@@ -1,0 +1,9 @@
+VirtKeyboardInit
+VirtKeyboardShutdown
+VirtKeyboardShow
+VirtKeyboardHide
+VirtKeyboardToggle
+#VirtKeyboardGetSurface
+#VirtKeyboardSetSurface
+VirtKeyboardReDraw
+VirtKeyboardIsVisible

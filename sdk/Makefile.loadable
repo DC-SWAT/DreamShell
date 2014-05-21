@@ -1,0 +1,126 @@
+#
+# DreamShell SDK Makefile.loadable
+# Copyright (C) 2009-2014 SWAT
+# http://www.dc-swat.ru
+#
+
+### Target ###
+ifdef TARGET_NAME
+
+ifndef TARGET
+TARGET = $(TARGET_NAME).klf
+endif
+
+else
+TARGET_NAME = $(TARGET)
+endif
+
+### Config ###
+include $(dir $(lastword $(MAKEFILE_LIST)))/Makefile.cfg
+
+
+### Version ###
+$(TARGET_NAME).build:
+	@echo 0 > $(TARGET_NAME).build
+
+increment_build: $(TARGET_NAME).build
+	@echo $$(($$(cat $(TARGET_NAME).build) + 1)) > $(TARGET_NAME).build
+
+ifdef VER_MAJOR
+
+ifndef VER_MINOR
+VER_MINOR=0
+endif
+
+ifndef VER_MICRO
+VER_MICRO=0
+endif
+
+ifndef VER_BUILD
+VER_BUILD=$(shell cat ${TARGET_NAME}.build)
+endif
+
+KOS_CFLAGS += -DVER_MAJOR=$(VER_MAJOR)	\
+				-DVER_MINOR=$(VER_MINOR)	\
+				-DVER_MICRO=$(VER_MICRO)	\
+				-DVER_BUILD=$(VER_BUILD)
+
+endif
+
+### Exports ###
+ifdef EXPORTS_FILE
+
+ifndef EXPORTS_SYMBOL
+EXPORTS_SYMBOL = ds_$(TARGET_NAME)_symtab
+OBJS += exports.o
+endif
+
+TARGET_LIB = lib$(TARGET_NAME).a
+
+exports.o: exports.c
+exports_stubs.o: exports_stubs.c
+
+exports.c: $(EXPORTS_FILE)
+	$(KOS_BASE)/utils/genexports/genexports.sh $(EXPORTS_FILE) exports.c $(EXPORTS_SYMBOL)
+
+exports_stubs.c: $(EXPORTS_FILE)
+	$(KOS_BASE)/utils/genexports/genexportstubs.sh $(EXPORTS_FILE) exports_stubs.c
+
+$(TARGET_LIB): exports_stubs.o
+	$(KOS_AR) rcs $(TARGET_LIB) exports_stubs.o
+
+endif
+
+
+### Libs ###
+ifndef GCC_LIB
+GCC_LIB = 
+DBG_GCC_LIB = -lds_gcc
+else
+ifndef DBG_GCC_LIB
+DBG_GCC_LIB = $(GCC_LIB)
+endif
+endif
+
+ifndef DBG_LIBS
+DBG_LIBS = -lds -lkos
+else
+DBG_LIBS += -lkos
+endif
+
+
+### Lua ###
+ifdef LUA_MODULE_NAME
+
+ifdef LUA_MODULE_OBJS
+OBJS += $(LUA_MODULE_OBJS)
+else
+OBJS += tolua_$(LUA_MODULE_NAME).o
+endif
+
+tolua_$(LUA_MODULE_NAME).o: tolua_$(LUA_MODULE_NAME).c
+
+tolua_$(LUA_MODULE_NAME).c: $(LUA_MODULE_NAME).pkg
+	$(DS_SDK)/bin/tolua -n $(LUA_MODULE_NAME) -o $@ $^
+
+endif
+
+
+### Build ###
+all: increment_build $(TARGET)
+
+# First one checks for missing symbols (and fully links with an offset
+# of zero so we can do tracebacks later), second one makes the real file.
+$(TARGET): $(OBJS)
+ifndef NO_LD_DEBUG
+	$(KOS_CC) -g -ml -m4-single-only -g -Wl,-Ttext=0x00000000 -e _start $(KOS_LD_SCRIPT) -nostartfiles -nodefaultlibs -o dbg-$(TARGET) $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(DBG_LIBS) $(DBG_GCC_LIB) -Wl,--end-group
+#	@$(KOS_SIZE) -A dbg-$(TARGET)
+endif
+	$(KOS_CC) -g -ml -m4-single-only -Wl,-d -Wl,-r -Wl,-S -Wl,-x -nostartfiles -nodefaultlibs -o $(TARGET) -Wl,-T $(DS_SDK)/shlelf.xr $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(GCC_LIB) -Wl,--end-group
+ifdef VER_MAJOR
+	@echo "\033[42m Compiled: $(TARGET_NAME) v$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO) build $(VER_BUILD) \033[0m"
+	@$(KOS_SIZE) $(TARGET)
+endif
+
+clean:
+	-rm -f $(OBJS) $(TARGET) dbg-$(TARGET) $(TARGET_LIB) romdisk.o romdisk.img exports.c exports_stubs.c exports_stubs.o tolua_*.c

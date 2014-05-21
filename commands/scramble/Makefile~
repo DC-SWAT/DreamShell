@@ -1,0 +1,24 @@
+# KallistiOS ##version##
+#
+# Created by SWAT
+# DreamShell command Makefile
+# http://www.dc-swat.ru
+#
+
+TARGET = scramble
+OBJS = main.o scramble.o
+DBG_LIBS = -lds
+
+KOS_CFLAGS += -I../../include -I../../include/SDL -DDS_ARCH_DC
+KOS_LIB_PATHS += -L../../sdk/lib
+
+all: rm-elf
+
+include ../../sdk/Makefile.loadable
+
+rm-elf:
+	-rm -f $(TARGET)
+	
+install: $(TARGET)
+	-rm ../../cd/cmds/$(TARGET)
+	cp $(TARGET) ../../cd/cmds/$(TARGET)

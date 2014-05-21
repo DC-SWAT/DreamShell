@@ -1,0 +1,59 @@
+#!/bin/sh
+#
+# Shell script wrapper to convert Lua to C and optionally
+# compile and run it.
+#
+# option -c causes compilation only (no run)
+# option -C causes C source generation only (no compile or run)
+
+pushd "`dirname \"$0\"`" > /dev/null
+export CWD="$PWD"
+popd > /dev/null
+
+# You may need to change these variables:
+LUA=lua
+CC=gcc
+CFLAGS="-O3 -fomit-frame-pointer -DNDEBUG -Wall -Ilua/src"
+#CFLAGS="-O2 -DNDEBUG -Wall -Ilua/src"
+#CFLAGS=-g
+LFLAGS="-Llua/src -llua"
+LUA2C="${LUA} $CWD/lua2c.lua"
+#LUA2C="./lua2c"
+
+COMPILEONLY=
+if [ "$1" = "-c" ]
+then
+  COMPILEONLY=1
+  shift
+elif [ "$1" = "-C" ]
+then
+  COMPILEONLY=2
+  shift
+fi
+if [ "$1" = "" ]
+then
+  echo "usage: clua [options] [filename.lua] ..."
+  echo "  options:"
+  echo "    -c   compile only (no run)"
+  echo "    -C   generate C source only (no compile or run)"
+  exit 1
+fi
+
+LUAFILE=$1
+FILENAME=${LUAFILE%.*}
+CFILE=${FILENAME}.c
+
+LUA_PATH=$CWD/lib/?.lua ${LUA2C} ${LUAFILE} > ${CFILE} || exit 1
+if [ "$COMPILEONLY" = "2" ]
+then
+  exit 0
+fi
+
+${CC} ${CFLAGS} ${CFILE} -o ${FILENAME} ${LFLAGS} || exit 1
+if [ "$COMPILEONLY" = "1" ]
+then
+  exit 0
+fi
+
+shift
+./${FILENAME} $@

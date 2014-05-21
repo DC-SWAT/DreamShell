@@ -1,0 +1,168 @@
+------------------------------------------------------------------------------
+
+Title   : Media Descriptor File (MDF/MDS) file format.
+Written : 2005.03.28.
+Updated : 2005.04.02.
+Version : 1.2.
+License : Copyright (c) 2005. All rights reserved.
+          ALL USE AT OWN RISK!
+Author  : Henrik Stokseth <hensto AT c2i DOT net>
+
+------------------------------------------------------------------------------
+
+
+
+Introduction:
+------------------------------------------------------------------------------
+
+MDF files are equal to BIN and IMG files. (as confirmed with a 'cmp' test)
+CUE and MDS files have different format. This documentation uses version
+1.2 of the MDS file format. If you have any additional info please send me
+an email. You should note that the information contained herein can be
+misleading but not intentionally so.
+
+
+
+
+Data structures found in the MDS file:
+------------------------------------------------------------------------------
+
+An MDS file's structure consists of the following stuff ...
+
+QUANTITY:   SIZE: OBJECT:               |
+1           112   Header.               |
+num_entries 80    Data blocks.          |
+num_entries 8     Extra blocks.         |
+1           22    Footer.               V
+
+Each section should immediately follow each other but it is recommended to
+check that ofs_entries is indeed 0x70 and that the ofs_footers points to
+the correct place which is ofs_entries + num_entries * sizeof(mds_datablock) +
+num_entries * sizeof(mds_extrablock).
+
+This file format design makes it easy to look up individual entries by
+indexing the file content as you simpy load them into ready structures.
+
+mds_header *header;
+mds_datablock *datablock;
+mds_extrablock *extrablock;
+mds_footer *footer;
+
+read_file_contents();
+
+for (int entry=0; entry < header->num_entries; entry++) {
+   if(datablock[entry].track < MDS_TRACKMODE_AUDIO) {
+      printf("track: %u, sector: %u, sectors: %u.\n", datablock[entry].track, \
+             datablock[entry].sector, extrablock[entry].sectors)
+   }
+}
+
+You get the idea ...
+
+It is possible earlier versions of the fileformat didn't have the
+extra-blocks, but instead calculated number of sectors per track by
+taking the difference between starting sectors and using the difference
+between num_sectors and last track's starting sectors.
+
+**************
+*** HEADER ***
+**************
+
+#define __PACKED__ __attribute__ ((packed))
+
+typedef struct mds_header {
+   unsigned char  signature[16] __PACKED__; /* 0x0000 "MEDIA DESCRIPTOR"                           */
+   unsigned char  version[3]    __PACKED__; /* 0x0010 Fileformat version?                          */
+   unsigned char  dummy         __PACKED__; /* 0x0013 (unknown)                                    */
+   unsigned short version2[3]   __PACKED__; /* 0x0014 Fileformat version?                          */
+   unsigned char  dummy2[48]    __PACKED__; /* 0x0020 (unknown)                                    */
+   signed   long  pregap_corr   __PACKED__; /* 0x0058 Pregap correction. ALBA. (0=TAO, -150=DAO)   */
+   unsigned long  num_sectors   __PACKED__; /* 0x005c Total number of sectors in image.            */
+   unsigned short dummy4        __PACKED__; /* 0x0060 (unknown)                                    */
+   unsigned char  num_entries   __PACKED__; /* 0x0062 Number of lead-in+regular track data blocks. */
+   unsigned char  num_leadin    __PACKED__; /* 0x0063 Number of lead-in track data blocks?         */
+   unsigned char  num_sessions  __PACKED__; /* 0x0064 Total number of sessions in image?           */
+   unsigned char  dummy5        __PACKED__; /* 0x0065 (unknown)                                    */
+   unsigned char  num_tracks    __PACKED__; /* 0x0066 Number of regular track data blocks.         */
+   unsigned char  dummy6[5]     __PACKED__; /* 0x0067 (unknown)                                    */
+   unsigned long  ofs_entries   __PACKED__; /* 0x006c Offset of lead-in+regular track data blocks. */
+} mds_header;
+
+sizeof(mds_header) == 112 (0x70)
+
+*************************
+*** TRACK DATA-BLOCKS ***
+*************************
+
+#define MDS_TRACKMODE_UNKNOWN     0x00
+#define MDS_TRACKMODE_AUDIO       0xA9 /* sector size = 2352      */
+#define MDS_TRACKMODE_MODE1       0xAA /* sector size = 2048      */
+#define MDS_TRACKMODE_MODE2       0xAB /* sector size = 2336      */
+#define MDS_TRACKMODE_MODE2_FORM1 0xAC /* sector size = 2048      */
+#define MDS_TRACKMODE_MODE2_FORM2 0xAD /* sector size = 2324 (+4) */
+
+#define MDS_LEAD-IN_TRACK_FIRST    0xA0 /* info about first track */
+#define MDS_LEAD-IN_TRACK_LAST     0xA1 /* info about last track  */
+#define MDS_LEAN-IN_TRACK_LEADOUT  0xA2 /* info about lead-out    */
+
+typedef struct mds_datablock {
+   unsigned short mode          __PACKED__; /* 0x0000 Track mode.                                */
+   unsigned short flags         __PACKED__; /* 0x0002 Track flags?                               */
+   unsigned char  track         __PACKED__; /* 0x0004 Track number. (>0x99 is lead-in track)     */
+   unsigned char  dummy[4]      __PACKED__; /* 0x0005 (unknown)                                  */
+   unsigned char  min           __PACKED__; /* 0x0009 (if track >= 0xA0 -> info about track ###) */
+                                            /*        (if track = 0xA2 -> min. @ lead-out)       */
+   unsigned char  sec           __PACKED__; /* 0x000a (if track = 0xA2 -> sec. @ lead-out)       */
+   unsigned char  frame         __PACKED__; /* 0x000b (if track = 0xA2 -> frame @ lead-out)      */
+   unsigned long  ofs_extra     __PACKED__; /* 0x000c Start offset of this track's extra block.  */
+   unsigned short sector_size   __PACKED__; /* 0x0010 Sector size.                               */
+   unsigned char  dummy2[18]    __PACKED__; /* 0x0012 (unknown)                                  */
+   unsigned long  sector        __PACKED__; /* 0x0024 Track start sector. PLBA.                  */
+   unsigned long long offset    __PACKED__; /* 0x0028 Track start offset.                        */
+   unsigned char  session       __PACKED__; /* 0x0030 Session or index?                          */
+   unsigned char  dummy3[3]     __PACKED__; /* 0x0031 (unknown)                                  */
+   unsigned long  ofs_footer    __PACKED__; /* 0x0034 Start offset of footer.                    */
+   unsigned char  dummy4[24]    __PACKED__; /* 0x0038 (unknown)                                  */
+} mds_datablock;
+
+sizeof(mds_datablock) == 80 (0x50)
+
+Track number is in the range of 0x01 to 0x99. Numbers from 0xA0 to 0xA2 means that
+the data block refers to the lead-in track of the disc. Track mode should be set
+to 0x00 in this case.
+Track 0xA0 gives information about the first track of the image, where min is the
+number of the first track in the image.
+Track 0xA1 gives information about the last track of the image, where min is the
+number of the last track in the image.
+Track 0xA2 gives information about the lead-out track, where min, sec and frame is
+set to the MSF of the lead-out track.
+
+NOTE: sec is two seconds more than calc. from sector number. Is this because
+of pregap, since a pregap of 150 frames equals to 2 seconds? In either case
+there's no pregap in the image file so you would either have add the
+pregap_corr or calculate a new MSF from sector count in order to get correct
+MSFs for the cd-image.
+
+**************************
+*** TRACK EXTRA-BLOCKS ***
+**************************
+
+typedef struct mds_extrablock {
+   unsigned long pregap         __PACKED__; /* 0x0000 Number of sectors in pregap.               */
+   unsigned long sectors        __PACKED__; /* 0x0004 Number of sectors in track.                */
+} mds_extrablock;
+
+sizeof(mds_extrablock) == 8 (0x08)
+
+**************
+*** FOOTER ***
+**************
+
+typedef struct mds_footer {
+   unsigned long ofs_filename   __PACKED__; /* 0x0000 Start offset of image filename.            */
+   unsigned char filename[18]   __PACKED__; /* 0x0018 (use ofs_filename! max size: 18 (17+\0)    */
+} mds_footer;
+
+sizeof(mds_footer) == 22 (0x16)
+
+------------------------------------------------------------------------------

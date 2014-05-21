@@ -1,0 +1,44 @@
++------------------+
+| F.A.Q            |
+| Updated 06/06/07 |
++------------------+
+
+
+Q: What's MDS4DC ?
+A: MDS4DC is a new selfboot tool for your Dreamcast. It allows you to build MDS/MDF (Alcohol 120)
+   images from an ISO, and if you want CDDA, from RAW tracks too.
+
+Q: What's the difference between the "Audio/Data" and "Audio/Data with CDDA" image format ?
+A: In "Audio/Data" you can't add CDDA tracks. The first session's only composed with one audio fake track.
+
+Q: Can i use my WAV/MP3/Whatever to CDDA ?
+A: The answer is yes *BUT* only if you convert your audio file to the RAW format, which means that your
+   file is *NOT* compressed. You can use a tool such SOX (http://sox.sourceforge.net/) to do that.
+
+Q: Hey, i built my MDS/MDF but it doesn't seems to be valid. What i'm doing wrong ?
+A: If your image's invalid, you probably built the image in "Audio/Data with CDDA" mode. Your LBA (MSINFO)
+   value for the second session (your DATA ISO) must be wrong. Did you use the lbacalc proggy correctly ?
+   Please note that the order of your CDDA track's IMPORTANT! ("1.raw 2.raw" is *NOT* the same as "2.raw 1.raw").
+
+Q: I have a Katana / WinCE game (official games) to selfboot... But i have a problem. Can you help me ?
+A: Only if you have bought a new HSV ClubSport R8 for me.
+
+Q: Can i create a GUI for your proggy ?
+A: Of course yes. If you do so, send me a mail ;)
+
+Q: Can i create a FAQ, burning guide, and so on in my native language ?
+A: Yes! And if you do so, please send me a mail too !
+
+Q: Can i host your tool ?
+A: Of course yeah ! But don't forget to update it if needed.
+
+Q: Can i test images built with this tool ?
+A: Of course yes ! You can use both nullDC or Chankast (with a virtual drive) emulators.
+
+Q: I really need another image format !!!
+A: Mount your MDS/MDF to a virtual drive and make a disc copy (until the coming of my new selfboot tool :p)
+
+Q: Why are you doing this ?
+A: Cuz i love you ! Don't leave me noooooooooooooooooooooooooooooooooow... *la la la*
+
+SiZ!^DCS '07 - "Can you feel the power of the DCS ?"

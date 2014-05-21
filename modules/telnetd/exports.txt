@@ -1,0 +1,2 @@
+telnetd_init
+telnetd_shutdown

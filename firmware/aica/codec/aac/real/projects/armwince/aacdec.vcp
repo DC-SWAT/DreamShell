@@ -1,0 +1,535 @@
+# Microsoft eMbedded Visual Tools Project File - Name="aacdec" - Package Owner=<4>
+# Microsoft eMbedded Visual Tools Generated Build File, Format Version 6.02
+# ** DO NOT EDIT **
+
+# TARGTYPE "Win32 (WCE ARM) Static Library" 0x8504
+
+CFG=aacdec - Win32 (WCE ARM) Debug
+!MESSAGE This is not a valid makefile. To build this project using NMAKE,
+!MESSAGE use the Export Makefile command and run
+!MESSAGE 
+!MESSAGE NMAKE /f "aacdec.vcn".
+!MESSAGE 
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
+!MESSAGE 
+!MESSAGE NMAKE /f "aacdec.vcn" CFG="aacdec - Win32 (WCE ARM) Debug"
+!MESSAGE 
+!MESSAGE Possible choices for configuration are:
+!MESSAGE 
+!MESSAGE "aacdec - Win32 (WCE ARM) Release" (based on "Win32 (WCE ARM) Static Library")
+!MESSAGE "aacdec - Win32 (WCE ARM) Debug" (based on "Win32 (WCE ARM) Static Library")
+!MESSAGE 
+
+# Begin Project
+# PROP AllowPerConfigDependencies 0
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
+# PROP ATL_Project 2
+CPP=clarm.exe
+
+!IF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Release"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 0
+# PROP BASE Output_Dir "ARMRel"
+# PROP BASE Intermediate_Dir "ARMRel"
+# PROP BASE CPU_ID "{D6518FFC-710F-11D3-99F2-00105A0DF099}"
+# PROP BASE Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 0
+# PROP Output_Dir "ARMRel"
+# PROP Intermediate_Dir "ARMRel"
+# PROP CPU_ID "{D6518FFC-710F-11D3-99F2-00105A0DF099}"
+# PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "NDEBUG" /D "ARM" /D "_ARM_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /Oxs /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /I "..\..\..\pub" /D "NDEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "ARM" /D "_ARM_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /D "USE_DEFAULT_STDLIB" /YX /Oxs /M$(CECrtMT) /c
+LIB32=link.exe -lib
+# ADD BASE LIB32 /nologo
+# ADD LIB32 /nologo
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+
+!ELSEIF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Debug"
+
+# PROP BASE Use_MFC 0
+# PROP BASE Use_Debug_Libraries 1
+# PROP BASE Output_Dir "ARMDbg"
+# PROP BASE Intermediate_Dir "ARMDbg"
+# PROP BASE CPU_ID "{D6518FFC-710F-11D3-99F2-00105A0DF099}"
+# PROP BASE Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP BASE Target_Dir ""
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries 1
+# PROP Output_Dir "ARMDbg"
+# PROP Intermediate_Dir "ARMDbg"
+# PROP CPU_ID "{D6518FFC-710F-11D3-99F2-00105A0DF099}"
+# PROP Platform_ID "{8A9A2F80-6887-11D3-842E-005004848CBA}"
+# PROP Target_Dir ""
+# ADD BASE CPP /nologo /W3 /Zi /Od /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "ARM" /D "_ARM_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /M$(CECrtMTDebug) /c
+# ADD CPP /nologo /W3 /Zi /Od /I "..\..\..\pub" /D "DEBUG" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "ARM" /D "_ARM_" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /D "USE_DEFAULT_STDLIB" /YX /M$(CECrtMTDebug) /c
+LIB32=link.exe -lib
+# ADD BASE LIB32 /nologo
+# ADD LIB32 /nologo
+BSC32=bscmake.exe
+# ADD BASE BSC32 /nologo
+# ADD BSC32 /nologo
+
+!ENDIF 
+
+# Begin Target
+
+# Name "aacdec - Win32 (WCE ARM) Release"
+# Name "aacdec - Win32 (WCE ARM) Debug"
+# Begin Group "Source Files"
+
+# PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Group "asm"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\asm\armwince\asmfunc.s
+
+!IF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Release"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+IntDir=.\ARMRel
+InputPath=..\..\asm\armwince\asmfunc.s
+InputName=asmfunc
+
+"$(IntDir)\$(InputName).obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	"$(EVCROOT)\wce300\bin\armasm" $(InputPath) $(IntDir)\$(InputName).obj
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Debug"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+IntDir=.\ARMDbg
+InputPath=..\..\asm\armwince\asmfunc.s
+InputName=asmfunc
+
+"$(IntDir)\$(InputName).obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	"$(EVCROOT)\wce300\bin\armasm" $(InputPath) $(IntDir)\$(InputName).obj
+
+# End Custom Build
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\asm\armwince\sbrcov.s
+
+!IF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Release"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+IntDir=.\ARMRel
+InputPath=..\..\asm\armwince\sbrcov.s
+InputName=sbrcov
+
+"$(IntDir)\$(InputName).obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	"$(EVCROOT)\wce300\bin\armasm" $(InputPath) $(IntDir)\$(InputName).obj
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\asm\armwince\sbrqmfak.s
+
+!IF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Release"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+IntDir=.\ARMRel
+InputPath=..\..\asm\armwince\sbrqmfak.s
+InputName=sbrqmfak
+
+"$(IntDir)\$(InputName).obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	"$(EVCROOT)\wce300\bin\armasm" $(InputPath) $(IntDir)\$(InputName).obj
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Debug"
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\asm\armwince\sbrqmfsk.s
+
+!IF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Release"
+
+# PROP Ignore_Default_Tool 1
+# Begin Custom Build
+IntDir=.\ARMRel
+InputPath=..\..\asm\armwince\sbrqmfsk.s
+InputName=sbrqmfsk
+
+"$(IntDir)\$(InputName).obj" : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+	"$(EVCROOT)\wce300\bin\armasm" $(InputPath) $(IntDir)\$(InputName).obj
+
+# End Custom Build
+
+!ELSEIF  "$(CFG)" == "aacdec - Win32 (WCE ARM) Debug"
+
+!ENDIF 
+
+# End Source File
+# End Group
+# Begin Group "general"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\..\aacdec.c
+DEP_CPP_AACDE=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\..\aactabs.c
+DEP_CPP_AACTA=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	
+# End Source File
+# End Group
+# Begin Group "csource"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\bitstream.c
+DEP_CPP_BITST=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\buffers.c
+DEP_CPP_BUFFE=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+NODEP_CPP_BUFFE=\
+	"..\..\hlxclib\stdlib.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\dct4.c
+DEP_CPP_DCT4_=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\decelmnt.c
+DEP_CPP_DECEL=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\dequant.c
+DEP_CPP_DEQUA=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\fft.c
+DEP_CPP_FFT_C=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\filefmt.c
+DEP_CPP_FILEF=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\huffman.c
+DEP_CPP_HUFFM=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\hufftabs.c
+DEP_CPP_HUFFT=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\imdct.c
+DEP_CPP_IMDCT=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\noiseless.c
+DEP_CPP_NOISE=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\pns.c
+DEP_CPP_PNS_C=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\stproc.c
+DEP_CPP_STPRO=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\tns.c
+DEP_CPP_TNS_C=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\trigtabs.c
+DEP_CPP_TRIGT=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# End Group
+# Begin Group "sbr"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\..\sbr.c
+DEP_CPP_SBR_C=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+NODEP_CPP_SBR_C=\
+	"..\..\hlxclib\stdlib.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrfft.c
+DEP_CPP_SBRFF=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrfreq.c
+DEP_CPP_SBRFR=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrhfadj.c
+DEP_CPP_SBRHF=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrhfgen.c
+DEP_CPP_SBRHFG=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrhuff.c
+DEP_CPP_SBRHU=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrimdct.c
+DEP_CPP_SBRIM=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\coder.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrmath.c
+DEP_CPP_SBRMA=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrqmf.c
+DEP_CPP_SBRQM=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\assembly.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrside.c
+DEP_CPP_SBRSI=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\sbrtabs.c
+DEP_CPP_SBRTA=\
+	"..\..\..\pub\aaccommon.h"\
+	"..\..\..\pub\aacdec.h"\
+	"..\..\..\pub\statname.h"\
+	"..\..\bitstream.h"\
+	"..\..\sbr.h"\
+	
+# End Source File
+# End Group
+# End Group
+# Begin Group "Header Files"
+
+# PROP Default_Filter "h;hpp;hxx;hm;inl"
+# End Group
+# End Target
+# End Project

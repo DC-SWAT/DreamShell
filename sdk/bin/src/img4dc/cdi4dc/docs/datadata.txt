@@ -1,0 +1,31 @@
+1. Create an ISO with a LBA of 0 (with the IP.BIN in the bootsector).
+2. Generate the header ISO (using isostrip's method).
+3. Burn the data ISO first - multisession CD-ROM XA 2 Form1 2048 bytes per sector
+4. Burn the header ISO next, same as the data ISO only close the session.
+
+
+Public Sub CreateISOHeader(ByVal ISO As String, ByVal IP As String)
+
+On Error GoTo ErrorHandler
+    
+    ReDim ISOHeaderArray(BytesInSectors(2, 2048) - 1) As Byte
+    ReDim IPArray(FileLen(IP) - 1) As Byte
+    
+    Open IP For Binary As #1
+        Get #1, , IPArray()
+        Open ISO For Binary As #2
+            Get #2, 32769, ISOHeaderArray()
+        Close #2
+        Open AppPath & "data02.iso" For Binary As #2
+            Put #2, , IPArray()
+            Put #2, , ISOHeaderArray()
+            Put #2, , String$(BytesInSectors(282, 2048), Chr(0))
+        Close #2
+    Close #1
+    
+    Exit Sub
+
+ErrorHandler:
+    MsgBox "CreateISOHeader - modISOHeader" & vbCrLf & vbCrLf & Err & " - " & Err.Description, vbCritical, "Error"
+
+End Sub

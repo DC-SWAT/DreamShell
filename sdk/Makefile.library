@@ -1,0 +1,18 @@
+#
+# DreamShell SDK Makefile.library
+# Copyright (C) 2009-2014 SWAT
+# http://www.dc-swat.ru
+#
+
+defaultall: $(OBJS) subdirs linklib
+
+linklib:
+	rm -f $(TARGET)
+	$(KOS_AR) rcs $(TARGET) $(OBJS) $(LIB_OBJS)
+
+clean: defaultclean
+         
+defaultclean: clean_subdirs
+	-rm -f $(OBJS) $(TARGET) $(LOCAL_CLEAN)
+
+include $(KOS_BASE)/Makefile.rules

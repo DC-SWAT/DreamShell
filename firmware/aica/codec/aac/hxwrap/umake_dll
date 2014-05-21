@@ -1,0 +1,115 @@
+# ***** BEGIN LICENSE BLOCK *****  
+# Source last modified: $Id: umake_dll,v 1.2 2005/06/16 18:32:24 ehyche Exp $ 
+#   
+# Portions Copyright (c) 1995-2005 RealNetworks, Inc. All Rights Reserved.  
+#       
+# The contents of this file, and the files included with this file, 
+# are subject to the current version of the RealNetworks Public 
+# Source License (the "RPSL") available at 
+# http://www.helixcommunity.org/content/rpsl unless you have licensed 
+# the file under the current version of the RealNetworks Community 
+# Source License (the "RCSL") available at 
+# http://www.helixcommunity.org/content/rcsl, in which case the RCSL 
+# will apply. You may also obtain the license terms directly from 
+# RealNetworks.  You may not use this file except in compliance with 
+# the RPSL or, if you have a valid RCSL with RealNetworks applicable 
+# to this file, the RCSL.  Please see the applicable RPSL or RCSL for 
+# the rights, obligations and limitations governing use of the 
+# contents of the file. 
+#   
+# This file is part of the Helix DNA Technology. RealNetworks is the 
+# developer of the Original Code and owns the copyrights in the 
+# portions it created. 
+#   
+# This file, and the files included with this file, is distributed 
+# and made available on an 'AS IS' basis, WITHOUT WARRANTY OF ANY 
+# KIND, EITHER EXPRESS OR IMPLIED, AND REALNETWORKS HEREBY DISCLAIMS 
+# ALL SUCH WARRANTIES, INCLUDING WITHOUT LIMITATION, ANY WARRANTIES 
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, QUIET 
+# ENJOYMENT OR NON-INFRINGEMENT. 
+#  
+# Technology Compatibility Kit Test Suite(s) Location:  
+#    http://www.helixcommunity.org/content/tck  
+#  
+# Contributor(s):  
+#   
+# ***** END LICENSE BLOCK *****  
+
+UmakefileVersion(2,2)
+
+project.AddIncludes("../pub")
+
+project.AddSources(
+                   "initguid.cpp",
+                   "aacdecdll.cpp",
+                   "aacdecdrm.cpp",
+                   "raacentrydrm.cpp"
+                  )
+
+project.AddModuleIncludes(
+                          "common/include",
+                          "datatype/include",
+                          "datatype/rm/include",
+                          "common/dbgtool/pub",
+                          "datatype/mp4/common/pub",
+                          "common/util/pub"
+                         )
+
+project.AddModuleLibraries(
+                           "common/runtime[runtlib]",
+                           "common/dbgtool[debuglib]",
+                           "common/util[utillib]",
+                           "datatype/mp4/common[mp4comlib]",
+                           "datatype/aac/codec/fixpt/decoder/hxwrap[aacdeclib]"
+                           )
+
+project.ExportFunction("RACreateDecoderInstance",
+                       "const CLSID &clsid, IUnknown** ppUnknown",
+                       "datatype/include",
+                       "hxacodec.h")
+project.ExportFunction("RAOpenCodec2",
+                       "RACODEC* pCodecRef, const char* pCodecPath",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RACloseCodec",
+                       "RACODEC codecRef",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RAGetFlavorProperty",
+                       "RACODEC codecRef, UINT16 flvIndex, UINT16 propIndex, UINT16* pSize",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RAInitDecoder",
+                       "RACODEC codecRef, void* pParam",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RADecode",
+                       "RACODEC codecRef, Byte* in, UINT32 inLength, Byte* out, UINT32* pOutLength, UINT32 userData",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RAFlush",
+                       "RACODEC codecRef, Byte* outBuf, UINT32* pOutLength",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RAFreeDecoder",
+                       "RACODEC codecRef",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RASetComMode",
+                       "RACODEC codecRef",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RAGetGUID",
+                       "UCHAR* pGUID",
+                       "datatype/rm/include",
+                       "racodec.h")
+project.ExportFunction("RAGetBackend",
+                       "RACODEC codecRef, void*** pFuncList",
+                       "datatype/rm/include",
+                       "racodec.h")
+
+project.SetDLLTypeCodec()
+
+DLLTarget("raac")
+
+DependTarget()

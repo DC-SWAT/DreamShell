@@ -1,0 +1,15 @@
+# ISO Loader exports
+isoLoader_Init
+isoLoader_Shutdown
+isoLoader_Exit
+isoLoader_ShowSettings
+isoLoader_ShowGames
+isoLoader_Run
+isoLoader_ItemClick
+isoLoader_toggleBootMode
+isoLoader_toggleBootMethod
+isoLoader_toggleMemory
+isoLoader_toggleOS
+isoLoader_DefaultPreset
+isoLoader_SavePreset
+isoLoader_LoadPreset

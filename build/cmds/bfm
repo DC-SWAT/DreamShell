@@ -1,0 +1,62 @@
+-- DK/DP VMU files manager v1.7
+-- Created by SWAT
+-- http://www.dc-swat.ru
+-- Usage: lua bfm.lua -flag infile.lua outfile.lua(if needed)
+
+if argv.n < 2 then
+	print("Usage: bfm -flag file_in file_out(if needed)")
+	print("Flags:")
+	print(" -c    -Convert DreamKey or DreamPassport VMU file to normal file")
+	print(" -rl   -Run lua script from DK or DP VMU file")
+	print(" -rd   -Run dscript from DK or DP VMU file")
+	return
+end
+
+
+function dpf_convert(filein, fileout)
+	local buff
+	local fin = assert(io.open(filein,"r"))
+	fin:seek(set, 704)
+	local type = fin:read(5)
+
+	if type == "From:" then
+
+	   fin:seek(cur, 101)
+	   buff = fin:read("*a")
+
+	 end
+
+	if type ~= "From:" then
+
+	   fin:seek(set, -5)
+	   buff = fin:read("*a")
+
+	 end
+
+	io.close(fin)
+	local fout = assert(io.open(fileout,"w"))
+	fout:write(buff)
+	io.close(fout)
+end
+
+
+if argv[1] == "-c" then
+	dpf_convert(argv[2], argv[3])
+	return
+end
+
+
+if argv[1] == "-rl" then
+	dpf_convert(argv[2], "/ram/bf_temp_file___.lua")
+	os.execute("lua /ram/bf_temp_file___.lua");
+	os.execute("rm /ram/bf_temp_file___.lua");
+	return
+end
+
+
+if argv[1] == "-rd" then
+	dpf_convert(argv[2], "/ram/bf_temp_file___.dsc")
+	os.execute("dsc /ram/bf_temp_file___.dsc");
+	os.execute("rm /ram/bf_temp_file___.dsc");
+	return
+end

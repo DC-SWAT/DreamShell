@@ -1,0 +1,4 @@
+target remote 192.168.0.33:3333
+monitor arm7_9 force_hw_bkpts enable
+#monitor soft_reset_halt
+monitor poll

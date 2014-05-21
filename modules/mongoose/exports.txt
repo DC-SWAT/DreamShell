@@ -1,0 +1,14 @@
+mg_start
+mg_stop
+mg_get_option
+mg_get_valid_option_names
+mg_modify_passwords_file
+mg_write
+mg_printf
+mg_send_file
+mg_read
+mg_get_header
+mg_get_var
+mg_get_cookie
+mg_version
+mg_md5

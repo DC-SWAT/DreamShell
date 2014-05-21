@@ -1,0 +1,16 @@
+lzo1x_1_compress
+lzo1x_decompress
+lzo1x_decompress_safe
+lzo_version
+lzo_version_string
+lzo_version_date
+lzo_memcmp
+lzo_memcpy
+lzo_memmove
+lzo_memset
+lzo_adler32
+#lzo_crc32
+#lzo_get_crc32_table
+__lzo_init_v2
+__lzo_align_gap
+_lzo_config_check

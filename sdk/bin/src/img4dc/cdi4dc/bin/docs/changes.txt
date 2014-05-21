@@ -1,0 +1,13 @@
+Changes :
+	
+0.3b :	13 april 2007
+		- Added a new image generation method : Data/Data images.
+		- Removed the algo that checks if the ISO is a veritable 11702 because it fails.
+		
+0.2b : 	6 july 2006
+		- If the iso doesn't exists, cdi4dc don't create an empty CDI file. (Thx Fackue)
+		- Fixed a problem with CD Labels with spaces (Thx Fackue)
+		- Checks if the ISO is a veritable 11702 iso.
+
+0.1b : 	5 july 2006
+		Initial release

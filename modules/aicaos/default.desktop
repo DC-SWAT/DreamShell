@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=aicaos
+Type=Application
+Exec=aicaos --init
+Comment=Extended AICAOS for DreamShell
+Terminal=false
+Categories=applications;settings;
+MimeType=application/drv
+X-OD-Manual=readme.txt
+X-OD-Daemon=true
+DS-Version=1.0.2
+DS-InstallScript=install.lua
+#DS-UninstallScript=uninstall.lua
+DS-Files=modules/aicaos.klf;firmware/aica/aicaos.drv;

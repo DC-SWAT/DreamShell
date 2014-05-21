@@ -1,0 +1,3 @@
+BUGS :
+- Ca fait planter le "us_shenmue_1.mds" : mds4dc -c us_shenmue_1.mds data.iso audio.raw
+- BUG quand on rentre la ligne de commande ".\mds4dc" ou ".\mds4dc.exe" (dans la print_usage le truc qui affiche le nom du proggy)

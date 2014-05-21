@@ -1,0 +1,1084 @@
+/* libluaKOS - KOS functions for DS lua by SWAT
+*/
+
+$#include <kos.h>
+$#include <kos/net.h>
+$#include <arpa/inet.h>
+$#include <netinet/in.h>
+$#include <sys/socket.h>
+$#include <dc/sd.h>
+$#include <kos/blockdev.h>
+$#include <ext2/fs_ext2.h>
+
+$
+$
+$uint32 TOC_LBA_(uint32 n) {
+$return TOC_LBA(n);
+$}
+$
+$uint32 TOC_ADR_(uint32 n) {
+$return TOC_ADR(n);
+$}
+$
+$uint32 TOC_CTRL_(uint32 n) {
+$return TOC_CTRL(n);
+$}
+$
+$uint32 TOC_TRACK_(uint32 n) {
+$return TOC_TRACK(n);
+$}
+$
+$CDROM_TOC *CDROM_TOC_new() { return (CDROM_TOC *) malloc(sizeof(CDROM_TOC)); }
+$void CDROM_TOC_delete(CDROM_TOC *toc) { return free(toc); }
+$size_t *size_t_new() { return (size_t *) malloc(sizeof(size_t)); }
+$void size_t_delete(size_t *s) { return free(s); }
+$
+$
+
+
+
+module KOS
+{
+
+
+/* PVR texture memory pointer; unlike the old "TA" system, PVR pointers
+   in the new system are actually SH-4 compatible pointers and can
+   be used directly in place of ta_txr_map(). */
+typedef void * pvr_ptr_t;
+
+/* PVR list specification */
+typedef uint32 pvr_list_t;
+
+
+typedef unsigned long long uint64;
+typedef unsigned long uint32;
+typedef unsigned short uint16;
+typedef unsigned char uint8;
+typedef long long int64;
+typedef long int32;
+typedef short int16;
+typedef char int8;
+
+/* Volatile types */
+typedef volatile uint64 vuint64;
+typedef volatile uint32 vuint32;
+typedef volatile uint16 vuint16;
+typedef volatile uint8 vuint8;
+typedef volatile int64 vint64;
+typedef volatile int32 vint32;
+typedef volatile int16 vint16;
+typedef volatile int8 vint8;
+
+/* Pointer arithmetic types */
+typedef uint32 ptr_t;
+
+typedef unsigned char	u_char;
+typedef unsigned short	u_short;
+typedef unsigned int	u_int;
+typedef unsigned long	u_long;
+typedef unsigned short	ushort;
+typedef unsigned int	uint;
+
+
+typedef int size_t;
+//#if 0
+/* File-specific types */
+typedef size_t ssize_t;
+typedef size_t off_t;
+//#endif
+
+// by SWAT for lua
+size_t *size_t_new();
+void size_t_delete(size_t *s);
+
+
+/* Flush a range of i-cache, given a physical address range */
+void icache_flush_range(uint32 start, uint32 count);
+
+/* Invalidate a range of o-cache/d-cache, given a physical address range */
+void dcache_inval_range(uint32 start, uint32 count);
+
+/* Flush a range of o-cache/d-cache, given a physical address range */
+void dcache_flush_range(uint32 start, uint32 count);
+
+/* Replace the currently running image with whatever is at
+   the pointer; note that this call will never return. */
+void arch_exec_at(const void *image, uint32 length, uint32 address);
+void arch_exec(const void *image, uint32 length);
+
+
+/** \brief  Directory entry.
+
+    All VFS handlers must conform to this interface in their directory entries.
+
+    \headerfile kos/fs.h
+*/
+typedef struct kos_dirent {
+    int size;               /**< \brief Size of the file in bytes. */
+    char name[MAX_FN_LEN];  /**< \brief Name of the file. */
+    time_t time;            /**< \brief Last access/mod/change time (depends on VFS) */
+    uint32 attr;            /**< \brief Attributes of the file. */
+} dirent_t;
+
+/* stat_t.unique */
+/**< \brief stat_t.unique: Constant to use denoting the file has no unique ID */
+#define STAT_UNIQUE_NONE    0
+
+/* stat_t.type */
+/** \brief stat_t.type: Unknown / undefined / not relevant */
+#define STAT_TYPE_NONE      0
+
+/** \brief stat_t.type: Standard file */
+#define STAT_TYPE_FILE      1
+
+/** \brief stat_t.type: Standard directory */
+#define STAT_TYPE_DIR       2
+
+/** \brief stat_t.type: A virtual device of some sort (pipe, socket, etc) */
+#define STAT_TYPE_PIPE      3
+
+/** \brief stat_t.type: Meta data */
+#define STAT_TYPE_META      4
+
+/** \brief stat_t.type: Symbolic link */
+#define STAT_TYPE_SYMLINK   5
+
+/* stat_t.attr */
+#define STAT_ATTR_NONE  0x00    /**< \brief stat_t.attr: No attributes */
+#define STAT_ATTR_R     0x01    /**< \brief stat_t.attr: Read-capable */
+#define STAT_ATTR_W     0x02    /**< \brief stat_t.attr: Write-capable */
+
+/** \brief stat_t.attr: Read/Write capable */
+#define STAT_ATTR_RW    (STAT_ATTR_R | STAT_ATTR_W)
+
+/** \brief  File descriptor type */
+typedef int file_t;
+
+/** \brief  Invalid file handle constant (for open failure, etc) */
+#define FILEHND_INVALID ((file_t)-1)
+
+/* Open modes */
+//#include <sys/fcntl.h>
+/** \defgroup open_modes            File open modes
+
+    @{
+*/
+#define O_MODE_MASK 0x0f        /**< \brief Mask for mode numbers */
+//#define O_TRUNC       0x0100      /* Truncate */
+#define O_ASYNC     0x0200      /**< \brief Open for asynchronous I/O */
+//#define O_NONBLOCK    0x0400      /* Open for non-blocking I/O */
+#define O_DIR       0x1000      /**< \brief Open as directory */
+#define O_META      0x2000      /**< \brief Open as metadata */
+/** @} */
+
+/** \defgroup seek_modes            Seek modes
+
+    These are the values you can pass for the whence parameter to fs_seek().
+
+    @{
+*/
+#define SEEK_SET    0           /**< \brief Set position to offset. */
+#define SEEK_CUR    1           /**< \brief Seek from current position. */
+#define SEEK_END    2           /**< \brief Seek from end of file. */
+/** @} */
+
+/* Standard file descriptor functions */
+/** \brief  Open a file on the VFS.
+
+    This function opens the specified file, returning a new file descriptor to
+    access the file.
+
+    \param  fn              The path to open.
+    \param  mode            The mode to use with opening the file. This may
+                            include the standard open modes (O_RDONLY, O_WRONLY,
+                            etc), as well as values from the \ref open_modes
+                            list. Multiple values can be ORed together.
+    \return                 The new file descriptor on success, -1 on error.
+*/
+file_t fs_open(const char *fn, int mode);
+
+/** \brief  Close an opened file.
+
+    This function closes the specified file descriptor, releasing all resources
+    associated with the descriptor.
+
+    \param  hnd             The file descriptor to close.
+    \return                 0 for success, -1 for error
+*/
+int fs_close(file_t hnd);
+
+/** \brief  Read from an opened file.
+
+    This function reads into the specified buffer from the file at its current
+    file pointer.
+
+    \param  hnd             The file descriptor to read from.
+    \param  buffer          The buffer to read into.
+    \param  cnt             The size of the buffer (or the number of bytes
+                            requested).
+    \return                 The number of bytes read, or -1 on error. Note that
+                            this may not be the full number of bytes requested.
+*/
+ssize_t fs_read(file_t hnd, void *buffer, size_t cnt);
+
+/** \brief  Write to an opened file.
+
+    This function writes the specfied buffer into the file at the current file
+    pointer.
+
+    \param  hnd             The file descriptor to write into.
+    \param  buffer          The data to write into the file.
+    \param  cnt             The size of the buffer, in bytes.
+    \return                 The number of bytes written, or -1 on failure. Note
+                            that the number of bytes written may be less than
+                            what was requested.
+*/
+ssize_t fs_write(file_t hnd, const void *buffer, size_t cnt);
+
+/** \brief  Seek to a new position within a file.
+
+    This function moves the file pointer to the specified position within the
+    file (the base of this position is determined by the whence parameter).
+
+    \param  hnd             The file descriptor to move the pointer for.
+    \param  offset          The offset in bytes from the specified base.
+    \param  whence          The base of the pointer move. This should be one of
+                            the \ref seek_modes values.
+    \return                 The new position of the file pointer.
+*/
+off_t fs_seek(file_t hnd, off_t offset, int whence);
+
+/** \brief  Seek to a new position within a file (64-bit offsets).
+
+    This function moves the file pointer to the specified position within the
+    file (the base of this position is determined by the whence parameter).
+
+    \param  hnd             The file descriptor to move the pointer for.
+    \param  offset          The offset in bytes from the specified base.
+    \param  whence          The base of the pointer move. This should be one of
+                            the \ref seek_modes values.
+    \return                 The new position of the file pointer.
+*/
+_off64_t fs_seek64(file_t hnd, _off64_t offset, int whence);
+
+/** \brief  Retrieve the position of the pointer within a file.
+
+    This function retrieves the current location of the file pointer within an
+    opened file. This is an offset in bytes from the start of the file.
+
+    \param  hnd             The file descriptor to retrieve the pointer from.
+    \return                 The offset within the file for the pointer.
+*/
+off_t fs_tell(file_t hnd);
+
+/** \brief  Retrieve the position of the 64-bit pointer within a file.
+
+    This function retrieves the current location of the file pointer within an
+    opened file. This is an offset in bytes from the start of the file.
+
+    \param  hnd             The file descriptor to retrieve the pointer from.
+    \return                 The offset within the file for the pointer.
+*/
+_off64_t fs_tell64(file_t hnd);
+
+/** \brief  Retrieve the length of an opened file.
+
+    This file retrieves the length of the file associated with the given file
+    descriptor.
+
+    \param  hnd             The file descriptor to retrieve the size from.
+    \return                 The length of the file on success, -1 on failure.
+*/
+size_t fs_total(file_t hnd);
+
+/** \brief  Retrieve the length of an opened file as a 64-bit integer.
+
+    This file retrieves the length of the file associated with the given file
+    descriptor.
+
+    \param  hnd             The file descriptor to retrieve the size from.
+    \return                 The length of the file on success, -1 on failure.
+*/
+uint64 fs_total64(file_t hnd);
+
+
+/** \brief  Read an entry from an opened directory.
+
+    This function reads the next entry from the directory specified by the given
+    file descriptor.
+
+    \param  hnd             The opened directory's file descriptor.
+    \return                 The next entry, or NULL on failure.
+*/
+dirent_t *fs_readdir(file_t hnd);
+
+/** \brief  Execute a device-specific command on a file descriptor.
+
+    The types and formats of the commands are device/filesystem specific, and
+    are not documented here. Each filesystem may define any commands that are
+    specific to it with its implementation of this function.
+
+    \param  hnd             The file descriptor to operate on.
+    \param  data            The command to send.
+    \param  size            The size of the command, in bytes.
+    \return                 -1 on failure.
+*/
+int fs_ioctl(file_t hnd, void *data, size_t size);
+
+/** \brief  Rename the specified file to the given filename.
+
+    This function renames the file specified by the first argument to the second
+    argument. The two paths should be on the same filesystem.
+
+    \param  fn1             The existing file to rename.
+    \param  fn2             The new filename to rename to.
+    \return                 0 on success, -1 on failure.
+*/
+int fs_rename(const char *fn1, const char *fn2);
+
+/** \brief  Delete the specified file.
+
+    This function deletes the specified file from the filesystem. This should
+    only be used for files, not for directories. For directories, use fs_rmdir()
+    instead of this function.
+
+    \param  fn              The path to remove.
+    \return                 0 on success, -1 on failure.
+*/
+int fs_unlink(const char *fn);
+
+/** \brief  Change the current working directory of the current thread.
+
+    This function changes the current working directory for the current thread.
+    Any relative paths passed into file-related functions will be relative to
+    the path that is changed to.
+
+    \param  fn              The path to set as the current working directory.
+    \return                 0 on success, -1 on failure.
+*/
+int fs_chdir(const char *fn);
+
+/** \brief  Memory-map a previously opened file.
+
+    This file "maps" the opened file into memory, reading the whole file into a
+    buffer, and returning that buffer. The returned buffer should not be freed,
+    as it will be freed when the file is closed. Bytes written into the buffer,
+    up to the original length of the file, will be written back to the file when
+    it is closed, assuming that the file is opened for writing.
+
+    \param  hnd             The descriptor to memory map.
+    \return                 The memory mapped buffer, or NULL on failure.
+
+    \note                   Some of the filesystems in KallistiOS do not support
+                            this operation. If you attempt to use this function
+                            on a filesystem that does not support it, the
+                            function will return NULL and set errno to EINVAL.
+*/
+void *fs_mmap(file_t hnd);
+
+/** \brief  Perform an I/O completion on the given file descriptor.
+
+    This function is used with asynchronous I/O to perform an I/O completion on
+    the given file descriptor.
+
+    \param  fd              The descriptor to complete I/O on.
+    \param  rv              A buffer to store the size of the I/O in.
+    \return                 0 on success, -1 on failure.
+
+    \note                   Most of the filesystems in KallistiOS do not support
+                            this operation. If you attempt to use this function
+                            on a filesystem that does not support it, the
+                            function will return -1 and set errno to EINVAL.
+*/
+int fs_complete(file_t fd, ssize_t *rv);
+
+/** \brief  Create a directory.
+
+    This function creates the specified directory, if possible.
+
+    \param  fn              The path of the directory to create.
+    \return                 0 on success, -1 on failure.
+*/
+int fs_mkdir(const char *fn);
+
+/** \brief  Remove a directory by name.
+
+    This function removes the specified directory. The directory shall only be
+    removed if it is empty.
+
+    \param  fn              The path of the directory to remove.
+    \return                 0 on success, -1 on failure.
+*/
+int fs_rmdir(const char *fn);
+
+/** \brief  Create a hard link.
+
+    This function implements the POSIX function link(), which creates a hard
+    link for an existing file.
+
+    \param  path1           An existing file to create a new link to.
+    \param  path2           The pathname of the new link to be created.
+    \return                 0 on success, -1 on failure.
+
+    \note                   Most filesystems in KallistiOS do not support hard
+                            links. If you call this function on a filesystem
+                            that does not support hard links, the function will
+                            return -1 and set errno to EMLINK.
+*/
+int fs_link(const char *path1, const char *path2);
+
+/** \brief  Create a symbolic link.
+
+    This function implements the POSIX function symlink(), which creates a
+    symbolic link on the filesystem. Symbolic links are not required to point to
+    an existing file (per POSIX) and may result in circular links if care is not
+    taken. For now, symbolic links cannot cross filesystem boundaries in KOS.
+
+    \param  path1           The content of the link (i.e, what to point at).
+    \param  path2           The pathname of the new link to be created.
+    \return                 0 on success, -1 on failure.
+
+    \note                   Most filesystems in KallistiOS do not support
+                            symbolic links. Filesystems that do not support
+                            symlinks will simply set errno to ENOSYS and return
+                            -1.
+*/
+int fs_symlink(const char *path1, const char *path2);
+
+/** \brief  Read the value of a symbolic link.
+
+    This function implements the POSIX function readlink(), which simply reads
+    the value of the symbolic link at the end of a path. This does not resolve
+    any internal links and it does not canonicalize the path either.
+
+    \param  path            The symbolic link to read.
+    \param  buf             The buffer to place the link's contents in.
+    \param  bufsize         The number of bytes allocated to buf.
+    \return                 -1 on failure, the number of bytes placed into buf
+                            on success. If the return value is equal to bufsize,
+                            you may not have the whole link -- provide a larger
+                            buffer and try again.
+
+    \note                   Most filesystems in KallistiOS do not support
+                            symbolic links. Filesystems that do not support
+                            symlinks will simply set errno to ENOSYS and return
+                            -1.
+*/
+ssize_t fs_readlink(const char *path, char *buf, size_t bufsize);
+
+/** \brief  Retrieve information about the specified path.
+
+    This function retrieves status information on the given path. This function
+    now returns the normal POSIX-style struct stat, rather than the old KOS
+    stat_t structure. In addition, you can specify whether or not this function
+    should resolve symbolic links on filesystems that support symlinks.
+
+    \param  path            The path to retrieve information about.
+    \param  buf             The buffer to store stat information in.
+    \param  flag            Specifies whether or not to resolve a symbolic link.
+                            If you don't want to resolve any symbolic links at
+                            the end of the path, pass AT_SYMLINK_NOFOLLOW,
+                            otherwise pass 0.
+    \return                 0 on success, -1 on failure.
+*/
+int fs_stat(const char *path, struct stat *buf, int flag);
+
+/** \brief  Duplicate a file descriptor.
+
+    This function duplicates the specified file descriptor, returning a new file
+    descriptor that can be used to access the file. This is equivalent to the
+    standard POSIX function dup().
+
+    \param  oldfd           The old file descriptor to duplicate.
+    \return                 The new file descriptor on success, -1 on failure.
+*/
+file_t fs_dup(file_t oldfd);
+
+/** \brief  Duplicate a file descriptor onto the specified descriptor.
+
+    This function duplicates the specified file descriptor onto the other file
+    descriptor provided. If the newfd parameter represents an open file, that
+    file will be closed before the old descriptor is duplicated onto it. This is
+    equivalent to the standard POSIX function dup2().
+
+    \param  oldfd           The old file descriptor to duplicate.
+    \param  newfd           The descriptor to copy into.
+    \return                 The new file descriptor on success, -1 on failure.
+*/
+file_t fs_dup2(file_t oldfd, file_t newfd);
+
+/** \brief  Get the current working directory of the running thread.
+    \return                 The current working directory.
+*/
+const char *fs_getwd();
+
+/* Couple of util functions */
+
+/** \brief  Copy a file.
+
+    This function copies the file at src to dst on the filesystem.
+
+    \param  src             The filename to copy from.
+    \param  dst             The filename to copy to.
+    \return                 The number of bytes copied successfully.
+*/
+ssize_t fs_copy(const char *src, const char *dst);
+
+/** \brief  Open and read a whole file into RAM.
+
+    This function opens the specified file, reads it into memory (allocating the
+    necessary space with malloc), and closes the file. The caller is responsible
+    for freeing the memory when they are done with it.
+
+    \param  src             The filename to open and read.
+    \param  out_ptr         A pointer to the buffer on success, NULL otherwise.
+    \return                 The size of the file on success, -1 otherwise.
+*/
+ssize_t fs_load(const char *src, void **out_ptr);
+
+
+/* Call this function to create a new pty. The name of the pty is written
+   into the user-provided buffer (if non-NULL) and two open file descriptors
+   pointing to the two ends of the pty are returned. */
+int fs_pty_create(char * buffer, int maxbuflen, file_t * master_out, file_t * slave_out);
+
+/** \defgroup cd_cmd_codes          CD-ROM syscall command codes
+
+    These are the syscall command codes used to actually do stuff with the
+    GD-ROM drive. These were originally provided by thanks maiwe.
+
+    @{
+*/
+#define CMD_PIOREAD 16  /**< \brief Read via PIO */
+#define CMD_DMAREAD 17  /**< \brief Read via DMA */
+#define CMD_GETTOC  18  /**< \brief Read TOC */
+#define CMD_GETTOC2 19  /**< \brief Read TOC */
+#define CMD_PLAY    20  /**< \brief Play track */
+#define CMD_PLAY2   21  /**< \brief Play sectors */
+#define CMD_PAUSE   22  /**< \brief Pause playback */
+#define CMD_RELEASE 23  /**< \brief Resume from pause */
+#define CMD_INIT    24  /**< \brief Initialize the drive */
+#define CMD_SEEK    27  /**< \brief Seek to a new position */
+#define CMD_READ    28  /**< \brief Read raw sectors */
+#define CMD_STOP    33  /**< \brief Stop the disc from spinning */
+#define CMD_GETSCD  34  /**< \brief Get subcode data */
+#define CMD_GETSES  35  /**< \brief Get session */
+/** @} */
+
+/** \defgroup cd_cmd_response       CD-ROM command responses
+
+    These are the values that the various functions can return as error codes.
+    @{
+*/
+#define ERR_OK          0   /**< \brief No error */
+#define ERR_NO_DISC     1   /**< \brief No disc in drive */
+#define ERR_DISC_CHG    2   /**< \brief Disc changed, but not reinitted yet */
+#define ERR_SYS         3   /**< \brief System error */
+#define ERR_ABORTED     4   /**< \brief Command aborted */
+#define ERR_NO_ACTIVE   5   /**< \brief System inactive? */
+/** @} */
+
+/** \defgroup cd_cmd_status         CD-ROM Command Status responses
+
+    These are the raw values the status syscall returns.
+    @{
+*/
+#define FAILED      -1  /**< \brief Command failed */
+#define NO_ACTIVE   0   /**< \brief System inactive? */
+#define PROCESSING  1   /**< \brief Processing command */
+#define COMPLETED   2   /**< \brief Command completed successfully */
+#define ABORTED     3   /**< \brief Command aborted before completion */
+/** @} */
+
+/** \defgroup cdda_read_modes       CDDA read modes
+
+    Valid values to pass to the cdrom_cdda_play() function for the mode
+    parameter.
+    @{
+*/
+#define CDDA_TRACKS     1   /**< \brief Play by track number */
+#define CDDA_SECTORS    2   /**< \brief Play by sector number */
+/** @} */
+
+/** \defgroup cd_status_values      CD-ROM status values
+
+    These are the values that can be returned as the status parameter from the
+    cdrom_get_status() function.
+    @{
+*/
+#define CD_STATUS_BUSY      0   /**< \brief Drive is busy */
+#define CD_STATUS_PAUSED    1   /**< \brief Disc is paused */
+#define CD_STATUS_STANDBY   2   /**< \brief Drive is in standby */
+#define CD_STATUS_PLAYING   3   /**< \brief Drive is currently playing */
+#define CD_STATUS_SEEKING   4   /**< \brief Drive is currently seeking */
+#define CD_STATUS_SCANNING  5   /**< \brief Drive is scanning */
+#define CD_STATUS_OPEN      6   /**< \brief Disc tray is open */
+#define CD_STATUS_NO_DISC   7   /**< \brief No disc inserted */
+/** @} */
+
+/** \defgroup cd_disc_types         CD-ROM drive disc types
+
+    These are the values that can be returned as the disc_type parameter from
+    the cdrom_get_status() function.
+    @{
+*/
+#define CD_CDDA     0       /**< \brief Audio CD (Red book) */
+#define CD_CDROM    0x10    /**< \brief CD-ROM or CD-R (Yellow book) */
+#define CD_CDROM_XA 0x20    /**< \brief CD-ROM XA (Yellow book extension) */
+#define CD_CDI      0x30    /**< \brief CD-i (Green book) */
+#define CD_GDROM    0x80    /**< \brief GD-ROM */
+/** @} */
+
+/** \brief  TOC structure returned by the BIOS.
+
+    This is the structure that the CMD_GETTOC2 syscall command will return for
+    the TOC. Note the data is in FAD, not LBA/LSN.
+
+    \headerfile dc/cdrom.h
+*/
+typedef struct {
+    uint32  entry[99];          /**< \brief TOC space for 99 tracks */
+    uint32  first;              /**< \brief Point A0 information (1st track) */
+    uint32  last;               /**< \brief Point A1 information (last track) */
+    uint32  leadout_sector;     /**< \brief Point A2 information (leadout) */
+} CDROM_TOC;
+
+
+/** \brief  Set the sector size for read sectors.
+
+    This function sets the sector size that the cdrom_read_sectors() function
+    will return. Be sure to set this to the correct value for the type of
+    sectors you're trying to read. Common values are 2048 (for reading CD-ROM
+    sectors) or 2352 (for reading raw sectors).
+
+    \param  size            The size of the sector data.
+*/
+void cdrom_set_sector_size(int size);
+
+/** \brief  Execute a CD-ROM command.
+
+    This function executes the specified command using the BIOS syscall for
+    executing GD-ROM commands.
+
+    \param  cmd             The command number to execute.
+    \param  param           Data to pass to the syscall.
+
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_exec_cmd(int cmd, void *param);
+
+/** \brief  Get the status of the GD-ROM drive.
+
+    \param  status          Space to return the drive's status.
+    \param  disc_type       Space to return the type of disc in the drive.
+
+    \return                 \ref cd_cmd_response
+    \see    cd_status_values
+    \see    cd_disc_types
+*/
+int cdrom_get_status(int *status, int *disc_type);
+
+/** \brief  Re-initialize the GD-ROM drive.
+
+    This function is for reinitializing the GD-ROM drive after a disc change,
+    or something of the like.
+
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_reinit();
+
+/** \brief  Read the table of contents from the disc.
+
+    This function reads the TOC from the specified session of the disc.
+
+    \param  toc_buffer      Space to store the returned TOC in.
+    \param  session         The session of the disc to read.
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_read_toc(CDROM_TOC *toc_buffer, int session);
+
+/** \brief  Read one or more sector from a CD-ROM.
+
+    This function reads the specified number of sectors from the disc, starting
+    where requested. This will respect the size of the sectors set with
+    cdrom_set_sector_size(). The buffer must have enough space to store the
+    specified number of sectors.
+
+    \param  buffer          Space to store the read sectors.
+    \param  sector          The sector to start reading from.
+    \param  cnt             The number of sectors to read.
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_read_sectors(void *buffer, int sector, int cnt);
+
+/** \brief  Locate the sector of the data track.
+
+    This function will search the toc for the last entry that has a CTRL value
+    of 4, and return its FAD address.
+
+    \param  toc             The TOC to search through.
+    \return                 The FAD of the track, or 0 if none is found.
+*/
+uint32 cdrom_locate_data_track(CDROM_TOC *toc);
+
+/** \brief  Play CDDA audio tracks or sectors.
+
+    This function starts playback of CDDA audio.
+
+    \param  start           The track or sector to start playback from.
+    \param  end             The track or sector to end playback at.
+    \param  loops           The number of times to repeat (max of 15).
+    \param  mode            The mode to play (see \ref cdda_read_modes).
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_cdda_play(uint32 start, uint32 end, uint32 loops, int mode);
+
+/** \brief  Pause CDDA audio playback.
+
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_cdda_pause();
+
+/** \brief  Resume CDDA audio playback after a pause.
+
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_cdda_resume();
+
+/** \brief  Spin down the CD.
+
+    This stops the disc in the drive from spinning until it is accessed again.
+
+    \return                 \ref cd_cmd_response
+*/
+int cdrom_spin_down();
+
+TOC_LBA_(uint32 n);
+TOC_ADR_(uint32 n);
+TOC_CTRL_(uint32 n);
+TOC_TRACK_(uint32 n);
+
+CDROM_TOC *CDROM_TOC_new();
+void CDROM_TOC_delete(CDROM_TOC *toc);
+
+
+/* Sound effect handle type */
+typedef uint32 sfxhnd_t;
+#define SFXHND_INVALID 0
+
+/* Load a sound effect from a WAV file and return a handle to it */
+sfxhnd_t snd_sfx_load(const char *fn);
+
+/* Unload a single sample */
+void snd_sfx_unload(sfxhnd_t idx);
+
+/* Unload all loaded samples and free their SPU RAM */
+void snd_sfx_unload_all();
+
+/* Play a sound effect with the given volume and panning; if the sound
+   effect is in stereo, the panning is ignored. Returns the used channel
+   ID (or the left channel, if stereo). */
+int snd_sfx_play(sfxhnd_t idx, int vol, int pan);
+
+/* Stop all playing sound effects. Doesn't stop channels 0 or 1, which
+   are assumed to be for streaming. */
+void snd_sfx_stop_all();
+
+
+/* Waits for the sound FIFO to empty */
+//void spu_write_wait();
+
+/* memcpy and memset designed for sound RAM; for addresses, don't
+   bother to include the 0xa0800000 offset that is implied. 'length'
+   must be a multiple of 4, but if it is not it will be rounded up. */
+void spu_memload(uint32 to, void *from, int length);
+void spu_memread(void *to, uint32 from, int length);
+void spu_memset(uint32 to, uint32 what, int length);
+
+/* Enable/disable the SPU; note that disable implies reset of the
+   ARM CPU core. */
+void spu_enable();
+void spu_disable();
+
+/* Set CDDA volume: values are 0-15 */
+void spu_cdda_volume(int left_volume, int right_volume);
+
+/* Set CDDA panning: values are 0-31, 16=center */
+void spu_cdda_pan(int left_pan, int right_pan);
+
+/* Set master volume (0..15) and mono/stereo settings */
+void spu_master_mixer(int volume, int stereo);
+
+
+/* clears n bytes at dest, dest must be 32-byte aligned */
+void sq_clr(void *dest, int n);
+
+/* copies n bytes from src to dest, dest must be 32-byte aligned */
+void * sq_cpy(void *dest, void *src, int n);
+
+/* fills n bytes at s with byte c, s must be 32-byte aligned */
+void * sq_set(void *s, uint32 c, int n);
+
+/* fills n bytes at s with short c, s must be 32-byte aligned */
+void * sq_set16(void *s, uint32 c, int n);
+
+/* fills n bytes at s with int c, s must be 32-byte aligned */
+void * sq_set32(void *s, uint32 c, int n);
+
+
+//-----------------------------------------------------------------------------
+#define CT_ANY		-1 // <-- Used ONLY internally with vid_mode
+#define CT_VGA		0
+#define CT_RGB		2
+#define CT_COMPOSITE	3
+
+//-----------------------------------------------------------------------------
+#define PM_RGB555	0
+#define PM_RGB565	1
+#define PM_RGB888	3
+
+//-----------------------------------------------------------------------------
+// These are more generic modes
+
+enum {
+	DM_GENERIC_FIRST = 0x1000,
+	DM_320x240 = 0x1000,
+	DM_640x480,
+	DM_800x608,
+	DM_256x256,
+	DM_768x480,
+	DM_768x576,
+	DM_GENERIC_LAST = DM_768x576
+};
+
+//-----------------------------------------------------------------------------
+// More specific modes (and actual indeces into the mode table)
+
+enum {
+	DM_INVALID = 0,
+	// Valid modes below
+	DM_320x240_VGA = 1,
+	DM_320x240_NTSC,
+	DM_640x480_VGA,
+	DM_640x480_NTSC_IL,
+	DM_800x608_VGA,
+	DM_640x480_PAL_IL,
+	DM_256x256_PAL_IL,
+	DM_768x480_NTSC_IL,
+	DM_768x576_PAL_IL,
+	DM_768x480_PAL_IL,
+	DM_320x240_PAL,
+	// The below is only for counting..
+	DM_SENTINEL,
+	DM_MODE_COUNT
+};
+
+
+//-----------------------------------------------------------------------------
+int vid_check_cable();
+
+void vid_set_start(uint32 base);
+void vid_flip(int fb);
+void vid_border_color(int r, int g, int b);
+void vid_clear(int r, int g, int b);
+// void vid_empty();
+void vid_waitvbl();
+void vid_set_mode(int dm, int pm);
+
+void vid_init(int disp_mode, int pixel_mode);
+//void vid_shutdown();
+
+//-----------------------------------------------------------------------------
+
+int vid_screen_shot(const char * destfn);
+
+
+/**
+  \file Implements wrappers for the BIOS flashrom syscalls, and some
+  utilities to make it easier to use the flashrom info. Note that
+  because the flash writing can be such a dangerous thing potentially
+  (I haven't deleted my flash to see what happens, but given the
+  info stored here it sounds like a Bad Idea(tm)) the syscalls for
+  the WRITE and DELETE operations are not enabled by default. If you
+  are 100% sure you really want to be writing to the flash and you
+  know what you're doing, then you can edit flashrom.c and re-enable
+  them there. */
+
+/**
+  An enumeration of partitions available in the flashrom. */
+#define FLASHROM_PT_SYSTEM		0	/*< Factory settings (read-only, 8K) */
+#define FLASHROM_PT_RESERVED	1	/*< reserved (all 0s, 8K) */
+#define FLASHROM_PT_BLOCK_1		2	/*< Block allocated (16K) */
+#define FLASHROM_PT_SETTINGS	3	/*< Game settings (block allocated, 32K) */
+#define FLASHROM_PT_BLOCK_2		4	/*< Block allocated (64K) */
+
+/**
+  Implements the FLASHROM_INFO syscall; given a partition ID,
+  return two ints specifying the beginning and the size of
+  the partition (respectively) inside the flashrom. Returns zero
+  if successful, -1 otherwise. */
+int flashrom_info(int part, int * start_out, int * size_out);
+
+/**
+  Implements the FLASHROM_READ syscall; given a flashrom offset,
+  an output buffer, and a count, this reads data from the
+  flashrom. Returns the number of bytes read if successful,
+  or -1 otherwise. */
+int flashrom_read(int offset, void * buffer_out, int bytes);
+
+/**
+  Implements the FLASHROM_WRITE syscall; given a flashrom offset,
+  an input buffer, and a count, this writes data to the flashrom.
+  Returns the number of bytes written if successful, -1 otherwise.
+
+  NOTE: It is not possible to write ones to the flashrom over zeros.
+  If you want to do this, you must save the old data in the flashrom,
+  delete it out, and save the new data back. */
+int flashrom_write(int offset, void * buffer, int bytes);
+
+/**
+  Implements the FLASHROM_DELETE syscall; given a partition offset,
+  that entire partition of the flashrom will be deleted and all data
+  will be reset to FFs. Returns zero if successful, -1 on failure. */
+int flashrom_delete(int offset);
+
+
+/* Medium-level functions */
+/**
+  Returns a numbered logical block from the requested partition. The newest
+  data is returned. 'buffer_out' must have enough room for 60 bytes of
+  data. */
+//int flashrom_get_block(int partid, int blockid, uint8 * buffer_out);
+
+
+/* Higher level functions */
+
+/**
+  Language settings possible in the BIOS menu. These will be returned
+  from flashrom_get_language(). */
+#define FLASHROM_LANG_JAPANESE	0
+#define FLASHROM_LANG_ENGLISH	1
+#define FLASHROM_LANG_GERMAN	2
+#define FLASHROM_LANG_FRENCH	3
+#define FLASHROM_LANG_SPANISH	4
+#define FLASHROM_LANG_ITALIAN	5
+
+/**
+  This struct will be filled by calling the flashrom_get_syscfg call
+  below. */
+typedef struct flashrom_syscfg {
+	int	language;	/*< Language setting (see defines above) */
+	int	audio;		/*< 0 == mono, 1 == stereo */
+	int	autostart;	/*< 0 == off, 1 == on */
+} flashrom_syscfg_t;
+
+/**
+  Retrieves the current syscfg settings and fills them into the struct
+  passed in to us. */
+int flashrom_get_syscfg(flashrom_syscfg_t * out);
+
+
+/**
+  Region settings possible in the system flash (partition 0). */
+#define FLASHROM_REGION_UNKNOWN	0
+#define FLASHROM_REGION_JAPAN	1
+#define FLASHROM_REGION_US	2
+#define FLASHROM_REGION_EUROPE	3
+
+/**
+  Retrieves the console's region code. This is still somewhat 
+  experimental, it may not function 100% on all DCs. Returns
+  one of the codes above or -1 on error. */
+int flashrom_get_region();
+
+
+/** \brief  Set serial parameters.
+    \param  baud            The bitrate to set.
+    \param  fifo            1 to enable FIFO mode.
+*/
+void scif_set_parameters(int baud, int fifo);
+
+// The rest of these are the standard dbgio interface.
+
+/** \brief  Enable or disable SCIF IRQ usage.
+    \param  on              1 to enable IRQ usage, 0 for polled I/O.
+    \retval 0               On success (no error conditions defined).
+*/
+int scif_set_irq_usage(int on);
+
+/** \brief  Is the SCIF port detected? Of course it is!
+    \return                 1
+*/
+int scif_detected();
+
+/** \brief  Initialize the SCIF port.
+
+    This function initializes the SCIF port to a sane state. If dcload-serial is
+    in use, this is effectively a no-op.
+
+    \retval 0               On success (no error conditions defined).
+*/
+int scif_init();
+
+/** \brief  Shutdown the SCIF port.
+
+    This function disables SCIF IRQs, if they were enabled and cleans up.
+
+    \retval 0               On success (no error conditions defined).
+*/
+int scif_shutdown();
+
+/** \brief  Read a single character from the SCIF port.
+    \return                 The character read if one is available, otherwise -1
+                            and errno is set to EAGAIN.
+*/
+int scif_read();
+
+/** \brief  Write a single character to the SCIF port.
+    \param  c               The character to write (only the low 8-bits are
+                            written).
+    \retval 1               On success.
+    \retval -1              If the SCIF port is disabled (errno set to EIO).
+*/
+int scif_write(int c);
+
+/** \brief  Flush any FIFO'd bytes out of the buffer.
+
+    This function sends any bytes that have been queued up for transmission but
+    have not left yet in FIFO mode.
+
+    \retval 0               On success.
+    \retval -1              If the SCIF port is disabled (errno set to EIO).
+*/
+int scif_flush();
+
+/** \brief  Write a whole buffer of data to the SCIF port.
+
+    This function writes a whole buffer of data to the SCIF port, optionally
+    making all newlines into carriage return + newline pairs.
+
+    \param  data            The buffer to write.
+    \param  len             The length of the buffer, in bytes.
+    \param  xlat            If set to 1, all newlines will be written as CRLF.
+    \return                 The number of bytes written on success, -1 on error.
+*/
+int scif_write_buffer(const uint8 *data, int len, int xlat);
+
+/** \brief  Read a buffer of data from the SCIF port.
+
+    This function reads a whole buffer of data from the SCIF port, blocking
+    until it has been filled.
+
+    \param  data            The buffer to read into.
+    \param  len             The number of bytes to read.
+    \return                 The number of bytes read on success, -1 on error.
+*/
+int scif_read_buffer(uint8 *data, int len);
+
+/* Ends C function definitions when using C++ */
+
+
+} /* end tolua module DS */
+
+
+/* Some code to be included in the generated .c file */

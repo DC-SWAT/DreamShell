@@ -1,0 +1,13 @@
+-- bare-bones luac in Lua
+-- Created by SWAT
+-- http://www.dc-swat.ru
+-- Usage: lua luac.lua infile.lua outfile.lua
+
+if argv[1] == nil then 
+	print("Usage: luac infile.lua outfile.lua") 
+	return 
+end
+
+f = assert(io.open(argv[2], "w"))
+f:write(string.dump(loadfile(argv[1])))
+io.close(f)

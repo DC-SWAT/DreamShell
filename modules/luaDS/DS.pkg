@@ -1,0 +1,308 @@
+/*
+luaDS
+DS functions for lua scripts
+(c) SWAT
+*/
+
+$#include "ds.h"
+$#include "lua/tolua.h"
+$#include "mxml.h"
+$#include "fs.h"
+$#include "vmu.h"
+$
+$App_t *VoidToApp(void *ptr) {
+$	return (App_t *) ptr;	
+$}
+$
+$Event_t *VoidToEvent(void *ptr) {
+$	return (Event_t *) ptr;	
+$}
+$
+$Cmd_t *AddCmdLua(const char *cmd, const char *helpmsg, const char *handler);
+$Event_t *AddEventLua(const char *name, int type, const char *handler);
+$
+	
+module DS
+{
+
+
+/***************************** DreamShell Functions *************************/
+
+uint32 GetVersion();
+void SetVersion(uint32 ver);
+const char *GetVersionBuildTypeString(int type);
+
+
+typedef struct Item {
+
+	const char *name;
+	uint32 id;
+	ListItemType type;
+	void *data;
+	uint32 size;
+   
+} Item_t;
+
+
+typedef enum {
+	
+	LIST_ITEM_USERDATA = 0,
+	LIST_ITEM_SDL_SURFACE,
+	LIST_ITEM_SDL_RWOPS,
+
+	LIST_ITEM_GUI_SURFACE,
+	LIST_ITEM_GUI_FONT,
+	LIST_ITEM_GUI_WIDGET,
+
+	LIST_ITEM_MODULE,
+	LIST_ITEM_APP,
+	LIST_ITEM_EVENT,
+	LIST_ITEM_THREAD,
+	LIST_ITEM_CMD,
+	LIST_ITEM_LUA_LIB
+	
+} ListItemType;
+
+Item_list_t *listMake();
+void listDestroy(Item_list_t *lst, listFreeItemFunc *ifree);
+
+uint32 listGetLastId(Item_list_t *lst);
+
+Item_t *listAddItem(Item_list_t *lst, ListItemType type, const char *name, void *data, uint32 size);
+void listRemoveItem(Item_list_t *lst, Item_t *i, listFreeItemFunc *ifree);
+
+Item_t *listGetItemByName(Item_list_t *lst, const char *name);
+Item_t *listGetItemByNameAndType(Item_list_t *lst, const char *name, ListItemType type);
+Item_t *listGetItemById(Item_list_t *lst, uint32 id);
+
+Item_t *listGetItemFirst(Item_list_t *lst);
+Item_t *listGetItemNext(Item_t *i);
+
+
+#define APP_STATE_OPENED 0x00000001
+#define APP_STATE_LOADED 0x00000002
+#define APP_STATE_READY 0x00000004
+#define APP_STATE_PROCESS 0x00000008
+#define APP_STATE_SLEEP 0x00000020
+#define APP_STATE_WAIT_UNLOAD 0x00000040
+
+typedef struct App {
+    
+	const char fn[MAX_FN_LEN];
+	const char icon[MAX_FN_LEN];
+	const char name[64];
+	const char ver[32];
+	const char ext[64];
+	const char *args;
+
+	uint32 id;
+	uint32 state;
+
+	Item_list_t *resources;
+	Item_list_t *elements;
+	mxml_node_t *xml;
+
+	void *thd;
+	void *lua;
+	GUI_Widget *body;
+
+} App_t;
+
+
+Item_list_t *GetAppList();
+App_t *GetAppById(int id);
+App_t *GetAppByFileName(const char *fn);
+App_t *GetAppByName(const char *name);
+App_t *GetAppByExtension(const char *ext);
+App_t *GetAppsByExtension(const char *ext, App_t **app_list, size_t count);
+App_t *GetCurApp();
+
+App_t *AddApp(const char *fn);
+int RemoveApp(App_t *app);
+
+int OpenApp(App_t *app, const char *args);
+int CloseApp(App_t *app, int unload);
+
+int SetAppSleep(App_t *app, int sleep);
+
+int LoadApp(App_t *app, int build);
+int UnLoadApp(App_t *app);
+void UnloadAppResources(Item_list_t *lst);
+
+int BuildAppBody(App_t *app);
+int AddToAppBody(App_t *app, GUI_Widget *widget);
+int RemoveFromAppBody(App_t *app, GUI_Widget *widget);
+
+int CallAppBodyEvent(App_t *app, char *event);
+void WaitApp(App_t *app);
+
+char *FindXmlAttr(char *name, mxml_node_t *node, char *defValue);
+GUI_Surface *getElementSurface(App_t *app, char *name);
+
+App_t *VoidToApp(void *ptr);
+
+
+#define EVENT_STATE_ACTIVE 0
+#define EVENT_STATE_SLEEP 1
+
+#define EVENT_ACTION_RENDER 0
+#define EVENT_ACTION_UPDATE 1
+
+#define EVENT_TYPE_INPUT 0
+#define EVENT_TYPE_VIDEO 1
+
+
+typedef struct Event {
+
+	const char *name;
+	uint32 id;
+	void *event;
+	void *param;
+	uint16 state;
+	uint16 type;
+       
+} Event_t;
+
+
+int InitEvents();
+void ShutdownEvents();
+
+Event_t *AddEventLua(const char *name, uint16 type, const char *event);
+int RemoveEvent(Event_t *e);
+
+int SetEventState(Event_t *e, uint16 state);
+
+Item_list_t *GetEventList();
+Event_t *GetEventById(uint32 id);
+Event_t *GetEventByName(const char *name);
+
+Event_t *VoidToEvent(void *ptr);
+
+
+typedef enum {
+	CMD_OK = 0,
+	CMD_NO_ARG,
+	CMD_ERROR,
+	CMD_NOT_EXISTS
+} CMD_RESULT;
+
+
+typedef enum {
+	CMD_TYPE_INTERNAL = 0,
+	CMD_TYPE_ELF,
+	CMD_TYPE_LUA,
+	CMD_TYPE_DSC,
+	CMD_TYPE_BIN,
+	CMD_TYPE_UKNOWN
+} CMD_TYPES;
+
+
+typedef struct Cmd {
+
+	const char *command;
+	const char *desc;
+	void *handler;
+	
+} Cmd_t;
+
+int CheckExtCmdType(const char *fn);
+
+Cmd_t *AddCmdLua(const char *cmd, const char *helpmsg, const char *handler);
+void RemoveCmd(Cmd_t *cmd);
+
+Item_list_t *GetCmdList();
+Cmd_t *GetCmdByName(const char *name);
+
+int ToggleConsole();
+int ConsoleIsVisible();
+int CreateConsolePTY();
+int DestroyConsolePTY();
+
+int SearchRoot(int pass_cnt);
+void vmu_draw_string(const char *str);
+int flashrom_get_region_only();
+int is_custom_bios();
+int is_no_syscalls();
+
+int FileSize(const char *fn);
+int FileExists(const char *fn);
+int DirExists(const char *fn);
+int PeriphExists(const char *name);
+
+int CopyFile(const char *src_fn, const char *dest_fn, int verbose);
+int CopyDirectory(const char *src_path, const char *dest_path, int verbose);
+
+const char *relativeFilePath(char *rel, char *file);
+int relativeFilePath_wb(char *buff, const char *rel, const char *file);
+char *getFilePath(const char *file);
+char *realpath(const char *path, char *resolved);
+int mkpath(const char *path);
+
+SDL_Surface *GetScreen();
+void SetScreen(SDL_Surface *new_screen);
+
+/* Always RGB565 */
+int GetVideoMode();
+void SetVideoMode(int mode);
+
+int GetScreenWidth();
+int GetScreenHeight();
+
+void SDL_DS_SetWindow(int width, int height);
+void SetScreenMode(int w, int h, float x, float y, float z);
+
+void SDL_DS_AllocScreenTexture(SDL_Surface *screen);
+void SDL_DS_FreeScreenTexture(int reset_pvr_memory);
+
+pvr_ptr_t *GetScreenTexture();
+void SetScreenTexture(pvr_ptr_t *txr);
+
+void SetScreenOpacity(float opacity);
+float GetScreenOpacity();
+void SetScreenFilter(int filter);
+void SetScreenVertex(float u1, float v1, float u2, float v2);
+
+void ScreenRotate(float x, float y, float z);
+void ScreenTranslate(float x, float y, float z);
+
+void ScreenFadeIn();
+void ScreenFadeOut();
+void ScreenFadeStop();
+
+void DisableScreen();
+void EnableScreen();
+int ScreenIsEnabled();
+void ScreenChanged();
+int ScreenUpdated();
+void ScreenWaitUpdate();
+
+void LockVideo();
+void UnlockVideo();
+int VideoIsLocked();
+int VideoMustLock();
+
+void LockInput();
+void UnlockInput();
+int InputIsLocked();
+int InputMustLock();
+
+void InitVideoHardware();
+int InitVideo(int w, int h, int bpp);
+void ShutdownVideo();
+
+void InitVideoThread();
+void ShutdownVideoThread();
+
+void ShowLogo();
+void HideLogo();
+
+void UpdateActiveMouseCursor();
+
+
+/* Ends C function definitions when using C++ */
+
+
+} /* end tolua module DS */
+
+
+/* Some code to be included in the generated .c file */

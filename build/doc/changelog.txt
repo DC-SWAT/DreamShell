@@ -1,0 +1,64 @@
+** DreamShell 4.0.0.RC.2 **
+	- http://www.dc-swat.ru/blog/dreamshell/875.html
+
+** DreamShell 4.0.0.RC.1 **
+	- http://www.dc-swat.ru/blog/dreamshell/28.html
+
+** DreamShell 4.0.0 Beta 4 **
+	- Reworked video rendering. Now he runs a separate process that allows not freeze all of the DS for work, or what the command, and the performance of this has contributed positively.
+	- Added support for external commands. Teams represent themselves separately compiled programs (ELF format), or lua scripts. Are they in the directory cmds.
+	- Updated library fatfs (to work with SD card) to the latest version, as well as improve its performance in the DS.
+	- Module sdiso now is not the module, now it is designed as external command. It also has been updated library fatfs and added support for long filenames.
+	- New command:
+		- bios 	- This command allows you to flash a BIOS (if you have a bios mod)
+		- gdrip - Team to rip GD-ROM to the SD card.
+		- hack 	- This command for hack LBA in a binary file. Maybe hack the binary directly in the ISO image.
+		- ffdev - Command to work with the SD card.
+		- dreameye - The command to save and delete photos from your camera dreameye.
+		- luac 	- Compiler lua scripts to bytecode.
+		- and other ...
+	- Just been handed down some internal commands to external, to facilitate a little core of DS.
+	- A little refined file manager. There were tooltips in the toolbar, as well as in the header shows the current path.
+	  Also it has built-in support firmware bios (when you click on the file extension .bios) and rip GD-ROM.
+	- Added an application to install DreamShell in bios (if you have a bios mod). Now you can load DreamShell directly without disc with bios and SD card!
+	- Added initial support network.
+	- Added module lwip, which is an alternative to built-in support network.
+	- Zip and bzip2 libraries were made in separate modules, to ease the DS core.
+	- Added a virtual keyboard, which works as a console and a GUI.
+	- Now L/R Shift of the joystick, you can call the console and the virtual keyboard.
+	- Speed up loading the DS core.
+	- Added the events mouseover and mouseout to GUI buttons.
+	- New features in the API.
+	- Lots of bugs fixes and optimizations. 
+	- A little refined boot DS with an SD card.
+	- Rather, there is still something that I forgot =)
+
+** DreamShell 4.0.0 Beta 3 **
+	- File System SD Card is now exempt from the limit of 8.3, you can use long file names and file names in Russian. And the library itself to work with the FAT has been updated. 
+	- File Manager is updated. Added new features work with files (archiving, extracting, renaming), and also supported more formats to open or load files, if necessary, load the appropriate module. 
+	- Updated DreamShell desktop. Added icon for the console. 
+	- Fixed modules mp3 and ogg, now when loaded the console commands appear to play these formats, as well as their support is implemented in the file manager. 
+	- Added a module from the VC/DC 0.2, but it is not yet working correctly, it's hoped in time for release, still need to defer to the next. 
+	- Added commands gzip and bzip2 for work with archives. 
+	- The cursor in the GUI can now be changed at any time. 
+	- Add new events in the xml <body> - "onopen", "onclose", "onunload". 
+	- Path in xml can now be relative. And as well as the possibility to set the working directory for DreamShell. 
+	- Now DreamShell can be loaded directly from SD card using the "DreamShell from SD Loader". 
+	- Added module "sdiso". When his loaded, added the command in the console "sdiso", which can run ISO images from SD cards, as this module is built into the file manager so you can start clicking on the ISO image file. 
+	- Some minor bug corrections and code optimization. New and modified some of the old API functions. <br />
+
+** DreamShell 4.0.0 Beta 2 **
+	- Added integrated support for SD Card. Now you can manage files from SD cards. Supported all the main features of the file system. But file name support only 8.3 format (temporarily). 
+	- Added the first application - very simple file manager.
+	- Added a new xml element <cardstack>
+	- Added loading screen (displayed when an application is loading).
+	- Added initial support for changing the cursor GUI (yet it can be modified only by replacing file the cursor /cd/gui/cursor.png).
+	- Fixed parsing of xml colors to elements <label> and <input>
+	- Fixed graphical glitches most of the GUI.
+	- The event "onload" (from xml <body>) of the application now works in another thread.
+	- Rewritten API functions work with the console commands, and added new features associated with the output of the console.
+	- Now the core DreamShell can be "put to sleep".
+	- Some minor bug corrections and code optimization.
+
+** DreamShell 4.0.0 Beta **
+	- First 4.0 release, new core.

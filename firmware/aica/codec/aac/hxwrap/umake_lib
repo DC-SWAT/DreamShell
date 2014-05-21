@@ -1,0 +1,135 @@
+# ***** BEGIN LICENSE BLOCK *****  
+# Source last modified: $Id: umake_lib,v 1.5 2005/06/27 21:19:01 gwright Exp $ 
+#   
+# Portions Copyright (c) 1995-2005 RealNetworks, Inc. All Rights Reserved.  
+#       
+# The contents of this file, and the files included with this file, 
+# are subject to the current version of the RealNetworks Public 
+# Source License (the "RPSL") available at 
+# http://www.helixcommunity.org/content/rpsl unless you have licensed 
+# the file under the current version of the RealNetworks Community 
+# Source License (the "RCSL") available at 
+# http://www.helixcommunity.org/content/rcsl, in which case the RCSL 
+# will apply. You may also obtain the license terms directly from 
+# RealNetworks.  You may not use this file except in compliance with 
+# the RPSL or, if you have a valid RCSL with RealNetworks applicable 
+# to this file, the RCSL.  Please see the applicable RPSL or RCSL for 
+# the rights, obligations and limitations governing use of the 
+# contents of the file. 
+#   
+# This file is part of the Helix DNA Technology. RealNetworks is the 
+# developer of the Original Code and owns the copyrights in the 
+# portions it created. 
+#   
+# This file, and the files included with this file, is distributed 
+# and made available on an 'AS IS' basis, WITHOUT WARRANTY OF ANY 
+# KIND, EITHER EXPRESS OR IMPLIED, AND REALNETWORKS HEREBY DISCLAIMS 
+# ALL SUCH WARRANTIES, INCLUDING WITHOUT LIMITATION, ANY WARRANTIES 
+# OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, QUIET 
+# ENJOYMENT OR NON-INFRINGEMENT. 
+#  
+# Technology Compatibility Kit Test Suite(s) Location:  
+#    http://www.helixcommunity.org/content/tck  
+#  
+# Contributor(s):  
+#   
+# ***** END LICENSE BLOCK *****  
+
+UmakefileVersion(2,2)
+
+project.AddSources("../aacdec.c", "../aactabs.c")
+
+if project.BuildOption('do_unit_tests'):
+      project.AddDefines('REL_ENABLE_ASSERTS')
+
+if ('HELIX_FEATURE_USE_IPP4' in project.defines):
+      project.AddSources("../ipp/buffers.c",
+                         "../ipp/decelmnt.c",
+                         "../ipp/dequant.c",
+                         "../ipp/filefmt.c",
+                         "../ipp/imdct.c",
+                         "../ipp/noiseless.c",
+                         "../ipp/pns.c",
+                         "../ipp/stproc.c",
+                         "../ipp/tns.c",
+                         "../real/bitstream.c"
+                         )
+
+      if('_LINUX' in project.defines):
+            project.AddIncludes('%s/include/' % GetSDKPath("ipp_aac_tools"))
+      else:
+            project.AddIncludes('\"%s\include\"' % GetSDKPath("ipp_aac_tools"))
+
+else:
+      project.AddSources("../real/bitstream.c",
+                         "../real/buffers.c",
+                         "../real/dct4.c",
+                         "../real/decelmnt.c",
+                         "../real/dequant.c", 
+                         "../real/fft.c",
+                         "../real/filefmt.c",
+                         "../real/huffman.c",
+                         "../real/hufftabs.c",
+                         "../real/imdct.c",
+                         "../real/noiseless.c", 
+                         "../real/pns.c",
+                         "../real/stproc.c",
+                         "../real/tns.c"
+                         )
+
+      # only enable this if target CPU has floating-point support (for super-small ROM image)
+      if('HELIX_CONFIG_AAC_GENERATE_TRIGTABS_FLOAT' in project.defines):
+            project.AddSources("../real/trigtabs_fltgen.c")
+      else:
+            project.AddSources("../real/trigtabs.c")
+
+
+# these can be omitted if SBR is not used (must #undef AAC_ENABLE_SBR in pub\aacdec.h)
+if ('HELIX_FEATURE_AUDIO_CODEC_AAC_SBR' in project.defines):
+      project.AddSources("../real/sbr.c",
+                   "../real/sbrfft.c",
+                   "../real/sbrfreq.c",
+                   "../real/sbrhfadj.c",
+                   "../real/sbrhfgen.c",
+                   "../real/sbrhuff.c",
+                   "../real/sbrimdct.c",
+                   "../real/sbrmath.c",
+                   "../real/sbrqmf.c",
+                   "../real/sbrside.c",
+                   "../real/sbrtabs.c",
+                   )
+
+if ('__ARMCC__' in project.defines):
+      # for compiling with ADS/RealView toolchain
+      project.AddSources("../real/asm/armads/sbrcov.s",
+                         "../real/asm/armads/sbrqmfak.s",
+                         "../real/asm/armads/sbrqmfsk.s"
+                         )
+elif (project.IsDefined('ARM') and project.IsDefined('__GCC32__') and project.IsDefined('_SYMBIAN')):
+      # for compiling with gcc for ARM
+      project.AddSources("../real/asm/armgcc_nosyms/sbrcov.s",
+                         "../real/asm/armgcc_nosyms/sbrqmfak.s",
+                         "../real/asm/armgcc_nosyms/sbrqmfsk.s"
+                         )
+elif ('ARM' in project.defines and '__GCC32__' in project.defines):
+      # for compiling with gcc for ARM
+      project.AddSources("../real/asm/armgcc/sbrcov.s",
+                         "../real/asm/armgcc/sbrqmfak.s",
+                         "../real/asm/armgcc/sbrqmfsk.s"
+                         )
+elif ('ARM' in project.defines and '_WINCE' in project.defines):
+      # for compiling with Embedded Visual C++ for ARM
+      project.AddSources("../real/asm/armwince/sbrcov.s",
+                         "../real/asm/armwince/sbrqmfak.s",
+                         "../real/asm/armwince/sbrqmfsk.s",
+                         "../real/asm/armwince/asmfunc.s",
+                         )
+
+project.AddIncludes("../pub")
+project.AddModuleIncludes("common/include")
+project.AddModuleIncludes("common/runtime/pub")
+
+LibraryTarget("aacdeclib")
+
+DependTarget()
+

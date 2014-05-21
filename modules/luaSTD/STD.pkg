@@ -1,0 +1,132 @@
+/* libluaKOS - KOS functions for DS lua by SWAT
+*/
+
+$#include <kos.h>
+$#include <sys/dirent.h>
+
+module std
+{
+
+
+void * malloc(size_t size);
+void * calloc(size_t nmemb, size_t size);
+void   free(void * ptr);
+void * realloc(void * ptr, size_t size);
+void * memalign(size_t alignment, size_t size);
+// void * valloc(size_t size);
+
+// void * memcpy4(void * dest,const void *src,size_t count);
+// void * memset4(void * s,unsigned long c,size_t count);
+// void * memcpy2(void * dest,const void *src,size_t count);
+// void * memset2(void * s,unsigned short c,size_t count);
+
+// void   bcopy(const void * src, void * dest, size_t count);
+// void   bzero(void *s, size_t n);
+// char * index(const char *p, int ch);
+void * memchr(const void *s, uint8 c, size_t n);
+int    memcmp(const void * cs,const void * ct,size_t count);
+void * memcpy(void * dest,const void *src,size_t count);
+void * memmove(void * dest,const void *src,size_t count);
+void * memset(void * s,int c,size_t count);
+// char * rindex(const char *p, int ch);
+char * strcat(char * dest, const char * src);
+char * strchr(const char * s, int c);
+int    strcmp(const char * cs,const char * ct);
+int    strcoll(const char *s1, const char *s2);
+char * strcpy(char * dest,const char *src);
+size_t strcspn(const char *s1, const char *s2);
+char * strdup(const char * src);
+// char * strerror(int errnum);
+int    stricmp(const char *cs, const char *ct);
+size_t strlen(const char * s);
+char * strncat(char *dest, const char *src, size_t count);
+char * strncpy(char * dest,const char *src, size_t count);
+int    strnicmp(const char *cs, const char *ct, int cnt);
+// int    strncmp(const char * cs,const char * ct,size_t count);
+// size_t strnlen(const char * s, size_t count);
+char * strpbrk(const char * cs,const char * ct);
+char * strrchr(const char * s, int c);
+char * strsep(char **stringp, const char *delim);
+size_t strspn(const char *s, const char *accept);
+char * strstr(const char * s1,const char * s2);
+char * strtok(char * s,const char * ct);
+// size_t strxfrm(char *s1, const char *s2, size_t n);
+long   strtol(const char * nptr, char ** endptr, int base);
+
+   
+#define	FOPEN_MAX 20   
+#define	FILENAME_MAX 256
+#define BUFSIZ 1024
+#define	SEEK_SET 0
+#define	SEEK_CUR 1	
+#define	SEEK_END 2	
+#define EOF -1
+
+
+typedef struct _FILE_t FILE;
+typedef off_t fpos_t;
+
+int      fclose(FILE *);
+FILE    *fdopen(int, const char *);
+int      feof(FILE *);
+int      ferror(FILE *);
+int      fflush(FILE *);
+int      fgetc(FILE *);
+//int      getc(FILE *);
+int      fgetpos(FILE *, fpos_t *);
+char    *fgets(char *, int, FILE *);
+int      fileno(FILE *);
+FILE    *fopen(const char *, const char *);
+int      fputc(int, FILE *);
+int      fputs(const char *, FILE *);
+size_t   fread(void *, size_t, size_t, FILE *);
+FILE    *freopen(const char *, const char *, FILE *);
+int      fseek(FILE *, long int, int);
+int      fseeko(FILE *, off_t, int);
+int      fsetpos(FILE *, const fpos_t *);
+long int ftell(FILE *);
+off_t    ftello(FILE *);
+size_t   fwrite(const void *, size_t, size_t, FILE *);
+//int      getc(FILE *);
+//int      getchar(void);
+char    *gets(char *);
+int      getw(FILE *);
+//int      putc(int, FILE *);
+int      putw(int, FILE *);
+void     rewind(FILE *);
+void     setbuf(FILE *, char *);
+int      setvbuf(FILE *, char *, int, size_t);
+// char    *tempnam(const char *, const char *);
+// FILE    *tmpfile(void);
+// char    *tmpnam(char *);
+int      ungetc(int, FILE *);
+// int      vfprintf(FILE *, const char *, va_list);
+// int      vprintf(const char *, va_list);
+// int      vsnprintf(char *, size_t, const char *, va_list);
+// int      vsprintf(char *, const char *, va_list);
+
+
+/* random number functions */
+#define RAND_MAX 0x7fffffff
+
+#define EXIT_FAILURE	1	/* Failing exit status. */
+#define EXIT_SUCCESS	0	/* Successful exit status. */
+
+double   atof(const char *);
+int      atoi(const char *);
+long     atol(const char *);
+int      rand(void);
+int      rand_r(unsigned int *);
+void     srand(unsigned int);
+double   strtod(const char *, char **);
+long     strtol(const char *, char **, int);
+unsigned long  strtoul(const char *, char **, int);
+
+
+/* Ends C function definitions when using C++ */
+
+
+} /* end tolua module DS */
+
+
+/* Some code to be included in the generated .c file */

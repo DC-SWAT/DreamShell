@@ -1,0 +1,13 @@
+h264, mpeg2video, mpeg4, msmpeg4v1, ape,
+mpeg1video, ac3, eac3, vp6, vp5, vp3,
+aac, eac3, flac, flic, mjpeg, mjpegb,
+adpcm_4xm, adpcm_adx, mpegvideo, theora, dca,
+flac, h261 , flv, cinepak, bink, truehd,
+msmpeg4v2, msmpeg4v3, h263, wmv1, wmv2, wmv3,
+pcm_s16be, pcm_s16le, pcm_u16be, pcm_u16le,
+ape, adpcm_ms, avi, ac3, mp3, mpegts, mpegvideo,
+matroska, h264, asf, m4v, aac, mjpeg,
+h261, pcm_u16le, eac3, ape, aiff, asf, ogg,
+pcm_s16be, pcm_s16le, pcm_u16be, voc, eac3, rm,
+flac, flic, dts, h263, flv, avisynth,
+dv, truehd, vc1, bink, nc, ape

@@ -1,0 +1,14 @@
+aica_init
+__aica_share
+__aica_call
+aica_clear_handler
+aica_clear_handler_table
+aica_update_fparams_table
+aica_find_id
+aica_get_func_from_id
+aica_get_funcname_from_id
+aica_upload
+aica_download
+aica_interrupt_init
+aica_interrupt
+aica_exit

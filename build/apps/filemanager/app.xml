@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="File Manager" version="0.6.3" icon="../../gui/icons/normal/file_manager.png">
+	<resources>
+		<module src="../../modules/tolua.klf" />
+		<module src="../../modules/luaDS.klf" />
+		<module src="../../modules/luaGUI.klf" />
+		<script type="text/lua" src="./lua/main.lua" />
+		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="16" name="arial" />
+		<image src="./images/toolbar/exec_norm.png" name="icon-exec" />
+		<image src="./images/toolbar/exec_highlight.png" name="icon-exec-high" />
+		<image src="./images/toolbar/copy_norm.png" name="icon-copy" />
+		<image src="./images/toolbar/copy_highlight.png" name="icon-copy-high" />
+		<image src="./images/toolbar/delete_norm.png" name="icon-delete" />
+		<image src="./images/toolbar/delete_highlight.png" name="icon-delete-high" />
+		<image src="./images/toolbar/rename_norm.png" name="icon-rename" />
+		<image src="./images/toolbar/rename_highlight.png" name="icon-rename-high" />
+		<image src="./images/toolbar/zip_norm.png" name="icon-zip" />
+		<image src="./images/toolbar/zip_highlight.png" name="icon-zip-high" />
+		<image src="./images/toolbar/cd_norm.png" name="icon-cd" />
+		<image src="./images/toolbar/cd_highlight.png" name="icon-cd-high" />
+		<image src="./images/toolbar/config_norm.png" name="icon-config" />
+		<image src="./images/toolbar/config_highlight.png" name="icon-config-high" />
+		<image src="./images/toolbar/exit_norm.png" name="icon-exit" />
+		<image src="./images/toolbar/exit_highlight.png" name="icon-exit-high" />
+		<image src="../../gui/icons/normal/ok/32x32.png" name="but-ok" />
+		<image src="../../gui/icons/normal/cancel/32x32.png" name="but-cancel" />
+		<image src="../../gui/icons/highlight/ok/32x32.png" name="but-ok-high" />
+		<image src="../../gui/icons/highlight/cancel/32x32.png" name="but-cancel-high" />
+		<surface width="640" height="480" name="background">
+			<fill x="0" y="0" width="640" height="480" color="#99CBDB" />
+			<fill x="10" y="25" width="620" height="455" color="#BBBBBB" />
+		</surface>
+		<surface width="305" height="110" name="white-bg">
+			<fill x="0" y="0" width="305" height="110" color="#FFFFFF" />
+		</surface>
+		<surface width="305" height="110" name="blue-bg">
+			<fill x="0" y="0" width="305" height="110" color="#EEFBFF" />
+		</surface>
+		<surface width="320" height="150" name="modal-bg" alpha="150">
+			<fill x="0" y="0" width="320" height="150" color="#EEEEEE" />
+		</surface>
+		<surface width="310" height="30" name="input-normal">
+			<fill x="0" y="0" width="310" height="30" color="#444444" />
+			<fill x="1" y="1" width="308" height="28" color="#F5F5F5" />
+		</surface>
+		<surface width="310" height="30" name="input-focus">
+			<fill x="0" y="0" width="310" height="30" color="#666666" />
+			<fill x="1" y="1" width="308" height="28" color="#D9F5FF" />
+		</surface>
+		<surface width="590" height="28" name="item-normal">
+			<fill x="0" y="0" width="590" height="1" color="#FFFFFF" />
+			<fill x="0" y="1" width="590" height="26" color="#F3F3F3" />
+			<fill x="0" y="27" width="590" height="1" color="#CCCCCC" />
+		</surface>
+		<surface width="590" height="28" name="item-focus">
+			<fill x="0" y="0" width="590" height="28" color="#DDDDDD" />
+		</surface>
+		<surface width="590" height="28" name="item-selected">
+			<fill x="0" y="0" width="590" height="28" color="#FFBBBB" />
+		</surface>
+		<surface width="20" height="20" name="sbb-normal">
+			<fill x="0" y="0" width="20" height="20" color="#BBBBBB" />
+			<fill x="1" y="0" width="19" height="20" color="#CCCCCC" />
+		</surface>
+		<surface width="20" height="20" name="sbb-focus">
+			<fill x="0" y="0" width="20" height="20" color="#BBBBBB" />
+			<fill x="1" y="0" width="19" height="20" color="#DDDDDD" />
+		</surface>
+		<surface width="20" height="20" name="sbb-disabled">
+			<fill x="0" y="0" width="20" height="20" color="#BBBBBB" />
+			<fill x="1" y="0" width="19" height="20" color="#AAAAAA" />
+		</surface>
+		<surface width="20" height="40" name="sb-knob">
+			<fill x="0" y="0" width="20" height="40" color="#CCCCCC" />
+			<fill x="1" y="1" width="19" height="38" color="#F3F3F3" />
+		</surface>
+		<surface width="20" height="180" name="sb-back">
+			<fill x="0" y="0" width="20" height="180" color="#EEEEEE" />
+			<fill x="0" y="0" width="1" height="180" color="#CCCCCC" />
+		</surface>
+		<surface width="20" height="405" name="sb-back-big">
+			<fill x="0" y="0" width="20" height="405" color="#EEEEEE" />
+			<fill x="0" y="0" width="1" height="405" color="#CCCCCC" />
+		</surface>
+	</resources>
+	<body x="0" y="0" width="640" height="480" background="background" onload="FileManager:Initialize()" onunload="FileManager:Shutdown()">
+		<label width="340" height="25" x="20" y="2" font="arial" color="#000000" name="title" text="File Manager v0.6" align="left" />
+		<panel x="365" y="2" width="280" height="22">
+			<input type="button" 
+					onclick="FileManager:openFile()" 
+					onmouseover="FileManager:tooltip('Open selected file')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-exec" 
+					highlight="icon-exec-high" 
+					pressed="icon-exec" 
+					x="10" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="FileManager:toolbarArchive()" 
+					onmouseover="FileManager:tooltip('Exctract/compress selected file')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-zip" 
+					highlight="icon-zip-high" 
+					pressed="icon-zip" 
+					x="38" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="FileManager:toolbarCopy()" 
+					onmouseover="FileManager:tooltip('Copy selected file')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-copy" 
+					highlight="icon-copy-high" 
+					pressed="icon-copy" 
+					x="66" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="FileManager:toolbarRename()" 
+					onmouseover="FileManager:tooltip('Rename selected file')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-rename" 
+					highlight="icon-rename-high" 
+					pressed="icon-rename" 
+					x="94" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="FileManager:toolbarDelete()" 
+					onmouseover="FileManager:tooltip('Delete selected file')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-delete" 
+					highlight="icon-delete-high" 
+					pressed="icon-delete" 
+					x="122" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="FileManager:toolbarMountISO()" 
+					onmouseover="FileManager:tooltip('Mount selected ISO file as VFS')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-cd" 
+					highlight="icon-cd-high" 
+					pressed="icon-cd" 
+					x="150" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="FileManager:toolbarModeSwitch()" 
+					onmouseover="FileManager:tooltip('Switch to dual or single window mode')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-config" 
+					highlight="icon-config-high" 
+					pressed="icon-config" 
+					x="211" y="0" width="22" height="22" />
+			<input type="button" 
+					onclick="console:app -o -n Main" 
+					onmouseover="FileManager:tooltip('Exit from file manager')" 
+					onmouseout="FileManager:tooltip(nil)" 
+					normal="icon-exit" 
+					highlight="icon-exit-high" 
+					pressed="icon-exit" 
+					x="239" y="0" width="22" height="22" />
+		</panel>
+		<filemanager path="/" background="white-bg" name="filemgr-top" 
+				width="610" height="220" x="15" y="30"
+				item_normal="item-normal" 
+				item_highlight="item-focus" 
+				item_pressed="item-normal" 
+				item_disabled="item-normal"
+				item_font="arial" 
+				item_font_color="#000000"
+				sb_knob="sb-knob" 
+				sb_back="sb-back" 
+				sbbup_normal="sbb-normal" 
+				sbbup_highlight="sbb-focus" 
+				sbbup_pressed="sbb-normal" 
+				sbbup_disabled="sbb-disabled"
+				sbbdown_normal="sbb-normal" 
+				sbbdown_highlight="sbb-focus" 
+				sbbdown_pressed="sbb-normal" 
+				sbbdown_disabled="sbb-disabled" 
+				onclick="FileManagerItemClickTop" 
+				oncontextclick="FileManagerItemContextClickTop" 
+				onmouseover="FileManagerItemMouseover" />
+		<filemanager path="/" background="white-bg" name="filemgr-bottom" 
+				width="610" height="220" x="15" y="255"
+				item_normal="item-normal" 
+				item_highlight="item-focus" 
+				item_pressed="item-normal" 
+				item_disabled="item-normal"
+				item_font="arial" 
+				item_font_color="#000000"
+				sb_knob="sb-knob" 
+				sb_back="sb-back" 
+				sbbup_normal="sbb-normal" 
+				sbbup_highlight="sbb-focus" 
+				sbbup_pressed="sbb-normal" 
+				sbbup_disabled="sbb-disabled"
+				sbbdown_normal="sbb-normal" 
+				sbbdown_highlight="sbb-focus" 
+				sbbdown_pressed="sbb-normal" 
+				sbbdown_disabled="sbb-disabled" 
+				onclick="FileManagerItemClickBottom"
+				oncontextclick="FileManagerItemContextClickBottom"
+				onmouseover="FileManagerItemMouseover" />
+		<panel x="160" y="165" width="320" height="150" name="modal-win" background="modal-bg"> 
+			<label width="310" height="45" x="5" y="15" font="arial" color="#000000" name="modal-label" text="Please wait..." />
+			<input type="text" font="arial" fontcolor="#000000" size="20" x="5" y="55" width="310" height="30" 
+					name="modal-input" normal="input-normal" highlight="input-normal" focus="input-focus" />
+			<input type="button" 
+					onclick="FileManager:ModalClick(true);" 
+					normal="but-ok" 
+					highlight="but-ok-high" 
+					pressed="but-ok" 
+					x="110" y="116" width="32" height="32" name="modal-ok" />
+			<input type="button" 
+					onclick="FileManager:ModalClick(false)" 
+					normal="but-cancel" 
+					highlight="but-cancel-high" 
+					pressed="but-cancel" 
+					x="190" y="115" width="32" height="32" name="modal-cancel" />
+		</panel>
+	</body>
+</app>

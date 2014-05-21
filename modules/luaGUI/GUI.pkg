@@ -1,0 +1,349 @@
+/*
+	luaGUI
+	by SWAT
+*/
+$
+$#include "ds.h"
+$#include "lua/tolua.h"
+$
+$
+$
+$GUI_Object *GUI_AnyToObject(void *type) { return (GUI_Object *)type; }
+$GUI_Widget *GUI_AnyToWidget(void *type) { return (GUI_Widget *)type; }
+$GUI_ListBox *GUI_AnyToListbox(void *type) { return (GUI_ListBox *)type; }
+$GUI_Font *GUI_AnyToFont(void *type) { return (GUI_Font *)type; }
+$GUI_Surface *GUI_AnyToSurface(void *type) { return (GUI_Surface *)type; }
+$
+$
+$void GUI_Free(void *ptr) { GUI_ObjectDecRef((GUI_Object *) ptr); }
+$
+$
+	
+module GUI
+{
+
+
+/* flags */
+
+#define WIDGET_PRESSED         0x00000001
+#define WIDGET_INSIDE          0x00000002
+#define WIDGET_HIDDEN          0x00000004
+#define WIDGET_CHANGED         0x00000008
+#define WIDGET_TRANSPARENT     0x00000010
+#define WIDGET_HAS_FOCUS       0x00000020
+#define WIDGET_WANTS_FOCUS     0x00000040
+#define WIDGET_TURNED_ON       0x00000080
+
+#define WIDGET_ALIGN_MASK      0x00000F00
+#define WIDGET_HORIZ_MASK      0x00000300
+#define WIDGET_HORIZ_CENTER    0x00000000
+#define WIDGET_HORIZ_RIGHT     0x00000100
+#define WIDGET_HORIZ_LEFT      0x00000200
+#define WIDGET_HORIZ_STRETCH   0x00000300
+#define WIDGET_VERT_MASK       0x00000C00
+#define WIDGET_VERT_CENTER     0x00000000
+#define WIDGET_VERT_TOP        0x00000400
+#define WIDGET_VERT_BOTTOM     0x00000800
+#define WIDGET_VERT_STRETCH    0x00000C00
+
+#define WIDGET_DISABLED        0x00001000
+
+#define WIDGET_TYPE_OTHER 			0
+#define WIDGET_TYPE_BUTTON 			1
+#define WIDGET_TYPE_SCROLLBAR 		2
+#define WIDGET_TYPE_CONTAINER 		3
+#define WIDGET_TYPE_CARDSTACK 		4
+#define WIDGET_TYPE_TEXTENTRY 		5
+
+
+/* GUI API */
+
+void GUI_SetScreen(GUI_Screen *);
+GUI_Screen *GUI_GetScreen(void);
+
+int GUI_ClipRect(SDL_Rect *sr, SDL_Rect *dr, const SDL_Rect *clip);
+
+
+/* Object API */
+
+GUI_Object *GUI_ObjectCreate(const char *s);
+const char *GUI_ObjectGetName(GUI_Object *object);
+void GUI_ObjectSetName(GUI_Object *object, const char *s);
+void GUI_ObjectIncRef(GUI_Object *object);
+int GUI_ObjectDecRef(GUI_Object *object);
+int GUI_ObjectGetRef(GUI_Object *object);
+int GUI_ObjectKeep(GUI_Object **target, GUI_Object *source);
+//int GUI_ObjectTrash(GUI_Object *object);
+//void GUI_ClearTrash();
+
+/* Surface API */
+void GUI_SurfaceSaveBMP(GUI_Surface *src, const char *filename);
+GUI_Surface *GUI_SurfaceLoad(const char *fn);
+GUI_Surface *GUI_SurfaceLoad_Rect(const char *fn, SDL_Rect *selection);
+GUI_Surface *GUI_SurfaceCreate(const char *aname, int f, int w, int h, int d, int rm, int gm, int bm, int am);
+GUI_Surface *GUI_SurfaceFrom(const char *aname, SDL_Surface *src);
+void GUI_SurfaceBlit(GUI_Surface *src, SDL_Rect *src_r, GUI_Surface *dst, SDL_Rect *dst_r);
+void GUI_SurfaceFill(GUI_Surface *surface, SDL_Rect *r, Uint32 c);
+void GUI_SurfaceUpdateRects(GUI_Surface *surface, int n, SDL_Rect *rects);
+void GUI_SurfaceUpdateRect(GUI_Surface *surface, int x, int y, int w, int h);
+int GUI_SurfaceGetWidth(GUI_Surface *surface);
+int GUI_SurfaceGetHeight(GUI_Surface *surface);
+Uint32 GUI_SurfaceMapRGB(GUI_Surface *surface, int r, int g, int b);
+Uint32 GUI_SurfaceMapRGBA(GUI_Surface *surface, int r, int g, int b, int a);
+//void GUI_SurfaceFlip(GUI_Surface *src);
+SDL_Surface *GUI_SurfaceGet(GUI_Surface *surface);
+void GUI_SurfaceSetAlpha(GUI_Surface *surface, Uint32 flag, Uint8 alpha);
+
+/* Font API */
+
+GUI_Surface *GUI_FontRenderFast(GUI_Font *font, const char *s, SDL_Color fg);
+GUI_Surface *GUI_FontRenderQuality(GUI_Font *font, const char *s, SDL_Color fg);
+void GUI_FontDrawText(GUI_Font *font, GUI_Surface *surface, const char *s, int x, int y);
+SDL_Rect GUI_FontGetTextSize(GUI_Font *font, const char *s);
+
+/* Widget API */
+
+void GUI_WidgetUpdate(GUI_Widget *widget, int force);
+void GUI_WidgetDraw(GUI_Widget *widget, GUI_Surface *image, const SDL_Rect *sr, const SDL_Rect *dr);
+void GUI_WidgetErase(GUI_Widget *widget, const SDL_Rect *dr);
+void GUI_WidgetFill(GUI_Widget *widget, const SDL_Rect *dr, SDL_Color c);
+int GUI_WidgetEvent(GUI_Widget *widget, const SDL_Event *event, int xoffset, int yoffset);
+void GUI_WidgetClicked(GUI_Widget *widget, int x, int y);
+void GUI_WidgetContextClicked(GUI_Widget *widget, int x, int y);
+void GUI_WidgetSetAlign(GUI_Widget *widget, int align);
+void GUI_WidgetMarkChanged(GUI_Widget *widget);
+void GUI_WidgetSetTransparent(GUI_Widget *widget, int trans);
+void GUI_WidgetSetEnabled(GUI_Widget *widget, int flag);
+void GUI_WidgetTileImage(GUI_Widget *widget, GUI_Surface *surface, const SDL_Rect *area, int x_offset, int y_offset);
+void GUI_WidgetSetFlags(GUI_Widget *widget, int mask);
+void GUI_WidgetClearFlags(GUI_Widget *widget, int mask);
+void GUI_WidgetSetState(GUI_Widget *widget, int state);
+int GUI_WidgetGetState(GUI_Widget *widget);
+SDL_Rect GUI_WidgetGetArea(GUI_Widget *widget);
+void GUI_WidgetSetPosition(GUI_Widget *widget, int x, int y);
+void GUI_WidgetSetSize(GUI_Widget *widget, int w, int h);
+int GUI_WidgetGetType(GUI_Widget *widget);
+
+/* Container API */
+
+int GUI_ContainerContains(GUI_Widget *container, GUI_Widget *widget);
+void GUI_ContainerAdd(GUI_Widget *container, GUI_Widget *widget);
+void GUI_ContainerRemove(GUI_Widget *container, GUI_Widget *widget);
+void GUI_ContainerRemoveAll(GUI_Widget *container);
+int GUI_ContainerGetCount(GUI_Widget *container);
+void GUI_ContainerRemoveAll(GUI_Widget *container);
+GUI_Widget *GUI_ContainerGetChild(GUI_Widget *container, int index);
+void GUI_ContainerSetEnabled(GUI_Widget *container, int flag);
+int GUI_ContainerIsVisibleWidget(GUI_Widget *container, GUI_Widget *widget);
+
+/* Screen API */
+
+void GUI_ScreenSetContents(GUI_Screen *screen, GUI_Widget *contents);
+void GUI_ScreenSetBackground(GUI_Screen *screen, GUI_Surface *surface);
+void GUI_ScreenSetFocusWidget(GUI_Screen *screen, GUI_Widget *item);
+void GUI_ScreenClearFocusWidget(GUI_Screen *screen);
+void GUI_ScreenSetBackgroundColor(GUI_Screen *screen, SDL_Color c);
+GUI_Widget *GUI_ScreenGetFocusWidget(GUI_Screen *screen);
+void GUI_ScreenSetJoySelectState(GUI_Screen *screen, int value);
+void GUI_ScreenEvent(GUI_Screen *screen, const SDL_Event *event, 
+                     int xoffset, int yoffset); 
+void GUI_ScreenUpdate(GUI_Screen *screen, int force); 
+void GUI_ScreenDoUpdate(GUI_Screen *screen, int force); 
+void GUI_ScreenDraw(GUI_Screen *screen, GUI_Surface *image, 
+                    const SDL_Rect *src_r, const SDL_Rect *dst_r);
+void GUI_ScreenFill(GUI_Screen *screen, const SDL_Rect *dst_r, SDL_Color c);
+void GUI_ScreenErase(GUI_Screen *screen, const SDL_Rect *area); 
+GUI_Surface *GUI_ScreenGetSurface(GUI_Screen *screen);
+
+
+/* Button Widget */
+
+GUI_Widget *GUI_ButtonCreate(const char *name, int x, int y, int w, int h);
+int GUI_ButtonCheck(GUI_Widget *widget);
+void GUI_ButtonSetNormalImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ButtonSetHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ButtonSetPressedImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ButtonSetDisabledImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ButtonSetCaption(GUI_Widget *widget, GUI_Widget *caption);
+void GUI_ButtonSetCaption2(GUI_Widget *widget, GUI_Widget *caption);
+void GUI_ButtonSetClick(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_ButtonSetContextClick(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_ButtonSetMouseover(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_ButtonSetMouseout(GUI_Widget *widget, GUI_Callback *callback);
+
+/* Callback API */
+
+/* GUI_Callback *GUI_CallbackCreate(GUI_CallbackFunction *function, GUI_CallbackFunction *freefunc, void *data); */
+GUI_Callback *GUI_LuaCallbackCreate(int appId, const char *luastring);
+void GUI_CallbackCall(GUI_Callback *callback);
+
+/* FastFont object */
+
+GUI_Font *GUI_FontLoadBitmap(char *fn);
+
+/* TTF Font object */
+
+GUI_Font *GUI_FontLoadTrueType(char *fn, int size);
+
+/* Panel Widget API */
+
+GUI_Widget *GUI_PanelCreate(const char *name, int x, int y, int w, int h);
+int GUI_PanelCheck(GUI_Widget *widget);
+void GUI_PanelSetBackground(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_PanelSetBackgroundCenter(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_PanelSetBackgroundColor(GUI_Widget *widget, SDL_Color c);
+void GUI_PanelSetXOffset(GUI_Widget *widget, int value);
+void GUI_PanelSetYOffset(GUI_Widget *widget, int value);
+int GUI_PanelGetXOffset(GUI_Widget *widget);
+int GUI_PanelGetYOffset(GUI_Widget *widget);
+void GUI_PanelSetLayout(GUI_Widget *widget, GUI_Layout *layout);
+
+/* VBox Layout object */
+
+GUI_Layout *GUI_VBoxLayoutCreate(void);
+
+/* ToggleButton Widget API */
+
+GUI_Widget *GUI_ToggleButtonCreate(const char *name, int x, int y, int w, int h);
+int GUI_ToggleButtonCheck(GUI_Widget *widget);
+void GUI_ToggleButtonSetOnNormalImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ToggleButtonSetOnHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ToggleButtonSetOffNormalImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ToggleButtonSetOffHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_ToggleButtonSetCaption(GUI_Widget *widget, GUI_Widget *caption);
+void GUI_ToggleButtonSetClick(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_ToggleButtonSetContextClick(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_ToggleButtonSetMouseover(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_ToggleButtonSetMouseout(GUI_Widget *widget, GUI_Callback *callback);
+
+/* Label Widget API */
+
+GUI_Widget *GUI_LabelCreate(const char *name, int x, int y, int w, int h, GUI_Font *font, const char *text);
+int GUI_LabelCheck(GUI_Widget *widget);
+void GUI_LabelSetFont(GUI_Widget *widget, GUI_Font *font);
+void GUI_LabelSetTextColor(GUI_Widget *widget, int r, int g, int b);
+void GUI_LabelSetText(GUI_Widget *widget, const char *text);
+
+/* Picture Widget API */
+
+GUI_Widget *GUI_PictureCreate(const char *name, int x, int y, int w, int h, GUI_Surface *image);
+int GUI_PictureCheck(GUI_Widget *widget);
+void GUI_PictureSetImage(GUI_Widget *widget, GUI_Surface *image);
+void GUI_PictureSetCaption(GUI_Widget *widget, GUI_Widget *caption);
+
+/* ProgressBar widget API */
+
+GUI_Widget *GUI_ProgressBarCreate(const char *name, int x, int y, int w, int h);
+int GUI_ProgressBarCheck(GUI_Widget *widget);
+void GUI_ProgressBarSetImage1(GUI_Widget *widget, GUI_Surface *image);
+void GUI_ProgressBarSetImage2(GUI_Widget *widget, GUI_Surface *image);
+void GUI_ProgressBarSetPosition(GUI_Widget *widget, double value);
+
+/* ScrollBar widget API */
+
+GUI_Widget *GUI_ScrollBarCreate(const char *name, int x, int y, int w, int h);
+int GUI_ScrollBarCheck(GUI_Widget *widget);
+void GUI_ScrollBarSetKnobImage(GUI_Widget *widget, GUI_Surface *image);
+GUI_Surface *GUI_ScrollBarGetKnobImage(GUI_Widget *widget);
+void GUI_ScrollBarSetBackgroundImage(GUI_Widget *widget, GUI_Surface *image);
+void GUI_ScrollBarSetPosition(GUI_Widget *widget, int value); // Deprecated
+int GUI_ScrollBarGetPosition(GUI_Widget *widget); // Deprecated
+void GUI_ScrollBarSetMovedCallback(GUI_Widget *widget, GUI_Callback *callback);
+int GUI_ScrollBarGetHorizontalPosition(GUI_Widget *widget);
+int GUI_ScrollBarGetVerticalPosition(GUI_Widget *widget);
+void GUI_ScrollBarSetHorizontalPosition(GUI_Widget *widget, int value);
+void GUI_ScrollBarSetVerticalPosition(GUI_Widget *widget, int value);
+
+/* CardStack widget API */
+
+GUI_Widget *GUI_CardStackCreate(const char *name, int x, int y, int w, int h);
+int GUI_CardStackCheck(GUI_Widget *widget);
+void GUI_CardStackSetBackground(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_CardStackSetBackgroundColor(GUI_Widget *widget, SDL_Color c);
+void GUI_CardStackNext(GUI_Widget *widget);
+void GUI_CardStackPrev(GUI_Widget *widget);
+void GUI_CardStackShowIndex(GUI_Widget *widget, int index);
+void GUI_CardStackShow(GUI_Widget *widget, const char *name);
+int GUI_CardStackGetIndex(GUI_Widget *widget);
+
+/* TextEntry widget API */
+
+GUI_Widget *GUI_TextEntryCreate(const char *name, int x, int y, int w, int h, GUI_Font *font, int size);
+int GUI_TextEntryCheck(GUI_Widget *widget);
+void GUI_TextEntrySetFont(GUI_Widget *widget, GUI_Font *font);
+void GUI_TextEntrySetTextColor(GUI_Widget *widget, int r, int g, int b);
+void GUI_TextEntrySetText(GUI_Widget *widget, const char *text);
+const char *GUI_TextEntryGetText(GUI_Widget *widget);
+void GUI_TextEntrySetNormalImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_TextEntrySetHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_TextEntrySetFocusImage(GUI_Widget *widget, GUI_Surface *surface);
+void GUI_TextEntrySetFocusCallback(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_TextEntrySetUnfocusCallback(GUI_Widget *widget, GUI_Callback *callback);
+
+
+/* ListBox Widget API */ 
+GUI_ListBox *GUI_CreateListBox(const char *aname, int x, int y, int w, int h, GUI_Font *afont);
+int GUI_ListBoxGetRowCount(GUI_ListBox *list);
+int GUI_ListBoxGetRowSize(GUI_ListBox *list, int row);
+int GUI_ListBoxGetColumnCount(GUI_ListBox *list);
+int GUI_ListBoxGetColumnSize(GUI_ListBox *list, int column);
+void GUI_ListBoxSetFont(GUI_ListBox *list, GUI_Font *afont);
+void GUI_ListBoxSetTextColor(GUI_ListBox *list, int r, int g, int b);
+void GUI_ListBoxDrawCell(GUI_ListBox *list, int column, int row, const SDL_Rect *r);
+void GUI_ListBoxAddItem(GUI_ListBox *list, const char *s);
+void GUI_ListBoxRemoveItem(GUI_ListBox *list, int n);
+
+
+/* RTF Widget API */ 
+GUI_Widget *GUI_RTF_Load(const char *name, const char *file, const char *default_font, int x, int y, int w, int h);
+GUI_Widget *GUI_RTF_LoadRW(const char *name, SDL_RWops *src, int freesrc, const char *default_font, int x, int y, int w, int h);
+int GUI_RTF_GetFullHeight(GUI_Widget *widget);
+void GUI_RTF_SetOffset(GUI_Widget *widget, int value);
+void GUI_RTF_SetBgColor(GUI_Widget *widget, int r, int g, int b);
+int GUI_RTF_SetFont(GUI_Widget *widget, RTF_FontFamily family, const char *file);
+const char *GUI_RTF_GetTitle(GUI_Widget *widget);
+const char *GUI_RTF_GetSubject(GUI_Widget *widget);
+const char *GUI_RTF_GetAuthor(GUI_Widget *widget);
+
+
+/* FileManager Widget API */
+GUI_Widget *GUI_FileManagerCreate(const char *name, const char *path, int x, int y, int w, int h);
+void GUI_FileManagerResize(GUI_Widget *widget, int w, int h);
+void GUI_FileManagerSetPath(GUI_Widget *widget, const char *path);
+const char *GUI_FileManagerGetPath(GUI_Widget *widget);
+void GUI_FileManagerChangeDir(GUI_Widget *widget, const char *name, int size);
+void GUI_FileManagerScan(GUI_Widget *widget);
+void GUI_FileManagerAddItem(GUI_Widget *widget, const char *name, int size, int time, int attr);
+GUI_Widget *GUI_FileManagerGetItem(GUI_Widget *widget, int index);
+GUI_Widget *GUI_FileManagerGetItemPanel(GUI_Widget *widget);
+void GUI_FileManagerSetItemSurfaces(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+void GUI_FileManagerSetItemLabel(GUI_Widget *widget, GUI_Font *font, int r, int g, int b);
+void GUI_FileManagerSetItemSize(GUI_Widget *widget, const SDL_Rect *item_r);
+/** Not support by lua =(
+void GUI_FileManagerSetItemClick(GUI_Widget *widget, GUI_CallbackFunction *func);
+void GUI_FileManagerSetItemContextClick(GUI_Widget *widget, GUI_CallbackFunction *func);
+void GUI_FileManagerSetItemMouseover(GUI_Widget *widget, GUI_CallbackFunction *func);
+void GUI_FileManagerSetItemMouseout(GUI_Widget *widget, GUI_CallbackFunction *func);
+*/
+void GUI_FileManagerSetScrollbar(GUI_Widget *widget, GUI_Surface *knob, GUI_Surface *background);
+void GUI_FileManagerSetScrollbarButtonUp(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+void GUI_FileManagerSetScrollbarButtonDown(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+int GUI_FileManagerEvent(GUI_Widget *widget, const SDL_Event *event, int xoffset, int yoffset);
+void GUI_FileManagerUpdate(GUI_Widget *widget, int force);
+
+
+GUI_Object *GUI_AnyToObject(void *type);
+GUI_Widget *GUI_AnyToWidget(void *type);
+GUI_ListBox *GUI_AnyToListbox(void *type);
+GUI_Font *GUI_AnyToFont(void *type);
+GUI_Surface *GUI_AnyToSurface(void *type);
+void GUI_Free(void *ptr);
+
+
+/* Ends C function definitions when using C++ */
+
+
+} /* end tolua module GUI */
+
+
+/* Some code to be included in the generated .c file */

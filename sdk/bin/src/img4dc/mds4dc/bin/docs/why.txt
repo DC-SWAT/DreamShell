@@ -1,0 +1,16 @@
+Why the MDS/MDF format ?
+========================
+
+After my first selfboot tool (cdi4dc) i chose to write another tool with the same goal for 
+your pleasure.
+
+I chose the Alcohol 120 format cuz it's seems to be very popular from theses days. 
+But don't worry, i'm planning to add the CD-DA supports to cdi4dc too... and maybe, creating
+anothers tools for anothers burning softwares... I said, *MAYBE*.
+
+Please note this tool is *NOT* made for and does *NOT* support piracy, if you are planning to
+use it for that, shame on you !
+
+Cheers, your friend,
+
+SiZ^DCS '07

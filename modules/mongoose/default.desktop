@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Mongoose
+Type=Application
+Comment=Mongoose web server
+Terminal=true
+Categories=libraryes
+MimeType=text/html
+Name[ru_RU]=default

@@ -1,0 +1,50 @@
+
+$#include "ds.h"
+$#include "lua/tolua.h"
+$#include "rc.h"
+
+	
+module RC
+{
+
+
+/* Funtion list */
+
+
+typedef struct flash_factory_values {
+
+	int country;
+	int broadcast;
+	int lang;
+	int black_swirl;
+
+} flash_factory_values_t;
+
+
+
+/**
+ * Flashrom
+ */
+int flash_clear(int block);
+uint8 *flash_read_factory();
+void flash_write_factory(uint8 *data);
+
+
+/**
+ * Application
+ */
+flash_factory_values_t *flash_factory_get_values(uint8 *data);
+uint8 *flash_factory_set_lang(uint8 *data, int lang);
+uint8 *flash_factory_set_broadcast(uint8 *data, int broadcast);
+uint8 *flash_factory_set_country(uint8 *data, int country, int black_swirl);
+
+void flash_factory_free_values(flash_factory_values_t *values);
+void flash_factory_free_data(uint8 *data);
+
+
+
+/* Ends C function definitions when using C++ */
+
+
+} /* end tolua module test */
+

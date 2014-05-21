@@ -1,0 +1,52 @@
+-- lua calc by zaero
+-- zaero@list.ru
+
+if argv.n < 2 then
+	print("\n\nLua calc v.0.1 by zaero")
+	print("Usage: calc -flag(if needed) arg1 operator arg2")
+	print("Flags:")
+	print(" -d -date and clock")
+	print(" -o -operations")
+	print(" -v -print version")
+	print(" -h -help")
+	print("\n")
+	print("Examples: calc 2 / 2")
+	print("\t calc 2 + 2")
+	return
+end
+
+if argv[1] == "-v" then
+	print("Lua calc 0.1 for Dreamshell")
+	return
+end
+
+if argv[1] == "-o" then
+	print("This version supports such operations: +, -, *, /")
+	return
+end
+
+if argv[1] == "-h" then
+	print("This flag is not supported")
+	return
+end
+
+if argv[1] == "-d" then
+	print(os.date())
+	return
+end
+
+if argv[1] and argv[2] then
+	if argv[2] == '+' then
+		print(argv[1]+argv[3])
+	end
+	if argv[2] == '-' then
+		print(argv[1]-argv[3])
+	end
+	if argv[2]== '*' then
+		print(argv[1]*argv[3])
+	end
+	if argv[2]== '/' then
+		print(argv[1]/argv[3])
+	end
+	return
+end
