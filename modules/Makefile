@@ -4,8 +4,9 @@
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = vkb luaDS luaKOS luaSDL luaGUI luaMXML luaSTD \
-		zip bzip2 minilzo httpd telnetd mongoose aicaos
+_SUBDIRS = vkb gumbo sqlite3 aicaos zip bzip2 minilzo \
+		luaDS luaKOS luaSDL luaGUI luaMXML luaSTD luaSQL luaTask \
+		SDL_net httpd telnetd mongoose
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

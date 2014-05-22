@@ -1,0 +1,1 @@
+luaopen_luasql_sqlite3

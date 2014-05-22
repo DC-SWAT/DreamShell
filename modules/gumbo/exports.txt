@@ -1,0 +1,15 @@
+gumbo_string_equals
+gumbo_string_equals_ignore_case
+gumbo_vector_index_of
+gumbo_normalized_tagname
+gumbo_tag_from_original_text
+gumbo_normalize_svg_tagname
+gumbo_tag_enum
+gumbo_get_attribute
+gumbo_parse
+gumbo_parse_with_options
+gumbo_destroy_output
+kGumboEmptySourcePosition
+kGumboEmptyString
+kGumboEmptyVector
+kGumboDefaultOptions

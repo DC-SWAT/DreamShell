@@ -1,0 +1,33 @@
+2007-11-24: BUG (fixed): SegFault caused by async pthread cancellation.
+
+2007-11-04: Documentation of task.create changed (a previously undocumented feature about chunks).
+            Now is possible to use a binary chunk in task.create.
+            Small documentation typo in LuaTaskRG fixed.
+            Documentation in PDF form removed (only OO).
+            
+2007-09-15: New task memory allocation scheme.
+            New function "sleep".
+
+2007-06-28: If is defined LUATASK_PTHREAD_STACK_SIZE we use pthread_attr_setstacksize.
+            OsLockMutex misplaced on taskthread.
+            Volatile attribute missing for aTask.
+
+2006-08-21: Lua 5.1 ready.
+
+2005-10-01: Added support for LUA_INIT environment variable.
+            BUG (fixed): OS_THREAD_T define for NATV_WIN32 in syncos.h.
+            BUG (fixed): <stdlib.h> added to queue.c.
+
+2005-04-03: BUG (fixed): Memory leak caused by non detached pthread creation.
+            Now using Pthreads-Win32 2.1.0.
+
+2004-08-20: Version 1.5 final is out.
+            Now LuaTask can be a dynamically loaded library.
+            New manual added.
+            New distribution file layout.
+
+2004-07-29: isrunning() and cancel() methods added.
+            New define NATV_WIN32:
+             defined   -> Direct W32 threads support without cancel().
+             undefined -> Pthreads-Win32 with cancel().
+
