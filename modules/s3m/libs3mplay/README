@@ -1,0 +1,10 @@
+This is an example player for the new library LibS3MPlay.
+LibS3MPlay is heavily based on the work of Dan Pottter.
+
+First, build the library
+s3mplay/libs3mplay/makefile
+
+Then you are ready to build the main application
+s3mplay/makefile
+
+-Josh PH3NOM Pearson 2011

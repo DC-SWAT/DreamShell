@@ -1,6 +1,6 @@
 
 #include <stddef.h>
-#include "aica_cmd_iface.h"
+#include "drivers/aica_cmd_iface.h"
 #include "aica.h"
 #include "mp3dec.h"
 	

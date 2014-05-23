@@ -1,0 +1,15 @@
+{
+	global:
+		xvid_global; 
+		xvid_decore; 
+		xvid_encore; 
+		xvid_plugin_single;
+		xvid_plugin_2pass1;
+		xvid_plugin_2pass2;
+		xvid_plugin_lumimasking; 
+		xvid_plugin_dump; 
+		xvid_plugin_psnr;
+		xvid_plugin_ssim;
+		xvid_plugin_psnrhvsm;
+	local: *;
+};

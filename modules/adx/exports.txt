@@ -1,0 +1,5 @@
+adx_dec
+adx_stop
+adx_restart
+adx_pause
+adx_resume

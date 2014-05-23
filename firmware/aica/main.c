@@ -1,7 +1,8 @@
-/* KallistiOS ##version##
+/* DreamShell ##version##
 
    main.c
-   (c)2000-2002 Dan Potter
+   Copyright (C) 2000-2002 Dan Potter
+   Copyright (C) 2009-2014 SWAT
    
    Generic sound driver with streaming capabilities
 
@@ -10,10 +11,9 @@
 
 */
 
-#include "aica_cmd_iface.h"
+#include "drivers/aica_cmd_iface.h"
 #include "aica.h"
 #include "dec.h"
-
 
 
 /****************** Timer *******************************************/
@@ -30,12 +30,21 @@ void timer_wait(int jiffies) {
 
 #include <stddef.h>
 
-void * memcpy(void *dest, const void *src, size_t count) {
+void *memcpy(void *dest, const void *src, size_t count) {
 	unsigned char *tmp = (unsigned char *) dest;
 	unsigned char *s = (unsigned char *) src;
 
 	while (count--)
 		*tmp++ = *s++;
+
+	return dest;
+}
+
+void *memset(void *dest, int c, size_t count) {
+	unsigned char *tmp = (unsigned char *) dest;
+
+	while (count--)
+		*tmp++ = c;
 
 	return dest;
 }
@@ -56,19 +65,18 @@ void *memmove (void *dest0, void const *source0, size_t length) {
   return dest0;
 }
 
-//#define AICA_RAM_START		0x030000
-//#define AICA_RAM_END		0x200000
-
 static void *memptr = (void*)AICA_RAM_START;
 
-
-void *malloc(int size) {
-	return memptr+=size;
+void *malloc(size_t size) {
+	void *ptr = memptr;
+	memset(ptr, 0, size);
+	memptr += size + 4;
+	return ptr;
 }
 
 void free(void *p) {
 	return;
-}                                  
+}
 
 /****************** Main Program ************************************/
 

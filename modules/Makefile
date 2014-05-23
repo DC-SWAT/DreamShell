@@ -6,7 +6,8 @@
 
 _SUBDIRS = vkb gumbo sqlite3 aicaos zip bzip2 minilzo \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSTD luaSQL luaTask \
-		SDL_net httpd telnetd mongoose
+		SDL_net httpd telnetd mongoose \
+		adx s3m mp3 ogg xvid ffmpeg
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

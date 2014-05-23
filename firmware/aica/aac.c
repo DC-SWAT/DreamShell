@@ -1,6 +1,6 @@
 
 #include <stddef.h>
-#include "aica_cmd_iface.h"
+#include "drivers/aica_cmd_iface.h"
 #include "aica.h"
 #include "aacdec.h"
 	
@@ -17,6 +17,6 @@ void shutdown_aac() {
 	AACFreeDecoder(hAACDecoder);
 }
 
-int decode_aac() {
+int decode_aac(aica_decoder_t *dat) {
 	return 0;
 }

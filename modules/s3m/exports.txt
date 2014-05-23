@@ -1,0 +1,2 @@
+s3m_play
+s3m_stop

@@ -1,0 +1,74 @@
++--------------------------------------------------------------------+
+|                      xvidcore lib examples                         |
++--------------------------------------------------------------------+
+
+In this directory can find some examples how to use Xvid MPEG4 codec 
+in your own programs. 
+
+** cactus.pgm.bz2
+----------------------------------------------------------------------
+
+This a  test sequence of 3 images  with a cactus moving  from right to
+left.   It  bzip2-compressed for  size  reason  (half  the size  of  a
+ZIP-file). Binaries  of bunzip2  are available for  all major  OSes at
+http://sources.redhat.com/bzip2/  The original  source  of the  cactus
+image is unknown...
+
+* xvid_encraw.c
+----------------------------------------------------------------------
+
+This is a  small example that allows you to encode  YUV streams or PGM
+files into a MPEG4 stream. It  can output single files (on per encoded
+frame), or one  file for all the enced stream (m4v  format or a simple
+container format that we called  mp4u, its description can be found at
+the end of this file). This  program also outputs some very basic time
+results.
+
+Type "xvid_encraw -help" to have all options' description.
+
+Examples :
+
+  1) bzip2 -dc cactus.pgm.bz2 | ./xvid_encraw -type 1
+
+     This command decompress cactus.pgm.bz2 and pipe the pgm file to
+     xvid_encraw that will compress it to mpeg4 format. No mp4 stream 
+     output is written to disk.
+
+  2) ./xvid_encraw -type 1 -i cactus.pgm -save
+
+     Compress cactus.pgm frames into mpeg4 stream, and then writes a 
+     m4v file per encoded frame.
+
+  3) ./xvid_encraw -type 1 -i cactus.pgm -o my_xvid_example.m4v -stats
+
+     Same thing as above but saves all raw m4v data to a singlefile,
+     and displays yuv-plane psnr statistics to stdout.
+
+
+** xvid_decraw.c
+----------------------------------------------------------------------
+
+This  is a  decoder  example that  is able  to  decode a  m4v or  mp4u
+stream. You can use it to decode what xvid_encraw encoded.
+
+Type "xvid_decraw -help" to have all options' description.
+
+Examples :
+
+  1) ./xvid_decraw -i stream.m4v -d
+
+     This command decodes a m4v file from stream.m4v and saves all
+     decoder output frames to individual PGM files (framexxxxx.pgm).
+
+  2) cat stream.m4v | ./xvid_decraw
+
+     This examples decodes a m4v stream from standard input, but does
+     save any decoded frames. 
+
+
+** xvid_bench.c
+----------------------------------------------------------------------
+
+This is a tool to conduct unit testing and profiling of the signal 
+processing functions used internally within libxvidcore.
+

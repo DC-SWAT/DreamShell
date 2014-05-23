@@ -1,0 +1,218 @@
+INSTALL
+=======
+
+Table of contents:
+==================
+
+1/ Generic install procedure for Unix based systems
+  1.a/ Requirements.
+  1.b/ How to build from a release tarball.
+  1.c/ How to build from CVS.
+  1.d/ Cross compiling xvidcore.
+  1.e/ What is the meaning of the xvidcore Makefile output.
+  1.f/ Building a Debian package.
+
+2/ Generic install procedure for Win32/MSVC.
+  2.a/ Requirements.
+  2.b/ How to build the VFW frontend from a release tarball.
+  2.c/ How to build from CVS.
+
+
+1/ Generic install procedure for Unix based systems
+===================================================
+
+This build process works for most common Unix based systems, including
+GNU/Linux, (Free|Open|Net)BSD, Solaris and faked unix environments
+like cygwin and minsys on Win32 platforms.
+
+  1.a/ Requirements
+  -----------------
+   - ANSI C compiler (gcc)
+   - make (GNU make, BSD make, Solaris make)
+   - a C library providing ANSI C functions like malloc/free/realloc
+     and some other standard functions.
+   - yasm or nasm on ia32/x86_64 platforms for MMX/SSE optimized code.
+
+ 
+  1.b/ How to build from a release tarball
+  ----------------------------------------
+
+Get the latest version on http://www.xvid.org/, and uncompress it on
+your disk. Let's name the resulting source directory ${xvidcore}.
+
+The next step allows you to configure the xvid sources.
+  # cd ${xvidcore}/build/generic
+  # ./configure
+
+Some building options can be tuned thanks to the ./configure tool. You
+can use your own CC and CFLAGS variables in order to override xvid's
+default ones. To have a list of known options:
+  # ./configure --help
+
+Now xvidcore is configured according to your specific platform. You
+can still handwrite the platform.inc file in order to add/remove
+specific flags that ./configure may have set them wrong.
+
+It is time to build xvidcore:
+  # make
+
+That creates a =build directory where all object files go, and where
+the build targets are linked. If no error was reported by the build
+process, then you can install it on your system:
+  # make install
+
+This copies the shared and static libraries to the prefix location
+passed to the ./configure tool (/usr/local by default). The xvid.h
+include file is also copied during the "make install" run.
+
+Voila, xvidcore is installed on your system, make sure your runtime
+linker knows about the xvidcore prefix lib dir where it is
+installed. And make also sure that it generates a symlink to its
+SONAME. In case it would do not take care of the symlink itself:
+  # cd ${prefix}/lib
+  # ls libxvidcore.so.*
+    ls should list at least one libxvidcore.so.MAJOR.MINOR file
+  # ln -s libxvidcore.so.MAJOR.MINOR libxvidcore.so.MAJOR
+
+You may also add a .so link to .so.MAJOR, so that applications linked
+against .so are in fact linked to .so.MAJOR and thus ensures better
+binary compatibility as we take care not changing the MAJOR number
+until there is an incompatible ABI change.
+  # ln -s libxvidcore.so.MAJOR libxvidcore.so
+
+
+  1.c/ How to build from CVS
+  --------------------------
+
+In order to build from CVS, you need some more requirements compared
+to the release building process:
+  - GNU autoconf >= 2.5
+  - GNU automake (no specific version)
+  - GNU libtool (no specific version)
+
+Grab the desired CVS version you want to build.
+  # cvs -d:pserver:anonymous@cvs.xvid.org:/xvid login
+    (just type enter)
+  # cvs -d:pserver:anonymous@cvs.xvid.org:/xvid co xvidcore
+    (read the CVS documentation if you want details about branch
+     checking outs)
+
+You now need to bootstrap the build files:
+  # cd xvidcore/build/generic
+  # ./bootstrap.sh
+
+A configure script has been bootstraped, you're now able to follow
+the "Build from release tarballs" steps.
+
+
+  1.d/ Cross compiling xvidcore.
+  ------------------------------
+
+The configure script allows an easy handling of cross compilation. You
+have just to specify the host and build platform values.
+
+e.g: building Win32 libxvidcore.dll from a gnu/linux systems
+ # cd ${xvidcore}/build/generic
+ # ./configure --host=i386-mingw32 --build=i386-pc-linux-gnu
+
+And then build as usual.
+
+As the example uses the Win32 target, we can even build the vfw frontend.
+Additional requirements are:
+ - Resource compiler (the Makefile uses the syntax of windres from the
+   GNU CC suite, but you can easily modify the cmd line)
+ - GNU make (other make programs may have problem with shell expansion)
+
+So to cross compile the VFW frontend, you just need to override the
+Makefile variables pointing to the compiler and the resource compiler.
+These variables are CC and WINDRES.
+ # cd ${xvidcore}/vfw/bin
+ # make CC=i386-mingw32-gcc WINDRES=i386-mingw32-windres
+
+
+  1.e/ What is the meaning of xvidcore Makefile output.
+  -----------------------------------------------------
+
+The makefile available in ${xvidcore}/build/generic is handwritten and
+outputs uncommon building progress strings to the terminal. You may
+want to understanding their meaning. Here is a brief explaination.
+
+  - A: a/dir/file.(asm|s)
+    This an assembling rule assembling 'a/dir/file.(asm|s)'
+  - C: a/dir/file.c
+    This is a compilation rule compiling 'a/dir/file.c'
+  - Cl: Stuff
+    This is a cleaning rule in action
+  - D: Directory
+    This is a rule creating 'Directory'
+  - I: a/dir/file
+    Installing 'file' in 'a/dir'
+  - L: file
+    Linking 'file'
+  - W: file
+    Compiling the Win32 resource 'file'
+
+
+  1.f/ Building a Debian package.
+  -------------------------------
+
+Release tarballs contain a debian dir so that you can easily build a
+debian package. Just execute the usual steps. They may be sumed up to:
+  # cd ${xvidcore}
+  # dpkg-buildpackage -rfakeroot
+
+If all went right, you're now able to install the package:
+  # cd ..
+  # dpkg -i libxvidcore...
+
+
+
+2/ Generic install procedure for Win32/MSVC.
+============================================
+
+
+
+  2.a/ Requirements.
+  ------------------
+
+    - MS Visual C++ 2005 or later
+    - nasm installed as 'nasm' in the msvc binary search paths.
+
+  2.b/ How to build the VFW frontend from a release tarball.
+  ----------------------------------------------------------
+
+Download the latest source distribution from http://www.xvid.org/ and
+uncompress it on your disk. Let's call this directory ${xvidcore}.
+
+    - Make sure your ${xvidcore} directory name does not contain spaces.
+      MS Visual C++ can have issues handling file names with whitespace.
+    - Open the workspace libxvidcore.sln located in
+      ${xvidcore}/build/win32.
+    - Then choose the libxvidcore project as the Active project of the
+      workspace.
+    - Make sure the Active configuration is
+      'libxvidcore Win32 Release'
+    - Build the project (F7)
+    - Open the project vfw.vcproj file located in ${xvidcore}/vfw.
+    - Make sure the Active configuration is
+      'vfw Win32 Release'
+    - Build the project (F7)
+    - Install the resulting VFW frontend using the xvid.inf file
+      provided in ${xvidcore}/vfw/bin. Right click on the file, and
+      then click 'Install'
+
+  2.c/ How to build from CVS.
+  ---------------------------
+
+You have first to retrieve the sources from the Xvid CVS repository
+using a tool like WinCVS. Then follow the normal steps explained in
+the previous section.
+
+NB: your CVS program may not convert text files to the cr/lf windows
+    text. In that case opening project files in MSVC will result in
+    some weird error messages from MSVC. To fix that, you have to
+    convert all .dsp files to the cr/lf format. You can do that
+    opening the .dsp file in WordPad and saving it. It should now be
+    in cr/lf format.
+
+Last edited: $Date: 2010-12-28 16:34:55 $

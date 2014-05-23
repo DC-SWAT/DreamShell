@@ -1,3 +1,8 @@
+#
+# AICA driver for DreamShell
+# Copyright (C) 2009-2014 SWAT
+# http://www.dc-swat.ru
+#
 
 TARGET = ds_stream
 
@@ -60,9 +65,9 @@ AAC_SRC = aac.o \
 
 OBJ = crt0.o main.o aica.o $(MP3_SRC) $(CODEC)/filter.o #$(AAC_SRC) $(ASRC)
 
-INCS = -I./codec/mp3/pub -I./codec/aac/pub -I./codec
-
 include ../../sdk/Makefile.cfg
+
+INCS = -I./codec/mp3/pub -I./codec/aac/pub -I./codec -I$(DS_SDK)/include
 
 DC_ARM_CFLAGS += $(INCS) -DARM -DARM7DI -DUSE_DEFAULT_STDLIB #-mcpu=arm7tdmi
 DC_ARM_AFLAGS += $(INCS) #-mcpu=arm7tdmi
@@ -90,5 +95,3 @@ clean:
 install: $(TARGET).drv
 	-rm $(DS_BUILD)/firmware/aica/$(TARGET).drv
 	cp $(TARGET).drv $(DS_BUILD)/firmware/aica/$(TARGET).drv
-
-

@@ -1,0 +1,46 @@
+AUTHORS
+=======
+
+This file lists  all authors of Xvid MPEG4 core  library. If you think
+your name should appear on this  list, please send us an email telling
+us your name, we will be pleased to add it here.
+
+The lists are classified by alphabetical order.
+
+
+Project initiators:
+-------------------
+
+Christoph Lampert <gruel@web.de>
+Michael Militzer <isibaar@xvid.org>
+Peter Ross <pross@xvid.org>
+
+
+Former 1.x maintainers:
+-----------------------
+
+Edouard Gomez <ed.gomez@free.fr> (lot of "lot of things")
+Radoslaw Czyz <xvid@syskin.cjb.net> (lot of ME work)
+
+
+Regular contributors:
+---------------------
+Pascal Massimino <skal@planet-d.net> (quite a lot of x86 assembly)
+
+
+Spontaneous contributors:
+-------------------------
+
+Benjamin Herrenschmidt <benh@kernel.crashing.org> (first ppc port attempt)
+Christoph Kuehnel <info@intek-darmstadt.de> (field interlaced decoding)
+Daniel Smith <danielsmith@astroboymail.com> (rc code)
+Dirk Knop <dknop@stud.uni-goettingen.de> (vfw)
+Guillaume Morin <guillaume@morinfr.org> (first ppc port attempt)
+MinChen <chenm001@163.com> (lot of work on early CVS versions)
+
+
+Architecture ports:
+-------------------
+Christoph Nägeli <chn@kbw.ch> (new PPC port)
+
+Last edited: $Date: 2010-12-22 16:52:52 $

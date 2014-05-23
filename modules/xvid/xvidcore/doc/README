@@ -1,0 +1,21 @@
+Documentation of Xvid
+=====================
+
+INSTALL
+-------
+
+This file describes the steps to build and install Xvid on supported
+platforms.
+
+NOTE FOR MacOS X PLATFORM
+-------------------------
+
+Many versions of yasm/nasm are known to be buggy for Mach-O output,
+whereas nasm seems to be less reliable than yasm. Therefore, yasm
+is highly recommended for Mac OS X target.
+
+* yasm 1.0 or later is required to build xvidcore. *
+
+http://www.tortall.net/projects/yasm/
+
+Last edited: $Date: 2010-12-28 16:34:55 $

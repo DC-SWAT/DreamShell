@@ -1,0 +1,731 @@
+dnl ==========================================================================
+dnl
+dnl Autoconf script for Xvid
+dnl
+dnl Copyright(C) 2003-2004 Edouard Gomez <ed.gomez@free.fr>
+dnl
+dnl ==========================================================================
+
+AC_PREREQ([2.50])
+
+AC_INIT([Xvid], [1.3.2], [xvid-devel@xvid.org])
+AC_CONFIG_SRCDIR(configure.in)
+
+dnl Do not forget to increase that when needed.
+API_MAJOR="4"
+API_MINOR="3"
+
+dnl NASM/YASM version requirement
+minimum_yasm_major_version=1
+minimum_nasm_minor_version=0
+minimum_nasm_major_version=2
+nasm_prog="nasm"
+yasm_prog="yasm"
+
+dnl Default CFLAGS -- Big impact on overall speed
+our_cflags_defaults="-Wall"
+our_cflags_defaults="$our_cflags_defaults -O2"
+our_cflags_defaults="$our_cflags_defaults -fstrength-reduce"
+our_cflags_defaults="$our_cflags_defaults -finline-functions"
+our_cflags_defaults="$our_cflags_defaults -ffast-math"
+our_cflags_defaults="$our_cflags_defaults -fomit-frame-pointer"
+
+dnl ==========================================================================
+dnl Features - configure options
+dnl ==========================================================================
+
+FEATURES=""
+
+dnl Internal Debug
+AC_ARG_ENABLE(idebug,
+		AC_HELP_STRING([--enable-idebug],
+				 [Enable internal debug function]),
+		 [if test "$enable_idebug" = "yes" ; then
+		     FEATURES="$FEATURES -D_DEBUG"
+		  fi])
+
+dnl Internal Profile
+AC_ARG_ENABLE(iprofile,
+		AC_HELP_STRING([--enable-iprofile],
+				 [Enable internal profiling]),
+		 [if test "$enable_iprofile" = "yes" ; then
+		     FEATURES="$FEATURES -D_PROFILING_"
+		  fi])
+
+dnl GNU Profiling options
+AC_ARG_ENABLE(gnuprofile,
+		AC_HELP_STRING([--enable-gnuprofile],
+				 [Enable profiling informations for gprof]),
+		 [if test "$enable_gnuprofile" = "yes" ; then
+		     GNU_PROF_CFLAGS="-pg -fprofile-arcs -ftest-coverage"
+		     GNU_PROF_LDFLAGS="-pg"
+		  fi])
+
+dnl Assembly code
+AC_ARG_ENABLE(assembly,
+		AC_HELP_STRING([--disable-assembly],
+				 [Disable assembly code]),
+		 [if test "$enable_assembly" = "no" ; then
+		     assembly="no"
+		  else
+		     if test "$enable_assembly" = "yes" ; then
+			assembly="yes"
+		     fi
+		  fi],
+		 [assembly="yes"])
+
+dnl pthread code
+AC_ARG_ENABLE(pthread,
+                AC_HELP_STRING([--disable-pthread],
+                                 [Disable pthread dependent code]),
+                 [if test "$enable_pthread" = "no" ; then
+                     pthread="no"
+                  else
+                     if test "$enable_pthread" = "yes" ; then
+                        pthread="yes"
+                     fi
+                  fi],
+                 [pthread="yes"])
+
+dnl Build as a module not a shared lib on darwin
+AC_ARG_ENABLE(macosx_module,
+		AC_HELP_STRING([--enable-macosx_module],
+				 [Build as a module on MacOS X]),
+		 [if test "$enable_macosx_module" = "yes" ; then
+		     macosx_module="yes"
+		  else 
+		     macosx_module="no"
+		  fi],
+		  [macosx_module="no"])
+
+dnl ==========================================================================
+dnl Default install prefix and checks build type
+dnl ==========================================================================
+
+AC_PREFIX_DEFAULT("/usr/local")
+AC_CANONICAL_BUILD
+AC_CANONICAL_HOST
+AC_CANONICAL_TARGET
+
+dnl ==========================================================================
+dnl Check for the C compiler (could be passed on command line)
+dnl ==========================================================================
+
+dnl
+dnl First we test if CFLAGS have been passed on command line
+dnl I do that because autoconf defaults (-g -O2) suck and they would kill
+dnl performance. To prevent that we define a good defult CFLAGS at the end
+dnl of the script if and only if CFLAGS has not been passed on the command
+dnl line
+dnl
+AC_MSG_CHECKING(whether to use default CFLAGS)
+if test  x"$CFLAGS" = x"" ; then
+   force_default_cc_options="yes"
+   AC_MSG_RESULT([yes])
+else
+   force_default_cc_options="no"
+   AC_MSG_RESULT([no])
+fi
+
+dnl Now we can safely check for the C compiler
+AC_PROG_CC
+
+dnl ==========================================================================
+dnl Check for the install program
+dnl ==========================================================================
+
+AC_PROG_INSTALL
+
+dnl ==========================================================================
+dnl Check for the ranlib program to generate static library index
+dnl ==========================================================================
+
+AC_PROG_RANLIB
+AC_CHECK_TOOL([AR], [ar], [ar-not-found])
+
+dnl ==========================================================================
+dnl
+dnl This part looks for:
+dnl
+dnl ARCHITECTURE : The platform architecture
+dnl                - IA32 for mmx, mmx-ext, mmx2, sse assembly
+dnl                - IA64
+dnl                - PPC for PowerPC assembly routines
+dnl                - GENERIC for plain C sources only
+dnl
+dnl BUS: Address bus size (in bits)
+dnl      - 32
+dnl      - 64
+dnl
+dnl ENDIANNESS: I think you can guess what this thing means :-)
+dnl             - LITTLE_ENDIAN
+dnl             - BIG_ENDIAN
+dnl
+dnl ==========================================================================
+
+dnl
+dnl Looking what sources have to be compiled according to the CPU type
+dnl
+
+ARCHITECTURE=""
+
+AC_MSG_CHECKING([for whether to use assembly code])
+if test x"$assembly" = x"yes" ; then
+   AC_MSG_RESULT([yes])
+   AC_MSG_CHECKING([for architecture type])
+   case "$target_cpu" in
+	  i[[3456]]86)
+	  AC_MSG_RESULT(ia32)
+	  	ARCHITECTURE="IA32"
+                ;;
+          x86_64)
+                AC_MSG_RESULT(x86_64)
+                ARCHITECTURE="X86_64"
+		;;	
+		powerpc)
+		AC_MSG_RESULT(PowerPC)
+		ARCHITECTURE="PPC"
+		;;
+		ia64)
+		AC_MSG_RESULT(ia64)
+		ARCHITECTURE="IA64"
+		;;
+		*)
+		AC_MSG_RESULT($target_cpu)
+		ARCHITECTURE="GENERIC"
+		;;
+   esac
+else
+   AC_MSG_RESULT([no])
+   ARCHITECTURE="GENERIC"
+fi
+
+dnl
+dnl Testing address bus length
+dnl
+BUS=""
+
+AC_CHECK_SIZEOF([int *])
+case "$ac_cv_sizeof_int_p" in
+     4)
+	BUS="32BIT"
+	;;
+     8)
+	BUS="64BIT"
+	;;
+     *)
+	AC_MSG_ERROR([Xvid supports only 32/64 bit architectures])
+	;;
+esac
+
+dnl
+dnl Testing endianness
+dnl
+ENDIANNESS=""
+
+AC_C_BIGENDIAN(ENDIANNESS="BIG_ENDIAN", ENDIANNESS="LITTLE_ENDIAN")
+
+dnl ==========================================================================
+dnl
+dnl Check for OS specific variables
+dnl    - SHARED_EXTENSION, STATIC_EXTENSION, OBJECT_EXTENSION
+dnl
+dnl ==========================================================================
+
+AC_MSG_CHECKING(for build extensions)
+SHARED_EXTENSION=""
+STATIC_EXTENSION=""
+OBJECT_EXTENSION=""
+case "$target_os" in
+     *bsd*|linux*|beos|irix*|solaris*)
+	AC_MSG_RESULT([.so .a .o])
+	STATIC_EXTENSION="a"
+	SHARED_EXTENSION="so"
+	OBJECT_EXTENSION="o"
+	;;
+     [[cC]][[yY]][[gG]][[wW]][[iI]][[nN]]*|mingw32*|mks*)
+	AC_MSG_RESULT([.dll .a .obj])
+	STATIC_EXTENSION="a"
+	SHARED_EXTENSION="dll"
+	OBJECT_EXTENSION="obj"
+	;;
+     darwin*|raphsody*)
+	if test x"$macosx_module" = x"yes"; then
+	   AC_MSG_RESULT([.so .a .o])
+	   SHARED_EXTENSION="so"
+        else
+	   AC_MSG_RESULT([.dynlib .a .o])
+	   SHARED_EXTENSION="dylib"
+	fi
+	STATIC_EXTENSION="a"
+	OBJECT_EXTENSION="o"
+	;;
+     *)
+        AC_MSG_RESULT([Unknown OS - Using .so .a .o])
+	STATIC_EXTENSION="a"
+	SHARED_EXTENSION="so"
+	OBJECT_EXTENSION="o"
+	;;
+esac
+
+dnl ==========================================================================
+dnl
+dnl Determines best options for CC and LD
+dnl  - STATIC_LIB, SHARED_LIB, SPECIFIC_CFLAGS, SPECIFIC_LDLAGS
+dnl
+dnl ==========================================================================
+
+AC_MSG_CHECKING(for platform specific LDFLAGS/CFLAGS)
+SPECIFIC_LDFLAGS=""
+SPECIFIC_CFLAGS=""
+ALTIVEC_CFLAGS=""
+PRE_SHARED_LIB=""
+case "$target_os" in
+     linux*|solaris*)
+	AC_MSG_RESULT([ok])
+	STATIC_LIB="libxvidcore.\$(STATIC_EXTENSION)"
+	SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION).\$(API_MAJOR).\$(API_MINOR)"
+	SPECIFIC_LDFLAGS="-Wl,-soname,libxvidcore.\$(SHARED_EXTENSION).\$(API_MAJOR) -shared -Wl,--version-script=libxvidcore.ld -lc -lm"
+	SPECIFIC_CFLAGS="-fPIC"
+	;;
+     *bsd*|irix*)
+	AC_MSG_RESULT([ok])
+	STATIC_LIB="libxvidcore.\$(STATIC_EXTENSION)"
+	SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION).\$(API_MAJOR).\$(API_MINOR)"
+	SPECIFIC_LDFLAGS="-Wl,-soname,libxvidcore.\$(SHARED_EXTENSION).\$(API_MAJOR) -shared -lc -lm"
+	SPECIFIC_CFLAGS="-fPIC"
+	;;
+     [[cC]][[yY]][[gG]][[wW]][[iI]][[nN]]*|mingw32*|mks*)
+	AC_MSG_RESULT([ok])
+	STATIC_LIB="xvidcore.\$(STATIC_EXTENSION)"
+	SHARED_LIB="xvidcore.\$(SHARED_EXTENSION)"
+	SPECIFIC_LDFLAGS="-mno-cygwin -shared -Wl,--dll,--out-implib,\$@.a libxvidcore.def"
+	SPECIFIC_CFLAGS="-mno-cygwin"
+	;;
+     darwin*|raphsody*)
+	STATIC_LIB="libxvidcore.\$(STATIC_EXTENSION)"
+	SPECIFIC_CFLAGS="-fPIC -fno-common -no-cpp-precomp"
+	if test x"$macosx_module" = x"no"; then
+	   AC_MSG_RESULT([dylib options])
+	   SHARED_LIB="libxvidcore.\$(API_MAJOR).\$(SHARED_EXTENSION)"
+	   SPECIFIC_LDFLAGS="-Wl,-read_only_relocs,suppress -dynamiclib -flat_namespace -compatibility_version \$(API_MAJOR) -current_version \$(API_MAJOR).\$(API_MINOR) -install_name \$(libdir)/\$(SHARED_LIB)"
+	else 
+	   AC_MSG_RESULT([module options])
+ 	   PRE_SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION)-temp.o"
+	   SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION).\$(API_MAJOR)"
+	   SPECIFIC_LDFLAGS="-r -keep_private_externs -nostdlib && \$(CC) \$(LDFLAGS) \$(PRE_SHARED_LIB) -o libxvidcore.\$(SHARED_EXTENSION).\$(API_MAJOR) -bundle -flat_namespace -undefined suppress"
+	fi
+	;;
+     beos)
+	AC_MSG_RESULT([ok])
+	STATIC_LIB="libxvidcore.\$(STATIC_EXTENSION)"
+	SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION)"
+	SPECIFIC_LDFLAGS="-nostart"
+	SPECIFIC_CFLAGS="-fPIC"
+	;;
+     *)
+        AC_MSG_RESULT([Unknown Platform (Using default -shared -lc -lm)])
+    STATIC_LIB="libxvidcore.\$(STATIC_EXTENSION)"
+	SHARED_LIB="libxvidcore.\$(SHARED_EXTENSION)"
+	SPECIFIC_LDFLAGS=""
+	SPECIFIC_CFLAGS=""
+	;;
+esac
+
+if test x"$PRE_SHARED_LIB" = x; then 
+  PRE_SHARED_LIB=$SHARED_LIB
+fi
+
+dnl ==========================================================================
+dnl
+dnl Assembler stuff
+dnl  - AS, AFLAGS, ASSEMBLY_EXTENSION, SOURCES
+dnl
+dnl ==========================================================================
+
+AS=""
+AFLAGS=""
+ASSEMBLY_EXTENSION=""
+GENERIC_SOURCES="SRC_GENERIC"
+ASSEMBLY_SOURCES=""
+
+dnl
+dnl IA32
+dnl
+
+if test "$ARCHITECTURE" = "IA32" -o "$ARCHITECTURE" = "X86_64" ; then
+
+   dnl
+   dnl Checking for nasm compatible programs
+   dnl
+
+   found_nasm_comp_prog="no"
+   chosen_asm_prog=""
+
+   dnl Check for yasm first
+   AC_CHECK_PROG([ac_yasm], [$yasm_prog], [yes], [no], , [yes])
+   if test "$ac_yasm" = "yes" ; then
+       dnl
+       dnl Checking yasm version
+       dnl
+       AC_MSG_CHECKING([for yasm version])
+       yasm_major=`$yasm_prog --version | head -1 | cut -d '.' -f 1 | cut -d ' ' -f 2`
+       if test -z $yasm_major ; then
+          yasm_major=-1
+       fi
+       AC_MSG_RESULT([$yasm_major])
+
+       dnl Actually, yasm >= 0.7.99.2161 should be ok
+       dnl But I'm too lazy to check also the patch version...
+       if test "$yasm_major" -lt "$minimum_yasm_major_version" ; then
+         AC_MSG_WARN([yasm version is too old])
+       else
+         found_nasm_comp_prog="yes"
+         chosen_asm_prog="$yasm_prog"
+       fi
+   fi
+
+   dnl Check for nasm (not buggy version)
+   if test "$found_nasm_comp_prog" = "no" ; then
+       AC_CHECK_PROG([ac_nasm], [$nasm_prog], [yes], [no], , [yes])
+       if test "$ac_nasm" = "yes" ; then
+           dnl
+           dnl Checking nasm version
+           dnl
+           AC_MSG_CHECKING([for nasm version])
+           nasm_minor=`$nasm_prog -v | cut -d '.' -f 2 | cut -d ' ' -f 1`
+           nasm_major=`$nasm_prog -v | cut -d '.' -f 1 | cut -d ' ' -f 3`
+           if test -z $nasm_minor ; then
+              nasm_minor=-1
+           fi
+           if test -z $nasm_major ; then
+              nasm_major=-1
+           fi
+           AC_MSG_RESULT([$nasm_major])
+
+           dnl need nasm 2.x for SSE3/4 and X86_64
+           if test "$nasm_major" -lt "$minimum_nasm_major_version" ; then
+             AC_MSG_WARN([nasm version is too old])
+           else
+             found_nasm_comp_prog="yes"
+	       chosen_asm_prog="$nasm_prog"
+           fi
+       fi
+   fi
+
+   dnl
+   dnl Ok now sort what object format we must use
+   dnl
+   if test "$found_nasm_comp_prog" = "yes" ; then
+       AC_MSG_CHECKING([for asm object format])
+       case "$target_os" in
+           *bsd*|linux*|beos|irix*|solaris*)
+               if test "$ARCHITECTURE" = "X86_64" ; then
+                   AC_MSG_RESULT([elf64])
+                   NASM_FORMAT="elf64"
+               else
+                   AC_MSG_RESULT([elf])
+                   NASM_FORMAT="elf"
+               fi
+	       MARK_FUNCS="-DMARK_FUNCS"
+	           PREFIX=""
+               ;;
+           [[cC]][[yY]][[gG]][[wW]][[iI]][[nN]]*|mingw32*|mks*)
+               if test "$ARCHITECTURE" = "X86_64" ; then
+                   AC_MSG_RESULT([win64])
+                   NASM_FORMAT="win64"
+               else
+                   AC_MSG_RESULT([win32])
+                   NASM_FORMAT="win32"
+               fi
+	       PREFIX="-DWINDOWS"
+	       MARK_FUNCS=""
+               ;;
+           *darwin*)
+               if test "$ARCHITECTURE" = "X86_64" ; then
+                   AC_MSG_RESULT([macho64])
+                   NASM_FORMAT="macho64"
+               else
+                   AC_MSG_RESULT([macho32])
+                   NASM_FORMAT="macho32"
+               fi
+               PREFIX="-DPREFIX"
+               MARK_FUNCS=""
+               ;;
+       esac
+
+       AS="$chosen_asm_prog"
+       ASSEMBLY_EXTENSION="asm"
+       AFLAGS="-I\$(<D)/ -I../../src/ -f $NASM_FORMAT $PREFIX $MARK_FUNCS"
+       ASSEMBLY_SOURCES="SRC_${ARCHITECTURE}"
+       if test "$ARCHITECTURE" = "X86_64" ; then
+               AFLAGS=${AFLAGS}" -DARCH_IS_X86_64"
+       fi
+   else 
+       AC_MSG_WARN([no correct assembler was found - Compiling generic sources only])
+       ARCHITECTURE="GENERIC"
+   fi
+fi
+
+dnl
+dnl PPC
+dnl
+dnl With the PPC platform we do not use assembly language, we better keep with
+dnl intrinsic altivec functions and types as they are supported by both Apple
+dnl and GNU gcc with very slight changes to code which can be sumed up by:
+dnl
+dnl Apple:
+dnl  - compile with the option -arch ppc -faltivec 
+dnl  - define vectors with parentheses vec = (0,0,0,0)
+dnl GNU
+dnl  - compile with -maltivec -mabi=altivec
+dnl  - include <altivec.h> before using intrincic
+dnl  - define vectors with vec = {0,0,0,0}
+dnl
+dnl * The compile time option will be "injected" into SPECIFIC_CFLAGS variable
+dnl * The need for altivec.h will also be injected into SPECIFIC_CFLAGS through
+dnl   a -DHAVE_ALTIVEC_H
+dnl * The vector definition is handled in portab.h thx to
+dnl   HAVE_PARENTHESES/BRACES_ALTIVEC_DECL
+dnl
+PPC_ALTIVEC_SOURCES=""
+if test "$ARCHITECTURE" = "PPC" ; then
+   AS="\$(CC)"
+   AFLAGS=""
+   ASSEMBLY_EXTENSION=".s"
+   ASSEMBLY_SOURCES=""
+
+   AC_MSG_CHECKING([for altivec.h])
+cat > conftest.c << EOF
+#include <altivec.h>
+int main() { return(0); }
+EOF
+   if $CC -arch ppc -faltivec -c conftest.c 2>/dev/null 1>/dev/null || \
+      $CC -maltivec -mabi=altivec -c conftest.c 2>/dev/null 1>/dev/null ; then
+        AC_MSG_RESULT(yes)
+        SPECIFIC_CFLAGS="$SPECIFIC_CFLAGS -DHAVE_ALTIVEC_H"
+	TEMP_ALTIVEC="-DHAVE_ALTIVEC_H"
+   else
+        AC_MSG_RESULT(no)
+	TEMP_ALTIVEC=""
+   fi
+
+   AC_MSG_CHECKING([for Altivec compiler support])
+cat > conftest.c << EOF
+#ifdef HAVE_ALTIVEC_H
+#include <altivec.h>
+#endif
+
+int main()
+{
+  vector unsigned int vartest2 = (vector unsigned int)(0);
+  vector unsigned int vartest3 = (vector unsigned int)(1);
+  vartest2 = vec_add(vartest2, vartest3);
+  return(0);
+}
+EOF
+   if $CC $TEMP_ALTIVEC -arch ppc -faltivec -c conftest.c 2>/dev/null 1>/dev/null ; then
+        AC_MSG_RESULT([yes (Apple)])
+        SPECIFIC_CFLAGS="$SPECIFIC_CFLAGS -arch ppc -faltivec -DHAVE_ALTIVEC_PARENTHESES_DECL $TEMP_ALTIVEC"
+	PPC_ALTIVEC_SOURCES="SRC_PPC_ALTIVEC"
+   else
+cat > conftest.c << EOF
+#ifdef HAVE_ALTIVEC_H
+#include <altivec.h>
+#endif
+
+int main()
+{
+  vector unsigned int vartest2 = (vector unsigned int){0};
+  vector unsigned int vartest3 = (vector unsigned int){1};
+  vartest2 = vec_add(vartest2, vartest3);
+  return(0);
+}
+EOF
+   if $CC $TEMP_ALTIVEC -maltivec -mabi=altivec -c conftest.c 2>/dev/null 1>/dev/null ; then
+        AC_MSG_RESULT([yes (GNU)])
+        SPECIFIC_CFLAGS="$SPECIFIC_CFLAGS -DHAVE_ALTIVEC_BRACES_DECL $TEMP_ALTIVEC"
+	PPC_ALTIVEC_SOURCES="SRC_PPC_ALTIVEC"
+        ALTIVEC_CFLAGS="-maltivec -mabi=altivec"
+   else
+	AC_MSG_RESULT([no (ppc support won't be compiled in)])
+	dnl Only C code can be compiled :-(
+	ARCHITECTURE="GENERIC"
+   fi
+   fi
+
+   rm -f conftest.*
+fi
+
+dnl
+dnl IA64
+dnl
+
+if test "$ARCHITECTURE" = "IA64" ; then
+   AS="\$(CC)"
+   AFLAGS="-c"
+   ASSEMBLY_EXTENSION="s"
+   ASSEMBLY_SOURCES="SRC_IA64"
+
+   case `basename $CC` in
+	*ecc*)
+		DCT_IA64_SOURCES="SRC_IA64_IDCT_ECC"
+
+		dnl If the compiler is ecc, then i don't know its options
+		dnl fallback to "no options"
+		if test "$force_default_cc_options" = "yes" ; then
+		   our_cflags_defaults=""
+		fi
+		;;
+	*)
+		DCT_IA64_SOURCES="SRC_IA64_IDCT_GCC"
+		;;
+   esac
+
+fi
+
+dnl ==========================================================================
+dnl
+dnl Check for header files
+dnl
+dnl ==========================================================================
+
+AC_CHECK_HEADERS(
+	stdio.h \
+	signal.h \
+	stdlib.h \
+	string.h \
+	assert.h \
+	math.h \
+	, , AC_MSG_ERROR(Missing header file))
+
+dnl ==========================================================================
+dnl
+dnl Check for pthread
+dnl
+dnl ==========================================================================
+
+if test x"$pthread" = x"yes" ; then
+   AC_CHECK_HEADER(
+	[pthread.h],
+	[AC_CHECK_LIB(
+		[pthread],
+		[pthread_create],
+		[SPECIFIC_CFLAGS="$SPECIFIC_CFLAGS -DHAVE_PTHREAD"
+		 SPECIFIC_LDFLAGS="$SPECIFIC_LDFLAGS -lpthread"],
+		AC_MSG_WARN(Pthread not supported. No SMP support))],
+	AC_MSG_WARN(Pthread not supported. No SMP support))
+else
+   AC_MSG_WARN(Pthread support disabled. No SMP support)
+fi
+
+dnl ==========================================================================
+dnl 
+dnl Now we can set CFLAGS if needed
+dnl
+dnl ==========================================================================
+
+if test "$force_default_cc_options" = "yes" ; then
+   CFLAGS="$our_cflags_defaults"
+fi
+
+dnl ==========================================================================
+dnl
+dnl Profiling stuff goes here
+dnl  - adds options to SPECIFIC_CFLAGS, SPECIFIC_LDLAGS
+dnl  - removes incompatible options from CFLAGS
+dnl
+dnl ==========================================================================
+
+SPECIFIC_LDFLAGS="$SPECIFIC_LDFLAGS $GNU_PROF_LDFLAGS"
+SPECIFIC_CFLAGS="$SPECIFIC_CFLAGS $GNU_PROF_CFLAGS"
+
+if test "$enable_gnuprofile" = "yes" ; then
+   CFLAGS=`echo $CFLAGS | sed s/'-fomit-frame-pointer'/''/`
+fi
+
+dnl ==========================================================================
+dnl Some gcc flags can't be used for gcc >= 3.4.0 
+dnl ==========================================================================
+
+if test "$GCC" = "yes" ; then
+cat << EOF > test.c
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+	if (*argv[[1]] == 'M') {
+		printf("%d", __GNUC__);
+	}
+	if (*argv[[1]] == 'm') {
+		printf("%d", __GNUC_MINOR__);
+	}
+	return 0;
+}
+EOF
+	$CC -o gcc-ver test.c
+	
+	GCC_MAJOR=`./gcc-ver M`
+	GCC_MINOR=`./gcc-ver m`
+
+	rm -f test.c
+	rm -f gcc-ver
+
+	# GCC 4.x
+	if test "${GCC_MAJOR}" -gt 3 ; then
+		CFLAGS=`echo $CFLAGS | sed s,"-mcpu","-mtune",g`
+		CFLAGS=`echo $CFLAGS | sed s,'-freduce-all-givs','',g`
+		CFLAGS=`echo $CFLAGS | sed s,'-fmove-all-movables','',g`
+		CFLAGS=`echo $CFLAGS | sed s,'-fnew-ra','',g`
+		CFLAGS=`echo $CFLAGS | sed s,'-fwritable-strings','',g`
+	fi
+
+	# GCC 3.4.x
+	if test "${GCC_MAJOR}" -eq 3 && test "${GCC_MINOR}" -gt 3 ; then
+		CFLAGS=`echo $CFLAGS | sed s,"-mcpu","-mtune",g`
+	fi
+fi
+
+
+dnl ==========================================================================
+dnl
+dnl Substitions
+dnl
+dnl ==========================================================================
+
+AC_SUBST(FEATURES)
+AC_SUBST(ARCHITECTURE)
+AC_SUBST(BUS)
+AC_SUBST(ENDIANNESS)
+AC_SUBST(SHARED_EXTENSION)
+AC_SUBST(STATIC_EXTENSION)
+AC_SUBST(OBJECT_EXTENSION)
+AC_SUBST(NASM_FORMAT)
+AC_SUBST(AS)
+AC_SUBST(AFLAGS)
+AC_SUBST(ASSEMBLY_EXTENSION)
+AC_SUBST(GENERIC_SOURCES)
+AC_SUBST(ASSEMBLY_SOURCES)
+AC_SUBST(CC)
+AC_SUBST(CFLAGS)
+AC_SUBST(SPECIFIC_LDFLAGS)
+AC_SUBST(SPECIFIC_CFLAGS)
+AC_SUBST(DCT_IA64_SOURCES)
+AC_SUBST(PPC_ALTIVEC_SOURCES)
+AC_SUBST(RANLIB)
+AC_SUBST(AR)
+AC_SUBST(API_MAJOR)
+AC_SUBST(API_MINOR)
+AC_SUBST(STATIC_LIB)
+AC_SUBST(PRE_SHARED_LIB)
+AC_SUBST(SHARED_LIB)
+AC_SUBST(ALTIVEC_CFLAGS)
+
+dnl ==========================================================================
+dnl
+dnl Output files
+dnl
+dnl ==========================================================================
+
+AC_CONFIG_FILES(platform.inc)
+
+AC_OUTPUT

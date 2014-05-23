@@ -1,0 +1,202 @@
+`configure' configures mpg123 20110808000000 to adapt to many kinds of systems.
+
+Usage: ./configure [OPTION]... [VAR=VALUE]...
+
+To assign environment variables (e.g., CC, CFLAGS...), specify them as
+VAR=VALUE.  See below for descriptions of some of the useful variables.
+
+Defaults for the options are specified in brackets.
+
+Configuration:
+  -h, --help              display this help and exit
+      --help=short        display options specific to this package
+      --help=recursive    display the short help of all the included packages
+  -V, --version           display version information and exit
+  -q, --quiet, --silent   do not print `checking...' messages
+      --cache-file=FILE   cache test results in FILE [disabled]
+  -C, --config-cache      alias for `--cache-file=config.cache'
+  -n, --no-create         do not create output files
+      --srcdir=DIR        find the sources in DIR [configure dir or `..']
+
+Installation directories:
+  --prefix=PREFIX         install architecture-independent files in PREFIX
+			  [/usr/local]
+  --exec-prefix=EPREFIX   install architecture-dependent files in EPREFIX
+			  [PREFIX]
+
+By default, `make install' will install all the files in
+`/usr/local/bin', `/usr/local/lib' etc.  You can specify
+an installation prefix other than `/usr/local' using `--prefix',
+for instance `--prefix=$HOME'.
+
+For better control, use the options below.
+
+Fine tuning of the installation directories:
+  --bindir=DIR           user executables [EPREFIX/bin]
+  --sbindir=DIR          system admin executables [EPREFIX/sbin]
+  --libexecdir=DIR       program executables [EPREFIX/libexec]
+  --sysconfdir=DIR       read-only single-machine data [PREFIX/etc]
+  --sharedstatedir=DIR   modifiable architecture-independent data [PREFIX/com]
+  --localstatedir=DIR    modifiable single-machine data [PREFIX/var]
+  --libdir=DIR           object code libraries [EPREFIX/lib]
+  --includedir=DIR       C header files [PREFIX/include]
+  --oldincludedir=DIR    C header files for non-gcc [/usr/include]
+  --datarootdir=DIR      read-only arch.-independent data root [PREFIX/share]
+  --datadir=DIR          read-only architecture-independent data [DATAROOTDIR]
+  --infodir=DIR          info documentation [DATAROOTDIR/info]
+  --localedir=DIR        locale-dependent data [DATAROOTDIR/locale]
+  --mandir=DIR           man documentation [DATAROOTDIR/man]
+  --docdir=DIR           documentation root [DATAROOTDIR/doc/mpg123]
+  --htmldir=DIR          html documentation [DOCDIR]
+  --dvidir=DIR           dvi documentation [DOCDIR]
+  --pdfdir=DIR           pdf documentation [DOCDIR]
+  --psdir=DIR            ps documentation [DOCDIR]
+
+Program names:
+  --program-prefix=PREFIX            prepend PREFIX to installed program names
+  --program-suffix=SUFFIX            append SUFFIX to installed program names
+  --program-transform-name=PROGRAM   run sed PROGRAM on installed program names
+
+System types:
+  --build=BUILD     configure for building on BUILD [guessed]
+  --host=HOST       cross-compile to build programs to run on HOST [BUILD]
+
+Optional Features:
+  --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
+  --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --disable-dependency-tracking  speeds up one-time build
+  --enable-dependency-tracking   do not reject slow dependency extractors
+  --enable-modules=no/yes dynamically loadable output modules
+  --enable-static[=PKGS]  build static libraries [default=no]
+  --enable-shared[=PKGS]  build shared libraries [default=yes]
+  --enable-fast-install[=PKGS]
+                          optimize for fast installation [default=yes]
+  --disable-libtool-lock  avoid locking (might break parallel builds)
+  --enable-debug=no/yes turn on debugging
+  --enable-nagging=no/yes turn on GCC's pedantic nagging with error on warnings, also enables debugging
+  --enable-gapless=no/yes turn on gapless (enabled per default)
+  --enable-fifo=no/yes FIFO support for control interface (auto-enabled on linux)
+  --enable-ipv6=no/yes IPv6 support (actually any protocol your libc does with getaddrinfo)
+  --enable-network=no/yes network support (http streams / webradio)
+  --disable-id3v2=no/yes no ID3v2 parsing
+  --disable-string=no/yes no string API (this will disable ID3v2; main mpg123 won't build anymore)
+  --disable-icy=no/yes no ICY metainfo parsing/conversion (main mpg123 won't build!)
+  --disable-ntom=no/yes no flexible resampling
+  --disable-downsample=no/yes no downsampled decoding
+  --disable-feeder=no/yes no feeder decoding, no buffered readers
+  --disable-messages=no/yes no error/warning messages on the console
+  --enable-int-quality=yes/no use rounding instead of fast truncation for integer output, where possible
+  --disable-16bit=no/yes no 16 bit integer output
+  --disable-8bit=no/yes no 8 bit integer output
+  --disable-32bit=no/yes no 32 bit integer output (also 24 bit)
+  --disable-real=no/yes no real (floating point) output
+  --enable-buffer=yes/no disable audio buffer code (default uses system whitelist... proper checks later)
+  --disable-layer1=no/yes no layer I decoding
+  --disable-layer2=no/yes no layer II decoding
+  --disable-layer3=no/yes no layer III decoding
+  --disable-largefile     omit support for large files
+  --disable-lfs-alias disable alias wrappers for largefile bitness (mpg123_seek_32 in addition to mpg123_seek, mpg123_seek_64 as alias on x86-64)
+  --disable-feature_report Disable feature report function
+
+Optional Packages:
+  --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
+  --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
+  --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
+  --with-pic              try to use only PIC/non-PIC objects [default=use
+                          both]
+  --with-tags[=TAGS]      include additional configurations [automatic]
+
+  --with-cpu=generic_fpu      Use generic processor code with floating point arithmetic
+  --with-cpu=generic_float      Plain alias to generic_fpu now... float output is a normal runtime option!
+  --with-cpu=generic_nofpu      Use generic processor code with fixed point arithmetic (p.ex. ARM, experimental)
+  --with-cpu=generic_dither     Use generic processor code with floating point arithmetic and dithering for 1to1 16bit decoding.
+  --with-cpu=i386_fpu         Use code optimized for i386 processors with floating point arithmetic
+  --with-cpu=i386_nofpu         Use code optimized for i386 processors with fixed point arithmetic (experimental)
+  --with-cpu=i486         Use code optimized for i486 processors (only usable alone!)
+  --with-cpu=i586         Use code optimized for i586 processors
+  --with-cpu=i586_dither  Use code optimized for i586 processors with dithering (noise shaping), adds 256K to binary size
+  --with-cpu=3dnow        Use code optimized for 3DNow processors
+  --with-cpu=3dnowext     Use code optimized for 3DNowExt processors (K6-3+, Athlon)
+  --with-cpu=3dnowext_alone     Really only 3DNowExt decoder, without 3DNow fallback for flexible rate
+  --with-cpu=mmx          Use code optimized for MMX processors
+  --with-cpu=mmx_alone          Really only MMX decoder, without i586 fallback for flexible rate
+  --with-cpu=sse          Use code optimized for SSE processors
+  --with-cpu=sse_alone          Really only SSE decoder, without i586 fallback for flexible rate
+  --with-cpu=x86          Pack all x86 opts into one binary (excluding i486, including dither)
+  --with-cpu=x86-64       Use code optimized for x86-64 processors (AMD64 and Intel64, including dithered generic)
+  --with-cpu=altivec      Use code optimized for Altivec processors (PowerPC G4 and G5)
+  --with-cpu=ppc_nofpu    Use code optimized for PowerPC processors with fixed point arithmetic (experimental)
+  --with-cpu=neon         Use code optimized for ARM NEON SIMD engine (Cortex-A series)
+  --with-cpu=arm_nofpu    Use code optimized for ARM processors with fixed point arithmetic (experimental)
+
+
+  --with-audio=<list of modules>  Select a list (or only one) of audio output modules (comma or space separated list).
+
+
+  --with-default-audio=aix        Use AIX as default audio output sub-system
+  --with-default-audio=alib       Use Alib as default audio output sub-system (for HPUX)
+  --with-default-audio=alsa       Use ALSA as default audio output sub-system
+  --with-default-audio=arts       Use aRts as default audio output sub-system (KDE sound server)
+  --with-default-audio=dummy      Use dummy as default audio (when no sound card is available)
+  --with-default-audio=esd        Use ESoundD as default audio output sub-system
+  --with-default-audio=hp         Use HP as default audio output sub-system
+  --with-default-audio=jack       Use JACK as default low-latency audio server
+  --with-default-audio=coreaudio  Use Mac OS X as default audio output sub-system (CoreAudio)
+  --with-default-audio=mint       Use MinT as default audio output sub-system (Atari)
+  --with-default-audio=nas        Use NAS as default audio output (Network Audio System)
+  --with-default-audio=os2        Use OS2 as default audio output sub-system
+  --with-default-audio=oss        Use OSS as default audio output sub-system (/dev/dsp)
+  --with-default-audio=portaudio  Use PortAudio as default audio output sub-system
+  --with-default-audio=pulse      Use Pulse audio server as default audio output sub-system
+  --with-default-audio=sdl        Use SDL as default audio output sub-system (Simple DirectMedia Layer)
+  --with-default-audio=sgi        Use SGI as default audio output sub-system (IRIX)
+  --with-default-audio=sndio      Use OpenBSD's sndio as default audio output sub-system
+  --with-default-audio=sun        Use Sun as default audio output sub-system (/dev/audio)
+  --with-default-audio=win32      Use Win32 audio as default audio output sub-system
+
+
+  --with-optimization=0   No Optimization
+  --with-optimization=1   Limited Optimization (-O) (for gcc)
+  --with-optimization=2   Default Optimization (-O2 ...) (for gcc)
+  --with-optimization=3   More Optimize than default (-O3 ...) (for gcc)
+  --with-optimization=4   Optimize yet more (-O4 ...) (for gcc)
+
+
+  --with-seektable=<size> choose size of seek index table (0 disables it), default 1000
+
+
+  --with-module-suffix=.la            (default) Use libtool's .la files for loading modules.
+  --with-module-suffix=.so|.dll|... Specify the native module file suffix to bypass .la files.
+
+
+Some influential environment variables:
+  CC          C compiler command
+  CFLAGS      C compiler flags
+  LDFLAGS     linker flags, e.g. -L<lib dir> if you have libraries in a
+              nonstandard directory <lib dir>
+  LIBS        libraries to pass to the linker, e.g. -l<library>
+  CPPFLAGS    C/C++/Objective C preprocessor flags, e.g. -I<include dir> if
+              you have headers in a nonstandard directory <include dir>
+  CCAS        assembler compiler command (defaults to CC)
+  CCASFLAGS   assembler compiler flags (defaults to CFLAGS)
+  CPP         C preprocessor
+  CXX         C++ compiler command
+  CXXFLAGS    C++ compiler flags
+  CXXCPP      C++ preprocessor
+  F77         Fortran 77 compiler command
+  FFLAGS      Fortran 77 compiler flags
+  PKG_CONFIG  path to pkg-config utility
+  JACK_CFLAGS C compiler flags for JACK, overriding pkg-config
+  JACK_LIBS   linker flags for JACK, overriding pkg-config
+  PULSE_CFLAGS
+              C compiler flags for PULSE, overriding pkg-config
+  PULSE_LIBS  linker flags for PULSE, overriding pkg-config
+  ESD_CFLAGS  C compiler flags for ESD, overriding pkg-config
+  ESD_LIBS    linker flags for ESD, overriding pkg-config
+  SDL_CFLAGS  C compiler flags for SDL, overriding pkg-config
+  SDL_LIBS    linker flags for SDL, overriding pkg-config
+
+Use these variables to override the choices made by `configure' or to help
+it to find libraries and programs with nonstandard names/locations.
+
+Report bugs to <mpg123-devel@lists.sourceforge.net>.

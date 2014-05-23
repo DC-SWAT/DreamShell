@@ -1,8 +1,8 @@
 /* KallistiOS ##version##
 
    aica_cmd_iface.h
-   (c)2000-2002 Dan Potter
-   (c)2011-2014 SWAT
+   Copyright (C) 2000-2002 Dan Potter
+   Copyright (C) 2009-2014 SWAT
 
    Definitions for the SH-4/AICA interface. This file is meant to be
    included from both the ARM and SH-4 sides of the fence.
