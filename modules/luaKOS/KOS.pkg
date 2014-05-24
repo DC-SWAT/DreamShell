@@ -163,10 +163,14 @@ typedef int file_t;
 
     @{
 */
+#define	O_RDONLY	0
+#define	O_WRONLY	1
+#define	O_RDWR		2
+#define	O_ACCMODE	(O_RDONLY|O_WRONLY|O_RDWR)
+#define	O_APPEND	0x0008
+#define	O_CREAT		0x0200
+#define	O_TRUNC		0x0400
 #define O_MODE_MASK 0x0f        /**< \brief Mask for mode numbers */
-//#define O_TRUNC       0x0100      /* Truncate */
-#define O_ASYNC     0x0200      /**< \brief Open for asynchronous I/O */
-//#define O_NONBLOCK    0x0400      /* Open for non-blocking I/O */
 #define O_DIR       0x1000      /**< \brief Open as directory */
 #define O_META      0x2000      /**< \brief Open as metadata */
 /** @} */
