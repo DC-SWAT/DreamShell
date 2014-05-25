@@ -1,0 +1,31 @@
+* Installation
+
+  Building tolua on a Unix system should be very easy:
+
+	1. Edit "config" to suit your platform, if at all necessary.
+	2. Then, type "make".
+
+  See below for instructions for Windows and Macintosh.
+
+* What you get
+
+  If "make" succeeds, you get:
+	* an executable to generate binding code in ./bin;
+	* the C library to be linked in your application in ./lib;
+	* the include file needed to compile your application in ./include.
+  These are the only directories you need for development, besides Lua.
+
+  There is testing codes in src/tests and, if you are lucky, there is a manual page 
+		in html in ./doc. You don't need these directories for development.
+
+* Installation on Windows
+
+  The instructions for building tolua on a Mac or Windows machine depend on
+  the particular compiler you are using.
+  The simplest way is to create a folder with all .c and .h files, and
+  then create a project for the executable and the library, as follows:
+
+  tolua.exe: all *.c *.h in src/bin.
+  tolua.lib: all *.c *.h in src/lib.
+
+		Under directory ./win32, there is a project sample for Visual C++ 6.

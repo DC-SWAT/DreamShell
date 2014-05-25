@@ -1,6 +1,7 @@
 tolua_RC_open
 _flashrom_write
 _flashrom_delete
+flash_write_file
 flash_write_factory
 flash_read_factory
 flash_clear

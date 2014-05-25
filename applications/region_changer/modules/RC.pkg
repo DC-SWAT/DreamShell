@@ -28,6 +28,7 @@ typedef struct flash_factory_values {
 int flash_clear(int block);
 uint8 *flash_read_factory();
 void flash_write_factory(uint8 *data);
+int flash_write_file(const char *filename);
 
 
 /**

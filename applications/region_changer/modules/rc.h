@@ -37,6 +37,7 @@ uint8 *flash_factory_set_country(uint8 *data, int country, int black_swirl);
 int flash_clear(int block);
 uint8 *flash_read_factory();
 int flash_write_factory(uint8 *data);
+int flash_write_file(const char *filename);
 
 void flash_factory_free_values(flash_factory_values_t *values);
 void flash_factory_free_data(uint8 *data);
