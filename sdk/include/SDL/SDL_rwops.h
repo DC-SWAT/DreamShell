@@ -73,10 +73,16 @@ typedef struct SDL_RWops {
 		} buffer;
 	    } win32io;
 #endif
-#ifdef HAVE_STDIO_H 
+#ifdef __DREAMCAST__
 	    struct {
-		int autoclose;
-	 	FILE *fp;
+			int autoclose;
+			file_t fd;
+	    } dc;
+#endif
+#ifdef HAVE_STDIO_H
+	    struct {
+			int autoclose;
+			FILE *fp;
 	    } stdio;
 #endif
 	    struct {
@@ -98,6 +104,10 @@ extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFile(const char *file, const char 
 
 #ifdef HAVE_STDIO_H
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFP(FILE *fp, int autoclose);
+#endif
+
+#ifdef __DREAMCAST__
+extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFD(file_t fd, int autoclose);
 #endif
 
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromMem(void *mem, int size);

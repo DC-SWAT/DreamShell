@@ -496,7 +496,11 @@ void isoLoader_DefaultPreset() {
 
 
 int isoLoader_SavePreset() {
-	
+
+	if(!GUI_WidgetGetState(APP_GET_WIDGET("preset-checkbox"))) {
+		return 0;
+	}
+
 	char *filename;
 	FILE *fp;
 	

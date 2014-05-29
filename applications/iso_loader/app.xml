@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="ISO Loader" version="0.4.0" icon="./images/iso_loader_icon.png" extensions=".iso .cso .cdi .gdi">
+<app name="ISO Loader" version="0.4.1" icon="./images/iso_loader_icon.png" extensions=".iso .cso .cdi .gdi">
 	<resources>
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" /> 
@@ -194,7 +194,16 @@
 				<!-- Left Column   -->
 				<panel x="0" y="10" width="320" height="350">
 				
-					<label width="200" height="40" x="40" y="5" font="m23" color="#3078A0" text="Settings:" align="left" />
+					<label width="130" height="40" x="40" y="5" font="m23" color="#3078A0" text="Settings:" align="left" />
+					<input type="checkbox" 
+							onnormal="iCheck" 
+							onhighlight="iCheckHigh" 
+							offnormal="iUncheck" 
+							offhighlight="iUncheckHigh" 
+							x="140" y="16" width="150" height="25" 
+							name="preset-checkbox">
+						<label width="130" height="20" x="25" y="0" font="arial" color="#000000" text="Save as preset" align="left" />
+					</input>
 				
 					<panel x="40" y="45" width="270" height="95">
 						<input type="checkbox" 
