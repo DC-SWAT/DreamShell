@@ -1,0 +1,102 @@
+%define name    libini
+%define version 1.1.10
+%define release 2
+%define major   1
+
+%{!?_prefix:     %define _prefix      /}
+%{!?_tmppath:    %define _tmppath     /tmp}
+%{!?_includedir: %define _includedir  ${_prefix}/include}
+%{!?_libdir:     %define _libdir      ${_prefix}/lib}
+
+Summary:        INI file parser library.
+Name:           %{name}
+Version:        %{version}
+Release:        %{release}
+Source:         %{name}-%{version}.tar.gz
+Copyright:      GPL
+Group:          System/Libraries
+URL:            http://libini.sourceforge.net/
+BuildRoot:      %{_tmppath}/%{name}%{major}-buildroot
+Prefix:         %{_prefix}
+
+%description
+An INI file parser library that can read, edit and create large INI
+files.  Usable under Microsoft Windows, DOS, Linux, etc. Supported
+languages are C, C++, Visual Basic, Java, TCL, Perl, Python, etc
+(DLL and SWIG capable).
+
+Support for non standard comments, anonymous sections and autoparsing
+of data lists.
+
+%package devel
+Summary:        Development headers and libraries for %{name}%{major}
+Group:          Development/C++
+
+%description devel
+This package includes the header and library files necessary
+for developing applications to use %{name}%{major}.
+
+
+%prep
+rm -rf $RPM_BUILD_ROOT
+%setup -q
+
+%build
+CFLAGS="$RPM_OPT_FLAGS" CXXFLAGS="$RPM_OPT_FLAGS" ./configure --prefix=%{_prefix}
+make
+
+%install
+make DESTDIR=$RPM_BUILD_ROOT install
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%postun
+/sbin/ldconfig
+
+%post
+/sbin/ldconfig
+
+%files
+%defattr(-,root,root)
+%doc AUTHORS COPYING ChangeLog README TODO
+%{_libdir}/*.so.*
+
+%files devel
+%defattr(-,root,root)
+%{_includedir}/*
+%{_libdir}/*.la
+%{_libdir}/*.a
+%{_libdir}/*.so
+
+%changelog
+* Sat Nov 17 2004 Simon White <s_a_white@email.com> 1.1.10-2
+- Fixes for read only files.  Add Red Hat 5.2 + other
+- Karel Vanroye patches (indexing delayed till 1.1.11).
+
+* Sat Nov 13 2004 Simon White <s_a_white@email.com> 1.1.10-1
+- Stabalisation and bugfixes, see ChangeLog for details.
+
+* Wed Sep 21 2002 Simon White <s_a_white@email.com> 1.1.9-1
+- First release, see ChangeLog for details.
+
+* Thu Oct 18 2001 Simon White <s_a_white@email.com> 1.1.8-2
+- Re-added ini_setBuffer to allow setting the default value
+  from a scripting language.
+
+* Wed Oct 17 2001 Simon White <s_a_white@email.com> 1.1.8-1
+- Interface + functionality update and bug fixes.
+
+* Fri Jul 27 2001 Simon White <s_a_white@email.com> 1.1.7-1
+- Bug fix update.
+
+* Sun Apr 20 2001 Simon White <s_a_white@email.com> 1.1.6-3
+- Fixes SWIG generating incorrect wrappers for some ini calls.
+
+* Sun Apr 19 2001 Simon White <s_a_white@email.com> 1.1.6-2
+- Various bug fixes, SWIG language safety update.
+
+* Sun Apr 1 2001 Simon White <s_a_white@email.com> 1.1.6-1
+- First spec file.
+
+# end of file

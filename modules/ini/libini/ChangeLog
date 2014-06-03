@@ -1,0 +1,177 @@
+Libini V1.10 Release 2:
+
+Fixed:
+
+* Make all ini modifing calls fail for read only files.
+
+* Fix strtrim to put null character in correct place
+
+Karel Vanroye <kva@melexis.com>:
+
+Fixed:
+
+* ini_readInt, ini_readDouble and ini_readLong returns zero
+  only if succesful conversion is done.
+
+* libini.spec.in: make it compactible with Red Hat 5.2 rpm 2.5.5
+
+Changes:
+
+* ini_readBool true has now synonym yes, on; false has no, off
+
+Added:
+
+* Returning of currently selected heading and key name using
+  ini_currentHeading and ini_currentKey.
+
+
+Libini V1.10 Release 1:
+
+Fixed:
+
+* Freeing of memory on heading creation errors.
+
+* A data of the following format nolonger returns the comment
+  as part of the data:
+
+  key=data ;comment
+
+* First key in an anonymous section starting right at the start
+  of the file is nolonger ignored.
+
+* Fix ini_append and ini_store to nolonger crash if a heading
+  was not previously located.
+
+* Providing ini_open a NULL for comment is now treated as no
+  comment (instead of crashing).
+
+Changes:
+
+* POTENTIAL INCOMPATIBILITY
+  By default key/heading searches are now performed without
+  case sensitivity. Pass the additional character 'i' in
+  mode to ini_open to obtain old behaviour.
+
+* By default backups are nolonger kept.  Pass the additional
+  character 'b' in mode to ini_open to obtain old behaviour.
+
+* Swig module naming to make it more consistent across
+  languages.  To use swig to generate support for another
+  language use:
+
+    swig -<lang> -module <lang>ini -o libini_<lang>.c libini.h
+
+  e.g.
+
+    swig -perl -module perlini -o libini_perl.c libini.h
+
+  Then compile that file and create a library called
+  lib<lang>ini that depends on the library libini.
+
+
+Libini V1.9 Release 1:
+
+Fixed:
+
+*ini_open nolonger wrongly keeps input file open.
+
+*Cleanup after new file creation check.  This prevents
+ operations on an already closed file.
+
+*The following is nolonger processed as two keys:
+
+ key1=key2=data
+
+*Simultaneous ini_open calls from different threads nolonger
+ gives corrupted results.  Note that you cannot access the
+ same INI file from multiple threads unless a mutex lock
+ is placed around all the relevant libini calls.
+
+Modified:
+
+*INI parser to support multiple character comments. The
+ passed in comment string to ini_open is now used when
+ processing the file. Comments are only recognised if they
+ are at the beginning of a newline, preceeded by one
+ character of whitespace and match the entire string passed
+ into ini_open.
+
+Added:
+
+*Bool data type.
+
+
+Libini V1.8 Release 2:
+
+Re-added ini_setBuffer for scripting languages which was
+accidently removed.
+
+
+Libini V1.8 Release 1:
+
+Fixed:
+
+*Different build options to reduce code size.
+
+*Temporary files being left sometimes.
+
+*ini_readDouble now reads double precision values from
+ the INI file.
+
+Modified:
+
+*ini_open & ini_new functions have been combined into a
+ single function called ini_open with extra parameters.
+ The function now takes a filename, access mode and
+ comment character(s).  Access mode "w" is equivalent
+ to the old ini_new and "a" is equivalent to the old
+ ini_open.  The comment character(s) should currently
+ be passed in as either "#" or ";".  Other comment
+ strings are not supported at this time.  Note that only
+ one comment type is supported in the same file!
+
+*ini_deleteAll renamed to ini_delete.
+
+Added:
+
+*ini_append:  Allows two INI files to be combined.  Keys
+ from the source INI file will overwrite keys in the
+ destination.
+
+
+Libini1 V1.7 Release 1:
+
+Various Fixes:
+
+*Fixed ini_new so correctly creates a new file if one dosen't
+ exist.
+
+*Doing an ini_flush no longer trashes the current heading/key
+ you had previously located.
+
+*If all section and keys have been removed the INI file is
+ now deleted.
+
+*ini_flush with no changes made to the file nolonger deletes
+ the ini file descriptor thus causing the next ini_* call to
+ perform a illegal operation/seg fault.
+
+*ini_deleteHeading now works.
+
+Added:
+
+*ini_deleteAll to remove all section and keys
+
+
+Libini1 V1.6 Release 3:
+
+*Tested with Visual Basic and added appropriate bas module.
+
+*Removed ini_listIndexLength.  When ini_listDelims is used
+ ini_dataLength now returns the value normally provided
+ by ini_listIndexLength.
+
+
+libini1 Version 1.6
+
+Initial Sourceforge Release.

@@ -1,0 +1,31 @@
+Patches, bug reporting and providing help with this project would
+be greatly appreciated.
+
+The following still needs to be implemented for completeness.  
+
+* Fix comments getting lost.
+
+* Use list mechanism to provide access to all section/key names
+  like the GetPrivateProfileString call with NULLs in the appropriate
+  positions.
+
+* Possibly track multi-layer section relationships like that used for the
+  Windows registry:
+
+  [Top]
+  key1 = data
+
+  [Top/Child]
+  key1 = data
+
+* Handle data (and possibly comments) spanning multiple lines:
+
+; comment \
+rest of comment
+
+key1 = data \
+rest of data
+
+* Handle quotes around keys
+
+key1 = "key1 ; This is not a comment"

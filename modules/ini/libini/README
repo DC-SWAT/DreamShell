@@ -1,0 +1,39 @@
+This INI file reader has been designed to handle large configuration files
+on Windows and non Windows platforms.  All standard Mircosoft functionality
+is provided.
+
+Additional support includes:
+
+Non standard comments e.g. '#' and comments appearing at the end of a key.
+
+
+Anonymous sections e.g.:
+
+; This key has no section header
+key1 = data
+
+[section1]
+key1 = data ; comment
+
+
+Auto parsing of data lists:
+
+key1 = data, data2, data3
+
+
+Features:
+
+Comments at the end of keeps will not be recognised unless there is atleast
+one character of whitespace preceeding the start of the comment.
+
+All comments in the same INI file must be of the same type, and you are
+required to define the type of comment you expect.
+
+Additional data types.
+
+
+Bugs:
+
+Due to the caching feature, only usable data is read from the INI file.
+Should you make a change to this data, only the usable data is written back
+to the file.  This means all comments will be lost!

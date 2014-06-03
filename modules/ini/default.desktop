@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=ini
+Type=Application
+Exec=module -o -f %f
+Comment=libini library
+Terminal=false
+Categories=applications
+MimeType=application/ini
