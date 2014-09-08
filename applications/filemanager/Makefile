@@ -12,6 +12,9 @@ DEPS = app.xml lua/main.lua
 
 all: install
 
+clean:
+	@echo Nothing clean
+
 install: $(DEPS)
 	-mkdir -p $(APP_DIR)
 	cp app.xml $(APP_DIR)/app.xml

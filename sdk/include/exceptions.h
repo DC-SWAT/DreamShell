@@ -97,7 +97,7 @@ void expt_print_place(char *file, int line, const char *func);
  * use EXPT_GUARD_RETURN instead. 
  */
 #define EXPT_GUARD_BEGIN_NEXT                                   \
-	if (1) {                                                    \
+	do {                                                        \
 		__expt->pos++;                                          \
 		if (__expt->pos >= EXPT_GUARD_STACK_SIZE)               \
 			EXPT_GUARD_THROW;                                   \
@@ -123,16 +123,14 @@ void expt_print_place(char *file, int line, const char *func);
 #define EXPT_GUARD_END                                          \
 		}                                                       \
 		__expt->pos--;                                          \
-	} else
+	} while(0)
 
 /** 
  * Return in middle of a guarded section. 
  * \warning : to be used exclusively inbetween EXPT_GUARD_BEGIN and
  * EXPT_GUARD_END. Never use normal "return" in this case. 
  */
-#define EXPT_GUARD_RETURN                                       \
-	__expt->pos--;                                              \
-	return
+#define EXPT_GUARD_RETURN __expt->pos--; return
 
 
 #define EXPT_GUARD_ASSIGN(dst, src, catched)                    \
@@ -141,7 +139,6 @@ void expt_print_place(char *file, int line, const char *func);
 	EXPT_GUARD_CATCH;                                           \
 		catched;                                                \
 	EXPT_GUARD_END
-
 
 
 #else /* ifdef USE_DS_EXCEPTIONS */

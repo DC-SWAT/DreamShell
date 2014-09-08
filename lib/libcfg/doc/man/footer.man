@@ -1,0 +1,7 @@
+.\" This is common footer for libcfg+ manpages. 
+.\" Written by Ondrej Jombik in 14th September 2002
+.SH "SEE ALSO"
+You can get library overview, table of contents and such additional information
+info from main \fBlibcfg+\fR(3) manpage by typing "man libcfg+" on UNIX-based
+systems. Also use this command to get information about authors, homepage and
+license conditions.

@@ -62,7 +62,7 @@ typedef int socklen_t;
 #include <sys/socket.h>
 #include <sys/select.h>
 //#include <net/if.h>
-//#include <netdb.h>
+#include <netdb.h>
 #endif /* WIN32 */
 
 /* FIXME: What platforms need this? */

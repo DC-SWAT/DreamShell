@@ -6,6 +6,7 @@
 */
 
 #include "ds.h"
+#include "isofs/isofs.h"
 
 DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
@@ -13,7 +14,7 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type);
 static int gdfiles(char *dst_folder,char *dst_file,char *text);
-static int getElement(char *name, ListItemType type);
+static void *getElement(char *name, ListItemType type);
 #define APP_GET_WIDGET(name)  ((GUI_Widget *)  getElement(name, LIST_ITEM_GUI_WIDGET))
 #define APP_GET_SURFACE(name) ((GUI_Surface *) getElement(name, LIST_ITEM_GUI_SURFACE))
 #define APP_GET_FONT(name)    ((GUI_Font *)    getElement(name, LIST_ITEM_GUI_FONT))
@@ -32,48 +33,22 @@ static struct self {
 		int lastgdtrack;
 } self;
 
-typedef struct {
-	char hardware_ID[16];
-	char maker_ID[16];
-	char device_info[16];
-	char country_codes[8];
-	char ctrl[4];
-	char dev[1];
-	char VGA[1];
-	char WinCE[1];
-	char product_ID[9];
-	char product_version[6];
-	char release_date[16];
-	char boot_file[16];
-	char software_maker_info[16];
-	char title[128];
-} ip_t;
 
 void gd_ripper_toggleSavedevice(GUI_Widget *widget){
-	//ds_printf("%s\n",GUI_ObjectGetName( (GUI_Object *)widget));
-	
     GUI_WidgetSetState(self.sd_c, 0);
     GUI_WidgetSetState(self.hdd_c, 0);
     GUI_WidgetSetState(self.net_c, 0);
-
-    GUI_WidgetSetState(widget, 1);
-
-	//ds_printf("%d\n",GUI_WidgetGetState(self.sd_c));
-	//ds_printf("%d\n",GUI_WidgetGetState(self.hdd_c));
-	//ds_printf("%d\n",GUI_WidgetGetState(self.net_c));		
+    GUI_WidgetSetState(widget, 1);	
 }
 
 void gd_ripper_Number_read(){
 	
-	char name[3];
+	char name[4];
 	if (atoi(GUI_TextEntryGetText(self.num_read)) > 50) GUI_TextEntrySetText(self.num_read, "50");
 	else {
-		snprintf(name, 3,"%d", atoi(GUI_TextEntryGetText(self.num_read)));
+		snprintf(name, 4, "%d", atoi(GUI_TextEntryGetText(self.num_read)));
 		GUI_TextEntrySetText(self.num_read, name);
 	}
-	
-	//ds_printf("%d\n" ,atoi(GUI_TextEntryGetText(self.num_read)));
-	
 }
 
 void gd_ripper_Gamename(){
@@ -83,8 +58,11 @@ void gd_ripper_Gamename(){
 	strcpy(txt,"\0");
 	snprintf(txt,MAX_FN_LEN,"%s", GUI_TextEntryGetText(self.gname));
 	
-	if(strlen(txt) == 0) strcpy(txt,"Game");
+	if(strlen(txt) == 0) 
+		strcpy(txt,"Game");
+		
 	snprintf(text,MAX_FN_LEN,"%s",txt);
+	
 	for (x=0;text[x] !=0;x++) {
 		if (text[x] == ' ') text[x] = '_' ;
 	}
@@ -102,7 +80,7 @@ void gd_ripper_ipbin_name(){
 	int status = 0, disc_type = 0, cdcr = 0, x = 0;
 	char pbuff[2048] , text[MAX_FN_LEN];
 	uint32 lba;
-//	gdrom_hw_reset();
+
 	cdrom_set_sector_size(2048);
 	if((cdcr = cdrom_get_status(&status, &disc_type)) != ERR_OK) {
 		switch (cdcr){
@@ -137,7 +115,7 @@ void gd_ripper_ipbin_name(){
 		return;
 	}
 	
-	ip_t *meta = (ip_t*) pbuff;
+	ipbin_meta_t *meta = (ipbin_meta_t*) pbuff;
 	
 	char *p;
 	char *o;
@@ -147,13 +125,13 @@ void gd_ripper_ipbin_name(){
 
 	// skip any spaces at the beginning
 	while(*p == ' ' && meta->title + 29 > p) 
-	p++;
+		p++;
 
 	// copy rest to output buffer
 	while(meta->title + 29 > p) { 
-	*o = *p;
-	p++; 
-	o++; 
+		*o = *p;
+		p++; 
+		o++; 
 	}
 
 	// make sure output buf is null terminated
@@ -162,27 +140,28 @@ void gd_ripper_ipbin_name(){
 
 	// remove trailing spaces
 	while(*o == ' ' && o > text) {
-	*o='\0';
-	o--;
+		*o='\0';
+		o--;
 	}
 	
-	if (strlen(text) == 0) GUI_TextEntrySetText(self.gname, "Game");	
-	else {
-	for (x=0;text[x] !=0;x++) {
-		if (text[x] == ' ') text[x] = '_' ;
-	}
-	GUI_TextEntrySetText(self.gname, text);
+	if (strlen(text) == 0) {
+		GUI_TextEntrySetText(self.gname, "Game");	
+	} else {
+		for (x=0;text[x] !=0;x++) {
+			if (text[x] == ' ') text[x] = '_' ;
+		}
+		GUI_TextEntrySetText(self.gname, text);
 	}
 	//ds_printf("Image name - %s\n",text);
 }
 
 void gd_ripper_Init(App_t *app, const char* fileName) {
-
-	self.app = app;
-
-
-	if(self.app != NULL) {
-
+	
+	if(app != NULL) {
+		
+		memset(&self, 0, sizeof(self));
+		
+		self.app = app;
 		self.bad = APP_GET_WIDGET("bad_btn");
 		self.gname = APP_GET_WIDGET("gname-text");
 		self.pbar = APP_GET_WIDGET("progress_bar");
@@ -208,14 +187,14 @@ void gd_ripper_Init(App_t *app, const char* fileName) {
 		}
 		
 		gd_ripper_ipbin_name();
+	} else {
+		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n", 
+					lib_get_name(), __func__);
 	}
-		else
-		ds_printf("DS_ERROR: %s: Can't find app named:\n", lib_get_name());
-	
 }
 
 
-static int getElement(char *name, ListItemType type) {
+static void *getElement(char *name, ListItemType type) {
 	
 	Item_t *item;
 	

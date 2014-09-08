@@ -44,5 +44,5 @@ int builtin_httpd_cmd(int argc, char *argv[]) {
 		return CMD_OK;
 	}
 	
-	return CMD_OK;
+	return CMD_NO_ARG;
 }

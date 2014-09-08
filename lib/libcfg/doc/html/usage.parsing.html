@@ -1,0 +1,332 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Parsing</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Usage"
+HREF="usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Context flags"
+HREF="usage.context-flags.html"><LINK
+REL="NEXT"
+TITLE="Error handling"
+HREF="usage.error-codes.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="usage.context-flags.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Usage</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="usage.error-codes.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="USAGE.PARSING"
+></A
+>2.4. Parsing</H1
+><P
+>&#13;After a libcfg+ context is created and its flags are set (optional), one can
+initiate the parsing. This chapter provides information about the available
+parsing methods.
+
+<DIV
+CLASS="FUNCSYNOPSIS"
+><A
+NAME="AEN465"
+></A
+><P
+></P
+><PRE
+CLASS="FUNCSYNOPSISINFO"
+>#include &#60;cfg+.h&#62;</PRE
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_parse</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_get_next_opt</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+></P
+></DIV
+>&#13;</P
+><P
+>&#13;These functions take a context as their only argument. Depending on the type
+of the context, either a file or a command line option will be processed. If
+the option just parsed matches one of the options in the option set
+(see&nbsp;<A
+HREF="usage.html#USAGE.OPTIONS-SET"
+><I
+>Options set</I
+></A
+>&nbsp;section) and the arguments of the
+parsed option are stored in memory and <TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> is set
+to point to them. However, if the <TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> of the
+relevant option in the option is set to <TT
+CLASS="CONSTANT"
+>NULL</TT
+>, the
+arguments will not be stored.&#13;</P
+><P
+>&#13;The main and only difference between the two functions is in the way they
+interpret the <TT
+CLASS="STRUCTFIELD"
+><I
+>val</I
+></TT
+> field of the relevant option
+after a matching token was found in the token stream. The function
+<TT
+CLASS="FUNCTION"
+>cfg_get_next_opt()</TT
+> respects the value of this field and
+if it is not <TT
+CLASS="CONSTANT"
+>0</TT
+>, returns the value upon a match. If the
+field is set to <TT
+CLASS="CONSTANT"
+>0</TT
+>, the function proceeds to the next token
+without returning a value. In the case of <TT
+CLASS="FUNCTION"
+>cfg_parse()</TT
+>,
+<TT
+CLASS="STRUCTFIELD"
+><I
+>val</I
+></TT
+> is ignored.&#13;</P
+><P
+>&#13;If an error occurs during parsing, the functions return a negative integer.
+This is why it is a good idea to set the <TT
+CLASS="STRUCTFIELD"
+><I
+>val</I
+></TT
+> member
+of the <SPAN
+CLASS="STRUCTNAME"
+>cfg_option</SPAN
+> to a value equal or greater than
+<TT
+CLASS="CONSTANT"
+>0</TT
+>.  Detailed information about error codes as well as
+their descriptions can be found in the <A
+HREF="usage.error-codes.html"
+><I
+>Error handling</I
+></A
+> section.&#13;</P
+><P
+>&#13;At the end of parsing <TT
+CLASS="CONSTANT"
+>0</TT
+> is returned.&#13;</P
+><P
+>&#13;The following functions provide additional information about a matched option.
+
+<DIV
+CLASS="FUNCSYNOPSIS"
+><A
+NAME="AEN497"
+></A
+><P
+></P
+><PRE
+CLASS="FUNCSYNOPSISINFO"
+>#include &#60;cfg+.h&#62;</PRE
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>char *cfg_get_cur_opt</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>char *cfg_get_cur_arg</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_get_cur_idx</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+></P
+></DIV
+>&#13;</P
+><P
+>&#13;Use <TT
+CLASS="FUNCTION"
+>cfg_get_cur_opt()</TT
+> to get the name of the option being
+processed. Use <TT
+CLASS="FUNCTION"
+>cfg_get_cur_arg()</TT
+>to get the current
+argument. Finally, use <TT
+CLASS="FUNCTION"
+>cfg_get_cur_idx()</TT
+> to get the
+current offset in the parsing stream. If the context is associated with the
+command line, the value is the current offset in the
+<TT
+CLASS="PARAMETER"
+><I
+>argv</I
+></TT
+> array. If the context is associated with a
+configuration file, then depending on the value of
+<TT
+CLASS="CONSTANT"
+>CFG_FILE_LINE_POS_USAGE</TT
+>, it is either the current byte
+offset or line number in the file.&#13;</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="usage.context-flags.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="usage.error-codes.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Context flags</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Error handling</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

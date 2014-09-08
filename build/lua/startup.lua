@@ -19,6 +19,8 @@
 --	ShowConsole
 --	HideConsole
 --	SetDebugIO             Set the debug output (scif, dclsocket, fb, ds, sd). By default is ds.
+--	Sleep                  Sleep in current thread (in ms)
+--	MapleAttached          Check for attached maple device
 --
 --	Bit library:           bit.or, bit.and, bit.not, bit.xor
 --	File system library:   lfs.chdir, lfs.currentdir, lfs.dir, lfs.mkdir, lfs.rmdir
@@ -50,6 +52,7 @@ local DreamShell = {
 		--"httpd",
 		--"telnetd",
 		--"mongoose",
+		--"ppp",
 		--"mpg123",
 		--"oggvorbis",
 		--"adx",
@@ -58,7 +61,6 @@ local DreamShell = {
 		--"SDL_mixer",        -- Depends: oggvorbis
 		--"ffmpeg",           -- Depends: oggvorbis, mpg123, bzip2
 		--"opengl",
-		--"kglx",
 		--"isofs",            -- Depends: minilzo
 		--"isoldr",           -- Depends: isofs
 		--"SDL_net",
@@ -67,9 +69,8 @@ local DreamShell = {
 		--"gumbo",
 		--"ini",
 		--"aicaos",
-		--"aicaos",
 		--"bflash",
-		"vkb"
+		--"vkb"
 	},
 
 	Initialize = function(self)
@@ -90,6 +91,10 @@ local DreamShell = {
 		end
 		
 		print("\n");
+		
+		if not MapleAttached("Keyboard") then
+			table.insert(self.modules, "vkb");
+		end
 
 		table.foreach(self.modules, function(k, name)  
 			print("DS_PROCESS: Loading module " .. name .. "...\n");
@@ -100,7 +105,7 @@ local DreamShell = {
 		
 		self:CheckUpdates(path);
 		self:InstallingApps(path .. "/apps");
-		OpenApp("Main");
+		OpenApp(os.getenv("APP"));
 		self.initialized = true;
 	end,
 	

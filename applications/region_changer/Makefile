@@ -1,6 +1,6 @@
 #
 # Region Changer App for DreamShell
-# Copyright (C) 2010-2013 SWAT
+# Copyright (C) 2010-2014 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -13,6 +13,12 @@ APP_DIR = $(DS_BUILD)/apps/$(APP_NAME)
 DEPS = app.xml lua/main.lua modules/app_$(APP_NAME).klf
 
 all: install
+
+$(DEPS): modules/module.c
+	cd modules && make
+	
+clean:
+	cd modules && make clean && cd ../
 
 install: $(DEPS)
 	-mkdir -p $(APP_DIR)

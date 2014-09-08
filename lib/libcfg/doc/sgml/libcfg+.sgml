@@ -1,0 +1,33 @@
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+	<!ENTITY % defs			SYSTEM "defs.sgml">
+	%defs;
+
+	<!ENTITY preface					SYSTEM	"preface.sgml">
+	<!ENTITY introduction				SYSTEM	"introduction.sgml">
+	<!ENTITY introduction.overwiev		SYSTEM	"introduction.overview.sgml">
+	<!ENTITY introduction.installation	SYSTEM	"introduction.installation.sgml">
+	<!ENTITY usage						SYSTEM	"usage.sgml">
+	<!ENTITY usage.options-set			SYSTEM	"usage.options-set.sgml">
+	<!ENTITY usage.context-manipulation	SYSTEM	"usage.context-manipulation.sgml">
+	<!ENTITY usage.context-flags		SYSTEM	"usage.context-flags.sgml">
+	<!ENTITY usage.parsing				SYSTEM	"usage.parsing.sgml">
+	<!ENTITY usage.error-codes			SYSTEM	"usage.error-codes.sgml">
+	<!ENTITY usage.properties			SYSTEM	"usage.properties.sgml">
+	<!ENTITY changelog					SYSTEM	"changelog.sgml">
+	<!ENTITY other-information			SYSTEM	"other-information.sgml">
+	<!ENTITY bookinfo	SYSTEM	"bookinfo.sgml">
+	<!ENTITY releaseinfo	"This document is the user's manual for	&name;.">
+]>
+
+<!-- $Platon: libcfg+/doc/sgml/libcfg+.sgml,v 1.16 2003/01/01 20:33:01 nepto Exp $ -->
+
+<book id="index">
+&bookinfo;
+
+&preface;
+&introduction;
+&usage;
+&other-information;
+
+</book>
+

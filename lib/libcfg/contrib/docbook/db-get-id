@@ -1,0 +1,103 @@
+#!/usr/bin/awk -f
+
+#
+# scripts/shell/docbook/ - DocBook support shell scripts
+#
+# db-get-id - SGML/XML ID attributes extractor
+# ____________________________________________________________
+#
+# Developed by Lubomir Host <rajo@platon.sk>
+# Copyright (c) 2002-2004 Platon SDG, http://platon.sk/
+# All rights reserved.
+#
+# See README file for more information about this software.
+# See COPYING file for license information.
+#
+# Download the latest version from
+# http://platon.sk/projects/scripts/
+#
+
+# $Platon: libcfg+/contrib/docbook/db-get-id,v 1.12 2004/01/12 06:03:07 nepto Exp $
+
+BEGIN {
+	last_tag  = "";
+	str       = "";
+	desc      = "";
+	manpage   = "";
+	printf "# id-name\tfilename\tmanpage\tid-type\tdescription\n";
+}
+
+function remove_tag(s, reg)
+{ # {{{
+		sub(/\t+/, " ", s);
+		reg1 = sprintf("^.*<%s[^>]*> *", reg);
+		reg2 = sprintf(" *</%s>.*$", reg);
+		if (!sub(reg1, "", s)) { s = ""; }
+		if (!sub(reg2, "", s)) { s = ""; }
+
+		return s;
+} # }}}
+
+function complete_tag(reg)
+{ # {{{
+	reg1 = sprintf("<%s",   reg);
+	reg2 = sprintf("</%s>", reg);
+
+	while (str ~ reg1 && str !~ reg2) {
+#		printf "BEFORE = '%s'\n", str;
+		getline;
+		str = sprintf("%s %s", str, $0);
+#		printf "AFTER = '%s'\n", str;
+	}
+	if (str ~ reg && str ~ /id=['"]/ && desc == "") {
+		desc = remove_tag(str, reg);
+	}
+	
+} # }}}
+
+/<refentrytitle>/ {
+	manpage = remove_tag($0, "refentrytitle");
+}
+
+{
+	if (last_tag != "") {
+		str = sprintf("<%s %s", last_tag, $0); # join last notcompleted tag
+		last_tag = ""; # last_tag was used, make it empty
+	} else
+		str = sprintf("%s", $0);
+
+	complete_tag("title");
+	complete_tag("constant");
+	
+
+	if (str ~ /<[^>]*$/) {
+		n = split(str, a, "<");
+		last_tag = a[n];
+		sub(/<[^>]+$/, "", str); # remove last notcompleted tag from line
+	}
+	
+	sub(/^</,      "> XX <", str);
+	sub(/>[^>]*$/, "> YY <", str);
+	
+	n = split(str, a, ">[^<>]*<");
+	for (i = 1; i <= n; i++) {
+		if (a[i] ~ /id=['"]/) { # SGML tag with id="..."
+#			printf "str = '%s'\n", str;
+			m = split(a[i], b, "[ \t]+");
+			for (j = 1; j <= m; j++) {
+				if (b[j] ~ /id=['"]/) {
+					sub(/^id=['"]/, "", b[j]);
+					sub(/['"]$/,    "", b[j]);
+# 				In future manpage volume may be generated dynamicaly
+					printf "%s\t%s\t%s(3)\t%s\t%s\n",
+						b[j], FILENAME, manpage, b[1], desc;
+					desc = "";
+				}
+			}
+		}
+	}
+}
+
+# vim: ft=awk cindent
+# vim600: fdl=0 fdc=3 fdm=marker
+

@@ -1,0 +1,242 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.context-manipulation.sgml,v 1.11 2003/08/16 14:04:36 nepto Exp $ -->
+
+<!-- MAN:
+	<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+		<!ENTITY % defs			SYSTEM "defs.sgml">
+		%defs;
+	]>
+	<refentry>
+
+	<refmeta>
+		<refentrytitle>cfg_context</refentrytitle>
+		<manvolnum>&manvolnum;</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>cfg_context</refname>
+		<refname>cfg_get_context</refname>
+		<refname>cfg_get_cmdline_context</refname>
+		<refname>cfg_get_cfgfile_context</refname>
+		<refname>cfg_set_cmdline_context</refname>
+		<refname>cfg_set_cfgfile_context</refname>
+		<refname>cfg_reset_context</refname>
+		<refname>cfg_free_context</refname>
+		<refpurpose>&name; context manipulation</refpurpose>
+	</refnamediv>
+-->
+
+<sect1 id="usage.context-manipulation">
+<title id="usage.context-manipulation.title">Context manipulation</title>
+
+<!-- MAN: <refsect1><title>SYNOPSIS | Creating context</title> -->
+<para>
+
+The parsing capabilities of &name; are accessed through a
+<firstterm>context</firstterm>, which is defined by the
+<structname>CFG_CONTEXT</structname> structure. By using contexts, one can
+parse several configuration files and the command line at the same time.  
+
+</para>
+<para>
+
+The functions used for creating a new context are described below. Those used
+for freeing (destroying) a context are described at the end of this
+<!-- MAN: man -->page.
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+
+<funcprototype>
+	<funcdef>CFG_CONTEXT <function>cfg_get_context</function></funcdef>
+	<paramdef>struct cfg_option <parameter>*options</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>CFG_CONTEXT <function>cfg_get_cmdline_context</function></funcdef>
+	<paramdef>long <parameter>begin_pos</parameter></paramdef>
+	<paramdef>long <parameter>size</parameter></paramdef>
+	<paramdef>char <parameter>**argv</parameter></paramdef>
+	<paramdef>struct cfg_option <parameter>options</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>CFG_CONTEXT <function>cfg_get_cfgfile_context</function></funcdef>
+	<paramdef>long <parameter>begin_pos</parameter></paramdef>
+	<paramdef>long <parameter>size</parameter></paramdef>
+	<paramdef>char <parameter>*filename</parameter></paramdef>
+	<paramdef>struct cfg_option <parameter>options</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>void <function>cfg_set_cmdline_context</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>long <parameter>begin_pos</parameter></paramdef>
+	<paramdef>long <parameter>size</parameter></paramdef>
+	<paramdef>char <parameter>**argv</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>void <function>cfg_set_cfgfile_context</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>long <parameter>begin_pos</parameter></paramdef>
+	<paramdef>long <parameter>size</parameter></paramdef>
+	<paramdef>char <parameter>*filename</parameter></paramdef>
+</funcprototype>
+
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+The function <function>cfg_get_context()</function> initializes a context but
+does not associate it with either the command line or a file. It takes a
+pointer to the option set <parameter>*options</parameter> and returns a new
+context. The association with the command line or a file can be done with
+<function>cfg_set_cmdline_context()</function> and
+<function>cfg_set_cfgline_context()</function> respectively. 
+
+</para>
+<para>
+
+The function <function>cfg_get_cmdline_context()</function> is used for full
+context initialization, which includes the initialization itself and assigning
+the newly created context to the command line. The
+<parameter>begin_pos</parameter> parameter stores the starting parsing
+position in the array of command line arguments. The
+<parameter>size</parameter> parameter defines the number of arguments (array
+elements) to parse. If a negative value is passed, the parsing will stop only
+when an <constant>NULL</constant> is encountered. The
+<parameter>argv</parameter> parameter is a pointer to a
+<constant>NULL</constant> terminated array of strings (options&nbsp;+&nbsp;arguments) to
+be parsed. As most of you probably know, <parameter>argv</parameter> is the
+second parameter passed to the <function>main()</function> function.
+
+</para>
+<para>
+
+The function <function>cfg_get_cfgfile_function()</function> initializes a new
+context and associates it with a configuration file. The parameter
+<parameter>begin_pos</parameter> determines the file offset at which the
+parsing will start. Whether the offset is expressed in bytes or lines depends
+on the value of the context flag <constant>CFG_FILE_LINE_POS_USAGE</constant>.
+If the flag is unset (the default value), <parameter>begin_pos</parameter>
+should be interpreted as a byte offset. If the flag is set,
+<parameter>begin_pos</parameter> is a line offset. See the <xref
+linkend="usage.context-flags" endterm="usage.context-flags.title"> section for
+more information about this. Whatever the case, the offset is zero based.  The
+<parameter>size</parameter> parameter defines the number of bytes or lines to
+parse. If the value is negative, the file will be parsed in its entirety. The
+name of the file to parse is passed in <parameter>filename</parameter>.
+
+</para>
+<para>
+
+<function>cfg_set_cmdline_context()</function> and
+<function>cfg_set_cfgfile_context()</function> work on an already existing
+context. These functions accept the existing context in their first parameter.
+The rest of their arguments are the same as those of
+<function>cfg_get_cfgfile_function()</function> and
+<function>cfg_get_cmdline_context()</function>.  Note that the two sets of
+functions differ in their return values. The context setting functions return
+void while the context creating functions return a new context. Working with
+existing contexts may be more convenient than creating new contexts from
+scratch, especially when there is a need to switch from parsing a file to
+parsing the command line and vice versa.
+
+</para>
+<para>
+
+Note, that while <parameter>begin_pos</parameter> of the file context defines
+the starting parsing offset in a file, the same parameter for the command line
+context specifies the offset in the <parameter>argv</parameter> array.  Note
+also that all offsets are zero-based. For example, the third line of a file is
+at&nbsp;offset&nbsp;<constant>2</constant>. However, the error handling
+routines of &name; increment all offsets by one when reporting an error, thus
+human readable messages are returned. So for the first position on command
+line it will print something like
+<computeroutput>on&nbsp;position&nbsp;1</computeroutput>, for second line in
+configuration file it will print
+<computeroutput>on&nbsp;line&nbsp;2</computeroutput> and so on.
+
+</para>
+<para>
+
+Starting from version 0.5.2, the
+<function>cfg_get_cmdline_context_argc()</function> and
+<function>cfg_set_cmdline_context_argc()</function> functions became
+available.  It creates a new context by passing the
+<parameter>argc</parameter> and <parameter>argv</parameter> parameters
+directly from <function>main()</function> function. Its parameters are similar
+to those of <function>cfg_get_cmdline_context()</function>, but instead of
+<parameter>begin_pos</parameter> and <parameter>size</parameter>, only
+<parameter>argc</parameter> is present. Whether one is more convenient than
+the other depends on the circumstances and it is for you to decide which one
+suits you best.
+
+</para>
+<para>
+
+There are also two groups of macros for managing contexts. The first group
+includes <function>cfg_get_cmdline_context_pos()</function> and
+<function>cfg_get_cfgfile_context_pos()</function> and is used for creating a
+new context of the needed type. You can use the second group, which consist of
+<function>cfg_set_cmdline_context_pos()</function> and
+<function>cfg_set_cfgfile_context_pos()</function>, for manipulating an
+existing context. The difference between these four macros and their function
+counterparts is in the <parameter>size</parameter> parameter, which is
+replaced by <parameter>end_pos</parameter> and specifies the offset of the
+last element to be parsed. For a file context the value is the byte offset (or
+line number) while for a command line context it is the offset in the
+<parameter>argv</parameter> array.
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>SYNOPSIS | Freeing context</title> -->
+<para>
+
+The following functions are used for reseting and freeing a context.
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+
+<funcprototype>
+	<funcdef>void <function>cfg_reset_context</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>void <function>cfg_free_context</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+You may come across situations when a context reset is necessary. You can use
+<function>cfg_reset_context()</function> to perform this task. When this
+function is called on a command line context, the offset in the
+<parameter>argv</parameter> is set to the value of
+<parameter>begin_pos</parameter>. For a file context, the offset is reset to
+the value of <parameter>begin_pos</parameter>. Context flags and context
+properties remain unchanged after a call to
+<function>cfg_reset_context()</function>. 
+
+</para>
+<para>
+
+After you are done with a context, you should use
+<function>cfg_free_context()</function> to free the resources associated with
+it. The function takes a context in its only parameter
+<parameter>con</parameter>. The function does not deallocate the memory for
+any arguments or argument arrays you might have allocated in your option set.
+You need to free that memory manually. However, it will free all internal
+context structures, which includes the context flags, context properties, and
+the context itself.
+
+</para>
+</sect1>
+<!-- MAN: </refsect1></refentry> -->
+ 

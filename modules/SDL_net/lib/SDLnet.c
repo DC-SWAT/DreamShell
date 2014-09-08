@@ -124,15 +124,15 @@ int SDLNet_ResolveHost(IPaddress *address, const char *host, Uint16 port)
 	} else {
 		address->host = inet_addr(host);
 		if ( address->host == INADDR_NONE ) {
-			/*
+			
 			struct hostent *hp;
 
 			hp = gethostbyname(host);
 			if ( hp ) {
 				memcpy(&address->host,hp->h_addr,hp->h_length);
-			} else {*/
+			} else {
 				retval = -1;
-			//}
+			}
 		}
 	}
 	address->port = SDL_SwapBE16(port);

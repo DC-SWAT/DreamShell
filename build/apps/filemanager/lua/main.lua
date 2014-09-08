@@ -1,7 +1,7 @@
 -------------------------------------------
 --                                       --
 -- @name:    File Manager                --
--- @version: 0.6.3                       --
+-- @version: 0.6.4                       --
 -- @author:  SWAT                        --
 -- @url:     http://www.dc-swat.ru       --
 --                                       --
@@ -16,6 +16,7 @@ FileManager = {
 	app = nil,
 	font = nil,
 	title = nil,
+	prev_title = nil,
 	modules = {},
 	ffmpeg = {
 		ext = {
@@ -207,6 +208,21 @@ function FileManager:ModalClick(s)
 end
 
 
+function FileManager:showConsole()
+	ShowConsole();
+end
+
+function FileManager:hideConsole()
+	Sleep(1000);
+	HideConsole();
+end
+
+function FileManager:execConsole(cmd)
+	self:showConsole();
+	os.execute(cmd);
+	self:hideConsole();
+end
+
 
 function FileManager:toolbarCopy()
 
@@ -227,12 +243,16 @@ function FileManager:toolbarCopy()
 		to = to .. f.name;
 	end
 	
-	if os.execute("cp " .. f.file .. " " .. to) ~= DS.CMD_OK then
-		return os.execute("console --show");
+	if f.attr ~= 0 or f.size > 8192*1024 then
+		self:execConsole("cp " .. f.file .. " " .. to .. " 1")
+	else
+		if os.execute("cp " .. f.file .. " " .. to) ~= DS.CMD_OK then
+			self:showConsole();
+			return;
+		end
+		
+		GUI.FileManagerScan(mgr.widget);
 	end
-	
-	GUI.FileManagerScan(mgr.widget);
-	
 end
 
 
@@ -250,7 +270,8 @@ function FileManager:toolbarRename()
 	local dst = f.path .. "/" .. GUI.TextEntryGetText(self.modal.input);
 	
 	if os.execute("rename " .. f.file .. " " .. dst) ~= DS.CMD_OK then
-		return os.execute("console --show");
+		self:showConsole();
+		return;
 	end
 	
 	local mgr = self:getFocusedManager();
@@ -271,7 +292,7 @@ function FileManager:toolbarDelete()
 	end
 	
 	if os.execute("rm " .. f.file) ~= DS.CMD_OK then
-		os.execute("console --show");
+		self:showConsole();
 		return false;
 	end
 	
@@ -303,7 +324,7 @@ function FileManager:toolbarArchive()
 	
 		if not DS.GetCmdByName("bzip2") then
 			 if not self:loadModule("bzip2") then
-				os.execute("console --show");
+				self:showConsole();
 				return;
 			 end
 		end
@@ -315,7 +336,7 @@ function FileManager:toolbarArchive()
 	
 		if not DS.GetCmdByName("zip") then
 			 if not self:loadModule("zip") then
-				os.execute("console --show");
+				self:showConsole();
 				return;
 			 end
 		end
@@ -336,13 +357,8 @@ function FileManager:toolbarArchive()
 		self:HideModal();
 	end
 	
-	os.execute("console --show");
-	if os.execute(cmd) ~= DS.CMD_OK then
-		--return os.execute("console --show");
-	end
-
+	self:execConsole(cmd)
 	GUI.FileManagerScan(mgr.widget);
-	os.execute("sleep 1000\nconsole --hide");
 end
 
 
@@ -376,13 +392,13 @@ function FileManager:toolbarMountISO()
 	
 	if not DS.GetCmdByName("isofs") then
 		 if not self:loadModule("minilzo") or not self:loadModule("isofs") then
-			os.execute("console --show");
+			self:showConsole();
 			return;
 		 end
 	end
 	
 	if os.execute("isofs -m -f " .. f.file .. " -d /iso") ~= DS.CMD_OK then
-		os.execute("console --show");
+		self:showConsole();
 	end
 end
 
@@ -447,11 +463,7 @@ function FileManager:openFile()
   		   flag = "-e";
   		end
 
-		os.execute("console --show\nsleep 1100");
-		if os.execute("exec "..flag.." -f " .. file) ~= DS.CMD_OK then
-			--os.execute("console --show");
-		end
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("exec "..flag.." -f " .. file);
 	
 	elseif ext == ".txt" then
 	
@@ -461,7 +473,8 @@ function FileManager:openFile()
 			self:HideModal();
 		end
 		
-		os.execute("console --show\ncat " .. file);
+		self:showConsole();
+		os.execute("cat " .. file);
 	
 	elseif ext == ".klf" then
 	
@@ -473,12 +486,7 @@ function FileManager:openFile()
 		
 		--if DS.GetModuleByFileName(file) then return file end
 		
-		os.execute("console --show");
-		if os.execute("module -o -f " .. file) ~= DS.CMD_OK then
-			--os.execute("console --show");
-		end
-
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("module -o -f " .. file)
 		
 	elseif ext == ".lua" then
 	
@@ -488,8 +496,7 @@ function FileManager:openFile()
 			self:HideModal();
 		end
 		
-		os.execute("console --show\nlua " .. file)
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("lua " .. file)
 	
 	elseif ext == ".dsc" then
 	
@@ -499,11 +506,7 @@ function FileManager:openFile()
 			self:HideModal();
 		end
 		
-		os.execute("console --show");
-		if os.execute("dsc " .. file) ~= DS.CMD_OK then
-			--os.execute("console --show");
-		end
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("dsc " .. file)
 		
 	elseif ext == ".xml" then
 	
@@ -513,11 +516,7 @@ function FileManager:openFile()
 			self:HideModal();
 		end
 		
-		os.execute("console --show");
-		if os.execute("app -a -f " .. file) ~= DS.CMD_OK then
-			--os.execute("console --show");
-		end
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("app -a -f " .. file)
 		
 	elseif ext == ".dsr" or ext == ".img" then
 	
@@ -527,12 +526,7 @@ function FileManager:openFile()
 			self:HideModal();
 		end
 		
-		os.execute("console --show");
-		if os.execute("romdisk -m " .. file) ~= DS.CMD_OK then
-			--os.execute("console --show");
-		end
-
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("romdisk -m " .. file)
 		
 	elseif ext == ".mp1" or ext == ".mp2" or ext == ".mp3" then
 		
@@ -545,13 +539,13 @@ function FileManager:openFile()
 		if not DS.GetCmdByName("mp3") then
 		
 			 if not self:loadModule("mpg123") then
-			 	os.execute("console --show");
+			 	self:showConsole();
 			 	return file; 
 			 end
 		end
 		
 		if os.execute("mpg123 -p -f " .. file) ~= DS.CMD_OK then
-			os.execute("console --show");
+			self:showConsole();
 		end
 		
 	elseif ext == ".ogg" then
@@ -565,13 +559,13 @@ function FileManager:openFile()
 		if not DS.GetCmdByName("oggvorbis") then
 		
 			 if not self:loadModule("oggvorbis") then
-			 	os.execute("console --show");
+			 	self:showConsole();
 			 	return file; 
 			 end
 		end
 		
 		if os.execute("oggvorbis -p -f " .. file) ~= DS.CMD_OK then
-			os.execute("console --show");
+			self:showConsole();
 		end
 		
 	elseif ext == ".adx" or ext == ".s3m" then
@@ -593,7 +587,7 @@ function FileManager:openFile()
 		end
 		
 		if os.execute(mod .. " -p -f " .. file) ~= DS.CMD_OK then
-			os.execute("console --show");
+			self:showConsole();
 		end
 		
 	elseif self:ext_supported(self.ffmpeg.ext, ext) then
@@ -616,7 +610,7 @@ function FileManager:openFile()
 		end
 		
 		if os.execute("ffplay -p -f " .. file) ~= DS.CMD_OK then
-			os.execute("console --show");
+			self:showConsole();
 		end
 		
 	elseif ext == ".opk" then
@@ -630,13 +624,12 @@ function FileManager:openFile()
 		if not DS.GetCmdByName("opkg") then
 		
 			 if not self:loadModule("minilzo") or not self:loadModule("opkg") then
-			 	os.execute("console --show");
+			 	self:showConsole();
 			 	return file; 
 			 end
 		end
 		
-		os.execute("console --show\nopkg -i -f " .. file);
-		os.execute("sleep 1000\nconsole --hide");
+		self:execConsole("opkg -i -f " .. file);
 		
 	else
 	
@@ -705,7 +698,7 @@ function FileManager:getFile()
 		local path = GUI.FileManagerGetPath(mgr.widget);
 	--end
 	
-	return {file = path .. "/" .. mgr.ent.name, name = mgr.ent.name, path = path};
+	return {file = path .. "/" .. mgr.ent.name, name = mgr.ent.name, path = path, attr = mgr.ent.attr, size = mgr.ent.size};
 end
 
 
@@ -771,23 +764,48 @@ function FileManager:ItemContextClick(ent, mgr)
 
 	self:focusManager(mgr);
 	--print("Context clicked: " .. ent.name .. " mgr: " .. mgr.id .. "\n");
-	--TODO
+	
+	if ent.attr ~= 0  then
+
+		if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
+		
+			local bt;
+
+			if mgr.ent.index > -1 then
+				bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
+				GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
+			end
+			
+			bt = GUI.FileManagerGetItem(mgr.widget, ent.index);
+			GUI.ButtonSetNormalImage(bt, self.mgr.item.selected);
+			mgr.ent = ent;
+			
+		else
+			GUI.FileManagerChangeDir(mgr.widget, ent.name, ent.size);
+			mgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
+			
+			local d = GUI.FileManagerGetPath(mgr.widget);
+			if d ~= "/" then
+				self:tooltip(d);
+			else 
+				self:tooltip(nil);
+			end
+		end
+	end
 end
 
 
 function FileManagerItemMouseover(ent)
-	if ent.size > 0 then
-		FileManager:tooltip(string.format("File size: %d KB", (ent.size / 1024)));
+	if ent.attr == 0 then
+		FileManager.prev_title = string.format("File size: %d KB", (ent.size / 1024));
+		FileManager:tooltip(FileManager.prev_title);
+	else
+		if FileManager.prev_title ~= nil then
+			FileManager.prev_title = nil;
+			FileManager:tooltip(nil);
+		end
 	end
 end
-
---
---function FileManagerItemMouseout(ent)
---	if ent.size > 0 then
---		FileManager:tooltip(nil);
---	end
---end
---
 
 
 function FileManager:showError(str)
@@ -826,12 +844,12 @@ function FileManager:getResource(name, type)
 		elseif type == DS.LIST_ITEM_GUI_SURFACE then
 		    return GUI.AnyToSurface(r.data);
 		else
-            self:showError("FileManager:getResource: Uknown resource type - " .. type);
+            self:showError("FileManager: Uknown resource type - " .. type);
 			return nil;
 		end
 	end
 
-	self:showError("FileManager:getResource: Can't find resource - " .. name);
+	self:showError("FileManager: Can't find resource - " .. name);
 	return nil;
 end
 
@@ -844,7 +862,7 @@ function FileManager:getElement(name)
 		return GUI.AnyToWidget(r.data);
 	end
 
-	self:showError("FileManager:getElement: Can't find element - " .. name);
+	self:showError("FileManager: Can't find element - " .. name);
 	return nil;
 end
 

@@ -73,4 +73,9 @@ char* substring(const char* str, size_t begin, size_t len);
 char *strndup(const char *, size_t);
 #endif
 
+/* Optimized memory utils */
+void *memcpy_sh4(void *dest, const void *src, size_t count);
+void *memmove_sh4(void *dest, const void *src, size_t count);
+void *memset_sh4(void *dest, uint32 val, size_t count);
+
 #endif

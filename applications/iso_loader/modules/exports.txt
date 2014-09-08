@@ -6,8 +6,10 @@ isoLoader_ShowSettings
 isoLoader_ShowGames
 isoLoader_Run
 isoLoader_ItemClick
+isoLoader_toggleDMA
+isoLoader_toggleAsync
+isoLoader_toggleCDDA
 isoLoader_toggleBootMode
-isoLoader_toggleBootMethod
 isoLoader_toggleMemory
 isoLoader_toggleOS
 isoLoader_DefaultPreset

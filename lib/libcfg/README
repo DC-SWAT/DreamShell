@@ -1,0 +1,36 @@
+libcfg+
+-------
+
+libcfg+ is command line and configuration file parsing library.
+
+libcfg+ is a C library that features multi- command line and
+configuration file parsing. It is possible to set up various special
+properties such as quoting characters, deliminator strings, file comment
+prefixes, multi-line postfixes, and more. It supports many data types
+such as booleans, integers, decimal numbers, strings with many
+additional data type flags (such as multiple values for a single
+option).
+
+For full information, such as installation notes, API description,
+examples of usage and others, refer to documentation located in
+doc/html/ or doc/man/ directories. If you have libcfg+ already
+installed, just type "man libcfg+" to get basic information and
+documentation table of contents.
+
+Developed by Ondrej Jombik and Lubomir Host
+Copyright (c) 2001-2004 Platon SDG, http://platon.sk/
+
+The official libcfg+ homepage is:
+http://platon.sk/projects/libcfg+/
+
+The libcfg+ project management page is:
+http://platon.sk/projects/main_page.php?project_id=3
+
+Use libcfg+ project management page to submit bugs, feature requests,
+suggestions for improvements or improved code. There is also online
+documentation browser, download central and discussion forum available
+for asking support questions.
+
+This document was written by Ondrej Jombik in 21st May 2002 and updated
+in 12th February 2003.
+

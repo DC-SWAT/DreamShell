@@ -8,7 +8,6 @@
 
 #include "ds.h"
 
-
 typedef struct flash_factory_values {
 
 	int country;
@@ -17,14 +16,6 @@ typedef struct flash_factory_values {
 	int black_swirl;
 
 } flash_factory_values_t;
-
-
-/**
- * Flashrom addons
- */
-int _flashrom_write(int offset, void * buffer, int bytes);
-int _flashrom_delete(int offset);
-
 
 /**
  * Application data
@@ -37,10 +28,15 @@ uint8 *flash_factory_set_country(uint8 *data, int country, int black_swirl);
 int flash_clear(int block);
 uint8 *flash_read_factory();
 int flash_write_factory(uint8 *data);
-int flash_write_file(const char *filename);
 
 void flash_factory_free_values(flash_factory_values_t *values);
 void flash_factory_free_data(uint8 *data);
+
+/* Read file to RAM and write to flashrom */
+int flash_write_file(const char *filename);
+
+/* Read flashrom to RAM and write to file */
+int flash_read_file(const char *filename);
 
 
 /**

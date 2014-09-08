@@ -1,0 +1,1182 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Properties</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Usage"
+HREF="usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Error handling"
+HREF="usage.error-codes.html"><LINK
+REL="NEXT"
+TITLE="Other information"
+HREF="other-information.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="usage.error-codes.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Usage</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="other-information.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="USAGE.PROPERTIES"
+></A
+>2.6. Properties</H1
+><P
+>&#13;In this chapter are functions for manipulating with libcfg+ properties described.
+We are starting with functions manipulating with one property. These functions
+work also with virtual properties as well.&#13;</P
+><P
+>&#13;<DIV
+CLASS="FUNCSYNOPSIS"
+><A
+NAME="AEN632"
+></A
+><P
+></P
+><PRE
+CLASS="FUNCSYNOPSISINFO"
+>#include &#60;cfg+.h&#62;</PRE
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_clear_property</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_add_property</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, char *str);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_remove_property</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, char *str);</CODE
+></P
+><P
+></P
+></DIV
+>&#13;</P
+><P
+>&#13;Given the context <TT
+CLASS="PARAMETER"
+><I
+>con</I
+></TT
+>, the functions perform the following tasks:
+
+<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>			Function <TT
+CLASS="FUNCTION"
+>cfg_clear_property()</TT
+> clears the
+			property <TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+> of any values it might have
+			accumulated.
+	</P
+></LI
+><LI
+><P
+>			Function <TT
+CLASS="FUNCTION"
+>cfg_add_property()</TT
+> adds a new value
+			<TT
+CLASS="PARAMETER"
+><I
+>str</I
+></TT
+> to the property
+			<TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+>.
+	</P
+></LI
+><LI
+><P
+>			Function <TT
+CLASS="FUNCTION"
+>cfg_remove_property()</TT
+> removes a
+			value <TT
+CLASS="PARAMETER"
+><I
+>str</I
+></TT
+> from the property
+			<TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+>.
+	</P
+></LI
+></UL
+>&#13;</P
+><P
+>&#13;Note that, when you set some string of multi vals separator property, any
+whitespace you will use in that string will match any non-zero amount of
+whitespaces during parsing. For example if separator is one space, also tab will
+match, two or more spaces too, tab with space and so forth. It is similar
+behaviour like when option name contains one or more white characters.&#13;</P
+><P
+>&#13;Types of properties, which are passed to mentioned functions as parameter
+<TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+>, are described in following tables. They are divided
+into three types. The first one are <A
+HREF="usage.properties.html#USAGE.PROPERTIES-COMMAND-LINE.TABLE"
+><I
+>Command line related properties</I
+></A
+> that affects only command
+line. Than there are <A
+HREF="usage.properties.html#USAGE.PROPERTIES-CONFIG-FILE.TABLE"
+><I
+>Configuration file related properties</I
+></A
+> that affect only
+configuration file. The last type of properties are <A
+HREF="usage.properties.html#USAGE.PROPERTIES-VIRTUAL.TABLE"
+><I
+>Virtual properties</I
+></A
+> (also known as <I
+CLASS="FIRSTTERM"
+>Shared
+properties</I
+>). In example, they can affect both, comand line and
+configuration file, or set up quotation prefix and postfix in one call. They
+exist for simplyfication of real properties manipulation.&#13;</P
+><P
+>&#13;Here are properties for command line.&#13;</P
+><P
+>&#13;<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><P
+><B
+>Command line related properties</B
+></P
+><DL
+><DT
+><A
+NAME="CFG-LINE-QUOTE-PREFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_QUOTE_PREFIX</TT
+>
+&nbsp; -- &nbsp; command line quotation prefix</DT
+><DD
+><P
+>&#13;For changing command line quotation prefix use this type. Note, that you
+probably want also set quotation postfix equivalent to this prefix.  By default
+are no strings initialized, due to simple reason. Most from often used shells
+such as <SPAN
+CLASS="APPLICATION"
+>sh</SPAN
+>, <SPAN
+CLASS="APPLICATION"
+>bash</SPAN
+>,
+<SPAN
+CLASS="APPLICATION"
+>tcsh</SPAN
+> and <SPAN
+CLASS="APPLICATION"
+>zsh</SPAN
+> already
+contains quotation marks implementation so there is no need to do that thing also
+in libcfg+ library. Although this, you can set command line quotation characters
+by appropriate <TT
+CLASS="FUNCTION"
+>cfg_add_property()</TT
+> function call.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-QUOTE-POSTFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_QUOTE_POSTFIX</TT
+>
+&nbsp; -- &nbsp; command line quotation postfix</DT
+><DD
+><P
+>&#13;For changing command line quotation postfix use this type. Note, that you
+probably want also set quotation prefix equivalent to this postfix. By default
+is of course also nothing initialized due to same reasons as it is in
+<TT
+CLASS="CONSTANT"
+>CFG_LINE_QUOTE_POSTFIX</TT
+> case.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-STOP-STRING.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_STOP_STRING</TT
+>
+&nbsp; -- &nbsp; command line stop string</DT
+><DD
+><P
+>&#13;For changing command line stop string use this type. Set this property if
+you want to stop parsing on specified string which occurs on command line. Error
+code <TT
+CLASS="CONSTANT"
+>CFG_ERROR_STOP_STR_FOUND</TT
+> is returned from parsing
+function to determine this event. By default is nothing initialized.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-SHORT-OPTION-PREFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_SHORT_OPTION_PREFIX</TT
+>
+&nbsp; -- &nbsp; command line short option prefix</DT
+><DD
+><P
+>&#13;For changing command line short option prefix use this type. Default value
+is of course single dash (<TT
+CLASS="CONSTANT"
+>-</TT
+>), because it is most offten
+used in applications. You will probably don't need to redefine this property.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-LONG-OPTION-PREFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_LONG_OPTION_PREFIX</TT
+>
+&nbsp; -- &nbsp; command line short option prefix</DT
+><DD
+><P
+>&#13;For changing command line long option prefix use this type. Default value
+is of course double dash (<TT
+CLASS="CONSTANT"
+>--</TT
+>), because it is most offten
+used in applications. You will probably don't need to redefine this property.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_NORMAL_MULTI_VALS_SEPARATOR</TT
+>
+&nbsp; -- &nbsp; normal command line multi values separator</DT
+><DD
+><P
+>&#13;For changing normal command line multi values separators use this type. Multi values
+separators are strings used for separation option values initialized with one
+argument. For example if separator is comma, one command line argument will be
+similar to this: <B
+CLASS="COMMAND"
+>--multi=val1,val2,val3</B
+>. Option must have
+<TT
+CLASS="CONSTANT"
+>CFG_MULTI_SEPARATED</TT
+> flag set. By default are
+comma (<TT
+CLASS="CONSTANT"
+>,</TT
+>) and semicolon (<TT
+CLASS="CONSTANT"
+>;</TT
+>) initialized.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_LEFTOVER_MULTI_VALS_SEPARATOR</TT
+>
+&nbsp; -- &nbsp; leftover command line multi values separator</DT
+><DD
+><P
+>&#13;For changing leftover command line multi values separators use this type.
+Explanation is the same as for previous type with difference, that this property
+affects only leftover arguments (arguments left on the command line without any
+option that are stored into option with <TT
+CLASS="CONSTANT"
+>CFG_LEFTOVER_ARGS</TT
+>
+type). By default is nothing initialized.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-LINE-OPTION-ARG-SEPARATOR.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_OPTION_ARG_SEPARATOR</TT
+>
+&nbsp; -- &nbsp; command line option argument separator</DT
+><DD
+><P
+>&#13;For changing command line option argument separator use this type. Option
+argument separators are strings used to separate option and its argument. By
+default is equal sign (<TT
+CLASS="CONSTANT"
+>=</TT
+>) character used. For example
+<B
+CLASS="COMMAND"
+>--option=argument</B
+>. Note that on command line argument can be
+initialized also as following string with no need of separator usage (like this:
+<B
+CLASS="COMMAND"
+>--option argument</B
+>).&#13;</P
+></DD
+></DL
+></DIV
+>&#13;</P
+><P
+>&#13;Here are properties for configuration file.&#13;</P
+><P
+>&#13;
+<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><P
+><B
+>Configuration file related properties</B
+></P
+><DL
+><DT
+><A
+NAME="CFG-FILE-QUOTE-PREFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_QUOTE_PREFIX</TT
+>
+&nbsp; -- &nbsp; configuration file quotation prefix</DT
+><DD
+><P
+>&#13;For changing configuration file quotation prefix use this type. Note, that you
+probably want also set quotation postfix equivalent to this prefix. By default
+are standart quotation characters, apostrophes (<TT
+CLASS="CONSTANT"
+>'</TT
+>) and
+inverted commans (<TT
+CLASS="CONSTANT"
+>"</TT
+>), initialized (also for postfixes).&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-QUOTE-POSTFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_QUOTE_POSTFIX</TT
+>
+&nbsp; -- &nbsp; configuration file quotation postfix</DT
+><DD
+><P
+>&#13;For changing configuration file quotation postfix use this type. Note, that you
+probably want also set quotation prefix equivalent to this postfix. By default
+are standart quotation characters, apostrophes (<TT
+CLASS="CONSTANT"
+>'</TT
+>) and
+inverted commans (<TT
+CLASS="CONSTANT"
+>"</TT
+>), initialized (also for prefixes).&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-STOP-PREFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_STOP_PREFIX</TT
+>
+&nbsp; -- &nbsp; config file stop prefix</DT
+><DD
+><P
+>&#13;For changing configuration file stop string use this type. Set this property if
+you want to stop parsing on specified string which occurs on configration file
+line. Error code <TT
+CLASS="CONSTANT"
+>CFG_ERROR_STOP_STR_FOUND</TT
+> is returned from
+parsing function to determine this event. By default is nothing initialized. We
+recommend you set this property to <TT
+CLASS="CONSTANT"
+>[</TT
+> character, if you want
+to determine configuration section beginning (to stop parsing on section
+header).&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-COMMENT-PREFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_COMMENT_PREFIX</TT
+>
+&nbsp; -- &nbsp; config file comment prefix</DT
+><DD
+><P
+>&#13;For changing configuration comment prefix use this type. Lines started with one
+of these prefixes are skipped. By default are hash sign (<TT
+CLASS="CONSTANT"
+>#</TT
+>)
+and semicolon (<TT
+CLASS="CONSTANT"
+>;</TT
+>) initialized.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-MULTI-LINE-POSTFIX.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_MULTI_LINE_POSTFIX</TT
+>
+&nbsp; -- &nbsp; config file multi line postfix</DT
+><DD
+><P
+>&#13;For changing configuration file multi line postfix use this type. Multi
+line postfixes are strings used to determine situation, that line continues on
+next line. Multi lines are are concatenated to one and that is parsed. Multui
+line postfixes are removed from concatenated line. By deault is backslash
+(<TT
+CLASS="CONSTANT"
+>\</TT
+>) initialized.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_NORMAL_MULTI_VALS_SEPARATOR</TT
+>
+&nbsp; -- &nbsp; normal config file multi values separator</DT
+><DD
+><P
+>&#13;For changing normal configuration file multi values separators use this type.
+Multi values separators are strings used for separation option values
+initialized with one argument. For example if separator is comma one line in
+configuration fill will be similar to this: <B
+CLASS="COMMAND"
+>multi =
+val1,val2,val2</B
+>. Option must have
+<TT
+CLASS="CONSTANT"
+>CFG_MULTI_SEPARATED</TT
+> flag set. By default are space, comma
+(<TT
+CLASS="CONSTANT"
+>,</TT
+>) and semicolon (<TT
+CLASS="CONSTANT"
+>;</TT
+>) initialized.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_LEFTOVER_MULTI_VALS_SEPARATOR</TT
+>
+&nbsp; -- &nbsp; leftover config file multi values separator</DT
+><DD
+><P
+>&#13;For changing leftover config file multi values separators use this type.
+Explanation is the same as for previous type with difference, that this property
+affects only leftover arguments (arguments left on the command line without any
+option that are stored into option with <TT
+CLASS="CONSTANT"
+>CFG_LEFTOVER_ARGS</TT
+>
+type). By default is space initialized. The goal is to get the similar
+functionality as it is in command line case, where leftover arguments are placed
+on command line and separated with spaces.&#13;</P
+></DD
+><DT
+><A
+NAME="CFG-FILE-OPTION-ARG-SEPARATOR.ROW"
+></A
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_OPTION_ARG_SEPARATOR</TT
+>
+&nbsp; -- &nbsp; config file option argument separator</DT
+><DD
+><P
+>&#13;For changing configuration file option argument separator use this type.
+Option argument separators are strings used to separate option and its argument.
+By default is equal sign (<TT
+CLASS="CONSTANT"
+>=</TT
+>) character used. For example <B
+CLASS="COMMAND"
+>option
+= argument</B
+>.&#13;</P
+></DD
+></DL
+></DIV
+>&#13;</P
+><P
+>&#13;Here are virtual (shared) properties. In description of every virtual will be
+only written which real properties are set. Please refer to <A
+HREF="usage.properties.html#USAGE.PROPERTIES-COMMAND-LINE.TABLE"
+><I
+>Command line related properties</I
+></A
+> table and <A
+HREF="usage.properties.html#USAGE.PROPERTIES-CONFIG-FILE.TABLE"
+><I
+>Configuration file related properties</I
+></A
+> table above for description
+of real properties.&#13;</P
+><P
+>&#13;<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><P
+><B
+>Virtual properties</B
+></P
+><DL
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_QUOTE</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-QUOTE-PREFIX.ROW"
+><I
+>CFG_LINE_QUOTE_PREFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-LINE-QUOTE-POSTFIX.ROW"
+><I
+>CFG_LINE_QUOTE_POSTFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-QUOTE-PREFIX.ROW"
+><I
+>CFG_FILE_QUOTE_PREFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-QUOTE-POSTFIX.ROW"
+><I
+>CFG_FILE_QUOTE_POSTFIX</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_QUOTE</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-QUOTE-PREFIX.ROW"
+><I
+>CFG_LINE_QUOTE_PREFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-LINE-QUOTE-POSTFIX.ROW"
+><I
+>CFG_LINE_QUOTE_POSTFIX</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_QUOTE</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-FILE-QUOTE-PREFIX.ROW"
+><I
+>CFG_FILE_QUOTE_PREFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-QUOTE-POSTFIX.ROW"
+><I
+>CFG_FILE_QUOTE_POSTFIX</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_QUOTE_PREFIX</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-QUOTE-PREFIX.ROW"
+><I
+>CFG_LINE_QUOTE_PREFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-QUOTE-PREFIX.ROW"
+><I
+>CFG_FILE_QUOTE_PREFIX</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_QUOTE_POSTFIX</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-QUOTE-POSTFIX.ROW"
+><I
+>CFG_LINE_QUOTE_POSTFIX</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-QUOTE-POSTFIX.ROW"
+><I
+>CFG_FILE_QUOTE_POSTFIX</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_MULTI_VALS_SEPARATOR</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_LINE_NORMAL_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_LINE_LEFTOVER_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_FILE_NORMAL_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_FILE_LEFTOVER_MULTI_VALS_SEPARATOR</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_LINE_MULTI_VALS_SEPARATOR</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_LINE_NORMAL_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_LINE_LEFTOVER_MULTI_VALS_SEPARATOR</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_MULTI_VALS_SEPARATOR</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_FILE_NORMAL_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_FILE_LEFTOVER_MULTI_VALS_SEPARATOR</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_NORMAL_MULTI_VALS_SEPARATOR</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_LINE_NORMAL_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_FILE_NORMAL_MULTI_VALS_SEPARATOR</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_LEFTOVER_MULTI_VALS_SEPARATOR</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_LINE_LEFTOVER_MULTI_VALS_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.ROW"
+><I
+>CFG_FILE_LEFTOVER_MULTI_VALS_SEPARATOR</I
+></A
+></P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_OPTION_ARG_SEPARATOR</TT
+></DT
+><DD
+><P
+><A
+HREF="usage.properties.html#CFG-LINE-OPTION-ARG-SEPARATOR.ROW"
+><I
+>CFG_LINE_OPTION_ARG_SEPARATOR</I
+></A
+>,
+<A
+HREF="usage.properties.html#CFG-FILE-OPTION-ARG-SEPARATOR.ROW"
+><I
+>CFG_FILE_OPTION_ARG_SEPARATOR</I
+></A
+></P
+></DD
+></DL
+></DIV
+>
+&#13;</P
+><P
+>&#13;Following functions allows you to set up multiple properties and/or its multiple
+values in one call. They work just like <A
+HREF="usage.properties.html#USAGE.PROPERTIES-VIRTUAL.TABLE"
+><I
+>Virtual properties</I
+></A
+>, but they are more flexible -
+you can specify arbitrary properties. All these functions use variable number of
+arguments.&#13;</P
+><P
+>&#13;<DIV
+CLASS="FUNCSYNOPSIS"
+><A
+NAME="AEN894"
+></A
+><P
+></P
+><PRE
+CLASS="FUNCSYNOPSISINFO"
+>#include &#60;cfg+.h&#62;</PRE
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_clear_properties</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, ...);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_add_properties</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, char *str, ..., ...);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_remove_properties</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, char *str, ..., ...);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_add_properties_type</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, char *str, ...);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_remove_properties_type</CODE
+>(CFG_CONTEXT con, enum cfg_property_type type, char *str, ...);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_add_properties_str</CODE
+>(CFG_CONTEXT con, char *str, enum cfg_property_type type, ...);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_remove_properties_str</CODE
+>(CFG_CONTEXT con, char *str, enum cfg_property_type type, ...);</CODE
+></P
+><P
+></P
+></DIV
+>&#13;</P
+><P
+>&#13;Given the context <TT
+CLASS="PARAMETER"
+><I
+>con</I
+></TT
+> the functions provide the
+following functionality:
+
+<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>		
+Function <TT
+CLASS="FUNCTION"
+>cfg_clear_properties()</TT
+> removes all values from the list
+of properties specified by the variable length parameter
+<TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+>. The property list must be terminated by the
+<TT
+CLASS="CONSTANT"
+>CFG_EOT</TT
+> constant. 
+
+		</P
+></LI
+><LI
+><P
+>&#13;Functions <TT
+CLASS="FUNCTION"
+>cfg_add_properties()</TT
+> and
+<TT
+CLASS="FUNCTION"
+>cfg_remove_properties()</TT
+> give you the ability to add and
+remove multiple property/value pairs. The property/value pairs are designated
+by the variable length parameters <TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+> and
+<TT
+CLASS="PARAMETER"
+><I
+>str</I
+></TT
+> correspondingly. The property list must be
+terminated with <TT
+CLASS="CONSTANT"
+>CFG_EOT</TT
+> and the value list must be
+terminated with <TT
+CLASS="CONSTANT"
+>NULL</TT
+>. 
+
+		</P
+></LI
+><LI
+><P
+>&#13;Functions <TT
+CLASS="FUNCTION"
+>cfg_add_properties_type()</TT
+> and
+<TT
+CLASS="FUNCTION"
+>cfg_remove_properties_type()</TT
+> add and remove multiple
+values specified by the variable parameter <TT
+CLASS="PARAMETER"
+><I
+>str</I
+></TT
+> to and
+from a single property denoted by <TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+>. The value list
+should be terminated with <TT
+CLASS="CONSTANT"
+>NULL</TT
+>.
+
+		</P
+></LI
+><LI
+><P
+>&#13;Functions <TT
+CLASS="FUNCTION"
+>cfg_add_properties_str()</TT
+> and
+<TT
+CLASS="FUNCTION"
+>cfg_remove_properties_str()</TT
+> add and remove the value
+denoted by <TT
+CLASS="PARAMETER"
+><I
+>str</I
+></TT
+> to and from the list of properties
+specified by the variable length parameter <TT
+CLASS="PARAMETER"
+><I
+>type</I
+></TT
+>. The
+property list must be terminated with <TT
+CLASS="CONSTANT"
+>CFG_EOT</TT
+>.
+		
+		</P
+></LI
+></UL
+>&#13;</P
+><P
+>&#13;As with the single-property functions, all of these functions return
+<TT
+CLASS="CONSTANT"
+>1</TT
+> on success or <TT
+CLASS="CONSTANT"
+>0</TT
+> on not enough
+memory error.&#13;</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="usage.error-codes.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="other-information.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Error handling</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Other information</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

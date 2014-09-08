@@ -1,5 +1,5 @@
 /** 
- * \file    bios.h
+ * \file    bflash.h
  * \brief   Bios flash chip driver
  * \date    2009-2014
  * \author  SWAT www.dc-swat.ru

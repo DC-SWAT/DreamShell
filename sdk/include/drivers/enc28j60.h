@@ -8,7 +8,6 @@
 #define ENC28J60_H
 
 #include <arch/types.h>
-#include "spi.h"
 
 /**
  * \file

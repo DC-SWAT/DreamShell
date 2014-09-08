@@ -14,7 +14,24 @@ __BEGIN_DECLS
 
 #include <arch/types.h>
 
-#define asic_sys_reset() *(vuint32*)0x005F6890 = 0x00007611; while(1)
+#define ASIC_BIOS_PROT *((vuint32*)0xa05F74E4)
+#define ASIC_SYS_RESET *((vuint32*)0x005F6890)
+
+/**
+ * Holly reset
+ */
+void asic_sys_reset(void);
+
+/**
+ * Disabling IDE interface
+ */
+#define asic_ide_disable() ASIC_BIOS_PROT = 0x000042FE
+
+/**
+ * Enabling IDE interface (BIOS check)
+ */
+void asic_ide_enable(void);
+
 
 __END_DECLS
 #endif /* _DS_ASIC_H */

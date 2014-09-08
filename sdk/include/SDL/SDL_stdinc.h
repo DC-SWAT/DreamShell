@@ -27,7 +27,6 @@
 
 #include "SDL_config.h"
 
-
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
@@ -70,6 +69,12 @@
 #endif
 #ifdef HAVE_ICONV_H
 # include <iconv.h>
+#endif
+
+#ifdef __DREAMCAST__
+void *memcpy_sh4(void *dest, const void *src, size_t count);
+void *memmove_sh4(void *dest, const void *src, size_t count);
+void *memset_sh4(void *dest, uint32 val, size_t count);
 #endif
 
 /* The number of elements in an array */
@@ -235,7 +240,7 @@ extern DECLSPEC void SDLCALL SDL_qsort(void *base, size_t nmemb, size_t size,
 #endif
 
 #ifdef HAVE_MEMSET
-#define SDL_memset      memset
+#define SDL_memset      memset_sh4
 #else
 extern DECLSPEC void * SDLCALL SDL_memset(void *dst, int c, size_t len);
 #endif
@@ -293,7 +298,7 @@ do {									  \
 #endif
 #ifndef SDL_memcpy
 #ifdef HAVE_MEMCPY
-#define SDL_memcpy      memcpy
+#define SDL_memcpy      memcpy_sh4
 #elif defined(HAVE_BCOPY)
 #define SDL_memcpy(d, s, n)	bcopy((s), (d), (n))
 #else
@@ -351,7 +356,7 @@ extern DECLSPEC void * SDLCALL SDL_revcpy(void *dst, const void *src, size_t len
 #endif
 
 #ifdef HAVE_MEMMOVE
-#define SDL_memmove     memmove
+#define SDL_memmove     memmove_sh4
 #elif defined(HAVE_BCOPY)
 #define SDL_memmove(d, s, n)	bcopy((s), (d), (n))
 #else

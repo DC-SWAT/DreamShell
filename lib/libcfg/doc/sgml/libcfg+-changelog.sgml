@@ -1,0 +1,21 @@
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+	<!ENTITY % defs		SYSTEM	"defs.sgml">
+	%defs;
+	<!ENTITY changelog	SYSTEM	"changelog.sgml">
+	<!ENTITY bookinfo	SYSTEM	"bookinfo.sgml">
+	<!ENTITY releaseinfo		"This document is the ChangeLog for &name;.">
+]>
+
+<!-- $Platon: libcfg+/doc/sgml/libcfg+-changelog.sgml,v 1.7 2003/01/15 22:22:13 nepto Exp $ -->
+
+<book id="index">
+&bookinfo;
+
+<chapter><title>&name; ChangeLog</title>
+
+&changelog;
+
+</chapter>
+
+</book>
+

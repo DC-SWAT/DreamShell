@@ -2,40 +2,9 @@
 */
 
 $#include <kos.h>
-$#include <kos/net.h>
-$#include <arpa/inet.h>
-$#include <netinet/in.h>
-$#include <sys/socket.h>
-$#include <dc/sd.h>
-$#include <kos/blockdev.h>
-$#include <ext2/fs_ext2.h>
 
-$
-$
-$uint32 TOC_LBA_(uint32 n) {
-$return TOC_LBA(n);
-$}
-$
-$uint32 TOC_ADR_(uint32 n) {
-$return TOC_ADR(n);
-$}
-$
-$uint32 TOC_CTRL_(uint32 n) {
-$return TOC_CTRL(n);
-$}
-$
-$uint32 TOC_TRACK_(uint32 n) {
-$return TOC_TRACK(n);
-$}
-$
-$CDROM_TOC *CDROM_TOC_new() { return (CDROM_TOC *) malloc(sizeof(CDROM_TOC)); }
-$void CDROM_TOC_delete(CDROM_TOC *toc) { return free(toc); }
 $size_t *size_t_new() { return (size_t *) malloc(sizeof(size_t)); }
 $void size_t_delete(size_t *s) { return free(s); }
-$
-$
-
-
 
 module KOS
 {
@@ -120,37 +89,6 @@ typedef struct kos_dirent {
     uint32 attr;            /**< \brief Attributes of the file. */
 } dirent_t;
 
-/* stat_t.unique */
-/**< \brief stat_t.unique: Constant to use denoting the file has no unique ID */
-#define STAT_UNIQUE_NONE    0
-
-/* stat_t.type */
-/** \brief stat_t.type: Unknown / undefined / not relevant */
-#define STAT_TYPE_NONE      0
-
-/** \brief stat_t.type: Standard file */
-#define STAT_TYPE_FILE      1
-
-/** \brief stat_t.type: Standard directory */
-#define STAT_TYPE_DIR       2
-
-/** \brief stat_t.type: A virtual device of some sort (pipe, socket, etc) */
-#define STAT_TYPE_PIPE      3
-
-/** \brief stat_t.type: Meta data */
-#define STAT_TYPE_META      4
-
-/** \brief stat_t.type: Symbolic link */
-#define STAT_TYPE_SYMLINK   5
-
-/* stat_t.attr */
-#define STAT_ATTR_NONE  0x00    /**< \brief stat_t.attr: No attributes */
-#define STAT_ATTR_R     0x01    /**< \brief stat_t.attr: Read-capable */
-#define STAT_ATTR_W     0x02    /**< \brief stat_t.attr: Write-capable */
-
-/** \brief stat_t.attr: Read/Write capable */
-#define STAT_ATTR_RW    (STAT_ATTR_R | STAT_ATTR_W)
-
 /** \brief  File descriptor type */
 typedef int file_t;
 
@@ -158,7 +96,6 @@ typedef int file_t;
 #define FILEHND_INVALID ((file_t)-1)
 
 /* Open modes */
-//#include <sys/fcntl.h>
 /** \defgroup open_modes            File open modes
 
     @{
@@ -166,11 +103,11 @@ typedef int file_t;
 #define	O_RDONLY	0
 #define	O_WRONLY	1
 #define	O_RDWR		2
-#define	O_ACCMODE	(O_RDONLY|O_WRONLY|O_RDWR)
-#define	O_APPEND	0x0008
-#define	O_CREAT		0x0200
-#define	O_TRUNC		0x0400
+#define	O_APPEND  0x0008
+#define	O_CREAT   0x0200
+#define	O_TRUNC   0x0400
 #define O_MODE_MASK 0x0f        /**< \brief Mask for mode numbers */
+#define O_ASYNC     0x0200      /**< \brief Open for asynchronous I/O */
 #define O_DIR       0x1000      /**< \brief Open as directory */
 #define O_META      0x2000      /**< \brief Open as metadata */
 /** @} */
@@ -546,225 +483,6 @@ ssize_t fs_load(const char *src, void **out_ptr);
    pointing to the two ends of the pty are returned. */
 int fs_pty_create(char * buffer, int maxbuflen, file_t * master_out, file_t * slave_out);
 
-/** \defgroup cd_cmd_codes          CD-ROM syscall command codes
-
-    These are the syscall command codes used to actually do stuff with the
-    GD-ROM drive. These were originally provided by thanks maiwe.
-
-    @{
-*/
-#define CMD_PIOREAD 16  /**< \brief Read via PIO */
-#define CMD_DMAREAD 17  /**< \brief Read via DMA */
-#define CMD_GETTOC  18  /**< \brief Read TOC */
-#define CMD_GETTOC2 19  /**< \brief Read TOC */
-#define CMD_PLAY    20  /**< \brief Play track */
-#define CMD_PLAY2   21  /**< \brief Play sectors */
-#define CMD_PAUSE   22  /**< \brief Pause playback */
-#define CMD_RELEASE 23  /**< \brief Resume from pause */
-#define CMD_INIT    24  /**< \brief Initialize the drive */
-#define CMD_SEEK    27  /**< \brief Seek to a new position */
-#define CMD_READ    28  /**< \brief Read raw sectors */
-#define CMD_STOP    33  /**< \brief Stop the disc from spinning */
-#define CMD_GETSCD  34  /**< \brief Get subcode data */
-#define CMD_GETSES  35  /**< \brief Get session */
-/** @} */
-
-/** \defgroup cd_cmd_response       CD-ROM command responses
-
-    These are the values that the various functions can return as error codes.
-    @{
-*/
-#define ERR_OK          0   /**< \brief No error */
-#define ERR_NO_DISC     1   /**< \brief No disc in drive */
-#define ERR_DISC_CHG    2   /**< \brief Disc changed, but not reinitted yet */
-#define ERR_SYS         3   /**< \brief System error */
-#define ERR_ABORTED     4   /**< \brief Command aborted */
-#define ERR_NO_ACTIVE   5   /**< \brief System inactive? */
-/** @} */
-
-/** \defgroup cd_cmd_status         CD-ROM Command Status responses
-
-    These are the raw values the status syscall returns.
-    @{
-*/
-#define FAILED      -1  /**< \brief Command failed */
-#define NO_ACTIVE   0   /**< \brief System inactive? */
-#define PROCESSING  1   /**< \brief Processing command */
-#define COMPLETED   2   /**< \brief Command completed successfully */
-#define ABORTED     3   /**< \brief Command aborted before completion */
-/** @} */
-
-/** \defgroup cdda_read_modes       CDDA read modes
-
-    Valid values to pass to the cdrom_cdda_play() function for the mode
-    parameter.
-    @{
-*/
-#define CDDA_TRACKS     1   /**< \brief Play by track number */
-#define CDDA_SECTORS    2   /**< \brief Play by sector number */
-/** @} */
-
-/** \defgroup cd_status_values      CD-ROM status values
-
-    These are the values that can be returned as the status parameter from the
-    cdrom_get_status() function.
-    @{
-*/
-#define CD_STATUS_BUSY      0   /**< \brief Drive is busy */
-#define CD_STATUS_PAUSED    1   /**< \brief Disc is paused */
-#define CD_STATUS_STANDBY   2   /**< \brief Drive is in standby */
-#define CD_STATUS_PLAYING   3   /**< \brief Drive is currently playing */
-#define CD_STATUS_SEEKING   4   /**< \brief Drive is currently seeking */
-#define CD_STATUS_SCANNING  5   /**< \brief Drive is scanning */
-#define CD_STATUS_OPEN      6   /**< \brief Disc tray is open */
-#define CD_STATUS_NO_DISC   7   /**< \brief No disc inserted */
-/** @} */
-
-/** \defgroup cd_disc_types         CD-ROM drive disc types
-
-    These are the values that can be returned as the disc_type parameter from
-    the cdrom_get_status() function.
-    @{
-*/
-#define CD_CDDA     0       /**< \brief Audio CD (Red book) */
-#define CD_CDROM    0x10    /**< \brief CD-ROM or CD-R (Yellow book) */
-#define CD_CDROM_XA 0x20    /**< \brief CD-ROM XA (Yellow book extension) */
-#define CD_CDI      0x30    /**< \brief CD-i (Green book) */
-#define CD_GDROM    0x80    /**< \brief GD-ROM */
-/** @} */
-
-/** \brief  TOC structure returned by the BIOS.
-
-    This is the structure that the CMD_GETTOC2 syscall command will return for
-    the TOC. Note the data is in FAD, not LBA/LSN.
-
-    \headerfile dc/cdrom.h
-*/
-typedef struct {
-    uint32  entry[99];          /**< \brief TOC space for 99 tracks */
-    uint32  first;              /**< \brief Point A0 information (1st track) */
-    uint32  last;               /**< \brief Point A1 information (last track) */
-    uint32  leadout_sector;     /**< \brief Point A2 information (leadout) */
-} CDROM_TOC;
-
-
-/** \brief  Set the sector size for read sectors.
-
-    This function sets the sector size that the cdrom_read_sectors() function
-    will return. Be sure to set this to the correct value for the type of
-    sectors you're trying to read. Common values are 2048 (for reading CD-ROM
-    sectors) or 2352 (for reading raw sectors).
-
-    \param  size            The size of the sector data.
-*/
-void cdrom_set_sector_size(int size);
-
-/** \brief  Execute a CD-ROM command.
-
-    This function executes the specified command using the BIOS syscall for
-    executing GD-ROM commands.
-
-    \param  cmd             The command number to execute.
-    \param  param           Data to pass to the syscall.
-
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_exec_cmd(int cmd, void *param);
-
-/** \brief  Get the status of the GD-ROM drive.
-
-    \param  status          Space to return the drive's status.
-    \param  disc_type       Space to return the type of disc in the drive.
-
-    \return                 \ref cd_cmd_response
-    \see    cd_status_values
-    \see    cd_disc_types
-*/
-int cdrom_get_status(int *status, int *disc_type);
-
-/** \brief  Re-initialize the GD-ROM drive.
-
-    This function is for reinitializing the GD-ROM drive after a disc change,
-    or something of the like.
-
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_reinit();
-
-/** \brief  Read the table of contents from the disc.
-
-    This function reads the TOC from the specified session of the disc.
-
-    \param  toc_buffer      Space to store the returned TOC in.
-    \param  session         The session of the disc to read.
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_read_toc(CDROM_TOC *toc_buffer, int session);
-
-/** \brief  Read one or more sector from a CD-ROM.
-
-    This function reads the specified number of sectors from the disc, starting
-    where requested. This will respect the size of the sectors set with
-    cdrom_set_sector_size(). The buffer must have enough space to store the
-    specified number of sectors.
-
-    \param  buffer          Space to store the read sectors.
-    \param  sector          The sector to start reading from.
-    \param  cnt             The number of sectors to read.
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_read_sectors(void *buffer, int sector, int cnt);
-
-/** \brief  Locate the sector of the data track.
-
-    This function will search the toc for the last entry that has a CTRL value
-    of 4, and return its FAD address.
-
-    \param  toc             The TOC to search through.
-    \return                 The FAD of the track, or 0 if none is found.
-*/
-uint32 cdrom_locate_data_track(CDROM_TOC *toc);
-
-/** \brief  Play CDDA audio tracks or sectors.
-
-    This function starts playback of CDDA audio.
-
-    \param  start           The track or sector to start playback from.
-    \param  end             The track or sector to end playback at.
-    \param  loops           The number of times to repeat (max of 15).
-    \param  mode            The mode to play (see \ref cdda_read_modes).
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_cdda_play(uint32 start, uint32 end, uint32 loops, int mode);
-
-/** \brief  Pause CDDA audio playback.
-
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_cdda_pause();
-
-/** \brief  Resume CDDA audio playback after a pause.
-
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_cdda_resume();
-
-/** \brief  Spin down the CD.
-
-    This stops the disc in the drive from spinning until it is accessed again.
-
-    \return                 \ref cd_cmd_response
-*/
-int cdrom_spin_down();
-
-TOC_LBA_(uint32 n);
-TOC_ADR_(uint32 n);
-TOC_CTRL_(uint32 n);
-TOC_TRACK_(uint32 n);
-
-CDROM_TOC *CDROM_TOC_new();
-void CDROM_TOC_delete(CDROM_TOC *toc);
-
 
 /* Sound effect handle type */
 typedef uint32 sfxhnd_t;
@@ -842,20 +560,6 @@ void * sq_set32(void *s, uint32 c, int n);
 #define PM_RGB888	3
 
 //-----------------------------------------------------------------------------
-// These are more generic modes
-
-enum {
-	DM_GENERIC_FIRST = 0x1000,
-	DM_320x240 = 0x1000,
-	DM_640x480,
-	DM_800x608,
-	DM_256x256,
-	DM_768x480,
-	DM_768x576,
-	DM_GENERIC_LAST = DM_768x576
-};
-
-//-----------------------------------------------------------------------------
 // More specific modes (and actual indeces into the mode table)
 
 enum {
@@ -889,8 +593,6 @@ void vid_clear(int r, int g, int b);
 void vid_waitvbl();
 void vid_set_mode(int dm, int pm);
 
-void vid_init(int disp_mode, int pixel_mode);
-//void vid_shutdown();
 
 //-----------------------------------------------------------------------------
 
@@ -938,13 +640,13 @@ int flashrom_read(int offset, void * buffer_out, int bytes);
   NOTE: It is not possible to write ones to the flashrom over zeros.
   If you want to do this, you must save the old data in the flashrom,
   delete it out, and save the new data back. */
-int flashrom_write(int offset, void * buffer, int bytes);
+//int flashrom_write(int offset, void * buffer, int bytes);
 
 /**
   Implements the FLASHROM_DELETE syscall; given a partition offset,
   that entire partition of the flashrom will be deleted and all data
   will be reset to FFs. Returns zero if successful, -1 on failure. */
-int flashrom_delete(int offset);
+//int flashrom_delete(int offset);
 
 
 /* Medium-level functions */
@@ -1078,6 +780,11 @@ int scif_write_buffer(const uint8 *data, int len, int xlat);
     \return                 The number of bytes read on success, -1 on error.
 */
 int scif_read_buffer(uint8 *data, int len);
+
+
+/* GD-ROM */
+int cdrom_spin_down();
+
 
 /* Ends C function definitions when using C++ */
 

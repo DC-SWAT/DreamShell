@@ -1,0 +1,141 @@
+<!-- $Platon: libcfg+/doc/sgml/changelog.sgml,v 1.13 2004/02/17 16:10:40 nepto Exp $ -->
+
+<sect1 id="changelog"><title>Version history</title>
+
+<para>Current version is &version; and it was released in &date-human;.</para>
+
+<para>version 0.6.2, February 17, 2004 (official release)</para>
+
+<para>
+<itemizedlist spacing="compact">
+<listitem><simpara>
+several major documentation rewrittes for better readability and
+explanations (thanks to Sergei Gerasenko
+<email>gerases@publicschoolworks.com</email>)
+</simpara></listitem>
+<listitem><simpara>
+fixed bad documentation concerning to "multiple properties manipulation"
+section
+</simpara></listitem>
+</itemizedlist>
+</para>
+
+<para>version 0.6.1, March 13, 2003 (official release)</para>
+
+<para>
+<itemizedlist spacing="compact">
+<listitem><simpara>
+added support for integer numbers initialization in float-like style
+</simpara></listitem>
+<listitem><simpara>
+fixed matching empty prefixes of short and/or long command line options
+</simpara></listitem>
+<listitem><simpara>
+tiny fixes in building stuff mostly related to documentation
+</simpara></listitem>
+</itemizedlist>
+</para>
+
+<para>version 0.6, October 9, 2002 (official release)</para>
+
+<para>
+<itemizedlist spacing="compact">
+<listitem><simpara>
+brand new man pages are generated from SGML (DocBook) documentation and they
+were added into &name; distrubution
+</simpara></listitem>
+<listitem><simpara>more properties manipulation functions</simpara></listitem>
+<listitem><simpara>more powerful &name; building stuff</simpara></listitem>
+<listitem><simpara>documentation update</simpara></listitem>
+</itemizedlist>
+</para>
+
+<para>version 0.5.2, July 19, 2002 (official release)</para>
+
+<para>
+<itemizedlist spacing="compact">
+<listitem><para>
+important API changes to get better &name; parsing context creation functions;
+parameter <parameter>argc</parameter> and <parameter>end_pos</parameter> are not
+used in standart context creation functions, parameter
+<parameter>size</parameter> is used instead; if you already use &name;, please
+make following substitutions:
+
+<itemizedlist spacing="compact">
+	<listitem><simpara>
+		<function>cfg_get_cmdline_context()</function> function call for
+		<function>cfg_get_cmdline_context_argc()</function>
+	</simpara></listitem>
+	<listitem><simpara>
+		<function>cfg_set_cmdline_context()</function> function call for
+		<function>cfg_set_cmdline_context_argc()</function>
+	</simpara></listitem>
+	<listitem><simpara>
+		<function>cfg_get_cfgfile_context()</function> function call for
+		<function>cfg_get_cfgfile_context_pos()</function>
+	</simpara></listitem>
+	<listitem><simpara>
+		<function>cfg_set_cfgfile_context()</function> function call for
+		<function>cfg_set_cfgfile_context_pos()</function>
+	</simpara></listitem>
+</itemizedlist>
+</para></listitem>
+<listitem><simpara>
+all elements are now counted from 0 to get analogical behaviour in command line
+array items, configuration file bytes and configuration file lines; in fact,
+this issue affects only configuration file lines, which was counted from 1 till
+this change
+</simpara></listitem>
+<listitem><simpara>
+fixed bug with property cleaning
+</simpara></listitem>
+<listitem><simpara>
+various virtual properties added for setting up two or more real properties in
+one function call
+</simpara></listitem>
+<listitem><simpara>
+improved internal functions split_multi_arg() and unquote_single_arg()
+</simpara></listitem>
+<listitem><simpara>
+example is now installed with documentation
+</simpara></listitem>
+<listitem><simpara>
+documentation update
+</simpara></listitem>
+</itemizedlist>
+</para>
+
+<para>version 0.5.1, Juny 11, 2002 (official release)</para>
+
+<para>
+<itemizedlist spacing="compact">
+<listitem><simpara>
+unnecesary file <filename class=headerfile>props.h</filename> removed due
+to linking problems against installed shared library; linking now works fine
+</simpara></listitem>
+<listitem><simpara>
+(special) properties stuff completely rewritten; three new functions and
+<structname>cfg_property_type</structname> enumeration added, ugly macros removed
+</simpara></listitem>
+<listitem><simpara>
+working example added to distribution
+</simpara></listitem>
+<listitem><simpara>
+installation and documentation building stuff improvements
+</simpara></listitem>
+<listitem><simpara>
+documentation update
+</simpara></listitem>
+</itemizedlist>
+</para>
+
+<para>version 0.5, May 24, 2002 (official release)</para>
+
+<para>
+<itemizedlist spacing="compact">
+<listitem><simpara>initial release</simpara></listitem>
+</itemizedlist>
+</para>
+
+</sect1>
+

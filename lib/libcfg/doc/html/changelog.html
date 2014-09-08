@@ -1,0 +1,378 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Version history</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Other information"
+HREF="other-information.html"><LINK
+REL="PREVIOUS"
+TITLE="CVS access"
+HREF="other-information.cvs-access.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="other-information.cvs-access.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 3. Other information</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+>&nbsp;</TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="CHANGELOG"
+></A
+>3.5. Version history</H1
+><P
+>Current version is 0.6.2 and it was released in 17th February 2004.</P
+><P
+>version 0.6.2, February 17, 2004 (official release)</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><SPAN
+>several major documentation rewrittes for better readability and
+explanations (thanks to Sergei Gerasenko
+<TT
+CLASS="EMAIL"
+>&#60;<A
+HREF="mailto:gerases@publicschoolworks.com"
+>gerases@publicschoolworks.com</A
+>&#62;</TT
+>)</SPAN
+></LI
+><LI
+><SPAN
+>fixed bad documentation concerning to "multiple properties manipulation"
+section</SPAN
+></LI
+></UL
+></P
+><P
+>version 0.6.1, March 13, 2003 (official release)</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><SPAN
+>added support for integer numbers initialization in float-like style</SPAN
+></LI
+><LI
+><SPAN
+>fixed matching empty prefixes of short and/or long command line options</SPAN
+></LI
+><LI
+><SPAN
+>tiny fixes in building stuff mostly related to documentation</SPAN
+></LI
+></UL
+></P
+><P
+>version 0.6, October 9, 2002 (official release)</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><SPAN
+>brand new man pages are generated from SGML (DocBook) documentation and they
+were added into libcfg+ distrubution</SPAN
+></LI
+><LI
+><SPAN
+>more properties manipulation functions</SPAN
+></LI
+><LI
+><SPAN
+>more powerful libcfg+ building stuff</SPAN
+></LI
+><LI
+><SPAN
+>documentation update</SPAN
+></LI
+></UL
+></P
+><P
+>version 0.5.2, July 19, 2002 (official release)</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><P
+>important API changes to get better libcfg+ parsing context creation functions;
+parameter <TT
+CLASS="PARAMETER"
+><I
+>argc</I
+></TT
+> and <TT
+CLASS="PARAMETER"
+><I
+>end_pos</I
+></TT
+> are not
+used in standart context creation functions, parameter
+<TT
+CLASS="PARAMETER"
+><I
+>size</I
+></TT
+> is used instead; if you already use libcfg+, please
+make following substitutions:
+
+<P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><SPAN
+>		<TT
+CLASS="FUNCTION"
+>cfg_get_cmdline_context()</TT
+> function call for
+		<TT
+CLASS="FUNCTION"
+>cfg_get_cmdline_context_argc()</TT
+>
+	</SPAN
+></LI
+><LI
+><SPAN
+>		<TT
+CLASS="FUNCTION"
+>cfg_set_cmdline_context()</TT
+> function call for
+		<TT
+CLASS="FUNCTION"
+>cfg_set_cmdline_context_argc()</TT
+>
+	</SPAN
+></LI
+><LI
+><SPAN
+>		<TT
+CLASS="FUNCTION"
+>cfg_get_cfgfile_context()</TT
+> function call for
+		<TT
+CLASS="FUNCTION"
+>cfg_get_cfgfile_context_pos()</TT
+>
+	</SPAN
+></LI
+><LI
+><SPAN
+>		<TT
+CLASS="FUNCTION"
+>cfg_set_cfgfile_context()</TT
+> function call for
+		<TT
+CLASS="FUNCTION"
+>cfg_set_cfgfile_context_pos()</TT
+>
+	</SPAN
+></LI
+></UL
+></P
+></LI
+><LI
+><SPAN
+>all elements are now counted from 0 to get analogical behaviour in command line
+array items, configuration file bytes and configuration file lines; in fact,
+this issue affects only configuration file lines, which was counted from 1 till
+this change</SPAN
+></LI
+><LI
+><SPAN
+>fixed bug with property cleaning</SPAN
+></LI
+><LI
+><SPAN
+>various virtual properties added for setting up two or more real properties in
+one function call</SPAN
+></LI
+><LI
+><SPAN
+>improved internal functions split_multi_arg() and unquote_single_arg()</SPAN
+></LI
+><LI
+><SPAN
+>example is now installed with documentation</SPAN
+></LI
+><LI
+><SPAN
+>documentation update</SPAN
+></LI
+></UL
+></P
+><P
+>version 0.5.1, Juny 11, 2002 (official release)</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><SPAN
+>unnecesary file <TT
+CLASS="FILENAME"
+>props.h</TT
+> removed due
+to linking problems against installed shared library; linking now works fine</SPAN
+></LI
+><LI
+><SPAN
+>(special) properties stuff completely rewritten; three new functions and
+<SPAN
+CLASS="STRUCTNAME"
+>cfg_property_type</SPAN
+> enumeration added, ugly macros removed</SPAN
+></LI
+><LI
+><SPAN
+>working example added to distribution</SPAN
+></LI
+><LI
+><SPAN
+>installation and documentation building stuff improvements</SPAN
+></LI
+><LI
+><SPAN
+>documentation update</SPAN
+></LI
+></UL
+></P
+><P
+>version 0.5, May 24, 2002 (official release)</P
+><P
+><P
+></P
+><UL
+COMPACT="COMPACT"
+><LI
+><SPAN
+>initial release</SPAN
+></LI
+></UL
+></P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="other-information.cvs-access.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>CVS access</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="other-information.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>&nbsp;</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

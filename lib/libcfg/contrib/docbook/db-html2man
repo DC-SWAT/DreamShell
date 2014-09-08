@@ -1,0 +1,207 @@
+#!/usr/bin/awk -f
+
+#
+# scripts/shell/docbook/ - DocBook support shell scripts
+#
+# db-get-id - SGML/XML DocBook source modifier
+# ____________________________________________________________
+#
+# Developed by Lubomir Host <rajo@platon.sk>
+# Copyright (c) 2002-2004 Platon SDG, http://platon.sk/
+# All rights reserved.
+#
+# See README file for more information about this software.
+# See COPYING file for license information.
+#
+# Download the latest version from
+# http://platon.sk/projects/scripts/
+#
+
+# $Platon: libcfg+/contrib/docbook/db-html2man,v 1.25 2004/01/12 06:03:07 nepto Exp $
+
+BEGIN {
+	read_id(IDfile);
+}
+
+function read_id(file)
+{ # {{{
+	while (getline tag < file) {
+		n = split(tag, a, "\t+");
+		IDs[a[1]] = tag;
+	}
+} # }}}
+
+function get_field(str, i)
+{ # {{{
+	n = split(IDs[str], a, "\t+");
+	return a[i];
+} # }}}
+
+function remove_tag(s, reg)
+{ # {{{
+		sub(/\t+/, " ", s);
+		reg1 = sprintf("^.*<%s[^>]*> *", reg);
+		reg2 = sprintf(" *</%s>.*$", reg);
+		if (!sub(reg1, "", s)) { s = ""; }
+		if (!sub(reg2, "", s)) { s = ""; }
+
+		return s;
+} # }}}
+
+function complete_xref(str)
+{ # {{{
+	reg = "<xref[^>]*$";
+
+	while (str ~ reg) {
+#		printf "BEFORE = '%s'\n", str;
+		getline;
+		str = sprintf("%s %s", str, $0);
+#		printf "AFTER = '%s'\n", str;
+	}
+
+	return str;
+	
+} # }}}
+
+function handle_xref(str)
+{ # {{{
+	while (str ~ "<xref") {
+		str = complete_xref(str);
+# now we substitute tag <xref ...> with apropriate ID
+		id = find_id(str);
+		sub(/<xref[^>]*>/, sprintf("%s", get_field(id, 5)), str);
+	}
+	print str;
+} # }}}
+
+# return "endterm" value of <xref ...> tag
+function find_id(str)
+{ # {{{
+	sub(/^.*<xref.*endterm=['"]/, "", str);
+	sub(/['"].*$/, "", str);
+	return str;
+} # }}}
+
+function remove_lines(str)
+{ # {{{
+	while (getline) {
+		if (sub(str, "")) { print; break; }
+	}
+	return;
+} # }}}
+
+function handle_man(str)
+{ # {{{
+	n = split(str, a, "-->");
+	for (i = 1; i <= n; i++) {
+		#printf "a[%d] = '%s'\n", i, a[i];
+		if (a[i] ~ /<!-- MAN:/) {
+			sub(/<!-- MAN:[ \t]+/, "", a[i]);
+			sub(/[ \t]+$/, "", a[i]);
+			printf "%s", a[i];
+		}
+		else if (a[i] ~ /<!-- /)
+				printf "%s -->", a[i];
+			else printf "%s", a[i];
+	}
+} # }}}
+
+function handle_multiline_man()
+{ # {{{
+	while (getline) {
+		if ($0 ~ /^[ \t]*-->$/) break;
+		print;
+	}
+	return;
+} # }}}
+
+function handle_table(str)
+{ # {{{
+	entries = 0;
+
+	sub(/<table[^>]*>/, "<variablelist>");
+	print;
+	while (getline) {
+		# end of table
+		if (sub(/<\/table>/, "</variablelist>")) { return; }
+
+		if ($0 ~ /<thead>/) {
+			remove_lines("^.*</thead>");
+		}
+		sub(/<tgroup[^>]*>/, "");
+		sub(/<\/tgroup>/, "");
+		sub(/<tbody>/, "");
+		sub(/<\/tbody>/, "");
+		
+		if (sub(/<row[^>]*>/, "<varlistentry>")) { entries = 0; }
+		if (sub(/<\/row>/, "</varlistentry>")) {
+			if (entries > 1)
+				print "</listitem>";
+		}
+		if ($0 ~ /<entry>/) {
+			entries++;
+			if (entries == 1 )
+				sub(/<entry>/, "<term>");
+			else {
+				if (entries == 2)
+					print "<listitem>";
+				sub(/<entry>/, "<para>");
+			}
+		}	
+		if ($0 ~ /<\/entry>/) {
+			if (entries == 1 )
+				sub(/<\/entry>/, "</term>");
+			else {
+				sub(/<\/entry>/, "</para>");
+			}
+		}	
+		if ($0 ~ /<!-- MAN:$/)
+			handle_multiline_man();
+		if ($0 ~ /<!-- MAN:/) {
+			handle_man($0);
+			continue;
+		}
+		if ($0 ~ /<xref/) {
+			handle_xref($0);
+			continue;
+		}
+
+		print;
+	}
+} # }}}
+
+# multiline MAN: comment
+/<!-- MAN:$/ {
+	handle_multiline_man();
+	next;
+}
+# MAN: on one line
+/<!-- MAN:/ {
+	handle_man($0);
+	next;
+}
+
+/<xref/ {
+	handle_xref($0);
+	next;
+}
+
+# remove "<sect1 .*</title>" -- MUST be on begin of the line!
+/<sect1/ {
+	remove_lines("^.*</title>");
+	next;
+}
+
+/<table / {
+	handle_table($0);
+}
+
+# default: print line
+// {
+	sub(/<\/sect1>/, "");
+	print;
+}
+
+# vim: ft=awk cindent
+# vim600: fdl=0 fdc=3 fdm=marker
+

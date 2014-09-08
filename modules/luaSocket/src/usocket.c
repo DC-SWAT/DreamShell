@@ -330,15 +330,15 @@ int socket_gethostbyaddr(const char *addr, socklen_t len, struct hostent **hp) {
     else if (errno) return errno;
     else return IO_UNKNOWN;
 }
-
+#endif
 int socket_gethostbyname(const char *addr, struct hostent **hp) {
     *hp = gethostbyname(addr);
     if (*hp) return IO_DONE;
-    else if (h_errno) return h_errno;
+//    else if (h_errno) return h_errno;
     else if (errno) return errno;
     else return IO_UNKNOWN;
 }
-#endif
+
 
 /*-------------------------------------------------------------------------*\
 * Error translation functions

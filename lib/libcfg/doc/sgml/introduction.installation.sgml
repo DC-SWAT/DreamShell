@@ -1,0 +1,78 @@
+<!-- $Platon: libcfg+/doc/sgml/introduction.installation.sgml,v 1.5 2003/08/16 01:43:42 nepto Exp $ -->
+
+<sect1 id="introduction.installation"><title>Installation</title>
+
+<para>
+
+The installation of &name; is straightforward. It uses traditional UNIX
+systems way. For a basic installation, simply execute the following three
+commands in the specified sequence.
+
+</para>
+<para>
+
+<screen>
+./configure
+make
+make install</screen>
+
+</para>
+<para>
+
+By default this will install following header and appropriate symlinks file on
+you system typically located in <filename
+class=directory>/usr/include/</filename> directory.
+
+<itemizedlist spacing="compact">
+	<listitem>
+		<simpara>
+			<filename class=headerfile>platon/cfg+.h</filename> file
+		</simpara>
+	</listitem>
+	<listitem>
+		<simpara>
+			<filename class=headerfile>platon/cfg.h</filename> symbolic link
+		</simpara>
+	</listitem>
+	<listitem>
+		<simpara>
+			<filename class=headerfile>cfg+.h</filename> symbolic link
+		</simpara>
+	</listitem>
+	<listitem>
+		<simpara>
+			<filename class=headerfile>cfg.h</filename> symbolic link
+		</simpara>
+	</listitem>
+</itemizedlist>
+
+</para>
+<para>
+
+Of course, also library files will be installed. Typically in <filename
+class=directory>/usr/lib/</filename> directory. It consists of the following
+components:
+
+<itemizedlist spacing="compact">
+	<listitem><simpara>
+			<filename class=headerfile>&name;.a</filename> static library
+	</simpara></listitem>
+	<listitem><simpara>
+			<filename class=headerfile>&name;-&version;.so</filename> shared library
+	</simpara></listitem>
+	<listitem><simpara>
+			<filename class=headerfile>&name;.so</filename> symbolic link
+			to shared library
+	</simpara></listitem>
+</itemizedlist>
+
+</para>
+<para>
+
+Note that you can pass several options with arguments to the
+<filename>./configure</filename> script. Type <command>./configure
+--help</command> to get more information.
+
+</para>
+</sect1>
+

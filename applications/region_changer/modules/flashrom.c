@@ -6,28 +6,6 @@
 
 #include "rc.h"
 
-int _flashrom_write(int offset, void * buffer, int bytes) {
-	int	(*sc)(int, void*, int, int);
-	int	old, rv;
-
-	old = irq_disable();
-	*((uint32 *)&sc) = *((uint32 *)0x8c0000b8);
-	rv = sc(offset, buffer, bytes, 2);
-	irq_restore(old);
-	return rv;
-}
-
-int _flashrom_delete(int offset) {
-	int	(*sc)(int, int, int, int);
-	int	old, rv;
-
-	old = irq_disable();
-	*((uint32 *)&sc) = *((uint32 *)0x8c0000b8);
-	rv = sc(offset, 0, 0, 3);
-	irq_restore(old);
-	return rv;
-}
-
 int flash_clear(int block) {
 	int size, start;
 
@@ -36,8 +14,7 @@ int flash_clear(int block) {
 		return -1;
 	}
 
-
-	if (_flashrom_delete(start) < 0) {
+	if (flashrom_delete(start) < 0) {
 		ds_printf("DS_ERROR: Deleting old flash factory data error\n");
 		return -1;
 	}
@@ -53,12 +30,12 @@ int flash_write_factory(uint8 *data) {
 		return -1;
 	}
 
-	if (_flashrom_delete(start) < 0) {
+	if (flashrom_delete(start) < 0) {
 		ds_printf("DS_ERROR: Deleting old flash factory data error\n");
 		return -1;
 	}
 
-	if (_flashrom_write(start, data, size) < 0) {
+	if (flashrom_write(start, data, size) < 0) {
 		ds_printf("DS_ERROR: Write new flash factory data error\n");
 		return -1;
 	}
@@ -100,10 +77,11 @@ uint8 *flash_read_factory() {
 	return data;
 }
 
+/* Read file to RAM and write to flashrom */
 int flash_write_file(const char *filename) {
    	
 	file_t fd;
-	uint8 *data;
+	uint8 *data = NULL;
 	size_t size;
 	
 	fd = fs_open(filename, O_RDONLY);
@@ -115,35 +93,77 @@ int flash_write_file(const char *filename) {
 	
 	size = fs_total(fd);
 	
-	if (size > 128 * 1024) {
-		fs_close(fd);
-		ds_printf("DS_ERROR: Firmware is too big: %d bytes\n", size);
-		return -1;
+	if (size > 0x20000) {
+		size = 0x20000;
 	}
 	
-	data = (uint8*) malloc(size);
+	data = (uint8*) memalign(32, size);
 	
 	if (data == NULL) {
-		fs_close(fd);
 		ds_printf("DS_ERROR: Not enough of memory\n");
-		return -1;
+		goto error;
 	}
 	
 	if (fs_read(fd, data, size) < 0) {
-		free(data);
-		fs_close(fd);
 		ds_printf("DS_ERROR: Error in reading file: %d\n", errno);
-		return -1;
+		goto error;
+	}
+	
+	if (flashrom_write(0, data, size) < 0) {
+		ds_printf("DS_ERROR: Write new flash data error\n");
+		goto error;
 	}
 	
 	fs_close(fd);
-    
-	if (_flashrom_write(0, data, size) < 0) {
-		ds_printf("DS_ERROR: Write new flash factory data error\n");
+	free(data);
+	return 0;
+	
+error:
+	fs_close(fd);
+	if(data)
 		free(data);
+	return -1;
+}
+
+/* Read flashrom to RAM and write to file */
+int flash_read_file(const char *filename) {
+   	
+	file_t fd;
+	uint8 *data = NULL;
+	size_t size = 0x20000;
+	
+	fd = fs_open(filename, O_WRONLY);
+	
+	if (fd == FILEHND_INVALID) {
+		ds_printf("DS_ERROR: Can't open %s\n", filename);
 		return -1;
 	}
 	
+	data = (uint8*) memalign(32, size);
+	
+	if (data == NULL) {
+		ds_printf("DS_ERROR: Not enough of memory\n");
+		goto error;
+	}
+	
+	if (flashrom_read(0, data, size) < 0) {
+		ds_printf("DS_ERROR: Read flash data error\n");
+		goto error;
+	}
+	
+	if (fs_write(fd, data, size) < 0) {
+		ds_printf("DS_ERROR: Error in writing to file: %d\n", errno);
+		goto error;
+	}
+	
+	fs_close(fd);
 	free(data);
 	return 0;
+	
+error:
+	fs_close(fd);
+	if(data)
+		free(data);
+	return -1;
 }
+

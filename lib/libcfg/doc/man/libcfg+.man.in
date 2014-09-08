@@ -1,0 +1,148 @@
+.\"
+.\" libcfg+ - precise command line & config file parsing library
+.\"
+.\" doc/man/libcfg+.man - main libcfg+ manpage
+.\" ____________________________________________________________
+.\"
+.\" Developed by Ondrej Jombik <nepto@platon.sk>
+.\"          and Lubomir Host <rajo@platon.sk>
+.\" Copyright (c) 2001-2004 Platon SDG, http://platon.sk/
+.\" All rights reserved.
+.\"
+.\" See README file for more information about this software.
+.\" See COPYING file for license information.
+.\"
+.\" Download the latest version from
+.\" http://platon.sk/projects/libcfg+/
+.\"
+.TH "@PACKAGE@" "@MANVOLNUM@" "@DATE_HUMAN@" "@PACKAGE@ @VERSION@" "@PACKAGE@ @VERSION@"
+.BY "Ondrej Jombik"
+.SH NAME
+@PACKAGE@ \- command line and configuration file parsing library
+.SH DESCRIPTION
+@PACKAGE@ is a C library that features multi- command line and configuration
+file parsing. It is possible to set up various special properties such as
+quoting characters, deliminator strings, file comment prefixes, multi-line
+postfixes, and more. It supports many data types such as booleans, integers,
+decimal numbers, strings with many additional data type flags (such as multiple
+values for a single option).
+.SH "TABLE OF CONTENTS"
+For simplicity of access and usage, @PACKAGE@ manpages documentation has been
+split up into several sections. Second column defines keywords, which can be
+used for accessing particular section.
+.sp
+.\".RS
+.TS
+lfB lfB
+lfR lfR
+lfB lfR.
+Section (described issue)	API functions / structures
+-------------------------	--------------------------
+
+Properties	cfg_add_property
+	cfg_clear_property
+	cfg_remove_property
+
+Context manipulation	cfg_context
+	cfg_get_context
+	cfg_get_cmdline_context
+	cfg_get_cfgfile_context
+	cfg_set_cmdline_context
+	cfg_set_cfgfile_context
+	cfg_reset_context
+	cfg_free_context
+
+Options set	cfg_option
+
+Parsing	cfg_parse
+	cfg_get_next_opt
+	cfg_get_cur_opt
+	cfg_get_cur_arg
+	cfg_get_cur_idx
+
+Error handling	cfg_print_error
+	cfg_fprint_error
+	cfg_get_error_str
+
+Context flags	cfg_set_context_flag
+	cfg_clear_context_flag
+	cfg_get_context_flag
+	cfg_set_context_flags
+	cfg_get_context_flags
+.TE
+.RE
+.SH FILES
+Header files and appropriate symbolic links, typically installed into
+/usr/include/ directory:
+.RS
+.TS
+lfB lfR.
+platon/cfg+.h	file 
+platon/cfg.h	symbolic link 
+cfg+.h	symbolic link 
+cfg.h	symbolic link 
+.TE
+.RE
+.sp
+Library files typically installed into /usr/lib/ directory:
+.RS
+.TS
+lfB lfR.
+@PACKAGE@.a	static library 
+@PACKAGE@-@VERSION@.so	shared library 
+@PACKAGE@.so	symbolic link to shared library
+.TE
+.RE
+.SH AUTHORS
+Developed by Ondrej Jombik <nepto@platon.sk>
+and Lubomir Host <rajo@platon.sk>
+.sp
+Copyright (c) 2001-2004 Platon SDG, http://platon.sk/
+.sp
+Comments, suggestions, bug reports and patches are always welcome.  Please
+e-mail them to the following <platon@pobox.sk> e-mail address and write
+`@PACKAGE@' keyword in the Subject line.
+.sp
+This manpage was manually written by Ondrej Jombik in 14th September 2002. Other
+@PACKAGE@ manpages are generated from SGML sources, so they are automatically
+kept in sync with official documentation.
+.SH HOMEPAGE
+The official @PACKAGE@ homepage is:
+.sp
+.RS
+.UR
+http://platon.sk/projects/@PACKAGE@/
+.sp
+.UE
+.RE
+The @PACKAGE@ project management page is:
+.sp
+.RS
+.UR
+http://platon.sk/projects/main_page.php?project_id=3
+.sp
+.UE
+.RE
+Use @PACKAGE@ project management page to submit bugs, feature requests,
+suggestions for improvements or improved code. There is also online
+documentation browser, download central and discussion forum available for
+asking support questions.
+.SH LICENSE
+This library is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2, or (at your option) any later version. 
+.sp
+This library is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details. 
+.sp
+You should have received a copy of the GNU General Public License along with
+this library; if not, write to the Free Software Foundation, Inc., 59 Temple
+Place - Suite 330, Boston, MA 02111-1307, USA.
+.SH "SEE ALSO"
+.BR getopt (3),
+.BR popt (3)
+.sp
+For full information, such as installation notes, API description, examples
+of usage and others, refer to documentation located in doc/html/ or
+doc/man/ directories of source tarball package.

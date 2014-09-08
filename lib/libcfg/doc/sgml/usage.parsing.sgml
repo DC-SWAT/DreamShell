@@ -1,0 +1,134 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.parsing.sgml,v 1.8 2003/08/16 14:06:06 nepto Exp $ -->
+
+<!-- MAN:
+	<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+		<!ENTITY % defs			SYSTEM "defs.sgml">
+		%defs;
+	]>
+	<refentry>
+
+	<refmeta>
+		<refentrytitle>cfg_parse</refentrytitle>
+		<manvolnum>&manvolnum;</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>cfg_parse</refname>
+		<refname>cfg_get_next_opt</refname>
+		<refname>cfg_get_cur_opt</refname>
+		<refname>cfg_get_cur_arg</refname>
+		<refname>cfg_get_cur_idx</refname>
+		<refpurpose>&name; parsing</refpurpose>
+	</refnamediv>
+-->
+
+<sect1 id="usage.parsing">
+<title id="usage.parsing.title">Parsing</title>
+
+<!-- MAN: <refsect1><title>SYNOPSIS | Parsing</title> -->
+<para>
+
+After a &name; context is created and its flags are set (optional), one can
+initiate the parsing. This chapter provides information about the available
+parsing methods.
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+
+<funcprototype>
+	<funcdef>int <function>cfg_parse</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>int <function>cfg_get_next_opt</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+These functions take a context as their only argument. Depending on the type
+of the context, either a file or a command line option will be processed. If
+the option just parsed matches one of the options in the option set
+(see&nbsp;<xref linkend="usage.options-set"
+endterm="usage.options-set.title">&nbsp;section) and the arguments of the
+parsed option are stored in memory and <structfield>value</structfield> is set
+to point to them. However, if the <structfield>value</structfield> of the
+relevant option in the option is set to <constant>NULL</constant>, the
+arguments will not be stored.
+
+</para>
+<para>
+
+The main and only difference between the two functions is in the way they
+interpret the <structfield>val</structfield> field of the relevant option
+after a matching token was found in the token stream. The function
+<function>cfg_get_next_opt()</function> respects the value of this field and
+if it is not <constant>0</constant>, returns the value upon a match. If the
+field is set to <constant>0</constant>, the function proceeds to the next token
+without returning a value. In the case of <function>cfg_parse()</function>,
+<structfield>val</structfield> is ignored.
+
+</para>
+<para>
+
+If an error occurs during parsing, the functions return a negative integer.
+This is why it is a good idea to set the <structfield>val</structfield> member
+of the <structname>cfg_option</structname> to a value equal or greater than
+<constant>0</constant>.  Detailed information about error codes as well as
+their descriptions can be found in the <xref linkend="usage.error-codes"
+endterm="usage.error-codes.title"> section.
+
+</para>
+<para>
+
+At the end of parsing <constant>0</constant> is returned.
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>SYNOPSIS | Additional information</title> -->
+<para>
+
+The following functions provide additional information about a matched option.
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+
+<funcprototype>
+	<funcdef>char *<function>cfg_get_cur_opt</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>char *<function>cfg_get_cur_arg</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>int <function>cfg_get_cur_idx</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+Use <function>cfg_get_cur_opt()</function> to get the name of the option being
+processed. Use <function>cfg_get_cur_arg()</function>to get the current
+argument. Finally, use <function>cfg_get_cur_idx()</function> to get the
+current offset in the parsing stream. If the context is associated with the
+command line, the value is the current offset in the
+<parameter>argv</parameter> array. If the context is associated with a
+configuration file, then depending on the value of
+<constant>CFG_FILE_LINE_POS_USAGE</constant>, it is either the current byte
+offset or line number in the file.
+
+</para>
+</sect1>
+<!-- MAN: </refsect1></refentry> -->
+

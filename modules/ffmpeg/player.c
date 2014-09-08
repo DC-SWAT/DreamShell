@@ -278,20 +278,23 @@ static void RenderVideo(video_txr_t *txr, AVFrame *frame, AVCodecContext *codec)
 				frame->data[2], frame->linesize[2]
 			);
 			
-			dcache_flush_range((unsigned)txr->backbuf, txr->tw * codec->height * 2);
-			while (!pvr_dma_ready());
-			pvr_txr_load_dma(txr->backbuf, txr->addr, txr->tw * codec->height * 2, -1, NULL, 0);
+//			dcache_flush_range((unsigned)txr->backbuf, txr->tw * codec->height * 2);
+//			while (!pvr_dma_ready());
+//			pvr_txr_load_dma(txr->backbuf, txr->addr, txr->tw * codec->height * 2, -1, NULL, 0);
+			sq_cpy(txr->addr, txr->backbuf, txr->tw * codec->height * 2);
 #endif
 			break;
 		case PIX_FMT_UYVY422:
-			dcache_flush_range((unsigned)frame->data[0], txr->tw * codec->height * 2);
-			while (!pvr_dma_ready());
-			pvr_txr_load_dma((uint8 *)(((uint32)frame->data[0] + 31) & (~31)), txr->addr, txr->tw * codec->height * 2, -1, NULL, 0);
+//			dcache_flush_range((unsigned)frame->data[0], txr->tw * codec->height * 2);
+//			while (!pvr_dma_ready());
+//			pvr_txr_load_dma((uint8 *)(((uint32)frame->data[0] + 31) & (~31)), txr->addr, txr->tw * codec->height * 2, -1, NULL, 0);
+			sq_cpy(txr->addr, frame->data[0], txr->tw * codec->height * 2);
 			break;
 		default:
-			dcache_flush_range((unsigned)frame->data[0], txr->tw * codec->height * 2);
-			while (!pvr_dma_ready());
-			pvr_txr_load_dma((uint8 *)(((uint32)frame->data[0] + 31) & (~31)), txr->addr, txr->tw * codec->height * 2, -1, NULL, 0);
+//			dcache_flush_range((unsigned)frame->data[0], txr->tw * codec->height * 2);
+//			while (!pvr_dma_ready());
+//			pvr_txr_load_dma((uint8 *)(((uint32)frame->data[0] + 31) & (~31)), txr->addr, txr->tw * codec->height * 2, -1, NULL, 0);
+			sq_cpy(txr->addr, frame->data[0], txr->tw * codec->height * 2);
 			break;
 	}
 	
@@ -456,6 +459,39 @@ static void spu_dma_transfer2(ptr_t data) {
 	spu_dma_transfer(sep_buffer[1], dmadest, dmacnt, -1, NULL, 0);
 }
 #endif
+
+
+/*
+static void spu_memload_stereo16(int leftpos, int rightpos, void *src0, size_t size) {
+
+	register uint16 *src   = (uint16 *)src0;
+	register uint32 *left  = (uint32 *)(leftpos  + SPU_RAM_BASE);
+	register uint32 *right = (uint32 *)(rightpos + SPU_RAM_BASE);
+	
+//	size = (size+7)/8;
+	unsigned int old = 0;
+	
+	while(size) {
+
+		g2_fifo_wait();
+		G2_LOCK(old);
+		
+		left[0]  = src[0] | (src[2] << 16);
+		right[0] = src[1] | (src[3] << 16);
+		
+		left[1]  = src[4] | (src[6] << 16);
+		right[1] = src[5] | (src[7] << 16);
+		
+		G2_UNLOCK(old);
+		
+		src += 8;
+		left += 2;
+		right += 2;
+		size -= 16;
+	}
+}
+*/
+
 
 static void spu_memload_stereo16(int leftpos, int rightpos, void *src0, size_t size)
 {
@@ -1010,6 +1046,7 @@ int ffplay(const char *filename, const char *force_format) {
 		
 #ifdef USE_HW_YUV				
 		yuv_conv_setup(movie_txr.addr, PVR_YUV_MODE_MULTI, PVR_YUV_FORMAT_YUV420, movie_txr.width, movie_txr.height);
+		pvr_dma_init();
 #endif
 
 	} else {

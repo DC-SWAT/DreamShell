@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="File Manager" version="0.6.3" icon="../../gui/icons/normal/file_manager.png">
+<app name="File Manager" version="0.6.4" icon="../../gui/icons/normal/file_manager.png">
 	<resources>
 		<module src="../../modules/tolua.klf" />
 		<module src="../../modules/luaDS.klf" />
@@ -84,7 +84,7 @@
 		</surface>
 	</resources>
 	<body x="0" y="0" width="640" height="480" background="background" onload="FileManager:Initialize()" onunload="FileManager:Shutdown()">
-		<label width="340" height="25" x="20" y="2" font="arial" color="#000000" name="title" text="File Manager v0.6" align="left" />
+		<label width="340" height="25" x="20" y="2" font="arial" color="#000000" name="title" text="File Manager v0.6.4" align="left" />
 		<panel x="365" y="2" width="280" height="22">
 			<input type="button" 
 					onclick="FileManager:openFile()" 

@@ -134,7 +134,7 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 		return eFileFail;
 	}
 
-	data = (uint8 *) malloc(fileSize);
+	data = (uint8 *) memalign(32, fileSize);
 	if(data == NULL) 
 	{
 		ds_printf("DS_ERROR: Not enough memory\n");
@@ -244,7 +244,7 @@ int BiosFlasher_CompareBiosWithFile(const char* filename, BiosFlasher_OperationC
 		return eDataMissmatch;
 	}
 
-	data = (uint8 *) malloc(CHUNK_SIZE);
+	data = (uint8 *) memalign(32, CHUNK_SIZE);
 	if(data == NULL) 
 	{
 		ds_printf("DS_ERROR: Not enough memory\n");
@@ -318,7 +318,19 @@ int BiosFlasher_WriteFromBiosToFile(const char* filename, BiosFlasher_OperationC
 		fileSize = (settings.m_DataLength > 0) ? offset + settings.m_DataLength : fileSize - offset;
 	}
 
-	data = (uint8*)BIOS_FLASH_ADDR;
+	data = memalign(32, fileSize);
+	if(!data) {
+		ds_printf("DS_ERROR: Not enough memory\n");
+		fs_close(pFile);
+		return eUnknownFail;
+	}
+	
+	/* 
+	 * We can't use G1 bus simultaneously for IDE and BIOS, 
+	 * so need copy BIOS data to RAM 
+	 */
+	memcpy(data, (uint8*)BIOS_FLASH_ADDR, fileSize);
+
 	int i = 0;
 	size_t chunkCount = fileSize / CHUNK_SIZE;
 	for (i = 0; i <= chunkCount; ++i)
@@ -332,10 +344,12 @@ int BiosFlasher_WriteFromBiosToFile(const char* filename, BiosFlasher_OperationC
 		{
 			ds_printf("DS_ERROR: Can't write data to file\n");
 			fs_close(pFile);
+			free(data);
 			return eFileFail;
 		}
 	}
 
+	free(data);
 	fs_close(pFile);
 
 	return 0;

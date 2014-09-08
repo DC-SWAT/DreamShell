@@ -181,8 +181,15 @@ static void BuildAppList() {
 			path[plen] = '\0';
 			
 			if(!FileExists(path)) {
-				snprintf(path, MAX_FN_LEN, "%s/gui/icons/normal/%s.png", 
-							getenv("PATH"), (type == 'l' ? "lua" : "script"));
+				
+				path[plen - 3] = 'b';
+				path[plen - 2] = 'm';
+				path[plen - 1] = 'p';
+				
+				if(!FileExists(path)) {
+					snprintf(path, MAX_FN_LEN, "%s/gui/icons/normal/%s.png", 
+								getenv("PATH"), (type == 'l' ? "lua" : "script"));
+				}
 			}
 
 			elen -= 4;

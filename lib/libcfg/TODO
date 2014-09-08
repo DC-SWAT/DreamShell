@@ -1,0 +1,169 @@
+libcfg+ TODO list
+-----------------
+
+- standard files such as README, AUTHORS, TODO an so on are not installed
+  into /usr/doc/ together with other documentation
+* when building on Gentoo Linux, make.conf CFLAGS are not used in addition
+  to our libcfg+ compilation flags
+
+* implement functions for multi properties manipulation:
+  - cfg_clear_properties()
+  - cfg_add_properties()
+  - cfg_remove_properties()
+
+- implement boolean datatypes initialization arguments properties;
+  with '0', 'off' and 'disabled' defaults for FALSE and '1', 'on' and 'enabled'
+  defaults for TRUE
+* cfg_set_cmdline_context() reimplementation from argc to begin_pos/end_pos; it
+  will allow parse a subset of items from string array; also create
+  cfg_(set|get)_cmdline_context_by_argc() macro to get old behaviour of
+  cfg_(set|get)_cmdline_context() functions (begin_pos is 0, end_pos is argc-1,
+  context has CFG_PROCESS_FIRST flag not set)
+* variable arguments (va) functions for property manipulation
+* clickable references to real properties of every virtual property in
+  documentation
+
+* implement multiple outputs from single SGML sources; we need at least
+  - man page
+  - changelog
+
+* `make distcheck' doesn't work due to error during documentation generation;
+  html/* and doxygen/* doesn't exists because they have hardcoded paths to sgml
+  and *.h sources in its configuration files and appropriate Makefile parts
++ rewrite special properties manipulation
+  - old code was removed, only in props.c was left commented
+  - make appropriate changes in documentation
+  - check doxygen documentation
+* rewrite context flags stuff
+  * rewritten, but virtual properties need also implement
+  * quotations reimplement
+* move Doxygen building stuff to doc/Makefile.in directory
+
+* linking to our library doesn't work (props.h is missing); we need also
+  install another headers, prefered models in /usr/include:
+    1. cfg+.h, [cfg.h], cfg+/cfg+.c, cfg+/props.h
+    2. cfg+.h, [cfg.h], platon/cfg+.c, platon/props.h
+    3. cfg+.h, [cfg.h], platon/cfg+/cfg+.c, platon/cfg+/props.h
+  or we can
+    4. modify existing code not to use #include "props.h" directive
+  - if you fix this, try to compile and link examples/example.c again installed
+    library into system (hint: use export LD_LIBRARY_PATH to specify place of
+    library files when run example binary)
+  - solution no. 4 was choosen and implemented
+
+- building stuff:
+  * normal 'make' SHOULD NOT build documentation (not everyone have docbook
+    installed on his or her system)
+  * move examples into doc/ and make appropriate 'make install' update
+  * name and version substitution in doc/sgml/libcfg+.sgml
+    - done (rajo)
+  * date substitution in doc/sgml/libcfg+.sgml
+  * make install should call make install in doc/
+  * make install in doc/ should install into /usr/share/doc/ (?) these
+    subdirectories: doxygen/ sgml/ html/
+	- finally /usr/doc/ was used
+  * make doc should call make doxygen and make doc in doc/
+	- done (rajo); use 'make documentation' not 'make doc'; doc target conflict
+	  with name of directory
+  * make doc in doc/ should call make html, make pdf, ... in doc/
+    - done (rajo)
+  + make <format> in doc/ should generate appropraite documentation format and
+    move it into separate directory (available formats should be html, pdf, ps,
+    tex, rtf, txt)
+  * solve install problem when library files (especially symlinks) are already
+    installed
+  - if 'ln' is not present, than use 'cp -l'
+  * doxygen building stuff move to doc/Makefile.in file
+    - done (rajo)
+
+* think about CVS tag (not) in header
+* think about own CVS tag $Platon
+  - implemented
+* rename to libcfg+; that cover: CVS project rename, cfg.c and cfg.h files
+  rename, distribution directory name, ...
+* missing, rebuild, configure.in must be in distribution?
+  - rebuild is useful
+  - configure.in is for help purpose of users
+  - missing - removed, because we don't know what it is for
+* objects from str/ are created in level-up directory - is it OK?
+  - yes it is; use -o option to specify location of object files or use the
+	same option for specifying new unique object filename in the same directory
+	(so str/strplus.c will compile into str/strplus.o or str_strplus.o)
+* move sources into src/ subdirectory (also with str/)
+  - done (rajo)
+* move documentation into doc/ or docs/ subdirectory
+  - done (rajo)
+
+* implement config file end_pos (in both modes, positions and line)
+  - line mode tested, works fine; position tests needed
+* get_cur_opt_idx() will return number of line in config file context
+  - implemented; set CFG_FILE_LINE_USAGE flag to use line arithmetic
+- make clearly understandable stuff around cfg_reset_context() and
+  cfg_set_(cmdline|cfgfile)_context() function
+- multi booleans in config file should be also initialized via var = value
+
+- option aliases (really needed?)
+- case insensitive options (isn't this a little bit strange idea?)
+
++ number of spaces in cfgfile option names should not be relevant in compare
+  with real option names in file; that means "multi int" is the same as
+  "multi  int" and "multi\tint"
+  - seems to be fixed, but needs testing
++ fix this bug: numbers in format 09 cannot be converted to decimal data type
+  - it is not bug, it is feature: numbers started with 0 are considered to be
+    in octal format; similary numbers started with 0x or 0X are considered to
+    be in hexadecimal format; so 09 is really invalid, because in octal format
+    this number is not correct
+
+- in cfgfile multi lines handling don't trim all left white characters in 2nd
+  or more part of multi line, but substitute it for one space; this the same
+  behaviour as it is for right white characters trims in all parts of multi
+  lines excepts the last one
+
+* make cfgfile.c and cmdline.c to be standalone and compileable files;
+  shared functions prefix by __cfg and move it to the shared.c;
+  make HUGE warning in shared.h for normal user not to include that file
+
+* universal, but customizable cfg error handle stuff
+  - should work fine
+
+* get_multi_line() will return return code according to error and pointer
+  to buffer will be passed as function parameter
+* parameter to specify end of line postfixes for multi lines quotation thinking
+* (oh no! ;-) multi arguments quotations and separation (split_multi_arg()
+* function) single argument quotations (unquote_single_arg() function)
++ also ability to turn quotations off (any idea how will this be useful? ;-)
+  - there is a possiblity to specify quotation prefixes/postfixes; just clear
+    them to turn quotations off
+
+* functions str_left_trim(), str_right_trim() for white characters removing
+* macros ltrim(), rtrim() or str_ltrim(), str_ltrim()
+* macros str_trim(), strtrim(), trim()
+
+* leftover arguments dual mode:
+  1. can have valid options after leftover arguments
+  2. after first leftover argument is all cosidered as leftover argument
+  Default initialization will be according to POSIXLY_CORRECT environment
+  variable. Can be changed by changing context flags.
+  - POSIXLY_CORRECT environment lookup not implemented
+* better stuff for manipulating with context flags (add, remove, clear, ...)
+  - cfg_set_context_flag(), cfg_clear_context_flag()
+    and getting info functions cfg_get_context_flag(), cfg_is_context_flag() 
+
+* universal functions with strdyn context properties manipulation and
+  create appropriate macros
+* cfg_add_cmdline_stop_str() and similar function should return
+  result if item was successfully added into string list
+
+* for each numeric data type (INT, UINT, LONG, ...) tests if range
+  checks works properly; for INT it doesn't
+  - it works, but int and long seems to be the same datatype
+* fix ULONG argument parsing (there is strange strtoul() behaviour)
+
+* command line stop string implemented
+* create strdyn_create_ar() and link strdyn_duplicate()
+* boolean multi options initialization handling
+* multi options detection and error handling
+* string data type support added
+* string multi options initialization handling
+ 

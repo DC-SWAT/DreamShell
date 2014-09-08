@@ -23,7 +23,7 @@
 /* struct timeval */
 //#include <sys/time.h>
 /* gethostbyname and gethostbyaddr functions */
-//#include <netdb.h>
+#include <netdb.h>
 /* sigpipe handling */
 #include <signal.h>
 /* IP stuff*/

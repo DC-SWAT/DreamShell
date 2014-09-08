@@ -1,0 +1,655 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.properties.sgml,v 1.11 2003/08/24 19:50:20 nepto Exp $ -->
+
+<!-- MAN:
+	<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+		<!ENTITY % defs			SYSTEM "defs.sgml">
+		%defs;
+	]>
+	<refentry>
+
+	<refmeta>
+		<refentrytitle>cfg_add_property</refentrytitle>
+		<manvolnum>&manvolnum;</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>cfg_clear_property</refname>
+		<refname>cfg_add_property</refname>
+		<refname>cfg_remove_property</refname>
+		<refpurpose>&name; properties</refpurpose>
+	</refnamediv>
+-->
+
+<sect1 id="usage.properties">
+<title id="usage.properties.title">Properties</title>
+
+<!-- MAN: <refsect1><title>SYNOPSIS | SINGLE PROPERTY MANIPULATION</title> -->
+<para>
+
+In this chapter are functions for manipulating with &name; properties described.
+We are starting with functions manipulating with one property. These functions
+work also with virtual properties as well.
+
+</para>
+<para>
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+<funcprototype>
+	<funcdef>int <function>cfg_clear_property</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_add_property</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_remove_property</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+Given the context <parameter>con</parameter>, the functions perform the following tasks:
+
+<itemizedlist spacing="compact">
+	<listitem><para>
+			Function <function>cfg_clear_property()</function> clears the
+			property <parameter>type</parameter> of any values it might have
+			accumulated.
+	</para></listitem>
+	<listitem><para>
+			Function <function>cfg_add_property()</function> adds a new value
+			<parameter>str</parameter> to the property
+			<parameter>type</parameter>.
+	</para></listitem>
+	<listitem><para>
+			Function <function>cfg_remove_property()</function> removes a
+			value <parameter>str</parameter> from the property
+			<parameter>type</parameter>.
+	</para></listitem>
+</itemizedlist>
+
+</para>
+<para>
+
+Note that, when you set some string of multi vals separator property, any
+whitespace you will use in that string will match any non-zero amount of
+whitespaces during parsing. For example if separator is one space, also tab will
+match, two or more spaces too, tab with space and so forth. It is similar
+behaviour like when option name contains one or more white characters.
+
+</para>
+<para>
+
+Types of properties, which are passed to mentioned functions as parameter
+<parameter>type</parameter>, are described in following tables. They are divided
+into three types. The first one are <xref
+linkend="usage.properties-command-line.table"
+endterm="usage.properties-command-line.table.title"> that affects only command
+line. Than there are <xref linkend="usage.properties-config-file.table"
+endterm="usage.properties-config-file.table.title"> that affect only
+configuration file. The last type of properties are <xref
+linkend="usage.properties-virtual.table"
+endterm="usage.properties-virtual.table.title"> (also known as <firstterm>Shared
+properties</firstterm>). In example, they can affect both, comand line and
+configuration file, or set up quotation prefix and postfix in one call. They
+exist for simplyfication of real properties manipulation.
+
+</para>
+<para>
+
+Here are properties for command line.
+
+</para>
+<para>
+
+<variablelist id="usage.properties-command-line.table">
+<title id="usage.properties-command-line.table.title">
+Command line related properties</title>
+<varlistentry id="CFG-LINE-QUOTE-PREFIX.row">
+<term><constant id="CFG-LINE-QUOTE-PREFIX.const">CFG_LINE_QUOTE_PREFIX</constant>
+&nbsp; -- &nbsp; command line quotation prefix</term>
+<listitem>
+<para>
+
+For changing command line quotation prefix use this type. Note, that you
+probably want also set quotation postfix equivalent to this prefix.  By default
+are no strings initialized, due to simple reason. Most from often used shells
+such as <application>sh</application>, <application>bash</application>,
+<application>tcsh</application> and <application>zsh</application> already
+contains quotation marks implementation so there is no need to do that thing also
+in &name; library. Although this, you can set command line quotation characters
+by appropriate <function>cfg_add_property()</function> function call.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-QUOTE-POSTFIX.row">
+<term><constant id="CFG-LINE-QUOTE-POSTFIX.const">CFG_LINE_QUOTE_POSTFIX</constant>
+&nbsp; -- &nbsp; command line quotation postfix</term>
+<listitem>
+<para>
+
+For changing command line quotation postfix use this type. Note, that you
+probably want also set quotation prefix equivalent to this postfix. By default
+is of course also nothing initialized due to same reasons as it is in
+<constant>CFG_LINE_QUOTE_POSTFIX</constant> case.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-STOP-STRING.row">
+<term><constant id="CFG-LINE-STOP-STRING.const">CFG_LINE_STOP_STRING</constant>
+&nbsp; -- &nbsp; command line stop string</term>
+<listitem>
+<para>
+
+For changing command line stop string use this type. Set this property if
+you want to stop parsing on specified string which occurs on command line. Error
+code <constant>CFG_ERROR_STOP_STR_FOUND</constant> is returned from parsing
+function to determine this event. By default is nothing initialized.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-SHORT-OPTION-PREFIX.row">
+<term><constant id="CFG-LINE-SHORT-OPTION-PREFIX.const">CFG_LINE_SHORT_OPTION_PREFIX</constant>
+&nbsp; -- &nbsp; command line short option prefix</term>
+<listitem>
+<para>
+
+For changing command line short option prefix use this type. Default value
+is of course single dash (<constant>-</constant>), because it is most offten
+used in applications. You will probably don't need to redefine this property.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-LONG-OPTION-PREFIX.row">
+<term><constant id="CFG-LINE-LONG-OPTION-PREFIX.const">CFG_LINE_LONG_OPTION_PREFIX</constant>
+&nbsp; -- &nbsp; command line short option prefix</term>
+<listitem>
+<para>
+
+For changing command line long option prefix use this type. Default value
+is of course double dash (<constant>--</constant>), because it is most offten
+used in applications. You will probably don't need to redefine this property.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.row">
+<term><constant id="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.const">CFG_LINE_NORMAL_MULTI_VALS_SEPARATOR</constant>
+&nbsp; -- &nbsp; normal command line multi values separator</term>
+<listitem>
+<para>
+
+For changing normal command line multi values separators use this type. Multi values
+separators are strings used for separation option values initialized with one
+argument. For example if separator is comma, one command line argument will be
+similar to this: <command>--multi=val1,val2,val3</command>. Option must have
+<constant>CFG_MULTI_SEPARATED</constant> flag set. By default are
+comma (<constant>,</constant>) and semicolon (<constant>;</constant>) initialized.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.row">
+<term><constant id="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.const">CFG_LINE_LEFTOVER_MULTI_VALS_SEPARATOR</constant>
+&nbsp; -- &nbsp; leftover command line multi values separator</term>
+<listitem>
+<para>
+
+For changing leftover command line multi values separators use this type.
+Explanation is the same as for previous type with difference, that this property
+affects only leftover arguments (arguments left on the command line without any
+option that are stored into option with <constant>CFG_LEFTOVER_ARGS</constant>
+type). By default is nothing initialized.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-LINE-OPTION-ARG-SEPARATOR.row">
+<term><constant id="CFG-LINE-OPTION-ARG-SEPARATOR.const">CFG_LINE_OPTION_ARG_SEPARATOR</constant>
+&nbsp; -- &nbsp; command line option argument separator</term>
+<listitem>
+<para>
+
+For changing command line option argument separator use this type. Option
+argument separators are strings used to separate option and its argument. By
+default is equal sign (<constant>=</constant>) character used. For example
+<command>--option=argument</command>. Note that on command line argument can be
+initialized also as following string with no need of separator usage (like this:
+<command>--option argument</command>).
+
+</para>
+</listitem>
+</varlistentry>
+</variablelist>
+
+</para>
+<para>
+
+Here are properties for configuration file.
+
+</para>
+<para>
+
+
+<variablelist id="usage.properties-config-file.table">
+<title id="usage.properties-config-file.table.title">
+Configuration file related properties</title>
+<varlistentry id="CFG-FILE-QUOTE-PREFIX.row">
+<term><constant id="CFG-FILE-QUOTE-PREFIX.const">CFG_FILE_QUOTE_PREFIX</constant>
+&nbsp; -- &nbsp; configuration file quotation prefix</term>
+<listitem>
+<para>
+
+For changing configuration file quotation prefix use this type. Note, that you
+probably want also set quotation postfix equivalent to this prefix. By default
+are standart quotation characters, apostrophes (<constant>'</constant>) and
+inverted commans (<constant>"</constant>), initialized (also for postfixes).
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-QUOTE-POSTFIX.row">
+<term><constant id="CFG-FILE-QUOTE-POSTFIX.const">CFG_FILE_QUOTE_POSTFIX</constant>
+&nbsp; -- &nbsp; configuration file quotation postfix</term>
+<listitem>
+<para>
+
+For changing configuration file quotation postfix use this type. Note, that you
+probably want also set quotation prefix equivalent to this postfix. By default
+are standart quotation characters, apostrophes (<constant>'</constant>) and
+inverted commans (<constant>"</constant>), initialized (also for prefixes).
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-STOP-PREFIX.row">
+<term><constant id="CFG-FILE-STOP-PREFIX.const">CFG_FILE_STOP_PREFIX</constant>
+&nbsp; -- &nbsp; config file stop prefix</term>
+<listitem>
+<para>
+
+For changing configuration file stop string use this type. Set this property if
+you want to stop parsing on specified string which occurs on configration file
+line. Error code <constant>CFG_ERROR_STOP_STR_FOUND</constant> is returned from
+parsing function to determine this event. By default is nothing initialized. We
+recommend you set this property to <constant>[</constant> character, if you want
+to determine configuration section beginning (to stop parsing on section
+header).
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-COMMENT-PREFIX.row">
+<term><constant id="CFG-FILE-COMMENT-PREFIX.const">CFG_FILE_COMMENT_PREFIX</constant>
+&nbsp; -- &nbsp; config file comment prefix</term>
+<listitem>
+<para>
+
+For changing configuration comment prefix use this type. Lines started with one
+of these prefixes are skipped. By default are hash sign (<constant>#</constant>)
+and semicolon (<constant>;</constant>) initialized.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-MULTI-LINE-POSTFIX.row">
+<term><constant id="CFG-FILE-MULTI-LINE-POSTFIX.const">CFG_FILE_MULTI_LINE_POSTFIX</constant>
+&nbsp; -- &nbsp; config file multi line postfix</term>
+<listitem>
+<para>
+
+For changing configuration file multi line postfix use this type. Multi
+line postfixes are strings used to determine situation, that line continues on
+next line. Multi lines are are concatenated to one and that is parsed. Multui
+line postfixes are removed from concatenated line. By deault is backslash
+(<constant>\</constant>) initialized.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.row">
+<term><constant id="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.const">CFG_FILE_NORMAL_MULTI_VALS_SEPARATOR</constant>
+&nbsp; -- &nbsp; normal config file multi values separator</term>
+<listitem>
+<para>
+
+For changing normal configuration file multi values separators use this type.
+Multi values separators are strings used for separation option values
+initialized with one argument. For example if separator is comma one line in
+configuration fill will be similar to this: <command>multi =
+val1,val2,val2</command>. Option must have
+<constant>CFG_MULTI_SEPARATED</constant> flag set. By default are space, comma
+(<constant>,</constant>) and semicolon (<constant>;</constant>) initialized.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.row">
+<term><constant id="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.const">CFG_FILE_LEFTOVER_MULTI_VALS_SEPARATOR</constant>
+&nbsp; -- &nbsp; leftover config file multi values separator</term>
+<listitem>
+<para>
+
+For changing leftover config file multi values separators use this type.
+Explanation is the same as for previous type with difference, that this property
+affects only leftover arguments (arguments left on the command line without any
+option that are stored into option with <constant>CFG_LEFTOVER_ARGS</constant>
+type). By default is space initialized. The goal is to get the similar
+functionality as it is in command line case, where leftover arguments are placed
+on command line and separated with spaces.
+
+</para>
+</listitem>
+</varlistentry>
+<varlistentry id="CFG-FILE-OPTION-ARG-SEPARATOR.row">
+<term><constant id="CFG-FILE-OPTION-ARG-SEPARATOR.const">CFG_FILE_OPTION_ARG_SEPARATOR</constant>
+&nbsp; -- &nbsp; config file option argument separator</term>
+<listitem>
+<para>
+
+For changing configuration file option argument separator use this type.
+Option argument separators are strings used to separate option and its argument.
+By default is equal sign (<constant>=</constant>) character used. For example <command>option
+= argument</command>.
+
+</para>
+</listitem>
+</varlistentry>
+</variablelist>
+
+</para>
+<para>
+
+Here are virtual (shared) properties. In description of every virtual will be
+only written which real properties are set. Please refer to <xref
+linkend="usage.properties-command-line.table"
+endterm="usage.properties-command-line.table.title"> table and <xref
+linkend="usage.properties-config-file.table"
+endterm="usage.properties-config-file.table.title"> table above for description
+of real properties.
+
+</para>
+<para>
+
+<variablelist id="usage.properties-virtual.table">
+<title id="usage.properties-virtual.table.title">Virtual properties</title>
+<varlistentry>
+<term><constant id="CFG-QUOTE.const">CFG_QUOTE</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-QUOTE-PREFIX.row"
+      endterm="CFG-LINE-QUOTE-PREFIX.const">,
+<xref linkend="CFG-LINE-QUOTE-POSTFIX.row"
+      endterm="CFG-LINE-QUOTE-POSTFIX.const">,
+<xref linkend="CFG-FILE-QUOTE-PREFIX.row"
+      endterm="CFG-FILE-QUOTE-PREFIX.const">,
+<xref linkend="CFG-FILE-QUOTE-POSTFIX.row"
+      endterm="CFG-FILE-QUOTE-POSTFIX.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-LINE-QUOTE.const">CFG_LINE_QUOTE</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-QUOTE-PREFIX.row"
+      endterm="CFG-LINE-QUOTE-PREFIX.const">,
+<xref linkend="CFG-LINE-QUOTE-POSTFIX.row"
+      endterm="CFG-LINE-QUOTE-POSTFIX.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-FILE-QUOTE.const">CFG_FILE_QUOTE</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-FILE-QUOTE-PREFIX.row"
+      endterm="CFG-FILE-QUOTE-PREFIX.const">,
+<xref linkend="CFG-FILE-QUOTE-POSTFIX.row"
+      endterm="CFG-FILE-QUOTE-POSTFIX.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-QUOTE-PREFIX.const">CFG_QUOTE_PREFIX</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-QUOTE-PREFIX.row"
+      endterm="CFG-LINE-QUOTE-PREFIX.const">,
+<xref linkend="CFG-FILE-QUOTE-PREFIX.row"
+      endterm="CFG-FILE-QUOTE-PREFIX.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-QUOTE-POSTFIX.const">CFG_QUOTE_POSTFIX</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-QUOTE-POSTFIX.row"
+      endterm="CFG-LINE-QUOTE-POSTFIX.const">,
+<xref linkend="CFG-FILE-QUOTE-POSTFIX.row"
+      endterm="CFG-FILE-QUOTE-POSTFIX.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-MULTI-VALS-SEPARATOR.const">CFG_MULTI_VALS_SEPARATOR</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-LINE-MULTI-VALS-SEPARATOR.const">CFG_LINE_MULTI_VALS_SEPARATOR</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-FILE-MULTI-VALS-SEPARATOR.const">CFG_FILE_MULTI_VALS_SEPARATOR</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-NORMAL-MULTI-VALS-SEPARATOR.const">CFG_NORMAL_MULTI_VALS_SEPARATOR</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-LINE-NORMAL-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-FILE-NORMAL-MULTI-VALS-SEPARATOR.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-LEFTOVER-MULTI-VALS-SEPARATOR.const">CFG_LEFTOVER_MULTI_VALS_SEPARATOR</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-LINE-LEFTOVER-MULTI-VALS-SEPARATOR.const">,
+<xref linkend="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.row"
+      endterm="CFG-FILE-LEFTOVER-MULTI-VALS-SEPARATOR.const">
+</para>
+</listitem>
+</varlistentry>
+<varlistentry>
+<term><constant id="CFG-OPTION-ARG-SEPARATOR.const">CFG_OPTION_ARG_SEPARATOR</constant></term>
+<listitem>
+<para>
+<xref linkend="CFG-LINE-OPTION-ARG-SEPARATOR.row"
+      endterm="CFG-LINE-OPTION-ARG-SEPARATOR.const">,
+<xref linkend="CFG-FILE-OPTION-ARG-SEPARATOR.row"
+      endterm="CFG-FILE-OPTION-ARG-SEPARATOR.const">
+</para>
+</listitem>
+</varlistentry>
+</variablelist>
+
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>SYNOPSIS | MULTIPLE PROPERTIES MANIPULATION</title> -->
+<para>
+
+Following functions allows you to set up multiple properties and/or its multiple
+values in one call. They work just like <xref
+linkend="usage.properties-virtual.table"
+endterm="usage.properties-virtual.table.title">, but they are more flexible -
+you can specify arbitrary properties. All these functions use variable number of
+arguments.
+
+</para>
+<para>
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+<funcprototype>
+	<funcdef>int <function>cfg_clear_properties</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_add_properties</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_remove_properties</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_add_properties_type</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_remove_properties_type</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_add_properties_str</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_remove_properties_str</function></funcdef>
+	<paramdef>CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>char *<parameter>str</parameter></paramdef>
+	<paramdef>enum cfg_property_type <parameter>type</parameter></paramdef>
+	<paramdef><parameter>...</parameter></paramdef>
+</funcprototype>
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+Given the context <parameter>con</parameter> the functions provide the
+following functionality:
+
+<itemizedlist spacing="compact">
+	<listitem>
+		<para>
+		
+Function <function>cfg_clear_properties()</function> removes all values from the list
+of properties specified by the variable length parameter
+<parameter>type</parameter>. The property list must be terminated by the
+<constant>CFG_EOT</constant> constant. 
+
+		</para>
+	</listitem>
+	<listitem>
+		<para>
+
+Functions <function>cfg_add_properties()</function> and
+<function>cfg_remove_properties()</function> give you the ability to add and
+remove multiple property/value pairs. The property/value pairs are designated
+by the variable length parameters <parameter>type</parameter> and
+<parameter>str</parameter> correspondingly. The property list must be
+terminated with <constant>CFG_EOT</constant> and the value list must be
+terminated with <constant>NULL</constant>. 
+
+		</para>
+	</listitem>
+	<listitem>
+		<para>
+
+Functions <function>cfg_add_properties_type()</function> and
+<function>cfg_remove_properties_type()</function> add and remove multiple
+values specified by the variable parameter <parameter>str</parameter> to and
+from a single property denoted by <parameter>type</parameter>. The value list
+should be terminated with <constant>NULL</constant>.
+
+		</para>
+	</listitem>
+	<listitem>
+		<para>
+
+Functions <function>cfg_add_properties_str()</function> and
+<function>cfg_remove_properties_str()</function> add and remove the value
+denoted by <parameter>str</parameter> to and from the list of properties
+specified by the variable length parameter <parameter>type</parameter>. The
+property list must be terminated with <constant>CFG_EOT</constant>.
+		
+		</para>
+	</listitem>
+</itemizedlist>
+
+</para>
+<para>
+
+As with the single-property functions, all of these functions return
+<constant>1</constant> on success or <constant>0</constant> on not enough
+memory error.
+
+</para>
+</sect1>
+<!-- MAN: </refsect1></refentry> -->
+

@@ -1,0 +1,76 @@
+libcfg+ ChangeLog
+
+
+
+   Current version is 0.6.2 and it was released in 17th February
+   2004.
+
+   version 0.6.2, February 17, 2004 (official release)
+
+     * several major documentation rewrittes for better
+       readability and explanations (thanks to Sergei Gerasenko
+       <gerases@publicschoolworks.com>)
+     * fixed bad documentation concerning to "multiple properties
+       manipulation" section
+
+   version 0.6.1, March 13, 2003 (official release)
+
+     * added support for integer numbers initialization in
+       float-like style
+     * fixed matching empty prefixes of short and/or long command
+       line options
+     * tiny fixes in building stuff mostly related to
+       documentation
+
+   version 0.6, October 9, 2002 (official release)
+
+     * brand new man pages are generated from SGML (DocBook)
+       documentation and they were added into libcfg+
+       distrubution
+     * more properties manipulation functions
+     * more powerful libcfg+ building stuff
+     * documentation update
+
+   version 0.5.2, July 19, 2002 (official release)
+
+     * important API changes to get better libcfg+ parsing
+       context creation functions; parameter argc and end_pos are
+       not used in standart context creation functions, parameter
+       size is used instead; if you already use libcfg+, please
+       make following substitutions:
+          + cfg_get_cmdline_context() function call for
+            cfg_get_cmdline_context_argc()
+          + cfg_set_cmdline_context() function call for
+            cfg_set_cmdline_context_argc()
+          + cfg_get_cfgfile_context() function call for
+            cfg_get_cfgfile_context_pos()
+          + cfg_set_cfgfile_context() function call for
+            cfg_set_cfgfile_context_pos()
+     * all elements are now counted from 0 to get analogical
+       behaviour in command line array items, configuration file
+       bytes and configuration file lines; in fact, this issue
+       affects only configuration file lines, which was counted
+       from 1 till this change
+     * fixed bug with property cleaning
+     * various virtual properties added for setting up two or
+       more real properties in one function call
+     * improved internal functions split_multi_arg() and
+       unquote_single_arg()
+     * example is now installed with documentation
+     * documentation update
+
+   version 0.5.1, Juny 11, 2002 (official release)
+
+     * unnecesary file props.h removed due to linking problems
+       against installed shared library; linking now works fine
+     * (special) properties stuff completely rewritten; three new
+       functions and cfg_property_type enumeration added, ugly
+       macros removed
+     * working example added to distribution
+     * installation and documentation building stuff improvements
+     * documentation update
+
+   version 0.5, May 24, 2002 (official release)
+
+     * initial release
+

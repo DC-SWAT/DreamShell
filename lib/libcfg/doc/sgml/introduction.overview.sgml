@@ -1,0 +1,79 @@
+<!-- $Platon: libcfg+/doc/sgml/introduction.overview.sgml,v 1.5 2003/08/09 23:58:13 nepto Exp $ -->
+
+<sect1 id="introduction.overview"><title>Overview</title>
+
+<para>
+		
+&name; is a library for parsing command line arguments and/or configuration
+files. Your program can utilize it whenever either kind of parsing is needed.
+C was our language of choice, but a C++ wrapper is currently under development
+and will be probably available soon.
+
+</para>
+<important><para>
+
+This is one of the first releases of &name;. If you find a bug or missing
+feature, please notify us and we will try to address the issue as soon as
+possible. Also, let us know if you find typos or badly written portions of the
+documentation. We are not native English speakers, but we are improving our
+language skills every day!
+
+</para></important>
+<para>
+		
+There are two approaches to using &name;.
+		
+<itemizedlist mark=opencircle>
+	<listitem>
+		<para>
+
+You can install it as a separate library and dynamically link your application
+against it. If you are planning to distribute your application, you can always
+use the <filename>./configure</filename> script included with the application
+to detect whether &name; has been installed on the target system. If not, user
+can be noticed to install this library. 
+
+		</para>
+
+		<para>
+					
+We are also working on the possibility of your application to check for the
+installation of &name;. If it is determined that &name; does not exist on the
+target system or is not the required version, it will be added to that system
+automatically. Your application can then be properly compiled and linked.
+
+		</para>
+		<para>
+
+We know that this is a little bit sophisticated thing with need of lot of
+testing and improving on various systems and platforms. Detailed examples on
+how to detect, install or reinstall &name; will be included. Please let us
+know of your experience because it will help us streamline the process.
+
+		</para>
+		</listitem>
+		
+		<listitem>
+		<para>
+
+The other method of using &name; is to simply add the library source code to
+your project source tree. In the example, the library source code can be put
+into a subdirectory called <filename class="directory">&name;/</filename>.
+Appropriate files of your application include the main library header file
+<filename class="headerfile">cfg+.h</filename>. Then compile the library and
+your sources and link everything together.
+
+		</para>
+		</listitem>
+	</itemizedlist>
+</para>
+<para>
+
+Some of the ideas used in this project were inspired by
+<productname>popt</productname> (a command line parsing library) and
+<productname>parsecfg</productname> (a library for parsing configuration
+files). However &name; was written from scratch.
+
+</para>
+</sect1>
+

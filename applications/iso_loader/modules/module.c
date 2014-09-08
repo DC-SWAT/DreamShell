@@ -9,6 +9,7 @@
 #include "ds.h"
 #include "isoldr.h"
 #include <stdbool.h>
+#include <kos/md5.h>
 
 DEFAULT_MODULE_EXPORTS(app_iso_loader);
 
@@ -31,6 +32,11 @@ static struct {
 	App_t *app;
 	isoldr_info_t *isoldr;
 	char filename[MAX_FN_LEN];
+	uint8 md5[16];
+	uint8 boot_sector[2048];
+	int image_type;
+	int sector_size;
+	
 	bool have_args;
 	bool used_preset;
 	
@@ -45,15 +51,19 @@ static struct {
 	GUI_Widget *settings;
 	GUI_Widget *games;
 	GUI_Widget *btn_run;
-
-	GUI_Widget *async;
-	GUI_Widget *async_sectors;
+	
+	GUI_Widget *preset;
+	
 	GUI_Widget *dma;
+	GUI_Widget *cdda;
+	GUI_Widget *async[10];
+	GUI_Widget *async_label;
+	
 	GUI_Widget *device;
-	GUI_Widget *os_chk[3];
+	GUI_Widget *os_chk[4];
+	
 	GUI_Widget *boot_mode_chk[3];
-	GUI_Widget *boot_method_chk[2];
-	GUI_Widget *memory_chk[10];
+	GUI_Widget *memory_chk[14];
 	GUI_Widget *memory_text;
 
 	int current_dev;
@@ -64,6 +74,7 @@ static struct {
 	GUI_Surface *default_cover;
 	GUI_Surface *current_cover;
 	GUI_Widget *cover_widget;
+	GUI_Widget *title;
 
 } self;
 
@@ -95,6 +106,13 @@ static void *getElement(char *name, ListItemType type) {
 	ds_printf("DS_ERROR: %s: Couldn't find or wrong type '%s'\n", 
 				lib_get_name(), name, self.app->name);
 	return NULL;
+}
+
+
+static int canUseTrueAsyncDMA(void) {
+	return (self.sector_size == 2048 && 
+			(self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
+			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
 
@@ -166,20 +184,89 @@ static void highliteDevice() {
 }
 
 
+static void get_md5_hash(const char *mountpoint) {
+	
+	file_t fd;
+	fd = fs_iso_first_file(mountpoint);
+	
+	if(fd != FILEHND_INVALID) {
+
+		if(fs_ioctl(fd, self.boot_sector, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA) < 0) {
+			memset(self.md5, 0, sizeof(self.md5));
+			memset(self.boot_sector, 0, sizeof(self.boot_sector));
+		} else {
+			kos_md5(self.boot_sector, sizeof(self.boot_sector), self.md5);
+		}
+		
+		/* Also get image type and sector size */
+		if(fs_ioctl(fd, &self.image_type, ISOFS_IOCTL_GET_IMAGE_TYPE) < 0) {
+			ds_printf("%s: Can't get image type\n", lib_get_name());
+		}
+		
+		if(fs_ioctl(fd, &self.sector_size, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE) < 0) {
+			ds_printf("%s: Can't get sector size\n", lib_get_name());
+		}
+		
+		fs_close(fd);
+	}
+}
+
+/* Trim begin/end spaces and copy into output buffer */
+static void trim_spaces(char *input, char *output, int size) {
+	char *p;
+	char *o;
+
+	p = input;
+	o = output;
+	
+	while(*p == ' ' && input + size > p) 
+		p++;
+
+	while(input + size > p) { 
+		*o = *p;
+		p++; 
+		o++; 
+	}
+	
+	*o = '\0';
+	o--;
+
+	while(*o == ' ' && o > output) {
+		*o='\0';
+		o--;
+	}
+}
+
 /* Try to get cover image from ISO */
 static void showCover() {
 	
 	GUI_Surface *s;
 	char path[MAX_FN_LEN];
-	char noext[MAX_FN_LEN];
+	char noext[128];
+	ipbin_meta_t *ipbin;
 	
-	strncpy(noext, self.filename, MAX_FN_LEN);
+	strncpy(noext, self.filename, sizeof(noext));
 	snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), strtok(noext, "."));
 
 	/* Check for jpeg cover */
 	if(FileExists(path)) {
 		
+		LockVideo();
 		s = GUI_SurfaceLoad(path);
+		
+		snprintf(path, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+		
+		if(!fs_iso_mount("/isocover", path)) {
+			
+			get_md5_hash("/isocover");
+			fs_iso_unmount("/isocover");
+			
+			ipbin = (ipbin_meta_t *)self.boot_sector;
+			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
+		}
+		
+		UnlockVideo();
+		GUI_LabelSetText(self.title, noext);
 		
 		if(s != NULL) {
 			GUI_PanelSetBackground(self.cover_widget, s);
@@ -195,11 +282,17 @@ static void showCover() {
 		/* Try to mount ISO and get 0GDTEXT.PVR */
 		if(!fs_iso_mount("/isocover", path)) {
 			
+			get_md5_hash("/isocover");
+			ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
+			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
+			
 			if(FileExists("/isocover/0GDTEX.PVR")) {
 				
 				s = GUI_SurfaceLoad("/isocover/0GDTEX.PVR");
 				fs_iso_unmount("/isocover");
 				UnlockVideo();
+				
+				GUI_LabelSetText(self.title, noext);
 				
 				if(s != NULL) {
 					GUI_PanelSetBackground(self.cover_widget, s);
@@ -212,6 +305,8 @@ static void showCover() {
 			} else {
 				fs_iso_unmount("/isocover");
 				UnlockVideo();
+				GUI_LabelSetText(self.title, noext);
+				goto check_default;
 			}
 			
 		} else {
@@ -229,6 +324,24 @@ check_default:
 	}
 }
 
+/*
+static void isoLoader_MakeShortcut(const char *filename) {
+	
+	file_t fd;
+	SDL_Surface *surface = NULL;
+	
+	fd = fs_open(filename, O_CREATE | O_TRUNC | O_WRONLY);
+	
+	if(fd != FILEHND_INVALID) {
+		SDL_Surface *s = zoomSurface(surface, 0.2f, 0.2f, 1);
+		SDL_SaveBMP_RW(s, SDL_RWFromFd(fd), 1);
+		SDL_FreeSurface(s);
+		fs_close(fd);
+	}
+	// TODO make script
+}
+*/
+
 /* Switch to the selected volume */
 void isoLoader_SwitchVolume(void *dir) {
 	GUI_FileManagerSetPath(self.filebrowser, (char *)dir);
@@ -236,51 +349,59 @@ void isoLoader_SwitchVolume(void *dir) {
 }
 
 void isoLoader_toggleOS(GUI_Widget *widget) {
-	for(int i = 0; i < 3; i++) {
+	for(int i = 0; i < sizeof(self.os_chk) >> 2; i++) {
 		if(widget != self.os_chk[i]) {
 			GUI_WidgetSetState(self.os_chk[i], 0);
 		}
 	}
 }
 
-void isoLoader_toggleBootMode(GUI_Widget *widget) {
-	
-	for(int i = 0; i < 3; i++) {
-		if(widget != self.boot_mode_chk[i]) {
-			GUI_WidgetSetState(self.boot_mode_chk[i], 0);
+void isoLoader_toggleAsync(GUI_Widget *widget) {
+	for(int i = 0; i < sizeof(self.async) >> 2; i++) {
+		if(widget != self.async[i]) {
+			GUI_WidgetSetState(self.async[i], 0);
 		}
 	}
+}
+
+void isoLoader_toggleDMA(GUI_Widget *widget) {
 	
-	if(widget != self.boot_mode_chk[BOOT_MODE_DIRECT]) {
+	if(GUI_WidgetGetState(widget)) {
 		
-		if(GUI_WidgetGetState(self.memory_chk[0])) {
+		if(canUseTrueAsyncDMA()) {
 			
-			int i;
-			for(i = 0; self.memory_chk[i]; i++) {
-				GUI_WidgetSetState(self.memory_chk[i], 0);
-			}
-			
-			GUI_WidgetSetState(self.memory_chk[i-4], 1);
+			GUI_LabelSetText(self.async_label, "true");
+			GUI_WidgetSetState(self.async[0], 1);
+			isoLoader_toggleAsync(self.async[0]);
 		}
 		
 	} else {
 		
-		GUI_WidgetSetState(self.memory_chk[0], 1);
+		GUI_LabelSetText(self.async_label, "none");
 		
-		for(int i = 1; self.memory_chk[i]; i++) {
-			GUI_WidgetSetState(self.memory_chk[i], 0);
+		if(GUI_WidgetGetState(self.async[0])) {
+			GUI_WidgetSetState(self.async[8], 1);
+			isoLoader_toggleAsync(self.async[8]);
 		}
 	}
 }
 
-void isoLoader_toggleBootMethod(GUI_Widget *widget) {
-	for(int i = 0; i < 2; i++) {
-		if(widget != self.boot_method_chk[i]) {
-			GUI_WidgetSetState(self.boot_method_chk[i], 0);
-		}
+void isoLoader_toggleCDDA(GUI_Widget *widget) {
+	
+	if(GUI_WidgetGetState(widget) && !GUI_WidgetGetState(self.dma)) {
+		
+		GUI_WidgetSetState(self.async[9], 1);
+		isoLoader_toggleAsync(self.async[9]);
+		
+	} else if(GUI_WidgetGetState(self.async[9])) {
+		
+		GUI_WidgetSetState(self.async[8], 1);
+		isoLoader_toggleAsync(self.async[8]);
 	}
 }
 
+
+void isoLoader_toggleBootMode(GUI_Widget *widget);
 void isoLoader_toggleMemory(GUI_Widget *widget) {
 	
 	int i;
@@ -293,6 +414,44 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 	
 	if(!strncasecmp(GUI_ObjectGetName((GUI_Object *) widget), "memory_text", 12)) {
 		GUI_WidgetSetState(self.memory_chk[i-1], 1);
+	}
+	
+	if(GUI_WidgetGetState(self.memory_chk[1]) && 
+		GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN])) {
+		
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 0);
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
+		
+	} else if(GUI_WidgetGetState(self.memory_chk[2]) && 
+		(GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN]) || 
+		GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]))) {
+		
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 0);
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 0);
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
+	}
+}
+
+
+void isoLoader_toggleBootMode(GUI_Widget *widget) {
+	
+	for(int i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) {
+		if(widget != self.boot_mode_chk[i]) {
+			GUI_WidgetSetState(self.boot_mode_chk[i], 0);
+		}
+	}
+	
+	if(widget == self.boot_mode_chk[BOOT_MODE_IPBIN]) {
+		
+		if(GUI_WidgetGetState(self.memory_chk[1])) {
+			GUI_WidgetSetState(self.memory_chk[0], 1);
+			isoLoader_toggleMemory(self.memory_chk[0]);
+		}
+		
+	} else {
+		
+		GUI_WidgetSetState(self.memory_chk[1], 1);
+		isoLoader_toggleMemory(self.memory_chk[1]);
 	}
 }
 
@@ -320,8 +479,19 @@ void isoLoader_Run(GUI_Widget *widget) {
 		return;
 	}
 	
-	if(GUI_WidgetGetState(self.async)) {
-		self.isoldr->emu_async = atoi(GUI_TextEntryGetText(self.async_sectors));
+	for(int i = 0; i < sizeof(self.async) >> 2; i++) {
+		if(GUI_WidgetGetState(self.async[i])) {
+			self.isoldr->emu_async = i;
+			break;
+		}
+	}
+	
+	if(self.isoldr->emu_async == 9) {
+		self.isoldr->emu_async = 16;
+	}
+	
+	if(GUI_WidgetGetState(self.cdda)) {
+		self.isoldr->emu_cdda = 1;
 	}
 	
 	if(GUI_WidgetGetState(self.dma)) {
@@ -343,23 +513,16 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 	
-	for(int i = 0; i < 4; i++) {
+	for(int i = 0; i < sizeof(self.os_chk) >> 2; i++) {
 		if(i && GUI_WidgetGetState(self.os_chk[i])) {
 			self.isoldr->exec.type = i;
 			break;
 		}
 	}
 	
-	for(int i = 0; i < 3; i++) {
+	for(int i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) {
 		if(i && GUI_WidgetGetState(self.boot_mode_chk[i])) {
 			self.isoldr->boot_mode = i;
-			break;
-		}
-	}
-	
-	for(int i = 0; i < 2; i++) {
-		if(i && GUI_WidgetGetState(self.boot_method_chk[i])) {
-			self.isoldr->boot_method = i;
 			break;
 		}
 	}
@@ -432,7 +595,8 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 			GUI_ButtonSetHighlightImage(w, self.item_focus);
 			GUI_ButtonSetPressedImage(w, self.item_focus);
 		}
-	
+		
+		UpdateActiveMouseCursor();
 		self.current_item = fm_ent->index;
 		strncpy(self.filename, ent->name, MAX_FN_LEN);
 		highliteDevice();
@@ -447,62 +611,93 @@ static char *makePresetFilename() {
 	if(!self.filename[0]) {
 		return NULL;
 	}
+
+	char dev[8];
+	static char filename[MAX_FN_LEN / 2];
+	const char *dir = GUI_FileManagerGetPath(self.filebrowser);
 	
-	char fn[MAX_FN_LEN];
-	static char filename[MAX_FN_LEN * 2];
 	memset(filename, 0, sizeof(filename));
+	strncpy(dev, dir + 1, 3);
 	
-	snprintf(filename, sizeof(filename), "%s/%s", 
-				GUI_FileManagerGetPath(self.filebrowser), 
-				self.filename);
-	
-	strncpy(fn, filename + 1, sizeof(fn));
-	int len = strlen(fn);
-	
-	for(int i = 0; i < len; i++) {
-		if(fn[i] == '/' || fn[i] == '.' || fn[i] == ' ') {
-			fn[i] = '_';
-		}
+	if(dev[2] == '/') {
+		dev[2] = '\0';
+	} else {
+		dev[3] = '\0';
 	}
 	
-	memset(filename, 0, MAX_FN_LEN);
-	snprintf(filename, sizeof(filename), "%s/apps/%s/presets/%s.pst", getenv("PATH"), lib_get_name() + 4, fn);
+	snprintf(filename, sizeof(filename), 
+				"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg", 
+				getenv("PATH"), lib_get_name() + 4, dev, self.md5[0],
+				self.md5[1], self.md5[2], self.md5[3], self.md5[4], self.md5[5], 
+				self.md5[6], self.md5[7], self.md5[8], self.md5[9], self.md5[10], 
+				self.md5[11], self.md5[12], self.md5[13], self.md5[14], self.md5[15]);
+				
 	return filename;
 }
-
 
 void isoLoader_DefaultPreset() {
 	
 	if(self.used_preset == true) {
-		GUI_WidgetSetState(self.async, 1);
-		GUI_TextEntrySetText(self.async_sectors, "8");
+		
+		GUI_WidgetSetState(self.preset, 0);
+		
 		GUI_WidgetSetState(self.dma, 0);
-		GUI_TextEntrySetText(self.device, "auto");
+		isoLoader_toggleDMA(self.dma);
 		
-		GUI_WidgetSetState(self.os_chk[0], 1);
-		isoLoader_toggleOS(self.os_chk[0]);
+		GUI_WidgetSetState(self.cdda, 0);
+		isoLoader_toggleCDDA(self.dma);
+
+		GUI_WidgetSetState(self.async[8], 1);
+		isoLoader_toggleAsync(self.async[8]);
 		
-		GUI_WidgetSetState(self.boot_mode_chk[0], 1);
-		isoLoader_toggleBootMode(self.boot_mode_chk[0]);
+		GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
+		isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 		
-		GUI_WidgetSetState(self.boot_method_chk[0], 1);
-		isoLoader_toggleBootMethod(self.boot_method_chk[0]);
+		/* 
+		 * If DC booted from sd_loader_with.bios, 
+		 * then we need use truncated IP.BIN mode by default.
+		 */
+		if(!strncasecmp((char*)0x001AF780, "DS_CORE.BIN", 11)) {
+			
+			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
+			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]);
+			
+		/*
+		 * If DC booted from custom BIOS,
+		 * then we can replace all syscalls by the loader.
+		 * IP.BIN boot mode will switch memory to 0x8c000100 and
+		 * in turn, the loader will enable emulation of all syscalls.
+		 */
+		} else if(is_custom_bios() && is_no_syscalls()) {
+			
+			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 1);
+			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN]);
+
+		/*
+		 * If DC booted from stock BIOS, 
+		 * then use Direct mode by default.
+		 */
+		} else {
+			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
+			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
+		}
 		
-		GUI_WidgetSetState(self.memory_chk[0], 1);
-		isoLoader_toggleMemory(self.memory_chk[0]);
 		self.used_preset = false;
 	}
 }
 
-
 int isoLoader_SavePreset() {
 
-	if(!GUI_WidgetGetState(APP_GET_WIDGET("preset-checkbox"))) {
+	if(!GUI_WidgetGetState(self.preset)) {
 		return 0;
 	}
 
-	char *filename;
-	FILE *fp;
+	char *filename, *memory = NULL;
+	file_t fd;
+	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
+	char text[32];
+	char result[256];
+	int async = 0, type = 0, mode = 0;
 	
 	filename = makePresetFilename();
 	
@@ -510,39 +705,40 @@ int isoLoader_SavePreset() {
 		return -1;
 	}
 	
-	fp = fopen(filename, "w");
+	LockVideo();
 	
-	if(fp == NULL) {
+	if(FileExists(filename)) {
+		fs_unlink(filename);
+	}
+	
+	fd = fs_open(filename, O_CREAT | O_WRONLY);
+	
+	if(fd == FILEHND_INVALID) {
+		UnlockVideo();
 		return -1;
 	}
 	
-	fprintf(fp, "dma = %d\n", GUI_WidgetGetState(self.dma));
-	
-	if(GUI_WidgetGetState(self.async)) {
-		fprintf(fp, "async = %s\n", GUI_TextEntryGetText(self.async_sectors));
-	} else {
-		fputs("async = 0\n", fp);
+	for(int i = 0; i < sizeof(self.async) >> 2; i++) {
+		if(GUI_WidgetGetState(self.async[i])) {
+			async = i;
+			break;
+		}
 	}
 	
-	fprintf(fp, "device = %s\n", GUI_TextEntryGetText(self.device));
+	if(async == 9) {
+		async = 16;
+	}
 	
-	for(int i = 0; i < 4; i++) {
+	for(int i = 0; i < sizeof(self.os_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.os_chk[i])) {
-			fprintf(fp, "type = %d\n", i);
+			type = i;
 			break;
 		}
 	}
 	
-	for(int i = 0; i < 3; i++) {
+	for(int i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.boot_mode_chk[i])) {
-			fprintf(fp, "mode = %d\n", i);
-			break;
-		}
-	}
-	
-	for(int i = 0; i < 2; i++) {
-		if(GUI_WidgetGetState(self.boot_method_chk[i])) {
-			fprintf(fp, "method = %d\n", i);
+			mode = i;
 			break;
 		}
 	}
@@ -551,22 +747,30 @@ int isoLoader_SavePreset() {
 		
 		if(GUI_WidgetGetState(self.memory_chk[i])) {
 			
-			char *tmpval = (char* )GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
+			memory = (char* )GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
 			
-			if(strlen(tmpval) < 8) {
-				char text[24];
+			if(strlen(memory) < 8) {
 				memset(text, 0, sizeof(text));
-				strncpy(text, tmpval, 10);
-				tmpval = strncat(text, GUI_TextEntryGetText(self.memory_text), 10);
+				strncpy(text, memory, 10);
+				memory = strncat(text, GUI_TextEntryGetText(self.memory_text), 10);
 			}
-
-			fprintf(fp, "memory = %s\n", tmpval);
+			
 			break;
 		}
 	}
 	
-	fclose(fp);
+	trim_spaces(ipbin->title, text, sizeof(ipbin->title));
+	memset(result, 0, sizeof(result));
+	
+	sprintf(result, "title = %s\ndma = %d\nasync = %d\ncdda = %d\ntype = %d\nmode = %d\nmemory = %s\n", 
+			text, GUI_WidgetGetState(self.dma), async, 
+			GUI_WidgetGetState(self.cdda), type, mode, memory);
+
+	fs_write(fd, result, strlen(result));
+	fs_close(fd);
 	self.used_preset = true;
+	
+	UnlockVideo();
 	return 0;
 }
 
@@ -575,27 +779,27 @@ int isoLoader_LoadPreset() {
 
 	char *filename = makePresetFilename();
 	
-	if(filename == NULL || !FileExists(filename)) {
+	if(filename == NULL || FileSize(filename) <= 0) {
 		isoLoader_DefaultPreset();
 		return -1;
 	}
 	
 	uint32 lex = 0;
-	char *device = NULL;
-	int use_dma = 0, emu_async = 0;
+	int use_dma = 0, emu_async = 8, emu_cdda = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
-	int boot_method = BOOT_METHOD_04X;
 	int bin_type = BIN_TYPE_AUTO;
+	char *title = NULL;
+	GUI_Widget *widget = NULL;
 	CFG_CONTEXT con;
 	
 	struct cfg_option options[] = {
 		{NULL, '\0', "dma",    CFG_INT,   (void *) &use_dma,     0},
-		{NULL, '\0', "device", CFG_STR,   (void *) &device,      0},
+		{NULL, '\0', "cdda",   CFG_INT,   (void *) &emu_cdda,    0},
 		{NULL, '\0', "memory", CFG_ULONG, (void *) &lex,         0},
 		{NULL, '\0', "async",  CFG_INT,   (void *) &emu_async,   0},
 		{NULL, '\0', "mode",   CFG_INT,   (void *) &boot_mode,   0},
-		{NULL, '\0', "method", CFG_INT,   (void *) &boot_method, 0},
 		{NULL, '\0', "type",   CFG_INT,   (void *) &bin_type,    0},
+		{NULL, '\0', "title",  CFG_STR,   (void *) &title,       0},
 		CFG_END_OF_LIST
 	};
 	
@@ -611,22 +815,26 @@ int isoLoader_LoadPreset() {
 	cfg_set_cfgfile_context(con, 0, -1, (char* )filename);
 
 	if(cfg_parse(con) != CFG_OK) {
-		ds_printf("DS_ERROR: %s\n", cfg_get_error_str(con));	
+		ds_printf("DS_ERROR: %s\n", cfg_get_error_str(con));
+		cfg_free_context(con);
 		isoLoader_DefaultPreset();
 		return -1;	
 	}
-
-	cfg_free_context(con);
 	
-	if(emu_async) {
-		char sv[8]; memset(sv, 0, sizeof(sv));
-		snprintf(sv, sizeof(sv), "%d", emu_async);
-		GUI_WidgetSetState(self.async, 1);
-		GUI_TextEntrySetText(self.async_sectors, sv);
+	if(emu_async < 9 && emu_async > -1) {
+		widget = self.async[emu_async];
+	} else {
+		widget = self.async[9];
 	}
 	
+	GUI_WidgetSetState(self.cdda, emu_cdda);
+//	isoLoader_toggleCDDA(self.dma);
+	
 	GUI_WidgetSetState(self.dma, use_dma);
-	GUI_TextEntrySetText(self.device, device);
+	isoLoader_toggleDMA(self.dma);
+	
+	GUI_WidgetSetState(widget, 1);
+	isoLoader_toggleAsync(widget);
 	
 	GUI_WidgetSetState(self.os_chk[bin_type], 1);
 	isoLoader_toggleOS(self.os_chk[bin_type]);
@@ -634,8 +842,9 @@ int isoLoader_LoadPreset() {
 	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
 	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
 	
-	GUI_WidgetSetState(self.boot_method_chk[boot_method], 1);
-	isoLoader_toggleBootMethod(self.boot_method_chk[boot_method]);
+	if(title) {
+		GUI_LabelSetText(self.title, title);
+	}
 	
 	if(lex) {
 		
@@ -655,13 +864,14 @@ int isoLoader_LoadPreset() {
 			}
 		}
 		
-		if(i > 8) {
+		if(i > 12) {
 			GUI_TextEntrySetText(self.memory_text, memory + 4);
-			GUI_WidgetSetState(self.memory_chk[8], 1);
-			isoLoader_toggleMemory(self.memory_chk[8]);
+			GUI_WidgetSetState(self.memory_chk[12], 1);
+			isoLoader_toggleMemory(self.memory_chk[12]);
 		}
 	}
 
+	cfg_free_context(con);
 	self.used_preset = true;
 	return 0;
 }
@@ -676,6 +886,7 @@ void isoLoader_Init(App_t *app) {
 
 	GUI_Widget *w, *b;
 	GUI_Callback *cb;
+	char name[32];
 
 	if(app != NULL) {
 
@@ -683,7 +894,8 @@ void isoLoader_Init(App_t *app) {
 		
 		self.app = app;
 		self.current_dev = -1;
-		self.used_preset = false;
+		self.used_preset = true;
+		self.sector_size = 2048;
 
 		self.btn_dev[APP_DEVICE_CD]  = APP_GET_WIDGET("btn_cd");
 		self.btn_dev[APP_DEVICE_SD]  = APP_GET_WIDGET("btn_sd");
@@ -718,24 +930,31 @@ void isoLoader_Init(App_t *app) {
 		
 		self.filebrowser  = APP_GET_WIDGET("file_browser");
 		self.cover_widget = APP_GET_WIDGET("cover_image");
+		self.title        = APP_GET_WIDGET("game_title");
 		self.btn_run      = APP_GET_WIDGET("run_iso");
-
-		self.async         = APP_GET_WIDGET("async-checkbox");
-		self.async_sectors = APP_GET_WIDGET("async-sectors");
+		
+		self.preset        = APP_GET_WIDGET("preset-checkbox");
 		self.dma           = APP_GET_WIDGET("dma-checkbox");
+		self.cdda          = APP_GET_WIDGET("cdda-checkbox");
+		
+		int acnt = (sizeof(self.async) >> 2) - 1;
+		
+		for(int i = 0; i < acnt; i++) {
+			snprintf(name, sizeof(name), "async-%d-checkbox", i);
+			self.async[i] = APP_GET_WIDGET(name);
+		}
+		self.async[acnt]   = APP_GET_WIDGET("async-16-checkbox");
+		self.async_label   = APP_GET_WIDGET("async-label");
 		self.device        = APP_GET_WIDGET("device");
 
-		self.boot_mode_chk[BOOT_MODE_DIRECT]  = APP_GET_WIDGET("direct-checkbox");
-		self.boot_mode_chk[BOOT_MODE_IPBIN]   = APP_GET_WIDGET("ipbin-checkbox");
-		self.boot_mode_chk[BOOT_MODE_SYSCALL] = APP_GET_WIDGET("syscall-checkbox");
-		
-		self.boot_method_chk[BOOT_METHOD_04X] = APP_GET_WIDGET("04x-checkbox");
-		self.boot_method_chk[BOOT_METHOD_03X] = APP_GET_WIDGET("03x-checkbox");
+		self.boot_mode_chk[BOOT_MODE_DIRECT]      = APP_GET_WIDGET("direct-checkbox");
+		self.boot_mode_chk[BOOT_MODE_IPBIN]       = APP_GET_WIDGET("ipbin-checkbox");
+		self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC] = APP_GET_WIDGET("ipbin-trunc-checkbox");
 		
 		self.os_chk[BIN_TYPE_AUTO]   = APP_GET_WIDGET("os-auto-checkbox");
 		self.os_chk[BIN_TYPE_KOS]    = APP_GET_WIDGET("os-kos-checkbox");
 		self.os_chk[BIN_TYPE_KATANA] = APP_GET_WIDGET("os-katana-checkbox");
-//		self.os_chk[BIN_TYPE_WINCE]  = APP_GET_WIDGET("os-wince-checkbox");
+		self.os_chk[BIN_TYPE_WINCE]  = APP_GET_WIDGET("os-wince-checkbox");
 		
 		w = APP_GET_WIDGET("memory_panel");
 		
@@ -747,7 +966,7 @@ void isoLoader_Init(App_t *app) {
 				
 				self.memory_chk[j++] = b;
 				
-				if(j > 8)
+				if(j > sizeof(self.memory_chk) / 4)
 					break;
 			}
 		}
@@ -856,6 +1075,8 @@ void isoLoader_Init(App_t *app) {
 		} else {
 			self.have_args = false;
 		}
+		
+		isoLoader_DefaultPreset();
 
 	} else {
 		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n", 

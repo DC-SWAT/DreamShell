@@ -1,0 +1,16 @@
+libcfg+ installation notes
+--------------------------
+
+For full installation information refer to documentation located
+in doc/html/ directory.
+
+If you are impatient try this:
+
+	1. Unpack archive (you probably already have this done)
+	2. ./configure
+	3. make
+	4. make install
+
+For non-GNU UNIX based systems (such as FreeBSD) you should use gmake
+instead of make.
+

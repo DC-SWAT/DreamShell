@@ -14,8 +14,10 @@ DEPS = modules/app_$(APP_NAME).klf
 all: install
 
 $(DEPS): modules/module.c
-	cd modules
-	make
+	cd modules && make
+	
+clean:
+	cd modules && make clean && cd ../
 
 install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)

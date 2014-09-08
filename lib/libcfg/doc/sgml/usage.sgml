@@ -1,0 +1,19 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.sgml,v 1.6 2003/08/09 23:58:13 nepto Exp $ -->
+
+<chapter id="usage"><title>Usage</title>
+<para>
+
+In the core of &name; is a single, carefully designed structure, which makes
+the uniform and consistent API possible.
+
+</para>
+
+&usage.options-set;
+&usage.context-manipulation;
+&usage.context-flags;
+&usage.parsing;
+&usage.error-codes;
+&usage.properties;
+
+</chapter>
+

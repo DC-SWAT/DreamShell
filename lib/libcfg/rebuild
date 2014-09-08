@@ -1,0 +1,46 @@
+#!/bin/sh
+
+echo
+echo "===================================="
+echo "This script is for maintainers only!"
+echo "===================================="
+echo
+
+here="`pwd`"
+path_to_configure=`echo "$0" | sed 's%/[^/]*$%%g;'`
+
+if [ "X$path_to_configure" != "X." ]; then
+	echo
+	echo "Warning: You have called 'rebuild' from another directory."
+	echo "         Whole library will be builded here"
+	echo
+fi
+
+rm -f  config.h configure config.cache aclocal.m4 config.log stamp-h*
+rm -f  Makefile src/Makefile doc/Makefile
+rm -rf .deps/ src/.deps/
+rm -f  doc/Doxyfile
+rm -f  lib*.so lib*.a *.o
+rm -rf doc/html/ doc/doxygen/
+rm -rf doc/man/*.3 doc/man/*.3.gz doc/man/*.sgml doc/man/libcfg+.man doc/man/manpage.*
+
+   echo "running autoheader" \
+&& cd "$path_to_configure" \
+&& autoheader \
+&& echo running aclocal \
+&& aclocal \
+&& echo running autoconf \
+&& autoconf \
+&& cd "$here" \
+&& echo "running $path_to_configure/configure" \
+&& $path_to_configure/configure $* \
+&& make clean \
+&& make \
+&& make documentation
+
+echo
+echo "===================================="
+echo "This script is for maintainers only!"
+echo "===================================="
+echo
+

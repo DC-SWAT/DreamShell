@@ -1,0 +1,21 @@
+<!-- $Platon: libcfg+/doc/sgml/preface.sgml,v 1.4 2003/08/09 23:58:13 nepto Exp $ -->
+
+<preface id="preface"><title id="preface.title">Preface</title>
+
+<para>
+
+During our daily involvement in C/C++ development, we were often confronted
+with such repetitive and mechanical tasks as parsing the command line or
+configuration files. We quickly came to the realization that a robust and
+versatile library for performing those tasks could save a substantial amount
+of our development time.  Examples of existing tools with similar
+functionality included <productname>popt</productname> or
+<productname>parsecfg</productname>.  Although both were effective at
+addressing one of the aforementioned problems, neither one provided a unified
+solution.  Clearly, the stage was set for a new tool with a uniform and
+consistent API for parsing both the command line and configuration files. And
+that is how &name; was born...
+
+</para>
+</preface>
+

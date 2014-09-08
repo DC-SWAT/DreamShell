@@ -1,0 +1,316 @@
+# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# Main Makefile for libcfg+ library.
+# $Platon: libcfg+/Makefile.in,v 1.79 2003/07/29 13:13:02 rajo Exp $
+
+PACKAGE = @PACKAGE@
+VERSION = @VERSION@
+MANVOLNUM = @MANVOLNUM@
+
+
+# Directories {{{
+top_builddir      = .
+rel_top_builddir := $(top_builddir)
+srcdir            = @srcdir@
+top_srcdir        = @top_srcdir@
+VPATH             = @srcdir@
+prefix            = @prefix@
+exec_prefix       = @exec_prefix@
+                  
+bindir            = @bindir@
+sbindir           = @sbindir@
+libexecdir        = @libexecdir@
+datadir           = @datadir@
+sysconfdir        = @sysconfdir@
+sharedstatedir    = @sharedstatedir@
+localstatedir     = @localstatedir@
+libdir            = @libdir@
+infodir           = @infodir@
+mandir            = @mandir@
+man3dir           = $(mandir)/man3
+includedir        = @includedir@
+includedir_platon = $(includedir)/platon
+oldincludedir     = /usr/include
+                 
+DESTDIR           =
+                 
+pkgdatadir        = $(datadir)/@PACKAGE@
+pkglibdir         = $(libdir)/@PACKAGE@
+pkgincludedir     = $(includedir)/@PACKAGE@
+
+distdir           = $(PACKAGE)-$(VERSION)
+top_distdir       = $(distdir)
+
+# }}} Directories
+
+# Targets {{{
+
+CONFIG_HEADER   = $(top_builddir)/config.h
+include_HEADERS = src/cfg+.h
+noinst_HEADERS  = src/cfgfile.h \
+				  src/cmdline.h \
+				  src/shared.h \
+				  src/platon/str/dynfgets.h \
+				  src/platon/str/strctype.h \
+				  src/platon/str/strdyn.h \
+				  src/platon/str/strplus.h
+
+noinst_SCRIPTS =
+
+man_MANS  =
+man3_MANS =
+MANS      = $(man_MANS) $(man3_MANS)
+
+CONFIG_CLEAN_FILES =  Makefile \
+					  Rules.make \
+					  ChangeLog \
+					  doc/Makefile \
+					  doc/Doxyfile \
+					  doc/sgml/defs.sgml \
+					  src/Makefile
+
+SCRIPTS            =  $(noinst_SCRIPTS)
+
+HEADERS =  $(include_HEADERS) $(noinst_HEADERS) $(CONFIG_HEADER)
+
+DISTFILES = AUTHORS COPYING README INSTALL TODO ChangeLog \
+			Makefile.in Rules.make.in configure.in \
+			config.h.in config.h.top config.h.bot \
+			config.guess config.sub configure \
+			install-sh mkinstalldirs rebuild \
+			src/ \
+			src/Makefile.in \
+			src/cfg+.c src/cfgfile.c src/cmdline.c \
+			src/parse.c src/props.c src/shared.c \
+			src/platon \
+			src/platon/str \
+			src/platon/str/strplus.c \
+			src/platon/str/strctype.c \
+			src/platon/str/strdyn.c \
+			src/platon/str/dynfgets.c \
+			$(include_HEADERS) $(noinst_HEADERS) \
+			doc/ \
+			doc/Makefile.in doc/Doxyfile.in \
+			doc/manpage.symlinks \
+			doc/doxygen-footer.html \
+			doc/html/ doc/html/*  \
+			doc/sgml/ doc/sgml/Makefile \
+			doc/sgml/*.sgml doc/sgml/defs.sgml.in \
+		 	doc/doxygen/ doc/doxygen/* \
+			doc/man/ doc/man/*.3.gz \
+			doc/man/libcfg+.man.in \
+			doc/man/footer.man \
+			doc/examples/ \
+			doc/examples/example.c doc/examples/example.cfg \
+			doc/examples/Makefile \
+			contrib/ \
+			contrib/docbook/ \
+			contrib/docbook/db-get-id contrib/docbook/db-html2man
+
+# }}} Targets
+
+all: configure-scripts makefiles $(MANS) all-subdirs
+
+include $(top_builddir)/Rules.make
+
+all-subdirs: all-src
+
+all-src:
+	cd $(top_builddir)/src && $(MAKE)
+
+
+static:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+dynamic:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+lib:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+%.gz: %
+	$(GZIP) -f -c $< > $@
+
+ChangeLog:
+	cd $(top_builddir)/doc && $(MAKE) ChangeLog
+
+.SUFFIXES:
+
+test:
+	@$(MAKE) dist \
+		&& tar xzf $(distdir).tar.gz \
+		&& here=`pwd` \
+		&& cd $(distdir) \
+			&& ./configure --prefix=install_dir \
+			&& $(MAKE) --warn-undefined-variables \
+			&& $(MAKE) --warn-undefined-variables install \
+			&& $(MAKE) --warn-undefined-variables uninstall \
+			&& $(MAKE) --warn-undefined-variables dist \
+			&& $(MAKE) --warn-undefined-variables distcheck \
+	&& banner="Test of compilation ended without errors, super! :-)"; echo; \
+	   dashes=`echo "$$banner" | sed s/./=/g`; \
+	   echo "$$dashes"; \
+	   echo "$$banner"; \
+	   echo "$$dashes"; \
+	cd $$here; \
+	rm -rf $(distdir)
+
+
+# Section: Install {{{
+install: all
+	cd $(top_builddir)/src && $(MAKE) $@
+	cd $(top_builddir)/doc && $(MAKE) $@
+uninstall:
+	cd $(top_builddir)/src && $(MAKE) $@
+	cd $(top_builddir)/doc && $(MAKE) $@
+
+installcheck:
+	cd $(top_builddir)/src && $(MAKE) $@
+	cd $(top_builddir)/doc && $(MAKE) $@
+
+install-exec:
+	cd $(top_builddir)/src && $(MAKE) $@
+uninstall-exec:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+install-lib:
+	cd $(top_builddir)/src && $(MAKE) $@
+uninstall-lib:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+install-data:
+	cd $(top_builddir)/doc && $(MAKE) $@
+
+install-strip:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+installdirs:
+	cd $(top_builddir)/src && $(MAKE) $@
+	cd $(top_builddir)/doc && $(MAKE) $@
+
+install-man: $(MANS)
+	cd $(top_builddir)/doc && $(MAKE) $@
+uninstall-man:
+	cd $(top_builddir)/doc && $(MAKE) $@
+
+install-includeHEADERS: $(include_HEADERS)
+	cd $(top_builddir)/src && $(MAKE) $@
+uninstall-includeHEADERS:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+
+# }}} Section: Install
+
+# Section clean {{{
+
+clean: clean-debian clean-src clean-hdr
+	-rm -rf  *.o core *.core .deps/
+	-rm -f md5sum* *.deb
+	-rm -rf $(distdir)
+
+clean-src:
+	cd $(top_builddir)/src && $(MAKE) clean
+
+clean-doc:
+	cd $(top_builddir)/doc && $(MAKE) clean
+
+clean-tags:
+	cd $(top_builddir)/src && $(MAKE) $@
+
+clean-hdr:
+	-rm -f config.h
+
+clean-debian:
+	-rm -f debian
+	cd contrib/debian \
+	&& rm -rf debian tmp libcfg+0/ libcfg+0-dev/ libcfg+0-doc/ *.debhelper
+
+
+mostlyclean: mostlyclean-src mostlyclean-hdr clean-tags
+	-rm -rf  *.o core *.core .deps/
+	-rm -f md5sum* *.deb
+
+mostlyclean-src:
+	cd $(top_builddir)/src && $(MAKE) mostlyclean
+mostlyclean-hdr:
+	cd $(top_builddir)/src && $(MAKE) mostlyclean
+
+maintainer-clean: distclean maintainer-clean-generic
+	@echo
+	@echo "-----------------------------------------------------------"
+	@echo "This command is intended for maintainers to use;"
+	@echo "it deletes files that may require special tools to rebuild."
+	@echo "-----------------------------------------------------------"
+	@echo
+
+maintainer-clean-generic:
+	-rm -f $(top_builddir)/config.status $(top_srcdir)/configure
+	-rm -f $(top_srcdir)/config.h.in
+	-rm -f $(top_builddir)/$(PACKAGE)-*.tar.gz
+	-rm -f $(top_builddir)/*.deb
+
+
+distclean: distclean-src distclean-doc distclean-hdr \
+	distclean-tags distclean-generic 
+	-rm -f config.status
+	-rm -rf  *.o core *.core .deps/
+	-rm -f md5sum* *.deb 
+	-rm -rf $(distdir) $(distdir).tar.gz
+
+distclean-src:
+	cd $(top_builddir)/src && $(MAKE) distclean
+
+distclean-doc:
+	cd $(top_builddir)/doc && $(MAKE) distclean
+
+distclean-hdr:
+	-rm -f config.h
+
+distclean-tags:
+	-rm -f TAGS ID
+
+distclean-generic:
+	-rm -f $(CONFIG_CLEAN_FILES)
+	-rm -f config.cache config.log stamp-h stamp-h[0-9]*
+
+# }}} Section clean
+
+# Create packages *.rpm *.deb {{{
+spec: $(PACKAGE).spec
+
+rpm-clean:
+	rm -rf rpm
+
+# Create Debian distribution package
+# This target is for maintainers only!
+deb: all
+	ln -s -f contrib/debian debian
+	rm -f config.status
+	$(MAKE) -f debian/rules binary
+
+.PHONY: deb deb-copy
+
+deb-copy:
+	mkdir -p ./DEBIAN
+	cp $(top_srcdir)/contrib/debian/changelog ./DEBIAN
+	cp $(top_srcdir)/contrib/debian/conffiles ./DEBIAN
+	cp $(top_srcdir)/contrib/debian/copyright ./DEBIAN
+	sed 's/@''PACKAGE''@/$(PACKAGE)/g; s/@''VERSION''@/$(VERSION)/g;' \
+		$(top_srcdir)/contrib/debian/control.in > ./DEBIAN/control
+
+# }}}
+
+# Tell versions [3.59,3.63) of GNU make to not export all variables.
+# Otherwise a system limit (for SysV at least) may be exceeded.
+.NOEXPORT:
+
+# vim600: fdm=marker fdc=3
+

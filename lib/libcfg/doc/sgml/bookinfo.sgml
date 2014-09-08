@@ -1,0 +1,28 @@
+<!-- $Platon: libcfg+/doc/sgml/bookinfo.sgml,v 1.5 2004/01/12 06:03:08 nepto Exp $ -->
+
+<bookinfo>
+	<date>&date-human;</date>
+	<title>&name;</title>
+	<abbrev>&name; &version;</abbrev>
+	<subtitle>command line and configuration file parsing library</subtitle>
+	<releaseinfo>&releaseinfo;</releaseinfo>
+	<authorgroup>
+	<author>
+		<firstname>Ondrej</firstname>
+		<!-- <othername>'Nepto'</othername> -->
+		<surname>Jombik</surname>
+	</author>
+	</authorgroup>
+	<copyright>
+		<year>2001</year>
+		<year>2002</year>
+		<year>2003</year>
+		<year>2004</year>
+		<holder>
+			<ulink url="http://platon.sk/">
+				Platon&nbsp;Software&nbsp;Development&nbsp;Group
+			</ulink>
+		</holder>
+	</copyright>
+</bookinfo>
+

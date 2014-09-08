@@ -1,0 +1,824 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Usage</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Installation"
+HREF="introduction.installation.html"><LINK
+REL="NEXT"
+TITLE="Context manipulation"
+HREF="usage.context-manipulation.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="introduction.installation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="usage.context-manipulation.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="USAGE"
+></A
+>Chapter 2. Usage</H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>2.1. <A
+HREF="usage.html#USAGE.OPTIONS-SET"
+>Options set</A
+></DT
+><DT
+>2.2. <A
+HREF="usage.context-manipulation.html"
+>Context manipulation</A
+></DT
+><DT
+>2.3. <A
+HREF="usage.context-flags.html"
+>Context flags</A
+></DT
+><DT
+>2.4. <A
+HREF="usage.parsing.html"
+>Parsing</A
+></DT
+><DT
+>2.5. <A
+HREF="usage.error-codes.html"
+>Error handling</A
+></DT
+><DT
+>2.6. <A
+HREF="usage.properties.html"
+>Properties</A
+></DT
+></DL
+></DIV
+><P
+>&#13;In the core of libcfg+ is a single, carefully designed structure, which makes
+the uniform and consistent API possible.&#13;</P
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="USAGE.OPTIONS-SET"
+></A
+>2.1. Options set</H1
+><P
+>&#13;The basic unit of libcfg+ is an <I
+CLASS="FIRSTTERM"
+>option</I
+>. An option is
+defined by the <SPAN
+CLASS="STRUCTNAME"
+>cfg_option</SPAN
+> structure, whose definition
+is presented below:&#13;</P
+><P
+>&#13;<PRE
+CLASS="PROGRAMLISTING"
+>struct <SPAN
+CLASS="STRUCTNAME"
+>cfg_option</SPAN
+> {
+	const char *<TT
+CLASS="STRUCTFIELD"
+><I
+>cmdline_long_name</I
+></TT
+>;
+	const char  <TT
+CLASS="STRUCTFIELD"
+><I
+>cmdline_short_name</I
+></TT
+>;
+	const char *<TT
+CLASS="STRUCTFIELD"
+><I
+>cfgfile_name</I
+></TT
+>;
+	const enum cfg_option_type <TT
+CLASS="STRUCTFIELD"
+><I
+>type</I
+></TT
+>;
+	void *<TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+>;
+	int   <TT
+CLASS="STRUCTFIELD"
+><I
+>val</I
+></TT
+>;
+};</PRE
+>&#13;</P
+><P
+>&#13;The first two members of the <SPAN
+CLASS="STRUCTNAME"
+>cfg_option</SPAN
+> structure,
+<TT
+CLASS="STRUCTFIELD"
+><I
+>cmdline_long_name</I
+></TT
+> and
+<TT
+CLASS="STRUCTFIELD"
+><I
+>cmdline_short_name</I
+></TT
+>, specify the long and short name
+of the option when parsing the command line. The third member,
+<TT
+CLASS="STRUCTFIELD"
+><I
+>cfgfile_name</I
+></TT
+>, specifies the name of the option in a
+configuration file. Setting the first two fields to <TT
+CLASS="CONSTANT"
+>NULL</TT
+>
+and <TT
+CLASS="CONSTANT"
+>'\0'</TT
+> respectively will effectively eliminate the
+option from taking part in command line parsing.  Setting
+<TT
+CLASS="STRUCTFIELD"
+><I
+>cfgfile_name</I
+></TT
+> to <TT
+CLASS="CONSTANT"
+>NULL</TT
+> will
+eliminate this option from taking part in configuration file parsing.&#13;</P
+><P
+>&#13;Note also that if <TT
+CLASS="STRUCTFIELD"
+><I
+>cmdline_long_name</I
+></TT
+> or
+<TT
+CLASS="STRUCTFIELD"
+><I
+>cfgfile_name</I
+></TT
+> point to a string containing at least
+one whitespace character, any non-zero number of whitespace characters will be
+matched during parsing. For example, if the separator is a space, a tab
+character will also match, as will two spaces and a tab, two tabs and a space,
+and so on. This simplifies the configuration for the user because one does not
+have to pay attention to the number of spaces used in a configuration option.
+For example, <TT
+CLASS="USERINPUT"
+><B
+>debug&nbsp;level</B
+></TT
+>,
+<TT
+CLASS="USERINPUT"
+><B
+>debug\tlevel</B
+></TT
+> and
+<TT
+CLASS="USERINPUT"
+><B
+>debug&nbsp;\tlevel</B
+></TT
+> will match the same option.&#13;</P
+><P
+>&#13;The variable <TT
+CLASS="STRUCTFIELD"
+><I
+>type</I
+></TT
+> is an enumeration defining the
+type of an option with each member of the enumeration being either a type or a
+flag. The possible values of <TT
+CLASS="STRUCTFIELD"
+><I
+>type</I
+></TT
+> are summarized in
+tables <A
+HREF="usage.html#USAGE.OPTION-TYPES.TABLE"
+><I
+>Option types</I
+></A
+> and <A
+HREF="usage.html#USAGE.OPTION-TYPE-FLAGS.TABLE"
+><I
+>Option type flags</I
+></A
+>&#13;</P
+><P
+>&#13;The variable <TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> is a pointer to the argument(s)
+of an option. The argument(s) must be of the type stored in the
+<TT
+CLASS="STRUCTFIELD"
+><I
+>type</I
+></TT
+> member of the
+<SPAN
+CLASS="STRUCTNAME"
+>cfg_option</SPAN
+> structure. Note that
+<TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> could also contain a
+<TT
+CLASS="CONSTANT"
+>NULL</TT
+> value, which would suggest that the option arguments
+will not be stored. &#13;</P
+><P
+>&#13;The last field of the structure is <TT
+CLASS="STRUCTFIELD"
+><I
+>val</I
+></TT
+>. It defines
+the exit code of parsing function when this option is found in the token
+stream. Setting this field to <TT
+CLASS="CONSTANT"
+>0</TT
+> will cause
+<TT
+CLASS="FUNCTION"
+>cfg_get_next_opt()</TT
+> to proceed to the next option instead
+of returning.  Also, since <TT
+CLASS="FUNCTION"
+>cfg_get_next_opt()</TT
+> also
+returns negative integers to signal an error, it is a good idea to keep the
+value of this field in the positive range. You can read more about this in the
+<A
+HREF="usage.parsing.html"
+><I
+>Parsing</I
+></A
+> section.&#13;</P
+><P
+>&#13;<DIV
+CLASS="TABLE"
+><A
+NAME="USAGE.OPTION-TYPES.TABLE"
+></A
+><P
+><B
+>Table 2-1. Option types</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Value</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> type</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_BOOL</TT
+>, <TT
+CLASS="CONSTANT"
+>CFG_BOOLEAN</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> int</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>No argument for an option is expected. Boolean datatype with two states.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_INT</TT
+>, <TT
+CLASS="CONSTANT"
+>CFG_INTEGER</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> int</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Integer argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_UINT</TT
+>, <TT
+CLASS="CONSTANT"
+>CFG_UNSIGNED</TT
+>,
+<TT
+CLASS="CONSTANT"
+>CFG_UNSIGNED_INT</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> unsigned int</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Unsigned integer argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_LONG</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> long int</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Long integer argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ULONG</TT
+>,
+<TT
+CLASS="CONSTANT"
+>CFG_UNSIGNED_LONG</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> unsigned long int</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Unsigned long integer argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_FLOAT</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> float</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Float argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_DOUBLE</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> double</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Double argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_STR</TT
+>, <TT
+CLASS="CONSTANT"
+>CFG_STRING</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+> char *</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>String argument</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+>&#13;</P
+><P
+>&#13;The next table describes the possible "type flags" of an option. The purpose
+of the flags is to add more variety and thus flexibility to the basic data
+types presented in the previous table. By combining one of the flags with one
+of the basic types, a completely new data type can be produced. For example,
+to define an array of strings, one would use the
+<TT
+CLASS="CONSTANT"
+>CFG_MULTI</TT
+> flag in addition to the
+<TT
+CLASS="CONSTANT"
+>CFG_STRING</TT
+> data type. One of the obvious rules of this
+data type combining is that the flags must always be used in conjunction with
+the basic types since a flag is only a data type modifier and not a
+self-contained data type. &#13;</P
+><P
+>&#13;<DIV
+CLASS="TABLE"
+><A
+NAME="USAGE.OPTION-TYPE-FLAGS.TABLE"
+></A
+><P
+><B
+>Table 2-2. Option type flags</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Flag</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> type</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_MULTI</TT
+>, <TT
+CLASS="CONSTANT"
+>CFG_MULTI_ARRAY</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#60;type&#62; **</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The Option can be specified more than once and the result is a
+	dynamic array of the defined type.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_MULTI_SEPARATED</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#60;type&#62; **</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Same as <TT
+CLASS="CONSTANT"
+>CFG_MULTI_ARRAY</TT
+>, but a dynamic array
+	is also created by splitting the option value according to the defined
+	separators.  See the <A
+HREF="usage.properties.html"
+><I
+>Properties</I
+></A
+> section for more information about the
+	separators that can be used and ways to change them.</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>		<TT
+CLASS="CONSTANT"
+>CFG_LAST_ARGS</TT
+>,
+		<TT
+CLASS="CONSTANT"
+>CFG_LAST_ARGUMENTS</TT
+>,
+		<TT
+CLASS="CONSTANT"
+>CFG_LEFTOVER_ARGS</TT
+>,
+		<TT
+CLASS="CONSTANT"
+>CFG_LEFTOVER_ARGUMENTS</TT
+>
+	</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>&#60;type&#62; **</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Leftover arguments are stored here.</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+>&#13;</P
+><P
+>&#13;Of the basic data types, only strings are dynamically allocated and in that
+case <TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> points to a portion of memory allocated
+with <TT
+CLASS="FUNCTION"
+>malloc()</TT
+> function. Do not forget to free that memory
+when you do not need it anymore using the <TT
+CLASS="FUNCTION"
+>free()</TT
+>
+function. If the <TT
+CLASS="CONSTANT"
+>CFG_MULTI_ARRAY</TT
+> or the
+<TT
+CLASS="CONSTANT"
+>CFG_MULTI_SEPARATED</TT
+> flag was used,
+<TT
+CLASS="STRUCTFIELD"
+><I
+>value</I
+></TT
+> will point to a <TT
+CLASS="CONSTANT"
+>NULL</TT
+>
+terminated array of a basic type. It can be freed using
+<TT
+CLASS="FUNCTION"
+>cfg_strdyn_free()</TT
+>.&#13;</P
+><P
+>&#13;The constants <TT
+CLASS="CONSTANT"
+>CFG_END_OPTION</TT
+> and
+<TT
+CLASS="CONSTANT"
+>CFG_END_OF_LIST</TT
+> are used to mark the end of an option
+set. They set all pointer values to <TT
+CLASS="CONSTANT"
+>NULL</TT
+> and all numeric
+values to <TT
+CLASS="CONSTANT"
+>0</TT
+>.&#13;</P
+><P
+>&#13;<DIV
+CLASS="EXAMPLE"
+><A
+NAME="AEN236"
+></A
+><P
+><B
+>Example 2-1. Example of options set definition</B
+></P
+><PRE
+CLASS="PROGRAMLISTING"
+>#include &#60;cfg+.h&#62;
+
+/* Option variables */
+int help, verbose, nice;
+char *cfg_file;
+char **command;
+
+/* Option set */
+struct cfg_option options[] = {
+  {"help",    'h', NULL,      CFG_BOOL,          (void *) &#38;help,     0},
+  {"nice",    'n', "nice",    CFG_INT,           (void *) &#38;nice,     0},
+  {"verbose", 'v', "verbose", CFG_BOOL+CFG_MULTI,(void *) &#38;verbose,  0},
+  {NULL,      'f', NULL,      CFG_STR,           (void *) &#38;cfg_file, 0},
+  {NULL, '\0', "command", CFG_STR+CFG_MULTI_SEPARATED+CFG_LEFTOVER_ARGS,
+    (void *) &#38;command, 0},
+  CFG_END_OF_LIST
+};</PRE
+></DIV
+>&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="introduction.installation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="usage.context-manipulation.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Installation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Context manipulation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

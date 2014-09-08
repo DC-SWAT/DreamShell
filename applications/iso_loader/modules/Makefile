@@ -13,8 +13,8 @@ EXPORTS_FILE = exports.txt
 KOS_CFLAGS += $(KOS_CSTD)
 
 VER_MAJOR = 0
-VER_MINOR = 4
-VER_MICRO = 1
+VER_MINOR = 5
+VER_MICRO = 0
 
 all: rm-elf
 

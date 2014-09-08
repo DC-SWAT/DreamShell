@@ -1,0 +1,171 @@
+<!-- $Platon: libcfg+/doc/sgml/other-information.sgml,v 1.27 2004/02/17 16:21:49 nepto Exp $ -->
+
+<chapter id="other-information"><title>Other information</title>
+<sect1 id="other-information.author-and-homepage"><title>Authors and homepage</title>
+<para>
+
+Developed by Ondrej Jombik (<ulink
+url="http://nepto.sk/">http://nepto.sk/</ulink>) and Lubomir Host (<ulink
+url="http://rajo.platon.sk/">http://rajo.platon.sk/</ulink>).
+
+</para>
+<para>
+
+Copyright (c) 2001-2004 Platon Software Development Group,
+<ulink url="http://platon.sk/">http://platon.sk/</ulink>
+
+</para>
+<para>
+
+The official &name; homepage is:
+<ulink url="http://platon.sk/projects/&name;/">
+http://platon.sk/projects/&name;/</ulink>
+
+</para>
+<para>
+
+The &name; project management page is:
+<ulink url="http://platon.sk/projects/main_page.php?project_id=3">
+http://platon.sk/projects/main_page.php?project_id=3</ulink>
+
+</para>
+<para>
+
+This documentation is related to &name; version &version; which was released
+in &date-human;.
+
+</para>
+</sect1>
+
+	
+<sect1 id="other-information.license"><title>License</title>
+<para>
+
+This library is free software; you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation; either version 2, or (at your option) any later version.
+
+</para>	
+<para>
+
+This library is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+
+</para>	
+<para>
+
+You should have received a copy of the GNU General Public License along with
+this library; if not, write to the Free Software Foundation, Inc., 59 Temple
+Place - Suite 330, Boston, MA 02111-1307, USA.
+
+</para>	
+</sect1>
+
+<sect1 id="other-information.support-and-feedback">
+<title id="other-information.support-and-feedback.title">Support and feedback</title>
+
+<bridgehead>Bug-tracking system</bridgehead>
+<para>
+
+We are happy to accept bug reports, suggestions for improvement, or improved
+code, preferably via our <ulink url="http://platon.sk/">Platon.SK</ulink>
+bug-tracking system where everyone can see them. When submitting a new bug
+report, make sure the same bug is not already submitted. If not, go straight to
+the new bug submission link and enter exhaustive details by filling out all the
+required fields. 
+
+</para>
+<para>
+
+All bugs listing page:
+<ulink url="http://platon.sk/projects/view_all_bug_page.php?project_id=3">
+http://platon.sk/projects/view_all_bug_page.php?project_id=3</ulink>
+
+</para>
+<para>
+
+New bug submission:
+<ulink url="http://platon.sk/projects/bug_report_advanced_page.php?project_id=3">
+http://platon.sk/projects/bug_report_advanced_page.php?project_id=3</ulink>
+
+
+</para>
+
+<bridgehead>Support forum</bridgehead>
+<para>
+
+A web based forum has been established to provide support for &name;. There you
+can discuss and consult general issues related to this project.  Installation,
+configuration and usage questions can be asked there. The forum is also the
+right place for brainstorming about new features, since more opinions and points
+of view can be presented. The whole matter needs to be completelly re-thought
+before it will be submitted into bug-tracking system, marked as a feature
+request and finally implemented.
+
+</para>
+<para>
+
+<ulink url="http://platon.sk/forum/projects/?c=3">
+http://platon.sk/forum/projects/?c=3</ulink>
+
+</para>
+
+<bridgehead>Feedback</bridgehead>
+<para>
+
+Feel free to correct the text of the documents and messages in this project if
+you find a mistake or typo.
+
+</para>
+<para>
+
+Usage of mentioned services is prefered, however if you need to contact authors
+directly, use the following &lt;<ulink
+url="mailto:platon@pobox.sk?subject=&name;">platon@pobox.sk</>&gt; e-mail
+address and write '&name;' keyword in the Subject line.
+
+</para>
+</sect1>
+
+<sect1 id="other-information.cvs-access"><title>CVS access</title>
+<para>
+
+Whole &name; project is provided in <ulink url="http://platon.sk/">Platon
+Software Development Group</ulink> CVS repository. It is possible to review
+our CVS repository using <ulink
+url="http://platon.sk/cvs/cvs.php/&name;/">CVSweb interface</ulink>, but
+it is also possible to checkout files using anonymous access.
+
+</para>
+<para>
+
+Particular CVS instructions follows. Platon Software Development Group CVS
+repository can be checked out through anonymous (pserver) CVS with the
+following instruction set. When prompted for a password for anonymous, simply
+press the <keycap>Enter</keycap> key.
+
+</para>
+<para>
+
+<screen>
+<!-- <prompt>$</prompt> --><userinput>export CVSROOT=:pserver:anonymous@kepler.fmph.uniba.sk:/home/cvs</userinput>
+<!-- <prompt>$</prompt> --><userinput>cvs login</userinput>
+<!-- <prompt>$</prompt> --><userinput>cvs checkout &name;</userinput>
+</screen>
+
+</para>
+<para>
+
+These commands should work with no problems on any UNIX-like system with cvs
+client installed. For checkouting on MS-Windows platform you can use one from
+several free available CVS client softwares.
+
+</para>
+</sect1>
+
+<!-- This is separated ChangeLog section -->
+&changelog;
+
+</chapter>
+

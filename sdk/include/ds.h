@@ -22,7 +22,6 @@
 #include "utils.h"
 #include "cfg+.h"
 #include "exceptions.h"
-#include "network/net.h"
 
 /**
  * Get DreamShell version code

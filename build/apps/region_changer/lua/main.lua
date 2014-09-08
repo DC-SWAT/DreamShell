@@ -1,7 +1,7 @@
 -----------------------------------------
 --                                     --
 -- @name:    Region Changer            --
--- @version: 1.8.3                     --
+-- @version: 1.8.4                     --
 -- @author:  SWAT                      --
 -- @url:     http://www.dc-swat.ru     --
 --                                     --
@@ -9,7 +9,6 @@
 
 
 --if not RegionChanger then
-
 
 	RegionChanger = {
 		app = nil,
@@ -30,7 +29,7 @@
 	
 	function RegionChanger:ShowPage(index) 
 		DS.ScreenFadeOut();
-		os.execute("sleep 500");
+		Sleep(500);
 		GUI.CardStackShowIndex(self.pages, index); 
 		DS.ScreenFadeIn();
 	end

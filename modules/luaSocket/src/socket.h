@@ -71,6 +71,6 @@ int socket_recv(p_socket ps, char *data, size_t count, size_t *got, p_timeout tm
 const char *socket_ioerror(p_socket ps, int err);
 
 //int socket_gethostbyaddr(const char *addr, socklen_t len, struct hostent **hp);
-//int socket_gethostbyname(const char *addr, struct hostent **hp);
+int socket_gethostbyname(const char *addr, struct hostent **hp);
 
 #endif /* SOCKET_H */

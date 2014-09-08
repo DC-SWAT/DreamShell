@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="ISO Loader" version="0.4.1" icon="./images/iso_loader_icon.png" extensions=".iso .cso .cdi .gdi">
+<app name="ISO Loader" version="0.5.0" icon="./images/iso_loader_icon.png" extensions=".iso .cso .cdi .gdi">
 	<resources>
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" /> 
@@ -55,8 +55,10 @@
 		<image src="./images/btn_close_over.png" name="iExitHigh" />
 		<image src="./images/btn_settings_norm.png" name="iSetNorm" />
 		<image src="./images/btn_settings_over.png" name="iSetHigh" />
+		<image src="./images/btn_settings_disabled.png" name="iSetDis" />
 		<image src="./images/btn_games_norm.png" name="iGamesNorm" />
 		<image src="./images/btn_games_over.png" name="iGamesHigh" />
+		<image src="./images/btn_games_disabled.png" name="iGamesDis" />
 
 		<image src="./images/btn_launch_norm.png" name="iRunNorm" />
 		<image src="./images/btn_launch_over.png" name="iRunHigh" />
@@ -121,13 +123,13 @@
 							name="btn_pc" />
 			</panel>
 			<!-- Navigation -->
-			<panel x="513" y="20" width="110" height="35">
+			<panel x="474" y="20" width="150" height="50">
 				<input type="button" 
 					normal="iGamesNorm" 
 					highlight="iGamesHigh" 
 					pressed="iGamesNorm" 
-					disabled="iGamesNorm" 
-					x="0" y="2" width="28" height="29" 
+					disabled="iGamesDis" 
+					x="5" y="1" width="36" height="36" 
 					name="games" 
 					inactive="true" 
 					onclick="export:isoLoader_ShowGames()" />
@@ -135,8 +137,8 @@
 					normal="iSetNorm" 
 					highlight="iSetHigh" 
 					pressed="iSetNorm" 
-					disabled="iSetNorm" 
-					x="40" y="0" width="30" height="30" 
+					disabled="iSetDis" 
+					x="60" y="0" width="36" height="36" 
 					name="settings" 
 					onclick="export:isoLoader_ShowSettings()" />
 				<input type="button" 
@@ -144,7 +146,7 @@
 					highlight="iExitHigh" 
 					pressed="iExitNorm" 
 					disabled="iExitNorm" 
-					x="80" y="0" width="30" height="31" 
+					x="110" y="0" width="36" height="36" 
 					onclick="export:isoLoader_Exit()" />
 			</panel>
 		</panel>
@@ -164,6 +166,9 @@
 					item_font_color="#3278A0"
 					onclick="export:isoLoader_ItemClick()" />
 		
+				<panel width="300" height="50" x="342" y="8">
+					<label width="300" height="50" x="0" y="0" font="m23" color="#3278A0" name="game_title" text="Select a game" align="center" />
+				</panel>
 				<panel width="300" height="322" x="359" y="58">
 					<panel width="256" height="256" x="0" y="0" name="cover_image" background="cover">
 				 		<image src="overlay" width="256" height="256" x="0" y="0" />
@@ -186,6 +191,12 @@
 						name="run_iso" 
 						inactive="true" 
 						onclick="export:isoLoader_Run()" />
+						
+				<panel x="570" y="340" width="50" height="20">
+					<label width="50" height="20" x="0" y="0" 
+							name="version" font="arial" color="#FFFFFF" 
+							text="v0.5.0" align="center" />
+				</panel>
 			</panel>
 				
 			<!-- Settings Page  -->
@@ -205,75 +216,178 @@
 						<label width="130" height="20" x="25" y="0" font="arial" color="#000000" text="Save as preset" align="left" />
 					</input>
 				
-					<panel x="40" y="45" width="270" height="95">
+					<panel x="40" y="45" width="270" height="135">
+					
 						<input type="checkbox" 
 							onnormal="iCheck" 
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
 							x="0" y="0" width="270" height="25" 
-							name="dma-checkbox">
+							name="dma-checkbox"
+							onclick="export:isoLoader_toggleDMA()">
 							<label width="235" height="20" x="25" y="0" font="arial" color="#000000" text="Use DMA transfer (GD/IDE only)" align="left" />
 						</input>
+						
+						<panel x="0" y="25" width="270" height="75">
+							<label width="235" height="20" x="0" y="0" font="arial" color="#000000" text="Emulate async read (in sectors):" align="left"/>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="0" y="25" width="70" height="25" 
+									name="async-0-checkbox"
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="60" height="20" x="25" y="0" font="arial" color="#000000" text="none" name="async-label" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="70" y="25" width="45" height="25" 
+									name="async-1-checkbox" 
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="41" height="20" x="24" y="0" font="arial" color="#000000" text="1+" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="115" y="25" width="45" height="25" 
+									name="async-2-checkbox"
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="35" height="20" x="24" y="0" font="arial" color="#000000" text="2" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="160" y="25" width="45" height="25" 
+									name="async-3-checkbox"
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="35" height="20" x="24" y="0" font="arial" color="#000000" text="3" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="205" y="25" width="45" height="25" 
+									name="async-4-checkbox" 
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="35" height="20" x="25" y="0" font="arial" color="#000000" text="4" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="0" y="50" width="70" height="25" 
+									name="async-16-checkbox"
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="60" height="20" x="25" y="0" font="arial" color="#000000" text="16" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="70" y="50" width="45" height="25" 
+									name="async-8-checkbox" 
+									checked="true" 
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="35" height="20" x="25" y="0" font="arial" color="#000000" text="8" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="115" y="50" width="45" height="25" 
+									name="async-7-checkbox"
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="35" height="20" x="24" y="0" font="arial" color="#000000" text="7" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="160" y="50" width="45" height="25" 
+									name="async-6-checkbox"
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="35" height="20" x="24" y="0" font="arial" color="#000000" text="6" align="left" />
+							</input>
+							<input type="checkbox" 
+									onnormal="iCheck" 
+									onhighlight="iCheckHigh" 
+									offnormal="iUncheck" 
+									offhighlight="iUncheckHigh" 
+									x="205" y="50" width="50" height="25" 
+									name="async-5-checkbox" 
+									onclick="export:isoLoader_toggleAsync()">
+								<label width="40" height="20" x="25" y="0" font="arial" color="#000000" text="5" align="left" />
+							</input>
+						</panel>
+						
 						<input type="checkbox" 
 							onnormal="iCheck" 
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="0" y="25" width="200" height="25" 
-							checked="true" 
-							name="async-checkbox">
-							<label width="170" height="20" x="25" y="0" font="arial" color="#000000" text="Emulate async read" align="left" />
+							x="0" y="105" width="270" height="25" 
+							name="cdda-checkbox"
+							onclick="export:isoLoader_toggleCDDA()">
+							<label width="235" height="20" x="25" y="0" font="arial" color="#000000" text="Emulate CDDA audio" align="left" />
 						</input>
-						<panel x="0" y="50" width="250" height="45">
-							<label width="235" height="20" x="0" y="0" font="arial" color="#000000" text="Sectors per frame (for async read):" align="left" />
-							<input type="text" 
-									font="arial" 
-									fontcolor="#000000" 
-									value="8" 
-									size="30" x="0" y="25" 
-									width="165" height="20" 
-									name="async-sectors" 
-									normal="input-text-normal" 
-									highlight="input-text-normal" 
-									focus="input-text-focus" />
-						</panel>
 					</panel>
 				
-					<panel x="0" y="150" width="150" height="125">
-						<panel width="120" height="20" x="40" y="0">
-							<label width="120" height="20" x="0" y="0" font="arial" color="#000000" text="Binary OS:" align="left"/>
-						</panel>
+					<panel x="40" y="177" width="270" height="125">
+						<label width="120" height="20" x="0" y="0" font="arial" color="#000000" text="Binary OS:" align="left" />
 						<input type="checkbox" 
 								onnormal="iCheck" 
 								onhighlight="iCheckHigh" 
 								offnormal="iUncheck" 
 								offhighlight="iUncheckHigh" 
-								x="40" y="25" width="200" height="25" 
+								x="0" y="25" width="110" height="25" 
 								name="os-auto-checkbox"
 								checked="true"
 								onclick="export:isoLoader_toggleOS()">
-							<label width="100" height="20" x="25" y="0" font="arial" color="#000000" text="Auto" align="left" />
+							<label width="85" height="20" x="25" y="0" font="arial" color="#000000" text="Auto" align="left" />
 						</input>
 						<input type="checkbox" 
 								onnormal="iCheck" 
 								onhighlight="iCheckHigh" 
 								offnormal="iUncheck" 
 								offhighlight="iUncheckHigh" 
-								x="40" y="50" width="200" height="25" 
+								x="110" y="25" width="125" height="25" 
 								name="os-kos-checkbox"
 								onclick="export:isoLoader_toggleOS()">
-							<label width="100" height="20" x="25" y="0" font="arial" color="#000000" text="KallistiOS" align="left" />
+							<label width="100" height="20" x="25" y="0" font="arial" color="#000000" text="Homebrew" align="left" />
 						</input>
 						<input type="checkbox" 
 								onnormal="iCheck" 
 								onhighlight="iCheckHigh" 
 								offnormal="iUncheck" 
 								offhighlight="iUncheckHigh" 
-								x="40" y="75" width="200" height="25" 
+								x="0" y="50" width="110" height="25" 
 								name="os-katana-checkbox"
 								onclick="export:isoLoader_toggleOS()">
-							<label width="100" height="20" x="25" y="0" font="arial" color="#000000" text="KATANA" align="left" />
+							<label width="85" height="20" x="25" y="0" font="arial" color="#000000" text="KATANA" align="left" />
+						</input>
+						<input type="checkbox" 
+								onnormal="iCheck" 
+								onhighlight="iCheckHigh" 
+								offnormal="iUncheck" 
+								offhighlight="iUncheckHigh" 
+								x="110" y="50" width="110" height="25" 
+								name="os-wince-checkbox"
+								onclick="export:isoLoader_toggleOS()">
+							<label width="85" height="20" x="25" y="0" font="arial" color="#000000" text="WinCE" align="left" />
 						</input>
 					</panel>
 					
@@ -293,77 +407,63 @@
 				</panel>
 				
 				<!-- Right Column -->
-				<panel x="320" y="10" width="280" height="370">
+				<panel x="320" y="10" width="290" height="370">
 				
-					<panel width="240" height="60" x="40" y="46">
+					<panel width="250" height="60" x="40" y="46">
 						<label width="120" height="20" x="0" y="0" font="arial" color="#000000" text="Boot mode:" align="left"/>
 						<input type="checkbox" 
 								onnormal="iCheck" 
 								onhighlight="iCheckHigh" 
 								offnormal="iUncheck" 
 								offhighlight="iUncheckHigh" 
-								x="0" y="25" width="80" height="25" 
+								x="0" y="25" width="78" height="25" 
 								name="direct-checkbox"
 								checked="true"
 								onclick="export:isoLoader_toggleBootMode()">
-							<label width="65" height="20" x="25" y="0" font="arial" color="#000000" text="Direct" align="left" />
+							<label width="63" height="20" x="25" y="0" font="arial" color="#000000" text="Direct" align="left" />
 						</input>
 						<input type="checkbox" 
 								onnormal="iCheck" 
 								onhighlight="iCheckHigh" 
 								offnormal="iUncheck" 
 								offhighlight="iUncheckHigh" 
-								x="80" y="25" width="75" height="25" 
+								x="78" y="25" width="73" height="25" 
 								name="ipbin-checkbox"
 								onclick="export:isoLoader_toggleBootMode()">
-							<label width="65" height="20" x="25" y="0" font="arial" color="#000000" text="IP.BIN" align="left" />
+							<label width="63" height="20" x="25" y="0" font="arial" color="#000000" text="IP.BIN" align="left" />
 						</input>
 						<input type="checkbox" 
 								onnormal="iCheck" 
 								onhighlight="iCheckHigh" 
 								offnormal="iUncheck" 
 								offhighlight="iUncheckHigh" 
-								x="160" y="25" width="75" height="25" 
-								name="syscall-checkbox"
+								x="158" y="25" width="80" height="25" 
+								name="ipbin-trunc-checkbox"
 								onclick="export:isoLoader_toggleBootMode()">
-							<label width="72" height="20" x="25" y="0" font="arial" color="#000000" text="Syscall" align="left" />
+							<label width="90" height="20" x="25" y="0" font="arial" color="#000000" text="IP.BIN cut" align="left" />
 						</input>
 					</panel>
 					
-					<panel width="250" height="75" x="40" y="96">
-						<label width="120" height="20" x="0" y="0" font="arial" color="#000000" text="Boot method:" align="left"/>
-						<input type="checkbox" 
-								onnormal="iCheck" 
-								onhighlight="iCheckHigh" 
-								offnormal="iUncheck" 
-								offhighlight="iUncheckHigh" 
-								x="0" y="25" width="80" height="25" 
-								name="04x-checkbox"
-								checked="true"
-								onclick="export:isoLoader_toggleBootMethod()">
-							<label width="65" height="20" x="25" y="0" font="arial" color="#000000" text="v0.4.x" align="left" />
-						</input>
-						<input type="checkbox" 
-								onnormal="iCheck" 
-								onhighlight="iCheckHigh" 
-								offnormal="iUncheck" 
-								offhighlight="iUncheckHigh" 
-								x="80" y="25" width="80" height="25" 
-								name="03x-checkbox"
-								onclick="export:isoLoader_toggleBootMethod()">
-							<label width="65" height="20" x="25" y="0" font="arial" color="#000000" text="v0.3.x" align="left" />
-						</input>
-					</panel>
-					
-					<panel x="40" y="150" width="350" height="150" name="memory_panel">
+					<panel x="40" y="100" width="350" height="225" name="memory_panel">
 						<label width="320" height="20" x="0" y="0" font="arial" color="#000000" text="Loader memory:" align="left" />
-					
+						
 						<input type="checkbox" 
 							onnormal="iCheck" 
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
 							x="0" y="25" width="120" height="20" 
+							name="0x8c000100"
+							onclick="export:isoLoader_toggleMemory()">
+							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8c000100" align="left" />
+						</input>
+						
+						<input type="checkbox" 
+							onnormal="iCheck" 
+							onhighlight="iCheckHigh" 
+							offnormal="iUncheck" 
+							offhighlight="iUncheckHigh" 
+							x="120" y="25" width="120" height="20" 
 							name="0x8c004000"
 							checked="true"
 							onclick="export:isoLoader_toggleMemory()">
@@ -375,7 +475,7 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="120" y="25" width="120" height="20" 
+							x="0" y="50" width="120" height="20" 
 							name="0x8c004800"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8c004800" align="left" />
@@ -386,10 +486,32 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="0" y="50" width="120" height="20" 
-							name="0x8ce00000"
+							x="120" y="50" width="120" height="20" 
+							name="0x8cef8000"
 							onclick="export:isoLoader_toggleMemory()">
-							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8ce00000" align="left" />
+							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cef8000" align="left" />
+						</input>
+						
+						<input type="checkbox" 
+							onnormal="iCheck" 
+							onhighlight="iCheckHigh" 
+							offnormal="iUncheck" 
+							offhighlight="iUncheckHigh" 
+							x="0" y="75" width="120" height="20" 
+							name="0x8cf80000"
+							onclick="export:isoLoader_toggleMemory()">
+							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cf80000" align="left" />
+						</input>
+						
+						<input type="checkbox" 
+							onnormal="iCheck" 
+							onhighlight="iCheckHigh" 
+							offnormal="iUncheck" 
+							offhighlight="iUncheckHigh" 
+							x="120" y="75" width="120" height="20" 
+							name="0x8cfa0000"
+							onclick="export:isoLoader_toggleMemory()">
+							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cfa0000" align="left" />
 						</input>
 	
 						<input type="checkbox" 
@@ -397,7 +519,18 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="120" y="50" width="120" height="20" 
+							x="0" y="100" width="120" height="20" 
+							name="0x8cfd0000"
+							onclick="export:isoLoader_toggleMemory()">
+							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cfc0000" align="left" />
+						</input>
+						
+						<input type="checkbox" 
+							onnormal="iCheck" 
+							onhighlight="iCheckHigh" 
+							offnormal="iUncheck" 
+							offhighlight="iUncheckHigh" 
+							x="120" y="100" width="120" height="20" 
 							name="0x8cfd0000"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cfd0000" align="left" />
@@ -408,7 +541,7 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="0" y="75" width="120" height="20" 
+							x="0" y="125" width="120" height="20" 
 							name="0x8cfe0000"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cfe0000" align="left" />
@@ -419,7 +552,7 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="120" y="75" width="120" height="20" 
+							x="120" y="125" width="120" height="20" 
 							name="0x8cfe8000"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cfe8000" align="left" />
@@ -430,7 +563,7 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="0" y="100" width="120" height="20" 
+							x="0" y="150" width="120" height="20" 
 							name="0x8cff0000"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cff0000" align="left" />
@@ -441,7 +574,7 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="120" y="100" width="120" height="20" 
+							x="120" y="150" width="120" height="20" 
 							name="0x8cff4800"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="105" height="20" x="25" y="0" font="arial" color="#000000" text="0x8cff4800" align="left" />
@@ -452,7 +585,7 @@
 							onhighlight="iCheckHigh" 
 							offnormal="iUncheck" 
 							offhighlight="iUncheckHigh" 
-							x="0" y="125" width="50" height="20" 
+							x="0" y="175" width="50" height="20" 
 							name="0x8c"
 							onclick="export:isoLoader_toggleMemory()">
 							<label width="55" height="20" x="25" y="0" font="arial" color="#000000" text="0x8c" align="left" />
@@ -462,8 +595,8 @@
 								onblur="export:isoLoader_toggleMemory()"
 								font="arial" 
 								fontcolor="#000000" 
-								value="000100" 
-								size="30" x="58" y="123" 
+								value="0000e4" 
+								size="30" x="58" y="173" 
 								width="165" height="20" 
 								name="memory_text" 
 								normal="input-text-normal" 

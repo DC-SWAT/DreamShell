@@ -1,0 +1,22 @@
+
+/* Macros for generating function name with prefix 'cfg_' */
+#ifndef PLATON_FUNC
+# define PLATON_FUNC(_name) cfg_ ## _name
+#endif
+
+/* Quote prefixed function name
+ * Macro PLATON_FUNC_STR(my_function) produces "cfg_my_function"
+ */
+#ifndef _PLATON_FUNC_STR
+# define _PLATON_FUNC_STR(_name) #_name
+#endif
+#ifndef PLATON_FUNC_STR
+# define PLATON_FUNC_STR(_name) _PLATON_FUNC_STR(cfg_ ## _name)
+#endif
+
+
+
+#endif /* #ifndef _CONFIG_H */
+
+/* vim: ft=cpp
+ */

@@ -1,0 +1,351 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Context flags</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Usage"
+HREF="usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Context manipulation"
+HREF="usage.context-manipulation.html"><LINK
+REL="NEXT"
+TITLE="Parsing"
+HREF="usage.parsing.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="usage.context-manipulation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Usage</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="usage.parsing.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="USAGE.CONTEXT-FLAGS"
+></A
+>2.3. Context flags</H1
+><P
+>&#13;The following functions can be used to set various context flags:&#13;</P
+><P
+>&#13;<DIV
+CLASS="FUNCSYNOPSIS"
+><A
+NAME="AEN374"
+></A
+><P
+></P
+><PRE
+CLASS="FUNCSYNOPSISINFO"
+>#include &#60;cfg+.h&#62;</PRE
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>void cfg_set_context_flag</CODE
+>(const CFG_CONTEXT con, int flag);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>void cfg_clear_context_flag</CODE
+>(const CFG_CONTEXT con, int flag);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_get_context_flag</CODE
+>(const CFG_CONTEXT con, int flag);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>void cfg_set_context_flags</CODE
+>(const CFG_CONTEXT con, int flags);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>int cfg_get_context_flags</CODE
+>(const CFG_CONTEXT con, int flags);</CODE
+></P
+><P
+></P
+></DIV
+>&#13;</P
+><P
+>&#13;You can set a context flag with <TT
+CLASS="FUNCTION"
+>cfg_set_context_flag()</TT
+>.
+You can clear a flag with <TT
+CLASS="FUNCTION"
+>cfg_clear_context_flag()</TT
+>. To see
+whether a flag is set, use <TT
+CLASS="FUNCTION"
+>cfg_get_context_flag()</TT
+>. It has
+a macro alias <TT
+CLASS="FUNCTION"
+>cfg_is_context_flag()</TT
+>, which is identical
+in every way.&#13;</P
+><P
+>&#13;The functions <TT
+CLASS="FUNCTION"
+>cfg_set_context_flags()</TT
+> and
+<TT
+CLASS="FUNCTION"
+>cfg_get_context_flags()</TT
+> can set and retrieve the value of
+all flags in one call. &#13;</P
+><P
+>&#13;A list of all settable context flags is provided in the following table.&#13;</P
+><P
+>&#13;<P
+></P
+><DIV
+CLASS="VARIABLELIST"
+><P
+><B
+>Context flags</B
+></P
+><DL
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_IGNORE_MULTI</TT
+></DT
+><DD
+><P
+>		Ignore multiple arguments for a single option. The first argument will
+		be used to store the option value. The others are skipped.
+	</P
+><P
+>		By default, multiple arguments for an option that has not allowed
+		them, cause the <TT
+CLASS="CONSTANT"
+>CFG_ERROR_MULTI</TT
+> error.
+	</P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_IGNORE_UNKNOWN</TT
+></DT
+><DD
+><P
+>Ignore all unknown options.</P
+><P
+>		The default behaviour is to produce the
+		<TT
+CLASS="CONSTANT"
+>CFG_ERROR_UNKNOWN</TT
+> error when an unknown option is
+		encountered.
+	</P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_SKIP_FIRST</TT
+></DT
+><DD
+><P
+>		Setting this flag will cause the first argument on the command line to
+		be skipped. This flag affects only command line contexts.
+	</P
+><P
+>The default behaviour is to parse all command line arguments.</P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_ADVANCED_LEFTOVERS</TT
+></DT
+><DD
+><P
+>		Advanced leftover arguments. Setting this flag will drop the
+		requirement of the leftover arguments to conform to the
+		<SPAN
+CLASS="ACRONYM"
+>POSIX</SPAN
+> standard.
+	</P
+><P
+>		The default behaviour is to require the leftover arguments to conform
+		to <SPAN
+CLASS="ACRONYM"
+>POSIX</SPAN
+>. According to <SPAN
+CLASS="ACRONYM"
+>POSIX</SPAN
+>,
+		all option arguments must precede any non-option (leftover) arguments.
+		Once a non-option argument is found, all remaining arguments are also
+		interpreted as non-option.
+	</P
+></DD
+><DT
+><TT
+CLASS="CONSTANT"
+>CFG_FILE_LINE_POS_USAGE</TT
+></DT
+><DD
+><P
+>		Setting this flag will cause the parsing of configuration file to
+		become line- instead of byte-oriented. This will also change the
+		meaning of the values stored in <TT
+CLASS="PARAMETER"
+><I
+>begin_pos</I
+></TT
+> and
+		<TT
+CLASS="PARAMETER"
+><I
+>size</I
+></TT
+>.
+	</P
+><P
+>By default, parsing is byte-oriented.</P
+></DD
+></DL
+></DIV
+></P
+><P
+>&#13;You can use the <TT
+CLASS="FUNCTION"
+>cfg_clear_context_flag()</TT
+> function to
+restore the value of a flag to its default value.&#13;</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="usage.context-manipulation.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="usage.parsing.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Context manipulation</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Parsing</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

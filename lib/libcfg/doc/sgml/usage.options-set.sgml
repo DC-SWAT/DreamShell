@@ -1,0 +1,274 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.options-set.sgml,v 1.14 2003/08/16 01:43:42 nepto Exp $ -->
+
+<!-- MAN:
+	<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+		<!ENTITY % defs			SYSTEM "defs.sgml">
+		%defs;
+	]>
+	<refentry>
+
+	<refmeta>
+		<refentrytitle>cfg_option</refentrytitle>
+		<manvolnum>&manvolnum;</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>cfg_option</refname>
+		<refpurpose>&name; options set</refpurpose>
+	</refnamediv>
+-->
+
+<sect1 id="usage.options-set">
+<title id="usage.options-set.title">Options set</title>
+
+<!-- MAN: <refsect1><title>SYNOPSIS</title> -->
+<para>
+
+The basic unit of &name; is an <firstterm>option</firstterm>. An option is
+defined by the <structname>cfg_option</structname> structure, whose definition
+is presented below:
+
+</para>
+<para>
+
+<programlisting>
+struct <structname>cfg_option</structname> {
+	const char *<structfield>cmdline_long_name</structfield>;
+	const char  <structfield>cmdline_short_name</structfield>;
+	const char *<structfield>cfgfile_name</structfield>;
+	const enum cfg_option_type <structfield>type</structfield>;
+	void *<structfield>value</structfield>;
+	int   <structfield>val</structfield>;
+};
+</programlisting>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+The first two members of the <structname>cfg_option</structname> structure,
+<structfield>cmdline_long_name</structfield> and
+<structfield>cmdline_short_name</structfield>, specify the long and short name
+of the option when parsing the command line. The third member,
+<structfield>cfgfile_name</structfield>, specifies the name of the option in a
+configuration file. Setting the first two fields to <constant>NULL</constant>
+and <constant>'\0'</constant> respectively will effectively eliminate the
+option from taking part in command line parsing.  Setting
+<structfield>cfgfile_name</structfield> to <constant>NULL</constant> will
+eliminate this option from taking part in configuration file parsing.
+
+</para>
+<para>
+
+Note also that if <structfield>cmdline_long_name</structfield> or
+<structfield>cfgfile_name</structfield> point to a string containing at least
+one whitespace character, any non-zero number of whitespace characters will be
+matched during parsing. For example, if the separator is a space, a tab
+character will also match, as will two spaces and a tab, two tabs and a space,
+and so on. This simplifies the configuration for the user because one does not
+have to pay attention to the number of spaces used in a configuration option.
+For example, <userinput>debug&nbsp;level</userinput>,
+<userinput>debug\tlevel</userinput> and
+<userinput>debug&nbsp;\tlevel</userinput> will match the same option.
+
+</para>
+<para>
+
+The variable <structfield>type</structfield> is an enumeration defining the
+type of an option with each member of the enumeration being either a type or a
+flag. The possible values of <structfield>type</structfield> are summarized in
+tables <xref linkend="usage.option-types.table"
+endterm="usage.option-types.table.title"> and <xref
+linkend="usage.option-type-flags.table"
+endterm="usage.option-type-flags.table.title">
+
+</para>
+<para>
+
+The variable <structfield>value</structfield> is a pointer to the argument(s)
+of an option. The argument(s) must be of the type stored in the
+<structfield>type</structfield> member of the
+<structname>cfg_option</structname> structure. Note that
+<structfield>value</structfield> could also contain a
+<constant>NULL</constant> value, which would suggest that the option arguments
+will not be stored. 
+
+</para>
+<para>
+
+The last field of the structure is <structfield>val</structfield>. It defines
+the exit code of parsing function when this option is found in the token
+stream. Setting this field to <constant>0</constant> will cause
+<function>cfg_get_next_opt()</function> to proceed to the next option instead
+of returning.  Also, since <function>cfg_get_next_opt()</function> also
+returns negative integers to signal an error, it is a good idea to keep the
+value of this field in the positive range. You can read more about this in the
+<xref linkend="usage.parsing" endterm="usage.parsing.title"> section.
+
+</para>
+<para>
+
+<table id="usage.option-types.table" frame=top>
+<title id="usage.option-types.table.title">Option types</title>
+<tgroup cols=3>
+<thead>
+<row>
+	<entry>Value</entry>
+	<entry><structfield>value</structfield> type</entry>
+	<entry>Description</entry>
+</row>
+</thead>
+<tbody>
+<row>
+	<entry><constant>CFG_BOOL</constant>, <constant>CFG_BOOLEAN</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> int</entry>
+	<entry>No argument for an option is expected. Boolean datatype with two states.</entry>
+</row>
+<row>
+	<entry><constant>CFG_INT</constant>, <constant>CFG_INTEGER</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> int</entry>
+	<entry>Integer argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_UINT</constant>, <constant>CFG_UNSIGNED</constant>,
+<constant>CFG_UNSIGNED_INT</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> unsigned int</entry>
+	<entry>Unsigned integer argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_LONG</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> long int</entry>
+	<entry>Long integer argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_ULONG</constant>,
+<constant>CFG_UNSIGNED_LONG</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> unsigned long int</entry>
+	<entry>Unsigned long integer argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_FLOAT</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> float</entry>
+	<entry>Float argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_DOUBLE</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> double</entry>
+	<entry>Double argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_STR</constant>, <constant>CFG_STRING</constant></entry>
+	<entry><!-- MAN: <structfield>value</structfield> type: --> char *</entry>
+	<entry>String argument</entry>
+</row>
+</tbody>
+</tgroup>
+</table>
+
+</para>
+<para>
+
+The next table describes the possible "type flags" of an option. The purpose
+of the flags is to add more variety and thus flexibility to the basic data
+types presented in the previous table. By combining one of the flags with one
+of the basic types, a completely new data type can be produced. For example,
+to define an array of strings, one would use the
+<constant>CFG_MULTI</constant> flag in addition to the
+<constant>CFG_STRING</constant> data type. One of the obvious rules of this
+data type combining is that the flags must always be used in conjunction with
+the basic types since a flag is only a data type modifier and not a
+self-contained data type. 
+
+</para>
+<para>
+
+<table id="usage.option-type-flags.table" frame=top>
+<title id="usage.option-type-flags.table.title">Option type flags</title>
+<tgroup cols=3>
+<thead>
+<row>
+	<entry>Flag</entry>
+	<entry><structfield>value</structfield> type</entry>
+	<entry>Description</entry>
+</row>
+</thead>
+<tbody>
+<row>
+	<entry><constant>CFG_MULTI</constant>, <constant>CFG_MULTI_ARRAY</constant></entry>
+	<entry><![CDATA[<type> **]]></entry>
+	<entry>The Option can be specified more than once and the result is a
+	dynamic array of the defined type.</entry>
+</row>
+<row>
+	<entry><constant>CFG_MULTI_SEPARATED</constant></entry>
+	<entry><![CDATA[<type> **]]></entry>
+	<entry>Same as <constant>CFG_MULTI_ARRAY</constant>, but a dynamic array
+	is also created by splitting the option value according to the defined
+	separators.  See the <xref linkend="usage.properties"
+	endterm="usage.properties.title"> section for more information about the
+	separators that can be used and ways to change them.</entry>
+</row>
+<row>
+	<entry>
+		<constant>CFG_LAST_ARGS</constant>,
+		<constant>CFG_LAST_ARGUMENTS</constant>,
+		<constant>CFG_LEFTOVER_ARGS</constant>,
+		<constant>CFG_LEFTOVER_ARGUMENTS</constant>
+	</entry>
+	<entry><![CDATA[<type> **]]></entry>
+	<entry>Leftover arguments are stored here.</entry>
+</row>
+</tbody>
+</tgroup>
+</table>
+
+</para>
+<para>
+
+Of the basic data types, only strings are dynamically allocated and in that
+case <structfield>value</structfield> points to a portion of memory allocated
+with <function>malloc()</function> function. Do not forget to free that memory
+when you do not need it anymore using the <function>free()</function>
+function. If the <constant>CFG_MULTI_ARRAY</constant> or the
+<constant>CFG_MULTI_SEPARATED</constant> flag was used,
+<structfield>value</structfield> will point to a <constant>NULL</constant>
+terminated array of a basic type. It can be freed using
+<function>cfg_strdyn_free()</function>.
+
+</para>
+<para>
+
+The constants <constant>CFG_END_OPTION</constant> and
+<constant>CFG_END_OF_LIST</constant> are used to mark the end of an option
+set. They set all pointer values to <constant>NULL</constant> and all numeric
+values to <constant>0</constant>.
+
+</para>
+<para>
+
+<example><title>Example of options set definition</title>
+<programlisting><![CDATA[
+#include <cfg+.h>
+
+/* Option variables */
+int help, verbose, nice;
+char *cfg_file;
+char **command;
+
+/* Option set */
+struct cfg_option options[] = {
+  {"help",    'h', NULL,      CFG_BOOL,          (void *) &help,     0},
+  {"nice",    'n', "nice",    CFG_INT,           (void *) &nice,     0},
+  {"verbose", 'v', "verbose", CFG_BOOL+CFG_MULTI,(void *) &verbose,  0},
+  {NULL,      'f', NULL,      CFG_STR,           (void *) &cfg_file, 0},
+  {NULL, '\0', "command", CFG_STR+CFG_MULTI_SEPARATED+CFG_LEFTOVER_ARGS,
+    (void *) &command, 0},
+  CFG_END_OF_LIST
+};
+]]></programlisting>
+</example>
+
+</para>
+</sect1>
+<!-- MAN: </refsect1></refentry> -->
+

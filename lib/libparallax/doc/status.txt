@@ -1,0 +1,10 @@
+- Primitive routines: done
+- Sprite routines: done
+- Array-based functions: not started
+- Matrix helpers: part of KOS (i.e., done)
+- Texture management: done for now (might add more later)
+- Context management: not started
+- Texture font routines: partially done
+- 3D glut-type functions: not started
+- DC wrappers: partially done
+

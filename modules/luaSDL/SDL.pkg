@@ -1259,7 +1259,7 @@ extern const SDL_VideoInfo * SDL_GetVideoInfo(void);
  * The arguments to SDL_VideoModeOK() are the same ones you would pass to
  * SDL_SetVideoMode()
  */
-extern int SDL_VideoModeOK(int width, int height, int bpp, Uint32 flags);
+//extern int SDL_VideoModeOK(int width, int height, int bpp, Uint32 flags);
 
 /*
  * Return a pointer to an array of available screen dimensions for the

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Region Changer" version="1.8.3" icon="./images/icon.png">
+<app name="Region Changer" version="1.8.4" icon="./images/icon.png">
 	<resources>
 		<module src="../../modules/tolua.klf" />
 		<module src="../../modules/luaDS.klf" />
@@ -36,7 +36,7 @@
 			<panel x="0" y="0" width="640" height="480" name="home-page">
 				<panel x="3" y="101" width="640" height="50">
 					<image src="label" width="262" height="23" x="189" y="0">
-						  <label width="262" height="23" x="0" y="0" font="comic" color="#ffffff" text="Region Changer v1.8.1" />
+						  <label width="262" height="23" x="0" y="0" font="comic" color="#ffffff" text="Region Changer v1.8.4" />
 					</image>
 				</panel>
 				<image src="logo" width="640" height="100" x="0" y="0" name="logo" />

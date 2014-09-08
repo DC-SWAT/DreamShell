@@ -1,0 +1,8 @@
+<!-- $Platon: libcfg+/doc/sgml/defs.sgml.in,v 1.8 2003/01/31 12:45:56 nepto Exp $ -->
+
+<!ENTITY name		"libcfg+">
+<!ENTITY version	"0.6.2">
+<!ENTITY date		"2003-02-17">
+<!ENTITY date-human	"17th February 2004">
+<!ENTITY manvolnum	"3">
+

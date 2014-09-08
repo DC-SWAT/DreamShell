@@ -1,0 +1,36 @@
+- All input coordinates to primitive routines are raw PVR coordinates. These
+  will include things like a quick way to submit vertices of a triangle strip
+  to the PVR.
+- All primitive routines are implemented as macros or inline functions. These
+  will include polygon header submission, vertex submission, userclip
+  submission, etc.
+- Simple sprite-like primitives: quads at a given x/y/z position and scaling,
+  with optional usage of the matrices for rotation or other special effects.
+- Array-based functions for 2D and 3D for going quickly from a predefined
+  object to the PVR (like GL arrays). Both 2D and 3D could go through the
+  matrices optionally, but there will be no "ortho viewport" matrix to
+  confuse things.
+- Matrix helpers: basically all the commonly used stuff from gltrans.c in
+  KGL, but instead of being part of the main pipeline, it just sets up
+  the matrices for DR or other direct usage. Some simple way of setting
+  up Z coordinates for 3D objects reliably so they can interact with normal
+  2D objects' Z coords without layering issues.
+- Texture management: structs with the PVR pointer, width/height, pvr polygon
+  headers for the various lists. Simple functions to submit a poly header
+  for a given texture quickly. Ability to just allocate raw memory for
+  real-time writing.
+- Optional context management: KGL-like maintenance of a single non-textured
+  and multiple textured polygon headers for each list, and simple functions
+  to manipulate and submit these.
+- Texture font routines, like PLIB, but with more capabilities: rotation and
+  scaling of the whole text or individual letters, colorization of individual
+  letters, outlining, etc.
+- 3D glut-type functions: sphere, cube.
+- Based on the DC low-level APIs, but with platform generic wrappers for
+  everything so that client code will be portable to any versions of the
+  library for other platforms. These wrappers are 100% optional.
+- No list management; this will all be done with the normal PVR functions
+  explicitly. Parallax just assists with things that go into each list.
+- No clipping, lighting or any other kind of slowness, unless it can be
+  done completely optionally in a build-your-own-pipeline fashion.
+

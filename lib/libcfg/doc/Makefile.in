@@ -1,0 +1,400 @@
+# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# Makefile for documentation of libcfg+ library.
+# $Platon: libcfg+/doc/Makefile.in,v 1.76 2003/11/28 17:36:33 nepto Exp $
+
+PACKAGE   = @PACKAGE@
+VERSION   = @VERSION@
+MANVOLNUM = @MANVOLNUM@
+
+
+# Directories {{{
+top_builddir      = ..
+rel_top_builddir := $(top_builddir)
+srcdir            = @srcdir@
+top_srcdir        = @top_srcdir@
+VPATH             = @srcdir@
+prefix            = @prefix@
+exec_prefix       = @exec_prefix@
+                  
+bindir            = @bindir@
+sbindir           = @sbindir@
+libexecdir        = @libexecdir@
+datadir           = @datadir@
+sysconfdir        = @sysconfdir@
+sharedstatedir    = @sharedstatedir@
+localstatedir     = @localstatedir@
+libdir            = @libdir@
+infodir           = @infodir@
+docdir            = $(prefix)/share/doc
+mandir            = @mandir@
+man3dir           = $(mandir)/man@MANVOLNUM@
+includedir        = @includedir@
+includedir_platon = $(includedir)/platon
+oldincludedir     = /usr/include
+                  
+DESTDIR           =
+                  
+pkgdatadir        = $(docdir)/@PACKAGE@-@VERSION@
+pkglibdir         = $(libdir)/@PACKAGE@
+pkgincludedir     = $(includedir)/@PACKAGE@
+
+# }}} Directories
+
+# Targets {{{
+ 
+SGML_USAGE_FILES = $(srcdir)/sgml/usage.context-flags.sgml \
+				   $(srcdir)/sgml/usage.context-manipulation.sgml \
+				   $(srcdir)/sgml/usage.error-codes.sgml \
+				   $(srcdir)/sgml/usage.options-set.sgml \
+				   $(srcdir)/sgml/usage.parsing.sgml \
+				   $(srcdir)/sgml/usage.sgml \
+				   $(srcdir)/sgml/usage.properties.sgml \
+
+SGML_FILES = $(srcdir)/sgml/introduction.installation.sgml \
+		     $(srcdir)/sgml/introduction.overview.sgml \
+		     $(srcdir)/sgml/introduction.sgml \
+		     $(srcdir)/sgml/libcfg+.sgml \
+		     $(srcdir)/sgml/other-information.sgml \
+		     $(srcdir)/sgml/preface.sgml \
+		     $(SGML_USAGE_FILES)
+
+MANPAGES = $(top_builddir)/doc/man/cfg_add_property.$(MANVOLNUM).gz \
+		   $(top_builddir)/doc/man/cfg_context.$(MANVOLNUM).gz \
+		   $(top_builddir)/doc/man/cfg_option.$(MANVOLNUM).gz \
+		   $(top_builddir)/doc/man/cfg_parse.$(MANVOLNUM).gz \
+		   $(top_builddir)/doc/man/cfg_print_error.$(MANVOLNUM).gz \
+		   $(top_builddir)/doc/man/cfg_set_context_flag.$(MANVOLNUM).gz \
+		   $(top_builddir)/doc/man/libcfg+.$(MANVOLNUM).gz
+
+MAN_SGML_FILES = $(top_builddir)/doc/man/usage.context-flags.sgml \
+				 $(top_builddir)/doc/man/usage.context-manipulation.sgml \
+				 $(top_builddir)/doc/man/usage.error-codes.sgml \
+				 $(top_builddir)/doc/man/usage.options-set.sgml \
+				 $(top_builddir)/doc/man/usage.parsing.sgml \
+				 $(top_builddir)/doc/man/usage.sgml \
+				 $(top_builddir)/doc/man/usage.properties.sgml \
+				 $(top_builddir)/doc/man/defs.sgml
+
+# Don't add '$(srcdir)/' prefix here:
+EXAMPLES = examples/example.c \
+		   examples/example.cfg
+
+# }}} Targets
+
+
+all: configure-scripts makefiles doc
+
+include $(top_builddir)/Rules.make
+
+# Rewrite relative $(top_builddir) path to absolute
+top_builddir := $(shell echo `cd $(top_builddir) && pwd` )
+
+
+doc: html doxygen man $(top_builddir)/ChangeLog
+
+html: sgml/defs.sgml $(SGML_FILES)
+	@if [ "x$(DOCBOOK2HTML)" = "x:" ]; then \
+		echo 'Program "docbook2html" seems to be not available, HTML documentation build skipped.'; \
+	else \
+		$(DOCBOOK2HTML) -o $(top_builddir)/doc/html "$(srcdir)/sgml/$(PACKAGE).sgml" \
+			&& : cp -r sgml/images html/							\
+			&& : rm -rf html/images/CVS;							\
+	fi
+	
+MAN_MAGIC := $(shell mkdir man > /dev/null 2>&1 || :)
+man: $(top_builddir)/doc/ID $(MAN_SGML_FILES)  $(MANPAGES) manpage.symlinks
+
+manpage.symlinks: manpage.symlinks.tmp
+	echo "libcfg+.3 cfg+.h.3" >> $<
+	-sort -u $< > $@
+
+$(top_builddir)/doc/ID: $(SGML_USAGE_FILES)
+	$(DB_GET_ID) $(SGML_USAGE_FILES) | sort -u > $@
+
+$(top_builddir)/doc/man/cfg_add_property.$(MANVOLNUM):		$(top_builddir)/doc/man/usage.properties.sgml
+$(top_builddir)/doc/man/cfg_context.$(MANVOLNUM):			$(top_builddir)/doc/man/usage.context-manipulation.sgml
+$(top_builddir)/doc/man/cfg_option.$(MANVOLNUM):			$(top_builddir)/doc/man/usage.options-set.sgml
+$(top_builddir)/doc/man/cfg_parse.$(MANVOLNUM):				$(top_builddir)/doc/man/usage.parsing.sgml
+$(top_builddir)/doc/man/cfg_print_error.$(MANVOLNUM):		$(top_builddir)/doc/man/usage.error-codes.sgml
+$(top_builddir)/doc/man/cfg_set_context_flag.$(MANVOLNUM):	$(top_builddir)/doc/man/usage.context-flags.sgml
+
+$(top_builddir)/doc/man/libcfg+.$(MANVOLNUM):				$(top_builddir)/doc/man/libcfg+.man
+	cat $< > $@
+
+# man SGML files
+$(top_builddir)/doc/man/%.sgml: ID 
+$(top_builddir)/doc/man/%.sgml: $(top_srcdir)/doc/sgml/%.sgml
+	@if [ "x$(DOCBOOK2MAN)" != "x:" ]; then \
+		$(DB_HTML2MAN) -v IDfile=ID $< > $@; \
+	fi
+
+$(top_builddir)/doc/man/%.$(MANVOLNUM):
+	@if [ "x$(DOCBOOK2MAN)" = "x:" ]; then \
+		echo 'Program "docbook2man" seems to be not available, manpage documentation build skipped.'; \
+	else \
+		$(DOCBOOK2MAN) $< -o $(top_builddir)/doc/man \
+			&& cat man/manpage.links >> manpage.symlinks.tmp; \
+		cat $(srcdir)/man/footer.man >> $@; \
+	fi
+
+# don't change dependency files, because this causes make
+# to rebuild them. Use trick with '-c' (stdout).
+%.gz: %
+	@if [ -f "$<" ]; then \
+		echo "Converting $<"; \
+		sed 's/^.TH\(.*\)[ \t]\+""[ \t]\+""$$/.TH\1 "$(PACKAGE) $(VERSION)" "$(PACKAGE) $(VERSION)"/g' "$<" \
+			| $(GZIP) -f -c > "$@"; \
+		echo ""; \
+	fi
+
+doxygen: Doxyfile
+	@rm -rf doxygen/
+	@mkdir doxygen/
+	@if [ "x$(DOXYGEN)" = "x:" ]; then \
+		echo 'Program "doxygen" seems to be not available, developer documentation build skipped.'; \
+	else \
+		echo "$(DOXYGEN) > doxygen.output"; \
+		( date; $(DOXYGEN) ) > doxygen.output ;\
+	fi
+
+$(top_builddir)/ChangeLog: $(top_srcdir)/doc/sgml/$(PACKAGE)-changelog.sgml $(top_srcdir)/doc/sgml/changelog.sgml $(top_srcdir)/doc/sgml/defs.sgml
+	@if [ "x$(DOCBOOK2TXT)" = "x:" ]; then \
+		echo 'Program "docbook2txt" seems to be not available, ChangeLog build skipped.'; \
+	else \
+		$(DOCBOOK2TXT) $< -o $(top_builddir)/doc \
+		&& cat $(PACKAGE)-changelog.txt \
+		| sed 's/Chapter[ ]*1.[ ]*\('$(PACKAGE)' ChangeLog\)/\1/g' \
+		| sed 's/^[ ]*\(1\.1\.[ ]*\)\?Version[ ]*history[ ]*$$//g' \
+		| sed -ne '/^[ ]*'$(PACKAGE)' ChangeLog[ ]*$$/,$$p;' \
+		| sed '/^References/,$$d' > $@ \
+		&& echo "" >> $@ \
+		&& rm -f $(PACKAGE)-changelog.txt; \
+	fi
+
+
+# Section: Install {{{
+install: installdirs \
+	install-html \
+	install-doxygen \
+	install-man \
+	install-examples \
+	install-symlinks
+#	install-sgml
+uninstall: uninstall-html \
+	uninstall-examples \
+	uninstall-doxygen \
+	uninstall-man \
+	uninstall-dirs
+#	uninstall-sgml
+
+installcheck:
+	@echo; echo; \
+	echo "These files was installed to: "; \
+	echo "	$(DESTDIR)$(pkgdatadir)"; \
+	dashes="-------------------------------------------------------------"; \
+	echo "$$dashes"; \
+	find $(DESTDIR)$(pkgdatadir) -print ;\
+	echo "$$dashes";
+
+installdirs:
+	@$(mkinstalldirs) \
+		$(DESTDIR)/$(docdir) \
+		$(DESTDIR)/$(pkgdatadir) \
+		$(DESTDIR)/$(pkgdatadir)/html \
+		$(DESTDIR)/$(pkgdatadir)/doxygen \
+		$(DESTDIR)/$(pkgdatadir)/examples
+#		$(DESTDIR)/$(pkgdatadir)/sgml
+uninstall-dirs:
+	@$(NORMAL_UNINSTALL)
+	-rmdir --ignore-fail-on-non-empty $(pkgdatadir) $(docdir)
+
+install-html:
+	@$(NORMAL_INSTALL)
+	@$(mkinstalldirs) $(DESTDIR)$(pkgdatadir)
+	@if test -d $(top_builddir)/doc/html ; then \
+		cd $(top_builddir)/doc/html && \
+		for p in * ; do \
+			echo "	Installing file $(DESTDIR)$(pkgdatadir)/html/$$p"; \
+			$(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/html/$$p; \
+		done \
+	else \
+		echo -en "Directroy $(top_builddir)/doc/html not found, "; \
+		echo     "html documentation NOT installed!"; \
+		echo; \
+		echo     "Did you type 'make documentation'?"; \
+		echo; \
+	fi
+uninstall-html:
+	@$(NORMAL_UNINSTALL)
+	@echo "	rm -rf $(DESTDIR)$(pkgdatadir)/html";
+	@-rm -rf $(DESTDIR)$(pkgdatadir)/html;
+
+# - install automaticaly generated defs.sgml file from
+#   $(top_builddir)/doc/sgml/ directory
+install-sgml:
+	@$(NORMAL_INSTALL)
+	@$(mkinstalldirs) $(DESTDIR)$(pkgdatadir)
+	@echo "	Installing file $(DESTDIR)$(pkgdatadir)/sgml/defs.sgml"; \
+	$(INSTALL_DATA) $(top_builddir)/doc/sgml/defs.sgml \
+			$(DESTDIR)$(pkgdatadir)/sgml/defs.sgml;
+	@if test -d $(srcdir)/sgml ; then \
+		cd $(srcdir)/sgml && \
+		for p in *.sgml ; do \
+			if [ "x$$p" != "xdefs.sgml" ]; then \
+				echo "	Installing file $(DESTDIR)$(pkgdatadir)/sgml/$$p"; \
+				$(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/sgml/$$p; \
+			fi; \
+		done \
+	else \
+		echo -en "Directroy $(srcdir)/sgml not found, "; \
+		echo     "sgml documentation NOT installed!"; \
+		echo; \
+		echo     "Did you type 'make documentation'?"; \
+		echo; \
+	fi
+uninstall-sgml:
+	@$(NORMAL_UNINSTALL)
+	@echo "	rm -rf $(DESTDIR)$(pkgdatadir)/sgml";
+	@-rm -rf $(DESTDIR)$(pkgdatadir)/sgml;
+
+install-doxygen:
+	@$(NORMAL_INSTALL)
+	@$(mkinstalldirs) $(DESTDIR)$(pkgdatadir)
+	@if test -d $(top_builddir)/doc/doxygen ; then \
+		cd $(top_builddir)/doc/doxygen && \
+		for p in * ; do \
+			echo "	Installing file $(DESTDIR)$(pkgdatadir)/doxygen/$$p"; \
+			$(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/doxygen/$$p; \
+		done \
+	else \
+		echo -en "Directroy $(top_builddir)/doc/doxygen not found, "; \
+		echo     "Doxygen documentation NOT installed!"; \
+		echo; \
+		echo     "Did you type 'make documentation'?"; \
+		echo; \
+	fi
+uninstall-doxygen:
+	@$(NORMAL_UNINSTALL)
+	@echo "	rm -rf $(DESTDIR)$(pkgdatadir)/doxygen";
+	@-rm -rf $(DESTDIR)$(pkgdatadir)/doxygen;
+
+install-man:
+	@$(NORMAL_INSTALL)
+	@$(mkinstalldirs) $(DESTDIR)$(man3dir)
+	@if test -d $(top_builddir)/doc/man ; then \
+		cd $(top_builddir)/doc/man && \
+		for p in *.$(MANVOLNUM).gz; do \
+			echo "	Installing file $(DESTDIR)$(man3dir)/$$p"; \
+			$(INSTALL_DATA) $$p $(DESTDIR)$(man3dir)/$$p; \
+		done \
+	else \
+		echo -en "Directroy $(top_builddir)/doc/man not found, "; \
+		echo     "Manpages NOT installed!"; \
+		echo; \
+		echo     "Did you type 'make documentation'?"; \
+		echo; \
+	fi
+uninstall-man:
+	@$(NORMAL_UNINSTALL)
+	@echo "	rm -f $(DESTDIR)$(man3dir)/";
+	@if test -d $(top_builddir)/doc/man ; then \
+		cd $(top_builddir)/doc/man && \
+		for p in *.$(MANVOLNUM).gz; do \
+			echo "	rm -rf $(DESTDIR)$(man3dir)/$$p"; \
+			rm -f $(DESTDIR)$(man3dir)/$$p; \
+		done; \
+	fi
+
+install-examples:
+	@$(NORMAL_INSTALL)
+	@$(mkinstalldirs) $(DESTDIR)$(pkgdatadir)
+	@if test -d $(srcdir)/examples ; then \
+		cd $(srcdir) && \
+		for p in $(EXAMPLES) ; do \
+			echo "	Installing file $(DESTDIR)$(pkgdatadir)/$$p"; \
+			$(INSTALL_DATA) $$p $(DESTDIR)$(pkgdatadir)/$$p; \
+		done \
+	else \
+		echo -en "Directroy $(srcdir)/examples not found, "; \
+		echo     "examples documentation NOT installed!"; \
+		echo; \
+		echo     "Did you type 'make documentation'?"; \
+		echo; \
+	fi
+uninstall-examples:
+	@$(NORMAL_UNINSTALL)
+	@echo "	rm -rf $(DESTDIR)$(pkgdatadir)/examples";
+	@-rm -rf $(DESTDIR)$(pkgdatadir)/examples;
+
+install-symlinks:
+	@$(NORMAL_INSTALL)
+	@$(mkinstalldirs) $(DESTDIR)$(man3dir)
+	@cd $(DESTDIR)$(man3dir) && \
+	for i in `cat $(top_builddir)/doc/manpage.symlinks`; do \
+		if [ -z "$$destfile" -o "$$destfile" = "x" ]; then \
+			destfile="$$i"; \
+		else \
+			echo "	Creating symlink $(DESTDIR)$(man3dir)/$$destfile.gz	<--	$$i.gz"; \
+			$(LN_S) $$destfile.gz $$i.gz; \
+			destfile="x"; \
+		fi \
+	done
+
+uninstall-symlinks:
+
+# }}} install
+
+# Section: clean {{{
+clean: clean-html clean-man clean-doxygen
+
+clean-html:
+	-rm -rf html/
+
+clean-man:
+	-rm -f manpage.*
+	-rm -rf ID manpage.* man/*.$(MANVOLNUM) man/*.$(MANVOLNUM).gz man/*.sgml man/manpage.*
+
+clean-doxygen:
+	-rm -rf doxygen/
+	-rm -f doxygen.output
+	-rm -f doxygen.warnings
+
+mostlyclean:
+
+maintainer-clean: maintainer-clean-hdr maintainer-clean-generic
+	@echo
+	@echo "-----------------------------------------------------------"
+	@echo "This command is intended for maintainers to use;"
+	@echo "it deletes files that may require special tools to rebuild."
+	@echo "-----------------------------------------------------------"
+	@echo
+
+maintainer-clean-generic:
+	-rm -f $(top_builddir)/config.status $(top_srcdir)/configure
+	-rm -f $(top_builddir)/$(PACKAGE)-*.tar.gz
+
+maintainer-clean-hdr:
+	-rm -f $(top_builddir)/config.h
+
+
+distclean: clean
+	-rm -f Doxyfile Makefile sgml/defs.sgml man/libcfg+.man
+
+distclean-generic:
+
+distclean-hdr:
+	-rm -f $(top_builddir)/config.h
+
+# }}} clean
+
+# vim600: fdm=marker fdc=3
+

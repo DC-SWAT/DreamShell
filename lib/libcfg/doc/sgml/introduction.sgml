@@ -1,0 +1,9 @@
+<!-- $Platon: libcfg+/doc/sgml/introduction.sgml,v 1.2 2002/10/07 10:54:40 rajo Exp $ -->
+
+<chapter id="introduction"><title id="introduction.title">Introduction</title>
+
+&introduction.overwiev;
+&introduction.installation;
+		
+</chapter>
+

@@ -1,0 +1,355 @@
+# Copyright (C) 1994, 1995-8, 1999 Free Software Foundation, Inc.
+# This Makefile.in is free software; the Free Software Foundation
+# gives unlimited permission to copy and/or distribute it,
+# with or without modifications, as long as this notice is preserved.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY, to the extent permitted by law; without
+# even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+# PARTICULAR PURPOSE.
+
+# Make rules for libcfg+ library.
+# This file is included with all Makefiles.
+ 
+# $Platon: libcfg+/Rules.make.in,v 1.10 2004/01/05 12:00:43 nepto Exp $
+
+PACKAGE = @PACKAGE@
+VERSION = @VERSION@
+
+CVSTAG  = $(PACKAGE)-$(subst .,_,$(VERSION))
+
+# Default settings {{{
+
+OBJECTS           +=
+DISTFILES         +=
+
+LIBSTATIC          = $(PACKAGE).a
+LIBDYNAMIC         = $(PACKAGE).so
+LIBDYNAMICV        = $(PACKAGE).so.$(VERSION)
+
+install_LIB        = $(LIBSTATIC) $(LIBDYNAMICV)
+SCRIPTS            =
+
+CONFIG_HEADER      = $(top_builddir)/config.h
+
+# Default settings  }}}
+
+# Programs {{{
+
+SHELL   = @SHELL@
+
+#ACLOCAL    = @ACLOCAL@
+#AUTOCONF   = @AUTOCONF@
+#AUTOMAKE   = @AUTOMAKE@
+#AUTOHEADER = @AUTOHEADER@
+ACLOCAL    = aclocal
+AUTOCONF   = autoconf
+AUTOMAKE   = automake
+AUTOHEADER = autoheader
+
+
+INSTALL         = @INSTALL@
+INSTALL_PROGRAM = @INSTALL_PROGRAM@ $(AM_INSTALL_PROGRAM_FLAGS)
+INSTALL_DATA    = @INSTALL_DATA@
+INSTALL_SCRIPT  = @INSTALL_SCRIPT@
+transform       = @program_transform_name@
+mkinstalldirs   = $(SHELL) $(top_srcdir)/mkinstalldirs
+LN_S            = @LN_S@
+MAKEINFO        = @MAKEINFO@
+RANLIB          = @RANLIB@
+STRIP           = @STRIP@
+AWK             = @AWK@
+DOXYGEN         = @DOXYGEN@
+DOCBOOK2HTML    = @DOCBOOK2HTML@
+DOCBOOK2MAN     = @DOCBOOK2MAN@
+DOCBOOK2TXT     = @DOCBOOK2TXT@
+DB_HTML2MAN     = @DB_HTML2MAN@
+DB_GET_ID       = @DB_GET_ID@
+TAR             = tar
+GZIP            = gzip
+GZIP_ENV        = --best
+NROFF           = nroff
+DEPEND          = makedepend 
+
+NORMAL_INSTALL   = :
+PRE_INSTALL      = :
+POST_INSTALL     = :
+NORMAL_UNINSTALL = :
+PRE_UNINSTALL    = :
+POST_UNINSTALL   = :
+
+CC       = @CC@
+CPP      = @CPP@
+CXX      = @CXX@
+CFLAGS   = @CFLAGS@
+CPPFLAGS = @CPPFLAGS@
+LDFLAGS  = @LDFLAGS@
+DEFS     = @DEFS@
+INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
+
+
+COMPILE      = $(CC)  $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
+COMPILE_CXX  = $(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
+CCLD         = $(CC)
+LINK         = $(CCLD) $(CFLAGS) $(LDFLAGS) -o $@
+
+# }}} Programs
+
+# Makefiles {{{
+
+makefiles: \
+	Makefile \
+	$(top_builddir)/Rules.make \
+	$(top_builddir)/Makefile \
+	$(top_builddir)/src/Makefile \
+	$(top_builddir)/doc/Makefile \
+	$(top_builddir)/doc/Doxyfile \
+	$(top_builddir)/doc/sgml/defs.sgml \
+	$(top_builddir)/doc/man/libcfg+.man
+configure-scripts: $(top_builddir)/config.status \
+	$(top_srcdir)/configure \
+	$(top_builddir)/config.h  \
+	$(top_srcdir)/config.h.in
+
+$(top_builddir)/Rules.make: $(top_srcdir)/Rules.make.in  $(top_builddir)/config.status
+	@cd $(top_builddir) \
+	  && CONFIG_FILES=Rules.make CONFIG_HEADERS= \
+	    $(SHELL) ./config.status
+
+$(top_builddir)/Makefile: $(top_srcdir)/Makefile.in $(top_builddir)/Rules.make $(top_builddir)/config.status
+	@cd $(top_builddir) \
+	  && CONFIG_FILES=Makefile CONFIG_HEADERS= \
+	    $(SHELL) ./config.status
+
+$(top_builddir)/%/Makefile: $(top_srcdir)/%/Makefile.in $(top_builddir)/Rules.make $(top_builddir)/config.status
+	@cd $(top_builddir) \
+	  && CONFIG_FILES=`echo "$@" | sed 's%^$(rel_top_builddir)/%%g;'` CONFIG_HEADERS= \
+	    $(SHELL) ./config.status
+
+$(top_builddir)/config.status: $(top_srcdir)/configure.in
+	@cd $(top_builddir) \
+	  && $(SHELL) ./config.status --recheck
+
+$(top_srcdir)/configure: $(top_srcdir)/configure.in
+	@here=`pwd`; \
+	cd $(top_builddir) \
+	  && $(SHELL) ./config.status --recheck \
+	    && cd $$here && cd $(top_srcdir) \
+	    && $(AUTOCONF)
+
+$(top_builddir)/config.h: $(top_srcdir)/config.h.in $(top_builddir)/config.status
+	@cd $(top_builddir) \
+	  && CONFIG_FILES= CONFIG_HEADERS=config.h \
+	    $(SHELL) ./config.status \
+		  && touch config.h
+
+$(top_srcdir)/config.h.in: $(top_srcdir)/configure.in
+	@cd $(top_srcdir) \
+	  && $(AUTOHEADER) \
+	    && touch config.h.in
+
+# Makefiles }}}
+
+.SUFFIXES:
+
+static:		$(LIBSTATIC)
+
+dynamic:	$(LIBDYNAMICV)
+
+$(LIBSTATIC):	$(OBJECTS)
+	$(AR) r $@ $(OBJECTS)
+
+$(LIBDYNAMICV):	$(OBJECTS)
+	$(LD) $(LDFLAGS) -shared -o $@ $(OBJECTS)
+
+%.o: %.c $(CONFIG_HEADER)
+	@echo '$(COMPILE) -c $<'; \
+	$(COMPILE) -Wp,-MD,.deps/$(*F).pp -o $@ -c $<
+	@-cp .deps/$(*F).pp .deps/$(*F).P; \
+	tr ' ' '\012' < .deps/$(*F).pp \
+	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
+	    >> .deps/$(*F).P; \
+	rm .deps/$(*F).pp
+
+%.o: %.cpp $(CONFIG_HEADER)
+	@echo '$(COMPILE_CXX) -c $<'; \
+	$(COMPILE_CXX) -Wp,-MD,.deps/$(*F).pp -o $@ -c $<
+	@-cp .deps/$(*F).pp .deps/$(*F).P; \
+	tr ' ' '\012' < .deps/$(*F).pp \
+	  | sed -e 's/^\\$$//' -e '/^$$/ d' -e '/:$$/ d' -e 's/$$/ :/' \
+	    >> .deps/$(*F).P; \
+	rm .deps/$(*F).pp
+
+info:
+dvi:
+check: all
+
+.PHONY: doc
+documentation:
+	cd $(top_builddir)/doc && $(MAKE)
+
+# Section: TAGS {{{
+
+tags: TAGS
+TAGS:
+	cd $(top_builddir)/src \
+	&& ctags --output=$@ $(HEADERS) $(SOURCES)
+
+# }}}  Section: TAGS
+
+# Section: distribution {{{
+# This target untars the dist file and tries a VPATH configuration.  Then
+# it guarantees that the distribution is self-contained by making another
+# tarfile.
+distcheck:
+	cd $(top_builddir) && $(MAKE) $@-top
+dist-all:
+	cd $(top_builddir) && $(MAKE) $@-top
+dist:
+	cd $(top_builddir) && $(MAKE) $@-top
+
+
+# This target untars the dist file and tries a VPATH configuration.  Then
+# it guarantees that the distribution is self-contained by making another
+# tarfile.
+distcheck-top: dist-top
+	-rm -rf $(distdir)
+	GZIP=$(GZIP_ENV) $(TAR) zxf $(distdir).tar.gz
+	mkdir $(distdir)/=build
+	mkdir $(distdir)/=inst
+	dc_install_base=`cd $(distdir)/=inst && pwd`; \
+	cd $(distdir)/=build \
+	  && ../configure --srcdir=.. --prefix=$$dc_install_base \
+	  && $(MAKE) --warn-undefined-variables \
+	  && $(MAKE) --warn-undefined-variables dvi \
+	  && $(MAKE) --warn-undefined-variables documentation \
+	  && $(MAKE) --warn-undefined-variables check \
+	  && $(MAKE) --warn-undefined-variables install \
+	  && $(MAKE) --warn-undefined-variables installcheck \
+	  && $(MAKE) --warn-undefined-variables dist
+	-rm -rf $(distdir)
+	@banner="$(distdir).tar.gz is ready for distribution"; \
+	dashes=`echo "$$banner" | sed s/./=/g`; \
+	echo "$$dashes"; \
+	echo "$$banner"; \
+	echo "$$dashes"
+	
+dist-all-top: dist-top
+dist-top: distdir distdir-permisions
+	GZIP=$(GZIP_ENV) $(TAR) chozf $(distdir).tar.gz  $(distdir)
+	@#BZIP=$(GZIP_ENV) $(TAR) chojf $(distdir).tar.bz2 $(distdir)
+	-rm -rf $(distdir)
+	-@banner="md5sum is: `md5sum $(distdir).tar.gz |tee md5sum.$(distdir)`"; \
+	dashes=`echo "$$banner" | sed s/./=/g`; \
+	echo "$$dashes"; \
+	echo "$$banner"; \
+	echo "$$dashes"
+
+# These target are needed for 'distdir' -- it creates documentation
+# included in tarball before creating distribution dir.
+$(top_builddir)/doc/html:      documentation
+$(top_builddir)/doc/html/*:    documentation
+$(top_builddir)/doc/doxygen/*: documentation
+distdir: all $(DISTFILES)
+	-rm -rf $(distdir)
+	mkdir $(distdir)
+	-chmod a+rx $(distdir)
+	@here=`cd $(top_builddir) && pwd`; \
+	top_distdir=`cd $(distdir) && pwd`; \
+	distdir=`cd $(distdir) && pwd`; \
+	umask 022; \
+	for file in $(DISTFILES); do \
+	  d=$(srcdir); \
+	  if test -d $$d/$$file; then \
+	    mkdir $(distdir)/$$file; \
+	  else \
+	    test -f $(distdir)/$$file \
+	    || cp $$d/$$file $(distdir)/$$file || :; \
+	  fi; \
+	done
+ 
+# || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
+
+distdir-permisions:
+	@for file in $(DISTFILES); do \
+	  if test -d $(distdir)/$$file; then \
+	    chmod a+rx $(distdir)/$$file; \
+	  else \
+	    test -f $(distdir)/$$file \
+	    && chmod a+r $(distdir)/$$file; \
+	  fi; \
+	  if test -x $(srcdir)/$$file; then \
+	  	chmod a+x $(distdir)/$$file; \
+	  fi; \
+	done
+
+# }}} Section: distribution
+ 
+# PHONY {{{
+.PHONY: mostlyclean-hdr distclean-hdr clean-hdr maintainer-clean-hdr \
+install uninstall installdirs \
+install-exec install-data \
+install-man3 uninstall-man3 \
+install-man  uninstall-man \
+install-lib  uninstall-lib \
+install-includeHEADERS uninstall-includeHEADERS \
+tags mostlyclean-tags \
+distclean-tags clean-tags maintainer-clean-tags distdir info \
+dvi check installcheck \
+mostlyclean-generic distclean-generic clean-generic \
+maintainer-clean-generic clean mostlyclean distclean maintainer-clean \
+tags TAGS
+# }}} PHONY
+
+.PHONY:	sources
+sources:
+	@echo $(SOURCES:%=cfg/%)
+
+.PHONY: lclint
+lclint:
+	lclint ${DEFS} ${INCLUDES} ${SOURCES}
+
+.PHONY: archive
+archive: 
+	@echo "This is $(PACKAGE)-$(VERSION)."
+	@sleep 5
+	@cvs -Q tag -F $(CVSTAG) .
+	@rm -rf /tmp/$(PACKAGE)-$(VERSION) /tmp/$(PACKAGE)
+	@cd /tmp; cvs -Q -d $(CVSROOT) export -r$(CVSTAG) $(PACKAGE) || :
+	@mv /tmp/$(PACKAGE) /tmp/$(PACKAGE)-$(VERSION)
+	@cd /tmp/$(PACKAGE)-$(VERSION); ./autogen.sh ; $(MAKE) depend; $(MAKE) distclean
+	@cd /tmp/$(PACKAGE)-$(VERSION); ./autogen.sh --noconfigure
+	@cd /tmp; tar czSpf $(PACKAGE)-$(VERSION).tar.gz $(PACKAGE)-$(VERSION)
+	@rm -rf /tmp/$(PACKAGE)-$(VERSION)
+	@cp /tmp/$(PACKAGE)-$(VERSION).tar.gz .
+	@rm -f /tmp/$(PACKAGE)-$(VERSION).tar.gz 
+	@echo " "
+	@echo "The final archive is ./$(PACKAGE)-$(VERSION).tar.gz."
+
+# Tell versions [3.59,3.63) of GNU make to not export all variables.
+# Otherwise a system limit (for SysV at least) may be exceeded.
+.NOEXPORT:
+
+# Help {{{
+.PHONY: help
+help:
+	@echo
+	@echo "Common targets:"
+	@echo "---------------"
+	@echo "make [all]          - builds sources, don't builds documentation"
+	@echo "make help           - print this help"
+	@echo "make install        - install all files to destination"
+	@echo "make uninstall      - remove installed files"
+	@echo "make clean          - remove builded files, don't remove documentation"
+	@echo
+	@echo "Targets for maintainers only:"
+	@echo "-----------------------------"
+	@echo "make dist           - create distribution package"
+	@echo "make distcheck      - test package"
+	@echo "make documentation  - build documentation"
+	@echo "make distclean      - remove builded files (also documentation)"
+	@echo
+# }}}
+
+# vim: ft=make
+# vim600: fdm=marker fdc=3

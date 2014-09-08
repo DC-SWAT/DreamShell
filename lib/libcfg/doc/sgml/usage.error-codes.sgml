@@ -1,0 +1,184 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.error-codes.sgml,v 1.12 2003/08/16 14:06:06 nepto Exp $ -->
+
+<!-- MAN:
+	<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+		<!ENTITY % defs			SYSTEM "defs.sgml">
+		%defs;
+	]>
+	<refentry>
+
+	<refmeta>
+		<refentrytitle>cfg_print_error</refentrytitle>
+		<manvolnum>&manvolnum;</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>cfg_print_error</refname>
+		<refname>cfg_fprint_error</refname>
+		<refname>cfg_get_error_str</refname>
+		<refpurpose>&name; error handling</refpurpose>
+	</refnamediv>
+-->
+
+<sect1 id="usage.error-codes">
+<title id="usage.error-codes.title">Error handling</title>
+
+<!-- MAN: <refsect1><title>SYNOPSIS</title> -->
+<para>
+
+The information about the last occurred error is stored within the context in
+the <structname>CFG_CONTEXT</structname> structure. The following functions
+provide a convenient interface for interpreting, querying and printing that
+information.
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+
+<funcprototype>
+	<funcdef>void <function>cfg_print_error</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>void <function>cfg_fprint_error</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>FILE *<parameter>fh</parameter></paramdef>
+</funcprototype>
+
+<funcprototype>
+	<funcdef>char *<function>cfg_get_error_str</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+</funcprototype>
+
+<!--
+<funcprototype>
+	<funcdef>char *<function>cfg_get_static_error_str</function></funcdef>
+	<paramdef>const int <parameter>errorcode</parameter></paramdef>
+</funcprototype>
+-->
+
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+The function <function>cfg_print_error()</function> prints an error message
+describing the last error. To print the message to the specified stream, use
+<function>cfg_fprint_error()</function>, which takes a stream pointer
+<parameter>fh</parameter> as its second argument.
+
+</para>
+<para>
+
+Lastly, <function>cfg_get_error_str()</function>, returns an error message in
+a dynamically allocated string. Be sure to free the memory taken by the string
+when you do not need it anymore.
+
+<!-- DEPRECATED!
+Second function returns pointer to local static buffer with error message.
+It needs error code passed as parameter <parameter>errorcode</parameter> to
+work.
+-->
+
+</para>
+<para>
+
+The following <xref linkend="usage.error-codes.table"
+endterm="usage.error-codes.table.title"> table describes the error constants
+used by the parsing functions. See <xref linkend="usage.parsing"
+endterm="usage.parsing.title"> section for reference.
+
+</para>
+<para>
+
+<table id="usage.error-codes.table" frame=top>
+<title id="usage.error-codes.table.title">Error codes</title>
+<tgroup cols=2>
+<thead>
+<row>
+	<entry>Value</entry>
+	<entry>Description</entry>
+</row>
+</thead>
+<tbody>
+<row>
+	<entry><constant>CFG_OK</constant></entry>
+	<entry>Everything is OK</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_NOARG</constant></entry>
+	<entry>An argument is missing for the option</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_NOTALLOWEDARG</constant></entry>
+	<entry>An argument is not allowed for the option</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_BADOPT</constant></entry>
+	<entry>The option's argument could not be parsed</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_BADQUOTE</constant></entry>
+	<entry>Error in quotations</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_BADNUMBER</constant></entry>
+	<entry>The option could not be converted to an appropriate numeric type</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_OVERFLOW</constant></entry>
+	<entry>A given numeric value was too big or too small</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_MULTI</constant></entry>
+	<entry>Multiple arguments used for an option that takes only one argument</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_NOMEM</constant></entry>
+	<entry>Not enough memory</entry>
+</row>
+<row>
+	<entry>
+		<constant>CFG_ERROR_STOP_STR</constant>,
+		<constant>CFG_ERROR_STOP_STR_FOUND</constant>
+	</entry>
+	<entry>Stop string was found</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_NOEQUAL</constant></entry>
+	<entry>Equal sign expected on the line, but no one was found</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_UNKNOWN</constant></entry>
+	<entry>An unknown option</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_FILE_NOT_FOUND</constant></entry>
+	<entry>File not found</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_SEEK_ERROR</constant></entry>
+	<entry>Seek error (<function>fseek()</function>&nbsp;failure)</entry>
+</row>
+<row>
+	<entry><constant>CFG_ERROR_INTERNAL</constant></entry>
+	<entry>Internal error</entry>
+</row>
+</tbody>
+</tgroup>
+</table>
+
+</para>
+<para>
+
+All of the constants have an alternative, short form, which can be derived by
+replacing <constant>_ERROR_</constant> with <constant>_ERR_</constant> in the
+name of the constant.  So for example you can use
+<constant>CFG_ERR_BADOPT</constant> as a substitution for
+<constant>CFG_ERROR_BADOPT</constant>.
+
+</para>
+</sect1>
+<!-- MAN: </refsect1></refentry> -->
+

@@ -29,6 +29,7 @@ int flash_clear(int block);
 uint8 *flash_read_factory();
 void flash_write_factory(uint8 *data);
 int flash_write_file(const char *filename);
+int flash_read_file(const char *filename);
 
 
 /**

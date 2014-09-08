@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Main" version="0.4.0" icon="../../gui/icons/normal/default_app.png">
+<app name="Main" version="0.4.1" icon="../../gui/icons/normal/default_app.png">
 	<resources>
 		<module src="modules/app_main.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
@@ -15,7 +15,7 @@
 	</resources>
 	<body x="0" y="0" width="100%" height="100%" onload="export:MainApp_Init()">
 		<panel x="0" y="0" width="100%" height="450" background="main-bg" name="applist" />
-		<panel x="0" y="450" width="100%" height="30" name="taskbar" background="taskbar-bg">
+		<panel x="0" y="450" width="100%" height="30" background="taskbar-bg">
 			<input type="button" onclick="export:MainApp_SlideLeft()" normal="left" highlight="left-hover" pressed="left" disabled="left" x="0" y="0" width="71" height="30" />
 			<label name="version" width="498" height="30" x="71" y="0" text="DreamShell" color="#000000" align="center" valign="center" font="arial" />
 			<input type="button" onclick="export:MainApp_SlideRight()" normal="right" highlight="right-hover" pressed="right" disabled="right" x="569" y="0" width="71" height="30" />

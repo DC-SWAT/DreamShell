@@ -1,0 +1,272 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Introduction</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="PREVIOUS"
+TITLE="Preface"
+HREF="preface.html"><LINK
+REL="NEXT"
+TITLE="Installation"
+HREF="introduction.installation.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="CHAPTER"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="preface.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+></TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="introduction.installation.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="CHAPTER"
+><H1
+><A
+NAME="INTRODUCTION"
+></A
+>Chapter 1. Introduction</H1
+><DIV
+CLASS="TOC"
+><DL
+><DT
+><B
+>Table of Contents</B
+></DT
+><DT
+>1.1. <A
+HREF="introduction.html#INTRODUCTION.OVERVIEW"
+>Overview</A
+></DT
+><DT
+>1.2. <A
+HREF="introduction.installation.html"
+>Installation</A
+></DT
+></DL
+></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="INTRODUCTION.OVERVIEW"
+></A
+>1.1. Overview</H1
+><P
+>		
+libcfg+ is a library for parsing command line arguments and/or configuration
+files. Your program can utilize it whenever either kind of parsing is needed.
+C was our language of choice, but a C++ wrapper is currently under development
+and will be probably available soon.&#13;</P
+><DIV
+CLASS="IMPORTANT"
+><P
+></P
+><TABLE
+CLASS="IMPORTANT"
+WIDTH="100%"
+BORDER="0"
+><TR
+><TD
+WIDTH="25"
+ALIGN="CENTER"
+VALIGN="TOP"
+><IMG
+SRC="../images/important.gif"
+HSPACE="5"
+ALT="Important"></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><P
+>&#13;This is one of the first releases of libcfg+. If you find a bug or missing
+feature, please notify us and we will try to address the issue as soon as
+possible. Also, let us know if you find typos or badly written portions of the
+documentation. We are not native English speakers, but we are improving our
+language skills every day!&#13;</P
+></TD
+></TR
+></TABLE
+></DIV
+><P
+>		
+There are two approaches to using libcfg+.
+		
+<P
+></P
+><UL
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>&#13;You can install it as a separate library and dynamically link your application
+against it. If you are planning to distribute your application, you can always
+use the <TT
+CLASS="FILENAME"
+>./configure</TT
+> script included with the application
+to detect whether libcfg+ has been installed on the target system. If not, user
+can be noticed to install this library. 
+
+		</P
+><P
+>					
+We are also working on the possibility of your application to check for the
+installation of libcfg+. If it is determined that libcfg+ does not exist on the
+target system or is not the required version, it will be added to that system
+automatically. Your application can then be properly compiled and linked.
+
+		</P
+><P
+>&#13;We know that this is a little bit sophisticated thing with need of lot of
+testing and improving on various systems and platforms. Detailed examples on
+how to detect, install or reinstall libcfg+ will be included. Please let us
+know of your experience because it will help us streamline the process.
+
+		</P
+></LI
+><LI
+STYLE="list-style-type: opencircle"
+><P
+>&#13;The other method of using libcfg+ is to simply add the library source code to
+your project source tree. In the example, the library source code can be put
+into a subdirectory called <TT
+CLASS="FILENAME"
+>libcfg+/</TT
+>.
+Appropriate files of your application include the main library header file
+<TT
+CLASS="FILENAME"
+>cfg+.h</TT
+>. Then compile the library and
+your sources and link everything together.
+
+		</P
+></LI
+></UL
+></P
+><P
+>&#13;Some of the ideas used in this project were inspired by
+<SPAN
+CLASS="PRODUCTNAME"
+>popt</SPAN
+> (a command line parsing library) and
+<SPAN
+CLASS="PRODUCTNAME"
+>parsecfg</SPAN
+> (a library for parsing configuration
+files). However libcfg+ was written from scratch.&#13;</P
+></DIV
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="preface.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="introduction.installation.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Preface</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+>&nbsp;</TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Installation</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

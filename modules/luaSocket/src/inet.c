@@ -12,7 +12,7 @@
 
 #include "inet.h"
 
-#if 0
+
 /*=========================================================================*\
 * Internal function prototypes.
 \*=========================================================================*/
@@ -28,7 +28,7 @@ static luaL_reg func[] = {
     { "gethostname", inet_global_gethostname},
     { NULL, NULL}
 };
-#endif
+
 
 /*=========================================================================*\
 * Exported functions
@@ -38,15 +38,15 @@ static luaL_reg func[] = {
 \*-------------------------------------------------------------------------*/
 int inet_open(lua_State *L)
 {
-	/*
+	
     lua_pushstring(L, "dns");
     lua_newtable(L);
     luaL_openlib(L, NULL, func, 0);
     lua_settable(L, -3);
-    */
+    
     return 0;
 }
-#if 0
+
 /*=========================================================================*\
 * Global Lua functions
 \*=========================================================================*/
@@ -57,7 +57,7 @@ int inet_open(lua_State *L)
 static int inet_gethost(const char *address, struct hostent **hp) {
     struct in_addr addr;
     if (inet_aton(address, &addr))
-        return socket_gethostbyaddr((char *) &addr, sizeof(addr), hp);
+        return IO_UNKNOWN; //socket_gethostbyaddr((char *) &addr, sizeof(addr), hp);
     else 
         return socket_gethostbyname(address, hp);
 }
@@ -117,8 +117,6 @@ static int inet_global_gethostname(lua_State *L)
     }
 }
 
-#endif
-
 /*=========================================================================*\
 * Lua methods
 \*=========================================================================*/
@@ -163,42 +161,42 @@ int inet_meth_getsockname(lua_State *L, p_socket ps)
 * Passes all resolver information to Lua as a table
 \*-------------------------------------------------------------------------*/
 
-//static void inet_pushresolved(lua_State *L, struct hostent *hp)
-//{
-//    char **alias;
-//    struct in_addr **addr;
-//    int i, resolved;
-//    lua_newtable(L); resolved = lua_gettop(L);
-//    lua_pushstring(L, "name");
-//    lua_pushstring(L, hp->h_name);
-//    lua_settable(L, resolved);
-//    lua_pushstring(L, "ip");
-//    lua_pushstring(L, "alias");
-//    i = 1;
-//    alias = hp->h_aliases;
-//    lua_newtable(L);
-//    if (alias) {
-//        while (*alias) {
-//            lua_pushnumber(L, i);
-//            lua_pushstring(L, *alias);
-//            lua_settable(L, -3);
-//            i++; alias++;
-//        }
-//    }
-//    lua_settable(L, resolved);
-//    i = 1;
-//    lua_newtable(L);
-//    addr = (struct in_addr **) hp->h_addr_list;
-//    if (addr) {
-//        while (*addr) {
-//            lua_pushnumber(L, i);
-//            lua_pushstring(L, inet_ntoa(**addr));
-//            lua_settable(L, -3);
-//            i++; addr++;
-//        }
-//    }
-//    lua_settable(L, resolved);
-//}
+static void inet_pushresolved(lua_State *L, struct hostent *hp)
+{
+    char **alias;
+    struct in_addr **addr;
+    int i, resolved;
+    lua_newtable(L); resolved = lua_gettop(L);
+    lua_pushstring(L, "name");
+    lua_pushstring(L, hp->h_name);
+    lua_settable(L, resolved);
+    lua_pushstring(L, "ip");
+    lua_pushstring(L, "alias");
+    i = 1;
+    alias = hp->h_aliases;
+    lua_newtable(L);
+    if (alias) {
+        while (*alias) {
+            lua_pushnumber(L, i);
+            lua_pushstring(L, *alias);
+            lua_settable(L, -3);
+            i++; alias++;
+        }
+    }
+    lua_settable(L, resolved);
+    i = 1;
+    lua_newtable(L);
+    addr = (struct in_addr **) hp->h_addr_list;
+    if (addr) {
+        while (*addr) {
+            lua_pushnumber(L, i);
+            lua_pushstring(L, inet_ntoa(**addr));
+            lua_settable(L, -3);
+            i++; addr++;
+        }
+    }
+    lua_settable(L, resolved);
+}
 
 /*-------------------------------------------------------------------------*\
 * Tries to create a new inet socket
@@ -218,16 +216,16 @@ const char *inet_tryconnect(p_socket ps, const char *address,
     memset(&remote, 0, sizeof(remote));
     remote.sin_family = AF_INET;
     remote.sin_port = htons(port);
-//	if (strcmp(address, "*")) {
-//        if (!inet_aton(address, &remote.sin_addr)) {
-//            struct hostent *hp = NULL;
-//            struct in_addr **addr;
-//            err = socket_gethostbyname(address, &hp);
-//            if (err != IO_DONE) return socket_hoststrerror(err);
-//            addr = (struct in_addr **) hp->h_addr_list;
-//            memcpy(&remote.sin_addr, *addr, sizeof(struct in_addr));
-//        }
-//    } else remote.sin_family = AF_UNSPEC;
+	if (strcmp(address, "*")) {
+        if (!inet_aton(address, &remote.sin_addr)) {
+            struct hostent *hp = NULL;
+            struct in_addr **addr;
+            err = socket_gethostbyname(address, &hp);
+            if (err != IO_DONE) return socket_hoststrerror(err);
+            addr = (struct in_addr **) hp->h_addr_list;
+            memcpy(&remote.sin_addr, *addr, sizeof(struct in_addr));
+        }
+    } else remote.sin_family = AF_UNSPEC;
     err = socket_connect(ps, (SA *) &remote, sizeof(remote), tm);
     return socket_strerror(err);
 }
@@ -244,14 +242,14 @@ const char *inet_trybind(p_socket ps, const char *address, unsigned short port)
     local.sin_addr.s_addr = htonl(INADDR_ANY);
     local.sin_port = htons(port);
     local.sin_family = AF_INET;
-//    if (strcmp(address, "*") && !inet_aton(address, &local.sin_addr)) {
-//        struct hostent *hp = NULL;
-//        struct in_addr **addr;
-//        err = socket_gethostbyname(address, &hp);
-//        if (err != IO_DONE) return socket_hoststrerror(err);
-//        addr = (struct in_addr **) hp->h_addr_list;
-//        memcpy(&local.sin_addr, *addr, sizeof(struct in_addr));
-//    }
+    if (strcmp(address, "*") && !inet_aton(address, &local.sin_addr)) {
+        struct hostent *hp = NULL;
+        struct in_addr **addr;
+        err = socket_gethostbyname(address, &hp);
+        if (err != IO_DONE) return socket_hoststrerror(err);
+        addr = (struct in_addr **) hp->h_addr_list;
+        memcpy(&local.sin_addr, *addr, sizeof(struct in_addr));
+    }
     err = socket_bind(ps, (SA *) &local, sizeof(local));
     if (err != IO_DONE) socket_destroy(ps);
     return socket_strerror(err); 

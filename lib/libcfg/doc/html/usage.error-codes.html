@@ -1,0 +1,481 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML
+><HEAD
+><TITLE
+>Error handling</TITLE
+><META
+NAME="GENERATOR"
+CONTENT="Modular DocBook HTML Stylesheet Version 1.7"><LINK
+REL="HOME"
+TITLE="libcfg+"
+HREF="index.html"><LINK
+REL="UP"
+TITLE="Usage"
+HREF="usage.html"><LINK
+REL="PREVIOUS"
+TITLE="Parsing"
+HREF="usage.parsing.html"><LINK
+REL="NEXT"
+TITLE="Properties"
+HREF="usage.properties.html"><LINK
+REL="STYLESHEET"
+TYPE="text/css"
+HREF="style.css"><META
+HTTP-EQUIV="Content-Type"
+CONTENT="text/html; charset=iso-8859-2"></HEAD
+><BODY
+CLASS="SECT1"
+BGCOLOR="#FFFFFF"
+TEXT="#000000"
+LINK="#0000FF"
+VLINK="#840084"
+ALINK="#0000FF"
+><DIV
+CLASS="NAVHEADER"
+><TABLE
+SUMMARY="Header navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TH
+COLSPAN="3"
+ALIGN="center"
+>libcfg+: command line and configuration file parsing library</TH
+></TR
+><TR
+><TD
+WIDTH="10%"
+ALIGN="left"
+VALIGN="bottom"
+><A
+HREF="usage.parsing.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="80%"
+ALIGN="center"
+VALIGN="bottom"
+>Chapter 2. Usage</TD
+><TD
+WIDTH="10%"
+ALIGN="right"
+VALIGN="bottom"
+><A
+HREF="usage.properties.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+></TABLE
+><HR
+ALIGN="LEFT"
+WIDTH="100%"></DIV
+><DIV
+CLASS="SECT1"
+><H1
+CLASS="SECT1"
+><A
+NAME="USAGE.ERROR-CODES"
+></A
+>2.5. Error handling</H1
+><P
+>&#13;The information about the last occurred error is stored within the context in
+the <SPAN
+CLASS="STRUCTNAME"
+>CFG_CONTEXT</SPAN
+> structure. The following functions
+provide a convenient interface for interpreting, querying and printing that
+information.
+
+<DIV
+CLASS="FUNCSYNOPSIS"
+><A
+NAME="AEN524"
+></A
+><P
+></P
+><PRE
+CLASS="FUNCSYNOPSISINFO"
+>#include &#60;cfg+.h&#62;</PRE
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>void cfg_print_error</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>void cfg_fprint_error</CODE
+>(const CFG_CONTEXT con, FILE *fh);</CODE
+></P
+><P
+><CODE
+><CODE
+CLASS="FUNCDEF"
+>char *cfg_get_error_str</CODE
+>(const CFG_CONTEXT con);</CODE
+></P
+><P
+></P
+></DIV
+>&#13;</P
+><P
+>&#13;The function <TT
+CLASS="FUNCTION"
+>cfg_print_error()</TT
+> prints an error message
+describing the last error. To print the message to the specified stream, use
+<TT
+CLASS="FUNCTION"
+>cfg_fprint_error()</TT
+>, which takes a stream pointer
+<TT
+CLASS="PARAMETER"
+><I
+>fh</I
+></TT
+> as its second argument.&#13;</P
+><P
+>&#13;Lastly, <TT
+CLASS="FUNCTION"
+>cfg_get_error_str()</TT
+>, returns an error message in
+a dynamically allocated string. Be sure to free the memory taken by the string
+when you do not need it anymore.
+&#13;</P
+><P
+>&#13;The following <A
+HREF="usage.error-codes.html#USAGE.ERROR-CODES.TABLE"
+><I
+>Error codes</I
+></A
+> table describes the error constants
+used by the parsing functions. See <A
+HREF="usage.parsing.html"
+><I
+>Parsing</I
+></A
+> section for reference.&#13;</P
+><P
+>&#13;<DIV
+CLASS="TABLE"
+><A
+NAME="USAGE.ERROR-CODES.TABLE"
+></A
+><P
+><B
+>Table 2-3. Error codes</B
+></P
+><TABLE
+BORDER="1"
+CLASS="CALSTABLE"
+><THEAD
+><TR
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Value</TH
+><TH
+ALIGN="LEFT"
+VALIGN="TOP"
+>Description</TH
+></TR
+></THEAD
+><TBODY
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_OK</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Everything is OK</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_NOARG</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>An argument is missing for the option</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_NOTALLOWEDARG</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>An argument is not allowed for the option</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_BADOPT</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The option's argument could not be parsed</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_BADQUOTE</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Error in quotations</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_BADNUMBER</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>The option could not be converted to an appropriate numeric type</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_OVERFLOW</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>A given numeric value was too big or too small</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_MULTI</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Multiple arguments used for an option that takes only one argument</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_NOMEM</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Not enough memory</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>		<TT
+CLASS="CONSTANT"
+>CFG_ERROR_STOP_STR</TT
+>,
+		<TT
+CLASS="CONSTANT"
+>CFG_ERROR_STOP_STR_FOUND</TT
+>
+	</TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Stop string was found</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_NOEQUAL</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Equal sign expected on the line, but no one was found</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_UNKNOWN</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>An unknown option</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_FILE_NOT_FOUND</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>File not found</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_SEEK_ERROR</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Seek error (<TT
+CLASS="FUNCTION"
+>fseek()</TT
+>&nbsp;failure)</TD
+></TR
+><TR
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+><TT
+CLASS="CONSTANT"
+>CFG_ERROR_INTERNAL</TT
+></TD
+><TD
+ALIGN="LEFT"
+VALIGN="TOP"
+>Internal error</TD
+></TR
+></TBODY
+></TABLE
+></DIV
+>&#13;</P
+><P
+>&#13;All of the constants have an alternative, short form, which can be derived by
+replacing <TT
+CLASS="CONSTANT"
+>_ERROR_</TT
+> with <TT
+CLASS="CONSTANT"
+>_ERR_</TT
+> in the
+name of the constant.  So for example you can use
+<TT
+CLASS="CONSTANT"
+>CFG_ERR_BADOPT</TT
+> as a substitution for
+<TT
+CLASS="CONSTANT"
+>CFG_ERROR_BADOPT</TT
+>.&#13;</P
+></DIV
+><DIV
+CLASS="NAVFOOTER"
+><HR
+ALIGN="LEFT"
+WIDTH="100%"><TABLE
+SUMMARY="Footer navigation table"
+WIDTH="100%"
+BORDER="0"
+CELLPADDING="0"
+CELLSPACING="0"
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+><A
+HREF="usage.parsing.html"
+ACCESSKEY="P"
+>Prev</A
+></TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="index.html"
+ACCESSKEY="H"
+>Home</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+><A
+HREF="usage.properties.html"
+ACCESSKEY="N"
+>Next</A
+></TD
+></TR
+><TR
+><TD
+WIDTH="33%"
+ALIGN="left"
+VALIGN="top"
+>Parsing</TD
+><TD
+WIDTH="34%"
+ALIGN="center"
+VALIGN="top"
+><A
+HREF="usage.html"
+ACCESSKEY="U"
+>Up</A
+></TD
+><TD
+WIDTH="33%"
+ALIGN="right"
+VALIGN="top"
+>Properties</TD
+></TR
+></TABLE
+></DIV
+></BODY
+></HTML
+>

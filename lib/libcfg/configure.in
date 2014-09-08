@@ -1,0 +1,83 @@
+dnl $Platon: libcfg+/configure.in,v 1.68 2004/02/17 16:10:40 nepto Exp $
+
+AC_INIT(src/cfg+.h)
+
+PACKAGE="libcfg+"
+VERSION="0.6.2"
+DATE="2003-02-17"
+DATE_HUMAN="17th February 2004"
+MANVOLNUM=3
+
+# add absolute path $srcdir to $PATH, needed by
+# db-get-id & db-html2man (documentation building)
+tmp_path=`cd $srcdir && pwd`
+PATH="$PATH:$tmp_path/contrib/docbook"
+
+# AC_CONFIG_HEADER {{{
+AC_CONFIG_HEADER(config.h)
+# }}} AC_CONFIG_HEADER
+
+# Checks for programs. {{{
+CFLAGS=${CFLAGS-"-O2 -Wall -Wno-shadow -pedantic"}
+AC_PROG_CC
+AC_PROG_AWK
+
+AC_PROG_LN_S
+LN_S="$LN_S -f" # adds '-f' parameter to 'ln'
+AC_PROG_MAKE_SET
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+
+# AC_CHECK_PROG STRIP {{{
+# Don't strip if we don't have it
+AC_CHECK_PROG(STRIP, strip, strip, :)
+# }}} AC_CHECK_PROG STRIP
+
+AC_CHECK_PROG(DOXYGEN, doxygen, doxygen, :)
+AC_CHECK_PROG(MAKEINFO, makeinfo, makeinfo, :)
+AC_CHECK_PROG(DOCBOOK2HTML, docbook2html, docbook2html, :)
+AC_CHECK_PROG(DOCBOOK2MAN, docbook2man, docbook2man, :)
+AC_CHECK_PROG(DOCBOOK2TXT, docbook2txt, docbook2txt, :)
+AC_CHECK_PROG(DB_HTML2MAN, db-html2man, `which db-html2man`, :)
+AC_CHECK_PROG(DB_GET_ID,   db-get-id,   `which db-get-id`, :)
+
+# }}} Checks for programs.
+
+# AC_CHECK_HEADERS {{{
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS(ctype.h errno.h float.h limits.h math.h stdarg.h stdio.h stdlib.h string.h strings.h unistd.h)
+# }}} AC_CHECK_HEADERS
+
+# AC_CHECK_FUNCS {{{
+dnl AC_CHECK_FUNCS(strerror)
+# }}} AC_CHECK_FUNCS
+
+# this fixes problem, with relative path prefix:
+#    ./configure --prefix=../install
+if test "X$prefix" != "XNONE"; then
+	if test ! -d "$prefix"; then
+		mkdir -p "$prefix";
+		chmod 755 "$prefix";
+	fi
+	prefix="`cd $prefix && pwd`"
+fi
+
+AC_SUBST(PACKAGE)
+AC_SUBST(VERSION)
+AC_SUBST(DATE)
+AC_SUBST(DATE_HUMAN)
+AC_SUBST(MANVOLNUM)
+
+# {{{ AC_OUTPUT
+AC_OUTPUT(Rules.make \
+		  Makefile \
+		  src/Makefile \
+		  doc/Makefile \
+		  doc/Doxyfile \
+		  doc/sgml/defs.sgml \
+		  doc/man/libcfg+.man)
+# }}} AC_OUTPUT
+
+# vim600: fdm=marker fdc=3
+

@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Speedtest" version="0.1a" icon="images/icon.png">
+<app name="Speedtest" version="0.2" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_speedtest.klf" />
 		<font src="fonts/dinnext.ttf" type="ttf" size="24" name="dinnext" />
 		<surface width="640" height="480" name="back">
-			<blit x="0" y="0" width="640" height="480" surface="images/background.jpg" />
+			<blit x="0" y="0" width="640" height="480" surface="../../gui/back/nautilus.jpg" />
 		</surface>
 		<image src="images/hdd.png" name="hdd" />
 		<image src="images/hdd_high.png" name="hdd_h" />
@@ -22,67 +22,51 @@
 		<image src="../../gui/icons/highlight/button_cancel.png" name="iExitHigh" />
 	</resources>
 	<body x="0" y="0" width="640" height="480" background="back" onload="export:Speedtest_Init()">
-		
 		<panel x="0" y="60" width="640" height="128">
-			
 			<input type="button" 
-						normal="sd" 
-						highlight="sd_h" 
-						pressed="sd" 
-						disabled="sd_d" 
-						onclick="export:Speedtest_Run()" 
-						x="26" y="0" width="128" height="128" name="/sd/" >
-			</input>
-			
+					normal="sd" 
+					highlight="sd_h" 
+					pressed="sd" 
+					disabled="sd_d" 
+					onclick="export:Speedtest_Run()" 
+					x="26" y="0" width="128" height="128" name="/sd" />
 			<input type="button" 
-						normal="hdd" 
-						highlight="hdd_h" 
-						pressed="hdd" 
-						disabled="hdd_d" 
-						onclick="export:Speedtest_Run()" 
-						x="179" y="0" width="128" height="128" name="/ide/" >
-			</input>
-			
+					normal="hdd" 
+					highlight="hdd_h" 
+					pressed="hdd" 
+					disabled="hdd_d" 
+					onclick="export:Speedtest_Run()" 
+					x="179" y="0" width="128" height="128" name="/ide" />
 			<input type="button" 
-						normal="pc" 
-						highlight="pc_h" 
-						pressed="pc" 
-						disabled="pc_d" 
-						onclick="export:Speedtest_Run()" 
-						x="332" y="0" width="128" height="128" name="/pc/" >
-			</input>
-			
+					normal="pc" 
+					highlight="pc_h" 
+					pressed="pc" 
+					disabled="pc_d" 
+					onclick="export:Speedtest_Run()" 
+					x="332" y="0" width="128" height="128" name="/pc" />
 			<input type="button" 
-						normal="cd" 
-						highlight="cd_h" 
-						pressed="cd" 
-						disabled="cd_d" 
-						onclick="export:Speedtest_Run()" 
-						x="485" y="0" width="128" height="128" name="/cd/" >
-			</input>
-			
+					normal="cd" 
+					highlight="cd_h" 
+					pressed="cd" 
+					disabled="cd_d" 
+					onclick="export:Speedtest_Run()" 
+					x="485" y="0" width="128" height="128" name="/cd" />
 		</panel>
-		
-		
 		<panel x="0" y="250" width="640" height="50">
-			<label width="640" height="40" x="0" y="0" font="dinnext" color="#1ce346" text=" " name="speedw_text" />
+			<label width="640" height="40" x="0" y="0" font="dinnext" color="#1ce346" name="speedw_text" />
 		</panel>
-		
 		<panel x="0" y="300" width="640" height="50">
-			<label width="640" height="40" x="0" y="0" font="dinnext" color="#1ce346" text=" " name="speedr_text" />
+			<label width="640" height="40" x="0" y="0" font="dinnext" color="#1ce346" name="speedr_text" />
 		</panel>
-		
 		<panel x="0" y="360" width="640" height="50">
-			<label width="640" height="40" x="0" y="0" font="dinnext" color="#ff0000" text="  " name="status_text" />
+			<label width="640" height="40" x="0" y="0" font="dinnext" color="#1ce346" text="Select a device" name="status_text" />
 		</panel>
-		
 		<input type="button" 
-					normal="iExitNorm" 
-					highlight="iExitHigh" 
-					pressed="iExitNorm" 
-					disabled="iExitNorm"  
-					onclick="console:app -o -n Main"
-					x="580" y="420" width="48" height="48" >
-		</input>
+				normal="iExitNorm" 
+				highlight="iExitHigh" 
+				pressed="iExitNorm" 
+				disabled="iExitNorm"  
+				onclick="console:app -o -n Main"
+				x="580" y="420" width="48" height="48" />
 	</body>
 </app>

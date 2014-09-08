@@ -1,0 +1,178 @@
+<!-- $Platon: libcfg+/doc/sgml/usage.context-flags.sgml,v 1.15 2003/11/28 17:35:36 nepto Exp $ -->
+
+<!-- MAN:
+	<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook V3.1//EN" [
+		<!ENTITY % defs			SYSTEM "defs.sgml">
+		%defs;
+	]>
+	<refentry>
+
+	<refmeta>
+		<refentrytitle>cfg_set_context_flag</refentrytitle>
+		<manvolnum>&manvolnum;</manvolnum>
+	</refmeta>
+
+	<refnamediv>
+		<refname>cfg_set_context_flag</refname>
+		<refname>cfg_clear_context_flag</refname>
+		<refname>cfg_get_context_flag</refname>
+		<refname>cfg_set_context_flags</refname>
+		<refname>cfg_get_context_flags</refname>
+		<refpurpose>
+			&name; context flags manipulation functions
+		</refpurpose>
+	</refnamediv>
+-->
+
+<sect1 id="usage.context-flags">
+<title id="usage.context-flags.title">Context flags</title>
+
+<!-- MAN: <refsect1><title>SYNOPSIS</title> -->
+<para>
+
+The following functions can be used to set various context flags:
+
+</para>
+<para>
+
+<funcsynopsis>
+<funcsynopsisinfo><![CDATA[#include <cfg+.h>]]></funcsynopsisinfo>
+
+<funcprototype>
+	<funcdef>void <function>cfg_set_context_flag</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>int <parameter>flag</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>void <function>cfg_clear_context_flag</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>int <parameter>flag</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_get_context_flag</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>int <parameter>flag</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>void <function>cfg_set_context_flags</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>int <parameter>flags</parameter></paramdef>
+</funcprototype>
+<funcprototype>
+	<funcdef>int <function>cfg_get_context_flags</function></funcdef>
+	<paramdef>const CFG_CONTEXT <parameter>con</parameter></paramdef>
+	<paramdef>int <parameter>flags</parameter></paramdef>
+</funcprototype>
+
+</funcsynopsis>
+
+</para>
+<!-- MAN: </refsect1><refsect1><title>DESCRIPTION</title> -->
+<para>
+
+You can set a context flag with <function>cfg_set_context_flag()</function>.
+You can clear a flag with <function>cfg_clear_context_flag()</function>. To see
+whether a flag is set, use <function>cfg_get_context_flag()</function>. It has
+a macro alias <function>cfg_is_context_flag()</function>, which is identical
+in every way.
+
+</para>
+<para>
+
+The functions <function>cfg_set_context_flags()</function> and
+<function>cfg_get_context_flags()</function> can set and retrieve the value of
+all flags in one call. 
+
+</para>
+<para>
+
+A list of all settable context flags is provided in the following table.
+
+</para>
+<para>
+
+<variablelist>
+<title id="usage.context-flags.table.title">Context flags</title>
+
+<varlistentry><term><constant>CFG_IGNORE_MULTI</constant></term>
+<listitem>
+	<para>
+		Ignore multiple arguments for a single option. The first argument will
+		be used to store the option value. The others are skipped.
+	</para>
+	<para>
+		By default, multiple arguments for an option that has not allowed
+		them, cause the <constant>CFG_ERROR_MULTI</constant> error.
+	</para>
+</listitem></varlistentry>
+
+<varlistentry><term><constant>CFG_IGNORE_UNKNOWN</constant></term>
+<listitem>
+	<para>Ignore all unknown options.</para>
+	<para>
+		The default behaviour is to produce the
+		<constant>CFG_ERROR_UNKNOWN</constant> error when an unknown option is
+		encountered.
+	</para>
+</listitem></varlistentry>
+
+<varlistentry><term><constant>CFG_SKIP_FIRST</constant></term>
+<listitem>
+	<para>
+		Setting this flag will cause the first argument on the command line to
+		be skipped. This flag affects only command line contexts.
+	</para>
+	<para>The default behaviour is to parse all command line arguments.</para>
+</listitem></varlistentry>
+
+<varlistentry><term><constant>CFG_ADVANCED_LEFTOVERS</constant></term>
+<listitem>
+	<para>
+		Advanced leftover arguments. Setting this flag will drop the
+		requirement of the leftover arguments to conform to the
+		<acronym>POSIX</acronym> standard.
+	</para>
+	<para>
+		The default behaviour is to require the leftover arguments to conform
+		to <acronym>POSIX</acronym>. According to <acronym>POSIX</acronym>,
+		all option arguments must precede any non-option (leftover) arguments.
+		Once a non-option argument is found, all remaining arguments are also
+		interpreted as non-option.
+	</para>
+</listitem></varlistentry>
+
+<!-- CFG_STRICT_LEFTOVERS is not used in source codes
+
+<varlistentry><term><constant>CFG_STRICT_LEFTOVERS</constant></term>
+<listitem>
+	<para>Strict initialization of leftover arguments in a file.</para>
+	<para>
+		By default, leftover arguments in a file are initialized in the normal
+		way (as&nbsp;they&nbsp;are).
+	</para>
+</listitem></varlistentry>
+-->
+
+<varlistentry><term><constant>CFG_FILE_LINE_POS_USAGE</constant></term>
+<listitem>
+	<para>
+		Setting this flag will cause the parsing of configuration file to
+		become line- instead of byte-oriented. This will also change the
+		meaning of the values stored in <parameter>begin_pos</parameter> and
+		<parameter>size</parameter>.
+	</para>
+	<para>By default, parsing is byte-oriented.</para>
+</listitem></varlistentry>
+
+</variablelist>
+</para>
+
+<para>
+
+You can use the <function>cfg_clear_context_flag()</function> function to
+restore the value of a flag to its default value.
+
+</para>
+</sect1>
+<!-- MAN: </refsect1></refentry> -->
+

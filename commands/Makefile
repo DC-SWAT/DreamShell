@@ -4,7 +4,7 @@
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = bin2iso dreameye netstat scramble vmode mke2fs mkfatfs
+_SUBDIRS = bin2iso dreameye flashrom hack netstat ping scramble untgz vmu vmode mke2fs mkfatfs
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
@@ -17,7 +17,8 @@ $(patsubst %, _clean_dir_%, $(_SUBDIRS)):
 	$(MAKE) -C $(patsubst _clean_dir_%, %, $@) clean
 
 
-install: $(patsubst %, _clean_dir_%, $(_SUBDIRS))
+install: $(patsubst %, _install_dir_%, $(_SUBDIRS))
 
-$(patsubst %, _clean_dir_%, $(_SUBDIRS)):
-	$(MAKE) -C $(patsubst _clean_dir_%, %, $@) install
+$(patsubst %, _install_dir_%, $(_SUBDIRS)):
+	$(MAKE) -C $(patsubst _install_dir_%, %, $@) install
+

@@ -171,9 +171,9 @@ int VirtKeyboardInit() {
 	
 	memset(&vkb, 0, sizeof(vkb));
 	
-	if(VirtKeyboardLoading(0) < 0) {
-		return -1;
-	}
+//	if(VirtKeyboardLoading(0) < 0) {
+//		return -1;
+//	}
 
 	vkb.col = 1;
 	vkb.row = 1;
@@ -225,10 +225,23 @@ void VirtKeyboardShutdown() {
 
 
 void VirtKeyboardShow() {
+	
+    if(vkb.surface[0].s == NULL) {
+
+        LockVideo();
+
+        if(VirtKeyboardLoading(0) < 0) {
+            UnlockVideo();
+            return;
+        }
+
+        UnlockVideo();
+    }
+	
     vkb.visible = 1;
     vkb.redraw = 1;
-    SetEventState(vkb.video, EVENT_STATE_ACTIVE);
     SDL_DC_EmulateMouse(SDL_FALSE);
+    SetEventState(vkb.video, EVENT_STATE_ACTIVE);
 }
 
 
@@ -365,6 +378,7 @@ static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
 		//if(param == NULL) {
 			VirtKeyboardReDraw();
 			SDL_DC_EmulateMouse(SDL_FALSE); // Console can switch on this feature.
+			
 		//} else {
 			/*
 			VideoEventUpdate_t *area = (VideoEventUpdate_t *)param;

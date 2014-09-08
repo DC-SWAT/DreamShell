@@ -4,10 +4,13 @@
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = vkb gumbo sqlite3 aicaos zip bzip2 minilzo \
-		luaDS luaKOS luaSDL luaGUI luaMXML luaSTD luaSQL luaTask \
-		SDL_net httpd telnetd mongoose \
-		adx s3m mp3 ogg xvid ffmpeg
+_SUBDIRS = bzip2 ffmpeg isofs isoldr ppp \
+		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
+		mp3 ogg SDL_net sqlite3 zip luaSocket luaTask \
+		http xvid adx s3m tolua tolua++ vkb opkg ini aicaos \
+		angelscript minilzo http httpd telnetd mongoose \
+		gumbo bflash OpenGL
+
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

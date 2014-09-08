@@ -1,9 +1,9 @@
 /*---------------------------------------------------------------------------/
-/  FatFs - FAT file system module configuration file  R0.10a (C)ChaN, 2014
+/  FatFs - FAT file system module configuration file  R0.10b (C)ChaN, 2014
 /---------------------------------------------------------------------------*/
 
 #ifndef _FFCONF
-#define _FFCONF 29000	/* Revision ID */
+#define _FFCONF 8051	/* Revision ID */
 
 
 /*---------------------------------------------------------------------------/
@@ -61,7 +61,7 @@
 /* The _CODE_PAGE specifies the OEM code page to be used on the target system.
 /  Incorrect setting of the code page can cause a file open failure.
 /
-/   932  - Japanese Shift-JIS (DBCS, OEM, Windows)
+/   932  - Japanese Shift_JIS (DBCS, OEM, Windows)
 /   936  - Simplified Chinese GBK (DBCS, OEM, Windows)
 /   949  - Korean (DBCS, OEM, Windows)
 /   950  - Traditional Chinese Big5 (DBCS, OEM, Windows)
@@ -86,14 +86,14 @@
 /   857  - Turkish (OEM)
 /   862  - Hebrew (OEM)
 /   874  - Thai (OEM, Windows)
-/   1    - ASCII (Valid for only non-LFN cfg.) */
+/   1    - ASCII (Valid for only non-LFN configuration) */
 
 
 #define	_USE_LFN	3		/* 0 to 3 */
 #define	_MAX_LFN	255		/* Maximum LFN length to handle (12 to 255) */
 /* The _USE_LFN option switches the LFN feature.
 /
-/   0: Disable LFN feature. _MAX_LFN and _LFN_UNICODE have no effect.
+/   0: Disable LFN feature. _MAX_LFN has no effect.
 /   1: Enable LFN with static working buffer on the BSS. Always NOT thread-safe.
 /   2: Enable LFN with dynamic working buffer on the STACK.
 /   3: Enable LFN with dynamic working buffer on the HEAP.
@@ -109,13 +109,14 @@
 #define	_LFN_UNICODE	0	/* 0:ANSI/OEM or 1:Unicode */
 /* To switch the character encoding on the FatFs API (TCHAR) to Unicode, enable LFN
 /  feature and set _LFN_UNICODE to 1. This option affects behavior of string I/O
-/  functions. */
+/  functions. This option must be 0 when LFN feature is not enabled. */
 
 
 #define _STRF_ENCODE	3	/* 0:ANSI/OEM, 1:UTF-16LE, 2:UTF-16BE, 3:UTF-8 */
 /* When Unicode API is enabled by _LFN_UNICODE option, this option selects the character
 /  encoding on the file to be read/written via string I/O functions, f_gets(), f_putc(),
-/  f_puts and f_printf(). This option has no effect when Unicode API is not enabled. */
+/  f_puts and f_printf(). This option has no effect when _LFN_UNICODE == 0. Note that
+/  FatFs supports only BMP. */
 
 
 #define _FS_RPATH		2	/* 0 to 2 */
@@ -138,10 +139,10 @@
 
 #define _STR_VOLUME_ID	0	/* 0:Use only 0-9 for drive ID, 1:Use strings for drive ID */
 #define _VOLUME_STRS	"SD","SD1","SD2","SD3","IDE","IDE1","IDE2","IDE3"
-/* When _STR_VOLUME_ID is set to 1, also pre-defined string can be used as drive number
-/  in the path name. _VOLUME_STRS defines the drive ID strings for each logical drives.
-/  Number of items must be equal to _VOLUMES. Valid characters for the drive ID strings
-/  are: 0-9 and A-Z. */
+/* When _STR_VOLUME_ID is set to 1, also pre-defined strings can be used as drive
+/  number in the path name. _VOLUME_STRS defines the drive ID strings for each logical
+/  drives. Number of items must be equal to _VOLUMES. Valid characters for the drive ID
+/  strings are: 0-9 and A-Z. */
 
 
 #define	_MULTI_PARTITION	1	/* 0:Single partition, 1:Enable multiple partition */
@@ -153,10 +154,10 @@
 
 #define	_MIN_SS		512
 #define	_MAX_SS		512
-/* These options configure the sector size to be supported. (512, 1024, 2048 or 4096)
-/  Always set both 512 for most systems, all memory card and hard disk. But a larger
+/* These options configure the range of sector size to be supported. (512, 1024, 2048 or
+/  4096) Always set both 512 for most systems, all memory card and harddisk. But a larger
 /  value may be required for on-board flash memory and some type of optical media.
-/  When _MIN_SS != _MAX_SS, FatFs is configured to multiple sector size and
+/  When _MAX_SS is larger than _MIN_SS, FatFs is configured to variable sector size and
 /  GET_SECTOR_SIZE command must be implemented to the disk_ioctl() function. */
 
 
@@ -166,9 +167,9 @@
 
 
 #define _FS_NOFSINFO	0	/* 0 to 3 */
-/* If you need to know correct free space on the FAT32 volume, set bit 0 of this
-/  option and f_getfree() function at first time after volume mount will force
-/  a full FAT scan. Bit 1 controls the last allocated cluster number as bit 0.
+/* If you need to know correct free space on the FAT32 volume, set bit 0 of this option
+/  and f_getfree() function at first time after volume mount will force a full FAT scan.
+/  Bit 1 controls the last allocated cluster number as bit 0.
 /
 /  bit0=0: Use free cluster count in the FSINFO if available.
 /  bit0=1: Do not trust free cluster count in the FSINFO.
@@ -182,34 +183,16 @@
 / System Configurations
 /---------------------------------------------------------------------------*/
 
-#define _WORD_ACCESS	0	/* 0 or 1 */
-/* The _WORD_ACCESS option is an only platform dependent option. It defines
-/  which access method is used to the word data on the FAT volume.
-/
-/   0: Byte-by-byte access. Always compatible with all platforms.
-/   1: Word access. Do not choose this unless under both the following conditions.
-/
-/  * Address misaligned memory access is always allowed for all instructions.
-/  * Byte order on the memory is little-endian.
-/
-/  If it is the case, _WORD_ACCESS can also be set to 1 to improve performance
-/  and reduce code size.
-*/
-
-
 #define	_FS_LOCK	0	/* 0:Disable or >=1:Enable */
-/* To enable file lock control feature, set _FS_LOCK to 1 or greater.
-/  The value defines how many files/sub-directories can be opened simultaneously.
-/  This feature consumes _FS_LOCK * 12 bytes of bss area. */
+/* To enable file lock control feature, set _FS_LOCK to non-zero value.
+/  The value defines how many files/sub-directories can be opened simultaneously
+/  with file lock control. This feature uses bss _FS_LOCK * 12 bytes. */
 
 #include <kos.h>
-#define _FS_REENTRANT	0		/* 0:Disable or 1:Enable */
-#define _FS_TIMEOUT		1000	/* Timeout period in unit of time ticks */
-#define	_SYNC_t			mutex_t*	/* O/S dependent sync object type. e.g. HANDLE, OS_EVENT*, ID and etc.. */
-
-/* A header file that defines sync object types on the O/S, such as windows.h,
-/  ucos_ii.h and semphr.h, should be included here when enable this option.
-/  The _FS_REENTRANT option switches the re-entrancy (thread safe) of the FatFs module.
+#define _FS_REENTRANT		0		/* 0:Disable or 1:Enable */
+#define _FS_TIMEOUT		1000	/* Timeout period in unit of time tick */
+#define	_SYNC_t		mutex_t*	/* O/S dependent sync object type. e.g. HANDLE, OS_EVENT*, ID, SemaphoreHandle_t and etc.. */
+/* The _FS_REENTRANT option switches the re-entrancy (thread safe) of the FatFs module.
 /
 /   0: Disable re-entrancy. _FS_TIMEOUT and _SYNC_t have no effect.
 /   1: Enable re-entrancy. Also user provided synchronization handlers,
@@ -218,4 +201,28 @@
 */
 
 
-#endif /* _FFCONFIG */
+#define _WORD_ACCESS	0	/* 0 or 1 */
+/* The _WORD_ACCESS option is an only platform dependent option. It defines
+/  which access method is used to the word data on the FAT volume.
+/
+/   0: Byte-by-byte access. Always compatible with all platforms.
+/   1: Word access. Do not choose this unless under both the following conditions.
+/
+/  * Address misaligned memory access is always allowed for ALL instructions.
+/  * Byte order on the memory is little-endian.
+/
+/  If it is the case, _WORD_ACCESS can also be set to 1 to improve performance and
+/  reduce code size. Following table shows an example of some processor types.
+/
+/   ARM7TDMI    0           ColdFire    0           V850E       0
+/   Cortex-M3   0           Z80         0/1         V850ES      0/1
+/   Cortex-M0   0           RX600(LE)   0/1         TLCS-870    0/1
+/   AVR         0/1         RX600(BE)   0           TLCS-900    0/1
+/   AVR32       0           RL78        0           R32C        0
+/   PIC18       0/1         SH-2        0           M16C        0/1
+/   PIC24       0           H8S         0           MSP430      0
+/   PIC32       0           H8/300H     0           x86         0/1
+*/
+
+
+#endif /* _FFCONF */

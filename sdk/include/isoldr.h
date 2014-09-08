@@ -28,11 +28,8 @@
 
 /**
  * It's a default loader addresses
- *
- * Also some known usable addresses:
- * 0x8cfd0000, 0x8cfe0000, 0x8cff0000, 0x8cff4800
  * 
- * 0x8c004000 - Can't be used with dcl loader and with not direct boot
+ * 0x8c004000 - Can't be used with dcl loader
  *
  * You can find more suitable by own experience.
  */
@@ -65,33 +62,9 @@
  */
 typedef enum isoldr_boot_mode {
 	BOOT_MODE_DIRECT = 0,
-	BOOT_MODE_IPBIN = 1,
-	BOOT_MODE_SYSCALL
+	BOOT_MODE_IPBIN = 1,  /* Bootstrap 1 */
+	BOOT_MODE_IPBIN_TRUNC /* Bootstrap 2 */
 } isoldr_boot_mode_t;
-
-
-/**
- * Boot method
- */
-typedef enum isoldr_boot_method {
-	BOOT_METHOD_04X = 0,
-	BOOT_METHOD_03X = 1
-} isoldr_boot_method_t;
-
-
-/**
- * Syscall argument for BOOT_MODE_SYSCALL
- */
-typedef enum isoldr_boot_sc_arg {
-	BOOT_SYSCALL_BIOS_CFG_LOAD_EXEC = -3,
-	BOOT_SYSCALL_SPECIAL_RESET = -2,
-	BOOT_SYSCALL_SWIRL_RESET = -1,
-	BOOT_SYSCALL_MENU = 0,
-	BOOT_SYSCALL_MENU2 = 1,
-	BOOT_SYSCALL_CHECK_DISK = 2,
-	BOOT_SYSCALL_LOAD_IP = 3,
-	BOOT_SYSCALL_SYS_RESET = 4
-} isoldr_boot_sc_arg_t;
 
 
 /**
@@ -121,7 +94,7 @@ typedef struct isoldr_exec_info {
 
 typedef struct isoldr_info {
 
-	char magic[12];			           /* isoldr magic code - 'DSISOLDR040' */
+	char magic[12];			           /* isoldr magic code - 'DSISOLDR050' */
 	
 	int  image_type;                    /* See isofs_image_type_t */
 	char image_file[256];               /* Full path to image */
@@ -132,20 +105,20 @@ typedef struct isoldr_info {
 	int  fs_part;                       /* Partition on device (0-3), only for SD and IDE devices */
 	
 	CISO_header_t ciso;                 /* CISO header for CSO/ZSO images */
-	CDROM_TOC toc;                      /* Table of content, only for CDI and GDI images */
+	CDROM_TOC toc;                      /* Table of content */
 	uint32 track_offset;                /* Data track offset, for the CDI images only */
 	uint32 track_lba[2];                /* Data track LBA, second value for the multitrack GDI image */
 	uint32 sector_size;                 /* Data track sector size */
 	
 	int boot_mode;                      /* See isoldr_boot_mode_t */
-	int boot_method;                    /* See isoldr_boot_method_t */
-	int syscall_arg;                    /* See isoldr_boot_sc_arg_t */
-	int video_mode;                     /* KOS defined video mode */
+	int emu_cdda;                       /* Emulate CDDA audio */
 	int emu_async;                      /* Emulate async data transfer */
-	int use_dma;                        /* Use DMA data transfer in GDROM/G1ATA loaders */
+	int use_dma;                        /* Use DMA data transfer for G1-bus devices (GD drive and IDE) */
 	
 	isoldr_exec_info_t exec;            /* Executable info */
 	uint32 gdtex;                       /* Memory address for GD texture */
+	
+	uint32 cdda_offset[55];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 
