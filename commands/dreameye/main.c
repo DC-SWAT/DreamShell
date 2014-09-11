@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    dreameye.c
-   Copyright (C) 2009-2013 SWAT
+   Copyright (C) 2009-2014 SWAT
 */
 
 

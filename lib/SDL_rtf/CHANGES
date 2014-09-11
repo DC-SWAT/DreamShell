@@ -1,0 +1,14 @@
+0.1.1:
+Sam Lantinga - Sun Apr 30 01:48:40 PDT 2006
+ * Added gcc-fat.sh for generating Universal binaries on Mac OS X
+ * Updated libtool support to version 1.5.22
+Alison Winters - Tue Mar 14 00:09:36 PST 2006
+ * Added font character set support
+Sam Lantinga - Wed Nov 19 00:23:44 PST 2003
+ * Updated libtool support for new mingw32 DLL build process
+Alison Winters - Sun Sep  7 21:04:07 PDT 2003
+ * Separated code so the core RTF parsing can be used in other applications
+
+0.1.0:
+Sam Lantinga - Thu Aug 21 16:38:18 PDT 2003
+ * Initial source release

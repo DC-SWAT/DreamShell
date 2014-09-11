@@ -1,0 +1,12 @@
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: SDL_gfx
+Description: drawing and graphical effects extension for SDL
+Version: 2.0.22
+Requires: sdl >= 1.2.0
+Libs: -L${libdir} -lSDL_gfx
+Cflags: -I${includedir}/SDL
+

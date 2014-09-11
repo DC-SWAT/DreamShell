@@ -3,7 +3,8 @@
 # http://www.dc-swat.ru
 # 
 
-_SUBDIRS = libcfg/src libparallax libpng lua mxml
+_SUBDIRS = libcfg/src libparallax libpng lua mxml \
+			freetype SDL_gfx SDL_image SDL_ttf SDL_rtf
 
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
