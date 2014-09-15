@@ -1,0 +1,17 @@
+bflash_devs
+bflash_manufacturers
+bflash_find_manufacturer
+bflash_find_dev
+bflash_get_sector_index
+bflash_detect
+bflash_erase_sector
+bflash_erase_all
+bflash_erase_suspend
+bflash_erase_resume
+bflash_sleep
+bflash_abort
+bflash_reset
+bflash_write_value
+bflash_write_page
+bflash_write_data
+bflash_auto_reflash

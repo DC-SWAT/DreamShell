@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=bflash
+Type=Application
+Exec=bflash -w -f %f
+Comment=BIOS Flasher
+Terminal=true
+Categories=applications
+MimeType=application/bios

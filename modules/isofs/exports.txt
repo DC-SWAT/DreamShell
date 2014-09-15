@@ -1,0 +1,34 @@
+#
+# Mounting
+#
+fs_iso_init
+fs_iso_shutdown
+fs_iso_mount
+fs_iso_unmount
+fs_iso_first_file
+#
+# CISO/ZISO images
+#
+ciso_open
+ciso_close
+ciso_get_blocks
+ciso_read_sectors
+#
+# CDI images
+#
+cdi_open
+cdi_close
+cdi_track_sector_size
+cdi_get_track
+cdi_get_offset
+cdi_get_toc
+cdi_read_sectors
+#
+# GDI images
+#
+gdi_open
+gdi_close
+gdi_get_track
+gdi_get_offset
+gdi_get_toc
+gdi_read_sectors
