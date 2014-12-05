@@ -269,6 +269,29 @@ in_ram:
 ! came out of reset -- it has no cached data for 8c01xxxx.
 
 ! Jump to it
+
+	mov.l	pctra2,r0	! 0xac3f0 -> r0
+	mov.l	pctrabase,r3 ! 0xff80002c -> r3
+	mov.l	r0,@r3 ! 0xac3f0 -> PCTRA
+	
+	mov.l	delay,r1
+.pause:	
+	nop
+	dt	r1
+	bf	.pause
+	nop
+
+
+	mov.l	pctra,r0	! 0xa03f0 -> r0
+	mov.l	r0,@r3 ! 0xa03f0 -> PCTRA
+	
+	mov.l	delay,r1	
+.pause1:	
+	nop
+	dt	r1
+	bf	.pause1
+	nop
+
 	mov.l	dst_addr,r0
 	jsr	@r0
 	nop
@@ -281,12 +304,18 @@ in_ram:
 	.align	2
 pctra:
 	.long	0x000a03f0	! PCTRA value
+pctra2:
+	.long	0x000ac3f0	! PCTRA value
+pctrabase:
+	.long	0xff80002c	! PCTRA Base adress
 src_addr:
 	.long	0x80004000	! Whatever's after us in flash
 dst_addr:
 	.long	0x8c010000	! Destination address (normal RAM location)
 cnt:
 	.long	0x1FC000/4	! The number of dwords in the rest of ROM
+delay:	
+	.long	0x1FFFFF
 stack:
 	.long	0x8c004000	! Temporary stack location
 cpg_base:
@@ -695,3 +724,4 @@ in_ram_end:
 ! forget about it. This helps out with flash wear and tear.
 	.org	0x4000
 begin_data:
+.include	"prog.s"
