@@ -10,6 +10,7 @@
 #include "drivers/bflash.h"
 #include <time.h>
 #include <stdbool.h>
+#include <drivers/sh7750_regs.h>
 
 DEFAULT_MODULE_EXPORTS(app_bios_flasher);
 
@@ -573,6 +574,11 @@ void BiosFlasher_OnSupportedPressed(GUI_Widget *widget) {
 
 void BiosFlasher_OnExitPressed(GUI_Widget *widget) {
 	
+	vuint32 * portac = (vuint32 *)PCTRA;
+	*portac |= PCTRA_PBOUT(7);
+	thd_sleep(100);
+	*portac = PCTRA_PBINP(7);
+	
 	(void)widget;
 	App_t *app = NULL;
 	
@@ -745,6 +751,11 @@ void BiosFlasher_Init(App_t* app)
 	GUI_Widget *w;
 	BiosFlasher_ResetSelf();
 	self.m_App = app;
+	
+	vuint32 * portac = (vuint32 *)PCTRA;
+	*portac |= PCTRA_PBOUT(7);
+	thd_sleep(100);
+	*portac = PCTRA_PBINP(7);
 	
 	if (self.m_App != 0)
 	{
