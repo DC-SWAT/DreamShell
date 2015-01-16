@@ -25,9 +25,9 @@ arm_target=arm-eabi
 sh_prefix  := /opt/toolchains/dc/$(sh_target)
 arm_prefix := /opt/toolchains/dc/$(arm_target)
 # kos_root: KOS Git root (contains kos/ and kos-ports/)
-kos_root=$(CURDIR)/../../..
+kos_root=/usr/local/dc/kos
 # kos_base: equivalent of KOS_BASE (contains include/ and kernel/)
-kos_base=$(CURDIR)/../..
+kos_base=/usr/local/dc/kos/kos
 binutils_ver=2.23.2
 gcc_ver=4.9.1
 newlib_ver=2.0.0
