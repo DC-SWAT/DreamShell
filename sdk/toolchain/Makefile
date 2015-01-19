@@ -28,9 +28,9 @@ arm_prefix := /opt/toolchains/dc/$(arm_target)
 kos_root=/usr/local/dc/kos
 # kos_base: equivalent of KOS_BASE (contains include/ and kernel/)
 kos_base=/usr/local/dc/kos/kos
-binutils_ver=2.23.2
+binutils_ver=2.25
 gcc_ver=4.9.1
-newlib_ver=2.0.0
+newlib_ver=2.2.0
 gdb_ver=7.6
 insight_ver=6.7.1
 
@@ -62,7 +62,7 @@ SHELL = /bin/bash
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
   ifneq ($(shell $(CXX) --version | grep clang),)
-    CXX := "$(CXX) -stdlib=libstdc++"
+    CXX := "$(CXX) -stdlib=libstdc++ -fbracket-depth=1024"
   endif
 endif
 
@@ -118,7 +118,7 @@ build: build-sh4 build-arm
 build-sh4: build-sh4-binutils build-sh4-gcc
 build-arm: build-arm-binutils build-arm-gcc
 build-sh4-gcc: build-sh4-gcc-pass1 build-sh4-newlib build-sh4-gcc-pass2
-build-arm-gcc: build-arm-gcc-pass1 #build-arm-newlib
+build-arm-gcc: build-arm-gcc-pass1
 	$(clean_arm_hack)
 build-sh4-newlib: build-sh4-newlib-only fixup-sh4-newlib
 build-arm-newlib: build-arm-newlib-only fixup-arm-newlib
@@ -139,7 +139,7 @@ $(build_arm_targets): extra_configure_args = --with-arch=armv4
 # can't be run multiple times.  So we create multiple targets.
 build_binutils     = build-sh4-binutils  build-arm-binutils
 build_gcc_pass1    = build-sh4-gcc-pass1 build-arm-gcc-pass1
-build_newlib       = build-sh4-newlib-only #build-arm-newlib-only
+build_newlib       = build-sh4-newlib-only
 build_gcc_pass2    = build-sh4-gcc-pass2
 
 # Here we use the essentially same code for multiple targets,
