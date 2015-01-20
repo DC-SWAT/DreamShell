@@ -2,8 +2,8 @@
 
 # These version numbers are all that should ever have to be changed.
 export GCC_VER=4.9.1
-export BINUTILS_VER=2.23.2
-export NEWLIB_VER=2.0.0
+export BINUTILS_VER=2.25
+export NEWLIB_VER=2.2.0
 export GMP_VER=4.3.2
 export MPFR_VER=2.4.2
 export MPC_VER=0.8.1
