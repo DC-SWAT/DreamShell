@@ -15,7 +15,6 @@
 
 TARGET = DS
 TRAGET_PREFIX = EMU_
-DC_IP = 192.168.1.110
 
 include sdk/Makefile.cfg
 
