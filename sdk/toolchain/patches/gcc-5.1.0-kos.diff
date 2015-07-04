@@ -10,6 +10,39 @@ diff -ruN gcc-5.1.0/gcc/configure gcc-5.1.0-kos/gcc/configure
      target_thread_file=${enable_threads}
      ;;
    *)
+diff -ruN gcc-5.1.0/libgcc/config/sh/crti.S gcc-5.1.0-kos/libgcc/config/sh/crti.S
+--- gcc-5.1.0/libgcc/config/sh/crti.S	2015-01-05 14:33:28.000000000 +0200
++++ gcc-5.1.0_kos/libgcc/config/sh/crti.S	2015-07-05 01:17:08.000000000 +0300
+@@ -22,7 +22,6 @@
+ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ <http://www.gnu.org/licenses/>.  */
+ 
+-#include "crt.h"
+ 
+ /* The code in sections .init and .fini is supposed to be a single
+    regular function.  The function in .init is called directly from
+@@ -45,8 +44,8 @@
+ #else
+ 	.p2align 1
+ #endif
+-	.global	 GLOBAL(_init)
+-GLOBAL(_init):
++	.global	 _init
++_init:
+ #if __SHMEDIA__
+ 	addi	r15, -16, r15
+ 	st.q	r15, 8, r14
+@@ -90,8 +89,8 @@
+ #else
+ 	.p2align 1
+ #endif
+-	.global  GLOBAL(_fini)
+-GLOBAL(_fini):	
++	.global  _fini
++_fini:	
+ #if __SHMEDIA__
+ 	addi	r15, -16, r15
+ 	st.q	r15, 8, r14
 diff -ruN gcc-5.1.0/libgcc/config/sh/crt1.S gcc-5.1.0-kos/libgcc/config/sh/crt1.S
 --- gcc-5.1.0/libgcc/config/sh/crt1.S	2015-01-05 14:33:28.000000000 +0200
 +++ gcc-5.1.0-kos/libgcc/config/sh/crt1.S	2015-06-15 21:50:38.000000000 +0300
