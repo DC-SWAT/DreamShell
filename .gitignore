@@ -1,0 +1,6 @@
+.DS_Store
+sdk/toolchain/
+!sdk/toolchain/download.sh
+!sdk/toolchain/Makefile
+!sdk/toolchain/patches/
+!sdk/toolchain/unpack.sh

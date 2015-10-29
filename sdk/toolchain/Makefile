@@ -16,6 +16,7 @@
 # build-sh4-gcc: build-sh4-gcc-pass1 build-sh4-newlib build-sh4-gcc-pass2
 # build-arm-gcc: build-arm-gcc-pass1
 # build-sh4-newlib: build-sh4-newlib-only fixup-sh4-newlib
+# build-arm-newlib: build-arm-newlib-only fixup-arm-newlib
 # gdb
 # insight
 
@@ -29,7 +30,7 @@ kos_root=/usr/local/dc/kos
 # kos_base: equivalent of KOS_BASE (contains include/ and kernel/)
 kos_base=/usr/local/dc/kos/kos
 binutils_ver=2.25
-gcc_ver=5.1.0
+gcc_ver=5.2.0
 newlib_ver=2.2.0
 gdb_ver=7.6
 insight_ver=6.7.1
@@ -108,7 +109,7 @@ $(gcc_patches):
 	patch -d $(gcc_dir) -p1 < $@
 
 $(kos_patches):
-	patch -d $(kos_root) -p1 < $@
+	patch -d $(kos_base) -p1 < $@
 
 # ---- }}}
 
@@ -118,7 +119,7 @@ build: build-sh4 build-arm
 build-sh4: build-sh4-binutils build-sh4-gcc
 build-arm: build-arm-binutils build-arm-gcc
 build-sh4-gcc: build-sh4-gcc-pass1 build-sh4-newlib build-sh4-gcc-pass2
-build-arm-gcc: build-arm-gcc-pass1
+build-arm-gcc: build-arm-gcc-pass1 build-arm-newlib
 	$(clean_arm_hack)
 build-sh4-newlib: build-sh4-newlib-only fixup-sh4-newlib
 build-arm-newlib: build-arm-newlib-only fixup-arm-newlib
@@ -139,8 +140,9 @@ $(build_arm_targets): extra_configure_args = --with-arch=armv4
 # can't be run multiple times.  So we create multiple targets.
 build_binutils     = build-sh4-binutils  build-arm-binutils
 build_gcc_pass1    = build-sh4-gcc-pass1 build-arm-gcc-pass1
-build_newlib       = build-sh4-newlib-only
+build_newlib_sh4   = build-sh4-newlib-only
 build_gcc_pass2    = build-sh4-gcc-pass2
+build_newlib_arm   = build-arm-newlib-only
 
 # Here we use the essentially same code for multiple targets,
 # differing only by the current state of the variables below.
@@ -169,10 +171,10 @@ $(build_gcc_pass1): logdir
 	make $(makejobs) -C $(build) DESTDIR=$(DESTDIR) $(to_log)
 	make -C $(build) install DESTDIR=$(DESTDIR) $(to_log)
 
-$(build_newlib): build = build-newlib-$(target)-$(newlib_ver)
-$(build_newlib): src_dir = newlib-$(newlib_ver)
-$(build_newlib): log = $(logdir)/$(build).log
-$(build_newlib): logdir
+$(build_newlib_sh4) $(build_newlib_arm): build = build-newlib-$(target)-$(newlib_ver)
+$(build_newlib_sh4) $(build_newlib_arm): src_dir = newlib-$(newlib_ver)
+$(build_newlib_sh4) $(build_newlib_arm): log = $(logdir)/$(build).log
+$(build_newlib_sh4) $(build_newlib_arm): logdir
 	@echo "+++ Building $(src_dir) to $(build)..."
 	-mkdir -p $(build)
 	> $(log)
@@ -182,7 +184,7 @@ $(build_newlib): logdir
 	$(clean_up)
 
 fixup-sh4-newlib: newlib_inc=$(DESTDIR)$(sh_prefix)/$(sh_target)/include
-fixup-sh4-newlib: $(build_newlib)
+fixup-sh4-newlib: $(build_newlib_sh4)
 	@echo "+++ Fixing up sh4 newlib includes..."
 # KOS pthread.h is modified
 # to define _POSIX_THREADS
@@ -198,7 +200,7 @@ fixup-sh4-newlib: $(build_newlib)
 	ln -nsf $(kos_base)/kernel/arch/dreamcast/include/dc   $(newlib_inc)
 
 fixup-arm-newlib: newlib_inc=$(DESTDIR)$(arm_prefix)/$(arm_target)/include
-fixup-arm-newlib: $(build_newlib)
+fixup-arm-newlib: $(build_newlib_arm)
 	@echo "+++ Fixing up arm newlib includes..."
 
 $(build_gcc_pass2): log = $(logdir)/$(build)-pass2.log
