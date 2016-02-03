@@ -1,0 +1,87 @@
+0.6.3 (2004/05/06)
+  - Fixed some cuesheet errors ( cdirip.c/.h )
+  - changed version info in cdirip.c
+  - removed buggy endianess code ( prevents some .cdi from being ripped )
+ 
+0.6.2 (2002/06/08)
+
+  - Support for DiscJuggler 4.0 CDI images
+  - CDIrip now opens CDR-WIN 5.x (*.cdr) images, too
+  - CDIrip sources are now much more portable (removed endian-dependant stuff)
+  - Added "Mac" ISO output support (new option -mac)
+  - Added CDA/AIFF audio output support (options -cda, -aiff)
+
+ 0.6c (2001/12/27)
+
+  - Added support for CDI 3.5.826+ images
+
+ 0.6b (2001/12/07)
+ 
+  - Fixed bug in 0.6a causing some old images (3.0, 2.0) not being recognized
+
+ 0.6a (2001/11/29)
+ 
+  - Fixed bug with some DiscJuggler 3.5 images (extracted 1st session only)
+
+ 0.6 (2001/09/07)
+
+  - Support for new DiscJuggler 3.00.780+ CDI images
+  - Destination path dialog (when double-clicked)
+  - Destination path can now be entered in command-line
+  - MAJOR speedup (now uses two 1024 Kb buffers for read and write)
+  - New "/pregap" option to extract pregaps, instead of discarding them
+  - New "/speed" option to show ripping speed in Kb/s
+  - All options can now start with "-" character (un*x-like)
+  - Fixed 0-length pregap handling in cuesheet
+  - Fixed negative track size handling (must add /pregap option)
+  - Fixed default track cutting misbehaviour (cutted last track by default)
+  - Fixed Mode1/2352 (raw) to 2048 (ISO) conversion bug (sorry :)
+  - Switched to Bloodshed Dev-C++ free compiler (tiny executable size!)
+
+ 0.5a (2001/02/13)
+ 
+  - Fixed stupid bug in audio swap routine
+
+ 0.5 (2001/02/05)
+
+  - Support for CDI v3.0 images
+  - Support for raw data tracks (2352 bytes/sector) either Mode1 and Mode2
+  - Audio tracks can now be byte-swapped with "/swap" option (for cdrecord)
+  - Tracks in second cuesheet now starts at no.1 (for multisession CDs)
+  - Truncated tracks are now detected and skipped
+  - Better error handling
+  - Windows Open File dialog and error Message Boxes for easier usage
+  - Options can now be written without an image filename (will ask for it)
+  - New preset options for burning apps: /cdrecord, /winoncd, /fireburner
+  - New progress counter (faster, bigger and better ;)
+  - Big internal cleanup
+  - Small bugfixes
+
+ 0.4 (2000/10/12)
+
+  - No need to use DOS-prompt for basic usage: just do double click to it
+  - Support for Mixed-mode (Mode1/2048) and CD-XA Multisession (Mode2/2336)
+    data tracks in cuesheet
+  - Data tracks in first session are now automatically cutted by 2 sectors
+  - Data tracks in CD-XA Multisession discs are now saved in BIN/2336 format
+  - Audio tracks are now saved in WAV format
+  - Added "/raw" option to force RAW format to audio tracks
+  - Added "/iso" option to force ISO/2048 conversion to all data tracks
+  - Added "/bin" option to force BIN/2336 format + 2 cuesheets
+  - Added "/full" option to avoid cutting data tracks
+  - Added "/cut" and "/cutall" options to cut tracks
+  - Added "/info" option
+  - Added progress counter (wow!)
+  - Small bugfixes
+
+ 0.3 (2000/09/06)
+
+  - Automatic cuesheet generation
+
+ 0.2 (2000/09/04)
+
+  - Support added for Mode1/2048 tracks
+
+ 0.1 (2000/09/03)
+
+  - First, internal release

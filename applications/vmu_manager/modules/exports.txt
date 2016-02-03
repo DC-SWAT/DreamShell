@@ -1,0 +1,13 @@
+Vmu_Manager_Init
+VMU_Manager_Exit
+VMU_Manager_EnableMainPage
+VMU_Manager_vmu
+VMU_Manager_info_bar
+VMU_Manager_info_bar_clr
+VMU_Manager_ItemClick
+VMU_Manager_addfileman
+VMU_Manager_Dump
+VMU_Manager_format
+VMU_Manager_sel_dst_vmu
+VMU_Manager_make_folder
+VMU_Manager_clr_name

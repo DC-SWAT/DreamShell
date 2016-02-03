@@ -10,7 +10,6 @@
 #include "drivers/bflash.h"
 #include <time.h>
 #include <stdbool.h>
-#include <drivers/sh7750_regs.h>
 
 DEFAULT_MODULE_EXPORTS(app_bios_flasher);
 
@@ -43,7 +42,7 @@ typedef void BiosFlasher_OperationCallback(OperationState_t state, float progres
 
 int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_OperationCallback guiClbk);
 int BiosFlasher_CompareBiosWithFile(const char* filename, BiosFlasher_OperationCallback guiClbk);
-int BiosFlasher_WriteFromBiosToFile(const char* filename, BiosFlasher_OperationCallback guiClbk);
+int BiosFlasher_ReadBiosToFile(const char* filename, BiosFlasher_OperationCallback guiClbk);
 void BiosFlasher_EnableMainPage();
 void BiosFlasher_EnableChoseFilePage();
 void BiosFlasher_EnableProgressPage();
@@ -288,7 +287,7 @@ int BiosFlasher_CompareBiosWithFile(const char* filename, BiosFlasher_OperationC
 	return ret;
 }
 
-int BiosFlasher_WriteFromBiosToFile(const char* filename, BiosFlasher_OperationCallback guiClbk)
+int BiosFlasher_ReadBiosToFile(const char* filename, BiosFlasher_OperationCallback guiClbk)
 {
 	uint8* data 	= 0;
 	file_t pFile 	= 0;
@@ -538,7 +537,7 @@ void BiosFlasher_OnConfirmPressed(GUI_Widget *widget)
 		case eReading:
 			fileName = BiosFlasher_GenerateBackupName();
 			snprintf(filePath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), fileName);	// TODO
-			result = BiosFlasher_WriteFromBiosToFile(filePath, &BiosFlasher_OnOperationProgress);
+			result = BiosFlasher_ReadBiosToFile(filePath, &BiosFlasher_OnOperationProgress);
 		break;
 
 		case eCompare:
@@ -573,11 +572,6 @@ void BiosFlasher_OnSupportedPressed(GUI_Widget *widget) {
 }
 
 void BiosFlasher_OnExitPressed(GUI_Widget *widget) {
-	
-	vuint32 * portac = (vuint32 *)PCTRA;
-	*portac |= PCTRA_PBOUT(7);
-	thd_sleep(100);
-	*portac = PCTRA_PBINP(7);
 	
 	(void)widget;
 	App_t *app = NULL;
@@ -747,15 +741,8 @@ void BiosFlasher_EnableSettingsPage()
 void BiosFlasher_Init(App_t* app) 
 {
 
-	int i;
-	GUI_Widget *w;
 	BiosFlasher_ResetSelf();
 	self.m_App = app;
-	
-	vuint32 * portac = (vuint32 *)PCTRA;
-	*portac |= PCTRA_PBOUT(7);
-	thd_sleep(100);
-	*portac = PCTRA_PBINP(7);
 	
 	if (self.m_App != 0)
 	{
@@ -769,10 +756,7 @@ void BiosFlasher_Init(App_t* app)
 		self.m_ItemSelected		= (GUI_Surface *) BiosFlasher_GetElement("item-selected", LIST_ITEM_GUI_SURFACE, 0);
 		
 		/* Disabling scrollbar on filemanager */
-		for(i = 3; i > 0; i--) {
-			w = GUI_ContainerGetChild(self.filebrowser, i);
-			GUI_ContainerRemove(self.filebrowser, w);
-		}
+		GUI_FileManagerRemoveScrollbar(self.filebrowser);
 
 		if (app->args != 0)
 		{

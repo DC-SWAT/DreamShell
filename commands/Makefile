@@ -1,10 +1,11 @@
 #
 # DreamShell commands Makefile
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2016 SWAT
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = bin2iso dreameye flashrom hack netstat ping scramble untgz vmu vmode mke2fs mkfatfs
+_SUBDIRS = bin2iso flashrom netstat ping scramble \
+			untgz vmu vmode mke2fs mkfatfs gdiopt ciso sip
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

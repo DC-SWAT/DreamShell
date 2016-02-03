@@ -1,0 +1,12 @@
+# Main
+SettingsApp_Init
+SettingsApp_ShowPage
+SettingsApp_ResetSettings
+# Video
+SettingsApp_ToggleNativeMode
+SettingsApp_ToggleScreenMode
+SettingsApp_ToggleScreenFilter
+# Boot
+SettingsApp_ToggleApp
+SettingsApp_ToggleRoot
+SettingsApp_ToggleStartup

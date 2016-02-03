@@ -1,7 +1,7 @@
 /** 
  * \file    isoldr.h
  * \brief   DreamShell ISO loader
- * \date    2009-2014
+ * \date    2009-2016
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -53,6 +53,7 @@
  */
 #define ISOLDR_FS_FAT     "fat"
 #define ISOLDR_FS_EXT2    "ext2"    /* EXT2 doesn't supported yet, just define for now */
+#define ISOLDR_FS_RAW     "raw"     /* It's a mapped CD image to unused partition on SD or IDE device */
 #define ISOLDR_FS_ISO9660 "iso9660"
 #define ISOLDR_FS_DCLOAD  "dc-load"
 
@@ -74,7 +75,7 @@ typedef enum isoldr_exec_type {
 	BIN_TYPE_AUTO = 0,
 	BIN_TYPE_KOS = 1,
 	BIN_TYPE_KATANA,
-	BIN_TYPE_WINCE     /* Not supported yet */
+	BIN_TYPE_WINCE
 } isoldr_exec_type_t;
 
 
@@ -94,14 +95,14 @@ typedef struct isoldr_exec_info {
 
 typedef struct isoldr_info {
 
-	char magic[12];			           /* isoldr magic code - 'DSISOLDR050' */
+	char magic[12];			           /* isoldr magic code - 'DSISOLDRXXX' where XXX is version */
 	
 	int  image_type;                    /* See isofs_image_type_t */
 	char image_file[256];               /* Full path to image */
 	char image_second[12];              /* Second data track file for the multitrack GDI image */
 	
 	char fs_dev[8];                     /* Device name, see supported devices */
-	char fs_type[8];                    /* File system type (fat or ext2), only for SD and IDE devices */
+	char fs_type[8];                    /* File system type (fat, ext2, raw), only for SD and IDE devices */
 	int  fs_part;                       /* Partition on device (0-3), only for SD and IDE devices */
 	
 	CISO_header_t ciso;                 /* CISO header for CSO/ZSO images */
@@ -114,11 +115,15 @@ typedef struct isoldr_info {
 	int emu_cdda;                       /* Emulate CDDA audio */
 	int emu_async;                      /* Emulate async data transfer */
 	int use_dma;                        /* Use DMA data transfer for G1-bus devices (GD drive and IDE) */
+	int fast_boot;                      /* Don't show any info on screen */
 	
 	isoldr_exec_info_t exec;            /* Executable info */
-	uint32 gdtex;                       /* Memory address for GD texture */
+
+	uint32 gdtex;                       /* Memory address for GD texture (draw it on screen) */
+	uint32 patch_addr[2];               /* Memory addresses for patching every frame */
+	uint32 patch_value[2];              /* Values for patching */
 	
-	uint32 cdda_offset[55];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[50];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

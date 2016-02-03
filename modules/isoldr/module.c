@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    DreamShell ISO Loader module
-   Copyright (C)2009-2014 SWAT 
+   Copyright (C)2009-2016 SWAT
 
 */
 
@@ -11,37 +11,96 @@
 #include "drivers/g1_ide.h"
 //#include <kos/md5.h>
 
-DEFAULT_MODULE_EXPORTS_CMD(isoldr, "Runs the games images");
+static uint8 kos_hdr[8] = {0x2D, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x2B, 0xD0};
+static uint8 ron_hdr[8] = {0x1B, 0xD0, 0x1A, 0xD1, 0x1B, 0x20, 0x2B, 0x40};
+static uint8 win_hdr[4] = {0x45, 0x43, 0x45, 0x43};
 
 void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 params_len);
 
+DEFAULT_MODULE_EXPORTS_CMD(isoldr, "Runs the games images");
+
+
 static void get_ipbin_info(isoldr_info_t *info, file_t fd, uint8 *sec, char *psec) {
-	
+
 	uint32 len;
-	
+
 	if(fs_ioctl(fd, sec, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA) < 0) {
-		
+
 		ds_printf("DS_ERROR: Can't get boot sector data\n");
-		
+
 	} else {
-		
+
 //		kos_md5(sec, sizeof(sec), info->md5);
-		
+
 		if(sec[0x60] != 0 && sec[0x60] != 0x20) {
-		
+
 			strncpy(info->exec.file, psec + 0x60, sizeof(info->exec.file));
-			
+
 			for(len = 0; len < sizeof(info->exec.file); len++) {
 				if(info->exec.file[len] == 0x20) {
 					info->exec.file[len] = '\0';
 					break;
 				}
 			}
-		
+
 		} else {
 			info->exec.file[0] = 0;
 		}
 	}
+}
+
+
+static int is_homebrew(file_t fd) {
+
+	uint8 src[sizeof(kos_hdr)];
+
+	fs_seek(fd, 0, SEEK_SET);
+	fs_read(fd, src, sizeof(kos_hdr));
+	fs_seek(fd, 0, SEEK_SET);
+
+	/* Check for unscrambled homebrew */
+	if(!memcmp(src, kos_hdr, sizeof(kos_hdr)) || !memcmp(src, ron_hdr, sizeof(ron_hdr))) {
+		return 1;
+	}
+	
+	/* TODO: Check for scrambled homebrew */
+	return 0;
+}
+
+static int is_wince_rom(file_t fd) {
+
+	uint8 src[sizeof(win_hdr)];
+	
+	fs_seek(fd, 64, SEEK_SET);
+	fs_read(fd, src, sizeof(win_hdr));
+	fs_seek(fd, 0, SEEK_SET);
+	
+	return !memcmp(src, win_hdr, sizeof(win_hdr));
+}
+
+static int get_executable_info(isoldr_info_t *info, file_t fd) {
+
+	if(!strncasecmp(info->exec.file, "0WINCEOS.BIN", 12)) {
+
+		info->exec.type = BIN_TYPE_WINCE;
+		info->exec.lba++;
+		info->exec.size -= 2048;
+
+	} else if(is_wince_rom(fd)) {
+		
+		info->exec.type = BIN_TYPE_WINCE;
+
+	} else if(is_homebrew(fd)) {
+
+		info->exec.type = BIN_TYPE_KOS;
+
+	} else {
+		// By default is KATANA
+		// FIXME: detect KATANA and set scrambled homebrew by default
+		info->exec.type = BIN_TYPE_KATANA;
+	}
+
+	return 0;
 }
 
 
@@ -57,7 +116,7 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 	SDL_Surface *gd_tex = NULL;
 
 	fd = fs_open(mount, O_DIR | O_RDONLY);
-	
+
 	if(fd != FILEHND_INVALID) {
 		fs_close(fd);
 		if(fs_iso_unmount(mount) < 0) {
@@ -70,14 +129,14 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 		ds_printf("DS_ERROR: Can't mount %s to %s\n", iso_file, mount);
 		return -1;
 	}
-	
+
 	if(use_gdtex) {
-		
+
 		snprintf(fn, MAX_FN_LEN, "%s/0GDTEX.PVR", mount);
 		fd = fs_open(fn, O_RDONLY);
 
 		if(fd != FILEHND_INVALID) {
-		
+
 			get_ipbin_info(info, fd, sec, psec);
 			fs_close(fd);
 
@@ -86,21 +145,21 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 			if(gd_tex != NULL) {
 				info->gdtex = (uint32)gd_tex->pixels;
 			}
-			
+
 		} else {
-			
+
 			fd = fs_iso_first_file(mount);
-			
+
 			if(fd != FILEHND_INVALID) {
 				get_ipbin_info(info, fd, sec, psec);
 				fs_close(fd);
 			}
 		}
-		
+
 	} else {
-		
+
 		fd = fs_iso_first_file(mount);
-		
+
 		if(fd != FILEHND_INVALID) {
 			get_ipbin_info(info, fd, sec, psec);
 			fs_close(fd);
@@ -113,26 +172,24 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 		strncpy(info->exec.file, "1ST_READ.BIN", 12);
 		info->exec.file[12] = '\0';
 	}
-	
+
 	snprintf(fn, MAX_FN_LEN, "%s/%s", mount, info->exec.file);
 	fd = fs_open(fn, O_RDONLY);
 
 	if(fd == FILEHND_INVALID) {
 		ds_printf("DS_ERROR: Can't open %s\n", fn);
-		fs_iso_unmount(mount);
-		if(gd_tex) SDL_FreeSurface(gd_tex);
-		return -1;
+		goto image_error;
 	}
-	
+
 	/* TODO check errors */
 	fs_ioctl(fd, &info->exec.lba, ISOFS_IOCTL_GET_FD_LBA);
 	fs_ioctl(fd, &info->image_type, ISOFS_IOCTL_GET_IMAGE_TYPE);
 	fs_ioctl(fd, &info->track_lba[0], ISOFS_IOCTL_GET_DATA_TRACK_LBA);
 	fs_ioctl(fd, &info->sector_size, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE);
 	fs_ioctl(fd, &info->toc, ISOFS_IOCTL_GET_TOC_DATA);
-	
+
 	if(info->image_type == ISOFS_IMAGE_TYPE_CDI) {
-		
+
 		uint32 *offset = (uint32 *)sec;
 		fs_ioctl(fd, offset, ISOFS_IOCTL_GET_CDDA_OFFSET);
 		memcpy_sh4(&info->cdda_offset, offset, sizeof(info->cdda_offset));
@@ -140,34 +197,31 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 
 		fs_ioctl(fd, &info->track_offset, ISOFS_IOCTL_GET_DATA_TRACK_OFFSET);
 	}
-	
-	if(info->image_type == ISOFS_IMAGE_TYPE_CSO || 
-		info->image_type == ISOFS_IMAGE_TYPE_ZSO) {
-			
+
+	if(info->image_type == ISOFS_IMAGE_TYPE_CSO ||
+	        info->image_type == ISOFS_IMAGE_TYPE_ZSO) {
+
 		uint32 ptr = 0;
-		
+
 		if(!fs_ioctl(fd, &ptr, ISOFS_IOCTL_GET_IMAGE_HEADER_PTR) && ptr != 0) {
 			memcpy_sh4(&info->ciso, (void*)ptr, sizeof(CISO_header_t));
 		}
 	}
-	
+
 	if(info->image_type == ISOFS_IMAGE_TYPE_GDI) {
-		
+
 		fs_ioctl(fd, sec, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME);
 		fs_ioctl(fd, info->image_second, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME2);
 		fs_ioctl(fd, &info->track_lba[1], ISOFS_IOCTL_GET_DATA_TRACK_LBA2);
-		
+
 		psec = strchr(psec + 1, '/');
-		
+
 	} else {
 		psec = strchr(iso_file + 1, '/');
 	}
-	
+
 	if(psec == NULL) {
-		fs_close(fd);
-		fs_iso_unmount(mount);
-		if(gd_tex) SDL_FreeSurface(gd_tex);
-		return -1;
+		goto image_error;
 	}
 
 	len = strlen(psec);
@@ -178,70 +232,83 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 
 	strncpy(info->image_file, psec, len);
 	info->image_file[len] = '\0';
-	
+
 	info->exec.lba += 150;
 	info->exec.size = fs_total(fd);
-	
+
+	if(get_executable_info(info, fd) < 0) {
+		ds_printf("DS_ERROR: Can't get executable info\n");
+		goto image_error;
+	}
+
 	fs_close(fd);
 	fs_iso_unmount(mount);
 	return 0;
+
+image_error:
+
+	if(fd != FILEHND_INVALID) {
+		fs_close(fd);
+	}
+	fs_iso_unmount(mount);
+	if(gd_tex) SDL_FreeSurface(gd_tex);
+	return -1;
 }
 
 
 static int get_device_info(isoldr_info_t *info, const char *iso_file) {
-	
+
 	if(!strncasecmp(iso_file, "/pc/", 4)) {
-		
+
 		strncpy(info->fs_dev, ISOLDR_DEV_DCLOAD, 3);
 		info->fs_dev[3] = '\0';
-		
+
 	} else if(!strncasecmp(iso_file, "/cd/", 4)) {
-		
+
 		strncpy(info->fs_dev, ISOLDR_DEV_GDROM, 2);
 		info->fs_dev[2] = '\0';
-		
+
 	} else if(!strncasecmp(iso_file, "/sd", 3)) {
-		
+
 		strncpy(info->fs_dev, ISOLDR_DEV_SDCARD, 2);
 		info->fs_dev[2] = '\0';
-		
+
 		if(iso_file[3] != '/') {
 			info->fs_part = (iso_file[3] - '0');
 		}
-		
+
 	} else if(!strncasecmp(iso_file, "/ide", 4)) {
-		
+
 		if(g1_ata_is_dcio() > 0 && !is_custom_bios()) {
-			
+
 			strncpy(info->fs_dev, ISOLDR_DEV_DCIO, 4);
 			info->fs_dev[4] = '\0';
-			
+
 		} else {
-		
+
 			strncpy(info->fs_dev, ISOLDR_DEV_G1ATA, 3);
 			info->fs_dev[3] = '\0';
 		}
-		
+
 		if(iso_file[4] != '/') {
 			info->fs_part = (iso_file[4] - '0');
 		}
-		
+
 	} else {
 		ds_printf("DS_ERROR: isoldr doesn't support this device\n");
 		return -1;
 	}
-	
-	
+
+
 	switch(info->fs_dev[0]) {
 		case 's':
-		case 'i':
-		{
+		case 'i': {
 			char *p = strchr(iso_file + 1, '/');
 			int sz = strlen(iso_file) - strlen(p);
 			char mp[8];
 			strncpy(mp, iso_file, strlen(iso_file) - strlen(p));
 			mp[sz] = '\0';
-			
+
 			if(fs_fat_is_mounted(mp)) {
 				strncpy(info->fs_type, ISOLDR_FS_FAT, 3);
 				info->fs_type[3] = '\0';
@@ -264,7 +331,7 @@ static int get_device_info(isoldr_info_t *info, const char *iso_file) {
 			info->fs_type[7] = '\0';
 			break;
 	}
-	
+
 	return 0;
 }
 
@@ -272,9 +339,9 @@ static int get_device_info(isoldr_info_t *info, const char *iso_file) {
 isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 
 	isoldr_info_t *info = NULL;
-	
+
 	LockVideo();
-	
+
 	if(!FileExists(file)) {
 		goto error;
 	}
@@ -282,7 +349,7 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	info = (isoldr_info_t *) malloc(sizeof(*info));
 
 	if(info == NULL) {
-		ds_printf("DS_ERROR: No free memory\n"); 
+		ds_printf("DS_ERROR: No free memory\n");
 		goto error;
 	}
 
@@ -294,11 +361,11 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	if(get_image_info(info, file, use_gdtex) < 0) {
 		goto error;
 	}
-	
+
 	if(get_device_info(info, file) < 0) {
 		goto error;
 	}
-	
+
 	snprintf(info->magic, 12, "DSISOLDR%d%d%d", VER_MAJOR, VER_MINOR, VER_MICRO);
 	info->magic[11] = '\0';
 	info->exec.addr = 0xac010000;
@@ -309,7 +376,7 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 error:
 	UnlockVideo();
 
-	if(info) 
+	if(info)
 		free(info);
 
 	return NULL;
@@ -323,29 +390,29 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 
 	EXPT_GUARD_BEGIN;
 
-		for(i = 3; i < size - 1; i++) {
+	for(i = 3; i < size - 1; i++) {
 
-			if(loader[i] == 0xE0 && loader[i + 1] == 0x8C) {
-				memcpy(&a, loader + i - 2, sizeof(uint32));
-				// printf("0x%08lx -> ", a);
-				a -= ISOLDR_DEFAULT_ADDR;
+		if(loader[i] == 0xE0 && loader[i + 1] == 0x8C/* && loader[i - 1] < 0x10*/) {
+			memcpy(&a, loader + i - 2, sizeof(uint32));
+//				printf("0x%08lx -> ", a);
+			a -= ISOLDR_DEFAULT_ADDR;
 
-				if(a == 0 && skip++) {
-					// printf("skip\n");
-					continue;
-				}
-
-				// printf("0x%04lx -> ", a);
-				a += addr;
-				// printf("0x%08lx at offset %ld\n", a, i);
-				memcpy(loader + i - 2, &a, sizeof(uint32));
+			if(a == 0 && skip++) {
+//					printf("skip\n");
+				continue;
 			}
+
+//				printf("0x%04lx -> ", a);
+			a += addr;
+//				printf("0x%08lx at offset %ld\n", a, i);
+			memcpy(loader + i - 2, &a, sizeof(uint32));
 		}
+	}
 
 	EXPT_GUARD_CATCH;
 
-		ds_printf("DS_ERROR: Loader memory patch failed\n");
-		EXPT_GUARD_RETURN -1;
+	ds_printf("DS_ERROR: Loader memory patch failed\n");
+	EXPT_GUARD_RETURN -1;
 
 	EXPT_GUARD_END;
 
@@ -360,7 +427,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 	char fn[MAX_FN_LEN];
 	uint8 *loader = NULL;
 
-	if(info->fs_type[0] == 'e') {
+	if(info->fs_type[0] == 'e' || info->fs_type[0] == 'r') {
 		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/%s_%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev, info->fs_type);
 	} else {
 		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev);
@@ -374,7 +441,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 	}
 
 	len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
-	
+
 	ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, len);
 	loader = (uint8 *) malloc(len < 0x10000 ? 0x10000 : len);
 
@@ -407,54 +474,54 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 	ShutdownVideoThread();
 	expt_shutdown();
 	g1_ata_shutdown();
-	
+
 	isoldr_exec_at(loader, len, addr, ISOLDR_PARAMS_SIZE);
 }
 
 
 void isoldr_exec_dcio(isoldr_info_t *info, const char *file) {
-	
+
 	// TODO ?
 	(void)info;
-	
+
 	uint32 lba = 0;
 	file_t fd;
 	uint16 buf[256];
 	char *path = (char*)buf;
-	
+
 	fd = fs_open(file, O_RDONLY);
-	
+
 	if(fd == FILEHND_INVALID) {
 		return;
 	}
-	
+
 	if(fs_ioctl(fd, &lba, FATFS_IOCTL_GET_FD_LBA) < 0) {
 		fs_close(fd);
 		ds_printf("DS_ERROR: Can't get file LBA: %d\n", errno);
 		return;
 	}
-	
+
 	fs_close(fd);
-	
+
 	if(!lba) {
 		ds_printf("DS_ERROR: Can't get file LBA: %s\n", file);
 		return;
 	}
-	
+
 	ds_printf("DS_PROCESS: Sending data to DCIO board...\n");
-	
+
 	memset_sh4(buf, 0, sizeof(buf));
 	buf[0] = lba & 0xffff;
 	buf[1] = (lba >> 16) & 0xffff;
-	
+
 	path += 4;
 	strncpy(path, file, MAX_FN_LEN);
-	
+
 	if(g1_ata_write_lba(g1_ata_max_lba() - 1, 1, buf) < 0) {
 		ds_printf("DS_ERROR: Can't send LBA to DCIO: %d\n", errno);
 		return;
 	}
-	
+
 	ShutdownVideoThread();
 	expt_shutdown();
 	arch_reboot();
@@ -462,47 +529,54 @@ void isoldr_exec_dcio(isoldr_info_t *info, const char *file) {
 
 
 int builtin_isoldr_cmd(int argc, char *argv[]) {
-	
-    if(argc < 2) {
-		
+
+	if(argc < 2) {
+
 		ds_printf("\n  ## ISO Loader v%d.%d.%d build %d ##\n\n"
-				   "Usage: %s options args\n"
-				   "Options: \n", VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD, argv[0]);
-		ds_printf(" -n, --nogdtex   -Don't show 0GDTEX.PVR on the screen\n", 
-				   " -i, --verbose   -Show additional info\n", 
-				   " -a, --dma       -Use DMA transfer if avaible\n"
-				   " -c, --cdda      -Emulate CDDA audio\n");
+		          "Usage: %s options args\n"
+		          "Options: \n", VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD, argv[0]);
+		ds_printf(" -s, --fast       -Fast boot mode (don't show any info on screen)\n",
+		          " -i, --verbose    -Show additional info\n",
+		          " -a, --dma        -Use DMA transfer if available\n"
+		          " -c, --cdda       -Emulate CDDA audio\n");
 		ds_printf("Arguments: \n"
-				   " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
-				   " -d, --device     -Loader device (sd/ide/cd/dcl/dcio), default auto\n"
-				   " -p, --fspart     -Device partition (0-3), default auto\n"
-				   " -t, --fstype     -Device filesystem (fat, ext2), default auto\n");
+		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
+		          " -d, --device     -Loader device (sd/ide/cd/dcl/dcio), default auto\n"
+		          " -p, --fspart     -Device partition (0-3), default auto\n"
+		          " -t, --fstype     -Device filesystem (fat, ext2, raw), default auto\n");
 		ds_printf(" -x, --lmem       -Any valid address for the loader (default auto)\n"
-				   " -f, --file       -ISO image file path\n"
-				   " -j, --jmp        -Boot mode:\n"
-				   "                      0 = from executable (default)\n"
-				   "                      1 = from IP.BIN\n"
-				   "                      2 = from truncated IP.BIN\n");
+		          " -f, --file       -ISO image file path\n"
+		          " -j, --jmp        -Boot mode:\n"
+		          "                      0 = from executable (default)\n"
+		          "                      1 = from IP.BIN\n"
+		          "                      2 = from truncated IP.BIN\n");
 		ds_printf(" -o, --os         -Executable OS:\n"
-				   "                      0 = auto (default)\n"
-				   "                      1 = KallistiOS\n"
-				   "                      2 = KATANA\n"
-				   "                      3 = WINCE\n");
+		          "                      0 = auto (default)\n"
+		          "                      1 = KallistiOS\n"
+		          "                      2 = KATANA\n"
+		          "                      3 = WINCE\n");
 		ds_printf(" -r, --addr       -Executable memory address (default 0xac010000)\n"
-				   " -b, --boot       -Executable file name (default from IP.BIN)\n\n"
-	              "Example: %s -f /sd/game.iso\n\n", argv[0]);
-        return CMD_NO_ARG; 
-    }
-    
-	uint32 addr = 0xac010000, use_dma = 0, lex = 0;
+		          " -b, --boot       -Executable file name (default from IP.BIN)\n");
+		ds_printf("     --pa1        -Patch address 1\n"
+		          "     --pa2        -Patch address 2\n"
+		          "     --pv1        -Patch value 1\n"
+		          "     --pv2        -Patch value 2\n\n"
+		          "Example: %s -f /sd/game.iso\n\n", argv[0]);
+		return CMD_NO_ARG;
+	}
+
+	uint32 p_addr[2]  = {0, 0};
+	uint32 p_value[2] = {0, 0};
+	uint32 addr = 0, use_dma = 0, lex = 0;
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
-	int emu_async = 0, emu_cdda = 0, 
-		boot_mode = BOOT_MODE_DIRECT;
-	int bin_type = BIN_TYPE_AUTO, nogdtex = 0, fspart = -1, verbose = 0;
+	int emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
+	int bin_type = BIN_TYPE_AUTO, nogdtex = 0,
+	    fast_boot = 0, fspart = -1, verbose = 0;
+
 	isoldr_info_t *info;
 
 	struct cfg_option options[] = {
-		{"nogdtex",   'n', NULL, CFG_BOOL,  (void *) &nogdtex,     0},
+		{"nogdtex",   'n', NULL, CFG_BOOL,  (void *) &nogdtex,     0}, /* Deprecated */
 		{"verbose",   'i', NULL, CFG_BOOL,  (void *) &verbose,     0},
 		{"dma",       'a', NULL, CFG_BOOL,  (void *) &use_dma,     0},
 		{"device",    'd', NULL, CFG_STR,   (void *) &device,      0},
@@ -516,30 +590,39 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"jmp",       'j', NULL, CFG_INT,   (void *) &boot_mode,   0},
 		{"os",        'o', NULL, CFG_INT,   (void *) &bin_type,    0},
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
+		{"fast",      's', NULL, CFG_INT,   (void *) &fast_boot,   0},
+		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
+		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
+		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
+		{"pv2",      '\0', NULL, CFG_ULONG, (void *) &p_value[1],  0},
 		CFG_END_OF_LIST
 	};
-	
+
 	CMD_DEFAULT_ARGS_PARSER(options);
-	
+
 	if(file == NULL) {
 		ds_printf("DS_ERROR: Too few arguments (ISO file) \n");
 		return CMD_ERROR;
 	}
-		
+
 	if(!lex) {
 		if(boot_mode != BOOT_MODE_DIRECT) {
-			lex = 0x8c000100; //ISOLDR_DEFAULT_ADDR_HIGH;
+			lex = ISOLDR_DEFAULT_ADDR_HIGH;
 		} else {
 			lex = ISOLDR_DEFAULT_ADDR_LOW;
 		}
 	}
 
+	if(fast_boot) {
+		nogdtex = 1;
+	}
+
 	info = isoldr_get_info(file, nogdtex ? 0 : 1);
-	
+
 	if(info == NULL) {
 		return CMD_ERROR;
 	}
-	
+
 	if(device != NULL && strncasecmp(device, "auto", 4)) {
 
 		strcpy(info->fs_dev, device);
@@ -551,12 +634,12 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 			ds_printf("DS_WARNING: Using dc-load as file system, forced loader address: 0x%08lx\n", lex);
 		}
 	}
-	
+
 	if(fstype != NULL && strncasecmp(fstype, "auto", 4)) {
 		strcpy(info->fs_type, fstype);
 		info->fs_type[strlen(info->fs_type)] = '\0';
 	}
-	
+
 	if(fspart > -1 && fspart < 4) {
 		info->fs_part = fspart;
 	}
@@ -565,63 +648,75 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		strncpy(info->exec.file, bin_file, 12);
 		info->exec.file[12] = '\0';
 	}
-	
-	info->exec.type = bin_type;
-	info->exec.addr = addr ? addr : 0xac010000;
+
+	if(bin_type) {
+		info->exec.type = bin_type;
+	}
+
+	if(addr) {
+		info->exec.addr = addr;
+	}
+
 	info->boot_mode = boot_mode;
 	info->emu_async = emu_async;
-	info->emu_cdda = emu_cdda;
-	info->use_dma = use_dma;
+	info->emu_cdda  = emu_cdda;
+	info->use_dma   = use_dma;
+	info->fast_boot = fast_boot;
 	
+	info->patch_addr[0]  = p_addr[0];
+	info->patch_addr[1]  = p_addr[1];
+	info->patch_value[0] = p_value[0];
+	info->patch_value[1] = p_value[1];
+
 	if(verbose) {
 
 		ds_printf("Params size: %d\n", sizeof(isoldr_info_t));
 
 		ds_printf("\n--- Executable info ---\n "
-					"Name: %s\n "
-					"OS: %d\n "
-					"Size: %d Kb\n "
-					"LBA: %d\n "
-					"Address: 0x%08lx\n "
-					"Boot mode: %d\n",
-					info->exec.file, 
-					info->exec.type, 
-					info->exec.size/1024, 
-					info->exec.lba, 
-					info->exec.addr, 
-					info->boot_mode);
-		
+		          "Name: %s\n "
+		          "OS: %d\n "
+		          "Size: %d Kb\n "
+		          "LBA: %d\n "
+		          "Address: 0x%08lx\n "
+		          "Boot mode: %d\n",
+		          info->exec.file,
+		          info->exec.type,
+		          info->exec.size/1024,
+		          info->exec.lba,
+		          info->exec.addr,
+		          info->boot_mode);
+
 		ds_printf("--- ISO info ---\n "
-					"File: %s (%s)\n "
-					"Format: %d\n "
-					"LBA: %d (%d)\n "
-					"Sector size: %d\n", 
-					info->image_file, 
-					info->image_second,
-					info->image_type, 
-					info->track_lba[0], 
-					info->track_lba[1],
-					info->sector_size);
-					
+		          "File: %s (%s)\n "
+		          "Format: %d\n "
+		          "LBA: %d (%d)\n "
+		          "Sector size: %d\n",
+		          info->image_file,
+		          info->image_second,
+		          info->image_type,
+		          info->track_lba[0],
+		          info->track_lba[1],
+		          info->sector_size);
+
 		ds_printf("--- Loader info ---\n "
-					"Device: %s\n "
-					"Filesystem: %s (partition %d)\n "
-					"Address: 0x%08lx\n "
-					"Emu async: %d\n "
-					"Emu CDDA: %d\n\n",
-					info->fs_dev,
-					info->fs_type,
-					info->fs_part,
-					lex, 
-					info->emu_async,
-					info->emu_cdda);
+		          "Device: %s\n "
+		          "Filesystem: %s (partition %d)\n "
+		          "Address: 0x%08lx\n "
+		          "Emu async: %d\n "
+		          "Emu CDDA: %d\n\n",
+		          info->fs_dev,
+		          info->fs_type,
+		          info->fs_part,
+		          lex,
+		          info->emu_async,
+		          info->emu_cdda);
 	}
-	
+
 	if(!strncasecmp(info->fs_dev, ISOLDR_DEV_DCIO, 4)) {
 		isoldr_exec_dcio(info, file);
 	} else {
 		isoldr_exec(info, lex);
 	}
-	
+
 	return CMD_ERROR;
 }

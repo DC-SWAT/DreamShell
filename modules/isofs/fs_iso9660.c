@@ -4,14 +4,15 @@
    Copyright (C)2000,2001,2003 Dan Potter
    Copyright (C)2001 Andrew Kieschnick
    Copyright (C)2002 Bero
-   Copyright (C)2011-2014 SWAT
+   Copyright (C)2011-2016 SWAT
 */
 
-#include "ds.h"
-#include "isofs/isofs.h"
-#include "isofs/ciso.h"
-#include "isofs/cdi.h"
-#include "isofs/gdi.h"
+#include <ds.h>
+#include <isofs/isofs.h>
+#include <isofs/ciso.h>
+#include <isofs/cdi.h>
+#include <isofs/gdi.h>
+#include "internal.h"
 
 /* List of cache blocks (ordered least recently used to most recently) */
 #define NUM_CACHE_BLOCKS 4
@@ -217,7 +218,7 @@ static int read_data(uint32 sector, uint32 count, void *data, isofs_t *ifs) {
 
 #define ROOT_DIRECTORY_HORIZON 64
 
-
+// TODO: CSO/ZSO
 static int isofile_read(file_t fd, off_t offset, size_t size, uint8 *buff) {
 	fs_seek(fd, offset, SEEK_SET);
 	return fs_read(fd, buff, size);
@@ -229,7 +230,7 @@ static int isofile_find_lba(isofs_t *ifs) {
 
 	for (sec = 16; sec < ROOT_DIRECTORY_HORIZON; sec++) {
 
-		if (isofile_read(ifs->fd, sec<<11, 6, buf1) < 0)
+		if (isofile_read(ifs->fd, sec << 11, 6, buf1) < 0)
 			return 150;
 		if (!memcmp(buf1, "\001CD001", 6))
 			break;
@@ -244,13 +245,13 @@ static int isofile_find_lba(isofs_t *ifs) {
 	ds_printf("DS_ISOFS: PVD is at %d", sec);
 #endif
 
-	if (isofile_read(ifs->fd, (sec<<11)+0x9c, 0x22, buf1) < 0)
+	if (isofile_read(ifs->fd, (sec << 11) + 0x9c, 0x22, buf1) < 0)
 		return -1;
 
 	while (++sec < ROOT_DIRECTORY_HORIZON) {
-		if (!isofile_read(ifs->fd, sec<<11, 0x22, buf2))
+		if (!isofile_read(ifs->fd, sec << 11, 0x22, buf2))
 			return 150;
-		if (!memcmp(buf1, buf2, 0x12) && !memcmp(buf1+0x19, buf2+0x19, 0x9))
+		if (!memcmp(buf1, buf2, 0x12) && !memcmp(buf1 + 0x19, buf2 + 0x19, 0x9))
 			break;
 	}
 	
@@ -370,28 +371,26 @@ static void bclear(isofs_t *ifs) {
 /********************************************************************************/
 /* Higher-level ISO9660 primitives */
 
+//#define IPBIN_TOC_OFFSET 260
 
-#define IPBIN_TOC_OFFSET 260
-
-
-static int GetLBAFromMKI(isofs_t *ifs) {
+static int get_lba_from_mki(isofs_t *ifs) {
 	
 	ds_printf("DS_ISOFS: Searching MKI string...\n");
 	int lba = -1;
 	int s = 17;
 	uint8 mki[2048];
-	char mkisofs[512];
+	char mkisofs[256];
 
 	while(s < 25) {
 
 		if(ifs->ciso != NULL) {
 			ciso_read_sectors(ifs->ciso, ifs->fd, mki, s, 1);
-		} else if(ifs->cdi != NULL) {
-			cdi_read_sectors(ifs->cdi, ifs->fd, mki, s, 1);
-		} else if(ifs->gdi != NULL) {
-			gdi_read_sectors(ifs->gdi, mki, s, 1);
+//		} else if(ifs->cdi != NULL) {
+//			cdi_read_sectors(ifs->cdi, ifs->fd, mki, s, 1);
+//		} else if(ifs->gdi != NULL) {
+//			gdi_read_sectors(ifs->gdi, mki, s, 1);
 		} else {
-			fs_seek(ifs->fd, s*2048, SEEK_SET);
+			fs_seek(ifs->fd, s << 1, SEEK_SET);
 			fs_read(ifs->fd, mki, sizeof(mki));
 		}
 		
@@ -423,8 +422,8 @@ static int GetLBAFromMKI(isofs_t *ifs) {
 	return lba;
 }
 
-
-static int GetTOC_FromISO(isofs_t *ifs) {
+/*
+static int get_toc_and_lba(isofs_t *ifs) {
 
 	uint8 ipbin[2048];
 	int i, lba = 150, mk = 0;
@@ -451,8 +450,9 @@ static int GetTOC_FromISO(isofs_t *ifs) {
 		}
 	}
 
-	
+
 	if(ipbin[0x0] == 'S' && ipbin[0x1] == 'E' && ipbin[(IPBIN_TOC_OFFSET)-1] == 0x31) {
+
 		memcpy_sh4(&ifs->toc, ipbin + IPBIN_TOC_OFFSET, sizeof(CDROM_TOC));
 		//lba = cdrom_locate_data_track(&toc) + 150;
 
@@ -463,7 +463,7 @@ static int GetTOC_FromISO(isofs_t *ifs) {
 				
 				if(lba >= 45150) {
 					
-					mk = GetLBAFromMKI(ifs);
+					mk = get_lba_from_mki(ifs);
 					
 					if(mk > 150) {
 						return mk;
@@ -477,8 +477,9 @@ static int GetTOC_FromISO(isofs_t *ifs) {
 				break;
 			}
 		}
+		
 	} else {
-		mk = GetLBAFromMKI(ifs);
+		mk = get_lba_from_mki(ifs);
 		
 		if(mk > 0) {
 			return mk;
@@ -486,7 +487,56 @@ static int GetTOC_FromISO(isofs_t *ifs) {
 			return 150;
 		}
 	}
-	
+
+	return lba;
+}
+*/
+
+static int get_toc_and_lba(isofs_t *ifs) {
+
+	int lba = 150;
+
+	switch(ifs->type) {
+		case ISOFS_IMAGE_TYPE_CDI:
+
+			cdi_get_toc(ifs->cdi, &ifs->toc);
+			return cdrom_locate_data_track(&ifs->toc);
+
+		case ISOFS_IMAGE_TYPE_GDI:
+
+			gdi_get_toc(ifs->gdi, &ifs->toc);
+			return 45150;
+
+		case ISOFS_IMAGE_TYPE_CSO:
+		case ISOFS_IMAGE_TYPE_ZSO:
+
+			lba = get_lba_from_mki(ifs);
+			
+			if(lba <= 0) {
+				lba = 150; // TODO: isofile_find_lba(ifs);
+			}
+			
+			spoof_multi_toc_cso(&ifs->toc, ifs->ciso, lba);
+			break;
+
+		case ISOFS_IMAGE_TYPE_ISO:
+		default:
+
+			lba = get_lba_from_mki(ifs);
+			
+			if(lba <= 0) {
+				lba = isofile_find_lba(ifs);
+			}
+			
+			if(lba >= 45150) {
+				spoof_multi_toc_3track_gd(&ifs->toc);
+			} else {
+				spoof_multi_toc_iso(&ifs->toc, ifs->fd, lba);
+			}
+
+			break;
+	}
+
 	return lba;
 }
 
@@ -499,7 +549,7 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 	/* Start off with no cached blocks and no open files*/
 	// virt_iso_reset(ifs);
 	
-	ifs->session_base = GetTOC_FromISO(ifs);
+	ifs->session_base = get_toc_and_lba(ifs);
 	ds_printf("DS_ISOFS: Session base: %d\n", ifs->session_base);
 	
 	//dbglog(DBG_DEBUG, "virt_iso_init_percd: session base = %d\n", ifs->session_base);
@@ -643,7 +693,7 @@ static virt_iso_dirent_t *find_object(const char *fn, int dir,
 						fnlen = p - fn;
 					else
 						fnlen = strlen(fn);
-					if (!strnicmp(rrname, fn, fnlen) && ! *(rrname + fnlen)) {
+					if (!strncasecmp(rrname, fn, fnlen) && ! *(rrname + fnlen)) {
 						if (!((dir << 1) ^ de->flags))
 							return de;
 					}
@@ -984,6 +1034,22 @@ static dirent_t *virt_iso_readdir(void * h) {
 	return &fh[fd].dirent;
 }
 
+
+static int virt_iso_rewinddir(void * h) {
+	file_t fd = (file_t)h;
+
+	if(fd >= MAX_ISO_FILES || fh[fd].first_extent == 0 || !fh[fd].dir ||
+		fh[fd].broken) {
+		errno = EBADF;
+		return -1;
+	}
+
+	/* Rewind to the beginning of the directory. */
+	fh[fd].ptr = 0;
+	return 0;
+}
+
+
 static int virt_iso_reset(isofs_t *ifs) {
 	virt_iso_break_all(ifs);
 	bclear(ifs);
@@ -1017,7 +1083,7 @@ static int virt_iso_ioctl(void * hnd, void *data, size_t size) {
 		{
 			if(fh[fd].ifs->gdi != NULL) {
 				GDI_track_t *trk = gdi_get_track(fh[fd].ifs->gdi, fh[fd].ifs->session_base - 150);
-				memcpy(data, trk->filename, sizeof(trk->filename));
+				memcpy_sh4(data, trk->filename, sizeof(trk->filename));
 			} else {
 				return -1;
 			}
@@ -1113,6 +1179,11 @@ static int virt_iso_ioctl(void * hnd, void *data, size_t size) {
 			memcpy_sh4(data, &lnk, sizeof(uint32));
 			break;
 		}
+		case ISOFS_IOCTL_GET_IMAGE_FD:
+		{
+			memcpy_sh4(data, &fh[fd].ifs->fd, sizeof(uint32));
+			break;
+		}
 		case ISOFS_IOCTL_GET_TOC_DATA:
 		
 			memcpy_sh4(data, &fh[fd].ifs->toc, sizeof(CDROM_TOC));
@@ -1152,8 +1223,109 @@ static int virt_iso_ioctl(void * hnd, void *data, size_t size) {
 			
 			break;
 		}
+		case ISOFS_IOCTL_GET_TRACK_SECTOR_COUNT:
+		{
+			uint32 val = *(uint32*)data;
+			uint32 sec_size = 2048;
+			
+			if(!val) {
+				val = fh[fd].ifs->session_base - 150;
+			} else {
+				val -= 150;
+			}
+			
+			if(fh[fd].ifs->cdi != NULL) {
+				
+				CDI_track_t *ctrk = cdi_get_track(fh[fd].ifs->cdi, val);
+				sec_size = cdi_track_sector_size(ctrk);
+				
+				val = ctrk->total_length / sec_size;
+				
+			} else if(fh[fd].ifs->gdi != NULL) {
+				
+				GDI_track_t *gtrk = gdi_get_track(fh[fd].ifs->gdi, val);
+				sec_size = gdi_track_sector_size(gtrk);
+				
+				val = fs_total(fh[fd].ifs->gdi->track_fd) / sec_size;
+			
+			} else if(fh[fd].ifs->ciso != NULL) {
+				
+				val = fh[fd].ifs->ciso->total_bytes / fh[fd].ifs->ciso->block_size;
+			
+			} else {
+				val = fs_total(fh[fd].ifs->fd) / sec_size;
+			}
+			
+			memcpy_sh4(data, &val, sizeof(uint32));
+			break;
+		}
 		default:
 			return -1;
+	}
+
+	return 0;
+}
+
+
+static int virt_iso_fcntl(void *h, int cmd, va_list ap) {
+	file_t fd = (file_t)h;
+	int rv = -1;
+
+	(void)ap;
+
+	if(fd >= MAX_ISO_FILES || !fh[fd].first_extent || fh[fd].broken) {
+		errno = EBADF;
+		return -1;
+	}
+
+	switch(cmd) {
+		case F_GETFL:
+			rv = O_RDONLY;
+
+			if(fh[fd].dir)
+				rv |= O_DIR;
+
+			break;
+
+		case F_SETFL:
+		case F_GETFD:
+		case F_SETFD:
+			rv = 0;
+			break;
+
+		default:
+			errno = EINVAL;
+	}
+
+	return rv;
+}
+
+
+static int virt_iso_fstat(void *h, struct stat *st) {
+	file_t fd = (file_t)h;
+
+	if(fd >= MAX_ISO_FILES || !fh[fd].first_extent || fh[fd].broken) {
+		errno = EBADF;
+		return -1;
+	}
+
+	memset(st, 0, sizeof(struct stat));
+
+	if(fh[fd].dir) {
+		st->st_size = 0;
+		st->st_dev = 'c' | ('d' << 8);
+		st->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR |
+			S_IXGRP | S_IXOTH;
+		st->st_nlink = 1;
+		st->st_blksize = 2048;
+	}
+	else {
+		st->st_size = fh[fd].size;
+		st->st_dev = 'c' | ('d' << 8);
+		st->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR |
+			S_IXGRP | S_IXOTH;
+		st->st_nlink = 1;
+		st->st_blksize = 2048;
 	}
 
 	return 0;
@@ -1183,21 +1355,23 @@ static vfs_handler_t vh = {
 	virt_iso_total,
 	virt_iso_readdir,
 	virt_iso_ioctl,
-    NULL,               /* rename XXX */
-    NULL,               /* unlink XXX */
-    NULL,               /* mmap XXX */
-    NULL,               /* complete */
-    NULL,               /* stat XXX */
-    NULL,               /* mkdir XXX */
-    NULL,               /* rmdir XXX */
-    NULL,               /* fcntl XXX */
-    NULL,               /* poll XXX */
-    NULL,               /* link XXX */
-    NULL,               /* symlink XXX */
-    NULL,               /* seek64 XXX */
-    NULL,               /* tell64 XXX */
-    NULL,               /* total64 XXX */
-    NULL                /* readlink XXX */
+	NULL,               /* rename XXX */
+	NULL,               /* unlink XXX */
+	NULL,               /* mmap XXX */
+	NULL,               /* complete */
+	NULL,               /* stat XXX */
+	NULL,               /* mkdir XXX */
+	NULL,               /* rmdir XXX */
+	virt_iso_fcntl,
+    NULL,               /* poll */
+    NULL,               /* link */
+    NULL,               /* symlink */
+    NULL,               /* seek64 */
+    NULL,               /* tell64 */
+    NULL,               /* total64 */
+    NULL,               /* readlink */
+    virt_iso_rewinddir,
+    virt_iso_fstat
 };
 
 
@@ -1310,11 +1484,11 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 		return -1;
 	}
 
-	memcpy(vfs, &vh, sizeof(vfs_handler_t));
+	memcpy_sh4(vfs, &vh, sizeof(vfs_handler_t));
 	strncpy(vfs->nmmgr.pathname, mountpoint, MAX_FN_LEN);
 	vfs->privdata = (void*)ifs;
 
-	memset(ifs, 0, sizeof(isofs_t));
+	memset_sh4(ifs, 0, sizeof(isofs_t));
 	ifs->fd = fd;
 	ifs->vfs = vfs;
 	

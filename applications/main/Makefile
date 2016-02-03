@@ -1,6 +1,6 @@
 #
 # Main App for DreamShell
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2016 SWAT
 # http://www.dc-swat.ru
 #
 

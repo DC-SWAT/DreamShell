@@ -1,168 +1,163 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="GD Ripper" version="1.0" icon="images/icon.png">
+<app name="GD Ripper" version="1.0.1" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_gd_ripper.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
-		<surface width="640" height="480" name="back">
-		<blit x="0" y="0" width="640" height="480" surface="images/background.jpg" />
+		<surface width="640" height="480" name="bg">
+			<blit surface="images/background.jpg" />
 		</surface>
 		<image src="../../gui/icons/normal/button_cancel.png" name="iExitNorm" />
 		<image src="../../gui/icons/highlight/button_cancel.png" name="iExitHigh" />
 		<image src="images/button.png" name="bNorm" />
 		<image src="images/buttonhigh.png" name="bNormh" />
 		<surface width="150" height="20" name="input-normal">
-			<fill x="0" y="0" width="150" height="20" color="#FFFFFF" />
+			<fill color="#FFFFFF" />
 		</surface>
 		<surface width="150" height="20" name="input-focus">
-			<fill x="0" y="0" width="150" height="20" color="#29B1EA" />
+			<fill color="#29B1EA" />
 			<fill x="2" y="2" width="148" height="18" color="#7CFFC1" />
 		</surface>
-		
 		<surface width="35" height="20" name="inputsmall-normal">
-			<fill x="0" y="0" width="35" height="20" color="#FFFFFF" />
+			<fill color="#FFFFFF" />
 		</surface>
 		<surface width="35" height="20" name="inputsmall-focus">
-			<fill x="0" y="0" width="35" height="20" color="#29B1EA" />
+			<fill color="#29B1EA" />
 			<fill x="2" y="2" width="33" height="18" color="#7CFFC1" />
 		</surface>
-		
 		<image src="./images/start.png" name="iStart" />
 		<image src="./images/starth.png" name="iStarth" />
 		<image src="./images/check.png" name="iCheck" />
 		<image src="./images/checkh.png" name="iCheckh" />
 		<surface width="18" height="17" name="iUncheck">
-			<fill x="0" y="0" width="18" height="17" color="#FFFFFF" />
+			<fill color="#FFFFFF" />
 		</surface>
 		<surface width="18" height="17" name="iUncheckh">
-			<fill x="0" y="0" width="18" height="17" color="#EAD8A0" />
+			<fill color="#EAD8A0" />
 		</surface>
 	</resources>
-	<body x="0" y="0" width="640" height="480" background="back" onload="export:gd_ripper_Init()" onunload="export:gd_ripper_Exit()">
+	<body width="640" height="480" background="bg" onload="export:gd_ripper_Init()" onunload="export:gd_ripper_Exit()">
+
 		<progressbar width="320" height="97" x="166" y="11" name="progress_bar" pos="0.0" pimage="images/sega.png" />
 		<progressbar width="320" height="120" x="160" y="160" name="read_error" pos="0.0" pimage="images/readerror.png" />
-		<label width="160" height="90" x="0" y="25" font="m23" color="#2439da" name="track-label" text=" " />
-		
-			<panel x="40" y="115" width="150" height="50">
-				<label width="150" height="20" x="0" y="0" font="arial" color="#000000" text="Enter name image :" align="left" />
-				<input type="text" 
-						onfocus="export:gd_ripper_Delname()"
-						onblur="export:gd_ripper_Gamename()"
-						font="arial" 
-						fontcolor="#000000" 
-						value="Game" 
-						size="30" x="0" y="20" 
-						width="150" height="20" 
-						name="gname-text" 
-						normal="input-normal" 
-						highlight="input-normal"
-						focus="input-focus" />
-			</panel>
-					
-					<input type="button" 
-					onclick="export:gd_ripper_ipbin_name()" 
-					normal="bNorm" 
-					highlight="bNormh" 
-					pressed="bNorm" 
-					disabled="bNorm" 
-					x="60" y="160" 
-					width="100" height="30" 
-					name="Read-name">
-					</input>
-		
-			<panel x="260" y="115" width="360" height="350">
-					<panel width="200" height="20" x="40" y="0">
-						<label width="200" height="20" x="0" y="0" font="arial" color="#000000" text="Read otions :" align="left" />
-					</panel>
-					
-					
-					<input type="checkbox"
-							checked="no"
-							onnormal="iCheck"
-							onhighlight="iCheckh"
-							offnormal="iUncheck"
-							offhighlight="iUncheckh"
-							x="40" y="25" width="40" height="25" 
-							name="bad_btn">
-							<label width="300" height="20" x="50" y="0" font="arial" color="#000000" text="Skip bad sectors" align="left" />
-					</input>
+		<label width="160" height="90" y="25" font="m23" color="#2439da" name="track-label" text=" " />
 
-					<panel x="40" y="60" width="360" height="40">
-						<label width="300" height="20" x="50" y="0" font="arial" color="#000000" text="Attempts of reading bad sectors" align="left" />
-						<input  type="text" 
-								onfocus="export:gd_ripper_Delname()"
-								onblur="export:gd_ripper_Number_read()"
-								font="arial" 
-								fontcolor="#000000" 
-								value="10" 
-								size="30" x="0" y="0" 
-								width="35" height="20" 
-								name="num-read" 
-								normal="inputsmall-normal" 
-								highlight="inputsmall-normal"
-								focus="inputsmall-focus">
-						</input>
-					</panel>
+		<panel x="40" y="115" width="150" height="80">
+			<label height="20" font="arial" color="#000000" text="Enter name image:" align="left" />
+			<input type="text"
+				onfocus="export:gd_ripper_Delname()"
+				onblur="export:gd_ripper_Gamename()"
+				font="arial"
+				fontcolor="#000000"
+				value="Game"
+				size="30"
+				height="20"
+				name="gname-text"
+				normal="input-normal"
+				highlight="input-normal"
+				focus="input-focus" />
+			<input type="button"
+				onclick="export:gd_ripper_ipbin_name()"
+				normal="bNorm"
+				highlight="bNormh"
+				pressed="bNorm"
+				disabled="bNorm"
+				width="100"
+				height="30"
+				y="50"
+				name="Read-name" />
+		</panel>
+
+		<panel x="300" y="115" width="360" height="200">
+			<panel height="20">
+				<label font="arial" color="#000000" text="Read options:" align="left" />
 			</panel>
-		
-		<panel x="300" y="200" width="300" height="180" >
-			<label width="150" height="20" x="0" y="0" font="arial" color="#000000" text="Select device to save :" align="left" />
-				<input type="checkbox" 
-						onclick="export:gd_ripper_toggleSavedevice()" 
-						onnormal="iCheck" 
-						onhighlight="iCheckh" 
-						offnormal="iUncheck" 
-						offhighlight="iUncheckh" 
-						x="0" 
-						y="30" 
-						width="40" 
-						height="25" 
-						name="sd_c">
-					<label width="80" height="20" x="0" y="0" font="arial" color="#000000" text="   SD" />
-				</input>
-				<input type="checkbox" 
-						onclick="export:gd_ripper_toggleSavedevice()" 
-						onnormal="iCheck" 
-						onhighlight="iCheckh" 
-						offnormal="iUncheck" 
-						offhighlight="iUncheckh" 
-						x="0" 
-						y="60" 
-						width="40" 
-						height="25" 
-						name="hdd_c">
-					<label width="80" height="20" x="0" y="0" font="arial" color="#000000" text="     HDD" />
-				</input>
-				<input type="checkbox" 
-						onclick="export:gd_ripper_toggleSavedevice()" 
-						onnormal="iCheck" 
-						onhighlight="iCheckh" 
-						offnormal="iUncheck" 
-						offhighlight="iUncheckh" 
-						x="0" 
-						y="90" 
-						width="40" 
-						height="25" 
-						name="net_c">
-					<label width="80" height="20" x="0" y="0" font="arial" color="#000000" text="     PC" />
-				</input>
+			
+			<input type="checkbox"
+					checked="no"
+					onnormal="iCheck"
+					onhighlight="iCheckh"
+					offnormal="iUncheck"
+					offhighlight="iUncheckh"
+					y="25"
+					width="200"
+					height="25"
+					name="bad_btn">
+				<label x="25" height="20" font="arial" color="#000000" text="Skip bad sectors" align="left" />
+			</input>
+
+			<panel y="60" width="360" height="20">
+				<input type="text"
+					onfocus="export:gd_ripper_Delname()"
+					onblur="export:gd_ripper_Number_read()"
+					font="arial"
+					fontcolor="#000000"
+					value="10"
+					size="30"
+					width="35"
+					height="20"
+					name="num-read"
+					normal="inputsmall-normal"
+					highlight="inputsmall-normal"
+					focus="inputsmall-focus" />
+				<label width="280" height="20" x="50" font="arial" color="#000000" text="Attempts of reading bad sectors" align="left" />
+			</panel>
 		</panel>
 		
-		<input type="button" 
-				normal="iStart" 
-				highlight="iStarth" 
-				pressed="iStart" 
-				disabled="iStart" 
-				x="10" y="405" width="70" height="70" 
-				onclick="export:gd_ripper_StartRip()" />
-				
-		
-		<input type="button" 
-				normal="iExitNorm" 
-				highlight="iExitHigh" 
-				pressed="iExitNorm" 
-				disabled="iExitNorm" 
-				x="580" y="420" width="48" height="48" 
-				onclick="console:app -o -n Main" />
+		<panel x="300" y="200" width="300" height="120">
+			<label width="150" height="20" font="arial" color="#000000" text="Select device to save :" align="left" />
+			<input type="checkbox"
+				onclick="export:gd_ripper_toggleSavedevice()"
+				onnormal="iCheck"
+				onhighlight="iCheckh"
+				offnormal="iUncheck"
+				offhighlight="iUncheckh"
+				y="30"
+				width="100"
+				height="25"
+				name="sd_c">
+				<label height="20" x="25" font="arial" color="#000000" text="SD" align="left" />
+			</input>
+			<input type="checkbox"
+				onclick="export:gd_ripper_toggleSavedevice()" 
+				onnormal="iCheck"
+				onhighlight="iCheckh"
+				offnormal="iUncheck"
+				offhighlight="iUncheckh"
+				y="60"
+				width="100"
+				height="25"
+				name="hdd_c">
+				<label height="20" x="25" font="arial" color="#000000" text="HDD" align="left" />
+			</input>
+			<input type="checkbox"
+				onclick="export:gd_ripper_toggleSavedevice()" 
+				onnormal="iCheck"
+				onhighlight="iCheckh"
+				offnormal="iUncheck"
+				offhighlight="iUncheckh"
+				y="90"
+				width="100"
+				height="25"
+				name="net_c">
+				<label height="20" x="25" font="arial" color="#000000" text="PC" align="left" />
+			</input>
+		</panel>
+
+		<input type="button"
+			normal="iStart"
+			highlight="iStarth"
+			pressed="iStart"
+			disabled="iStart"
+			x="10" y="405" width="70" height="70"
+			onclick="export:gd_ripper_StartRip()" />
+
+		<input type="button"
+			normal="iExitNorm"
+			highlight="iExitHigh"
+			pressed="iExitNorm"
+			disabled="iExitNorm"
+			x="580" y="420" width="48" height="48"
+			onclick="console:app -o -n Main" />
 	</body>
 </app>

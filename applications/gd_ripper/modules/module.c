@@ -14,23 +14,19 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type);
 static int gdfiles(char *dst_folder,char *dst_file,char *text);
-static void *getElement(char *name, ListItemType type);
-#define APP_GET_WIDGET(name)  ((GUI_Widget *)  getElement(name, LIST_ITEM_GUI_WIDGET))
-#define APP_GET_SURFACE(name) ((GUI_Surface *) getElement(name, LIST_ITEM_GUI_SURFACE))
-#define APP_GET_FONT(name)    ((GUI_Font *)    getElement(name, LIST_ITEM_GUI_FONT))
 
 static struct self {
-		App_t *app;
-		GUI_Widget *bad;
-		GUI_Widget *sd_c;
-		GUI_Widget *hdd_c;
-		GUI_Widget *net_c;
-		GUI_Widget *gname;
-		GUI_Widget *pbar;
-		GUI_Widget *track_label;
-		GUI_Widget *read_error;
-		GUI_Widget *num_read;
-		int lastgdtrack;
+	App_t *app;
+	GUI_Widget *bad;
+	GUI_Widget *sd_c;
+	GUI_Widget *hdd_c;
+	GUI_Widget *net_c;
+	GUI_Widget *gname;
+	GUI_Widget *pbar;
+	GUI_Widget *track_label;
+	GUI_Widget *read_error;
+	GUI_Widget *num_read;
+	int lastgdtrack;
 } self;
 
 
@@ -38,7 +34,7 @@ void gd_ripper_toggleSavedevice(GUI_Widget *widget){
     GUI_WidgetSetState(self.sd_c, 0);
     GUI_WidgetSetState(self.hdd_c, 0);
     GUI_WidgetSetState(self.net_c, 0);
-    GUI_WidgetSetState(widget, 1);	
+    GUI_WidgetSetState(widget, 1);
 }
 
 void gd_ripper_Number_read(){
@@ -193,30 +189,6 @@ void gd_ripper_Init(App_t *app, const char* fileName) {
 	}
 }
 
-
-static void *getElement(char *name, ListItemType type) {
-	
-	Item_t *item;
-	
-	switch(type) {
-		case LIST_ITEM_GUI_WIDGET:
-			item = listGetItemByName(self.app->elements, name);
-			break;
-		case LIST_ITEM_GUI_SURFACE:
-		case LIST_ITEM_GUI_FONT:
-		default:
-			item = listGetItemByName(self.app->resources, name);
-			break;
-	}
-
-	if(item != NULL && item->type == type) {
-		return item->data;
-	}
-
-	ds_printf("DS_ERROR: %s: Couldn't find or wrong type '%s'\n", 
-				lib_get_name(), name, self.app->name);
-	return NULL;
-}
 
 void gd_ripper_StartRip() {
 	file_t fd;
@@ -426,12 +398,12 @@ getstatus:
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type){
 
-double percent,percent_last=0.0;
-maple_device_t *cont;
-cont_state_t *state;
-file_t hnd;
-int secbyte = (type == 4 ? 2048 : 2352) , i , count_old=count, bad=0, cdstat, readi;
-uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
+	double percent,percent_last=0.0;
+	maple_device_t *cont;
+	cont_state_t *state;
+	file_t hnd;
+	int secbyte = (type == 4 ? 2048 : 2352) , i , count_old=count, bad=0, cdstat, readi;
+	uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
 	
 	GUI_WidgetMarkChanged(self.app->body);
 //	ds_printf("Track %d		First %d	Count %d	Type %d\n",tn,first,count,type);
@@ -444,7 +416,7 @@ uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
 		ds_printf("Error open file %s\n" ,dst_file); 
 		cdrom_spin_down(); free(buffer); 
 		return CMD_ERROR;
-		}
+	}
 	
 	LockVideo();
 	
@@ -460,7 +432,7 @@ uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
 			if (readi > 5) break ;
 			thd_sleep(200);
 		}
-			readi = 0;
+		readi = 0;
 		if (cdstat != ERR_OK) {
 			if (!GUI_WidgetGetState(self.bad)) {
 				UnlockVideo();
@@ -497,10 +469,10 @@ uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
 			for(i = 0; i < nsects; i++) {
 				
 				while((cdstat=cdrom_read_sectors(pbuffer, first, 1)) != ERR_OK ) {
-				readi++ ;
-				if (readi > atoi(GUI_TextEntryGetText(self.num_read))) break ;
-				if (readi == 1 || readi == 6 || readi == 11 || readi == 16 || readi == 21 || readi == 26 || readi == 31 || readi == 36 || readi == 41 || readi == 46) cdrom_reinit();
-				thd_sleep(200);
+					readi++ ;
+					if (readi > atoi(GUI_TextEntryGetText(self.num_read))) break ;
+					if (readi == 1 || readi == 6 || readi == 11 || readi == 16 || readi == 21 || readi == 26 || readi == 31 || readi == 36 || readi == 41 || readi == 46) cdrom_reinit();
+					thd_sleep(200);
 				}
 				readi = 0;
 				
@@ -533,16 +505,17 @@ uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
 		UnlockVideo();
 		percent = 1-(float)(count) / count_old;
 		if ((percent = ((int)(percent*100 + 0.5))/100.0) > percent_last) {
-		percent_last = percent;
-		GUI_ProgressBarSetPosition(self.pbar, percent);
-		LockVideo();
+			percent_last = percent;
+			GUI_ProgressBarSetPosition(self.pbar, percent);
+			LockVideo();
 		}
 	}
-UnlockVideo();
-free(buffer);
-fs_close(hnd);
-ds_printf("%d Bad sectors on track\n", bad);
-return CMD_OK;
+
+	UnlockVideo();
+	free(buffer);
+	fs_close(hnd);
+	ds_printf("%d Bad sectors on track\n", bad);
+	return CMD_OK;
 }
 
 
@@ -626,7 +599,7 @@ int gdfiles(char *dst_folder,char *dst_file,char *text){
 	fs_chdir("/");
 	ds_printf("%s.gdi succes writen\n",text);
 
-return CMD_OK;	
+	return CMD_OK;	
 }
 
 void gd_ripper_Exit() {

@@ -1,8 +1,8 @@
 /* DreamShell ##version##
 
-   module.c - ISO Loader App module
+   module.c - ISO Loader app module
    Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2014 SWAT
+   Copyright (C) 2011-2016 SWAT
 
 */
 
@@ -12,12 +12,6 @@
 #include <kos/md5.h>
 
 DEFAULT_MODULE_EXPORTS(app_iso_loader);
-
-/* Resource helpers */
-static void *getElement(char *name, ListItemType type);
-#define APP_GET_WIDGET(name)  ((GUI_Widget *)  getElement(name, LIST_ITEM_GUI_WIDGET))
-#define APP_GET_SURFACE(name) ((GUI_Surface *) getElement(name, LIST_ITEM_GUI_SURFACE))
-#define APP_GET_FONT(name)    ((GUI_Font *)    getElement(name, LIST_ITEM_GUI_FONT))
 
 /* Indexes of devices  */
 #define APP_DEVICE_CD    0
@@ -44,6 +38,7 @@ static struct {
 	
 	GUI_Widget *filebrowser;
 	int current_item;
+	int current_item_dir;
 	GUI_Surface *item_norm;
 	GUI_Surface *item_focus;
 	GUI_Surface *item_selected;
@@ -56,6 +51,7 @@ static struct {
 	
 	GUI_Widget *dma;
 	GUI_Widget *cdda;
+	GUI_Widget *fastboot;
 	GUI_Widget *async[10];
 	GUI_Widget *async_label;
 	
@@ -63,7 +59,7 @@ static struct {
 	GUI_Widget *os_chk[4];
 	
 	GUI_Widget *boot_mode_chk[3];
-	GUI_Widget *memory_chk[14];
+	GUI_Widget *memory_chk[16];
 	GUI_Widget *memory_text;
 
 	int current_dev;
@@ -82,31 +78,9 @@ static struct {
 void isoLoader_DefaultPreset();
 int isoLoader_LoadPreset();
 int isoLoader_SavePreset();
-
-
-static void *getElement(char *name, ListItemType type) {
-	
-	Item_t *item;
-	
-	switch(type) {
-		case LIST_ITEM_GUI_WIDGET:
-			item = listGetItemByName(self.app->elements, name);
-			break;
-		case LIST_ITEM_GUI_SURFACE:
-		case LIST_ITEM_GUI_FONT:
-		default:
-			item = listGetItemByName(self.app->resources, name);
-			break;
-	}
-
-	if(item != NULL && item->type == type) {
-		return item->data;
-	}
-
-	ds_printf("DS_ERROR: %s: Couldn't find or wrong type '%s'\n", 
-				lib_get_name(), name, self.app->name);
-	return NULL;
-}
+void isoLoader_ResizeUI();
+void isoLoader_toggleMemory(GUI_Widget *widget);
+void isoLoader_toggleBootMode(GUI_Widget *widget);
 
 
 static int canUseTrueAsyncDMA(void) {
@@ -219,8 +193,9 @@ static void trim_spaces(char *input, char *output, int size) {
 	p = input;
 	o = output;
 	
-	while(*p == ' ' && input + size > p) 
+	while(*p == ' ' && input + size > p) {
 		p++;
+	}
 
 	while(input + size > p) { 
 		*o = *p;
@@ -267,6 +242,7 @@ static void showCover() {
 		
 		UnlockVideo();
 		GUI_LabelSetText(self.title, noext);
+		vmu_draw_string(noext);
 		
 		if(s != NULL) {
 			GUI_PanelSetBackground(self.cover_widget, s);
@@ -285,6 +261,7 @@ static void showCover() {
 			get_md5_hash("/isocover");
 			ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
+			vmu_draw_string(noext);
 			
 			if(FileExists("/isocover/0GDTEX.PVR")) {
 				
@@ -324,7 +301,7 @@ check_default:
 	}
 }
 
-/*
+/* TODO
 static void isoLoader_MakeShortcut(const char *filename) {
 	
 	file_t fd;
@@ -334,7 +311,7 @@ static void isoLoader_MakeShortcut(const char *filename) {
 	
 	if(fd != FILEHND_INVALID) {
 		SDL_Surface *s = zoomSurface(surface, 0.2f, 0.2f, 1);
-		SDL_SaveBMP_RW(s, SDL_RWFromFd(fd), 1);
+		SDL_SaveBMP_RW(s, SDL_RWFromFd(fd), 1); // Need alpha...
 		SDL_FreeSurface(s);
 		fs_close(fd);
 	}
@@ -388,6 +365,11 @@ void isoLoader_toggleDMA(GUI_Widget *widget) {
 
 void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	
+	if(GUI_WidgetGetState(widget) && GUI_WidgetGetState(self.memory_chk[1])) {
+		GUI_WidgetSetState(self.memory_chk[0], 1);
+		isoLoader_toggleMemory(self.memory_chk[0]);
+	}
+	
 	if(GUI_WidgetGetState(widget) && !GUI_WidgetGetState(self.dma)) {
 		
 		GUI_WidgetSetState(self.async[9], 1);
@@ -400,8 +382,6 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	}
 }
 
-
-void isoLoader_toggleBootMode(GUI_Widget *widget);
 void isoLoader_toggleMemory(GUI_Widget *widget) {
 	
 	int i;
@@ -412,7 +392,7 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 		}
 	}
 	
-	if(!strncasecmp(GUI_ObjectGetName((GUI_Object *) widget), "memory_text", 12)) {
+	if(!strncasecmp(GUI_ObjectGetName((GUI_Object *) widget), "memory-text", 12)) {
 		GUI_WidgetSetState(self.memory_chk[i-1], 1);
 	}
 	
@@ -431,7 +411,6 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
 	}
 }
-
 
 void isoLoader_toggleBootMode(GUI_Widget *widget) {
 	
@@ -498,13 +477,17 @@ void isoLoader_Run(GUI_Widget *widget) {
 		self.isoldr->use_dma = 1;
 	}
 	
+	if(GUI_WidgetGetState(self.fastboot)) {
+		self.isoldr->fast_boot = 1;
+	}
+	
 	tmpval = GUI_TextEntryGetText(self.device);
 	
 	if(strncasecmp(tmpval, "auto", 4)) {
 		strncpy(self.isoldr->fs_dev, tmpval, sizeof(self.isoldr->fs_dev));
 	}
 	
-	if(self.current_cover && self.current_cover != self.default_cover) {
+	if(self.current_cover && self.current_cover != self.default_cover && !self.isoldr->fast_boot) {
 		
 		SDL_Surface *surf = GUI_SurfaceGet(self.current_cover);
 		
@@ -563,46 +546,131 @@ void isoLoader_Run(GUI_Widget *widget) {
 }
 
 
+static void selectFile(char *name, int index) {
+	GUI_Widget *w;
+	GUI_WidgetSetEnabled(self.btn_run, 1);
+	
+	w = GUI_FileManagerGetItem(self.filebrowser, index);
+	GUI_ButtonSetNormalImage(w, self.item_selected);
+	GUI_ButtonSetHighlightImage(w, self.item_selected);
+	GUI_ButtonSetPressedImage(w, self.item_selected);
+	
+	if(self.current_item > -1) {
+		w = GUI_FileManagerGetItem(self.filebrowser, self.current_item);
+		GUI_ButtonSetNormalImage(w, self.item_norm);
+		GUI_ButtonSetHighlightImage(w, self.item_focus);
+		GUI_ButtonSetPressedImage(w, self.item_focus);
+	}
+	
+	UpdateActiveMouseCursor();
+	self.current_item = index;
+	strncpy(self.filename, name, MAX_FN_LEN);
+	highliteDevice();
+	showCover();
+	isoLoader_LoadPreset();
+}
+
+
+static void changeDir(dirent_t *ent) {
+	self.current_item = -1;
+	self.current_item_dir = -1;
+	memset(self.filename, 0, MAX_FN_LEN);
+	GUI_FileManagerChangeDir(self.filebrowser, ent->name, ent->size);
+	highliteDevice();
+	GUI_WidgetSetEnabled(self.btn_run, 0);
+}
+
+
+static int checkGDI(char *filepath, char *dirname, char *filename) {
+	memset(filepath, 0, MAX_FN_LEN);
+	snprintf(filepath, MAX_FN_LEN, "%s/%s/%s.gdi", GUI_FileManagerGetPath(self.filebrowser), dirname, filename);
+
+	if(FileExists(filepath)) {
+		memset(filepath, 0, MAX_FN_LEN);
+		snprintf(filepath, MAX_FN_LEN, "%s/%s.gdi", dirname, filename);
+		return 1;
+	}
+	
+	return 0;
+}
+
 void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 
-	dirent_t *ent = &fm_ent->ent;
+	if(!fm_ent) {
+		return;
+	}
 
-	if(ent->attr == O_DIR) {
+	dirent_t *ent = &fm_ent->ent;
+	
+	if(ent->attr == O_DIR && self.current_item_dir != fm_ent->index) {
 		
-		self.current_item = -1;
-		memset(self.filename, 0, MAX_FN_LEN);
-		GUI_FileManagerChangeDir(self.filebrowser, ent->name, ent->size);
-		highliteDevice();
-		GUI_WidgetSetEnabled(self.btn_run, 0);
+		file_t fd;
+		dirent_t *dent;
+		char filepath[MAX_FN_LEN];
+		int count = 0;
+
+		if(checkGDI(filepath, ent->name, "disk") ||
+			checkGDI(filepath, ent->name, "disc") ||
+			checkGDI(filepath, ent->name, "disc_optimized")) {
+
+			selectFile(filepath, fm_ent->index);
+			self.current_item_dir = fm_ent->index;
+			return;
+		}
+
+		memset(filepath, 0, MAX_FN_LEN);
+		snprintf(filepath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
+		fd = fs_open(filepath, O_RDONLY | O_DIR);
 		
-	} else if(fm_ent && self.current_item == fm_ent->index) {
+		if(fd != FILEHND_INVALID) {
+			
+			while ((dent = fs_readdir(fd)) != NULL) {
+				
+				// NOTE: if have directory, seems it's not a GDI
+				// TODO: optimize
+				if(++count > 100 || (dent->name[0] != '.' && dent->attr == O_DIR)) {
+					break;
+				}
+
+				int len = strlen(dent->name);
+
+				if(len > 4 && !strncasecmp(dent->name + len - 4, ".gdi", 4)) {
+//				if(strcasestr(dent->name, ".gdi") != NULL) {
+					memset(filepath, 0, MAX_FN_LEN);
+					snprintf(filepath, MAX_FN_LEN, "%s/%s", ent->name, dent->name);
+					fs_close(fd);
+					selectFile(filepath, fm_ent->index);
+					self.current_item_dir = fm_ent->index;
+					return;
+				}
+			}
+			
+			fs_close(fd);
+		}
+		
+		changeDir(ent);
+		
+	} else if(self.current_item == fm_ent->index) {
 		
 		isoLoader_Run(NULL);
 		
 	} else if(IsFileSupportedByApp(self.app, ent->name)) {
-		
-		GUI_Widget *w;
-		GUI_WidgetSetEnabled(self.btn_run, 1);
-		
-		w = GUI_FileManagerGetItem(self.filebrowser, fm_ent->index);
-		GUI_ButtonSetNormalImage(w, self.item_selected);
-		GUI_ButtonSetHighlightImage(w, self.item_selected);
-		GUI_ButtonSetPressedImage(w, self.item_selected);
-		
-		if(self.current_item > -1) {
-			w = GUI_FileManagerGetItem(self.filebrowser, self.current_item);
-			GUI_ButtonSetNormalImage(w, self.item_norm);
-			GUI_ButtonSetHighlightImage(w, self.item_focus);
-			GUI_ButtonSetPressedImage(w, self.item_focus);
-		}
-		
-		UpdateActiveMouseCursor();
-		self.current_item = fm_ent->index;
-		strncpy(self.filename, ent->name, MAX_FN_LEN);
-		highliteDevice();
-		showCover();
-		isoLoader_LoadPreset();
+
+		selectFile(ent->name, fm_ent->index);
 	}
+}
+
+
+void isoLoader_ItemContextClick(dirent_fm_t *fm_ent) {
+	
+	dirent_t *ent = &fm_ent->ent;
+	
+	if(ent->attr == O_DIR) {
+		changeDir(ent);
+		return;
+	}
+	
+	isoLoader_ItemClick(fm_ent);
 }
 
 
@@ -613,7 +681,7 @@ static char *makePresetFilename() {
 	}
 
 	char dev[8];
-	static char filename[MAX_FN_LEN / 2];
+	static char filename[MAX_FN_LEN];
 	const char *dir = GUI_FileManagerGetPath(self.filebrowser);
 	
 	memset(filename, 0, sizeof(filename));
@@ -637,18 +705,26 @@ static char *makePresetFilename() {
 
 void isoLoader_DefaultPreset() {
 	
-	if(self.used_preset == true) {
-		
-		GUI_WidgetSetState(self.preset, 0);
+	if(canUseTrueAsyncDMA() && !GUI_WidgetGetState(self.dma)) {
+
+		GUI_WidgetSetState(self.dma, 1);
+		isoLoader_toggleDMA(self.dma);
+
+	} else if(GUI_WidgetGetState(self.dma)) {
 		
 		GUI_WidgetSetState(self.dma, 0);
 		isoLoader_toggleDMA(self.dma);
 		
-		GUI_WidgetSetState(self.cdda, 0);
-		isoLoader_toggleCDDA(self.dma);
-
 		GUI_WidgetSetState(self.async[8], 1);
 		isoLoader_toggleAsync(self.async[8]);
+	}
+
+	if(self.used_preset == true) {
+		
+		GUI_WidgetSetState(self.preset, 0);
+		
+		GUI_WidgetSetState(self.cdda, 0);
+//		isoLoader_toggleCDDA(self.cdda);
 		
 		GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 		isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
@@ -696,7 +772,7 @@ int isoLoader_SavePreset() {
 	file_t fd;
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	char text[32];
-	char result[256];
+	char result[512];
 	int async = 0, type = 0, mode = 0;
 	
 	filename = makePresetFilename();
@@ -707,11 +783,7 @@ int isoLoader_SavePreset() {
 	
 	LockVideo();
 	
-	if(FileExists(filename)) {
-		fs_unlink(filename);
-	}
-	
-	fd = fs_open(filename, O_CREAT | O_WRONLY);
+	fd = fs_open(filename, O_CREAT | O_TRUNC | O_WRONLY);
 	
 	if(fd == FILEHND_INVALID) {
 		UnlockVideo();
@@ -762,11 +834,12 @@ int isoLoader_SavePreset() {
 	trim_spaces(ipbin->title, text, sizeof(ipbin->title));
 	memset(result, 0, sizeof(result));
 	
-	sprintf(result, "title = %s\ndma = %d\nasync = %d\ncdda = %d\ntype = %d\nmode = %d\nmemory = %s\n", 
+	snprintf(result, sizeof(result),
+			"title = %s\ndma = %d\nasync = %d\ncdda = %d\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n", 
 			text, GUI_WidgetGetState(self.dma), async, 
-			GUI_WidgetGetState(self.cdda), type, mode, memory);
+			GUI_WidgetGetState(self.cdda), GUI_WidgetGetState(self.fastboot), type, mode, memory);
 
-	fs_write(fd, result, strlen(result));
+	fs_write(fd, result, sizeof(result));
 	fs_close(fd);
 	self.used_preset = true;
 	
@@ -779,13 +852,14 @@ int isoLoader_LoadPreset() {
 
 	char *filename = makePresetFilename();
 	
-	if(filename == NULL || FileSize(filename) <= 0) {
+	if(filename == NULL || FileSize(filename) < 5) {
 		isoLoader_DefaultPreset();
 		return -1;
 	}
 	
 	uint32 lex = 0;
 	int use_dma = 0, emu_async = 8, emu_cdda = 0;
+	int fastboot = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
 	char *title = NULL;
@@ -800,6 +874,7 @@ int isoLoader_LoadPreset() {
 		{NULL, '\0', "mode",   CFG_INT,   (void *) &boot_mode,   0},
 		{NULL, '\0', "type",   CFG_INT,   (void *) &bin_type,    0},
 		{NULL, '\0', "title",  CFG_STR,   (void *) &title,       0},
+		{NULL, '\0', "fastboot", CFG_INT, (void *) &fastboot,    0},
 		CFG_END_OF_LIST
 	};
 	
@@ -812,7 +887,7 @@ int isoLoader_LoadPreset() {
 		return -1;	
 	}
 
-	cfg_set_cfgfile_context(con, 0, -1, (char* )filename);
+	cfg_set_cfgfile_context(con, 0, 2048, filename);
 
 	if(cfg_parse(con) != CFG_OK) {
 		ds_printf("DS_ERROR: %s\n", cfg_get_error_str(con));
@@ -828,8 +903,10 @@ int isoLoader_LoadPreset() {
 	}
 	
 	GUI_WidgetSetState(self.cdda, emu_cdda);
-//	isoLoader_toggleCDDA(self.dma);
+	isoLoader_toggleCDDA(self.cdda);
 	
+	GUI_WidgetSetState(self.fastboot, fastboot);
+
 	GUI_WidgetSetState(self.dma, use_dma);
 	isoLoader_toggleDMA(self.dma);
 	
@@ -844,6 +921,7 @@ int isoLoader_LoadPreset() {
 	
 	if(title) {
 		GUI_LabelSetText(self.title, title);
+		vmu_draw_string(title);
 	}
 	
 	if(lex) {
@@ -855,7 +933,7 @@ int isoLoader_LoadPreset() {
 		
 		for(i = 0; self.memory_chk[i]; i++) {
 			
-			name = (char* )GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
+			name = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
 			
 			if(!strncasecmp(name, memory, sizeof(memory))) {
 				GUI_WidgetSetState(self.memory_chk[i], 1);
@@ -886,7 +964,6 @@ void isoLoader_Init(App_t *app) {
 
 	GUI_Widget *w, *b;
 	GUI_Callback *cb;
-	char name[32];
 
 	if(app != NULL) {
 
@@ -894,6 +971,8 @@ void isoLoader_Init(App_t *app) {
 		
 		self.app = app;
 		self.current_dev = -1;
+		self.current_item = -1;
+		self.current_item_dir = -1;
 		self.used_preset = true;
 		self.sector_size = 2048;
 
@@ -936,27 +1015,36 @@ void isoLoader_Init(App_t *app) {
 		self.preset        = APP_GET_WIDGET("preset-checkbox");
 		self.dma           = APP_GET_WIDGET("dma-checkbox");
 		self.cdda          = APP_GET_WIDGET("cdda-checkbox");
+		self.fastboot      = APP_GET_WIDGET("fastboot-checkbox");
 		
-		int acnt = (sizeof(self.async) >> 2) - 1;
+		w = APP_GET_WIDGET("async-panel");
+		self.async[0] = GUI_ContainerGetChild(w, 1);
+		int sz = (sizeof(self.async) >> 2) - 1;
 		
-		for(int i = 0; i < acnt; i++) {
-			snprintf(name, sizeof(name), "async-%d-checkbox", i);
-			self.async[i] = APP_GET_WIDGET(name);
+		for(int i = 0; i < sz; i++) {
+
+			b = GUI_ContainerGetChild(w, i + 2);
+			int val = atoi( GUI_LabelGetText( GUI_ButtonGetCaption(b) ) );
+
+			self.async[(val - 1) < sz ? val : sz] = b;
 		}
-		self.async[acnt]   = APP_GET_WIDGET("async-16-checkbox");
+
 		self.async_label   = APP_GET_WIDGET("async-label");
 		self.device        = APP_GET_WIDGET("device");
-
-		self.boot_mode_chk[BOOT_MODE_DIRECT]      = APP_GET_WIDGET("direct-checkbox");
-		self.boot_mode_chk[BOOT_MODE_IPBIN]       = APP_GET_WIDGET("ipbin-checkbox");
-		self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC] = APP_GET_WIDGET("ipbin-trunc-checkbox");
 		
-		self.os_chk[BIN_TYPE_AUTO]   = APP_GET_WIDGET("os-auto-checkbox");
-		self.os_chk[BIN_TYPE_KOS]    = APP_GET_WIDGET("os-kos-checkbox");
-		self.os_chk[BIN_TYPE_KATANA] = APP_GET_WIDGET("os-katana-checkbox");
-		self.os_chk[BIN_TYPE_WINCE]  = APP_GET_WIDGET("os-wince-checkbox");
+		w = APP_GET_WIDGET("boot-panel");
 		
-		w = APP_GET_WIDGET("memory_panel");
+		for(int i = 0; i < (sizeof(self.boot_mode_chk) >> 2); i++) {
+			self.boot_mode_chk[i] = GUI_ContainerGetChild(w, i + 1);
+		}
+		
+		w = APP_GET_WIDGET("os-panel");
+		
+		for(int i = 0; i < (sizeof(self.os_chk) >> 2); i++) {
+			self.os_chk[i] = GUI_ContainerGetChild(w, i + 1);
+		}
+		
+		w = APP_GET_WIDGET("memory-panel");
 		
 		for(int i = 0, j = 0; i < GUI_ContainerGetCount(w); i++) {
 			
@@ -966,18 +1054,15 @@ void isoLoader_Init(App_t *app) {
 				
 				self.memory_chk[j++] = b;
 				
-				if(j > sizeof(self.memory_chk) / 4)
+				if(j == sizeof(self.memory_chk) / 4)
 					break;
 			}
 		}
 
-		self.memory_text = APP_GET_WIDGET("memory_text");
+		self.memory_text = APP_GET_WIDGET("memory-text");
 
 		/* Disabling scrollbar on filemanager */
-		for(int i = 3; i > 0; i--) {
-			w = GUI_ContainerGetChild(self.filebrowser, i);
-			GUI_ContainerRemove(self.filebrowser, w);
-		}
+		GUI_FileManagerRemoveScrollbar(self.filebrowser);
 
 		if(!is_custom_bios()/*DirExists("/cd")*/) {
 			
@@ -1077,11 +1162,69 @@ void isoLoader_Init(App_t *app) {
 		}
 		
 		isoLoader_DefaultPreset();
+		w =  APP_GET_WIDGET("version");
+		
+		if(w) {
+			char vers[32];
+			snprintf(vers, sizeof(vers), "v%s", app->ver);
+			GUI_LabelSetText(w, vers);
+		}
+
+		isoLoader_ResizeUI();
 
 	} else {
 		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n", 
 					lib_get_name(), __func__);
 	}
+}
+
+void isoLoader_ResizeUI()
+{
+	SDL_Surface *screen = GetScreen();
+	GUI_Widget *filemanager_bg = APP_GET_WIDGET("filemanager_bg");
+	GUI_Widget *cover_bg = APP_GET_WIDGET("cover_bg");
+	GUI_Widget *title_panel = APP_GET_WIDGET("title_panel");
+
+	int screen_width = GetScreenWidth();
+	SDL_Rect filemanager_bg_rect = GUI_WidgetGetArea(filemanager_bg);
+	SDL_Rect cover_bg_rect = GUI_WidgetGetArea(cover_bg);
+	SDL_Rect title_rect = GUI_WidgetGetArea(title_panel);
+
+	const int scroll_bar_width = 20; // TODO: hardcoded value
+	const int gap = 19;
+
+	int filemanager_bg_width = screen_width - cover_bg_rect.w - gap * 3;
+	int filemanager_bg_height = filemanager_bg_rect.h;
+
+	GUI_Surface *fm_bg = GUI_SurfaceCreate("fm_bg", 
+											screen->flags, 
+											filemanager_bg_width, 
+											filemanager_bg_height,
+											screen->format->BitsPerPixel, 
+											screen->format->Rmask, 
+											screen->format->Gmask, 
+											screen->format->Bmask, 
+											screen->format->Amask);
+
+	GUI_SurfaceFill(fm_bg, NULL, GUI_SurfaceMapRGB(fm_bg, 255, 255, 255));
+	SDL_Rect grayRect;
+	grayRect.x = 6;
+	grayRect.y = 6;
+	grayRect.w = filemanager_bg_width - grayRect.x * 2;
+	grayRect.h = filemanager_bg_height - grayRect.y * 2;
+	GUI_SurfaceFill(fm_bg, &grayRect, GUI_SurfaceMapRGB(fm_bg, 0xCC, 0xE4, 0xF0));
+
+	GUI_PanelSetBackground(filemanager_bg, fm_bg);
+	GUI_ObjectDecRef((GUI_Object *) fm_bg);
+
+	int delta_x = filemanager_bg_width + gap * 2 - cover_bg_rect.x;
+
+	GUI_WidgetSetPosition(cover_bg, cover_bg_rect.x + delta_x, cover_bg_rect.y);
+	GUI_WidgetSetPosition(title_panel, title_rect.x + delta_x, title_rect.y);
+	GUI_WidgetSetSize(filemanager_bg, filemanager_bg_width, filemanager_bg_height);
+	GUI_FileManagerResize(self.filebrowser, 
+						  filemanager_bg_width - grayRect.x * 2 + scroll_bar_width, 
+						  filemanager_bg_height - grayRect.y * 2);
 }
 
 void isoLoader_Shutdown(App_t *app) {

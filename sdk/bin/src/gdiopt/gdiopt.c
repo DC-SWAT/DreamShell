@@ -1,6 +1,6 @@
 /** 
  * gdiopt.c 
- * Copyright (c) 2014 SWAT
+ * Copyright (c) 2014-2015 SWAT
  */
 
 #include <stdlib.h>
@@ -13,7 +13,7 @@ int bin2iso(const char *source, const char *target) {
     int   seek_header, seek_ecc, sector_size;
     long  i, source_length;
     char  buf[2352];
-    const uint8_t SYNC_HEADER[12] = 
+    const unsigned char SYNC_HEADER[12] = 
         {0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0};
     
     FILE *fpSource, *fpTarget;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 	
 	FILE *fr, *fw;
 	int i, rc, track_no, track_count;
-	uint32_t start_lba, flags, sector_size, offset;
+	unsigned long start_lba, flags, sector_size, offset;
 	char fn_old[256],  fn_new[256], cmd[256];
 	char outfn[9] = "disk.gdi"; outfn[8] = '\0';
 	char *out = outfn;

@@ -1,6 +1,6 @@
 #
 # luaGUI module for DreamShell
-# Copyright (C) 2007-2013 SWAT
+# Copyright (C) 2007-2016 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -13,7 +13,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 0
-VER_MICRO = 2
+VER_MICRO = 3
 
 OLD_FUNC =  tolua_function(tolua_S,"GUI_
 NEW_FUNC = tolua_function(tolua_S,"

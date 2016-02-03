@@ -6,6 +6,7 @@ fs_iso_shutdown
 fs_iso_mount
 fs_iso_unmount
 fs_iso_first_file
+fs_iso_map2dev
 #
 # CISO/ZISO images
 #

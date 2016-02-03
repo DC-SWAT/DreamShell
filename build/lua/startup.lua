@@ -69,8 +69,7 @@ local DreamShell = {
 		--"gumbo",
 		--"ini",
 		--"aicaos",
-		--"bflash",
-		--"vkb"
+		--"bflash"
 	},
 
 	Initialize = function(self)
@@ -160,17 +159,24 @@ local DreamShell = {
 
 		print("DS_PROCESS: Installing apps...\n");
 		local name = nil;
-		
+		local list = {};
+
 		for ent in lfs.dir(path) do
 			if ent ~= nil and ent.name ~= ".." and ent.name ~= "." and ent.name ~= ".svn" and ent.attr ~= 0 then
+				table.insert(list, ent.name);
+			end
+		end
+
+		table.sort(list, function(a, b) return a > b end);
+		
+		for index, directory in ipairs(list) do
+
+			name = AddApp(path .. "/" .. directory .. "/app.xml");
 			
-				name = AddApp(path .. "/" .. ent.name .. "/app.xml");
-				
-				if not name then
-					print("DS_ERROR: " .. ent.name .. "\n");
-				else
-					print("DS_OK: " .. name .. "\n");
-				end
+			if not name then
+				print("DS_ERROR: " .. directory .. "\n");
+			else
+				print("DS_OK: " .. name .. "\n");
 			end
 		end
 		

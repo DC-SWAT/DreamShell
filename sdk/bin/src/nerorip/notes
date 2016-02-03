@@ -1,0 +1,30 @@
+AUDIO SWAP CONVERSION
+------------------------------------------------
+wav and raw never do this. aiff and cda do. Seems that cda is the same as raw with swap.
+If you pass aiff or cda AND swap, then swap doesn't happen.
+1. Read 2 bytes
+2. Swap bytes
+3. Write 3 bytes
+.. Definitely want to buffer this to do more reading and writing at once
+
+
+
+ISO CONVERSIONS
+---------------------------------------------------
+
+Converting to ISO/2048
+(It's done because the image data contains a lot of data that is only needed for disc images. 2048 is straight user data)
+1. Read 1 sector of image data
+2. Skip the header data:
+    Mode2: 24 if sector_size is 2352
+            8 if sector_size is 2336
+            0 otherwise
+    Other: 16 if sector_size is 2352
+            0 otherwise
+3. Write first 2048 bytes of the sector
+
+
+Converting to Mac format:
+1. Read 1 sector
+2. Write "00 00 08 00  00 00 08 00"
+3. Write first 2048 of the sector

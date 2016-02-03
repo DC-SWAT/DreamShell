@@ -9,11 +9,10 @@ TARGET_NAME = app_$(APP_NAME)
 OBJS = module.o
 DBG_LIBS = -lds -lisofs
 EXPORTS_FILE = exports.txt
-# KOS_CFLAGS += -I$(KOS_BASE)/kernel
 
 VER_MAJOR = 1
 VER_MINOR = 0
-VER_MICRO = 0
+VER_MICRO = 1
 
 all: rm-elf
 

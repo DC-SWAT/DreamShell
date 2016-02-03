@@ -1,7 +1,7 @@
 /** 
  * \file    asic.h
  * \brief   Additional definitions for Dreamcast HOLLY ASIC
- * \date    2014
+ * \date    2014-2015
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -25,7 +25,7 @@ void asic_sys_reset(void);
 /**
  * Disabling IDE interface
  */
-#define asic_ide_disable() ASIC_BIOS_PROT = 0x000042FE
+void asic_ide_disable(void);
 
 /**
  * Enabling IDE interface (BIOS check)

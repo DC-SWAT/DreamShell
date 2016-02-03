@@ -395,6 +395,7 @@ class GUI_Label : public GUI_Widget
 		void SetFont(GUI_Font *font);
 		void SetTextColor(int r, int g, int b);
 		void SetText(const char *s);
+		char *GetText();
 		virtual void DrawWidget(const SDL_Rect *dr);
 };
 
@@ -447,6 +448,8 @@ class GUI_AbstractButton : public GUI_Widget
 		virtual void RemoveWidget(GUI_Widget *widget);
 		void SetCaption(GUI_Widget *widget);
 		void SetCaption2(GUI_Widget *widget);
+		GUI_Widget *GetCaption();
+		GUI_Widget *GetCaption2();
 		void SetClick(GUI_Callback *handler);
 		void SetContextClick(GUI_Callback *handler);
 		void SetMouseover(GUI_Callback *handler);
@@ -774,6 +777,8 @@ protected:
 		void SetScrollbar(GUI_Surface *knob, GUI_Surface *background);
 		void SetScrollbarButtonUp(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 		void SetScrollbarButtonDown(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+		void RemoveScrollbar();
+		void RestoreScrollbar();
 		virtual void Update(int force);
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
 };
@@ -882,15 +887,13 @@ typedef struct guiListBox GUI_ListBox;
 
 #define WIDGET_ALIGN_MASK      0x00000F00
 #define WIDGET_HORIZ_MASK      0x00000300
-#define WIDGET_HORIZ_CENTER    0x00000000
 #define WIDGET_HORIZ_RIGHT     0x00000100
 #define WIDGET_HORIZ_LEFT      0x00000200
-#define WIDGET_HORIZ_STRETCH   0x00000300
+#define WIDGET_HORIZ_CENTER    0x00000300
 #define WIDGET_VERT_MASK       0x00000C00
-#define WIDGET_VERT_CENTER     0x00000000
 #define WIDGET_VERT_TOP        0x00000400
 #define WIDGET_VERT_BOTTOM     0x00000800
-#define WIDGET_VERT_STRETCH    0x00000C00
+#define WIDGET_VERT_CENTER     0x00000C00
 
 #define WIDGET_DISABLED        0x00001000
 
@@ -1022,6 +1025,8 @@ SDL_Rect GUI_WidgetGetArea(GUI_Widget *widget);
 void GUI_WidgetSetPosition(GUI_Widget *widget, int x, int y);
 void GUI_WidgetSetSize(GUI_Widget *widget, int w, int h);
 int GUI_WidgetGetType(GUI_Widget *widget);
+int GUI_WidgetGetFlags(GUI_Widget *widget);
+GUI_Widget *GUI_WidgetGetParent(GUI_Widget *widget);
 
 /* Container API */
 
@@ -1085,6 +1090,8 @@ void GUI_ButtonSetPressedImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ButtonSetDisabledImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ButtonSetCaption(GUI_Widget *widget, GUI_Widget *caption);
 void GUI_ButtonSetCaption2(GUI_Widget *widget, GUI_Widget *caption);
+GUI_Widget *GUI_ButtonGetCaption(GUI_Widget *widget);
+GUI_Widget *GUI_ButtonGetCaption2(GUI_Widget *widget);
 void GUI_ButtonSetClick(GUI_Widget *widget, GUI_Callback *callback);
 void GUI_ButtonSetContextClick(GUI_Widget *widget, GUI_Callback *callback);
 void GUI_ButtonSetMouseover(GUI_Widget *widget, GUI_Callback *callback);
@@ -1130,6 +1137,7 @@ void GUI_ToggleButtonSetOnHighlightImage(GUI_Widget *widget, GUI_Surface *surfac
 void GUI_ToggleButtonSetOffNormalImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ToggleButtonSetOffHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ToggleButtonSetCaption(GUI_Widget *widget, GUI_Widget *caption);
+GUI_Widget *GUI_ToggleButtonGetCaption(GUI_Widget *widget);
 void GUI_ToggleButtonSetClick(GUI_Widget *widget, GUI_Callback *callback);
 void GUI_ToggleButtonSetContextClick(GUI_Widget *widget, GUI_Callback *callback);
 void GUI_ToggleButtonSetMouseover(GUI_Widget *widget, GUI_Callback *callback);
@@ -1142,6 +1150,7 @@ int GUI_LabelCheck(GUI_Widget *widget);
 void GUI_LabelSetFont(GUI_Widget *widget, GUI_Font *font);
 void GUI_LabelSetTextColor(GUI_Widget *widget, int r, int g, int b);
 void GUI_LabelSetText(GUI_Widget *widget, const char *text);
+char *GUI_LabelGetText(GUI_Widget *widget);
 
 /* Picture Widget API */
 
@@ -1255,6 +1264,8 @@ void GUI_FileManagerSetScrollbarButtonUp(GUI_Widget *widget, GUI_Surface *normal
 void GUI_FileManagerSetScrollbarButtonDown(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 int GUI_FileManagerEvent(GUI_Widget *widget, const SDL_Event *event, int xoffset, int yoffset);
 void GUI_FileManagerUpdate(GUI_Widget *widget, int force);
+void GUI_FileManagerRemoveScrollbar(GUI_Widget *widget);
+void GUI_FileManagerRestoreScrollbar(GUI_Widget *widget);
 
 
 #ifdef __cplusplus

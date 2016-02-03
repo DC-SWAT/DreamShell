@@ -1,7 +1,7 @@
 #
 # Speedtest App module for DreamShell
 # Copyright (C) 2014 megavolt85
-# Copyright (C) 2014 SWAT
+# Copyright (C) 2014-2016 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -13,7 +13,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
 VER_MINOR = 0
-VER_MICRO = 2
+VER_MICRO = 3
 
 all: rm-elf
 

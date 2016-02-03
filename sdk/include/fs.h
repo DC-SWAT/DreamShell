@@ -12,7 +12,6 @@
 #include <arch/types.h>
 #include <kos/blockdev.h>
 #include <ext2/fs_ext2.h>
-//#include <isofs/isofs.h>
 
 /**
  * Initialize SD Card 
@@ -50,7 +49,8 @@ typedef enum fatfs_ioctl {
 	FATFS_IOCTL_GET_BLOCK_SIZE,       /* Get erase block size (for only f_mkfs()), 2 byte unsigned */
 	FATFS_IOCTL_CTRL_ERASE_SECTOR,    /* Force erased a block of sectors (for only _USE_ERASE) */
 	FATFS_IOCTL_GET_BOOT_SECTOR_DATA, /* Get first sector data, ffconf.h _MAX_SS bytes */
-	FATFS_IOCTL_GET_FD_LBA            /* Get file LBA, 4 byte unsigned */
+	FATFS_IOCTL_GET_FD_LBA,           /* Get file LBA, 4 byte unsigned */
+	FATFS_IOCTL_GET_FD_LINK_MAP       /* Get file clusters linkmap, 128+ bytes */
 
 } fatfs_ioctl_t;
 

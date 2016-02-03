@@ -1,0 +1,65 @@
+nerorip version 0.4
+Licensed under the GNU LGPL
+(c) 2011 Joe Balough -- scallopedlama at gmail.com
+
+Nerorip takes a nero image file (.nrt extension) as input
+and attempts to extract the track data as either ISO or audio data.
+
+Usage: nerorip [OPTIONS]... [INPUT FILE] [OUTPUT DIRECTORY]
+
+  Audio track saving options:
+    -r, --raw           Save audio data as little endian raw data
+    -c, --cda           Switches data to big endian and saves as RAW
+    -a, --aiff          Switches data to big endian and saves as an AIFF file
+    -s, --swap          Changes data between big and little endian (only affects --aiff and --cda)
+  If omitted, Audio tracks will be exported as WAV files
+
+  Data track saving options:
+    -b, --bin           Export data directly out of image file
+    -m, --mac           Convert data to "Mac" ISO/2056 format
+  If omitted, Data tracks will be converted to ISO/2048 format.
+
+  Data track trimming options:
+    -t, --trim          Trim 2 sectors from the end of the first track
+    -T, --trimall               Trim 2 sectors from the end of all tracks
+    -f, --full          Do not cut any sectors from any tracks
+  --trim and --trimall can be combined, resulting in 4 sectors being trimmed from the first track
+  If omitted, only the first track will have 2 sectors trimmed.
+
+  General options:
+  -i, --info            Only disply information about the image file, do not rip
+  -v, --verbose         Increment program verbosity by one tick
+  -q, --quiet           Decrement program verbosity by one tick
+                        Verbosity starts at 1, a verbosity of 0 will print nothing.
+  -h, --help            Display this help message and exit
+      --version         Output version information and exit.
+
+If output directory is omitted, image data is put in the same directory as the input file.
+
+For each track found in the image, nerorip will output the following:
+  one iso file named "tdataTT.[iso/bin]" if the track is data and
+  one wav file named "taudioTT.[wav/bin/cda/aiff]" if the track is audio
+where TT is the track number.
+
+For example, if your disc image is like the following
+  Session 1:
+    Track 1: Audio
+    Track 2: Data
+  Session 2:
+    Track 1: Data
+nerorip will output the following files:
+  taudio01.wav, tdata02.iso, tdata03.iso
+Note that the track number does not reset between sessions.
+
+In many situations nerorip tries to act like cdirip. nerorip's session and track information output
+follows a very similar style to cdirip so that nerorip can used using the same regex as cdirip.
+
+Track trimming is present in this program to further that mimicing of cdirip's behavior. Like cdirip, 
+by default the first track will be trimmed while the rest will be left alone. Unlike cdirip, trim and trimall
+can actually be combined to have 4 sectors trimmed from the first track.
+In general, it is not necessary to use the trim options. They are there in case the untrimmed tracks do not
+fit on a regular CD-R because your burning software adds two sectors (which many do and cdrecord certainly does).
+
+About the only feature present in cdirip that is not present in nerorip is the ability to move pretrack data
+to the end of the previous track. This is unimplemented becaue I have had no need of it and I'm not convinced that
+it is the best way to handle the pretrack data. If you really need this feature, let me know.

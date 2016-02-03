@@ -1,0 +1,385 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="VMU Manager" version="1.0.0" icon="images/icon.png">
+	<resources>
+		<module src="modules/app_vmu_manager.klf" />
+		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
+		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="30" name="m23_30" />
+		<font src="../../fonts/ttf/arial.ttf" type="ttf" size="16" name="arial" />
+		<surface width="640" height="400" name="back">
+		<blit x="0" y="0" width="640" height="400" surface="images/background.jpg" />
+		</surface>
+		<image src="../../gui/bars/black_bar_640x37.png" name="iBarTop" />
+		<image src="images/black_bar_down_640x48.png" name="iBarDown" />
+		<image src="../../gui/icons/normal/button_cancel.png" name="iExitNorm" />
+		<image src="../../gui/icons/highlight/button_cancel.png" name="iExitHigh" />
+		<image src="../../gui/icons/normal/button_ok.png" name="iOkNorm" />
+		<image src="../../gui/icons/highlight/button_ok.png" name="iOkHigh" />
+		<image src="images/progressbar2.png" name="progressbar_back" />
+		<image src="images/progressbar.png" name="progressbar" />
+		<image src="../../gui/buttons/big_green/highlight.png" name="buthigh" />
+		<image src="../../gui/buttons/big_green/normal.png" name="butnorm" />
+		<image src="../../gui/buttons/big_green/pressed.png" name="butpres" />
+		<image src="images/help.png" name="help" />
+		<image src="images/null.png" name="null" />
+		<image src="images/vmu.png" name="vmu" />
+		<image src="images/vmu_high.png" name="vmu_h" />
+		<image src="images/vmu_disable.png" name="vmu_d" />
+		<image src="images/controller.png" name="controller" />
+		<image src="images/lightgun.png" name="lightgun" />
+		<image src="images/keyboard.png" name="keyboard" />
+		<image src="images/mouse.png" name="mouse" />
+		<image src="images/confirm.png" name="confirmimg" />
+		<image src="images/confirm0.png" name="confirmimg0" />
+		<image src="images/confirm1.png" name="confirmimg1" />
+		<image src="images/hdd.png" name="hdd" />
+		<image src="images/hdd_high.png" name="hdd_h" />
+		<image src="images/hdd_disable.png" name="hdd_d" />
+		<image src="images/sd.png" name="sd" />
+		<image src="images/sd_high.png" name="sd_h" />
+		<image src="images/sd_disable.png" name="sd_d" />
+		<image src="images/cd.png" name="cd" />
+		<image src="images/cd_high.png" name="cd_h" />
+		<image src="images/cd_disable.png" name="cd_d" />
+		<image src="images/pc.png" name="pc" />
+		<image src="images/pc_high.png" name="pc_h" />
+		<image src="images/pc_disable.png" name="pc_d" /> 
+		<image src="images/home.png" name="ihome" />
+		<image src="images/home_high.png" name="ihome_h" />
+		<image src="images/icon.png" name="dump_icon" />
+		<image src="images/dump.png" name="dump" />
+		<image src="images/dump_high.png" name="dump_h" />
+		<image src="images/dump_disable.png" name="dump_d" />
+		<image src="images/format.png" name="format" />
+		<image src="images/format_high.png" name="format_h" />
+		
+		<surface width="640" height="400" name="vmu_frame">
+			<fill x="0" y="0" width="640" height="400" color="#000000" />
+		</surface>
+		<surface width="201" height="30" name="item-normal">
+			<fill x="0" y="0" width="201" height="28" color="#000000" />
+			<fill x="0" y="28" width="201" height="2" color="#FFFFFF" />
+		</surface>
+		<surface width="201" height="30" name="item-focus">
+			<fill x="0" y="0" width="201" height="28" color="#BFBFBF" />
+			<fill x="0" y="28" width="201" height="2" color="#FFFFFF" />
+		</surface>
+		<surface width="201" height="30" name="item-selected">
+			<fill x="0" y="0" width="201" height="28" color="#317E53" />
+			<fill x="0" y="28" width="201" height="2" color="#FFFFFF" />
+		</surface>
+		<surface width="301" height="30" name="item-normal2">
+			<fill x="0" y="0" width="301" height="28" color="#000000" />
+			<fill x="0" y="28" width="301" height="2" color="#FFFFFF" />
+		</surface>
+		<surface width="301" height="30" name="item-focus2">
+			<fill x="0" y="0" width="301" height="28" color="#BFBFBF" />
+			<fill x="0" y="28" width="301" height="2" color="#FFFFFF" />
+		</surface>
+		<surface width="301" height="30" name="item-selected2">
+			<fill x="0" y="0" width="301" height="28" color="#317E53" />
+			<fill x="0" y="28" width="301" height="2" color="#FFFFFF" />
+		</surface>
+		<surface width="48" height="48" name="logo">
+			<fill x="0" y="0" width="48" height="48" color="#000000" />
+		</surface>
+		
+		<surface width="100" height="20" name="input-normal">
+			<fill x="0" y="0" width="100" height="20" color="#FFFFFF" />
+		</surface>
+		<surface width="100" height="20" name="input-focus">
+			<fill x="0" y="0" width="100" height="20" color="#29B1EA" />
+			<fill x="2" y="2" width="98" height="18" color="#7CFFC1" />
+		</surface>
+		
+	</resources>
+	<body x="0" y="0" width="640" height="480" onload="export:Vmu_Manager_Init()">
+		
+		<panel x="0" y="0" background="iBarTop" width="640" height="40">
+			<label width="640" height="37" x="0" y="0" font="m23" color="#FFFFFF" text="VMU Manager" />
+		</panel>
+		
+		<panel x="0" y="425" background="iBarDown" width="640" height="55">
+			<input type="button" 
+				normal="iExitNorm" 
+				highlight="iExitHigh" 
+				pressed="iExitNorm" 
+				disabled="iExitNorm" 
+				x="580" y="15" width="48" height="48" 
+				onclick="export:VMU_Manager_Exit" />
+				
+			<input type="button" 
+				normal="ihome" 
+				highlight="ihome_h" 
+				pressed="ihome" 
+				disabled="null" 
+				x="28" y="15" width="48" height="48" name="home_but"
+				onclick="export:VMU_Manager_EnableMainPage" />	
+		</panel>
+		
+				
+		<cardstack x="0" y="40" width="640" height="400" name="pages">
+			
+			<panel background="back" x="0" y="0" width="640" height="400" name="main_page">
+				
+				<panel background="images/frame.png" x="0" y="120" width="130" height="120">
+					<label width="130" height="40" x="0" y="10" font="m23" align="center" color="#ffffff" name="name-device" />
+					
+					<panel x="0" y="50" width="130" height="40">
+					<label width="130" height="40" x="0" y="0" font="arial" align="center" color="#ffffff" name="free-mem" />
+					</panel>
+					
+				</panel>
+				
+				<panel x="140" y="20" width="500" height="80" >
+					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="28" y="10" name="contA" />
+					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="148" y="10" name="contB" />
+					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="268" y="10" name="contC" />
+					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="388" y="10" name="contD" />
+				</panel>
+				
+				<panel x="140" y="120" width="500" height="190" name="vmu-container">
+					
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()" 
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="20" y="10" width="80" height="80" name="A1" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="20" y="110" width="80" height="80" name="A2" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="140" y="10" width="80" height="80" name="B1" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="140" y="110" width="80" height="80" name="B2" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="260" y="10" width="80" height="80" name="C1" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="260" y="110" width="80" height="80" name="C2" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="380" y="10" width="80" height="80" name="D1" />
+						<input type="button" 
+								normal="vmu" 
+								highlight="vmu_h" 
+								pressed="vmu" 
+								disabled="vmu_d" 
+								onclick="export:VMU_Manager_vmu()"
+								onmouseover="export:VMU_Manager_info_bar()"
+								onmouseout="export:VMU_Manager_info_bar_clr()"
+								x="380" y="110" width="80" height="80" name="D2" />
+								
+				</panel>
+				
+				<panel x="20" y="350" width="300" height="40">
+					<label width="300" height="40" x="0" y="0" font="m23" color="#FFFFFF" text="SELECT SOURCE VMU" name="drection" />
+				</panel>
+
+			</panel>
+			
+			<panel x="0" y="0" width="640" height="400" name="vmu_page" background="vmu_frame" >
+				
+				<panel x="220" y="25" width="200" height="350" name="progressbar_container">	
+					<progressbar width="200" height="350" x="0" y="0" name="progressbar" pos="0.0" bimage="progressbar_back" pimage="progressbar" />
+				</panel>
+				
+				<panel x="150" y="100" width="400" height="126" name="confirm" >
+					
+					<panel x="0" y="86" width="400" height="40" background="confirmimg1" >
+						<label width="380" height="35" x="10" y="0" font="arial" color="#FF260F" name="confirm-text" text="   " align="center"/>
+					</panel>
+					
+					<image src="confirmimg" x="0" y="0" width="400" height="86" name="image-confirm"/>
+					
+				</panel>
+				
+				<panel x="220" y="0" width="100" height="280" >
+					<image src="help" x="0" y="0" width="100" height="280" />
+				</panel>
+				
+				<input type="button" 
+							normal="dump" 
+							highlight="dump_h" 
+							pressed="dump" 
+							disabled="dump_d" 
+							onclick="export:VMU_Manager_Dump()" 
+							x="220" y="280" width="100" height="50" name="dump-button" />
+				
+				<panel x="20" y="0" width="180" height="330" >
+				<filemanager path="/" name="file_browser" 
+					width="180" height="330" x="0" y="0"
+					item_normal="item-normal" 
+					item_highlight="item-focus" 
+					item_pressed="item-focus" 
+					item_disabled="item-normal"
+					item_font="arial" 
+					item_font_r="255" 
+					item_font_g="255" 
+					item_font_b="255"
+					onclick="export:VMU_Manager_ItemClick()" />
+				</panel>
+					
+				<filemanager path="/" name="file_browser2" 
+					width="300" height="330" x="340" y="0"
+					item_normal="item-normal2" 
+					item_highlight="item-focus2" 
+					item_pressed="item-focus2" 
+					item_disabled="item-normal2"
+					item_font="arial" 
+					item_font_r="255" 
+					item_font_g="255" 
+					item_font_b="255"
+					onclick="export:VMU_Manager_ItemClick()" />
+					
+					<input type="button" 
+							normal="sd" 
+							highlight="sd_h" 
+							pressed="sd" 
+							disabled="sd_d" 
+							onclick="export:VMU_Manager_addfileman()" 
+							x="355" y="20" width="80" height="80" name="/sd/vmu" />
+					<input type="button" 
+							normal="hdd" 
+							highlight="hdd_h" 
+							pressed="hdd" 
+							disabled="hdd_d" 
+							onclick="export:VMU_Manager_addfileman()" 
+							x="355" y="125" width="80" height="80" name="/ide/vmu" />
+					<input type="button" 
+							normal="pc" 
+							highlight="pc_h" 
+							pressed="pc" 
+							disabled="pc_d" 
+							onclick="export:VMU_Manager_addfileman()" 
+							x="460" y="20" width="80" height="80" name="/pc" />
+					<input type="button" 
+							normal="cd" 
+							highlight="cd_h" 
+							pressed="cd" 
+							disabled="cd_d" 
+							onclick="export:VMU_Manager_addfileman()" 
+							x="460" y="125" width="80" height="80" name="/cd" />
+					<input type="button" 
+							normal="vmu" 
+							highlight="vmu_h" 
+							pressed="vmu" 
+							disabled="vmu_d" 
+							onclick="export:VMU_Manager_sel_dst_vmu()" 
+							x="355" y="230" width="80" height="80" name="dst-vmu" />
+					<input type="button" 
+							normal="format" 
+							highlight="format_h" 
+							pressed="format" 
+							disabled="format" 
+							onclick="export:VMU_Manager_format()" 
+							x="460" y="230" width="80" height="80" name="format-c" />
+					
+				<panel x="0" y="330" width="60" height="70" >
+					<image width="48" height="48" x="5" y="0" name="vmu-icon" src="logo" />
+				</panel>	
+				
+				<panel x="60" y="330" width="200" height="35" >	
+					<label width="200" height="25" x="0" y="0" font="arial" color="#ffffff" name="save-name" text=" " align="left"/>
+				</panel>
+					
+				<panel x="60" y="365" width="200" height="35" >	
+					<label width="200" height="25" x="0" y="0" font="arial" color="#ffffff" name="save-size" text=" " align="left"/>	
+				</panel>	
+				
+				<panel x="260" y="330" width="280" height="35" >	
+					<label width="270" height="25" x="10" y="0" font="arial" color="#ffffff" name="desc-short" text=" " align="left"/>	
+				</panel>
+				
+				<panel x="260" y="365" width="280" height="35" >	
+					<label width="270" height="25" x="10" y="0" font="arial" color="#ffffff" name="desc-long" text=" " align="left"/>	
+				</panel>
+				
+			</panel>		
+		
+			<panel x="0" y="0" width="640" height="400" name="folder_page" background="vmu_frame" >
+				
+				<panel x="170" y="60" width="300" height="40" >
+					<label width="300" height="40" x="0" y="0" font="m23" color="#FFFFFF" text="ENTER NAME NEW FOLDER" align="center" valign="center"/>
+				</panel>
+				
+				<input  type="text" 
+					onfocus="export:VMU_Manager_clr_name()"
+					font="arial" 
+					fontcolor="#000000" 
+					value="new_folder" 
+					x="270" y="120" 
+					width="100" height="20" 
+					name="folder-name" 
+					normal="input-normal" 
+					highlight="input-normal"
+					focus="input-focus">
+				</input>
+				
+				<input type="button" 
+					normal="iOkNorm" 
+					highlight="iOkHigh" 
+					pressed="iOkNorm" 
+					disabled="iOkNorm" 
+					name="confirm-yes"
+					x="270" y="160" width="48" height="48"
+					onclick="export:VMU_Manager_make_folder()" >
+				</input>
+					
+				<input type="button" 
+					normal="iExitNorm" 
+					highlight="iExitHigh" 
+					pressed="iExitNorm" 
+					disabled="iExitNorm" 
+					name="confirm-no"
+					x="322" y="160" width="48" height="48" 
+					onclick="export:VMU_Manager_make_folder()" >
+				</input>
+				
+			</panel>
+			
+		</cardstack>
+	</body>
+</app>

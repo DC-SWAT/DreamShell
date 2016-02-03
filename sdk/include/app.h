@@ -29,7 +29,7 @@
  * App info structure
  */
 typedef struct App {
-    
+
 	const char fn[MAX_FN_LEN];
 	const char icon[MAX_FN_LEN];
 	const char name[64];
@@ -155,10 +155,14 @@ int SetAppSleep(App_t *app, int sleep);
 int IsFileSupportedByApp(App_t *app, const char *filename);
 
 /* Utils */
-GUI_Surface *getElementSurface(App_t *app, char *name);
 char *FindXmlAttr(char *name, mxml_node_t *node, char *defValue);
-
 void UnLoadOldApps();
 void UnloadAppResources(Item_list_t *lst);
+
+/* Resource helpers */
+void *getAppElement(App_t *app, const char *name, ListItemType type);
+#define APP_GET_WIDGET(name)  ((GUI_Widget *)  getAppElement(self.app, name, LIST_ITEM_GUI_WIDGET))
+#define APP_GET_SURFACE(name) ((GUI_Surface *) getAppElement(self.app, name, LIST_ITEM_GUI_SURFACE))
+#define APP_GET_FONT(name)    ((GUI_Font *)    getAppElement(self.app, name, LIST_ITEM_GUI_FONT))
 
 #endif

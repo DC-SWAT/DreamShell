@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - minilzo module
-   Copyright (C)2011-2014 SWAT 
+   Copyright (C)2011-2015 SWAT 
 */
             
 #include "ds.h"

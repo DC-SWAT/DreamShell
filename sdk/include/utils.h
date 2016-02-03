@@ -1,7 +1,7 @@
 /** 
  * \file    utils.h
  * \brief   DreamShell utils
- * \date    2004-2014
+ * \date    2004-2016
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -17,10 +17,17 @@
 #define DS_VER_MICRO(v) ((v >> 8) & 0xff)
 #define DS_VER_BUILD(v) ((v >> 0) & 0xff)
 
-/* Divide build to type and number (if not used build counter) */
-#define DS_VER_BUILD_TYPE(b) 		(b & 0xf0) / 0xf)
-#define DS_VER_BUILD_TYPE_STR(b) 	(GetVersionBuildTypeString(DS_VER_BUILD_TYPE(b))
-#define DS_VER_BUILD_NUM(b) 		(b & 0x0f)
+/* Divide build to type and number (if build counter is not used) */
+#define DS_VER_BUILD_TYPE(b)     ((b & 0xf0) / 0xf)
+#define DS_VER_BUILD_TYPE_STR(b) (GetVersionBuildTypeString(DS_VER_BUILD_TYPE(b)))
+#define DS_VER_BUILD_NUM(b)      (b & 0x0f)
+
+enum {
+	DS_VER_BUILD_TYPE_APLHA = 0,
+	DS_VER_BUILD_TYPE_BETA,
+	DS_VER_BUILD_TYPE_RC,
+	DS_VER_BUILD_TYPE_RELEASE
+};
 
 #define DS_MAKE_VER(MAJOR, MINOR, MICRO, BUILD) \
 					( (((MAJOR) & 0xff) << 24) 	\
@@ -43,6 +50,7 @@ void arch_shutdown();
 void ds_sleep(int ms) __attribute__((deprecated)); 
 
 int flashrom_get_region_only();
+int is_hacked_bios();
 int is_custom_bios();
 int is_no_syscalls();
 
@@ -78,4 +86,15 @@ void *memcpy_sh4(void *dest, const void *src, size_t count);
 void *memmove_sh4(void *dest, const void *src, size_t count);
 void *memset_sh4(void *dest, uint32 val, size_t count);
 
+#define memcpy  memcpy_sh4
+#define memmove memmove_sh4
+#define memset  memset_sh4
+
+#ifndef strcasestr
+char *strcasestr(const char *str1, const char *str2);
 #endif
+
+void vmu_draw_string(const char *str);
+void vmu_draw_string_xy(const char *str, int x, int y);
+
+#endif /*_DS_UTILS_H */

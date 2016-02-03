@@ -56,7 +56,6 @@
 #include <zlib/zlib.h>
 #endif
 #if USE_LZO
-#include <minilzo/lzoconf.h>
 #include <minilzo/minilzo.h>
 #endif
 

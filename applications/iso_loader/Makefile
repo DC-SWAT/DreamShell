@@ -1,6 +1,6 @@
 #
 # ISO Loader App for DreamShell
-# Copyright (C) 2011-2014 SWAT
+# Copyright (C) 2011-2016 SWAT
 # http://www.dc-swat.ru
 #
 

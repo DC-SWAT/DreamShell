@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 by SWAT <swat@211.ru> www.dc-swat.ru
+ * Copyright (c) 2014-2015 by SWAT <swat@211.ru> www.dc-swat.ru
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -86,7 +86,7 @@ GDI_header_t *gdi_open(file_t fd, const char *filename) {
 
 	int track_no, i, rc;
 	char line[MAX_FN_LEN], fname[MAX_FN_LEN / 2];
-	char *path;
+	char *path = NULL;
 	GDI_header_t *hdr;
 	
 	hdr = (GDI_header_t*)malloc(sizeof(GDI_header_t));
@@ -138,9 +138,13 @@ GDI_header_t *gdi_open(file_t fd, const char *filename) {
 		snprintf(hdr->tracks[i]->filename, MAX_FN_LEN, "%s/%s", path, fname);
 	}
 
+	free(path);
 	return hdr;
 
 error:
+	if(path) {
+		free(path);
+	}
 	gdi_close(hdr);
 	return NULL;
 }

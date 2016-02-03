@@ -16,7 +16,6 @@
 #include <stdio.h>
 
 void _atexit_call_all();
-void fs_dclsocket_shutdown();
 
 #if __GNUC__ >= 4
 void init(void);

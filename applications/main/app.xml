@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Main" version="0.4.1" icon="../../gui/icons/normal/default_app.png">
+<app name="Main" version="0.5.0" icon="../../gui/icons/normal/default_app.png">
 	<resources>
 		<module src="modules/app_main.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
-		<surface width="640" height="450" name="main-bg">
-			<fill x="0" y="0" width="640" height="450" color="#70C9DB" />
-			<blit x="0" y="120" width="640" height="180" surface="images/logo.png" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="14" name="comic" />
+		<surface width="100%" height="450" name="main-bg">
+			<fill color="#70C9DB" />
+			<blit align="center" valign="center" surface="images/logo.png" />
 		</surface>
 		<image src="images/taskbar.png" name="taskbar-bg" />
 		<image src="images/left.png" name="left" />
@@ -13,12 +14,24 @@
 		<image src="images/right.png" name="right" />
 		<image src="images/right_hover.png" name="right-hover" />
 	</resources>
-	<body x="0" y="0" width="100%" height="100%" onload="export:MainApp_Init()">
-		<panel x="0" y="0" width="100%" height="450" background="main-bg" name="applist" />
-		<panel x="0" y="450" width="100%" height="30" background="taskbar-bg">
-			<input type="button" onclick="export:MainApp_SlideLeft()" normal="left" highlight="left-hover" pressed="left" disabled="left" x="0" y="0" width="71" height="30" />
-			<label name="version" width="498" height="30" x="71" y="0" text="DreamShell" color="#000000" align="center" valign="center" font="arial" />
-			<input type="button" onclick="export:MainApp_SlideRight()" normal="right" highlight="right-hover" pressed="right" disabled="right" x="569" y="0" width="71" height="30" />
+	<body width="100%" height="100%" onload="export:MainApp_Init()" background="main-bg">
+		<panel width="100%" height="450" name="app-list" />
+		<panel width="100%" height="30" background="taskbar-bg">
+			<panel width="13%">
+				<input type="button" align="left" width="71" onclick="export:MainApp_SlideLeft()" normal="left" highlight="left-hover" pressed="left" disabled="left" />
+			</panel>
+			<panel width="13%">
+				<label name="date" text="00.00.0000" color="#000000" align="left" valign="center" font="comic" />
+			</panel>
+			<panel width="52%">
+				<label name="version" text="DreamShell" color="#000000" align="center" valign="center" font="comic" />
+			</panel>
+			<panel width="9%">
+				<label name="time" text="00:00" color="#000000" align="right" valign="center" font="comic" />
+			</panel>
+			<panel width="13%">
+				<input type="button" align="right" width="71" onclick="export:MainApp_SlideRight()" normal="right" highlight="right-hover" pressed="right" disabled="right" />
+			</panel>
 		</panel>
 	</body>
 </app>

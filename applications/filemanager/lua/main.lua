@@ -1,7 +1,7 @@
 -------------------------------------------
 --                                       --
 -- @name:    File Manager                --
--- @version: 0.6.4                       --
+-- @version: 0.6.5                       --
 -- @author:  SWAT                        --
 -- @url:     http://www.dc-swat.ru       --
 --                                       --
@@ -200,7 +200,7 @@ function FileManager:ModalClick(s)
 		    
 			self:toolbarArchive();
 		else
-			return self:ShowModal("alert", "Uknown command", nil);
+			return self:ShowModal("alert", "Unknown command", nil);
 		end 
 	end
 	
@@ -536,7 +536,7 @@ function FileManager:openFile()
 			self:HideModal();
 		end
 		
-		if not DS.GetCmdByName("mp3") then
+		if not DS.GetCmdByName("mpg123") then
 		
 			 if not self:loadModule("mpg123") then
 			 	self:showConsole();
@@ -581,7 +581,7 @@ function FileManager:openFile()
 		if not DS.GetCmdByName(mod) then
 		
 			 if not self:loadModule(mod) then
-			 	os.execute("console --show");
+			 	self:showConsole();
 			 	return file; 
 			 end
 		end
@@ -604,7 +604,7 @@ function FileManager:openFile()
 				 or not self:loadModule("mpg123") 
 				 or not self:loadModule("oggvorbis") 
 				 or not self:loadModule("ffmpeg") then
-			 	os.execute("console --show");
+			 	self:showConsole();
 			 	return file; 
 			 end
 		end
@@ -703,22 +703,18 @@ end
 
 
 function FileManagerItemClickTop(ent)
-	--print("FileManagerItemClickTop: " .. ent.fmwname);
 	FileManager:ItemClick(ent, FileManager.mgr.top);
 end
 
 function FileManagerItemContextClickTop(ent)
-	--print("FileManagerItemClickTop: " .. ent.fmwname);
 	FileManager:ItemContextClick(ent, FileManager.mgr.top);
 end
 
 function FileManagerItemClickBottom(ent)
-	--print("FileManagerItemClickBottom" .. ent.fmwname);
 	FileManager:ItemClick(ent, FileManager.mgr.bottom);
 end
 
 function FileManagerItemContextClickBottom(ent)
-	--print("FileManagerItemClickBottom" .. ent.fmwname);
 	FileManager:ItemContextClick(ent, FileManager.mgr.bottom);
 end
 
@@ -726,7 +722,6 @@ end
 function FileManager:ItemClick(ent, mgr)
 	
 	self:focusManager(mgr);
-	--print("Clicked: " .. ent.name .. " mgr: " .. mgr.id .. "\n");
 	
 	if ent.attr == 0  then
 
@@ -763,7 +758,6 @@ end
 function FileManager:ItemContextClick(ent, mgr)
 
 	self:focusManager(mgr);
-	--print("Context clicked: " .. ent.name .. " mgr: " .. mgr.id .. "\n");
 	
 	if ent.attr ~= 0  then
 
@@ -956,8 +950,7 @@ function FileManager:Initialize()
 			self:HideModal();
 			self:focusManager(self.mgr.top);
 			self:toolbarModeSwitch();
-			
-			--print("File Manager initialized.\n");
+			self:tooltip(nil);
 		end
 	end
 end

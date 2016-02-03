@@ -1,6 +1,6 @@
 #
 # Region Changer module for DreamShell
-# Copyright (C) 2010-2014 SWAT
+# Copyright (C) 2010-2016 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -13,7 +13,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 8
-VER_MICRO = 4
+VER_MICRO = 5
 
 all: rm-elf
 

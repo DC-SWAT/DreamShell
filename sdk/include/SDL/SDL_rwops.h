@@ -73,7 +73,7 @@ typedef struct SDL_RWops {
 		} buffer;
 	    } win32io;
 #endif
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
 	    struct {
 			int autoclose;
 			file_t fd;
@@ -106,7 +106,7 @@ extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFile(const char *file, const char 
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFP(FILE *fp, int autoclose);
 #endif
 
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFD(file_t fd, int autoclose);
 #endif
 

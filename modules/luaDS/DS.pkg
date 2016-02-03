@@ -87,7 +87,7 @@ Item_t *listGetItemNext(Item_t *i);
 #define APP_STATE_WAIT_UNLOAD 0x00000040
 
 typedef struct App {
-    
+
 	const char fn[MAX_FN_LEN];
 	const char icon[MAX_FN_LEN];
 	const char name[64];
@@ -136,8 +136,9 @@ int RemoveFromAppBody(App_t *app, GUI_Widget *widget);
 int CallAppBodyEvent(App_t *app, char *event);
 void WaitApp(App_t *app);
 
+int IsFileSupportedByApp(App_t *app, const char *filename);
 char *FindXmlAttr(char *name, mxml_node_t *node, char *defValue);
-GUI_Surface *getElementSurface(App_t *app, char *name);
+void *getAppElement(App_t *app, const char *name, ListItemType type);
 
 App_t *VoidToApp(void *ptr);
 
@@ -221,6 +222,7 @@ int DestroyConsolePTY();
 int SearchRoot(int pass_cnt);
 void vmu_draw_string(const char *str);
 int flashrom_get_region_only();
+int is_hacked_bios();
 int is_custom_bios();
 int is_no_syscalls();
 

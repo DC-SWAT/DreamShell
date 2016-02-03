@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=dreameye
+Type=Application
+Exec=dreameye -g -d %f
+Comment=Dreameye camera
+Terminal=true
+Categories=applications
+MimeType=application/dreameye

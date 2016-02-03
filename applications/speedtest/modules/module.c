@@ -24,33 +24,6 @@ static struct {
 
 static uint8 rd_buff[0x10000] __attribute__((aligned(32)));
 
-static void *getElement(char *name, ListItemType type) {
-	
-	Item_t *item;
-	
-	switch(type) {
-		case LIST_ITEM_GUI_WIDGET:
-			item = listGetItemByName(self.app->elements, name);
-			break;
-		case LIST_ITEM_GUI_SURFACE:
-		case LIST_ITEM_GUI_FONT:
-		default:
-			item = listGetItemByName(self.app->resources, name);
-			break;
-	}
-
-	if(item != NULL && item->type == type) {
-		return item->data;
-	}
-
-	ds_printf("DS_ERROR: %s: Couldn't find or wrong type '%s'\n", 
-				lib_get_name(), name, self.app->name);
-	return NULL;
-}
-
-#define APP_GET_WIDGET(name) ((GUI_Widget *) getElement(name, LIST_ITEM_GUI_WIDGET))
-
-
 static void show_status_ok(char *msg) {
 	GUI_LabelSetTextColor(self.status, 28, 227, 70);
 	GUI_LabelSetText(self.status, msg);

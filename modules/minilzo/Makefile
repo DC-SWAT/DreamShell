@@ -1,6 +1,6 @@
 #
 # minilzo module for DreamShell
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2015 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -11,7 +11,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 2
 VER_MINOR = 0
-VER_MICRO = 6
+VER_MICRO = 9
 
 KOS_CFLAGS += -I../../include/minilzo
 

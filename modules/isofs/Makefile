@@ -1,17 +1,17 @@
 #
 # isofs module for DreamShell
-# Copyright (C) 2011-2014 SWAT
+# Copyright (C) 2011-2015 SWAT
 #
 
 TARGET_NAME = isofs
-OBJS = module.o fs_iso9660.o ciso.o cdi.o gdi.o
+OBJS = module.o fs_iso9660.o map2dev.o ciso.o cdi.o gdi.o
 DBG_LIBS = -lds -lminilzo
 EXPORTS_FILE = exports.txt
 #KOS_CFLAGS += -DDEBUG=1
 
 VER_MAJOR = 1
-VER_MINOR = 5
-VER_MICRO = 1
+VER_MINOR = 6
+VER_MICRO = 0
 
 all: rm-elf
 

@@ -1,11 +1,12 @@
 /* DreamShell ##version##
 
    module.c - isofs module
-   Copyright (C)2009-2014 SWAT
+   Copyright (C)2009-2016 SWAT
 */
             
 #include "ds.h"
 #include "isofs/isofs.h"
+#include "isofs/ciso.h"
 
 DEFAULT_MODULE_HEADER(isofs);
 
@@ -13,13 +14,13 @@ int builtin_isofs_cmd(int argc, char *argv[]) {
 
     if(argc < 2) {
 		ds_printf("Usage: %s options args\n"
-	              "Options: \n"
-				  " -m, --mount     -Mounting CD image as filesystem\n"
-				  " -u, --unmount   -Unmounting CD image\n\n"
-	              "Arguments: \n"
-				  " -f, --file      -CD image file\n"
-				  " -d, --dir       -VFS Directory for access to files of CD image\n\n"
-	              "Example: %s -m -f /sd/image.iso -d /iso\n\n", argv[0], argv[0]);
+					"Options: \n"
+					" -m, --mount    -Mounting CD image as filesystem\n"
+					" -u, --unmount  -Unmounting CD image\n\n"
+					"Arguments: \n"
+					" -f, --file     -CD image file\n"
+					" -d, --dir      -VFS Directory for access to files of CD image\n\n"
+					"Example: %s -m -f /sd/image.iso -d /iso\n\n", argv[0], argv[0]);
         return CMD_NO_ARG; 
     }
     
@@ -86,7 +87,7 @@ int lib_open(klibrary_t *lib) {
 
 
 int lib_close(klibrary_t *lib) {
-	RemoveCmd(GetCmdByName(lib_get_name()));
+	RemoveCmd( GetCmdByName( lib_get_name() ) );
 	fs_iso_shutdown();
 	return nmmgr_handler_remove(&ds_isofs_hnd.nmmgr); 
 }
@@ -181,6 +182,10 @@ file_t fs_iso_first_file(const char *mountpoint) {
 
 	fd = fs_open(mountpoint, O_DIR | O_RDONLY);
 	
+	if(fd == FILEHND_INVALID) {
+		return fd;
+	}
+	
 	do {
 		ent = fs_readdir(fd);
 	} while(ent && ent->attr != 0);
@@ -197,3 +202,153 @@ file_t fs_iso_first_file(const char *mountpoint) {
 	return fd;
 }
 
+
+/**
+ * Spoof TOC for GD session 1
+ */
+void spoof_toc_3track_gd_session_1(CDROM_TOC *toc) {
+
+	/**
+	 * Track 1
+	 * CTRL = 4, ADR = 1, FAD = 0x0096 (FAD 150, so LBA 0)
+	 * MSF = 00:02:00
+	 */
+	toc->entry[0] = 0x41000096;
+	
+	/**
+	 * Track 2
+	 * CTRL = 0, ADR = 1, FAD = 0x02EE (FAD 750, so LBA 600)
+	 * MSF = 00:10:00
+	 */
+	toc->entry[1] = 0x010002EE;
+	
+	/**
+	 * Ununsed / empty entries
+	 */
+	for(int i = 2; i < 99; i++)
+		toc->entry[i] = (uint32)-1;
+	
+	/**
+	 * First track 1 Data
+	 */
+	toc->first = 0x41010000;
+	
+	/**
+	 * Last track 2 Audio
+	 */
+	toc->last  = 0x01020000;
+	
+	/**
+	 * Leadout Audio
+	 * FAD = 0x1A2C (FAD 6700, so LBA 6850 decimal)
+	 * MSF = 01:29:00, 25 frames per second
+	 */
+	toc->leadout_sector = 0x01001A2C;
+}
+
+
+/**
+ * Spoof TOC for GD session 2
+ */
+void spoof_toc_3track_gd_session_2(CDROM_TOC *toc) {
+
+	/**
+	 * Track 1 and 2 is empty.
+	 * This is a low-density track, unused in GD session.
+	 */
+	toc->entry[0] = -1;
+	toc->entry[1] = -1;
+	
+	/**
+	 * Track 3 Data
+	 * CTRL = 4, ADR = 1, FAD = 0xB05E (FAD 45150, so LBA 45000)
+	 * MSF = 10:02:00
+	 */
+	toc->entry[2] = 0x4100B05E;
+	
+	/**
+	 * Ununsed / empty entries
+	 */
+	for(int i = 3; i < 99; i++) {
+		toc->entry[i] = (uint32)-1;
+	}
+	
+	/**
+	 * Track 3 Data
+	 */
+	toc->first = 0x41030000;
+	toc->last  = 0x41030000;
+	
+	/**
+	 * Data
+	 * FAD = 0x0861B4 (FAD 549300, so LBA 549150 decimal)
+	 * MSF = 122:04:00
+	 */
+	toc->leadout_sector = 0x410861B4;
+}
+
+
+void spoof_multi_toc_3track_gd(CDROM_TOC *toc) {
+
+	spoof_toc_3track_gd_session_2(toc);
+	
+	toc->entry[0] = 0x41000096;
+	toc->entry[1] = 0x010002EE;
+	
+	/* Need change before use */
+//	toc->first = 0x41010000;
+//	toc->last  = 0x01020000;
+//	toc->leadout_sector = 0x01001A2C;
+}
+
+
+void spoof_multi_toc_iso(CDROM_TOC *toc, file_t fd, uint32 lba) {
+	/**
+	 * Track 1 Data
+	 * CTRL = 4, ADR = 1, LBA = ???
+	 */
+	toc->entry[0] = 0x41000000 | lba;
+	
+	/**
+	 * Ununsed / empty entries
+	 */
+	for(int i = 1; i < 99; i++)
+		toc->entry[i] = (uint32)-1;
+	
+	/**
+	 * First and last is track 1
+	 */
+	toc->first = 0x41010000;
+	toc->last  = 0x01010000;
+	
+	/**
+	 * Leadout sector
+	 */
+	toc->leadout_sector = (fs_total(fd) / 2048) + lba;
+}
+
+
+void spoof_multi_toc_cso(CDROM_TOC *toc, CISO_header_t *hdr, uint32 lba) {
+	/**
+	 * Track 1 Data
+	 * CTRL = 4, ADR = 1, LBA = ???
+	 */
+	toc->entry[0] = 0x41000000 | lba;
+	
+	/**
+	 * Ununsed / empty entries
+	 */
+	for(int i = 1; i < 99; i++)
+		toc->entry[i] = (uint32)-1;
+	
+	/**
+	 * First and last is track 1
+	 */
+	toc->first = 0x41010000;
+	toc->last  = 0x01010000;
+	
+	/**
+	 * Leadout sector
+	 */
+	toc->leadout_sector = (hdr->total_bytes / hdr->block_size) + lba;
+}
