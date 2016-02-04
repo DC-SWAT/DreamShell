@@ -1,9 +1,8 @@
-/* DreamShell boot loader spiral
-	
-   spiral.c
-   (c)2011-2014 SWAT
-*/
-
+/**
+ * DreamShell boot loader
+ * Spiral
+ * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ */
 
 #include "main.h"
 

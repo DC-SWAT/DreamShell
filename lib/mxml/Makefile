@@ -88,7 +88,7 @@ PUBLIBOBJS	=	mxml-attr.o mxml-entity.o mxml-file.o mxml-get.o \
 			mxml-index.o mxml-node.o mxml-search.o mxml-set.o
 LIBOBJS		=	$(PUBLIBOBJS) mxml-private.o mxml-string.o
 OBJS		=	mxmldoc.o testmxml.o $(LIBOBJS)
-TARGETS		=	$(LIBMXML) mxmldoc testmxml mxml.xml doc/mxml.man
+TARGETS		=	$(LIBMXML) mxmldoc #testmxml mxml.xml doc/mxml.man
 
 
 #

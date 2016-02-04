@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 
 # libtool - Provide generalized library-building support services.
 # Generated automatically by config.status () 
@@ -60,7 +60,7 @@ build_old_libs=yes
 pic_mode=default
 
 # Whether or not to optimize for fast installation.
-fast_install=yes
+fast_install=needless
 
 # The host system.
 host_alias=sh-elf
@@ -69,23 +69,23 @@ host_os=elf
 
 # The build system.
 build_alias=
-build=x86_64-unknown-linux-gnu
-build_os=linux-gnu
+build=i686-pc-cygwin
+build_os=cygwin
 
 # A sed program that does not truncate output.
-SED="/bin/sed"
+SED="/usr/bin/sed"
 
 # Sed that helps us avoid accidentally triggering echo(1) options like -n.
 Xsed="$SED -e 1s/^X//"
 
 # A grep program that handles long lines.
-GREP="/bin/grep"
+GREP="/usr/bin/grep"
 
 # An ERE matcher.
-EGREP="/bin/grep -E"
+EGREP="/usr/bin/grep -E"
 
 # A literal string matcher.
-FGREP="/bin/grep -F"
+FGREP="/usr/bin/grep -F"
 
 # A BSD- or MS-compatible name lister.
 NM="/opt/toolchains/dc/sh-elf/bin/sh-elf-nm -B"
@@ -94,7 +94,7 @@ NM="/opt/toolchains/dc/sh-elf/bin/sh-elf-nm -B"
 LN_S="ln -s"
 
 # What is the maximum length of a command?
-max_cmd_len=1572864
+max_cmd_len=8192
 
 # Object file suffix (normally "o").
 objext=o
@@ -137,7 +137,7 @@ old_postuninstall_cmds=""
 LTCC="/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing"
+LTCFLAGS="-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections  -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -I/usr/local/dc/kos/kos/../kos-ports/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing"
 
 # Take the output of nm and produce a listing of raw symbols and C names.
 global_symbol_pipe=""
@@ -155,7 +155,7 @@ global_symbol_to_c_name_address_lib_prefix="sed -n -e 's/^: \\([^ ]*\\) \$/  {\\
 objdir=.libs
 
 # Shell to use when invoking shell scripts.
-SHELL="/bin/bash"
+SHELL="/bin/sh"
 
 # An echo program that does not interpret backslashes.
 ECHO="echo"
@@ -239,7 +239,7 @@ finish_eval=""
 hardcode_into_libs=no
 
 # Compile-time system search path for libraries.
-sys_lib_search_path_spec="/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/4.7.3 /opt/toolchains/dc/sh-elf/sh-elf/lib"
+sys_lib_search_path_spec="/opt/toolchains/dc/sh-elf/lib/gcc/sh-elf/5.2.0 /opt/toolchains/dc/sh-elf/sh-elf/lib"
 
 # Run-time system search path for libraries.
 sys_lib_dlsearch_path_spec="/lib /usr/lib"
@@ -259,7 +259,7 @@ striplib="sh-elf-strip --strip-unneeded"
 
 
 # The linker used to build libraries.
-LD="/opt/toolchains/dc/sh-elf/sh-elf/bin/ld"
+LD="/opt/toolchains/dc/sh-elf/sh-elf/bin/ld.exe"
 
 # Commands used to build an old-style archive.
 old_archive_cmds="\$AR \$AR_FLAGS \$oldlib\$oldobjs~\$RANLIB \$oldlib"
@@ -286,7 +286,7 @@ link_static_flag="-static"
 compiler_c_o="yes"
 
 # Whether or not to add -lc for building shared libraries.
-build_libtool_need_lc=no
+build_libtool_need_lc=yes
 
 # Whether or not to disallow shared libs when runtime libs are static.
 allow_libtool_libs_with_static_runtimes=no

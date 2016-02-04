@@ -1,6 +1,7 @@
 /*
   SDL_image:  An example image loading library for use with SDL
   Copyright (C) 1997-2012 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 2016 SWAT
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -37,21 +38,24 @@ static struct {
 } supported[] = {
 	/* keep magicless formats first */
 	{ "TGA", NULL,      IMG_LoadTGA_RW },
+
+	/* keep often usable formats secondary */
+	{ "PNG", IMG_isPNG, IMG_LoadPNG_RW },
+	{ "JPG", IMG_isJPG, IMG_LoadJPG_RW },
+	{ "PVR", IMG_isPVR, IMG_LoadPVR_RW },
+
 	{ "CUR", IMG_isCUR, IMG_LoadCUR_RW },
 	{ "ICO", IMG_isICO, IMG_LoadICO_RW },
 	{ "BMP", IMG_isBMP, IMG_LoadBMP_RW },
 	{ "GIF", IMG_isGIF, IMG_LoadGIF_RW },
-	{ "JPG", IMG_isJPG, IMG_LoadJPG_RW },
 	{ "LBM", IMG_isLBM, IMG_LoadLBM_RW },
 	{ "PCX", IMG_isPCX, IMG_LoadPCX_RW },
-	{ "PNG", IMG_isPNG, IMG_LoadPNG_RW },
 	{ "PNM", IMG_isPNM, IMG_LoadPNM_RW }, /* P[BGP]M share code */
 	{ "TIF", IMG_isTIF, IMG_LoadTIF_RW },
 	{ "XCF", IMG_isXCF, IMG_LoadXCF_RW },
 	{ "XPM", IMG_isXPM, IMG_LoadXPM_RW },
 	{ "XV",  IMG_isXV,  IMG_LoadXV_RW  },
 	{ "WEBP", IMG_isWEBP, IMG_LoadWEBP_RW },
-	{ "PVR", IMG_isPVR, IMG_LoadPVR_RW },
 };
 
 const SDL_version *IMG_Linked_Version(void)

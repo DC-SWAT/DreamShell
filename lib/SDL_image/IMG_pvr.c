@@ -30,7 +30,11 @@
 #include "SDL_image.h"
 #include "SegaPVRImage.h"
 
-#ifdef HAVE_STDIO_H
+#if defined(__DREAMCAST__)
+#include <malloc.h>
+#endif
+
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
 int fileno(FILE *f);
 #endif
 
@@ -41,8 +45,7 @@ unsigned long int GetUntwiddledTexelPosition(unsigned long int x, unsigned long 
 int MipMapsCountFromWidth(unsigned long int width);
 
 // RGBA Utils
-void TexelToRGBA( unsigned short int srcTexel, enum TextureFormatMasks srcFormat, 
-					unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *a);
+void TexelToRGBA( unsigned short int srcTexel, enum TextureFormatMasks srcFormat, unsigned char *r, unsigned char *g, unsigned char *b, unsigned char *a);
 
 unsigned int ToUint16(unsigned char* value)
 {
@@ -68,12 +71,17 @@ int IMG_isPVR(SDL_RWops *src)
 		
 	start = SDL_RWtell(src);
 
-	if ( SDL_RWread(src, magic, sizeof(magic), 1) == 1 ) {
+	if ( SDL_RWread(src, magic, 1, sizeof(magic)) == sizeof(magic) ) {
 		if (!strncasecmp(magic, "GBIX", 4) || !strncasecmp(magic, "PVRT", 4)) {
 			is_PVR = 1;
 		}
 	}
 	SDL_RWseek(src, start, RW_SEEK_SET);
+	
+#ifdef DEBUG_IMGLIB
+	fprintf(stderr, "IMG_isPVR: %d (%c%c%c%c)\n", is_PVR, magic[0], magic[1], magic[2], magic[3]);
+#endif
+	
 	return(is_PVR);
 }
 
@@ -99,14 +107,18 @@ SDL_Surface *IMG_LoadPVR_RW(SDL_RWops *src)
 	len = SDL_RWtell(src);
 	SDL_RWseek(src, 0, RW_SEEK_SET);
 	
+#ifdef DEBUG_IMGLIB
+	fprintf(stderr, "IMG_LoadPVR_RW: %d bytes\n", len);
+#endif
+	
 	data = (uint8*) memalign(32, len);
 	
 	if(data == NULL) {
-		error = "no memory";
+		error = "no free memory";
 		goto done;
 	}
 	
-#ifdef HAVE_STDIO_H
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
 
 	int fd = fileno(src->hidden.stdio.fp);
 	

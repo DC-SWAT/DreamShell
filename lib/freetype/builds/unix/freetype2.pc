@@ -1,6 +1,6 @@
 prefix=/usr/local
 exec_prefix=${prefix}
-libdir=${exec_prefix}/lib
+libdir=/usr/local/dc/kos/kos/ds/lib
 includedir=${prefix}/include
 
 Name: FreeType 2

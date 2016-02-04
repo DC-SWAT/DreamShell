@@ -1,10 +1,11 @@
-# DreamShell ##version##
-# (с) 2008-2014 SWAT
+#
+# DreamShell libraries Makefile
+# Copyright (C) 2008-2016 SWAT
 # http://www.dc-swat.ru
-# 
+#
 
-_SUBDIRS = libcfg/src libparallax libpng lua mxml \
-			freetype SDL_gfx SDL_image SDL_ttf SDL_rtf
+_SUBDIRS = freetype libcfg/src libparallax libSDL_rtf \
+	lua SDL SDL_gfx SDL_image SDL_ttf mxml
 
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))

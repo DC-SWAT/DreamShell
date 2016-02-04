@@ -1,47 +1,24 @@
-/* DreamShell boot loader
-	
-   main.c
-   (c) 2011-2014 SWAT
-*/
+/**
+ * DreamShell boot loader
+ * Main
+ * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ */
 
 #include "main.h"
 #include "fs.h"
 
-
+KOS_INIT_FLAGS(INIT_DEFAULT/* | INIT_NET*/);
 extern uint8 romdisk[];
-//KOS_INIT_ROMDISK(romdisk);
 
 pvr_init_params_t params = {
 	{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
-	512*1024
+	512 * 1024
 };
 
-const char	title[28] = "DreamShell boot loader v2.3";
+const char	title[28] = "DreamShell boot loader v"VERSION;
 
 //#define EMU
 //#define BIOS_MODE
-
-#ifndef EMU
-KOS_INIT_FLAGS(INIT_DEFAULT/* | INIT_NET*/);
-#else
-KOS_INIT_FLAGS(INIT_DEFAULT);
-#endif
-
-
-int FileSize(const char *fn) {
-	int size;
-	file_t f;
-
-	f = fs_open(fn, O_RDONLY); 
-
-	if(f == FILEHND_INVALID) {
-		return -1; 
-	}
-
-	size = fs_total(f); 
-	fs_close(f); 
-	return size; 
-}
 
 int FileExists(const char *fn) {
     file_t f;
@@ -106,8 +83,16 @@ int flashrom_get_region_only() {
 }
 
 
+int is_hacked_bios() {
+	return (*(uint16 *)0xa0000000) == 0xe6ff;
+}
+
 int is_custom_bios() {
-	return (*(uint16 *)0x80000004) != 0x6439;
+	return (*(uint16 *)0xa0000004) == 0x4318;
+}
+
+int is_no_syscalls() {
+	return (*(uint16 *)0xac000100) != 0x2f06;
 }
 
 #ifdef BIOS_MODE
@@ -186,31 +171,16 @@ int main(int argc, char **argv) {
 	cont_btn_callback(0, CONT_START, (cont_btn_callback_t)start_callback);
 	
 	if(vid_check_cable() == CT_VGA) {
-		
 		vid_set_mode(DM_640x480_VGA, PM_RGB565);
-		
+	} else if(flashrom_get_region_only() == FLASHROM_REGION_EUROPE) {
+		vid_set_mode(DM_640x480_PAL_IL, PM_RGB565);
 	} else {
-		
-		int region = flashrom_get_region_only();
-
-		switch(region) {
-			case FLASHROM_REGION_US:
-			case FLASHROM_REGION_JAPAN:
-				vid_set_mode(DM_640x480_NTSC_IL, PM_RGB565);
-				break;
-			case FLASHROM_REGION_EUROPE:
-				vid_set_mode(DM_640x480_PAL_IL, PM_RGB565);
-				break;
-			case FLASHROM_REGION_UNKNOWN:
-			default:
-				break;
-		}
+		vid_set_mode(DM_640x480_NTSC_IL, PM_RGB565);
 	}
 
 #ifndef EMU
 
 #ifdef BIOS_MODE
-
 
 	if(!fs_romdisk_mount(RES_PATH, (const uint8 *)romdisk, 0)) {
 		
@@ -219,8 +189,8 @@ int main(int argc, char **argv) {
 		
 		if(is_custom_bios()/* && is_no_syscalls()*/) {
 			setup_syscalls();
-			cdrom_init();
-			fs_iso9660_init();
+//			cdrom_init();
+//			fs_iso9660_init();
 		}
 		
 	} else {

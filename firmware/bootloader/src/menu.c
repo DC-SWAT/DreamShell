@@ -1,8 +1,8 @@
-/* DreamShell boot loader menu
-	
-   menu.c
-   (c)2011-2014 SWAT
-*/
+/**
+ * DreamShell boot loader
+ * Menu
+ * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ */
 
 
 #include "main.h"
@@ -24,6 +24,7 @@ typedef struct menu_item {
 	char path[MAX_FN_LEN];
 	int mode;
 	int is_gz;
+	int is_scrambled;
 	struct menu_item *next;
 } menu_item_t;
 
@@ -205,7 +206,7 @@ static int search_root_check(char *device, char *path, char *file) {
 		sprintf(check, "/%s%s/%s", device, path, file);
 	}
 	
-	if((file == NULL && DirExists(check)) || (file != NULL && (FileSize(check) > 500*1024))) {
+	if((file == NULL && DirExists(check)) || (file != NULL && FileExists(check))) {
 		return 0;
 	}
 	
@@ -230,57 +231,56 @@ static int search_root() {
 	
 	while ((ent = fs_readdir(hnd)) != NULL) {
 		
-		if(!strncasecmp(ent->name, "pty", 3) || !strncasecmp(ent->name, "sock", 4) || !strncasecmp(ent->name, "vmu", 3)) {
+		if(ent->name[0] == 0 || !strncasecmp(ent->name, "pty", 3) ||
+			!strncasecmp(ent->name, "sock", 4) || !strncasecmp(ent->name, "vmu", 3)) {
 			continue;
 		}
 		
 		item = calloc(1, sizeof(menu_item_t));
 		
-		if(item) {
+		if(!item) {
+			break;
+		}
 			
-			item->next = items;
-			items = item;
-			
-			for(i = 0; i < strlen(ent->name); i++) {
-				name[i] = toupper((int)ent->name[i]);
-			}
-			
-			name[i] = '\0';
-			snprintf(item->name, MAX_FN_LEN, "Boot from %s", name);
-			item->name[strlen(item->name)] = '\0';
-			item->mode = 0;
-			items_cnt++;
-			
-			dbglog(DBG_INFO, "Checking for root directory on /%s\n", ent->name);
-			
-			if(!search_root_check(ent->name, "/DS", "/DS_CORE.BIN")) {
-					
-				snprintf(item->path, MAX_FN_LEN, "/%s/DS/DS_CORE.BIN", ent->name);
-				item->path[strlen(item->path)] = '\0';
+		item->next = items;
+		items = item;
+		
+		for(i = 0; i < strlen(ent->name); i++) {
+			name[i] = toupper((int)ent->name[i]);
+		}
+		
+		name[i] = '\0';
+		snprintf(item->name, MAX_FN_LEN, "Boot from %s", name);
+		item->mode = 0;
+		items_cnt++;
+		
+		dbglog(DBG_INFO, "Checking for root directory on /%s\n", ent->name);
+		
+		if(!search_root_check(ent->name, "/DS", "/DS_CORE.BIN")) {
 				
-			} else if(!search_root_check(ent->name, "", "/DS_CORE.BIN")) {
-							
-				snprintf(item->path, MAX_FN_LEN, "/%s/DS_CORE.BIN", ent->name);
-				item->path[strlen(item->path)] = '\0';
+			snprintf(item->path, MAX_FN_LEN, "/%s/DS/DS_CORE.BIN", ent->name);
+			
+		} else if(!search_root_check(ent->name, "", "/DS_CORE.BIN")) {
+						
+			snprintf(item->path, MAX_FN_LEN, "/%s/DS_CORE.BIN", ent->name);
+			
+		} else if(!search_root_check(ent->name, "", "/1DS_CORE.BIN")) {
+						
+			snprintf(item->path, MAX_FN_LEN, "/%s/1DS_CORE.BIN", ent->name);
+			item->is_scrambled = 1;
+			
+		} else if(!search_root_check(ent->name, "/DS", "/ZDS_CORE.BIN")) {
 				
-			} else if(!search_root_check(ent->name, "/DS", "/ZDS_CORE.BIN")) {
-					
-				snprintf(item->path, MAX_FN_LEN, "/%s/DS/ZDS_CORE.BIN", ent->name);
-				item->path[strlen(item->path)] = '\0';
-				item->is_gz = 1;
-				
-			} else if(!search_root_check(ent->name, "", "/ZDS_CORE.BIN")) {
-							
-				snprintf(item->path, MAX_FN_LEN, "/%s/ZDS_CORE.BIN", ent->name);
-				item->path[strlen(item->path)] = '\0';
-				item->is_gz = 1;
-				
-			} else {
-				item->path[0] = 0;
-			}
+			snprintf(item->path, MAX_FN_LEN, "/%s/DS/ZDS_CORE.BIN", ent->name);
+			item->is_gz = 1;
+			
+		} else if(!search_root_check(ent->name, "", "/ZDS_CORE.BIN")) {
+						
+			snprintf(item->path, MAX_FN_LEN, "/%s/ZDS_CORE.BIN", ent->name);
+			item->is_gz = 1;
 			
 		} else {
-			break;
+			item->path[0] = 0;
 		}
 	}
 	
@@ -441,7 +441,7 @@ void *loading_thd(void *param) {
 	}
 	
 	update_progress(0);
-	binary_buff = (uint8 *)malloc(binary_size);
+	binary_buff = (uint8 *)memalign(32, binary_size);
 	
 	if(binary_buff != NULL) {
 		
@@ -494,10 +494,10 @@ void *loading_thd(void *param) {
 					unlock_video();
 					return NULL;
 				}
-				
+
 			} else {
 		
-				while((i = fs_read(fd, pbuff, 16384)) > 0) {
+				while((i = fs_read(fd, pbuff, 32768)) > 0) {
 					
 					update_progress((float)count / ((float)binary_size / 100.0f));
 //					dbglog(DBG_INFO, "Loaded %d to %p\n", i, pbuff);
@@ -508,6 +508,18 @@ void *loading_thd(void *param) {
 			}
 			
 			fs_close(fd);
+		}
+		
+		if(item->is_scrambled) {
+
+			lock_video();
+			show_message("Descrambling...");
+			unlock_video();
+
+			uint8 *tmp_buf = (uint8 *)malloc(binary_size);
+			descramble(binary_buff, tmp_buf, binary_size);
+			free(binary_buff);
+			binary_buff = tmp_buf;
 		}
 		
 		lock_video();
@@ -658,12 +670,13 @@ int menu_init() {
 		
 	search_root();
 	
-	while(selected++ < items_cnt) {
+	while(selected < items_cnt) {
 		menu_item_t *item = get_selected();
 
 		if(item->path[0] != 0) {
 			return 0;
 		}
+		selected++;
 	}
 	
 	selected = 0;

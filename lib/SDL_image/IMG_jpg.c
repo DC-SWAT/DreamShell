@@ -28,6 +28,10 @@
 #include <string.h>
 #include <setjmp.h>
 
+#if defined(__DREAMCAST__)
+#include <malloc.h>
+#endif
+
 #include "SDL_image.h"
 
 #ifdef LOAD_JPG
@@ -40,7 +44,7 @@
 	#define FALSE JPEG_FALSE
 #endif
 
-#ifdef HAVE_STDIO_H
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
 int fileno(FILE *f);
 #endif
 
@@ -196,7 +200,8 @@ int IMG_isJPG(SDL_RWops *src)
 	start = SDL_RWtell(src);
 	is_JPG = 0;
 	in_scan = 0;
-	if ( SDL_RWread(src, magic, 2, 1) ) {
+
+	if ( SDL_RWread(src, magic, 1, 2) == 2 ) {
 		if ( (magic[0] == 0xFF) && (magic[1] == 0xD8) ) {
 			is_JPG = 1;
 			while (is_JPG == 1) {
@@ -238,9 +243,22 @@ int IMG_isJPG(SDL_RWops *src)
 					}
 				}
 			}
+			
+			/* Additional check */
+			if(!is_JPG && magic[0] == 0xFF && magic[1] == 0xE0) {
+				SDL_RWseek(src, 6, RW_SEEK_SET);
+				if(SDL_RWread(src, magic, 1, 4) == 4 && !strncasecmp((char*)magic, "JFIF", 4)) {
+					is_JPG = 1;
+				}
+			}
 		}
 	}
 	SDL_RWseek(src, start, RW_SEEK_SET);
+	
+#ifdef DEBUG_IMGLIB
+	fprintf(stderr, "IMG_isJPG: %d (%02x%02x%02x%02x)\n", is_JPG, magic[0], magic[1], magic[2], magic[3]);
+#endif
+	
 	return(is_JPG);
 }
 
@@ -270,7 +288,7 @@ static boolean fill_input_buffer (j_decompress_ptr cinfo)
 	my_source_mgr * src = (my_source_mgr *) cinfo->src;
 	int nbytes;
 	
-#ifdef HAVE_STDIO_H
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
 	int fd = fileno(src->ctx->hidden.stdio.fp);
 	
 	if(fd > -1) {

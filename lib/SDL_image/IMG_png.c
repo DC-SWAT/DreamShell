@@ -71,7 +71,11 @@
 #endif
 #include <png.h>
 
-#ifdef HAVE_STDIO_H
+#if defined(__DREAMCAST__)
+#include <malloc.h>
+#endif
+
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
 int fileno(FILE *f);
 #endif
 
@@ -325,6 +329,11 @@ int IMG_isPNG(SDL_RWops *src)
 		}
 	}
 	SDL_RWseek(src, start, RW_SEEK_SET);
+	
+#ifdef DEBUG_IMGLIB
+	fprintf(stderr, "IMG_isPNG: %d (0x%02x %c%c%c)\n", is_PNG, magic[0], magic[1], magic[2], magic[3]);
+#endif
+	
 	return(is_PNG);
 }
 
@@ -335,7 +344,7 @@ static void png_read_data(png_structp ctx, png_bytep area, png_size_t size)
 
 	src = (SDL_RWops *)lib.png_get_io_ptr(ctx);
 	
-#ifdef HAVE_STDIO_H
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
 	int fd = fileno(src->hidden.stdio.fp);
 	
 	if(size > 1024 && fd > -1) {

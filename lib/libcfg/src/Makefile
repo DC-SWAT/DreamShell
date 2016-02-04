@@ -8,7 +8,7 @@
 
 KOS_CFLAGS += -I./platon/str -I. -DHAVE_LIMITS_H -DHAVE_FLOAT_H -DHAVE_STRING_H -DHAVE_CTYPE_H -DHAVE_MATH_H
 
-TARGET = libcfg.a
+TARGET = ../../libcfg.a
 OBJS = cfg+.o parse.o props.o cmdline.o cfgfile.o shared.o \
 	./platon/str/strplus.o \
 	./platon/str/strdyn.o \
