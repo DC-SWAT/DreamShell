@@ -1,3 +1,9 @@
+** DreamShell 4.0.0.RC.4 **
+	- http://www.dc-swat.ru/blog/dreamshell/1139.html
+
+** DreamShell 4.0.0.RC.3 **
+	- http://www.dc-swat.ru/blog/dreamshell/877.html
+
 ** DreamShell 4.0.0.RC.2 **
 	- http://www.dc-swat.ru/blog/dreamshell/875.html
 

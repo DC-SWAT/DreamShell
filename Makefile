@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile (very truncated)
-# Copyright (C) 2004-2014 SWAT
+# Copyright (C) 2004-2016 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -25,7 +25,7 @@ $(DS_BUILD)/1$(TARGET)_CORE.BIN: $(DS_BUILD)/$(TRAGET_PREFIX)$(TARGET)_CORE.BIN
 
 $(TARGET).cdi: $(DS_BUILD)/1$(TARGET)_CORE.BIN
 	@echo Creating ISO...
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_BUILD)/IP.BIN -joliet -rock -l -o $(TARGET).iso $(DS_BUILD)
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -G resources/IP.BIN -joliet -rock -l -o $(TARGET).iso $(DS_BUILD)
 	@-rm -f $(DS_BUILD)/1$(TARGET)_CORE.BIN
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
