@@ -69,4 +69,4 @@ OBJS = \
 #	src/video/SDL_yuv.o \
 #	src/video/SDL_yuv_sw.o \
 #
-include ../Makefile.prefab
+include ../../sdk/Makefile.library

@@ -1,0 +1,863 @@
+diff --git a/environ_base.sh b/environ_base.sh
+index 29ce451..ced13f0 100644
+--- a/environ_base.sh
++++ b/environ_base.sh
+@@ -42,7 +42,7 @@ export KOS_CPPSTD="-std=gnu++98"
+ export KOS_GCCVER="`kos-cc -v 2>&1 | tail -1 | awk '{print $3}'`"
+ 
+ case $KOS_GCCVER in
+-  4*)
++  4*|5*)
+     export KOS_LDFLAGS="${KOS_LDFLAGS} ${KOS_LD_SCRIPT} -nodefaultlibs ${KOS_LIB_PATHS}" ;;
+   *)
+     export KOS_LDFLAGS="${KOS_LDFLAGS} -nostartfiles -nostdlib ${KOS_LIB_PATHS}" ;;
+@@ -52,7 +52,7 @@ esac
+ export KOS_ARCH_DIR="${KOS_BASE}/kernel/arch/${KOS_ARCH}"
+ 
+ case $KOS_GCCVER in
+-  4*)
++  4*|5*)
+     export KOS_START="" ;;
+   *)
+     export KOS_START="${KOS_ARCH_DIR}/kernel/startup.o" ;;
+diff --git a/include/assert.h b/include/assert.h
+index 583992e..439da09 100644
+--- a/include/assert.h
++++ b/include/assert.h
+@@ -42,7 +42,7 @@ __BEGIN_DECLS
+     \param  e               A value or expression to be evaluated as true or
+                             false.
+ */
+-#   define assert(e)        ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, NULL, __FUNCTION__))
++#   define assert(e)        ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, NULL, __func__))
+ 
+ /** \brief  assert() with a custom message.
+ 
+@@ -53,7 +53,7 @@ __BEGIN_DECLS
+                             false.
+     \param  m               A message (const char *).
+ */
+-#   define assert_msg(e, m) ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, m, __FUNCTION__))
++#   define assert_msg(e, m) ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, m, __func__))
+ #endif
+ 
+ /* \cond */
+diff --git a/include/kos/cdefs.h b/include/kos/cdefs.h
+index 335947a..ebfceca 100644
+--- a/include/kos/cdefs.h
++++ b/include/kos/cdefs.h
+@@ -38,16 +38,16 @@
+ 
+ /** \brief  Identify a function that has no side effects other than its return,
+             and only uses its arguments for any work. */
+-#define __pure      __attribute__((__const__))
++//#define __pure      __attribute__((__const__))
+ 
+ /** \brief  Identify a function or variable that may be unused. */
+ #define __unused    __attribute__((__unused__))
+ 
+ /** \brief  Alias for \ref __noreturn. For BSD compatibility. */
+-#define __dead2     __noreturn  /* BSD compat */
++//#define __dead2     __noreturn  /* BSD compat */
+ 
+ /** \brief  Alias for \ref __pure. Fore BSD compatibility. */
+-#define __pure2     __pure      /* ditto */
++//#define __pure2     __pure      /* ditto */
+ 
+ /* Printf/Scanf-like declaration */
+ /** \brief  Identify a function as accepting formatting like printf().
+diff --git a/include/kos/elf.h b/include/kos/elf.h
+index 154edf8..e6f2831 100644
+--- a/include/kos/elf.h
++++ b/include/kos/elf.h
+@@ -241,6 +241,7 @@ struct elf_rel_t {
+     @{
+ */
+ #define R_SH_DIR32  1       /**< \brief SuperH: Rel = Symbol + Addend */
++#define R_SH_REL32  2       /**< \brief SuperH: Rel = Symbol + Addend - Value */
+ #define R_386_32    1       /**< \brief x86: Rel = Symbol + Addend */
+ #define R_386_PC32  2       /**< \brief x86: Rel = Symbol + Addend - Value */
+ /** @} */
+diff --git a/kernel/arch/dreamcast/hardware/cdrom.c b/kernel/arch/dreamcast/hardware/cdrom.c
+index a41cd69..1101a71 100644
+--- a/kernel/arch/dreamcast/hardware/cdrom.c
++++ b/kernel/arch/dreamcast/hardware/cdrom.c
+@@ -445,14 +445,23 @@ int cdrom_init() {
+     uint32 p;
+     volatile uint32 *react = (uint32 *)0xa05f74e4,
+                      *bios = (uint32 *)0xa0000000;
+-
+-    /* Reactivate drive: send the BIOS size and then read each
++	
++	/* Reactivate drive: send the BIOS size and then read each
+        word across the bus so the controller can verify it. */
+-    *react = 0x1fffff;
+-
+-    for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) {
+-        (void)bios[p];
+-    }
++	if((*(uint16 *)0xa0000000) == 0xe6ff) {
++		
++		*react = 0x3ff;
++		for(p = 0; p < 0x400 / sizeof(bios[0]); p++) {
++			(void)bios[p];
++		}
++		
++	} else {
++		
++		*react = 0x1fffff;
++		for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) {
++			(void)bios[p];
++		}
++	}
+ 
+     mutex_lock(&_g1_ata_mutex);
+     /* Make sure to select the GD-ROM drive. */
+diff --git a/kernel/arch/dreamcast/hardware/g1ata.c b/kernel/arch/dreamcast/hardware/g1ata.c
+index 331bcbe..04f38b9 100644
+--- a/kernel/arch/dreamcast/hardware/g1ata.c
++++ b/kernel/arch/dreamcast/hardware/g1ata.c
+@@ -1,7 +1,7 @@
+ /* KallistiOS ##version##
+ 
+    hardware/g1ata.c
+-   Copyright (C) 2013, 2014, 2015 Lawrence Sebald
++   Copyright (C) 2013, 2014, 2015 Lawrence Sebald, SWAT
+ */
+ 
+ #include <errno.h>
+@@ -103,6 +103,13 @@ typedef struct ata_devdata {
+ #define G1_ATA_DMA_DIRECTION    0xA05F740C      /* Read/Write */
+ #define G1_ATA_DMA_ENABLE       0xA05F7414      /* Read/Write */
+ #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
++#define G1_ATA_DMA_PRO          0xA05F74B8      /* Write-only */
++#define G1_ATA_DMA_PRO_SYSMEM   0x8843407F
++
++/* PIO-related registers. */
++#define G1_ATA_PIO_RACCESS_WAIT 0xA05F7490      /* Write-only */
++#define G1_ATA_PIO_WACCESS_WAIT 0xA05F7494      /* Write-only */
++#define G1_ATA_PIO_IORDY_CTRL   0xA05F74B4      /* Write-only */
+ 
+ /* Bitmasks for the STATUS_REG/ALT_STATUS registers. */
+ #define G1_ATA_SR_ERR   0x01
+@@ -115,6 +122,7 @@ typedef struct ata_devdata {
+ #define G1_ATA_SR_BSY   0x80
+ 
+ /* ATA Commands we might like to send. */
++#define ATA_CMD_RECALIBRATE         0x10
+ #define ATA_CMD_READ_SECTORS        0x20
+ #define ATA_CMD_READ_SECTORS_EXT    0x24
+ #define ATA_CMD_READ_DMA_EXT        0x25
+@@ -123,10 +131,17 @@ typedef struct ata_devdata {
+ #define ATA_CMD_WRITE_DMA_EXT       0x35
+ #define ATA_CMD_READ_DMA            0xC8
+ #define ATA_CMD_WRITE_DMA           0xCA
++#define ATA_CMD_SPINDOWN            0xE0
++#define ATA_CMD_SPINUP              0xE1
++#define ATA_CMD_STANDBY_5SU         0xE2
++#define ATA_CMD_IDLE_5SU            0xE3
++#define ATA_CMD_SLEEP               0xE6
+ #define ATA_CMD_FLUSH_CACHE         0xE7
+ #define ATA_CMD_FLUSH_CACHE_EXT     0xEA
+ #define ATA_CMD_IDENTIFY            0xEC
+ #define ATA_CMD_SET_FEATURES        0xEF
++#define ATA_CMD_STANDBY_01SU        0xF2
++#define ATA_CMD_IDLE_01SU           0xF3
+ 
+ /* Subcommands we might care about for the SET FEATURES command. */
+ #define ATA_FEATURE_TRANSFER_MODE   0x03
+@@ -140,6 +155,7 @@ typedef struct ata_devdata {
+ 
+ /* Access timing data. */
+ #define G1_ACCESS_WDMA_MODE2        0x00001001
++#define G1_ACCESS_PIO_DEFAULT       0x00000222
+ 
+ /* DMA Settings. */
+ #define G1_DMA_TO_DEVICE            0
+@@ -267,7 +283,7 @@ static inline int g1_ata_wait_drq(void) {
+ static int dma_common(uint8_t cmd, size_t nsects, uint32_t addr, int dir,
+                       int block) {
+     uint8_t status;
+-
++	
+     /* Set the thread ID that initiated this DMA. */
+     dma_thd = thd_current;
+ 
+@@ -316,6 +332,9 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+     int rv = 0;
+     unsigned int i, j;
+     uint8_t nsects = (uint8_t)count;
++    uint16_t data;
++    uint8_t *pdata = (uint8_t *)&data;
++    uint8_t *buff = (uint8_t*)buf;
+ 
+     /* Make sure that we've been initialized and there's a disk attached. */
+     if(!devices) {
+@@ -362,6 +381,8 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+ 
+                 s = 1;
+             }
++			
++//            dcache_pref_range((uint32)buff, 512);
+ 
+             /* Wait for data */
+             if(g1_ata_wait_drq()) {
+@@ -374,7 +395,11 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+             }
+ 
+             for(j = 0; j < 256; ++j) {
+-                *buf++ = IN16(G1_ATA_DATA);
++//                *buf++ = IN16(G1_ATA_DATA);
++                data = IN16(G1_ATA_DATA);
++                buff[0] = pdata[0];
++                buff[1] = pdata[1];
++                buff += 2;
+             }
+         }
+     }
+@@ -392,6 +417,8 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+     int rv = 0;
+     unsigned int i, j;
+     uint8_t nsects = (uint8_t)count;
++    uint8_t *buff = (uint8_t*)buf;
++    uint16_t data;
+ 
+     /* Make sure that we've been initialized and there's a disk attached. */
+     if(!devices) {
+@@ -438,13 +465,18 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+ 
+                 s = 1;
+             }
++			
++            dcache_pref_range((uint32)buff, 512);
+ 
+             /* Wait for the device to signal it is ready. */
+             g1_ata_wait_nbsy();
+ 
+             /* Send the data! */
+             for(j = 0; j < 256; ++j) {
+-                OUT16(G1_ATA_DATA, *buf++);
++//                OUT16(G1_ATA_DATA, *buf++);
++                data = buff[0] | buff[1] << 8;
++                OUT16(G1_ATA_DATA, data);
++                buff += 2;
+             }
+         }
+     }
+@@ -463,6 +495,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+     int rv = 0;
+     unsigned int i, j;
+     uint8_t nsects = (uint8_t)count;
++    uint16_t data;
++    uint8_t *pdata = (uint8_t *)&data;
++    uint8_t *buff = (uint8_t*)buf;
+ 
+     /* Make sure that we've been initialized and there's a disk attached. */
+     if(!devices) {
+@@ -535,6 +570,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+ 
+         /* Now, wait for the drive to give us back each sector. */
+         for(i = 0; i < nsects; ++i, ++sector) {
++			
++//            dcache_alloc_range((uint32)buff, 512);
++			
+             /* Wait for data */
+             if(g1_ata_wait_drq()) {
+                 dbglog(DBG_KDEBUG, "g1_ata_read_lba: error reading sector %d "
+@@ -545,7 +583,11 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+             }
+ 
+             for(j = 0; j < 256; ++j) {
+-                *buf++ = IN16(G1_ATA_DATA);
++//                *buf++ = IN16(G1_ATA_DATA);
++                data = IN16(G1_ATA_DATA);
++                buff[0] = pdata[0];
++                buff[1] = pdata[1];
++                buff += 2;
+             }
+         }
+     }
+@@ -682,6 +724,8 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+     int rv = 0;
+     unsigned int i, j;
+     uint8_t nsects = (uint8_t)count;
++    uint8_t *buff = (uint8_t*)buf;
++    uint16_t data;
+ 
+     /* Make sure that we've been initialized and there's a disk attached. */
+     if(!devices) {
+@@ -747,11 +791,15 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+         /* Now, send the drive each sector. */
+         for(i = 0; i < nsects; ++i, ++sector) {
+             /* Wait for the device to signal it is ready. */
++            dcache_pref_range((uint32)buff, 512);
+             g1_ata_wait_nbsy();
+ 
+             /* Send the data! */
+             for(j = 0; j < 256; ++j) {
+-                OUT16(G1_ATA_DATA, *buf++);
++//                OUT16(G1_ATA_DATA, *buf++);
++                data = buff[0] | buff[1] << 8;
++                OUT16(G1_ATA_DATA, data);
++                buff += 2;
+             }
+         }
+     }
+@@ -915,6 +963,55 @@ int g1_ata_flush(void) {
+     return 0;
+ }
+ 
++
++int g1_ata_standby(void) {
++
++    /* Make sure that we've been initialized and there's a disk attached. */
++    if(!devices) {
++        errno = ENXIO;
++        return -1;
++    }
++
++    /* Lock the mutex. */
++    if(g1_ata_mutex_lock())
++        return -1;
++
++    /* Select the slave device. */
++    g1_ata_select_device(G1_ATA_SLAVE | G1_ATA_LBA_MODE);
++    timer_spin_sleep(1);
++	
++    OUT8(G1_ATA_COMMAND_REG, ATA_CMD_STANDBY_5SU);
++    timer_spin_sleep(1);
++    g1_ata_wait_bsydrq();
++    g1_ata_mutex_unlock();
++
++    return 0;
++}
++
++uint64_t g1_ata_max_lba(void) {
++
++    /* Make sure that we've been initialized and there's a disk attached. */
++    if(!devices) {
++        errno = ENXIO;
++        return (uint64_t)-1;
++    }
++	
++    if(device.max_lba)
++		return device.max_lba;
++    else
++		return (device.cylinders * device.heads * device.sectors);
++}
++
++int g1_ata_is_dcio(void) {
++	
++    if(!devices) {
++        errno = ENXIO;
++        return -1;
++    }
++	
++    return (device.capabilities & (1 << 2));
++}
++
+ static int g1_ata_set_transfer_mode(uint8_t mode) {
+     uint8_t status;
+ 
+@@ -1034,6 +1131,7 @@ static int g1_ata_scan(void) {
+         if(!g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) {
+             OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
+             OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
++            OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+         }
+         else {
+             device.wdma_modes = 0;
+diff --git a/kernel/arch/dreamcast/hardware/hardware.c b/kernel/arch/dreamcast/hardware/hardware.c
+index 312150d..afaaf7e 100644
+--- a/kernel/arch/dreamcast/hardware/hardware.c
++++ b/kernel/arch/dreamcast/hardware/hardware.c
+@@ -46,7 +46,7 @@ int hardware_periph_init() {
+     spu_dma_init();
+ 
+     /* Init CD-ROM.. NOTE: NO GD-ROM SUPPORT. ONLY CDs/CDRs. */
+-    cdrom_init();
++	cdrom_init();
+ 
+     /* Setup maple bus */
+     maple_init();
+diff --git a/kernel/arch/dreamcast/hardware/network/broadband_adapter.c b/kernel/arch/dreamcast/hardware/network/broadband_adapter.c
+index 0da0a39..345744d 100644
+--- a/kernel/arch/dreamcast/hardware/network/broadband_adapter.c
++++ b/kernel/arch/dreamcast/hardware/network/broadband_adapter.c
+@@ -1115,6 +1115,7 @@ static void bba_if_netinput(uint8 *pkt, int pktsize) {
+ 
+ /* Set ISP configuration from the flashrom, as long as we're configured staticly */
+ static void bba_set_ispcfg() {
++	
+     flashrom_ispcfg_t isp;
+     uint32 fields = FLASHROM_ISP_IP | FLASHROM_ISP_NETMASK |
+                     FLASHROM_ISP_BROADCAST | FLASHROM_ISP_GATEWAY;
+diff --git a/kernel/arch/dreamcast/include/arch/arch.h b/kernel/arch/dreamcast/include/arch/arch.h
+index 847d53c..807632c 100644
+--- a/kernel/arch/dreamcast/include/arch/arch.h
++++ b/kernel/arch/dreamcast/include/arch/arch.h
+@@ -48,7 +48,7 @@ __BEGIN_DECLS
+ #define DEFAULT_PIXEL_MODE  PM_RGB565
+ 
+ /** \brief  Default serial bitrate. */
+-#define DEFAULT_SERIAL_BAUD 57600
++#define DEFAULT_SERIAL_BAUD 115200
+ 
+ /** \brief  Default serial FIFO behavior. */
+ #define DEFAULT_SERIAL_FIFO 1
+diff --git a/kernel/arch/dreamcast/include/arch/cache.h b/kernel/arch/dreamcast/include/arch/cache.h
+index 1c648aa..107e7f7 100644
+--- a/kernel/arch/dreamcast/include/arch/cache.h
++++ b/kernel/arch/dreamcast/include/arch/cache.h
+@@ -2,6 +2,7 @@
+ 
+    arch/dreamcast/include/cache.h
+    (c)2001 Dan Potter
++   (c)2014 SWAT
+ 
+ */
+ 
+@@ -9,9 +10,10 @@
+     \brief  Cache management functionality.
+ 
+     This file contains definitions for functions that manage the cache in the
+-    Dreamcast, including functions to flush and invalidate the caches.
++    Dreamcast, including functions to flush, invalidate, purge, prefetch and
++    allocate the caches.
+ 
+-    \author Dan Potter
++    \author Dan Potter, SWAT
+ */
+ 
+ #ifndef __ARCH_CACHE_H
+@@ -48,14 +50,38 @@ void dcache_inval_range(uint32 start, uint32 count);
+     back on all of the data in the specified range. This does not invalidate the
+     cache in the process (meaning the blocks will still be in the cache, just
+     not marked as dirty after this has completed). If you wish to invalidate the
+-    cache as well, call dcache_inval_range() after calling this function.
++    cache as well, call dcache_inval_range() after calling this function or
++    use dcache_purge_range() instead of dcache_flush_range()
+ 
+     \param  start           The physical address to begin flushing at.
+     \param  count           The number of bytes to flush.
+ */
+ void dcache_flush_range(uint32 start, uint32 count);
+ 
++/** \brief  Purge the data/operand cache.
++
++    This function flushes a range of the data/operand cache, forcing a write-
++    back and invalidate on all of the data in the specified range.
++
++    \param  start           The physical address to begin purging at.
++    \param  count           The number of bytes to purge.
++*/
++void dcache_purge_range(uint32 start, uint32 count);
++
++/** \brief  Prefetch to the data/operand cache.
++
++    \param  start           The physical address to begin prefetching at.
++    \param  count           The number of bytes to prefetch.
++*/
++void dcache_pref_range(uint32 start, uint32 count);
++
++/** \brief  Allocate the data/operand cache.
++
++    \param  start           The physical address to begin allocating at.
++    \param  count           The number of bytes to allocate.
++*/
++void dcache_alloc_range(uint32 start, uint32 count);
++
+ __END_DECLS
+ 
+ #endif  /* __ARCH_CACHE_H */
+-
+diff --git a/kernel/arch/dreamcast/kernel/cache.s b/kernel/arch/dreamcast/kernel/cache.s
+index 5c7020f..e97e4bf 100644
+--- a/kernel/arch/dreamcast/kernel/cache.s
++++ b/kernel/arch/dreamcast/kernel/cache.s
+@@ -1,165 +1,188 @@
+-! This routine was such a PIA to get working in inside the C program
+-! that I finally gave up and moved it out to an assembler file.
+-
+-! Routine to flush parts of cache.. thanks to the Linux-SH guys
+-! for the algorithm. The original version of this routine was
+-! taken from sh-stub.c.
+-
+-	.text
+-	.globl _icache_flush_range
+-	.globl _dcache_inval_range
+-	.globl _dcache_flush_range
+-
+-! r4 is starting address
+-! r5 is count
+-_icache_flush_range:
+-	mov.l	fraddr,r0
+-	mov.l	p2mask,r1
+-	or	r1,r0
+-	jmp	@r0
+-	nop
+-
+-	.align	2
+-fraddr:	.long	flush_real
+-p2mask:	.long	0x20000000
+-	
+-
+-flush_real:
+-	! Save old SR and disable interrupts
+-	stc	sr,r0
+-	mov.l	r0,@-r15
+-	mov.l	ormask,r1
+-	or	r1,r0
+-	ldc	r0,sr
+-
+-	! Get ending address from count and align start address
+-	add	r4,r5
+-	mov.l	l1align,r0
+-	and	r0,r4
+-	mov.l	addrarray,r1
+-	mov.l	entrymask,r2
+-	mov.l	validmask,r3
+-
+-flush_loop:
+-	! Write back O cache
+-	ocbwb	@r4
+-
+-	! Invalidate I cache
+-	mov	r4,r6		! v & CACHE_IC_ENTRY_MASK
+-	and	r2,r6
+-	or	r1,r6		! CACHE_IC_ADDRESS_ARRAY | ^
+-
+-	mov	r4,r7		! v & 0xfffffc00
+-	and	r3,r7
+-
+-	add	#32,r4		! += L1_CACHE_BYTES
+-	cmp/hs	r4,r5
+-	bt/s	flush_loop
+-	mov.l	r7,@r6		! *addr = data	
+-
+-	! Restore old SR
+-	mov.l	@r15+,r0
+-	ldc	r0,sr
+-
+-	! make sure we have enough instrs before returning to P1
+-	nop
+-	nop
+-	nop
+-	nop
+-	nop
+-	nop
+-	nop
+-	rts
+-	nop
+-
+-	.align	2
+-ormask:
+-	.long	0x100000f0
+-addrarray:
+-	.long	0xf0000000	! CACHE_IC_ADDRESS_ARRAY
+-entrymask:
+-	.long	0x1fe0		! CACHE_IC_ENTRY_MASK
+-validmask:
+-	.long	0xfffffc00
+-	
+-
+-! Goes through and invalidates the O-cache for a given block of
+-! RAM. Make sure that you've called dcache_flush_range first if
+-! you care about the contents.
+-! r4 is starting address
+-! r5 is count
+-_dcache_inval_range:
+-	! Get ending address from count and align start address
+-	add	r4,r5
+-	mov.l	l1align,r0
+-	and	r0,r4
+-
+-dinval_loop:
+-	! Invalidate the O cache
+-	ocbi	@r4		! r4
+-	
+-	mov	#0x10,r0	! r4 | 0x1000
+-	shll8	r0
+-	or	r4,r0
+-	ocbi	@r0
+-	
+-	mov	#0x20,r0	! r4 | 0x2000
+-	shll8	r0
+-	or	r4,r0
+-	ocbi	@r0
+-	
+-	mov	#0x30,r0	! r4 | 0x3000
+-	shll8	r0
+-	or	r4,r0
+-	ocbi	@r0
+-	
+-	cmp/hs	r4,r5
+-	bt/s	dinval_loop
+-	add	#32,r4		! += L1_CACHE_BYTES
+-
+-	rts
+-	nop
+-
+-
+-! This routine just goes through and forces a write-back on the
+-! specified data range. Use prior to dcache_inval_range if you
+-! care about the contents.
+-! r4 is starting address
+-! r5 is count
+-_dcache_flush_range:
+-	! Get ending address from count and align start address
+-	add	r4,r5
+-	mov.l	l1align,r0
+-	and	r0,r4
+-
+-dflush_loop:
+-	! Write back the O cache
+-	ocbwb	@r4
+-
+-	mov	#0x10,r0	! r4 | 0x1000
+-	shll8	r0
+-	or	r4,r0
+-	ocbwb	@r0
+-	
+-	mov	#0x20,r0	! r4 | 0x2000
+-	shll8	r0
+-	or	r4,r0
+-	ocbwb	@r0
+-	
+-	mov	#0x30,r0	! r4 | 0x3000
+-	shll8	r0
+-	or	r4,r0
+-	ocbwb	@r0
+-	
+-	cmp/hs	r4,r5
+-	bt/s	dflush_loop
+-	add	#32,r4		! += L1_CACHE_BYTES
+-
+-	rts
+-	nop
+-
+-
+-
+-	.align	2
+-l1align:
+-	.long	~31		! ~(L1_CACHE_BYTES-1)
++! This routine was such a PIA to get working in inside the C program
++! that I finally gave up and moved it out to an assembler file.
++
++! Routine to flush parts of cache.. thanks to the Linux-SH guys
++! for the algorithm. The original version of this routine was
++! taken from sh-stub.c.
++!
++! Optimized and extended by SWAT <http://www.dc-swat.ru>
++!
++
++	.text
++	.globl _icache_flush_range
++	.globl _dcache_inval_range
++	.globl _dcache_flush_range
++	.globl _dcache_purge_range
++	.globl _dcache_pref_range
++	.globl _dcache_alloc_range
++
++! r4 is starting address
++! r5 is count
++_icache_flush_range:
++	mov.l	fraddr,r0
++	mov.l	p2mask,r1
++	or	r1,r0
++	jmp	@r0
++	nop
++
++	.align	2
++fraddr:	.long	flush_real
++p2mask:	.long	0x20000000
++	
++
++flush_real:
++	! Save old SR and disable interrupts
++	stc	sr,r0
++	mov.l	r0,@-r15
++	mov.l	ormask,r1
++	or	r1,r0
++	ldc	r0,sr
++
++	! Get ending address from count and align start address
++	add	r4,r5
++	mov.l	l1align,r0
++	and	r0,r4
++	mov.l	addrarray,r1
++	mov.l	entrymask,r2
++	mov.l	validmask,r3
++
++flush_loop:
++	! Write back O cache
++	ocbwb	@r4
++
++	! Invalidate I cache
++	mov	r4,r6		! v & CACHE_IC_ENTRY_MASK
++	and	r2,r6
++	or	r1,r6		! CACHE_IC_ADDRESS_ARRAY | ^
++
++	mov	r4,r7		! v & 0xfffffc00
++	and	r3,r7
++
++	add	#32,r4		! += L1_CACHE_BYTES
++	cmp/hs	r4,r5
++	bt/s	flush_loop
++	mov.l	r7,@r6		! *addr = data	
++
++	! Restore old SR
++	mov.l	@r15+,r0
++	ldc	r0,sr
++
++	! make sure we have enough instrs before returning to P1
++	nop
++	nop
++	nop
++	nop
++	nop
++	nop
++	nop
++	rts
++	nop
++
++	.align	2
++ormask:
++	.long	0x100000f0
++addrarray:
++	.long	0xf0000000	! CACHE_IC_ADDRESS_ARRAY
++entrymask:
++	.long	0x1fe0		! CACHE_IC_ENTRY_MASK
++validmask:
++	.long	0xfffffc00
++	
++
++! Goes through and invalidates the O-cache for a given block of
++! RAM. Make sure that you've called dcache_flush_range first if
++! you care about the contents.
++! r4 is starting address
++! r5 is count
++_dcache_inval_range:
++	! Get ending address from count and align start address
++	add	r4,r5
++	mov.l	l1align,r0
++	and	r0,r4
++dinval_loop:
++	! Invalidate the O cache
++	ocbi	@r4		! r4
++	cmp/hs	r4,r5
++	bt/s	dinval_loop
++	add	#32,r4		! += L1_CACHE_BYTES
++	rts
++	nop
++
++
++! This routine just goes through and forces a write-back on the
++! specified data range. Use prior to dcache_inval_range if you
++! care about the contents.
++! r4 is starting address
++! r5 is count
++_dcache_flush_range:
++	! Get ending address from count and align start address
++	add	r4,r5
++	mov.l	l1align,r0
++	and	r0,r4
++dflush_loop:
++	! Write back the O cache
++	ocbwb	@r4
++	cmp/hs	r4,r5
++	bt/s	dflush_loop
++	add	#32,r4		! += L1_CACHE_BYTES
++	rts
++	nop
++	
++! This routine just goes through and forces a write-back and invalidate
++! on the specified data range.
++! r4 is starting address
++! r5 is count
++_dcache_purge_range:
++	! Get ending address from count and align start address
++	add	r4,r5
++	mov.l	l1align,r0
++	and	r0,r4
++dpurge_loop:
++	! Write back and invalidate the O cache
++	ocbp	@r4
++	cmp/hs	r4,r5
++	bt/s	dpurge_loop
++	add	#32,r4		! += L1_CACHE_BYTES
++	rts
++	nop
++
++! This routine just prefetch to operand cache the
++! specified data range. 
++! r4 is starting address
++! r5 is count
++_dcache_pref_range:
++	! Get ending address from count and align start address
++	add	r4,r5
++	mov.l	l1align,r0
++	and	r0,r4
++dpref_loop:
++	! Prefetch to the O cache
++	pref @r4
++	cmp/hs	r4,r5
++	bt/s	dpref_loop
++	add	#32,r4		! += L1_CACHE_BYTES
++	rts
++	nop
++	
++! This routine just allocate operand cache for the
++! specified data range. 
++! r4 is starting address
++! r5 is count
++_dcache_alloc_range:
++	! Get ending address from count and align start address
++	add	r4,r5
++	mov.l	l1align,r0
++	and	r0,r4
++	mov #0,r0
++dalloc_loop:
++	! Allocate the O cache
++	movca.l r0, @r4
++	cmp/hs	r4,r5
++	bt/s	dalloc_loop
++	add	#32,r4		! += L1_CACHE_BYTES
++	rts
++	nop
++
++	.align	2
++l1align:
++	.long	~31		! ~(L1_CACHE_BYTES-1)
+diff --git a/kernel/arch/dreamcast/sound/arm/stream.drv b/kernel/arch/dreamcast/sound/arm/stream.drv
+index d5c91b5..0b1d0db 100755
+Binary files a/kernel/arch/dreamcast/sound/arm/stream.drv and b/kernel/arch/dreamcast/sound/arm/stream.drv differ
+diff --git a/kernel/fs/elf.c b/kernel/fs/elf.c
+index 643c5a1..9a566cd 100644
+--- a/kernel/fs/elf.c
++++ b/kernel/fs/elf.c
+@@ -78,7 +78,7 @@ int elf_load(const char * fn, klibrary_t * shell, elf_prog_t * out) {
+     sz = fs_total(fd);
+     DBG(("Loading ELF file of size %d\n", sz));
+ 
+-    img = malloc(sz);
++    img = memalign(32, sz);
+ 
+     if(img == NULL) {
+         dbglog(DBG_ERROR, "elf_load: can't allocate %d bytes for ELF load\n", sz);
+diff --git a/kernel/libc/koslib/Makefile b/kernel/libc/koslib/Makefile
+index 6fdc05f..96cd5bc 100644
+--- a/kernel/libc/koslib/Makefile
++++ b/kernel/libc/koslib/Makefile
+@@ -18,8 +18,8 @@ OBJS = abort.o byteorder.o memset2.o memset4.o memcpy2.o memcpy4.o \
+ GCC_MAJORMINOR = $(basename $(KOS_GCCVER))
+ GCC_MAJOR = $(basename $(GCC_MAJORMINOR))
+ 
+-ifneq ($(strip $(GCC_MAJOR)), 4)
+-OBJS += crtbegin.o crtend.o
+-endif
++#ifneq ($(strip $(GCC_MAJOR)), 4)
++#OBJS += crtbegin.o crtend.o
++#endif
+ 
+ include $(KOS_BASE)/Makefile.prefab

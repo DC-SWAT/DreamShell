@@ -4,7 +4,7 @@
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = freetype libcfg/src libparallax libSDL_rtf \
+_SUBDIRS = freetype libcfg/src libparallax SDL_rtf \
 	lua SDL SDL_gfx SDL_image SDL_ttf mxml
 
 
