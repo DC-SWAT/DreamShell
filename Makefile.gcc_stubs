@@ -1,0 +1,10 @@
+# KallistiOS ##version##
+# Created by SWAT
+# http://www.dc-swat.ru
+# libds_gcc Makefile
+#
+
+TARGET = ./sdk/lib/libds_gcc.a
+OBJS = ./src/exports_gcc_stubs.o
+
+include ./sdk/Makefile.library

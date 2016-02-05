@@ -2,4 +2,4 @@ DreamShell
 ==========
 
 Dreamshell is the operating system for the game console Sega Dreamcast.
-This repository does not contain the source code of the kernel for now. For the time being here are placed only some external commands, modules, applications and libraries.
+This repository contain all source code of this project and it is licensed under KallistiOS.

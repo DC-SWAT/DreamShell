@@ -1,0 +1,832 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeLite_Project Name="Loadable" InternalType="Library">
+  <VirtualDirectory Name="modules">
+    <VirtualDirectory Name="luaSQL">
+      <VirtualDirectory Name="src">
+        <VirtualDirectory Name="jdbc">
+          <File Name="modules/luaSQL/src/jdbc/Makefile"/>
+        </VirtualDirectory>
+        <File Name="modules/luaSQL/src/ls_mysql.c"/>
+        <File Name="modules/luaSQL/src/ls_oci8.c"/>
+        <File Name="modules/luaSQL/src/ls_odbc.c"/>
+        <File Name="modules/luaSQL/src/ls_postgres.c"/>
+        <File Name="modules/luaSQL/src/ls_sqlite.c"/>
+        <File Name="modules/luaSQL/src/ls_sqlite3.c"/>
+        <File Name="modules/luaSQL/src/luasql.c"/>
+        <File Name="modules/luaSQL/src/luasql.h"/>
+      </VirtualDirectory>
+      <File Name="modules/luaSQL/Makefile"/>
+      <File Name="modules/luaSQL/module.c"/>
+      <File Name="modules/luaSQL/exports.txt"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="isoldr">
+      <File Name="modules/isoldr/Makefile"/>
+      <File Name="modules/isoldr/exec.c"/>
+      <File Name="modules/isoldr/execasm.s"/>
+      <File Name="modules/isoldr/exports.txt"/>
+      <File Name="modules/isoldr/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ffmpeg">
+      <VirtualDirectory Name="include">
+        <VirtualDirectory Name="libavcodec">
+          <File Name="modules/ffmpeg/include/libavcodec/avcodec.h"/>
+          <File Name="modules/ffmpeg/include/libavcodec/avfft.h"/>
+          <File Name="modules/ffmpeg/include/libavcodec/dxva2.h"/>
+          <File Name="modules/ffmpeg/include/libavcodec/opt.h"/>
+          <File Name="modules/ffmpeg/include/libavcodec/vaapi.h"/>
+          <File Name="modules/ffmpeg/include/libavcodec/vdpau.h"/>
+          <File Name="modules/ffmpeg/include/libavcodec/xvmc.h"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="libavformat">
+          <File Name="modules/ffmpeg/include/libavformat/avformat.h"/>
+          <File Name="modules/ffmpeg/include/libavformat/avio.h"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="libavutil">
+          <File Name="modules/ffmpeg/include/libavutil/adler32.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/attributes.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/avconfig.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/avstring.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/avutil.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/base64.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/common.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/crc.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/error.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/fifo.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/intfloat_readwrite.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/log.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/lzo.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/mathematics.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/md5.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/mem.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/pixdesc.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/pixfmt.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/rational.h"/>
+          <File Name="modules/ffmpeg/include/libavutil/sha1.h"/>
+        </VirtualDirectory>
+        <File Name="modules/ffmpeg/SDL_ffmpeg/include/SDL/SDL_ffmpeg.h"/>
+      </VirtualDirectory>
+      <File Name="modules/ffmpeg/aica.c"/>
+      <File Name="modules/ffmpeg/aica.h"/>
+      <File Name="modules/ffmpeg/Makefile"/>
+      <File Name="modules/ffmpeg/module.c"/>
+      <File Name="modules/ffmpeg/player.c"/>
+      <File Name="modules/ffmpeg/config.sh"/>
+      <File Name="modules/ffmpeg/exports.txt"/>
+      <File Name="modules/ffmpeg/FFMPEG.pkg"/>
+      <File Name="modules/ffmpeg/mpg123.c"/>
+      <File Name="modules/ffmpeg/oggvorbis.c"/>
+      <File Name="modules/ffmpeg/xvid.c"/>
+      <File Name="modules/ffmpeg/block8x8.s"/>
+      <File Name="modules/ffmpeg/sdl_player.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="bzip2">
+      <File Name="modules/bzip2/Makefile"/>
+      <File Name="modules/bzip2/module.c"/>
+      <File Name="modules/bzip2/exports.txt"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="freetype">
+      <File Name="modules/freetype/Makefile"/>
+      <File Name="modules/freetype/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="isofs">
+      <File Name="modules/isofs/fs_iso9660.c"/>
+      <File Name="modules/isofs/Makefile"/>
+      <File Name="modules/isofs/module.c"/>
+      <File Name="modules/isofs/exports.txt"/>
+      <File Name="modules/isofs/ciso.c"/>
+      <File Name="modules/isofs/cdi.c"/>
+      <File Name="modules/isofs/gdi.c"/>
+      <File Name="modules/isofs/internal.h"/>
+      <File Name="modules/isofs/map2dev.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaCFG">
+      <File Name="modules/luaCFG/Makefile"/>
+      <File Name="modules/luaCFG/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaDS">
+      <File Name="modules/luaDS/Makefile"/>
+      <File Name="modules/luaDS/module.c"/>
+      <File Name="modules/luaDS/exports.txt"/>
+      <File Name="modules/luaDS/DS.pkg"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaGUI">
+      <File Name="modules/luaGUI/Makefile"/>
+      <File Name="modules/luaGUI/module.c"/>
+      <File Name="modules/luaGUI/exports.txt"/>
+      <File Name="modules/luaGUI/GUI.pkg"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaKOS">
+      <File Name="modules/luaKOS/Makefile"/>
+      <File Name="modules/luaKOS/module.c"/>
+      <File Name="modules/luaKOS/exports.txt"/>
+      <File Name="modules/luaKOS/KOS.pkg"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaMXML">
+      <File Name="modules/luaMXML/Makefile"/>
+      <File Name="modules/luaMXML/module.c"/>
+      <File Name="modules/luaMXML/exports.c"/>
+      <File Name="modules/luaMXML/MXML.pkg"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaSDL">
+      <File Name="modules/luaSDL/Makefile"/>
+      <File Name="modules/luaSDL/module.c"/>
+      <File Name="modules/luaSDL/exports.txt"/>
+      <File Name="modules/luaSDL/SDL.pkg"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaSTD">
+      <File Name="modules/luaSTD/Makefile"/>
+      <File Name="modules/luaSTD/module.c"/>
+      <File Name="modules/luaSTD/exports.txt"/>
+      <File Name="modules/luaSTD/STD.pkg"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="mp3">
+      <File Name="modules/mp3/Makefile"/>
+      <File Name="modules/mp3/module.c"/>
+      <File Name="modules/mp3/exports.txt"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ogg">
+      <File Name="modules/ogg/Makefile"/>
+      <File Name="modules/ogg/module.c"/>
+      <File Name="modules/ogg/exports.txt"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="SDL_mixer">
+      <File Name="modules/SDL_mixer/Makefile"/>
+      <File Name="modules/SDL_mixer/module.c"/>
+      <File Name="modules/SDL_mixer/exports.txt"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="sqlite3">
+      <File Name="modules/sqlite3/Makefile"/>
+      <File Name="modules/sqlite3/module.c"/>
+      <File Name="modules/sqlite3/shell.c"/>
+      <File Name="modules/sqlite3/exports.txt"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="zip">
+      <File Name="modules/zip/Makefile"/>
+      <File Name="modules/zip/miniunz.c"/>
+      <File Name="modules/zip/minizip.c"/>
+      <File Name="modules/zip/module.c"/>
+      <File Name="modules/zip/exports.txt"/>
+    </VirtualDirectory>
+    <File Name="modules/Makefile"/>
+    <VirtualDirectory Name="http">
+      <File Name="modules/http/exports.txt"/>
+      <File Name="modules/http/httpfs.c"/>
+      <File Name="modules/http/Makefile"/>
+      <File Name="modules/http/module.c"/>
+      <File Name="modules/http/tcpfs.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="minilzo">
+      <File Name="modules/minilzo/exports.txt"/>
+      <File Name="modules/minilzo/Makefile"/>
+      <File Name="modules/minilzo/minilzo.c"/>
+      <File Name="modules/minilzo/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="vkb">
+      <File Name="modules/vkb/exports.txt"/>
+      <File Name="modules/vkb/Makefile"/>
+      <File Name="modules/vkb/module.c"/>
+      <File Name="modules/vkb/vkb.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="adx">
+      <VirtualDirectory Name="libADX">
+        <File Name="modules/adx/LibADX/libadx.c"/>
+        <File Name="modules/adx/LibADX/libadx.h"/>
+        <File Name="modules/adx/LibADX/snddrv.c"/>
+        <File Name="modules/adx/LibADX/snddrv.h"/>
+      </VirtualDirectory>
+      <File Name="modules/adx/exports.txt"/>
+      <File Name="modules/adx/Makefile"/>
+      <File Name="modules/adx/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="s3m">
+      <File Name="modules/s3m/exports.txt"/>
+      <File Name="modules/s3m/Makefile"/>
+      <File Name="modules/s3m/module.c"/>
+      <VirtualDirectory Name="libs3mplay">
+        <File Name="modules/s3m/libs3mplay/libs3mplay.c"/>
+        <File Name="modules/s3m/libs3mplay/libs3mplay.h"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="httpd">
+      <File Name="modules/httpd/exports.txt"/>
+      <File Name="modules/httpd/httpd.c"/>
+      <File Name="modules/httpd/Makefile"/>
+      <File Name="modules/httpd/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="telnetd">
+      <File Name="modules/telnetd/exports.txt"/>
+      <File Name="modules/telnetd/Makefile"/>
+      <File Name="modules/telnetd/module.c"/>
+      <File Name="modules/telnetd/telnetd.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="mongoose">
+      <File Name="modules/mongoose/exports.txt"/>
+      <File Name="modules/mongoose/main.c"/>
+      <File Name="modules/mongoose/Makefile"/>
+      <File Name="modules/mongoose/Makefile.stubs"/>
+      <File Name="modules/mongoose/module.c"/>
+      <File Name="modules/mongoose/mongoose.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="opkg">
+      <File Name="modules/opkg/exports.txt"/>
+      <File Name="modules/opkg/Makefile"/>
+      <File Name="modules/opkg/module.c"/>
+      <File Name="modules/opkg/unsqfs.c"/>
+      <File Name="modules/opkg/unsqfs.h"/>
+      <File Name="modules/opkg/libopk.c"/>
+      <File Name="modules/opkg/opkinfo.c"/>
+      <VirtualDirectory Name="libini">
+        <File Name="modules/opkg/libini/ini.h"/>
+        <File Name="modules/opkg/libini/libini.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="aicaos">
+      <File Name="modules/aicaos/aica_common.c"/>
+      <File Name="modules/aicaos/aica_common.h"/>
+      <File Name="modules/aicaos/aica_registers.h"/>
+      <File Name="modules/aicaos/aica_syscalls.h"/>
+      <File Name="modules/aicaos/exports.txt"/>
+      <File Name="modules/aicaos/Makefile"/>
+      <File Name="modules/aicaos/module.c"/>
+      <VirtualDirectory Name="arm">
+        <File Name="modules/aicaos/arm/aica_arm.c"/>
+        <File Name="modules/aicaos/arm/aica_syscalls.c"/>
+        <File Name="modules/aicaos/arm/crt0.S"/>
+        <File Name="modules/aicaos/arm/interrupt.c"/>
+        <File Name="modules/aicaos/arm/interrupt.h"/>
+        <File Name="modules/aicaos/arm/main.c"/>
+        <File Name="modules/aicaos/arm/Makefile"/>
+        <File Name="modules/aicaos/arm/script.ld"/>
+        <File Name="modules/aicaos/arm/spinlock.h"/>
+        <File Name="modules/aicaos/arm/task.c"/>
+        <File Name="modules/aicaos/arm/task.h"/>
+        <File Name="modules/aicaos/arm/task_asm.S"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="sh4">
+        <File Name="modules/aicaos/sh4/aica_sh4.c"/>
+        <File Name="modules/aicaos/sh4/aica_sh4.h"/>
+        <File Name="modules/aicaos/sh4/aica_syscalls.c"/>
+      </VirtualDirectory>
+      <File Name="modules/aicaos/default.desktop"/>
+      <File Name="modules/aicaos/install.lua"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ini">
+      <File Name="modules/ini/default.desktop"/>
+      <File Name="modules/ini/exports.txt"/>
+      <File Name="modules/ini/Makefile"/>
+      <File Name="modules/ini/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="tolua">
+      <File Name="modules/tolua/exports.txt"/>
+      <File Name="modules/tolua/Makefile"/>
+      <File Name="modules/tolua/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="bflash">
+      <File Name="modules/bflash/Makefile"/>
+      <File Name="modules/bflash/bflash.c"/>
+      <File Name="modules/bflash/default.desktop"/>
+      <File Name="modules/bflash/devices.c"/>
+      <File Name="modules/bflash/flash_if.h"/>
+      <File Name="modules/bflash/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="SDL_net">
+      <File Name="modules/SDL_net/exports.txt"/>
+      <File Name="modules/SDL_net/Makefile"/>
+      <File Name="modules/SDL_net/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="xvid">
+      <File Name="modules/xvid/exports.txt"/>
+      <File Name="modules/xvid/Makefile"/>
+      <File Name="modules/xvid/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="tolua++">
+      <File Name="modules/tolua++/exports.txt"/>
+      <File Name="modules/tolua++/Makefile"/>
+      <File Name="modules/tolua++/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="OpenGL">
+      <File Name="modules/OpenGL/exports.txt"/>
+      <File Name="modules/OpenGL/Makefile"/>
+      <File Name="modules/OpenGL/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="gumbo">
+      <File Name="modules/gumbo/default.desktop"/>
+      <File Name="modules/gumbo/exports.txt"/>
+      <File Name="modules/gumbo/Makefile"/>
+      <File Name="modules/gumbo/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="angelscript">
+      <File Name="modules/angelscript/exports.txt"/>
+      <File Name="modules/angelscript/Makefile"/>
+      <File Name="modules/angelscript/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaSocket">
+      <File Name="modules/luaSocket/Makefile"/>
+      <File Name="modules/luaSocket/exports.txt"/>
+      <File Name="modules/luaSocket/module.c"/>
+      <VirtualDirectory Name="src">
+        <File Name="modules/luaSocket/src/auxiliar.c"/>
+        <File Name="modules/luaSocket/src/auxiliar.h"/>
+        <File Name="modules/luaSocket/src/buffer.c"/>
+        <File Name="modules/luaSocket/src/buffer.h"/>
+        <File Name="modules/luaSocket/src/except.c"/>
+        <File Name="modules/luaSocket/src/except.h"/>
+        <File Name="modules/luaSocket/src/inet.c"/>
+        <File Name="modules/luaSocket/src/inet.h"/>
+        <File Name="modules/luaSocket/src/io.c"/>
+        <File Name="modules/luaSocket/src/io.h"/>
+        <File Name="modules/luaSocket/src/luasocket.c"/>
+        <File Name="modules/luaSocket/src/luasocket.h"/>
+        <File Name="modules/luaSocket/src/mime.c"/>
+        <File Name="modules/luaSocket/src/mime.h"/>
+        <File Name="modules/luaSocket/src/options.c"/>
+        <File Name="modules/luaSocket/src/options.h"/>
+        <File Name="modules/luaSocket/src/select.c"/>
+        <File Name="modules/luaSocket/src/select.h"/>
+        <File Name="modules/luaSocket/src/socket.h"/>
+        <File Name="modules/luaSocket/src/tcp.c"/>
+        <File Name="modules/luaSocket/src/tcp.h"/>
+        <File Name="modules/luaSocket/src/timeout.c"/>
+        <File Name="modules/luaSocket/src/timeout.h"/>
+        <File Name="modules/luaSocket/src/udp.c"/>
+        <File Name="modules/luaSocket/src/udp.h"/>
+        <File Name="modules/luaSocket/src/usocket.c"/>
+        <File Name="modules/luaSocket/src/usocket.h"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="luaTask">
+      <File Name="modules/luaTask/Makefile"/>
+      <File Name="modules/luaTask/exports.txt"/>
+      <File Name="modules/luaTask/module.c"/>
+      <VirtualDirectory Name="src">
+        <File Name="modules/luaTask/src/ltask.c"/>
+        <File Name="modules/luaTask/src/queue.c"/>
+        <File Name="modules/luaTask/src/queue.h"/>
+        <File Name="modules/luaTask/src/syncos.c"/>
+        <File Name="modules/luaTask/src/syncos.h"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ppp">
+      <File Name="modules/ppp/Makefile"/>
+      <File Name="modules/ppp/exports.txt"/>
+      <File Name="modules/ppp/module.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="dreameye">
+      <File Name="modules/dreameye/Makefile"/>
+      <File Name="modules/dreameye/dreameye.c"/>
+      <File Name="modules/dreameye/exports.txt"/>
+      <File Name="modules/dreameye/module.c"/>
+      <File Name="modules/dreameye/dreameye.h"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
+  <VirtualDirectory Name="commands">
+    <VirtualDirectory Name="httpd">
+      <VirtualDirectory Name="source">
+        <File Name="commands/httpd/source/httpd-ack.c"/>
+        <File Name="commands/httpd/source/Makefile"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="bin2iso">
+      <File Name="commands/bin2iso/main.c"/>
+      <File Name="commands/bin2iso/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="dreameye">
+      <File Name="commands/dreameye/main.c"/>
+      <File Name="commands/dreameye/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ffdev">
+      <File Name="commands/ffdev/ffdev"/>
+      <File Name="commands/ffdev/ffdev.c"/>
+      <File Name="commands/ffdev/main.c"/>
+      <File Name="commands/ffdev/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="flashrom">
+      <File Name="commands/flashrom/main.c"/>
+      <File Name="commands/flashrom/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="gdrip">
+      <File Name="commands/gdrip/dreamrip.c"/>
+      <File Name="commands/gdrip/main.c"/>
+      <File Name="commands/gdrip/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="binhack"/>
+    <VirtualDirectory Name="install">
+      <File Name="commands/install/install.c"/>
+      <File Name="commands/install/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="netstat">
+      <File Name="commands/netstat/main.c"/>
+      <File Name="commands/netstat/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ping">
+      <File Name="commands/ping/main.c"/>
+      <File Name="commands/ping/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="scramble">
+      <File Name="commands/scramble/main.c"/>
+      <File Name="commands/scramble/Makefile"/>
+      <File Name="commands/scramble/scramble.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="sip">
+      <File Name="commands/sip/Makefile"/>
+      <File Name="commands/sip/main.c"/>
+      <File Name="commands/sip/wave_format.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="test">
+      <File Name="commands/test/cmd"/>
+      <File Name="commands/test/cmd.c"/>
+      <File Name="commands/test/dbg-cmd"/>
+      <File Name="commands/test/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="untgz">
+      <File Name="commands/untgz/Makefile"/>
+      <File Name="commands/untgz/untgz.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="vmu">
+      <File Name="commands/vmu/main.c"/>
+      <File Name="commands/vmu/Makefile"/>
+    </VirtualDirectory>
+    <File Name="commands/Makefile"/>
+    <VirtualDirectory Name="pvr2bmp">
+      <File Name="commands/pvr2bmp/main.c"/>
+      <File Name="commands/pvr2bmp/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="vmode">
+      <File Name="commands/vmode/main.c"/>
+      <File Name="commands/vmode/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="mke2fs">
+      <File Name="commands/mke2fs/Makefile"/>
+      <File Name="commands/mke2fs/mke2fs.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="mkfatfs">
+      <File Name="commands/mkfatfs/Makefile"/>
+      <File Name="commands/mkfatfs/main.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="ciso">
+      <File Name="commands/ciso/Makefile"/>
+      <File Name="commands/ciso/main.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="gdiopt">
+      <File Name="commands/gdiopt/Makefile"/>
+      <File Name="commands/gdiopt/main.c"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
+  <Description/>
+  <Dependencies/>
+  <Settings Type="Dynamic Library">
+    <GlobalSettings>
+      <Compiler Options="" C_Options="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="">
+        <LibraryPath Value="."/>
+      </Linker>
+      <ResourceCompiler Options=""/>
+    </GlobalSettings>
+    <Configuration Name="Debug" CompilerType="gnu gcc" DebuggerType="GNU gdb debugger" Type="" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="-g" C_Options="-g" Required="yes" PreCompiledHeader="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="$(IntermediateDirectory)/$(ProjectName).so" IntermediateDirectory="./Debug" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;"/>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="no">
+        <RebuildCommand/>
+        <CleanCommand/>
+        <BuildCommand/>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName/>
+        <WorkingDirectory/>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+    </Configuration>
+    <Configuration Name="Release" CompilerType="gnu gcc" DebuggerType="GNU gdb debugger" Type="" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="" C_Options="" Required="yes" PreCompiledHeader="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="-O2" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="$(IntermediateDirectory)/$(ProjectName).so" IntermediateDirectory="./Release" Command="" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;"/>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="no">
+        <RebuildCommand/>
+        <CleanCommand/>
+        <BuildCommand/>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName/>
+        <WorkingDirectory/>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+    </Configuration>
+  </Settings>
+  <Dependencies Name="Debug"/>
+  <Dependencies Name="Release"/>
+  <VirtualDirectory Name="applications">
+    <VirtualDirectory Name="main">
+      <File Name="applications/main/app.xml"/>
+      <File Name="applications/main/Makefile"/>
+      <VirtualDirectory Name="images"/>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/main/modules/exports.txt"/>
+        <File Name="applications/main/modules/Makefile"/>
+        <File Name="applications/main/modules/module.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="filemanager">
+      <File Name="applications/filemanager/app.xml"/>
+      <File Name="applications/filemanager/Makefile"/>
+      <VirtualDirectory Name="lua">
+        <File Name="applications/filemanager/lua/main.lua"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="images"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="region_changer">
+      <File Name="applications/region_changer/app.xml"/>
+      <File Name="applications/region_changer/Makefile"/>
+      <VirtualDirectory Name="lua">
+        <File Name="applications/region_changer/lua/main.lua"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/region_changer/modules/exports.txt"/>
+        <File Name="applications/region_changer/modules/flashrom.c"/>
+        <File Name="applications/region_changer/modules/Makefile"/>
+        <File Name="applications/region_changer/modules/module.c"/>
+        <File Name="applications/region_changer/modules/rc.h"/>
+        <File Name="applications/region_changer/modules/RC.pkg"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="iso_loader">
+      <File Name="applications/iso_loader/app.xml"/>
+      <File Name="applications/iso_loader/Makefile"/>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/iso_loader/modules/exports.txt"/>
+        <File Name="applications/iso_loader/modules/Makefile"/>
+        <File Name="applications/iso_loader/modules/module.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="bios_flasher">
+      <File Name="applications/bios_flasher/app.xml"/>
+      <File Name="applications/bios_flasher/Makefile"/>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/bios_flasher/modules/Makefile"/>
+        <File Name="applications/bios_flasher/modules/exports.txt"/>
+        <File Name="applications/bios_flasher/modules/module.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="speedtest">
+      <File Name="applications/speedtest/app.xml"/>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/speedtest/modules/Makefile"/>
+        <File Name="applications/speedtest/modules/exports.txt"/>
+        <File Name="applications/speedtest/modules/module.c"/>
+      </VirtualDirectory>
+      <File Name="applications/speedtest/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="gd_ripper">
+      <File Name="applications/gd_ripper/Makefile"/>
+      <File Name="applications/gd_ripper/app.xml"/>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/gd_ripper/modules/Makefile"/>
+        <File Name="applications/gd_ripper/modules/exports.txt"/>
+        <File Name="applications/gd_ripper/modules/module.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <File Name="applications/Makefile"/>
+    <VirtualDirectory Name="vmu_manager">
+      <VirtualDirectory Name="modules">
+        <File Name="applications/vmu_manager/modules/Makefile"/>
+        <File Name="applications/vmu_manager/modules/exports.txt"/>
+        <File Name="applications/vmu_manager/modules/module.c"/>
+      </VirtualDirectory>
+      <File Name="applications/vmu_manager/Makefile"/>
+      <File Name="applications/vmu_manager/app.xml"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="settings">
+      <File Name="applications/settings/Makefile"/>
+      <File Name="applications/settings/app.xml"/>
+      <VirtualDirectory Name="modules">
+        <File Name="applications/settings/modules/Makefile"/>
+        <File Name="applications/settings/modules/exports.txt"/>
+        <File Name="applications/settings/modules/module.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+  </VirtualDirectory>
+  <VirtualDirectory Name="firmware">
+    <VirtualDirectory Name="aica">
+      <File Name="firmware/aica/Makefile"/>
+      <File Name="firmware/aica/aac.c"/>
+      <File Name="firmware/aica/aica.c"/>
+      <File Name="firmware/aica/aica.h"/>
+      <File Name="firmware/aica/crt0.s"/>
+      <File Name="firmware/aica/dec.h"/>
+      <File Name="firmware/aica/main.c"/>
+      <File Name="firmware/aica/mp3.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="bios">
+      <File Name="firmware/bios/Makefile"/>
+      <VirtualDirectory Name="bootstarp">
+        <File Name="firmware/bios/bootstrap/boot.s"/>
+        <File Name="firmware/bios/bootstrap/Makefile"/>
+        <File Name="firmware/bios/bootstrap/makefonts.py"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="flash"/>
+    <VirtualDirectory Name="isoldr">
+      <File Name="firmware/isoldr/loader/main.c"/>
+      <File Name="firmware/isoldr/loader/Makefile"/>
+      <File Name="firmware/isoldr/loader/Makefile.cd"/>
+      <File Name="firmware/isoldr/loader/Makefile.cfg"/>
+      <File Name="firmware/isoldr/loader/Makefile.ide"/>
+      <File Name="firmware/isoldr/loader/Makefile.net"/>
+      <File Name="firmware/isoldr/loader/Makefile.sd"/>
+      <File Name="firmware/isoldr/loader/minilzo.c"/>
+      <File Name="firmware/isoldr/loader/reader.c"/>
+      <VirtualDirectory Name="include">
+        <File Name="firmware/isoldr/loader/include/fs.h"/>
+        <File Name="firmware/isoldr/loader/include/main.h"/>
+        <File Name="firmware/isoldr/loader/include/reader.h"/>
+        <File Name="firmware/isoldr/loader/include/syscalls.h"/>
+        <File Name="firmware/isoldr/loader/include/cdda.h"/>
+        <File Name="firmware/isoldr/loader/include/asic.h"/>
+        <File Name="firmware/isoldr/loader/include/exception.h"/>
+        <File Name="firmware/isoldr/loader/include/exception-lowlevel.h"/>
+        <File Name="firmware/isoldr/loader/include/ubc.h"/>
+        <File Name="firmware/isoldr/loader/include/mmu.h"/>
+      </VirtualDirectory>
+      <File Name="firmware/isoldr/loader/syscalls.c"/>
+      <VirtualDirectory Name="fs">
+        <VirtualDirectory Name="cd">
+          <File Name="firmware/isoldr/loader/fs/cd/cdfs.c"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="dcl">
+          <File Name="firmware/isoldr/loader/fs/dcl/dcload-syscall.s"/>
+          <File Name="firmware/isoldr/loader/fs/dcl/fs.c"/>
+          <VirtualDirectory Name="include">
+            <File Name="firmware/isoldr/loader/fs/dcl/include/fs_dcload.h"/>
+          </VirtualDirectory>
+        </VirtualDirectory>
+        <VirtualDirectory Name="fat">
+          <File Name="firmware/isoldr/loader/fs/fat/fs.c"/>
+          <File Name="firmware/isoldr/loader/fs/fat/src/diskio.c"/>
+          <File Name="firmware/isoldr/loader/fs/fat/src/ff.c"/>
+          <VirtualDirectory Name="include">
+            <File Name="firmware/isoldr/loader/fs/fat/include/diskio.h"/>
+            <File Name="firmware/isoldr/loader/fs/fat/include/ff.h"/>
+            <File Name="firmware/isoldr/loader/fs/fat/include/ffconf.h"/>
+            <File Name="firmware/isoldr/loader/fs/fat/include/integer.h"/>
+            <File Name="firmware/isoldr/loader/fs/fat/include/fstime.h"/>
+          </VirtualDirectory>
+          <VirtualDirectory Name="dev">
+            <VirtualDirectory Name="sd">
+              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/sd.c"/>
+              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/sd.h"/>
+              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/spi.c"/>
+              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/spi.h"/>
+            </VirtualDirectory>
+            <VirtualDirectory Name="ide">
+              <File Name="firmware/isoldr/loader/fs/fat/dev/ide/g1ata.c"/>
+              <File Name="firmware/isoldr/loader/fs/fat/dev/ide/g1ata.h"/>
+            </VirtualDirectory>
+          </VirtualDirectory>
+          <File Name="firmware/isoldr/loader/fs/fat/src/fstime.c"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="net">
+          <File Name="firmware/isoldr/loader/fs/net/commands.c"/>
+          <File Name="firmware/isoldr/loader/fs/net/fs.c"/>
+          <File Name="firmware/isoldr/loader/fs/net/include/commands.h"/>
+        </VirtualDirectory>
+      </VirtualDirectory>
+      <File Name="firmware/isoldr/loader/Makefile.dcl"/>
+      <File Name="firmware/isoldr/loader/startup.s"/>
+      <File Name="firmware/isoldr/loader/utils.c"/>
+      <VirtualDirectory Name="kos">
+        <VirtualDirectory Name="dc">
+          <File Name="firmware/isoldr/loader/kos/dc/biosfont.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/cdrom.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/scif.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/video.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/controller.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/g2bus.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/maple.h"/>
+          <File Name="firmware/isoldr/loader/kos/dc/vmu.h"/>
+          <VirtualDirectory Name="net">
+            <File Name="firmware/isoldr/loader/kos/dc/net/broadband_adapter.h"/>
+            <File Name="firmware/isoldr/loader/kos/dc/net/lan_adapter.h"/>
+          </VirtualDirectory>
+          <File Name="firmware/isoldr/loader/kos/dc/sq.h"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="arch">
+          <File Name="firmware/isoldr/loader/kos/arch/timer.h"/>
+          <File Name="firmware/isoldr/loader/kos/arch/types.h"/>
+          <File Name="firmware/isoldr/loader/kos/arch/cache.h"/>
+          <File Name="firmware/isoldr/loader/kos/arch/irq.h"/>
+          <File Name="firmware/isoldr/loader/kos/arch/gdb.h"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="src">
+          <File Name="firmware/isoldr/loader/kos/src/biosfont.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/broadband_adapter.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/conio.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/controller.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/g2bus.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/lan_adapter.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/maple.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/memcmp.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/printf.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/scif.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/sprintf.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/strncmp.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/timer.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/video.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/vmu.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/vsprintf.c"/>
+          <File Name="firmware/isoldr/loader/kos/src/cache.s"/>
+          <File Name="firmware/isoldr/loader/kos/src/memchr.S"/>
+          <File Name="firmware/isoldr/loader/kos/src/memmove.S"/>
+          <File Name="firmware/isoldr/loader/kos/src/memset.S"/>
+          <File Name="firmware/isoldr/loader/kos/src/strlen.S"/>
+          <File Name="firmware/isoldr/loader/kos/src/memcpy.S"/>
+        </VirtualDirectory>
+        <File Name="firmware/isoldr/loader/kos/conio.h"/>
+        <File Name="firmware/isoldr/loader/kos/stdio.h"/>
+        <File Name="firmware/isoldr/loader/kos/string.h"/>
+        <File Name="firmware/isoldr/loader/kos/unistd.h"/>
+        <VirtualDirectory Name="net">
+          <File Name="firmware/isoldr/loader/kos/net/arp.c"/>
+          <File Name="firmware/isoldr/loader/kos/net/core.c"/>
+          <File Name="firmware/isoldr/loader/kos/net/icmp.c"/>
+          <File Name="firmware/isoldr/loader/kos/net/net.h"/>
+          <File Name="firmware/isoldr/loader/kos/net/udp.c"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="kos">
+          <File Name="firmware/isoldr/loader/kos/kos/net.h"/>
+        </VirtualDirectory>
+      </VirtualDirectory>
+      <File Name="firmware/isoldr/loader/shlelf.xc"/>
+      <File Name="firmware/isoldr/loader/cdda.c"/>
+      <File Name="firmware/isoldr/loader/pcm_split.s"/>
+      <VirtualDirectory Name="syscalls">
+        <File Name="firmware/isoldr/loader/bfont_syscall.s"/>
+        <File Name="firmware/isoldr/loader/gdc_syscall.s"/>
+        <File Name="firmware/isoldr/loader/sys_syscall.s"/>
+        <File Name="firmware/isoldr/loader/flash_syscall.s"/>
+        <File Name="firmware/isoldr/loader/menu_syscall.s"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="irq">
+        <File Name="firmware/isoldr/loader/asic.c"/>
+        <File Name="firmware/isoldr/loader/exception-lowlevel.s"/>
+        <File Name="firmware/isoldr/loader/exception.c"/>
+        <File Name="firmware/isoldr/loader/ubc.c"/>
+      </VirtualDirectory>
+      <File Name="firmware/isoldr/loader/descramble.c"/>
+      <File Name="firmware/isoldr/loader/gdb.c"/>
+      <File Name="firmware/isoldr/loader/mmu.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="boot">
+      <File Name="firmware/bootloader/src/main.c"/>
+      <File Name="firmware/bootloader/src/menu.c"/>
+      <File Name="firmware/bootloader/src/spiral.c"/>
+      <File Name="firmware/bootloader/Makefile"/>
+      <VirtualDirectory Name="include">
+        <File Name="firmware/bootloader/include/main.h"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="simple">
+        <File Name="firmware/bootloader/simple/main.c"/>
+        <File Name="firmware/bootloader/simple/Makefile"/>
+        <File Name="firmware/bootloader/simple/Makefile.cfg"/>
+        <File Name="firmware/bootloader/simple/Makefile.sd"/>
+        <File Name="firmware/bootloader/simple/shlelf.xc"/>
+        <File Name="firmware/bootloader/simple/startup.s"/>
+        <File Name="firmware/bootloader/simple/utils.c"/>
+        <VirtualDirectory Name="include">
+          <File Name="firmware/bootloader/simple/include/fs.h"/>
+          <File Name="firmware/bootloader/simple/include/main.h"/>
+        </VirtualDirectory>
+      </VirtualDirectory>
+      <File Name="firmware/bootloader/src/descramble.c"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
+</CodeLite_Project>

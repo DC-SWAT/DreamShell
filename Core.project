@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeLite_Project Name="Core" InternalType="Console">
+  <Plugins>
+    <Plugin Name="qmake">
+      <![CDATA[00010001N0005Debug000000000000]]>
+    </Plugin>
+  </Plugins>
+  <Reconciliation>
+    <Regexes/>
+    <Excludepaths>
+      <Path>_OLD\</Path>
+      <Path>release\</Path>
+      <Path>resources\</Path>
+      <Path>sdk\</Path>
+      <Path>emu\</Path>
+      <Path>cd\</Path>
+    </Excludepaths>
+    <Ignorefiles/>
+    <Extensions>
+      <![CDATA[cpp;c;h;hpp;xrc;wxcp;fbp]]>
+    </Extensions>
+    <Topleveldir>../ds</Topleveldir>
+  </Reconciliation>
+  <Description/>
+  <Dependencies/>
+  <VirtualDirectory Name="src">
+    <File Name="src/cmd_elf.c"/>
+    <File Name="src/list.c"/>
+    <File Name="src/main.c"/>
+    <File Name="src/module.c"/>
+    <File Name="src/utils.c"/>
+    <File Name="src/video.c"/>
+    <VirtualDirectory Name="app">
+      <File Name="src/app/app.c"/>
+      <File Name="src/app/load.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="fs">
+      <VirtualDirectory Name="fat">
+        <File Name="src/fs/fat/dc.c"/>
+        <File Name="src/fs/fat/ff.c"/>
+        <VirtualDirectory Name="option">
+          <File Name="src/fs/fat/option/ccsbcs.c"/>
+          <File Name="src/fs/fat/option/syscall.c"/>
+        </VirtualDirectory>
+        <File Name="src/fs/fat/utils.c"/>
+        <File Name="src/fs/fat/diskio.c"/>
+      </VirtualDirectory>
+      <File Name="src/fs/fs.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="gui">
+      <File Name="src/gui/gui.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="irq">
+      <File Name="src/irq/exceptions.c"/>
+      <File Name="src/irq/setjmp.s"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="lua">
+      <File Name="src/lua/lua.c"/>
+      <File Name="src/lua/lua_ds.c"/>
+      <File Name="src/lua/packlib.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="utils">
+      <File Name="src/utils/debug_console.c"/>
+      <File Name="src/utils/gmtime.c"/>
+      <File Name="src/utils/strftime.c"/>
+      <File Name="src/utils/memcpy.S"/>
+      <File Name="src/utils/memmove.S"/>
+      <File Name="src/utils/memset.S"/>
+      <File Name="src/utils/asm.h"/>
+    </VirtualDirectory>
+    <File Name="exports.txt"/>
+    <File Name="Makefile"/>
+    <File Name="Makefile.stubs"/>
+    <File Name="src/events.c"/>
+    <VirtualDirectory Name="img">
+      <File Name="src/img/pvr.c"/>
+      <File Name="src/img/png.c"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="drivers">
+      <File Name="src/drivers/enc28j60.c"/>
+      <File Name="src/drivers/spi.c"/>
+      <File Name="src/drivers/sd.c"/>
+      <File Name="src/drivers/g1_ide.c"/>
+      <File Name="src/drivers/g2_ide.c"/>
+      <File Name="src/drivers/asic.c"/>
+      <File Name="src/drivers/rtc.c"/>
+    </VirtualDirectory>
+    <File Name="src/commands.c"/>
+    <File Name="src/console.c"/>
+    <File Name="Makefile.gcc_stubs"/>
+    <File Name="exports_gcc.txt"/>
+    <VirtualDirectory Name="vmu">
+      <File Name="src/vmu/vmu.c"/>
+      <File Name="src/vmu/vmu_font.h"/>
+    </VirtualDirectory>
+    <File Name="src/settings.c"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="include">
+    <File Name="include/app.h"/>
+    <File Name="include/cfg+.h"/>
+    <File Name="include/cmd_elf.h"/>
+    <File Name="include/console.h"/>
+    <File Name="include/ds.h"/>
+    <File Name="include/events.h"/>
+    <File Name="include/exceptions.h"/>
+    <File Name="include/fs.h"/>
+    <File Name="include/ft2build.h"/>
+    <File Name="include/gui.h"/>
+    <File Name="include/list.h"/>
+    <File Name="include/lua.h"/>
+    <File Name="include/module.h"/>
+    <File Name="include/mxml.h"/>
+    <File Name="include/setjmp.h"/>
+    <File Name="include/sqlite3.h"/>
+    <File Name="include/utils.h"/>
+    <File Name="include/video.h"/>
+    <VirtualDirectory Name="fatfs">
+      <File Name="include/fatfs/diskio.h"/>
+      <File Name="include/fatfs/ff.h"/>
+      <File Name="include/fatfs/ffconf.h"/>
+      <File Name="include/fatfs/integer.h"/>
+      <File Name="include/fatfs/ff_utils.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="SDL">
+      <File Name="include/SDL/begin_code.h"/>
+      <File Name="include/SDL/close_code.h"/>
+      <File Name="include/SDL/DT_drawtext.h"/>
+      <File Name="include/SDL/internal.h"/>
+      <File Name="include/SDL/math-sll.h"/>
+      <File Name="include/SDL/SDL.h"/>
+      <File Name="include/SDL/SDL_active.h"/>
+      <File Name="include/SDL/SDL_audio.h"/>
+      <File Name="include/SDL/SDL_byteorder.h"/>
+      <File Name="include/SDL/SDL_cdrom.h"/>
+      <File Name="include/SDL/SDL_console.h"/>
+      <File Name="include/SDL/SDL_copying.h"/>
+      <File Name="include/SDL/SDL_cpuinfo.h"/>
+      <File Name="include/SDL/SDL_dreamcast.h"/>
+      <File Name="include/SDL/SDL_endian.h"/>
+      <File Name="include/SDL/SDL_error.h"/>
+      <File Name="include/SDL/SDL_events.h"/>
+      <File Name="include/SDL/SDL_getenv.h"/>
+      <File Name="include/SDL/SDL_gfxBlitFunc.h"/>
+      <File Name="include/SDL/SDL_gfxPrimitives.h"/>
+      <File Name="include/SDL/SDL_gfxPrimitives_font.h"/>
+      <File Name="include/SDL/SDL_gui.h"/>
+      <File Name="include/SDL/SDL_image.h"/>
+      <File Name="include/SDL/SDL_joystick.h"/>
+      <File Name="include/SDL/SDL_keyboard.h"/>
+      <File Name="include/SDL/SDL_keysym.h"/>
+      <File Name="include/SDL/SDL_loadso.h"/>
+      <File Name="include/SDL/SDL_main.h"/>
+      <File Name="include/SDL/SDL_mixer.h"/>
+      <File Name="include/SDL/SDL_mouse.h"/>
+      <File Name="include/SDL/SDL_mutex.h"/>
+      <File Name="include/SDL/SDL_name.h"/>
+      <File Name="include/SDL/SDL_opengl.h"/>
+      <File Name="include/SDL/SDL_prim.h"/>
+      <File Name="include/SDL/SDL_quit.h"/>
+      <File Name="include/SDL/SDL_rotozoom.h"/>
+      <File Name="include/SDL/SDL_rwops.h"/>
+      <File Name="include/SDL/SDL_syswm.h"/>
+      <File Name="include/SDL/SDL_thread.h"/>
+      <File Name="include/SDL/SDL_timer.h"/>
+      <File Name="include/SDL/SDL_ttf.h"/>
+      <File Name="include/SDL/SDL_types.h"/>
+      <File Name="include/SDL/SDL_version.h"/>
+      <File Name="include/SDL/SDL_video.h"/>
+      <File Name="include/SDL/SDL_rtf.h"/>
+      <File Name="include/SDL/SDL_config.h"/>
+      <File Name="include/SDL/SDL_config_dreamcast.h"/>
+      <File Name="include/SDL/SDL_platform.h"/>
+      <File Name="include/SDL/SDL_stdinc.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="lua">
+      <File Name="include/lua/lauxlib.h"/>
+      <File Name="include/lua/lua.h"/>
+      <File Name="include/lua/luaconf.h"/>
+      <File Name="include/lua/lualib.h"/>
+      <File Name="include/lua/tolua++.h"/>
+      <File Name="include/lua/tolua.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="zip">
+      <File Name="include/zip/crypt.h"/>
+      <File Name="include/zip/ioapi.h"/>
+      <File Name="include/zip/unzip.h"/>
+      <File Name="include/zip/zip.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="freetype">
+      <File Name="include/freetype/freetype.h"/>
+      <File Name="include/freetype/ftadvanc.h"/>
+      <File Name="include/freetype/ftbbox.h"/>
+      <File Name="include/freetype/ftbdf.h"/>
+      <File Name="include/freetype/ftbitmap.h"/>
+      <File Name="include/freetype/ftcache.h"/>
+      <File Name="include/freetype/ftchapters.h"/>
+      <File Name="include/freetype/ftcid.h"/>
+      <File Name="include/freetype/fterrdef.h"/>
+      <File Name="include/freetype/fterrors.h"/>
+      <File Name="include/freetype/ftgasp.h"/>
+      <File Name="include/freetype/ftglyph.h"/>
+      <File Name="include/freetype/ftgxval.h"/>
+      <File Name="include/freetype/ftgzip.h"/>
+      <File Name="include/freetype/ftimage.h"/>
+      <File Name="include/freetype/ftincrem.h"/>
+      <File Name="include/freetype/ftlcdfil.h"/>
+      <File Name="include/freetype/ftlist.h"/>
+      <File Name="include/freetype/ftlzw.h"/>
+      <File Name="include/freetype/ftmac.h"/>
+      <File Name="include/freetype/ftmm.h"/>
+      <File Name="include/freetype/ftmodapi.h"/>
+      <File Name="include/freetype/ftmoderr.h"/>
+      <File Name="include/freetype/ftotval.h"/>
+      <File Name="include/freetype/ftoutln.h"/>
+      <File Name="include/freetype/ftpfr.h"/>
+      <File Name="include/freetype/ftrender.h"/>
+      <File Name="include/freetype/ftsizes.h"/>
+      <File Name="include/freetype/ftsnames.h"/>
+      <File Name="include/freetype/ftstroke.h"/>
+      <File Name="include/freetype/ftsynth.h"/>
+      <File Name="include/freetype/ftsystem.h"/>
+      <File Name="include/freetype/fttrigon.h"/>
+      <File Name="include/freetype/fttypes.h"/>
+      <File Name="include/freetype/ftwinfnt.h"/>
+      <File Name="include/freetype/ftxf86.h"/>
+      <File Name="include/freetype/t1tables.h"/>
+      <File Name="include/freetype/ttnameid.h"/>
+      <File Name="include/freetype/tttables.h"/>
+      <File Name="include/freetype/tttags.h"/>
+      <File Name="include/freetype/ttunpat.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="drivers">
+      <File Name="include/drivers/aica_cmd_iface.h"/>
+      <File Name="include/drivers/enc28j60.h"/>
+      <File Name="include/drivers/scif_dma.h"/>
+      <File Name="include/drivers/sh7750_regs.h"/>
+      <File Name="include/drivers/spi.h"/>
+      <File Name="include/drivers/aica.h"/>
+      <File Name="include/drivers/asic.h"/>
+      <File Name="include/drivers/bflash.h"/>
+      <File Name="include/drivers/sd.h"/>
+      <File Name="include/drivers/g2_ide.h"/>
+      <File Name="include/drivers/g1_ide.h"/>
+      <File Name="include/drivers/rtc.h"/>
+    </VirtualDirectory>
+    <File Name="include/bzlib.h"/>
+    <File Name="include/xvid.h"/>
+    <File Name="include/status.h"/>
+    <VirtualDirectory Name="minilzo">
+      <File Name="include/minilzo/lzoconf.h"/>
+      <File Name="include/minilzo/lzodefs.h"/>
+      <File Name="include/minilzo/minilzo.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="isofs">
+      <File Name="include/isofs/ciso.h"/>
+      <File Name="include/isofs/isofs.h"/>
+      <File Name="include/isofs/cdi.h"/>
+      <File Name="include/isofs/gdi.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="plx">
+      <File Name="include/plx/color.h"/>
+      <File Name="include/plx/context.h"/>
+      <File Name="include/plx/dr.h"/>
+      <File Name="include/plx/font.h"/>
+      <File Name="include/plx/list.h"/>
+      <File Name="include/plx/matrix.h"/>
+      <File Name="include/plx/prim.h"/>
+      <File Name="include/plx/sprite.h"/>
+      <File Name="include/plx/texture.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="audio">
+      <File Name="include/audio/adx.h"/>
+      <File Name="include/audio/mp3.h"/>
+      <File Name="include/audio/s3m.h"/>
+      <File Name="include/audio/snddrv.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="network">
+      <File Name="include/network/http.h"/>
+      <File Name="include/network/net.h"/>
+      <File Name="include/network/mongoose.h"/>
+      <File Name="include/network/telnet.h"/>
+    </VirtualDirectory>
+    <File Name="include/opk.h"/>
+    <VirtualDirectory Name="aicaos">
+      <File Name="include/aicaos/aica_common.h"/>
+      <File Name="include/aicaos/aica_sh4.h"/>
+      <File Name="include/aicaos/aicaos.h"/>
+    </VirtualDirectory>
+    <File Name="include/sqlite3ext.h"/>
+    <File Name="include/isoldr.h"/>
+    <VirtualDirectory Name="ogg">
+      <File Name="include/ogg/config_types.h"/>
+      <File Name="include/ogg/ogg.h"/>
+      <File Name="include/ogg/os_types.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="vorbis">
+      <File Name="include/vorbis/codec.h"/>
+      <File Name="include/vorbis/vorbisenc.h"/>
+      <File Name="include/vorbis/vorbisfile.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="mpg123">
+      <File Name="include/mpg123/compat.h"/>
+      <File Name="include/mpg123/config.h"/>
+      <File Name="include/mpg123/intsym.h"/>
+      <File Name="include/mpg123/mpg123.h"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="png">
+      <File Name="include/png/png.h"/>
+      <File Name="include/png/pngconf.h"/>
+      <File Name="include/png/pngdebug.h"/>
+      <File Name="include/png/pnginfo.h"/>
+      <File Name="include/png/pnglibconf.h"/>
+      <File Name="include/png/pngpriv.h"/>
+      <File Name="include/png/pngstruct.h"/>
+    </VirtualDirectory>
+    <File Name="include/settings.h"/>
+  </VirtualDirectory>
+  <VirtualDirectory Name="lib">
+    <VirtualDirectory Name="GUI">
+      <File Name="lib/SDL_gui/AbstractButton.cc"/>
+      <File Name="lib/SDL_gui/AbstractTable.cc"/>
+      <File Name="lib/SDL_gui/Button.cc"/>
+      <File Name="lib/SDL_gui/Callback.cc"/>
+      <File Name="lib/SDL_gui/CardStack.cc"/>
+      <File Name="lib/SDL_gui/Container.cc"/>
+      <File Name="lib/SDL_gui/Drawable.cc"/>
+      <File Name="lib/SDL_gui/Exception.cc"/>
+      <File Name="lib/SDL_gui/FastFont.cc"/>
+      <File Name="lib/SDL_gui/FastLabel.cc"/>
+      <File Name="lib/SDL_gui/Font.cc"/>
+      <File Name="lib/SDL_gui/Label.cc"/>
+      <File Name="lib/SDL_gui/Layout.cc"/>
+      <File Name="lib/SDL_gui/ListBox.cc"/>
+      <File Name="lib/SDL_gui/Mouse.cc"/>
+      <File Name="lib/SDL_gui/NanoX.cc"/>
+      <File Name="lib/SDL_gui/Object.cc"/>
+      <File Name="lib/SDL_gui/Panel.cc"/>
+      <File Name="lib/SDL_gui/Picture.cc"/>
+      <File Name="lib/SDL_gui/ProgressBar.cc"/>
+      <File Name="lib/SDL_gui/RealScreen.cc"/>
+      <File Name="lib/SDL_gui/RTF.cc"/>
+      <File Name="lib/SDL_gui/Screen.cc"/>
+      <File Name="lib/SDL_gui/ScrollBar.cc"/>
+      <File Name="lib/SDL_gui/ScrollPanel.cc"/>
+      <File Name="lib/SDL_gui/SDL_gui.cc"/>
+      <File Name="lib/SDL_gui/SDLScreen.cc"/>
+      <File Name="lib/SDL_gui/Surface.cc"/>
+      <File Name="lib/SDL_gui/TextEntry.cc"/>
+      <File Name="lib/SDL_gui/ToggleButton.cc"/>
+      <File Name="lib/SDL_gui/TrueTypeFont.cc"/>
+      <File Name="lib/SDL_gui/VBoxLayout.cc"/>
+      <File Name="lib/SDL_gui/Widget.cc"/>
+      <File Name="lib/SDL_gui/Window.cc"/>
+      <File Name="lib/SDL_gui/FileManager.cc"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="SDL">
+      <File Name="lib/SDL/src/SDL.c"/>
+      <File Name="lib/SDL/src/SDL_error.c"/>
+      <File Name="lib/SDL/src/SDL_fatal.c"/>
+      <File Name="lib/SDL/src/SDL_getenv.c"/>
+      <File Name="lib/SDL/src/SDL_loadso.c"/>
+      <VirtualDirectory Name="video">
+        <VirtualDirectory Name="dc">
+          <File Name="lib/SDL/src/video/dc/SDL_dcvideo.h"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dcvideo.c"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dcmouse_c.h"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dcmouse.c"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dcmemcpy.s"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dcevents_c.h"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dcevents.c"/>
+          <File Name="lib/SDL/src/video/dc/Makefile.in"/>
+          <File Name="lib/SDL/src/video/dc/Makefile.am"/>
+          <File Name="lib/SDL/src/video/dc/60hz.h"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dc_yuv.c"/>
+          <File Name="lib/SDL/src/video/dc/SDL_dc_yuv.h"/>
+        </VirtualDirectory>
+        <File Name="lib/SDL/src/video/blank_cursor.h"/>
+        <File Name="lib/SDL/src/video/default_cursor.h"/>
+        <File Name="lib/SDL/src/video/e_log.h"/>
+        <File Name="lib/SDL/src/video/e_pow.h"/>
+        <File Name="lib/SDL/src/video/e_sqrt.h"/>
+        <File Name="lib/SDL/src/video/Makefile.am"/>
+        <File Name="lib/SDL/src/video/Makefile.in"/>
+        <File Name="lib/SDL/src/video/math_private.h"/>
+        <File Name="lib/SDL/src/video/mmx.h"/>
+        <File Name="lib/SDL/src/video/SDL_blit.c"/>
+        <File Name="lib/SDL/src/video/SDL_blit.h"/>
+        <File Name="lib/SDL/src/video/SDL_blit_0.c"/>
+        <File Name="lib/SDL/src/video/SDL_blit_1.c"/>
+        <File Name="lib/SDL/src/video/SDL_blit_A.c"/>
+        <File Name="lib/SDL/src/video/SDL_blit_N.c"/>
+        <File Name="lib/SDL/src/video/SDL_bmp.c"/>
+        <File Name="lib/SDL/src/video/SDL_cursor.c"/>
+        <File Name="lib/SDL/src/video/SDL_cursor_c.h"/>
+        <File Name="lib/SDL/src/video/SDL_gamma.c"/>
+        <File Name="lib/SDL/src/video/SDL_glfuncs.h"/>
+        <File Name="lib/SDL/src/video/SDL_leaks.h"/>
+        <File Name="lib/SDL/src/video/SDL_memops.h"/>
+        <File Name="lib/SDL/src/video/SDL_pixels.c"/>
+        <File Name="lib/SDL/src/video/SDL_pixels_c.h"/>
+        <File Name="lib/SDL/src/video/SDL_RLEaccel.c"/>
+        <File Name="lib/SDL/src/video/SDL_RLEaccel_c.h"/>
+        <File Name="lib/SDL/src/video/SDL_stretch.c"/>
+        <File Name="lib/SDL/src/video/SDL_stretch_c.h"/>
+        <File Name="lib/SDL/src/video/SDL_surface.c"/>
+        <File Name="lib/SDL/src/video/SDL_sysvideo.h"/>
+        <File Name="lib/SDL/src/video/SDL_video.c"/>
+        <File Name="lib/SDL/src/video/SDL_yuv.c"/>
+        <File Name="lib/SDL/src/video/SDL_yuv_mmx.c"/>
+        <File Name="lib/SDL/src/video/SDL_yuv_sw.c"/>
+        <File Name="lib/SDL/src/video/SDL_yuv_sw_c.h"/>
+        <File Name="lib/SDL/src/video/SDL_yuvfuncs.h"/>
+      </VirtualDirectory>
+      <File Name="lib/SDL/Makefile"/>
+      <File Name="lib/SDL/Makefile.dc"/>
+      <VirtualDirectory Name="stdlib">
+        <File Name="lib/SDL/src/stdlib/SDL_string.c"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="file">
+        <File Name="lib/SDL/src/file/SDL_rwops.c"/>
+      </VirtualDirectory>
+      <VirtualDirectory Name="timer">
+        <File Name="lib/SDL/src/timer/dc/SDL_systimer.c"/>
+      </VirtualDirectory>
+    </VirtualDirectory>
+    <VirtualDirectory Name="parallax">
+      <File Name="lib/libparallax/src/context.c"/>
+      <File Name="lib/libparallax/src/font.c"/>
+      <File Name="lib/libparallax/src/mat3d.c"/>
+      <File Name="lib/libparallax/src/texture.c"/>
+      <File Name="lib/libparallax/Makefile"/>
+    </VirtualDirectory>
+    <VirtualDirectory Name="Console">
+      <File Name="lib/SDL_Console/src/DT_drawtext.c"/>
+      <File Name="lib/SDL_Console/src/internal.c"/>
+      <File Name="lib/SDL_Console/src/SDL_console.c"/>
+    </VirtualDirectory>
+    <File Name="lib/Makefile"/>
+    <VirtualDirectory Name="SDL_Image">
+      <File Name="lib/SDL_image/IMG_jpg.c"/>
+      <File Name="lib/SDL_image/IMG_png.c"/>
+      <File Name="lib/SDL_image/IMG_pvr.c"/>
+      <File Name="lib/SDL_image/Makefile"/>
+      <File Name="lib/SDL_image/SegaPVRImage.h"/>
+      <File Name="lib/SDL_image/IMG.c"/>
+    </VirtualDirectory>
+  </VirtualDirectory>
+  <Dependencies Name="Debug"/>
+  <Dependencies Name="Release"/>
+  <Settings Type="Executable">
+    <GlobalSettings>
+      <Compiler Options="" C_Options="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="">
+        <LibraryPath Value="."/>
+      </Linker>
+      <ResourceCompiler Options=""/>
+    </GlobalSettings>
+    <Configuration Name="Debug" CompilerType="gnu gcc" DebuggerType="GNU gdb debugger" Type="Executable" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="-g" C_Options="-g" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" UseDifferentPCHFlags="no" PCHFlags="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="" Required="yes"/>
+      <ResourceCompiler Options="" Required="no">
+        <IncludePath Value="C:\cygwin\usr\local\dc\kos\kos\include"/>
+        <IncludePath Value="C:\cygwin\usr\local\dc\kos\kos\addons\include"/>
+        <IncludePath Value="C:\cygwin\usr\local\dc\kos\kos\kernel\arch\dreamcast\include"/>
+      </ResourceCompiler>
+      <General OutputFile="$(IntermediateDirectory)/$(ProjectName)" IntermediateDirectory="./Debug" Command="./$(ProjectName)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
+      <Environment EnvVarSetName="KallistiOS" DbgSetName="&lt;Use Defaults&gt;">
+        <![CDATA[]]>
+      </Environment>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="no">
+        <RebuildCommand/>
+        <CleanCommand/>
+        <BuildCommand/>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName>None</ThirdPartyToolName>
+        <WorkingDirectory/>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+      <Completion EnableCpp11="no">
+        <ClangCmpFlagsC/>
+        <ClangCmpFlags/>
+        <ClangPP/>
+        <SearchPaths/>
+      </Completion>
+    </Configuration>
+    <Configuration Name="Release" CompilerType="gnu gcc" DebuggerType="GNU gdb debugger" Type="" BuildCmpWithGlobalSettings="append" BuildLnkWithGlobalSettings="append" BuildResWithGlobalSettings="append">
+      <Compiler Options="" C_Options="" Required="yes" PreCompiledHeader="" PCHInCommandLine="no" UseDifferentPCHFlags="no" PCHFlags="">
+        <IncludePath Value="."/>
+      </Compiler>
+      <Linker Options="-O2" Required="yes"/>
+      <ResourceCompiler Options="" Required="no"/>
+      <General OutputFile="$(IntermediateDirectory)/$(ProjectName)" IntermediateDirectory="./Release" Command="./$(ProjectName)" CommandArguments="" UseSeparateDebugArgs="no" DebugArguments="" WorkingDirectory="$(IntermediateDirectory)" PauseExecWhenProcTerminates="yes"/>
+      <Environment EnvVarSetName="&lt;Use Defaults&gt;" DbgSetName="&lt;Use Defaults&gt;">
+        <![CDATA[]]>
+      </Environment>
+      <Debugger IsRemote="no" RemoteHostName="" RemoteHostPort="" DebuggerPath="">
+        <PostConnectCommands/>
+        <StartupCommands/>
+      </Debugger>
+      <PreBuild/>
+      <PostBuild/>
+      <CustomBuild Enabled="no">
+        <RebuildCommand/>
+        <CleanCommand/>
+        <BuildCommand/>
+        <PreprocessFileCommand/>
+        <SingleFileCommand/>
+        <MakefileGenerationCommand/>
+        <ThirdPartyToolName>None</ThirdPartyToolName>
+        <WorkingDirectory/>
+      </CustomBuild>
+      <AdditionalRules>
+        <CustomPostBuild/>
+        <CustomPreBuild/>
+      </AdditionalRules>
+      <Completion EnableCpp11="no">
+        <ClangCmpFlagsC/>
+        <ClangCmpFlags/>
+        <ClangPP/>
+        <SearchPaths/>
+      </Completion>
+    </Configuration>
+  </Settings>
+  <VirtualDirectory Name="sdk">
+    <File Name="sdk/Makefile.cfg"/>
+    <File Name="sdk/Makefile.loadable"/>
+    <File Name="sdk/Makefile.library"/>
+    <File Name="sdk/shlelf.xr"/>
+  </VirtualDirectory>
+</CodeLite_Project>
