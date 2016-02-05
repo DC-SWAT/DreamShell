@@ -1,0 +1,665 @@
+/* KallistiOS ##version##
+
+   net/lan_adapter.c
+
+   (c)2002 Dan Potter
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <dc/g2bus.h>
+// #include <dc/asic.h>
+#include <dc/net/lan_adapter.h>
+#include <arch/irq.h>
+#include <arch/timer.h>
+#include <net/net.h>
+
+//CVSID("$Id: lan_adapter.c,v 1.8 2003/02/25 07:39:37 bardtx Exp $");
+
+/*
+
+   Contains a low-level ethernet driver for the "Lan Adapter" (HIT-0300), which
+   is a Fujitsu ethernet chip attached to the 8-bit interface of the DC's
+   "parallel port". The block diagram looks something like this:
+
+   The DC Lan Adapter is an 8-bit G2 peripheral with the following block
+   diagram:
+
+   G2 <---> Altera PLD <---> MB86967 Ethernet <---> TDK "Pulse Transformer"
+                                    ^                         ^
+                                    |                         |
+                                    v                         v
+                              M5M5278DVP RAM            10BT ethernet
+
+   Its IO base is located at 0xa060xxxx, like the modem, and the register
+   interface seems very similar (I suspect they actually use the exact same
+   PLD in both, to save money).
+
+   As for the Fujitsu ethernet chip, the latest updated driver in BSD was
+   for FreeBSD 2.x (!!) and was for PCMCIA, so a bit of interpolation was
+   required. Fortunately the Fujitsu chip is _much_ simpler and easier to
+   work with than the later RTL chip, but unfortunately, that simplicity
+   comes at a cost. Each packet to be send or received must be processed
+   over a PIO interface one byte at a time. This is probably why Sega dumped
+   it for the RTL design later on, because you can imagine the system load
+   to do that while trying to process 3D graphics and such...
+
+   This driver is really simplistic, but this should form the basis with 
+   which a better one can be written if neccessary. It was developed using
+   KOS CVS (1.1.5+).
+
+   If anyone has a DC Lan Adapter which this doesn't work with, please let
+   me know!
+
+   Thanks to TheGypsy for test hardware.
+
+   Historical note: this driver was adapted from the dc-load-ip modifications
+   I made for dc-load-ip-la.
+
+*/
+
+/* 
+   Register names. The first set of register names is always valid; the
+   second depends on which bank you have selected. During normal 
+   operation, the last bank will be selected (the one containing the
+   BMPR regs). Source: Fujitsu PDF.
+*/
+
+/* Bank-agnostic registers; the bank for these is specified as -1 so 
+   that the register access function will ignore it */
+#define DLCR0R	0
+#define DLCR0	DLCR0R,-1	/* Transmit Status Register */
+#define DLCR0_TMTOK	(1<<7)		/* Transmit OK */
+#define DLCR0_NETBSY	(1<<6)		/* Net Busy (carrier detected) */
+#define DLCR0_TMTREC	(1<<5)		/* Transmit Packet Receive */
+#define DLCR0_SRTPKT	(1<<4)		/* Short Packet */
+#define DLCR0_JABBER	(1<<3)		/* Jabber */
+#define DLCR0_COL	(1<<2)		/* Collision Error */
+#define DLCR0_16COL	(1<<1)		/* 16 Collision Error */
+#define DLCR0_BUSWRERR	(1<<0)		/* Bus Write Error */
+#define DLCR0_CLEARALL	0xff
+
+#define DLCR1R	1
+#define DLCR1	DLCR1R,-1	/* Receive Status Register */
+#define DLCR1_PKTRDY	(1<<7)		/* Packet ready */
+#define DLCR1_BUSRDERR	(1<<6)		/* Bus Read Error */
+#define DLCR1_DMAEOP	(1<<5)		/* DMA Completed */
+#define DLCR1_RMTRST	(1<<4)		/* Remote Reset */
+#define DLCR1_RXSRTPKT	(1<<3)		/* Short Packet */
+#define DLCR1_ALGERR	(1<<2)		/* Alignment Error */
+#define DLCR1_CRCERR	(1<<1)		/* CRC Error */
+#define DLCR1_OVRFLO	(1<<0)		/* Overflow Error */
+#define DLCR1_CLEARALL	0xff
+
+#define DLCR2R	2
+#define DLCR2	DLCR2R,-1	/* Transmit Interrupt Enable Register */
+					/* Use DLCR0 Constants */
+
+#define DLCR3R	3
+#define DLCR3	DLCR3R,-1	/* Receive Interrupt Enable Register */
+					/* Use DLCR1 Constants */
+
+#define DLCR4R	4
+#define DLCR4	DLCR4R,-1	/* Transmit Mode Register */
+#define DLCR4_COLCNT(x)	(((x) >> 4) & 0x0f) /* Read collision count (ro) */
+#define DLCR4_CNTRL	(1<<2)		/* DREQ Control */
+#define DLCR4_LBC	(1<<1)		/* Loopback Control */
+#define DLCR4_DSC	(1<<0)		/* Disable Carrier Detect */
+
+#define DLCR5R	5
+#define DLCR5	DLCR5R,-1	/* Receive Mode Register */
+#define DLCR5_BUFEMP	(1<<6)		/* Buffer empty? (ro) */
+#define DLCR5_ACPTBADPKT (1<<5)		/* Accept packets with bad CRC/length */
+#define DLCR5_ADDSIZE	(1<<4)		/* Mac Address Size */
+#define DLCR5_ENASRTPKT	(1<<3)		/* Enable Short Packet Receive */
+#define DLCR5_AM_OFF	0		/* Address mode: receive nothing */
+#define DLCR5_AM_SELF	1		/* "          ": only our packets */
+#define DLCR5_AM_OTHER	2		/* "          ": only other node packets */
+#define DLCR5_AM_PROM	3		/* "          ": receive ALL packets */
+#define DLCR5_AM_MASK	3
+
+#define DLCR6R	6
+#define DLCR6	DLCR6R,-1	/* Control Register 1 */
+#define DLCR6_DLCRST	(1<<7)		/* Reset the DLC and buffers */
+#define DLCR6_SCTS	(1<<6)		/* SRAM cycle time select */
+#define DLCR6_SBW	(1<<5)		/* System Bus Width Select: 16/8 bit */
+#define DLCR6_TBS_2K	0		/* TX Buffer Size: 2K, 1-bank */
+#define DLCR6_TBS_4K	4		/* TX Buffer Size: 4K, 2-bank */
+#define DLCR6_TBS_8K	8		/* TX Buffer Size: 8K, 2-bank */
+#define DLCR6_TBS_16K	16		/* TX Buffer Size: 16K, 2-bank */
+#define DLCR6_BS	(1<<1)		/* External Buffer Size: 8K/32K */
+
+#define DLCR7R	7
+#define DLCR7	DLCR7R,-1	/* Control Register 2 */
+#define DLCR7_IDENT(x)	(((x) >> 6) & 3) /* Chip Identification (ro) */
+#define DLCR7_ID_MB86960A	0
+#define DLCR7_ID_MB86964	1
+#define DLCR7_ID_MB86967	2
+#define DLCR7_ID_MB86965A	3
+#define DLCR7_NSTBY	(1<<6)		/* Not-standby mode */
+#define DLCR7_RBS_D8	0		/* Read Bank Select: DLCR8 - DLCR15 */
+#define DLCR7_RBS_M8	4		/* "              ": MAR8 - MAR15 */
+#define DLCR7_RBS_B8	8		/* "              ": BMPR8 - BMPR15 */
+#define DLCR7_RBS_MASK	0x0C
+#define DLCR7_EOP	(1<<1)		/* DMA End Signal: active LOW / HIGH */
+#define DLCR7_BSWAP	(1<<0)		/* Byte Swap */
+
+#define BMPR16	16,-1		/* EEPROM Control */
+#define BMPR16_ESK	(1<<6)		/* EEPROM Shift Clocks */
+#define BMPR16_ECS	(1<<5)		/* EEPROM Chip Select */
+#define BMPR17	17,-1		/* EEPROM Data */
+#define BMPR17_EDIO	(1<<7)		/* EEPROM Data I/O Bit */
+
+/* The rest of these registers must be accessed using the banking
+   mechanism; i.e., their bank must be selected before they can be
+   accessed at all. */
+#define DLCR8	8,DLCR7_RBS_D8	/* Node ID (Mac Address) Registers */
+
+#define DLCR14	14,DLCR7_RBS_D8	/* TDR Low */
+
+#define DLCR15	15,DLCR7_RBS_D8	/* TDR High */
+
+#define MAR8	8,DLCR7_RBS_M8	/* Multicast Address Registers */
+
+#define BMPR8	8,DLCR7_RBS_B8	/* Buffer Memory Port */
+
+#define BMPR10	10,DLCR7_RBS_B8	/* Transmit Packet Count */
+#define BMPR10_TX	(1<<7)		/* Start transmit */
+#define BMPR10_PKTCNT(x) ((x) & 0x7f)	/* Remaining packet count */
+
+#define BMPR11	11,DLCR7_RBS_B8	/* 16 Collision Control */
+#define BMPR11_AUTO	6		/* Auto-retransmit */
+#define BMPR11_SKIP	7		/* Skip problem packet */
+#define BMPR11_MANUAL	2		/* Manually handle 16-collisions */
+#define BMPR11_MANUAL_DISCARD	3	/* Discard packet during manual handling */
+
+#define BMPR12	12,DLCR7_RBS_B8	/* DMA Enable Register, or as Fujitsu says, the DAM enable ;-) */
+#define BMPR12_NLPR	(1<<3)		/* Long Packet Receive Disable */
+#define BMPR12_RENA	(1<<1)		/* Receive DMA Enable */
+#define BMPR12_TENA	(1<<0)		/* Transmit DMA Enable */
+
+#define BMPR13	13,DLCR7_RBS_B8	/* DMA Burst/Transceiver Mode Control */
+#define BMPR13_LTA	(1<<5)		/* Link Test Enable */
+#define BMPR13_DB_1	0		/* DMA Burst Cycle Count: 1 */
+#define BMPR13_DB_4	1		/* "                   ": 4 */
+#define BMPR13_DB_18	2		/* "                   ": 18 */
+#define BMPR13_DB_12	3		/* "                   ": 12 */
+
+#define BMPR14	14,DLCR7_RBS_B8	/* Receiver Control/Transceiver IRQ Control */
+#define BMPR14_LKFE	(1<<6)		/* Link Failure Interrupt Enable */
+#define BMPR14_SDM	(1<<5)		/* Shutdown mode */
+#define BMPR14_SKIPRX	(1<<2)		/* Skip RX Packet (r/w) */
+#define BMPR14_SQE	(1<<1)		/* Signal Quality Error Int Enable */
+#define BMPR14_FS	(1<<0)		/* Filter Self (in promisc mode) */
+
+#define BMPR15	15,DLCR7_RBS_B8	/* Transceiver Status */
+#define BMPR15_LKF	(1<<6)		/* Link failure */
+#define BMPR15_POLREV	(1<<5)		/* Polarity Reverse */
+#define BMPR15_SQE	(1<<1)		/* Signal Quality Error */
+#define BMPR15_CLEARALL	(BMPR15_LKF | BMPR15_POLREV | BMPR15_SQE)
+
+#define REGLOC(x)	(0xa0600400 + (x) * 4)
+#define G2_8BP_RST	0xa0600480
+
+/* What bank do we have selected now? */
+static int la_bank = -1;
+
+/* Our network struct */
+netif_t la_if;
+
+/* What's our current state? */
+#define LA_NOT_STARTED		0
+#define LA_DETECTED		1
+#define LA_RUNNING		2
+#define LA_PAUSED		3
+static int la_started = LA_NOT_STARTED;
+
+/* Mac address (read from EEPROM) */
+#define la_mac la_if.mac_addr
+
+/* Forward declaration */
+//static void la_irq_hnd(uint32 code);
+
+/* Set the current bank */
+static void la_set_bank(int bank) {
+	int i;
+	
+	if (la_bank == bank)
+		return;
+
+	i = g2_read_32(REGLOC(DLCR7R)) & 0xff;
+	g2_write_8(REGLOC(DLCR7R), (i & ~DLCR7_RBS_MASK) | bank);
+	la_bank = bank;
+}
+
+/* Read a register */
+static int la_read(int reg, int bank) {
+	if (bank != -1)
+		la_set_bank(bank);
+	return g2_read_32(REGLOC(reg)) & 0xff;
+}
+
+/* Write a register */
+static void la_write(int reg, int bank, int value) {
+	if (bank != -1)
+		la_set_bank(bank);
+	g2_write_8(REGLOC(reg), value);
+}
+	
+/* This is based on the JLI EEPROM reader from FreeBSD. EEPROM in the
+   Sega adapter is a bit simpler than what is described in the Fujitsu
+   manual -- it appears to contain only the MAC address and not a base
+   address like the manual says. EEPROM is read one bit (!) at a time
+   through the EEPROM interface port. */
+static void la_strobe_eeprom() {
+	la_write(BMPR16, BMPR16_ECS);
+	la_write(BMPR16, BMPR16_ECS | BMPR16_ESK);
+	la_write(BMPR16, BMPR16_ECS | BMPR16_ESK);
+	la_write(BMPR16, BMPR16_ECS);
+}
+static void la_read_eeprom(uint8 *data) {
+	uint8 /*save16, save17, */val;
+	int n, bit;
+
+	/* Save the current value of the EEPROM registers */
+//	save16 = la_read(BMPR16);
+//	save17 = la_read(BMPR17);
+
+	/* Read bytes from EEPROM, two per iteration */
+	for (n=0; n<3; n++) {
+		/* Reset the EEPROM interface */
+		la_write(BMPR16, 0);
+		la_write(BMPR17, 0);
+
+		/* Start EEPROM access */
+		la_write(BMPR16, BMPR16_ECS);
+		la_write(BMPR17, BMPR17_EDIO);
+		la_strobe_eeprom();
+
+		/* Pass the iteration count as well as a READ command */
+		val = 0x80 | n;
+		for (bit=0x80; bit != 0x00; bit>>=1) {
+			la_write(BMPR17, (val & bit) ? BMPR17_EDIO : 0);
+			la_strobe_eeprom();
+		}
+		la_write(BMPR17, 0);
+
+		/* Read a byte */
+		val = 0;
+		for (bit=0x80; bit != 0x00; bit>>=1) {
+			la_strobe_eeprom();
+			if (la_read(BMPR17) & BMPR17_EDIO)
+				val |= bit;
+		}
+		*data++ = val;
+
+		/* Read one more byte */
+		val = 0;
+		for (bit=0x80; bit != 0x00; bit>>=1) {
+			la_strobe_eeprom();
+			if (la_read(BMPR17) & BMPR17_EDIO)
+				val |= bit;
+		}
+		*data++ = val;
+	}
+}
+
+/* Reset the lan adapter and verify that it's there and alive */
+static int la_detect() {
+	int type;
+
+	if (la_started != LA_NOT_STARTED)
+		return -1;
+	// assert_msg(la_started == LA_NOT_STARTED, "la_detect called out of sequence");
+	
+	/* Reset the interface */
+	g2_write_8(G2_8BP_RST, 0);
+	g2_write_8(G2_8BP_RST, 1);
+	g2_write_8(G2_8BP_RST, 0);
+
+	/* Give it a few ms to come back */
+	timer_spin_sleep(100);
+
+	/* Read the chip type and verify it */
+	type = DLCR7_IDENT(la_read(DLCR7));
+	if (type != DLCR7_ID_MB86967) {
+		// dbglog(DBG_KDEBUG, "lan_adapter: no device detected (wrong type = %d)\n", type);
+		return -1;
+	}
+
+	/* That should do */
+	la_started = LA_DETECTED;
+	return 0;
+}
+
+/* Reset the lan adapter and set it up for send/receive */
+static int la_hw_init() {
+	int i;
+
+	if (la_started != LA_DETECTED)
+		return -1;
+	// assert_msg(la_started == LA_DETECTED, "la_hw_init called out of sequence");
+		
+	/* Clear interrupt status */
+	la_write(DLCR0, DLCR0_CLEARALL);
+	la_write(DLCR1, DLCR0_CLEARALL);
+
+	/* Power down chip */
+	timer_spin_sleep(2);
+	la_write(DLCR7, la_read(DLCR7) & ~DLCR7_NSTBY);
+	timer_spin_sleep(2);
+
+	/* Reset Data Link Control */
+	timer_spin_sleep(2);
+	la_write(DLCR6, la_read(DLCR6) | DLCR6_DLCRST);
+	timer_spin_sleep(2);
+
+	/* Power up the chip */
+	timer_spin_sleep(2);
+	la_write(DLCR7, la_read(DLCR7) | DLCR7_NSTBY);
+	timer_spin_sleep(2);
+
+	/* Read the EEPROM data */
+	la_read_eeprom(la_mac);
+
+	/* Write the MAC address into the Node ID regs */
+	for (i=0; i<6; i++)
+		la_write(i + DLCR8, la_mac[i]);
+
+	/* Clear the multicast address */
+	for (i=0; i<6; i++)
+		la_write(i + MAR8, 0);
+
+	/* dbglog(DBG_DEBUG, "lan_adapter: MAC address is %02x:%02x:%02x:%02x:%02x:%02x\n",
+		la_mac[0], la_mac[1], la_mac[2],
+		la_mac[3], la_mac[4], la_mac[5]); */
+
+	/* Setup the BMPR bank for normal operation */
+	la_write(BMPR10, 0);
+	la_write(BMPR11, BMPR11_AUTO);
+	la_write(BMPR12, 0);
+	la_write(BMPR13, 0);
+	la_write(BMPR14, 0);
+	la_write(BMPR15, BMPR15_CLEARALL);
+
+	/* Set non-promiscuous mode (use 0x03 for promiscuous) */
+	la_write(DLCR5, (la_read(DLCR5) & ~DLCR5_AM_MASK) | DLCR5_AM_OTHER);
+
+	/* Setup interrupt handler */
+	// XXX
+	/* asic_evt_set_handler(ASIC_EVT_EXP_8BIT, la_irq_hnd);
+	asic_evt_enable(ASIC_EVT_EXP_8BIT, ASIC_IRQB); */
+
+	/* Enable receive interrupt */
+	la_write(DLCR3, DLCR1_PKTRDY);
+	
+	/* Enable transmitter / receiver */
+	la_write(DLCR6, (la_read(DLCR6) & ~DLCR6_DLCRST));
+
+	la_started = LA_RUNNING;
+	return 0;
+}
+
+/* Start lan adapter (after a stop) */
+static void la_start() {
+	// assert_msg(la_started == LA_PAUSED, "la_start called out of sequence");
+	if (la_started != LA_PAUSED)
+		return;
+
+	/* Set normal receive mode */
+	la_write(DLCR5, (la_read(DLCR5) & ~DLCR5_AM_MASK) | DLCR5_AM_OTHER);
+	la_started = LA_RUNNING;
+}
+
+/* Temporarily stop lan adapter */
+static void la_stop() {
+	int timeout = 50;
+	
+	// assert_msg(la_started == LA_RUNNING, "la_stop called out of sequence");
+	if (la_started != LA_RUNNING)
+		return;
+
+	/* Make sure we aren't transmitting currently */
+	while (BMPR10_PKTCNT(la_read(BMPR10)) > 0 && (--timeout) > 0)
+		timer_spin_sleep(2);
+
+	/* Disable all receive */
+	la_write(DLCR5, (la_read(DLCR5) & ~DLCR5_AM_MASK) | DLCR5_AM_OFF);
+	la_started = LA_PAUSED;
+}
+
+/* Shut it down for good */
+static void la_hw_shutdown() {
+	/* Power down chip */
+	timer_spin_sleep(2);
+	la_write(DLCR7, la_read(DLCR7) & ~DLCR7_NSTBY);
+	timer_spin_sleep(2);
+
+	la_started = LA_NOT_STARTED;
+
+	/* Unhook interrupts */
+	// XXX
+	/* asic_evt_disable(ASIC_EVT_EXP_8BIT, ASIC_IRQB);
+	asic_evt_set_handler(ASIC_EVT_EXP_8BIT, NULL); */
+}
+
+/* We don't really need these stats right now but we might want 'em later */
+static int total_pkts_rx = 0, total_pkts_tx = 0;
+
+/* Transmit a packet */
+/* Note that it's technically possible to queue up more than one packet 
+   at a time for transmission, but this is the simple way. */
+static int la_tx(const uint8 * pkt, int len) {
+	int	i, timeout;
+
+	//assert_msg(la_started == LA_RUNNING, "la_tx called out of sequence");
+	if (la_started != LA_RUNNING)
+		return -1;
+
+	/* Wait for queue to empty */
+	timeout = 50;
+	while (BMPR10_PKTCNT(la_read(BMPR10)) > 0 && (--timeout) > 0)
+		timer_spin_sleep(2);
+	if (timeout == 0) {
+		//dbglog(DBG_ERROR, "la_tx timed out waiting for previous tx\n");
+		return 0;
+	}
+
+	/* Is the length less than the minimum? */
+	if (len < 0x60)
+		len = 0x60;
+
+	/* Poke the length */
+	la_write(BMPR8, (len & 0x00ff));
+	la_write(BMPR8, (len & 0xff00) >> 8);
+
+	/* Write the packet */
+	for (i=0; i<len; i++)
+		la_write(BMPR8, pkt[i]);
+
+	/* Start the transmitter */
+	timer_spin_sleep(2);
+	la_write(BMPR10, 1 | BMPR10_TX);	/* 1 Packet, Start */
+
+	total_pkts_tx++;
+
+	return 1;
+}
+
+/* Check for received packets */
+static int la_rx() {
+	int i, status, len, count;
+
+	// assert_msg(la_started == LA_RUNNING, "la_rx called out of sequence");
+	if (la_started != LA_RUNNING)
+		return -1;
+
+	for (count = 0; ; count++) {
+		/* Is the buffer empty? */
+		if (la_read(DLCR5) & DLCR5_BUFEMP)
+			return count;
+
+		/* Get the receive status byte */
+		status = la_read(BMPR8);
+		(void)la_read(BMPR8);
+
+		/* Get the packet length */
+		len = la_read(BMPR8);
+		len |= la_read(BMPR8) << 8;
+
+		/* Check for errors */
+		if ( (status & 0xF0) != 0x20 ) {
+			//dbglog(DBG_ERROR, "la_rx: receive error occured (status %02x)\n", status);
+			return -1;
+		}
+
+		/* Read the packet */
+		if (len > 1514) {
+			//dbglog(DBG_ERROR, "la_rx: big packet received (size %d)\n", len);
+			return -2;
+		}
+		for (i=0; i<len; i++) {
+			net_rxbuf[i] = la_read(BMPR8);
+		}
+
+		/* Submit it for processing */
+		net_input(&la_if, len);
+
+		total_pkts_rx++;
+	}
+}
+
+#if 0
+static void la_irq_hnd(uint32 code) {
+	int intr_rx, intr_tx, hnd = 0;
+	
+	/* Acknowledge Lan Adapter interrupt(s) */
+	intr_tx = la_read(DLCR0);
+	la_write(DLCR0, intr_tx);
+	intr_rx = la_read(DLCR1);
+	la_write(DLCR1, intr_rx);
+
+	/* Handle receive interrupt */
+	if (intr_rx & DLCR1_PKTRDY) {
+		la_rx();
+		hnd = 1;
+	}
+
+	if (!hnd) {
+		//dbglog(DBG_KDEBUG, "la_irq_hnd: spurious interrupt for %02x/%02x\n", intr_tx, intr_rx);
+	}
+}
+#endif
+
+/****************************************************************************/
+/* Netcore interface */
+
+netif_t la_if;
+
+static int la_if_detect(netif_t * self) {
+	if (self->flags & NETIF_DETECTED)
+		return 0;
+
+	if (la_detect() < 0)
+		return -1;
+
+	self->flags |= NETIF_DETECTED;
+	return 0;
+}
+
+static int la_if_init(netif_t * self) {
+	if (self->flags & NETIF_INITIALIZED)
+		return 0;
+
+	if (la_hw_init() < 0)
+		return -1;
+
+	memcpy(self->mac_addr, la_mac, 6);
+	self->flags |= NETIF_INITIALIZED;
+	return 0;
+}
+
+static int la_if_shutdown(netif_t * self) {
+	if (!(self->flags & NETIF_INITIALIZED))
+		return 0;
+
+	la_hw_shutdown();
+	
+	self->flags &= ~(NETIF_DETECTED | NETIF_INITIALIZED | NETIF_RUNNING);
+	return 0;
+}
+
+static int la_if_start(netif_t * self) {
+	if (!(self->flags & NETIF_INITIALIZED))
+		return -1;
+
+	self->flags |= NETIF_RUNNING;
+
+	if (la_started == LA_PAUSED)
+		la_start();
+
+	return 0;
+}
+
+static int la_if_stop(netif_t * self) {
+	if (!(self->flags & NETIF_RUNNING))
+		return -1;
+
+	self->flags &= ~NETIF_RUNNING;
+
+	if (la_started == LA_RUNNING)
+		la_stop();
+
+	return 0;
+}
+
+static int la_if_tx(netif_t * self, const uint8 * data, int len) {
+	if (!(self->flags & NETIF_RUNNING))
+		return -1;
+
+	if (la_tx(data, len) != 1)
+		return -1;
+
+	return 0;
+}
+
+static int la_if_rx_poll(netif_t * self) {
+	(void)self;
+	return la_rx();
+}
+
+/* Don't need to hook anything here yet */
+static int la_if_set_flags(netif_t * self, uint32 flags_and, uint32 flags_or) {
+	self->flags = (self->flags & flags_and) | flags_or;
+	return 0;
+}
+
+/* Initialize */
+int la_init() {
+	/* Initialize our state */
+	la_started = LA_NOT_STARTED;
+	
+	/* Setup the netcore structure */
+	la_if.descr = "Lan Adapter (HIT-0300)";
+	la_if.flags = NETIF_NO_FLAGS;
+	memset(la_if.ip_addr, 0, sizeof(la_if.ip_addr));
+	la_if.if_detect = la_if_detect;
+	la_if.if_init = la_if_init;
+	la_if.if_shutdown = la_if_shutdown;
+	la_if.if_start = la_if_start;
+	la_if.if_stop = la_if_stop;
+	la_if.if_tx = la_if_tx;
+	la_if.if_rx_poll = la_if_rx_poll;
+	la_if.if_set_flags = la_if_set_flags;
+
+	return 0;
+}
+
+/* Shutdown */
+int la_shutdown() {
+	la_if_shutdown(&la_if);
+	return 0;
+}
+

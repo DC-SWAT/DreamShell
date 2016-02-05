@@ -1,0 +1,20 @@
+#
+# DreamShell ISO Loader
+# GD-ROM
+# (c) 2009-2016 SWAT
+#
+
+include Makefile.cfg
+
+TARGETCFLAGS += $(CD_CFLAGS) #-DLOG #-DDEBUG
+LOBJECTS += $(CD) 
+LOBJECTS += $(KOS_DIR)/src/scif.o $(KOS_DIR)/src/printf.o #gdb.o
+
+all: rm-elf $(BUILD)/cd.bin
+
+rm-elf:
+	rm -f $(LOBJECTS) $(BUILD)/cd.bin $(BUILD)/cd.elf
+
+$(BUILD)/cd.elf: $(LOBJECTS)
+	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(LOBJECTS) $(LIBS)
+	$(TARGETSIZE) $@
