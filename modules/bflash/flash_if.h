@@ -26,8 +26,9 @@
 #define ADDR_UNLOCK_2_WM                0x02AA
 
 /* JEDEC */
-#define ADDR_UNLOCK_1_JEDEC             0x5555
-#define ADDR_UNLOCK_2_JEDEC             0x2AAA
+/* words to put on A14-A0 without A-1 (Q15) ! -> The address need to be shifted. */
+#define ADDR_UNLOCK_1_JEDEC             (0x5555<<1)
+#define ADDR_UNLOCK_2_JEDEC             (0x2AAA<<1)
 
 #define CMD_UNLOCK_DATA_1               0x00AA
 #define CMD_UNLOCK_DATA_2               0x0055
