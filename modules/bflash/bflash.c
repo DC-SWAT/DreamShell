@@ -4,6 +4,8 @@
 
 	(c)2009-2014 SWAT
 	http://www.dc-swat.ru
+
+	04/10/2016 jfdelnero : MX29L3211 & MX29F1610 support fixed.
 */
 
 #include <assert.h>
@@ -16,6 +18,7 @@
 static vuint8 *const flashport = (vuint8 *)BIOS_FLASH_ADDR;
 
 /* Accurate usec delay for JEDEC */
+/* jfdn : I am very suspicious about this function. Seems a way slower than it should in my setup... To be checked */
 static void jedec_delay(int usec) {
 
     timer_prime(TMU1, 1000000, 0);
@@ -27,6 +30,20 @@ static void jedec_delay(int usec) {
     }
 
     timer_stop(TMU1);
+}
+
+static void delay(int usec) {
+
+	if(usec)
+	{
+		timer_prime(TMU1, 1000000 / usec, 0);
+		timer_clear(TMU1);
+		timer_start(TMU1);
+
+		while(!timer_clear(TMU1)) ;
+
+		timer_stop(TMU1);
+	}
 }
 
 /* Read a flash value */
@@ -146,15 +163,86 @@ static int bflash_wait_ready(bflash_dev_t *dev, uint32 addr, int timeout) {
 	return 0;
 }
 
+/* Wait a flag from the flash, with timeout */
+static int bflash_wait_flag(bflash_dev_t *dev, uint32 addr, int timeout,uint8 mask) {
+	int wait = 0;
+	
+	if (timeout < 0) {
+		timeout = -timeout;
+		wait = 1;
+	}
+
+	while (timeout-- && !( bflash_read(0) & mask ) ) {
+		if (wait)
+			thd_sleep(10);
+		else
+			thd_pass();
+	}
+
+	if (timeout <= 0) {
+		ds_printf("DS_ERROR: Writing to flash timed out (mask : 0x%.2X)\n",mask);
+		return -1;
+	}
+	
+	return 0;
+}
+
 /* Write a single flash value, return -1 if we fail or timeout */
 int bflash_write_value(bflash_dev_t *dev, uint32 addr, uint8 value) {
-	send_cmd(dev, CMD_PROGRAM_UNLOCK_DATA);
-	flashport[addr] = value;
+	int irqState;
 
-	if (bflash_wait_ready(dev, addr, 1000) < 0) {
-		ds_printf("DS_ERROR: Failed writing value to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
-			addr, flashport[addr], value);
-		return -1;
+	switch(dev->prog_mode)
+	{
+		case F_FLASH_DATAPOLLING_PM:
+			send_cmd(dev, CMD_PROGRAM_UNLOCK_DATA);
+			flashport[addr] = value;
+
+			if (bflash_wait_ready(dev, addr, 1000) < 0) {
+				ds_printf("DS_ERROR: Failed writing value to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
+					addr, flashport[addr], value);
+				return -1;
+			}
+		break;
+
+		case F_FLASH_REGPOLLING_PM:
+
+			flashport[dev->unlock[0]] = CMD_UNLOCK_DATA_1;
+			flashport[dev->unlock[1]] = CMD_UNLOCK_DATA_2;
+
+			/* The following loop must not be interrupted !
+			   The flash device flush its buffer after 100us without access. */
+
+			irqState = irq_disable(); // Disable interrupts
+
+			flashport[dev->unlock[0]] = CMD_PROGRAM_UNLOCK_DATA;
+
+			flashport[addr] = value;
+
+			irq_restore(irqState); // re-enable interrupts
+
+			delay(250); // let's start the flash process (wait 100us min)
+
+			if (bflash_wait_flag(dev, addr + dev->page_size, -800,D7_MASK) < 0) {
+
+				send_cmd(dev, CMD_RESET_DATA);
+
+				ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx : timeout !\n",addr);
+				return -1;
+			}
+
+			/* Fast CMD_RESET_DATA */
+			flashport[dev->unlock[0]] = CMD_UNLOCK_DATA_1;
+			delay(5);
+			flashport[dev->unlock[1]] = CMD_UNLOCK_DATA_2;
+			delay(5);
+			flashport[dev->unlock[0]] = CMD_RESET_DATA;
+			delay(5);
+
+		break;
+		default:
+			return -2;
+		break;
+
 	}
 
 	if (flashport[addr] != value) {
@@ -166,32 +254,89 @@ int bflash_write_value(bflash_dev_t *dev, uint32 addr, uint8 value) {
 	return 0;
 }
 
+
 /* Write a page of flash, return -1 if we fail or timeout */
 int bflash_write_page(bflash_dev_t *dev, uint32 addr, uint8 *data) {
-	
-	int i;
+	uint32 irqState;
+	uint32 i;
 	
 	if(dev->page_size <= 1) {
 		ds_printf("DS_ERROR: The flash device doesn't support page program mode.\n");
 		return -1;
 	}
 	
-	send_cmd(dev, CMD_PROGRAM_UNLOCK_DATA);
-	
-	for(i = 0; i < dev->page_size; i++) {
-		flashport[addr + i] = data[i];
-	}
+	switch(dev->prog_mode)
+	{
+		case F_FLASH_DATAPOLLING_PM:
 
-	if (bflash_wait_ready(dev, addr + dev->page_size, -15000) < 0) {
-		ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
-			addr, flashport[addr + dev->page_size], data[dev->page_size - 1]);
-		return -1;
-	}
+			send_cmd(dev, CMD_PROGRAM_UNLOCK_DATA);
 
-	if (flashport[addr + dev->page_size] != data[dev->page_size - 1]) {
-		ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
-			addr, flashport[addr + dev->page_size], data[dev->page_size - 1]);
-		return -1;
+			for(i = 0; i < dev->page_size; i++) {
+				flashport[addr + i] = data[i];
+			}
+
+			if (bflash_wait_ready(dev, addr + dev->page_size, -15000) < 0) {
+				ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
+					addr, flashport[addr + dev->page_size], data[dev->page_size - 1]);
+				return -1;
+			}
+
+			if (flashport[addr + dev->page_size - 1] != data[dev->page_size - 1]) {
+				ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
+					addr, flashport[addr + dev->page_size], data[dev->page_size - 1]);
+				return -1;
+			}
+		break;
+
+		case F_FLASH_REGPOLLING_PM:
+
+			flashport[dev->unlock[0]] = CMD_UNLOCK_DATA_1;
+			flashport[dev->unlock[1]] = CMD_UNLOCK_DATA_2;
+
+			/* The following loop must not be interrupted !
+			   The flash device flush its buffer after 100us without access.*/
+
+			irqState = irq_disable(); // Disable interrupts
+
+			flashport[dev->unlock[0]] = CMD_PROGRAM_UNLOCK_DATA;
+
+			for(i = 0; i < dev->page_size; i++) {
+				flashport[addr + i] = data[i];
+			}
+
+			irq_restore(irqState); // re-enable interrupts
+
+			delay(250); // let's start the flash process (wait 100us min)
+
+			if (bflash_wait_flag(dev, addr + dev->page_size, -800,D7_MASK) < 0) {
+
+				send_cmd(dev, CMD_RESET_DATA);
+
+				ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx : timeout !\n",addr);
+				return -1;
+			}
+
+			/* Fast CMD_RESET_DATA */
+			flashport[dev->unlock[0]] = CMD_UNLOCK_DATA_1;
+			delay(5);
+			flashport[dev->unlock[1]] = CMD_UNLOCK_DATA_2;
+			delay(5);
+			flashport[dev->unlock[0]] = CMD_RESET_DATA;
+			delay(5);
+
+			/* Check the whole page */
+			for(i = 0; i < dev->page_size; i++) {
+				if(flashport[addr + i] != data[i]){
+					ds_printf("DS_ERROR: Failed writing page to flash at 0x%08lx (0x%02x vs 0x%02x)\n",
+						addr+i, flashport[addr + dev->page_size], data[dev->page_size - 1]);
+					return -1;
+				}
+			}
+
+		break;
+		default:
+			return -2;
+		break;
 	}
 
 	return 0;
@@ -247,24 +392,40 @@ int bflash_erase_sector(bflash_dev_t *dev, uint32 addr) {
 		ds_printf("DS_ERROR: The flash device doesn't support erase sectors.\n");
 		return -1;
 	}
-	
-	if(dev->unlock[0] == ADDR_UNLOCK_1_JEDEC) {
 
-		send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
-		send_unlock_jedec(dev);
-		flashport[addr] = CMD_SECTOR_ERASE_UNLOCK_DATA_2;
-		jedec_delay(10);
+	switch(dev->prog_mode)
+	{
+		case F_FLASH_DATAPOLLING_PM:
 
-	} else {
+			send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
+			send_unlock(dev);
+			flashport[addr] = CMD_SECTOR_ERASE_UNLOCK_DATA_2;
+			if (bflash_wait_ready(dev, addr, -15000) < 0) {
+				ds_printf("DS_ERROR: Failed erasing flash sector at 0x%08lx (timeout...)\n", addr);
+				return -1;
+			}
+		break;
 
-		send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
-		send_unlock(dev);
-		flashport[addr] = CMD_SECTOR_ERASE_UNLOCK_DATA_2;
-	}
+		case F_FLASH_REGPOLLING_PM:
 
-	if (bflash_wait_ready(dev, addr, -15000) < 0) {
-		ds_printf("DS_ERROR: Failed erasing flash sector at 0x%08lx\n", addr);
-		return -1;
+			send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
+			send_unlock(dev);
+			flashport[addr] = CMD_SECTOR_ERASE_UNLOCK_DATA_2;
+
+			if (bflash_wait_flag(dev, addr, -400,D7_MASK) < 0) {
+				ds_printf("DS_ERROR: Failed erasing flash sector at 0x%08lx (timeout...)\n", addr);
+
+				send_cmd(dev, CMD_RESET_DATA);
+
+				return -1;
+			}
+
+			send_cmd(dev, CMD_RESET_DATA);
+		break;
+		default:
+			return -2;
+		break;
+
 	}
 
 	if (flashport[addr] != 0xff) {
@@ -277,23 +438,46 @@ int bflash_erase_sector(bflash_dev_t *dev, uint32 addr) {
 
 /* Erase the whole flash chip */
 int bflash_erase_all(bflash_dev_t *dev) {
-	
+	uint32 i;
+
 	if(!(dev->flags & F_FLASH_ERASE_ALL)) {
 		ds_printf("DS_ERROR: The flash device doesn't support erase full chip.\n");
 		return -1;
 	}
-	
-	send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
-	send_cmd(dev, CMD_ERASE_ALL);
-	
-	if (bflash_wait_ready(dev, 0, -30000) < 0) {
-		ds_printf("DS_ERROR: Failed erasing full chip.\n");
-		return -1;
+
+	switch(dev->prog_mode)
+	{
+		case F_FLASH_DATAPOLLING_PM:
+			send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
+			send_cmd(dev, CMD_ERASE_ALL);
+
+			if (bflash_wait_ready(dev, 0, -30000) < 0) {
+				ds_printf("DS_ERROR: Failed erasing full chip.\n");
+				return -1;
+			}
+		break;
+
+		case F_FLASH_REGPOLLING_PM:
+			send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
+			send_cmd(dev, CMD_ERASE_ALL);
+
+			if (bflash_wait_flag(dev, 0, -30000,D6_MASK) < 0) {
+				ds_printf("DS_ERROR: Failed erasing full chip. (ready timeout...)\n");
+				send_cmd(dev, CMD_RESET_DATA);
+				return -1;
+			}
+
+			send_cmd(dev, CMD_RESET_DATA);
+
+		break;
 	}
 
-	if (flashport[0] != 0xff) {
-		ds_printf("DS_ERROR: Failed erasing full chip.\n");
-		return -1;
+	for(i=0;i<dev->size;i++)
+	{
+		if (flashport[i] != 0xff) {
+			ds_printf("DS_ERROR: Failed erasing full chip.\n");
+			return -1;
+		}
 	}
 
 	return 0;
@@ -365,22 +549,36 @@ int bflash_detect(bflash_manufacturer_t **mfr, bflash_dev_t **dev) {
 	bflash_manufacturer_t *b_mfr = NULL;
 	bflash_dev_t *b_dev = NULL;
 	bflash_dev_t tmp_dev;
-	
+	uint8 prev_mfrid,prev_devid;
+
+	// To slowdown the rom access timings...
+	// The default read/write speed is almost
+	// the max eeprom read/write speed.
+	// And the CS signal is not very clean due to the diode D501.
+	//*((vuint32 *)0xA05F7484) = 0x1FF7; // SB_G1RWC - System ROM write access timing
+	//*((vuint32 *)0xA05F7480) = 0x1FF7; // SB_G1RRC - System ROM read access timing
+	// Commented - seems working fine at full speed now.
+
 	memset(&tmp_dev, 0, sizeof(tmp_dev));
 	tmp_dev.flags = F_FLASH_READ;
 	tmp_dev.unlock[0] = ADDR_UNLOCK_1_BM;
 	tmp_dev.unlock[1] = ADDR_UNLOCK_2_BM;
 
+	/* Store current rom value. Used to detect
+	   if the chip respond to the read id command */
+	prev_mfrid = flashport[ADDR_MANUFACTURER];
+	prev_devid = flashport[ADDR_DEVICE_ID];
+
 	bflash_get_id(&tmp_dev, &mfr_id, &dev_id);
-	
-	if(dev_id == SEGA_FLASH_DEVICE_ID && getenv("EMU") == NULL) {
+
+	if( ( ( prev_mfrid == ( mfr_id & 0xFF ) ) && ( prev_devid == ( dev_id & 0xFF ) ) ) && getenv("EMU") == NULL) {
 		
 		tmp_dev.unlock[0] = ADDR_UNLOCK_1_JEDEC;
 		tmp_dev.unlock[1] = ADDR_UNLOCK_2_JEDEC;
 		
 		bflash_get_id(&tmp_dev, &mfr_id, &dev_id);
 		
-		if(dev_id == SEGA_FLASH_DEVICE_ID) {
+		if( ( prev_mfrid == ( mfr_id & 0xFF ) ) && ( prev_devid == ( dev_id & 0xFF ) ) ) {
 			
 			tmp_dev.unlock[0] = ADDR_UNLOCK_1_WM;
 			tmp_dev.unlock[1] = ADDR_UNLOCK_2_WM;
@@ -492,22 +690,26 @@ int bflash_auto_reflash(const char *file, uint32 start_sector, int erase_mode) {
 			
 			ds_printf("DS_PROCESS: Erasing flash chip...\n");
 			
-			if(erase_mode == F_FLASH_ERASE_ALL) {
-				
+			if(erase_mode == F_FLASH_ERASE_ALL && (dev->size<=2048) ) {
+				/* Don't full erase a with more than 2MB -> The others bank datas may be usefull ;) */
 				if (bflash_erase_all(dev) < 0) {
 					free(ptr);
 					EXPT_GUARD_RETURN -1;
 				}
 				
 			} else if(erase_mode == F_FLASH_ERASE_SECTOR) {
-			
+
 				for (i = b_idx; i < dev->sec_count; i++) {
 					
 					if (dev->sectors[i] >= (len + dev->sectors[b_idx]))
 						break;
-					
+
+					/* Don't try to erase the others banks sectors. */
+					if(dev->sectors[i] >= 0x200000)
+						break;
+
 					ds_printf("DS_PROCESS: Erasing sector: 0x%08x\n", dev->sectors[i]);
-					
+
 					if (bflash_erase_sector(dev, dev->sectors[i]) < 0) {
 						free(ptr);
 						EXPT_GUARD_RETURN -1;

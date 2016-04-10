@@ -49,6 +49,6 @@
 #define D6_MASK                         0x40 /* Ready bit */
 #define D7_MASK                         0x80 /* Data polling bit */
 
-#define SEGA_FLASH_DEVICE_ID            0xFF28
+#define SEGA_FLASH_DEVICE_ID            0xFF28 /* The "SEGA ID" is just the data read back from the ROM at the address 0 and 2... */
 
 #endif /* __BIOS_FLASH_IF_H */

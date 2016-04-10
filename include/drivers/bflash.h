@@ -72,6 +72,15 @@
 #define F_FLASH_LOGIC_5V       0x0400
 /** @} */
 
+/** \defgroup prog_method_flags     Flash chip programming algorithm flags
+    @{
+*/
+#define F_FLASH_UNKNOWN_PM        0x0000
+#define F_FLASH_DATAPOLLING_PM    0x0001
+#define F_FLASH_REGPOLLING_PM     0x0002
+/** @} */
+
+
 /**
  * \brief Flash chip manufacturer info
  */
@@ -92,6 +101,7 @@ typedef struct bflash_dev {
 	uint16 page_size;		/* Bytes  */
 	uint16 sec_count;
 	uint32 *sectors;
+	uint16 prog_mode;
 } bflash_dev_t;
 
 /**
