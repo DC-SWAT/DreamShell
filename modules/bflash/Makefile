@@ -1,6 +1,6 @@
 #
 # bflash module for DreamShell
-# Copyright (C) 2013-2014 SWAT
+# Copyright (C) 2013-2016 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -10,7 +10,7 @@ DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
-VER_MINOR = 5
+VER_MINOR = 6
 VER_MICRO = 0
 
 all: rm-elf

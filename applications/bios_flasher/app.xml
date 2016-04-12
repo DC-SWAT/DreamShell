@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app extensions=".bios .bin .rom .img" icon="images/icon_small.png" name="Bios Flasher" version="2.0.2">
+<app extensions=".bios .bin .rom .img" icon="images/icon_small.png" name="Bios Flasher" version="2.0.4">
 	<resources>
 		<module src="../../modules/bflash.klf" />
 		<module src="modules/app_bios_flasher.klf" />

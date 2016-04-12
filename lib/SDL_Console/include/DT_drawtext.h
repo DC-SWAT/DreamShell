@@ -23,10 +23,6 @@
 #ifndef Drawtext_h
 #define Drawtext_h
 
-#ifdef HAVE_CONFIG_H
-  #include <config.h>
-#endif
-
 
 #define TRANS_FONT 1
 
@@ -41,8 +37,7 @@ extern "C" {
 		int			CharHeight;
 		int			FontNumber;
 		struct BitFont_td	*NextFont;
-	}
-	BitFont;
+	} BitFont;
 
 
 	void	DT_DrawText(const char *string, SDL_Surface *surface, int FontType, int x, int y );

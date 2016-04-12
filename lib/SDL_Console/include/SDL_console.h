@@ -23,10 +23,6 @@
 #ifndef _CONSOLE_H_
 #define _CONSOLE_H_
 
-#ifdef HAVE_CONFIG_H
-  #include <config.h>
-#endif
-
 
 #include "SDL_events.h"
 #include "SDL_video.h"
