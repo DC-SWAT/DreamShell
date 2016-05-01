@@ -13,7 +13,7 @@ extern "C" {
 
 static SDL_Rect ConvertRect(const GUI_Rect &r)
 {
-	SDL_Rect sdl_r = { r.x, r.y, r.w, r.h };
+	SDL_Rect sdl_r = { (Sint16) r.x, (Sint16) r.y, (Uint16) r.w, (Uint16) r.h };
 	return sdl_r;
 }
 
