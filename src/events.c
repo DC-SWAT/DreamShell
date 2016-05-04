@@ -151,6 +151,7 @@ void ProcessVideoEventsRender() {
 	Event_t *e;
 	Item_t *i;
 
+	mutex_lock(&event_mutex);
 	SLIST_FOREACH(i, events, list) {
 
 		e = (Event_t *) i->data;

@@ -16,7 +16,7 @@ FMTS = -DLOAD_BMP=1 -DLOAD_PNG=1 -DLOAD_TGA=1 -DLOAD_PNM=1 -DLOAD_GIF=1 \
 KOS_CFLAGS += $(FMT_INCS) $(FMTS) $(KOS_CSTD) -I./ -I../../include/SDL
 #KOS_CFLAGS += -DDEBUG_IMGLIB=1
 
-TARGET = libSDL_image_1.2.12.a
+TARGET = ../libSDL_image_1.2.12.a
 
 OBJS = \
 	IMG.o			\

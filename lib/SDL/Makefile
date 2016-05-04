@@ -6,9 +6,9 @@ KOS_CFLAGS += -Isrc/video -DNO_SIGNAL_H -DENABLE_DC
 
 ifdef GL
 KOS_CFLAGS += -DHAVE_KGL
-TARGET = libSDL_gl_1213.a
+TARGET = ../libSDL_gl_1213.a
 else
-TARGET = libSDL_1.2.13.a
+TARGET = ../libSDL_1.2.13.a
 endif
 
 OBJS = \

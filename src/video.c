@@ -345,40 +345,23 @@ int VideoMustLock() {
 void LockVideo() { 
 	
 //	if(!video_inited) return;
-	
-	//if(mutex_is_locked(&video_mutex)) thd_pass();
 
-	//if(video_mutex) {
-
-		// int locked = mutex_trylock(&video_mutex);
-		// //ds_printf("Locked: %d, cnt=%d\n", locked, video_mutex.count);
-
-		// if(locked == -1 && irq_inside_int()) {
-		// 	errno = EAGAIN;
-		// 	//ds_printf("Locked: %d, irq_inside_int %d\n", locked, errno);
-		// 	return;
-		// } else if(locked == -1) {
 #ifdef DEBUG_VIDEO
-		printf("%s\n", __func__);
+	printf("%s\n", __func__);
 #endif
-//			mutex_lock(&video_mutex);
-			mutex_lock_timed(&video_mutex, 60000);
-		// }
-	//}
+	mutex_lock(&video_mutex);
+//	mutex_lock_timed(&video_mutex, 60000);
 }
 
 
 void UnlockVideo() {
-	
+
 //	if(!video_inited) return;
 
-	//if(video_mutex)
 #ifdef DEBUG_VIDEO
 	printf("%s\n", __func__);
 #endif
-		mutex_unlock(&video_mutex);
-		//ds_printf("UnLocked: cnt=%d\n", video_mutex.count);
-
+	mutex_unlock(&video_mutex);
 }
 
 
@@ -551,33 +534,6 @@ static inline void plx_vert_ifpm3(int flags, float x, float y, float z, uint32 c
 	plx_vert_ifp(flags, x, y, z, color, u, v);
 	//printf("%f %f %f\n",x,y,z);
 }
-
-/*
-void drawwave(int theta) {
-	uint32 color = 0xffa0a0a0;
-	int i, divs = 320;
-	float x, y, t;
-	plx_dr_state_t dr;
-
-	plx_dr_init(&dr);
-
-	// Convert to radians for sin/cos
-	t = theta * 2*M_PI / 360.0f;
-
-	for (i=0; i<=divs; i++) {
-		x = i*640.0f/divs;
-
-		// These are more or less magic numbers I played with until
-		// it looked neat.
-		y = 240.0f + fsin(t + i*M_PI/64.0f)*30.0f*fsin(t*4);
-		y += fcos(t + i*M_PI/36.0f)*40.0f*fcos(t*6);
-		y += fcos(t + i*M_PI/30.0f)*24.0f*fcos(t*8);
-
-		plx_vert_ind(&dr, PLX_VERT, x, y, 0.0001f, color);
-		plx_vert_ind(&dr, i == divs ? PLX_VERT_EOS : PLX_VERT, x, native_height, 0.0001f, color);
-	}
-}
-*/
 
 
 void SDL_DS_Blit_Textured() {
@@ -760,10 +716,10 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 		gui = GUI_RealScreenCreate("screen", DScreen);
 		GUI_SetScreen(gui);
 	}
-	
+*/
 	ConsoleInformation *console = GetConsole();
 	
-	if(console != NULL) {
+	if(console != NULL && (console->ConsoleSurface->w != w || console->ConsoleSurface->h != h)) {
 		SDL_Rect rect;
 		rect.w = w;
 		rect.h = h;
@@ -771,8 +727,7 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 		rect.y = 0;
 		CON_Resize(console, rect);
 	}
-*/
-	
+
 	//pvr_poly_cxt_txr(&sdl_pvr_cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED, sdl_dc_wtex, sdl_dc_htex, sdl_dc_memtex, PVR_FILTER_NEAREST);
 	//pvr_poly_compile(&sdl_pvr_hdr, &sdl_pvr_cxt);
 	
@@ -1113,5 +1068,3 @@ void HideLogo() {
 		InitVideoThread();
 	}
 }
-
-

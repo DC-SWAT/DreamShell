@@ -154,11 +154,7 @@ int SaveSettings() {
 	int pkg_size;
 	file_t fd;
 	
-	if(FileExists(settings_file)) {
-		fs_unlink(settings_file);
-	}
-	
-	fd = fs_open(settings_file, O_CREAT | O_WRONLY);
+	fd = fs_open(settings_file, O_CREAT | O_TRUNC | O_WRONLY);
 
 	if(fd == FILEHND_INVALID) {
 		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, settings_file);
@@ -184,6 +180,12 @@ int SaveSettings() {
 	pkg.data = (void *)&current_set;
 
 	vmu_pkg_build(&pkg, &pkg_out, &pkg_size);
+	
+	if(!pkg_out || pkg_size <= 0) {
+		dbglog(DBG_DEBUG, "%s: vmu_pkg_build failed\n", __func__);
+		return 0;
+	}
+
 	fs_write(fd, pkg_out, pkg_size);
 	fs_close(fd);
 	free(pkg_out);

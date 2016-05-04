@@ -80,7 +80,6 @@
       <File Name="src/drivers/enc28j60.c"/>
       <File Name="src/drivers/spi.c"/>
       <File Name="src/drivers/sd.c"/>
-      <File Name="src/drivers/g1_ide.c"/>
       <File Name="src/drivers/g2_ide.c"/>
       <File Name="src/drivers/asic.c"/>
       <File Name="src/drivers/rtc.c"/>

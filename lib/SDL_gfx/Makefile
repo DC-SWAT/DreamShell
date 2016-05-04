@@ -3,7 +3,7 @@
 # http://www.dc-swat.ru
 # 
 
-TARGET = libSDL_gfx_2.0.25.a
+TARGET = ../libSDL_gfx_2.0.25.a
 
 SRCS =	\
 	SDL_framerate.c \
