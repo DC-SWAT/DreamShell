@@ -37,6 +37,7 @@ static struct {
 	App_t *app;
 	Settings_t *settings;
 	GUI_Widget *pages;
+	GUI_Widget *sysdate[6];
 	
 } self;
 
@@ -93,6 +94,11 @@ void SettingsApp_Init(App_t *app) {
 		self.app = app;
 		self.settings = GetSettings();
 		self.pages = APP_GET_WIDGET("pages");
+		self.sysdate[0] = APP_GET_WIDGET("year");
+		self.sysdate[1] = APP_GET_WIDGET("month");
+		self.sysdate[2] = APP_GET_WIDGET("day");
+		self.sysdate[3] = APP_GET_WIDGET("hours");
+		self.sysdate[4] = APP_GET_WIDGET("minute");
 		
 		SetupVideoSettings();
 		SetupBootSettings();
@@ -386,5 +392,82 @@ static void SetupBootSettings() {
 			GUI_ObjectDecRef((GUI_Object *) b);
 		}
 	}
+}
+
+void SettingsApp_TimeChange(GUI_Widget *widget)
+{
+	time_t t;
+    struct tm tm;
+	
+	if(strcmp(GUI_ObjectGetName(widget),"get-time") == 0)
+	{
+		char buf[5];
+		t = (((g2_read_32(0xa0710000) & 0xffff) << 16) | (g2_read_32(0xa0710004) & 0xffff))-631152000;
+		localtime_r(&t, &tm);
+		
+		sprintf(buf,"%04d",tm.tm_year + 1900);
+		GUI_TextEntrySetText(self.sysdate[0], buf);
+		sprintf(buf,"%02d",tm.tm_mon + 1);
+		GUI_TextEntrySetText(self.sysdate[1], buf);
+		sprintf(buf,"%02d",tm.tm_mday);
+		GUI_TextEntrySetText(self.sysdate[2], buf);
+		sprintf(buf,"%02d",tm.tm_hour);
+		GUI_TextEntrySetText(self.sysdate[3], buf);
+		sprintf(buf,"%02d",tm.tm_min);
+		GUI_TextEntrySetText(self.sysdate[4], buf);
+	}
+	else if(strcmp(GUI_ObjectGetName(widget),"set-time") == 0)
+	{
+		tm.tm_sec = 0;
+		tm.tm_min = atoi(GUI_TextEntryGetText(self.sysdate[4]));
+		tm.tm_hour = atoi(GUI_TextEntryGetText(self.sysdate[3]));
+		tm.tm_mday = atoi(GUI_TextEntryGetText(self.sysdate[2]));
+		tm.tm_mon = atoi(GUI_TextEntryGetText(self.sysdate[1])) - 1;
+		tm.tm_year = atoi(GUI_TextEntryGetText(self.sysdate[0])) - 1900;
+		
+		t = mktime(&tm);
+		t += 631152000;
+
+		g2_write_32(0xa0710008, 1);
+		g2_write_32(0xa0710004, t & 0xffff);
+		g2_write_32(0xa0710000, (t >> 16) & 0xffff);
+
+	}
+}
+
+void SettingsApp_Time(GUI_Widget *widget)
+{
+	char wname[32];
+	sprintf(wname,"%s",GUI_ObjectGetName(widget));
+	int entryvar = atoi(GUI_TextEntryGetText(widget));
+	
+	switch (wname[strlen(wname)-1])
+	{	
+		case 'r':
+			if(entryvar < 1998) GUI_TextEntrySetText(widget, "1998");
+			if(entryvar > 2086) GUI_TextEntrySetText(widget, "2086");
+			break;
+		case 'h':
+			if(entryvar < 1) GUI_TextEntrySetText(widget, "01");
+			if(entryvar > 12) GUI_TextEntrySetText(widget, "12");
+			break;
+		case 'y':
+			if(entryvar < 1) GUI_TextEntrySetText(widget, "01");
+			if(entryvar > 31) GUI_TextEntrySetText(widget, "31");
+			break;
+		case 's':
+			if(entryvar < 1) GUI_TextEntrySetText(widget, "00");
+			if(entryvar > 23) GUI_TextEntrySetText(widget, "23");
+			break;
+		case 'e':
+			if(entryvar < 1) GUI_TextEntrySetText(widget, "00");
+			if(entryvar > 59) GUI_TextEntrySetText(widget, "59");
+			break;
+	}
+}
+
+void SettingsApp_Time_Clr(GUI_Widget *widget)
+{
+	GUI_TextEntrySetText(widget, "");
 }
 

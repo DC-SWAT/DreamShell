@@ -10,3 +10,7 @@ SettingsApp_ToggleScreenFilter
 SettingsApp_ToggleApp
 SettingsApp_ToggleRoot
 SettingsApp_ToggleStartup
+# Date
+SettingsApp_Time
+SettingsApp_Time_Clr
+SettingsApp_TimeChange
