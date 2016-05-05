@@ -1335,6 +1335,10 @@ asic_sys_reset
 asic_ide_enable
 asic_ide_disable
 #
+rtc_gettime
+rtc_settime
+rtc_gettimeutc
+rtc_settimeutc
 rtc_gettimeofday
 rtc_settimeofday
 #
