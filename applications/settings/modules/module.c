@@ -5,6 +5,7 @@
 */
 
 #include "ds.h"
+#include <drivers/rtc.h>
 
 DEFAULT_MODULE_EXPORTS(app_settings);
 
@@ -396,42 +397,35 @@ static void SetupBootSettings() {
 
 void SettingsApp_TimeChange(GUI_Widget *widget)
 {
-	time_t t;
-    struct tm tm;
+    struct tm time;
 	
 	if(strcmp(GUI_ObjectGetName(widget),"get-time") == 0)
 	{
 		char buf[5];
-		t = (((g2_read_32(0xa0710000) & 0xffff) << 16) | (g2_read_32(0xa0710004) & 0xffff))-631152000;
-		localtime_r(&t, &tm);
 		
-		sprintf(buf,"%04d",tm.tm_year + 1900);
+		rtc_gettimeutc(&time);
+		
+		sprintf(buf,"%04d",time.tm_year + 1900);
 		GUI_TextEntrySetText(self.sysdate[0], buf);
-		sprintf(buf,"%02d",tm.tm_mon + 1);
+		sprintf(buf,"%02d",time.tm_mon + 1);
 		GUI_TextEntrySetText(self.sysdate[1], buf);
-		sprintf(buf,"%02d",tm.tm_mday);
+		sprintf(buf,"%02d",time.tm_mday);
 		GUI_TextEntrySetText(self.sysdate[2], buf);
-		sprintf(buf,"%02d",tm.tm_hour);
+		sprintf(buf,"%02d",time.tm_hour);
 		GUI_TextEntrySetText(self.sysdate[3], buf);
-		sprintf(buf,"%02d",tm.tm_min);
+		sprintf(buf,"%02d",time.tm_min);
 		GUI_TextEntrySetText(self.sysdate[4], buf);
 	}
 	else if(strcmp(GUI_ObjectGetName(widget),"set-time") == 0)
 	{
-		tm.tm_sec = 0;
-		tm.tm_min = atoi(GUI_TextEntryGetText(self.sysdate[4]));
-		tm.tm_hour = atoi(GUI_TextEntryGetText(self.sysdate[3]));
-		tm.tm_mday = atoi(GUI_TextEntryGetText(self.sysdate[2]));
-		tm.tm_mon = atoi(GUI_TextEntryGetText(self.sysdate[1])) - 1;
-		tm.tm_year = atoi(GUI_TextEntryGetText(self.sysdate[0])) - 1900;
+		time.tm_sec = 0;
+		time.tm_min = atoi(GUI_TextEntryGetText(self.sysdate[4]));
+		time.tm_hour = atoi(GUI_TextEntryGetText(self.sysdate[3]));
+		time.tm_mday = atoi(GUI_TextEntryGetText(self.sysdate[2]));
+		time.tm_mon = atoi(GUI_TextEntryGetText(self.sysdate[1])) - 1;
+		time.tm_year = atoi(GUI_TextEntryGetText(self.sysdate[0])) - 1900;
 		
-		t = mktime(&tm);
-		t += 631152000;
-
-		g2_write_32(0xa0710008, 1);
-		g2_write_32(0xa0710004, t & 0xffff);
-		g2_write_32(0xa0710000, (t >> 16) & 0xffff);
-
+		rtc_settimeutc(&time);
 	}
 }
 
