@@ -860,6 +860,7 @@ GUI_ObjectKeep
 #
 #Surface API
 GUI_SurfaceSaveBMP
+GUI_SurfaceSavePNG
 GUI_SurfaceLoad
 GUI_SurfaceLoad_Rect
 GUI_SurfaceCreate

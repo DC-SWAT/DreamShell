@@ -53,6 +53,7 @@ OBJS = \
 	src/video/SDL_blit_A.o \
 	src/video/SDL_blit_N.o \
 	src/video/SDL_bmp.o \
+	src/video/SDL_png.o \
 	src/video/SDL_cursor.o \
 	src/video/SDL_gamma.o \
 	src/video/SDL_pixels.o \

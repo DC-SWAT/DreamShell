@@ -285,6 +285,11 @@ void GUI_Surface::SaveBMP(const char *filename)
 	SDL_SaveBMP(surface, filename);
 }
 
+void GUI_Surface::SavePNG(const char *filename)
+{
+	SDL_SavePNG(surface, filename);
+}
+
 extern "C"
 {
 
@@ -292,6 +297,11 @@ extern "C"
 void GUI_SurfaceSaveBMP(GUI_Surface *src, const char *filename)
 {
 	src->SaveBMP(filename);
+}
+
+void GUI_SurfaceSavePNG(GUI_Surface *src, const char *filename)
+{
+	src->SavePNG(filename);
 }
 
 GUI_Surface *GUI_SurfaceLoad(const char *fn)

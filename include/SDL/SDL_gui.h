@@ -161,6 +161,7 @@ class GUI_Surface : public GUI_Object
 		void Flip(void);
 		SDL_Surface *GetSurface(void);
 		void SaveBMP(const char *filename);
+		void SavePNG(const char *filename);
 };
 
 class GUI_Font : public GUI_Object
@@ -950,6 +951,7 @@ int GUI_ObjectKeep(GUI_Object **target, GUI_Object *source);
 
 /* Surface API */
 void GUI_SurfaceSaveBMP(GUI_Surface *src, const char *filename);
+void GUI_SurfaceSavePNG(GUI_Surface *src, const char *filename);
 GUI_Surface *GUI_SurfaceLoad(const char *fn);
 GUI_Surface *GUI_SurfaceLoad_Rect(const char *fn, SDL_Rect *selection);
 GUI_Surface *GUI_SurfaceCreate(const char *aname, int f, int w, int h, int d, int rm, int gm, int bm, int am);
