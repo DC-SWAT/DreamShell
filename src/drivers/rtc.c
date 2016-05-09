@@ -67,7 +67,7 @@ int rtc_settime(time_t time) {
 }
 
 
-int rtc_gettimeutc(const struct tm *time) {
+int rtc_gettimeutc(struct tm *time) {
 
 	time_t timestamp = rtc_gettime();
 
@@ -75,7 +75,7 @@ int rtc_gettimeutc(const struct tm *time) {
 		return -1;
 	}
 
-	localtime_r(&timestamp, (struct tm*)time);
+	localtime_r(&timestamp, time);
 	return 0;
 }
 

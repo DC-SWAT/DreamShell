@@ -40,7 +40,7 @@ int rtc_settime(time_t time);
  * On SUCCESS 0
  * On ERROR -1
  */
-int rtc_gettimeutc(const struct tm *time);
+int rtc_gettimeutc(struct tm *time);
 
 /**
  * Adjusts the given time value from struct tm to the AICA Epoch and sets the RTC seconds counter.

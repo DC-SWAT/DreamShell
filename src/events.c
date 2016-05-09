@@ -151,7 +151,8 @@ void ProcessVideoEventsRender() {
 	Event_t *e;
 	Item_t *i;
 
-	mutex_lock(&event_mutex);
+//	FIXME: blocks forever
+//	mutex_lock(&event_mutex);
 	SLIST_FOREACH(i, events, list) {
 
 		e = (Event_t *) i->data;
@@ -160,7 +161,7 @@ void ProcessVideoEventsRender() {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
 	}
-	mutex_unlock(&event_mutex);
+//	mutex_unlock(&event_mutex);
 }
 
 void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {

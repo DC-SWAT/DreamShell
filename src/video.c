@@ -649,9 +649,7 @@ static void *VideoThread(void *ptr) {
 
 
 void SetScreenMode(int w, int h, float x, float y, float z) {
-	
-	//LockVideo();
-	
+
 	Settings_t *settings = GetSettings();
 	
 	if(settings->video.tex_filter < PVR_FILTER_NEAREST) {
@@ -665,11 +663,7 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 
 #if 0	
 	if(h > 512) {
-		/*
-		if(!(DScreen = SDL_SetVideoMode(1024, 1024, 16, SDL_SWSURFACE|SDL_DOUBLEBUF))) {
-			 ds_printf("DS_ERROR: Change video mode failed: %s\n", SDL_GetError());
-		}*/
-		
+
 		sdl_dc_htex = 1024;
 		DScreen->h = h;
 		SDL_DS_FreeScreenTexture(0);
@@ -706,17 +700,8 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 	sdl_dc_z = z;
 	
 	SDL_DS_SetWindow(w, h);
-	
-/*
-	GUI_Screen *gui = GUI_GetScreen();
-	
-	if(gui != NULL) {
-		GUI_ScreenSetContents(gui, NULL);
-		GUI_ObjectDecRef((GUI_Object *)gui);
-		gui = GUI_RealScreenCreate("screen", DScreen);
-		GUI_SetScreen(gui);
-	}
-*/
+
+	/* FIXME: resize console
 	ConsoleInformation *console = GetConsole();
 	
 	if(console != NULL && (console->ConsoleSurface->w != w || console->ConsoleSurface->h != h)) {
@@ -727,11 +712,7 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 		rect.y = 0;
 		CON_Resize(console, rect);
 	}
-
-	//pvr_poly_cxt_txr(&sdl_pvr_cxt, PVR_LIST_OP_POLY, PVR_TXRFMT_RGB565|PVR_TXRFMT_NONTWIDDLED, sdl_dc_wtex, sdl_dc_htex, sdl_dc_memtex, PVR_FILTER_NEAREST);
-	//pvr_poly_compile(&sdl_pvr_hdr, &sdl_pvr_cxt);
-	
-	//UnlockVideo();
+	*/
 }
 
 
