@@ -671,9 +671,10 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 						
 						int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
 						int sp = (scroll_height / 2) + ((event->jaxis.value / (256 / 100)) * (scroll_height / 100));
+						int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
 						
-						if(sp > scroll_height) 
-							sp = scroll_height;
+						if(sp > cont_height) 
+							sp = cont_height;
 							
 						if(sp < 0) 
 							sp = 0;
