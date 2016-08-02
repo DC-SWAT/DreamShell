@@ -103,6 +103,7 @@
 			<input offhighlight="iUncheckHigh" offnormal="iUncheck" onhighlight="iCheckHigh" onnormal="iCheck" type="checkbox" />
 			<input focus="input-text-focus" highlight="input-text-normal" normal="input-text-normal" type="text" />
 		</theme>
+		
 	</resources>
 	<body height="480" onload="export:isoLoader_Init()" onunload="export:isoLoader_Shutdown()" width="100%" name="main_body">
 		<panel background="head_bg" height="104">
@@ -126,7 +127,7 @@
 
 		
 		<cardstack height="380" name="pages" y="100">
-
+			
 			
 			<panel background="games_bg" height="380">
 			
@@ -249,12 +250,9 @@
 				</panel>
 
 				
-				<panel height="370" width="55%" x="56%" y="10">
-					<input height="25" name="fastboot-checkbox" type="checkbox" width="47%" y="16" checked="true">
-						<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="87%" x="17%" />
-					</input>
+				<panel height="370" width="55%" x="56%" y="10" name="container-panel" >
 
-					<panel height="55" name="boot-panel" width="100%" y="43">
+					<panel height="55" name="boot-panel" width="100%" y="16">
 						<label align="left" color="#000000" font="arial" height="25" text="Boot mode:" />
 						<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="22%">
 							<label align="left" color="#000000" font="arial" height="20" text="Direct" width="81%" x="32%" />
@@ -266,9 +264,22 @@
 							<label align="left" color="#000000" font="arial" height="20" text="IP.BIN cut" width="113%" x="31%" />
 						</input>
 					</panel>
+					
+					<panel height="25" width="33%" >
+						<input name="fastboot-checkbox" type="checkbox" checked="true">
+							<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="100%" x="23%" />
+						</input>
+					</panel>
+					
+					<panel height="25" width="67%" >
+						<input name="mem-patch-toggle" onclick="export:isoLoader_toggleMemPatch()" type="checkbox" checked="false">
+							<label align="left" color="#000000" font="arial" height="20" text="Patch memory" width="100%" x="10%" />
+						</input>
+					</panel>
 
 					<panel height="225" name="memory-panel" width="80%">
-						<label align="left" color="#000000" font="arial" height="25" text="Loader memory:" width="100%" />
+						<label y="0" align="left" color="#000000" font="arial" height="25" text="Loader memory:" width="100%" />
+						
 						<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 							<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
 						</input>
@@ -316,8 +327,37 @@
 						</input>
 						<input font="arial" fontcolor="#000000" height="18" name="memory-text" onblur="export:isoLoader_toggleMemory()" size="30" type="text" value="e00000" width="59%" />
 					</panel>
+					
+					<panel y="105" height="225" name="patch-panel" width="80%">
+						
+						<label align="left" color="#000000" font="arial" height="20" text="Patch memory:" />
+						
+						<panel height="25">
+							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch address 1" />
+						</panel>
+						<input font="arial" fontcolor="#000000" height="18" name="pa1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
+						
+						<panel height="25">
+							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 1" />
+						</panel>
+						<input font="arial" fontcolor="#000000" height="18" name="pv1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+						
+						<panel height="25">
+							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch address 2" />
+						</panel>
+						<input font="arial" fontcolor="#000000" height="18" name="pa2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
+						
+						<panel height="25">
+							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 2" />
+						</panel>
+						<input font="arial" fontcolor="#000000" height="18" name="pv2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+					</panel>
+					
 				</panel>
+			
+			
 			</panel>
+		
 		</cardstack>
 	</body>
 </app>
