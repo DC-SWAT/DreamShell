@@ -161,7 +161,9 @@ void ProcessVideoEventsRender() {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
 	}
-//	mutex_unlock(&event_mutex);
+
+//	FIXME: Seems some mutex doesn't unlocked, need keep it...
+	mutex_unlock(&event_mutex);
 }
 
 void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
