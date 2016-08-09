@@ -343,7 +343,19 @@ Cmd_t *GetCmdByName(const char *name) {
 	return NULL;
 }
 
-
+static char *fix_spaces(char *str)
+{
+	if(!str) return NULL;
+	
+	int i, len = (int) strlen(str);
+	
+	for(i=0; i<len; i++)
+	{
+		if(str[i] == '\\') str[i] = ' ';
+	}
+	
+	return str;
+}
 
 /* Execute a single command input by the user or a script */
 int dsystem(const char *buff) {
@@ -356,7 +368,7 @@ int dsystem(const char *buff) {
 
 	/* seperate the string into args */
 	for (argc = 0; argc < 16;) {
-		if ((argv[argc] = strsep(&str, " \t\n")) == NULL)
+		if ((argv[argc] = fix_spaces(strsep(&str, " \t\n"))) == NULL)
 			break;
 		if (*argv[argc] != '\0')
 			argc++;
