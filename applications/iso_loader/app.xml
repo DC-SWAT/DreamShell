@@ -10,7 +10,8 @@
 		<font name="arial" size="15" src="../../fonts/ttf/arial_lite.ttf" type="ttf" />
 
 		<image name="logo" src="images/logo.png" />
-
+		<image name="stdico" src="../../gui/icons/normal/games.png" />
+		
 		<surface height="104" name="head_bg" width="100%">
 			<fill color="#B2E2F9" height="366" />
 			<fill color="#31799F" height="114" width="100%" y="366" />
@@ -76,6 +77,9 @@
 		<image name="iGamesNorm" src="images/btn_games_norm.png" />
 		<image name="iGamesHigh" src="images/btn_games_over.png" />
 		<image name="iGamesDis" src="images/btn_games_disabled.png" />
+		<image name="iLinkNorm" src="images/btn_lnk_norm.png" />
+		<image name="iLinkHigh" src="images/btn_lnk_over.png" />
+		<image name="iLinkDis" src="images/btn_lnk_disabled.png" />
 
 		<image name="iRunNorm" src="images/btn_launch_norm.png" />
 		<image name="iRunHigh" src="images/btn_launch_over.png" />
@@ -118,10 +122,11 @@
 				<input disabled="btn_pc_disabled" height="23" highlight="btn_pc_over" inactive="true" name="btn_pc" normal="btn_pc_norm" pressed="btn_pc_over" type="button" width="26%" />
 			</panel>
 			
-			<panel height="50" width="23%" x="74%" y="20">
-				<input disabled="iGamesDis" height="36" highlight="iGamesHigh" inactive="true" name="games" normal="iGamesNorm" onclick="export:isoLoader_ShowGames()" pressed="iGamesNorm" type="button" width="24%" x="3%" y="1" />
-				<input disabled="iSetDis" height="36" highlight="iSetHigh" name="settings" normal="iSetNorm" onclick="export:isoLoader_ShowSettings()" pressed="iSetNorm" type="button" width="24%" x="40%" />
-				<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="24%" x="73%" />
+			<panel height="50" width="33%" x="66%" y="20">
+				<input disabled="iLinkDis" height="36" highlight="iLinkHigh" inactive="true" name="link" normal="iLinkNorm" onclick="export:isoLoader_ShowLink()" pressed="iLinkNorm" type="button" width="18%" x="2%"/>
+				<input disabled="iGamesDis" height="36" highlight="iGamesHigh" inactive="true" name="games" normal="iGamesNorm" onclick="export:isoLoader_ShowGames()" pressed="iGamesNorm" type="button" width="18%" x="29%" y="1" />
+				<input disabled="iSetDis" height="36" highlight="iSetHigh" name="settings" normal="iSetNorm" onclick="export:isoLoader_ShowSettings()" pressed="iSetNorm" type="button" width="18%" x="55%" />
+				<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="18%" x="82%" />
 			</panel>
 		</panel>
 
@@ -357,6 +362,63 @@
 			
 			
 			</panel>
+			
+			
+			<panel background="settings_bg" height="380">
+				
+				<panel height="350" width="50%" y="10">
+					<panel width="256" height="256" x="45" y="30">
+						<image src="stdico" name="link-icon"/>
+					</panel>
+				</panel>
+				
+				<panel height="370" width="55%" x="56%" y="10">
+					<panel height="340" width="80%" y="30">
+						
+						<label y="0" align="left" color="#000000" font="arial" height="25" text="Icon size:" width="100%" />
+						
+						<input height="22" name="48x48" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%" checked="true">
+							<label align="left" color="#000000" font="arial" height="20" text="48x48 (Default)" x="9%" />
+						</input>
+						<input height="22" name="64x64" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="64x64" x="9%" />
+						</input>
+						<input height="22" name="96x96" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="96x96" x="9%" />
+						</input>
+						<input height="22" name="128x128" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="128x128" x="9%" />
+						</input>
+						<input height="22" name="256x256" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="256x256" x="9%" />
+						</input>
+						<panel width="100%" height="4"/>
+						<input height="22" name="rotate-link" onclick="export:isoLoader_Rotate_Image()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="Rotate image 180" x="9%" />
+						</input>
+						
+						<panel width="100%" height="4"/>
+						
+						<panel width="100%" height="25">
+							<label align="left" color="#000000" font="arial" height="25" text="Icon name:" width="100%" />
+						</panel>
+						
+						<input font="arial" fontcolor="#000000" height="18" name="link-text" onblur="export:isoLoader_toggleLinkName()" size="30" type="text" value="game name" width="59%" />
+						
+						<panel width="100%" height="6"/>
+						
+						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="Don't show name on desktop" x="9%" />
+						</input>
+						
+						<input name="save-link-btn" disabled="iGamesDis" height="36" width="250" highlight="iGamesHigh" normal="iGamesNorm" onclick="export:isoLoader_MakeShortcut()" pressed="iGamesNorm" type="button" >
+							<label align="left" color="#000000" font="m23" height="36" name="save-link-txt" text="create shortcut" x="45" />
+						</input>
+					</panel>
+				</panel>
+				
+			</panel>
+			
 		
 		</cardstack>
 	</body>

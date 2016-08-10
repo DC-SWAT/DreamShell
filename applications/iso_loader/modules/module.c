@@ -43,6 +43,7 @@ static struct {
 	GUI_Surface *item_focus;
 	GUI_Surface *item_selected;
 
+	GUI_Widget *link;
 	GUI_Widget *settings;
 	GUI_Widget *games;
 	GUI_Widget *btn_run;
@@ -77,6 +78,20 @@ static struct {
 	GUI_Widget *memory_panel;
 	GUI_Widget *patch_panel;
 	
+	GUI_Widget *icosizebtn[5];
+	GUI_Widget *wlnkico;
+	GUI_Surface *slnkico;
+	GUI_Surface *stdico;
+	
+	GUI_Widget *linktext;
+	GUI_Widget  *btn_hidetext;
+	GUI_Widget  *save_link_btn;
+	GUI_Widget  *save_link_txt;
+	GUI_Widget  *rotate180;
+	
+	GUI_Widget  *wpa[2];
+	GUI_Widget  *wpv[2];
+	
 	uint32_t pa[2];
 	uint32_t pv[2];
 
@@ -88,6 +103,8 @@ int isoLoader_SavePreset();
 void isoLoader_ResizeUI();
 void isoLoader_toggleMemory(GUI_Widget *widget);
 void isoLoader_toggleBootMode(GUI_Widget *widget);
+void isoLoader_toggleIconSize(GUI_Widget *widget);
+static void setico(int size, int force);
 
 #define CONF_END 0
 #define CONF_INT 1
@@ -153,12 +170,8 @@ static int conf_parse(isoldr_conf *cfg, const char *filename)
 			optname = strtok(buf, "=");
 		else
 			optname = strtok('\0', "=");
-			
-		ds_printf("DS_DEBUG: optname %s\n", optname);
 		
 		value = strtok('\0', "\n");
-		
-		ds_printf("DS_DEBUG: value %s\n", value);
 		
 		if(optname == NULL || value == NULL) break;
 		
@@ -189,6 +202,11 @@ static int canUseTrueAsyncDMA(void) {
 			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
+void isoLoader_Rotate_Image(GUI_Widget *widget) 
+{
+	(void)widget;
+	setico(GUI_SurfaceGetWidth(self.slnkico), 1);
+}
 
 void isoLoader_ShowSettings(GUI_Widget *widget) {
 	
@@ -199,11 +217,14 @@ void isoLoader_ShowSettings(GUI_Widget *widget) {
 	
 	GUI_CardStackShowIndex(self.pages,  1);
 	GUI_WidgetSetEnabled(self.games,    1);
+	
+	if(self.filename[0]) 
+		GUI_WidgetSetEnabled(self.link, 1);
+	
 	GUI_WidgetSetEnabled(self.settings, 0);
 	
 	ScreenFadeIn();
 }
-
 
 void isoLoader_ShowGames(GUI_Widget *widget) {
 	
@@ -215,8 +236,50 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 	GUI_CardStackShowIndex(self.pages,  0);
 	GUI_WidgetSetEnabled(self.settings, 1);
 	GUI_WidgetSetEnabled(self.games,    0);
+	GUI_WidgetSetEnabled(self.link,     0);
 	
 	isoLoader_SavePreset();
+	ScreenFadeIn();
+}
+
+static void chk_save_file(void)
+{
+	char save_file[MAX_FN_LEN];
+	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/scripts/%s.dsc", getenv("PATH"), GUI_TextEntryGetText(self.linktext));
+	
+	if(FileExists(save_file))
+	{
+		GUI_LabelSetText(self.save_link_txt, "rewrite shortcut");
+	}
+	else
+	{
+		GUI_LabelSetText(self.save_link_txt, "create shortcut");
+	}
+	
+	GUI_WidgetMarkChanged(self.save_link_btn);
+}
+
+void isoLoader_ShowLink(GUI_Widget *widget) {
+	
+	(void)widget;
+	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
+	
+	ScreenFadeOut();
+	thd_sleep(200);
+	
+	GUI_CardStackShowIndex(self.pages,  2);
+	GUI_WidgetSetEnabled(self.settings, 1);
+	GUI_WidgetSetEnabled(self.link,     0);
+	
+	GUI_WidgetSetState(self.rotate180, 0);
+	GUI_WidgetSetState(self.btn_hidetext, 0);
+	isoLoader_toggleIconSize(self.icosizebtn[0]);
+	setico(48, 1);
+	ipbin->title[sizeof(ipbin->title)-1] = '\0';
+	GUI_TextEntrySetText(self.linktext, trim_spaces2(ipbin->title));
+	
+	chk_save_file();
+	
 	ScreenFadeIn();
 }
 
@@ -401,23 +464,266 @@ check_default:
 	}
 }
 
-/* TODO
-static void isoLoader_MakeShortcut(const char *filename) {
+static char *fix_spaces(char *str)
+{
+	if(!str) return NULL;
 	
-	file_t fd;
-	SDL_Surface *surface = NULL;
+	int i, len = (int) strlen(str);
 	
-	fd = fs_open(filename, O_CREATE | O_TRUNC | O_WRONLY);
-	
-	if(fd != FILEHND_INVALID) {
-		SDL_Surface *s = zoomSurface(surface, 0.2f, 0.2f, 1);
-		SDL_SaveBMP_RW(s, SDL_RWFromFd(fd), 1); // Need alpha...
-		SDL_FreeSurface(s);
-		fs_close(fd);
+	for(i=0; i<len; i++)
+	{
+		if(str[i] == ' ') str[i] = '\\';
 	}
-	// TODO make script
+	
+	return str;
 }
-*/
+
+void isoLoader_MakeShortcut(GUI_Widget *widget) 
+{
+	(void)widget;
+	FILE *fd;
+	char *env = getenv("PATH");
+	char save_file[MAX_FN_LEN];
+	char cmd[512];
+	const char *tmpval;
+	int i;
+	
+	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/scripts/%s.dsc", env, GUI_TextEntryGetText(self.linktext));
+	
+	fd = fopen(save_file, "w");
+	
+	if(!fd)
+	{
+		ds_printf("DS_ERROR: Can't save shortcut\n");
+		return;
+	}
+	
+	fprintf(fd, "module -o -f %s/modules/minilzo.klf\n", env);
+	fprintf(fd, "module -o -f %s/modules/isofs.klf\n", env);
+	fprintf(fd, "module -o -f %s/modules/isoldr.klf\n", env);
+	
+	strcpy(cmd, "isoldr");
+	
+	strcat(cmd, GUI_WidgetGetState(self.fastboot) ? " -s 1":" -i" );
+	
+	if(GUI_WidgetGetState(self.dma)) 
+	{
+		strcat(cmd, " -a");
+	}
+	
+	if(GUI_WidgetGetState(self.cdda)) 
+	{
+		strcat(cmd, " -c");
+	}
+	
+	for(i = 0; i < sizeof(self.async) >> 2; i++) 
+	{
+		if(GUI_WidgetGetState(self.async[i])) 
+		{
+			if(i)
+			{
+				char async[8];
+				snprintf(async, sizeof(async), " -e %d", i == 9 ? 16:i);
+				strcat(cmd, async);
+			}
+			break;
+		}
+	}
+	
+	tmpval = GUI_TextEntryGetText(self.device);
+	
+	if(strncasecmp(tmpval, "auto", 4)) 
+	{
+		strcat(cmd, " -d ");
+		strcat(cmd, tmpval);
+	}
+	
+	for(i = 0; self.memory_chk[i]; i++) 
+	{
+		if(GUI_WidgetGetState(self.memory_chk[i])) 
+		{
+			tmpval = GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
+			
+			if(strlen(tmpval) < 8) 
+			{
+				char text[24];
+				memset(text, 0, sizeof(text));
+				strncpy(text, tmpval, 10);
+				tmpval = strncat(text, GUI_TextEntryGetText(self.memory_text), 10);
+			}
+			strcat(cmd, " -x ");
+			strcat(cmd, tmpval);
+			break;
+		}
+	}
+	
+	char fpath[MAX_FN_LEN];
+	sprintf(fpath, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+	
+	strcat(cmd, " -f ");
+	strcat(cmd, fix_spaces(fpath));
+	
+	
+	for(i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) 
+	{
+		if(i && GUI_WidgetGetState(self.boot_mode_chk[i])) 
+		{
+			char boot_mode[3];
+			sprintf(boot_mode, "%d", i);
+			strcat(cmd, " -j ");
+			strcat(cmd, boot_mode);
+			break;
+		}
+	}
+	
+	for(i = 0; i < sizeof(self.os_chk) >> 2; i++) 
+	{
+		if(i && GUI_WidgetGetState(self.os_chk[i])) 
+		{
+			char os[3];
+			sprintf(os, "%d", i);
+			strcat(cmd, " -o ");
+			strcat(cmd, os);
+			break;
+		}
+	}
+	
+	i = 1;
+	char patchstr[18];
+	
+	if(self.pa[0] & 0xffffff)
+	{
+		sprintf(patchstr," --pa%d 0x%s", i, GUI_TextEntryGetText(self.wpa[i-1]));
+		strcat(cmd, patchstr);
+		sprintf(patchstr," --pv%d 0x%s", i, GUI_TextEntryGetText(self.wpv[i-1]));
+		strcat(cmd, patchstr);
+		i++;
+	}
+	
+	if(self.pa[1] & 0xffffff)
+	{
+		sprintf(patchstr," --pa%d 0x%s", i, GUI_TextEntryGetText(self.wpa[i-1]));
+		strcat(cmd, patchstr);
+		sprintf(patchstr," --pv%d 0x%s", i, GUI_TextEntryGetText(self.wpa[i-1]));
+		strcat(cmd, patchstr);
+	}
+	
+	fprintf(fd, "%s\n", cmd);
+	
+	fprintf(fd, "console --show\n");
+	
+	fclose(fd);
+	
+	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/images/%s.png", env, GUI_TextEntryGetText(self.linktext));
+	GUI_SurfaceSavePNG(self.slnkico, save_file);
+	
+	isoLoader_ShowSettings(NULL);
+}
+
+static void setico(int size, int force)
+{
+	GUI_Surface *image, *s;
+	int cursize = GUI_SurfaceGetWidth(self.slnkico);
+	
+	if(size == cursize && !force) 
+	{
+		return;
+	}
+	
+	if(self.current_cover == self.default_cover)
+		s = self.stdico;
+	else
+		s = self.current_cover;
+	
+	SDL_Surface *sdls = GUI_SurfaceGet(s);
+	
+	if(GUI_WidgetGetState(self.rotate180))
+		sdls = rotateSurface90Degrees(sdls, 2);
+	
+	double scaling = (double) size / (double) GUI_SurfaceGetWidth(s);
+	
+	image = GUI_SurfaceFrom("ico-surface", zoomSurface(sdls, scaling, scaling, 1));
+	
+	GUI_PictureSetImage(self.wlnkico, image);
+	if(self.slnkico) free(self.slnkico);
+	self.slnkico = image;
+	GUI_WidgetMarkChanged(self.pages);
+}
+
+void isoLoader_toggleIconSize(GUI_Widget *widget)
+{
+	int i, size = 48;
+	
+	for(i=0; i<5; i++)
+	{
+		GUI_WidgetSetState(self.icosizebtn[i], 0);
+	}
+	
+	GUI_WidgetSetState(widget, 1);
+	
+	char *name = (char *) GUI_ObjectGetName((GUI_Object *)widget);
+	
+	switch(name[1])
+	{
+		case '2':
+			size = 128;
+			break;
+		case '4':
+			size = 64;
+			break;
+		case '5':
+			size = 256;
+			break;
+		case '6':
+			size = 96;
+			break;
+		case '8':
+		default:
+			size = 48;
+	}
+	
+	setico(size, 0);
+}
+
+void isoLoader_toggleLinkName(GUI_Widget *widget)
+{
+	char curtext[33];
+	
+	snprintf(curtext, 33, "%s", GUI_TextEntryGetText(widget));
+	
+	int state = !(curtext[0] != '_');
+	
+	if(strlen(curtext) < 3)
+	{
+		ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
+		ipbin->title[sizeof(ipbin->title)-1] = '\0';
+		GUI_TextEntrySetText(self.linktext, trim_spaces2(ipbin->title));
+	}
+	
+	GUI_WidgetSetState(self.btn_hidetext, state);
+	
+	chk_save_file();	
+}
+
+void isoLoader_toggleHideName(GUI_Widget *widget)
+{
+	int state = GUI_WidgetGetState(widget);
+	char *curtext = (char *)GUI_TextEntryGetText(self.linktext);
+	char text[MAX_FN_LEN];
+	
+	if(state && curtext[0] != '_')
+	{
+		snprintf(text, MAX_FN_LEN, "_%s", curtext);
+		GUI_TextEntrySetText(self.linktext, text);
+	}
+	else if(!state && curtext[0] == '_')
+	{
+		snprintf(text, MAX_FN_LEN, "%s", &curtext[1]);
+		GUI_TextEntrySetText(self.linktext, text);
+	}
+	
+	chk_save_file();
+}
 
 void isoLoader_toggleMemPatch(GUI_Widget *widget) 
 {
@@ -891,7 +1197,7 @@ void isoLoader_DefaultPreset() {
 		isoLoader_toggleAsync(self.async[8]);
 	}
 
-	if(self.used_preset == true) {
+//	if(self.used_preset == true) {
 		
 		GUI_WidgetSetState(self.preset, 0);
 		
@@ -931,7 +1237,7 @@ void isoLoader_DefaultPreset() {
 		}
 		
 		self.used_preset = false;
-	}
+//	}
 }
 
 int isoLoader_SavePreset() {
@@ -1110,20 +1416,20 @@ int isoLoader_LoadPreset() {
 		isoLoader_toggleMemory(self.memory_chk[12]);
 	}
 	
-	if(strlen(patchtxt[0]) == 8 && strlen(patchtxt[1]) == 8)
+	if(patchtxt[0][1] != '0' && strlen(patchtxt[0]) == 8 && strlen(patchtxt[1]) == 8)
 	{
 		self.pa[0] = strtoul(patchtxt[0], NULL, 16);
 		self.pv[0] = strtoul(patchtxt[1], NULL, 16);
-		GUI_TextEntrySetText(APP_GET_WIDGET("pa1-text"), patchtxt[0]);
-		GUI_TextEntrySetText(APP_GET_WIDGET("pv1-text"), patchtxt[1]);
+		GUI_TextEntrySetText(self.wpa[0], patchtxt[0]);
+		GUI_TextEntrySetText(self.wpv[0], patchtxt[1]);
 	}
 	
-	if(strlen(patchtxt[2]) == 8 && strlen(patchtxt[3]) == 8)
+	if(patchtxt[2][1] != '0' && strlen(patchtxt[2]) == 8 && strlen(patchtxt[3]) == 8)
 	{
 		self.pa[1] = strtoul(patchtxt[2], NULL, 16);
 		self.pv[1] = strtoul(patchtxt[3], NULL, 16);
-		GUI_TextEntrySetText(APP_GET_WIDGET("pa2-text"), patchtxt[2]);
-		GUI_TextEntrySetText(APP_GET_WIDGET("pv2-text"), patchtxt[3]);
+		GUI_TextEntrySetText(self.wpa[1], patchtxt[2]);
+		GUI_TextEntrySetText(self.wpv[1], patchtxt[3]);
 	}
 	
 	self.used_preset = true;
@@ -1183,6 +1489,7 @@ void isoLoader_Init(App_t *app) {
 		self.pages    = APP_GET_WIDGET("pages");
 		self.settings = APP_GET_WIDGET("settings");
 		self.games    = APP_GET_WIDGET("games");
+		self.link    = APP_GET_WIDGET("link");
 		
 		self.filebrowser  = APP_GET_WIDGET("file_browser");
 		self.cover_widget = APP_GET_WIDGET("cover_image");
@@ -1198,8 +1505,27 @@ void isoLoader_Init(App_t *app) {
 		self.mem_patch_toggle = APP_GET_WIDGET("mem-patch-toggle");
 		self.memory_panel	  = APP_GET_WIDGET("memory-panel");
 		self.patch_panel	  = APP_GET_WIDGET("patch-panel");
+		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
+		self.wpa[1]	          = APP_GET_WIDGET("pa2-text");
+		self.wpv[0]	          = APP_GET_WIDGET("pv1-text");
+		self.wpv[1]	          = APP_GET_WIDGET("pv2-text");
 		
 		isoLoader_toggleMemPatch(self.mem_patch_toggle);
+		
+		self.icosizebtn[0]	  = APP_GET_WIDGET("48x48");
+		self.icosizebtn[1]	  = APP_GET_WIDGET("64x64");
+		self.icosizebtn[2]	  = APP_GET_WIDGET("96x96");
+		self.icosizebtn[3]	  = APP_GET_WIDGET("128x128");
+		self.icosizebtn[4]	  = APP_GET_WIDGET("256x256");
+		self.rotate180	      = APP_GET_WIDGET("rotate-link");
+		self.linktext	      = APP_GET_WIDGET("link-text");
+		self.btn_hidetext     = APP_GET_WIDGET("hide-name");
+		self.save_link_btn    = APP_GET_WIDGET("save-link-btn");
+		self.save_link_txt    = APP_GET_WIDGET("save-link-txt");
+		self.wlnkico	      = APP_GET_WIDGET("link-icon");
+		self.stdico           = APP_GET_SURFACE("stdico");
+		
+		self.slnkico = GUI_SurfaceFrom("ico-surface", GUI_SurfaceGet(self.stdico));
 		
 		w = APP_GET_WIDGET("async-panel");
 		self.async[0] = GUI_ContainerGetChild(w, 1);

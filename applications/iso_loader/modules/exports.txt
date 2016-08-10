@@ -18,3 +18,9 @@ isoLoader_SavePreset
 isoLoader_LoadPreset
 isoLoader_toggleMemPatch
 isoLoader_togglePatchAddr
+isoLoader_ShowLink
+isoLoader_toggleIconSize
+isoLoader_toggleHideName
+isoLoader_MakeShortcut
+isoLoader_toggleLinkName
+isoLoader_Rotate_Image
