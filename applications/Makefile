@@ -6,7 +6,7 @@
 
 _SUBDIRS = main filemanager region_changer iso_loader \
 			bios_flasher gd_ripper speedtest vmu_manager \
-			settings
+			settings gdplay
 
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))

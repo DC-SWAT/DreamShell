@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="GD Play" version="0.1.0" icon="images/icon.png">
+	<resources>
+		<module src="modules/app_gdplay.klf" />
+		
+		<font name="Digitalt" size="18" src="../../fonts/ttf/Digitalt.ttf" type="ttf" />
+		
+		<surface name="txtbg" height="25" width="256" alpha="180">
+			<fill color="#000000" />
+			<fill color="#FFFFFF" height="23" y="1"/>
+		</surface>
+		
+		<surface name="bg" height="100%" width="100%">
+			<blit surface="images/background.jpg" />
+		</surface>
+		
+		<image name="cdrom" src="images/std_cdrom.png" />
+		<image name="gdrom" src="images/std_gdrom.png" />
+		<image name="cdaudio" src="images/std_audiocd.png" />
+		<image name="milcd" src="images/std_milcd.png" />
+		<image name="nodisc" src="images/std_nodisc.png" />
+		<image name="cdshadow" src="images/cdrom-shadow.png" />
+		
+		<image name="play" src="images/play.png" />
+		
+		<image name="iExitNorm" src="images/exit.png" />
+		<image name="iExitHigh" src="images/exith.png" />
+		
+	</resources>
+	
+	<body width="100%" height="480" background="bg" onload="export:gdplay_Init()" onunload="export:gdplay_Exit()">
+		
+		<panel height="100%" width="40%" x="2%" y="10">
+			
+			<panel height="256" width="256" background="cdshadow" >
+				<input 	type="button" 
+						onclick="export:gdplay_play()" 
+						width="256" height="256" name="play-btn" />
+			</panel>
+			
+			
+		</panel>
+		
+		<panel height="100%" width="53%" x="45%" y="10">
+			
+			<panel height="25" width="30%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" x="10" y="5" text="REGION" />
+			</panel>
+			
+			<panel height="25" width="70%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="region-txt"/>
+			</panel>
+			
+			<panel height="25" width="30%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" x="10" y="5" text="VGA" />
+			</panel>
+			
+			<panel height="25" width="70%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="vga-txt"/>
+			</panel>
+			
+			<panel height="25" width="30%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" x="10" y="5" text="DATE" />
+			</panel>
+			
+			<panel height="25" width="70%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="date-txt"/>
+			</panel>
+			
+			<panel height="25" width="30%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" x="10" y="5" text="DISC NUM" />
+			</panel>
+			
+			<panel height="25"  width="70%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="disk-num-txt"/>
+			</panel>
+			
+			<panel height="25" width="30%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" x="10" y="5" text="VERSION" />
+			</panel>
+			
+			<panel height="25" width="70%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="version-txt"/>
+			</panel>
+			
+			<panel height="25" width="30%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" x="10" y="5" text="TITLE" />
+			</panel>
+			
+			<panel height="25" width="70%" background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="title1-txt"/>
+			</panel>
+			
+			<panel height="25" width="30%"/>
+			<panel height="25" width="70%"  background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="title2-txt"/>
+			</panel>
+			<panel height="25" width="30%"/>
+			<panel height="25" width="70%"  background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="title3-txt"/>
+			</panel>
+			<panel height="25" width="30%"/>
+			<panel height="25" width="70%"  background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="title4-txt"/>
+			</panel>
+			<panel height="25" width="30%"/>
+			<panel height="25" width="70%"  background="txtbg">
+				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="title5-txt"/>
+			</panel>
+			
+			<input disabled="iExitNorm" highlight="iExitHigh" normal="iExitNorm" onclick="console:app -o -n Main" pressed="iExitNorm" type="button" width="96%"  height="48" x="70%" y="410"/>
+			
+		</panel>
+	
+	</body>
+</app>

@@ -1,0 +1,3 @@
+gdplay_Init
+gdplay_Exit
+gdplay_play
