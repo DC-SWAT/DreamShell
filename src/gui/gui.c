@@ -77,10 +77,73 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
     }
 }
 
+static uint64_t last_saved_time = 0;
+static uint8_t last_joy_state = 0;
+
+static void screenshot_callback(void) 
+{
+	char path[MAX_FN_LEN];
+	char *home_dir = getenv("PATH");
+	int i;
+	uint64 cur_time = timer_ms_gettime64();
+	
+	if(!strncmp(home_dir, "/cd", 3) || ((cur_time - last_saved_time) < 5000)) 
+	{
+		return;
+	}
+	
+	last_saved_time = cur_time;
+	
+	for(i=0;;i++)
+	{
+		snprintf(path, MAX_FN_LEN, "%s/screenshot/ds_scr_%03d.png", home_dir, i);
+		if(!FileExists(path)) break;
+		if(i == 999)  return;
+	}
+	
+	char *arg[3] = {"screenshot", path, "png"};
+	
+	LockGUI();
+	CallCmd(3, arg);
+	UnlockGUI();
+}
+
 static void GUI_EventHandler(void *ds_event, void *param, int action) {
 		
 	SDL_Event *event = (SDL_Event *) param;
-	GUI_ScreenEvent(GUI_GetScreen(), event, 0, 0); 
+	GUI_ScreenEvent(GUI_GetScreen(), event, 0, 0);
+	
+	
+	switch(event->type) 
+	{
+		case SDL_JOYBUTTONDOWN:
+			switch(event->jbutton.button) 
+			{
+				case 6: // X button
+					last_joy_state |= 1;
+					break;
+			}
+			break;
+		case SDL_JOYAXISMOTION:
+			switch(event->jaxis.axis)
+			{
+				case 2: // rtrig
+					if(event->jaxis.value)
+						last_joy_state |= 2;
+					break;
+				case 3: //ltrig
+					if(event->jaxis.value)
+						last_joy_state |= 4;
+					break;
+			}
+			break;
+		default:
+			last_joy_state = 0;
+			break;
+	}
+	
+	if(last_joy_state == 7)
+		screenshot_callback();
 /*
 	switch(event->type) {
 		case SDL_KEYDOWN:

@@ -1237,12 +1237,21 @@ static int builtin_screenshot(int argc, char *argv[]) {
 			return CMD_ERROR;
 		}
 
-	} else {
-
+	} else if(argc > 2 && !strncasecmp(argv[2], "bmp", 3)) {
+		
 		if(SDL_SaveBMP(GetScreen(), argv[1]) < 0) {
 			ds_printf("DS_ERROR: Can't save BMP screenshot to %s\n", argv[1]);
 			return CMD_ERROR;
 		}
+	} else {
+
+		SDL_Surface *tmp = SDL_PNGFormatAlpha(GetScreen());
+		if(SDL_SavePNG(tmp, argv[1]) < 0) {
+			SDL_FreeSurface(tmp);
+			ds_printf("DS_ERROR: Can't save PNG screenshot to %s\n", argv[1]);
+			return CMD_ERROR;
+		}
+		SDL_FreeSurface(tmp);
 	}
 
 	ds_printf("DS_OK: Screenshot saved to %s\n", argv[1]);

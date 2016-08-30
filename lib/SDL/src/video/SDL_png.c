@@ -7,6 +7,7 @@
 #include <png/png.h>
 #include "SDL_video.h"
 #include "SDL_endian.h"
+#include "SDL_pixels_c.h"
 
 #define SUCCESS 0
 #define ERROR -1
@@ -42,8 +43,8 @@ SDL_Surface *SDL_PNGFormatAlpha(SDL_Surface *src)
 	SDL_Surface *surf;
 	SDL_Rect rect = { 0 };
 
-	/* NO-OP for images < 32bpp and 32bpp images that already have Alpha channel */ 
-	if (src->format->BitsPerPixel <= 24 || src->format->Amask) 
+	/* NO-OP for images not 24bpp and 24bpp images that already have Alpha channel */ 
+	if (src->format->BitsPerPixel == 24 || src->format->Amask) 
 	{
 		src->refcount++;
 		return src;
@@ -53,10 +54,7 @@ SDL_Surface *SDL_PNGFormatAlpha(SDL_Surface *src)
 	rect.w = src->w;
 	rect.h = src->h;
 	
-	surf = SDL_CreateRGBSurface(src->flags, src->w, src->h, 24,
-								src->format->Rmask, 
-								src->format->Gmask, 
-								src->format->Bmask, 0);
+	surf = SDL_CreateRGBSurface(src->flags, src->w, src->h, 24, rmask, gmask, bmask, src->format->Amask);
 								
 	SDL_LowerBlit(src, &rect, surf, &rect);
 

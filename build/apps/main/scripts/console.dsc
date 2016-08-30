@@ -1,0 +1,2 @@
+# Show console
+console --show
