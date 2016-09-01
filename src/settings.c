@@ -8,7 +8,7 @@
 
 #include <ds.h>
 
-static const char settings_file[] = "DS_CORE4.CFG";
+static const char settings_file[] = "/vmu/a1/DS_CORE4.CFG";
 static Settings_t current_set;
 static int loaded = 0;
 
@@ -106,28 +106,8 @@ int LoadSettings() {
 	vmu_pkg_t pkg;
 	size_t size;
 	file_t fd;
-	char settings_file_path[MAX_FN_LEN];
-	char find_folder[5][10] = {"/ide/DS/","/ide/","/sd/DS/","/sd/","/pc/"};
 	
-	snprintf(settings_file_path, MAX_FN_LEN, "/vmu/a1/%s", settings_file);
-	
-	if(!FileExists(settings_file_path))
-	{
-		for(int i=0; i<5; i++)
-		{
-			if(DirExists(find_folder[i]))
-			{
-				snprintf(settings_file_path, MAX_FN_LEN, "%s%s", find_folder[i], settings_file);
-				if(FileExists(settings_file_path))
-					goto check_passed;
-			}
-		}
-		return 0;
-	}
-	
-check_passed:
-	
-	fd = fs_open(settings_file_path, O_RDONLY);
+	fd = fs_open(settings_file, O_RDONLY);
 
 	if(fd == FILEHND_INVALID) 
 		return 0;
@@ -161,7 +141,7 @@ check_passed:
 }
 
 
-int SaveSettings(int dev) {
+int SaveSettings() {
 	
 	if(!loaded) {
 		return 0;
@@ -171,19 +151,11 @@ int SaveSettings(int dev) {
 	vmu_pkg_t pkg;
 	int pkg_size;
 	file_t fd;
-	char settings_file_path[MAX_FN_LEN];
 	
-	if(!dev)
-		snprintf(settings_file_path, MAX_FN_LEN, "/vmu/a1/%s", settings_file);
-	else if(strncasecmp(getenv("PATH"), "/cd", 3))
-		snprintf(settings_file_path, MAX_FN_LEN, "%s/%s", getenv("PATH"), settings_file);
-	else
-		return 0;
-	
-	fd = fs_open(settings_file_path, O_CREAT | O_TRUNC | O_WRONLY);
+	fd = fs_open(settings_file, O_CREAT | O_TRUNC | O_WRONLY);
 
 	if(fd == FILEHND_INVALID) {
-		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, settings_file_path);
+		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, settings_file);
 		return 0;
 	}
 	

@@ -57,6 +57,6 @@ void SetSettings(Settings_t *settings);
 void ResetSettings();
 
 int LoadSettings();
-int SaveSettings(int dev); // 0 for VMU, other for HDD/SD
+int SaveSettings();
 
 #endif /* _DS_SETTINGS_H */
