@@ -382,12 +382,24 @@ static void showCover() {
 	char path[MAX_FN_LEN];
 	char noext[128];
 	ipbin_meta_t *ipbin;
+	char use_cover = 0;
 	
-	strncpy(noext, self.filename, sizeof(noext));
-	snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), strtok(noext, "."));
+	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
+	strcpy(noext, strtok(noext, "."));
+	
+	snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
+	
+	if (FileExists(path))
+		use_cover = 1;
+	else
+	{
+		snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
+		if (FileExists(path))
+			use_cover = 1;
+	}
 
 	/* Check for jpeg cover */
-	if(FileExists(path)) {
+	if(use_cover) {
 		
 		LockVideo();
 		s = GUI_SurfaceLoad(path);
@@ -1163,7 +1175,7 @@ static char *makePresetFilename() {
 	const char *dir = GUI_FileManagerGetPath(self.filebrowser);
 	
 	memset(filename, 0, sizeof(filename));
-	strncpy(dev, dir + 1, 3);
+	strncpy(dev, &dir[1], 3);
 	
 	if(dev[2] == '/') {
 		dev[2] = '\0';
