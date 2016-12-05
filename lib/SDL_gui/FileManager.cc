@@ -273,84 +273,82 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 		}
 	}
 }
-/*
-void GUI_FileManager::ItemEvent(GUI_Object * sender, GUI_CallbackFunction *func) {
-	GUI_EventHandler < GUI_FileManager > *cb;
-	void *data;
-		
-	cb = (GUI_EventHandler < GUI_FileManager > *)sender;
-	data = cb->GetData();
+
+static int alpha_sort(dirent_t *a, dirent_t *b)
+{
+	const char *s1 = a->name, *s2 = b->name;
 	
-	sender->IncRef();
-	func(data);
-	
-	if(func == item_click && use_browse) {
-		ChangeDir(data);
+	while (toupper(*s1) == toupper(*s2))
+	{
+		if (*s1 == 0)
+			return 0;
+		s1++;
+		s2++;
 	}
 	
-	if(sender->GetRef() == 1) {
-		sender->Trash();
-	} else {
-		sender->DecRef();
-	}
+	return toupper(*(unsigned const char *)s1) - toupper(*(unsigned const char *)(s2));
 }
 
-void GUI_FileManager::ItemClickEvent(GUI_Object * sender) {
-	if(item_click) {
-		ItemEvent(sender, item_click);
-	}
-}
-
-void GUI_FileManager::ItemContextClickEvent(GUI_Object * sender) {
-	if(item_context_click) {
-		ItemEvent(sender, item_context_click);
-	}
-}
-
-void GUI_FileManager::ItemMouseoverEvent(GUI_Object * sender) {
-	if(item_mouseover) {
-		ItemEvent(sender, item_mouseover);
-	}
-}
-
-void GUI_FileManager::ItemMouseoutEvent(GUI_Object * sender) {
-	if(item_mouseout) {
-		ItemEvent(sender, item_mouseout);
-	}
-}*/
-
-void GUI_FileManager::Scan() {
-
+void GUI_FileManager::Scan() 
+{
 	file_t f;
 	dirent_t *ent;
+	dirent_t *sorts = (dirent_t *) malloc(sizeof(dirent_t));
+	int n = 0;
 	
 	f = fs_open(cur_path, O_RDONLY | O_DIR);
-//	ds_printf("GUI_FileManager::Scan: Scaning %s\n", cur_path);
 	
-	if(f == FILEHND_INVALID) {
+	if(f == FILEHND_INVALID) 
+	{
 		ds_printf("GUI_FileManager: Can't open dir: %s\n", cur_path);
 		return;
 	}
 	
-//	ds_printf("GUI_FileManager: Remove all\n");
 	panel->RemoveAllWidgets();
 	panel->SetYOffset(0);
 	
-	if(strlen(cur_path) > 1) {
+	if(strlen(cur_path) > 1) 
+	{
 		const char b[] = {0x2E, 0x2E, 0};
 		AddItem(b, -2, 0, O_DIR);
 	}
 	
-	while ((ent = fs_readdir(f)) != NULL) {
-		if(strncasecmp(ent->name, ".", MAX_FN_LEN) && strncasecmp(ent->name, "..", MAX_FN_LEN)) {
-			AddItem(ent->name, ent->size, ent->time, ent->attr);
+	while ((ent = fs_readdir(f)) != NULL) 
+	{
+		if(strncasecmp(ent->name, ".", MAX_FN_LEN) && strncasecmp(ent->name, "..", MAX_FN_LEN) && 
+			strncasecmp(ent->name, "RECYCLER", MAX_FN_LEN) && 
+			strncasecmp(ent->name, "$RECYCLE.BIN", MAX_FN_LEN) && 
+			strncasecmp(ent->name, "System Volume Information", MAX_FN_LEN)) 
+		{
+			if (n)
+				sorts = (dirent_t *) realloc((void *) sorts, (sizeof(dirent_t)*(n+1)));
+			
+			memcpy(&sorts[n], ent, sizeof(dirent_t));
+			n++;
 		}
 	}
 	
+	qsort((void *) sorts, n, sizeof(dirent_t), (int (*)(const void*, const void*)) alpha_sort);
+	
+	for (int i = 0; i < n; i++)
+	{
+		if (sorts[i].attr)
+		{
+			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
+		}
+	}
+	
+	for (int i = 0; i < n; i++)
+	{
+		if (!sorts[i].attr)
+		{
+			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
+		}
+	}
+	
+	free(sorts);
 	fs_close(f);
 	rescan = 0;
-//	UpdateActiveMouseCursor();
-//	MarkChanged();
 }
 
 void GUI_FileManager::ReScan() {
