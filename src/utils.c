@@ -255,8 +255,11 @@ int CopyDirectory(const char *src_path, const char *dest_path, int verbose) {
 		PathDest[strlen(dest_path)] = '/';
 		EndDestPtr += (strlen(dest_path)+1);
 
-		while((e = fs_readdir(fd)) != NULL) {
-
+		while((e = fs_readdir(fd)) != NULL) 
+		{
+			if (!strcmp(e->name, ".") || !strcmp(e->name, ".."))
+				continue;
+			
 			strcpy(EndPtr, e->name);
 			strcpy(EndDestPtr, e->name);
 			
