@@ -26,11 +26,11 @@ arm_target=arm-eabi
 sh_prefix  := /opt/toolchains/dc/$(sh_target)
 arm_prefix := /opt/toolchains/dc/$(arm_target)
 # kos_root: KOS Git root (contains kos/ and kos-ports/)
-kos_root=/usr/local/dc/kos
+kos_root=/opt/toolchains/dc/
 # kos_base: equivalent of KOS_BASE (contains include/ and kernel/)
-kos_base=/usr/local/dc/kos/kos
+kos_base=/opt/toolchains/dc/kos
 binutils_ver=2.25
-gcc_ver=5.2.0
+gcc_ver=7.1.0
 newlib_ver=2.2.0
 gdb_ver=7.6
 insight_ver=6.7.1
@@ -63,7 +63,7 @@ SHELL = /bin/bash
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
   ifneq ($(shell $(CXX) --version | grep clang),)
-    CXX := "$(CXX) -stdlib=libstdc++ -fbracket-depth=1024"
+    CXX := "$(CXX) -stdlib=libstdc++ -fbracket-depth=2048"
   endif
 endif
 
@@ -91,7 +91,7 @@ gcc_patches    := $(wildcard $(patches)/gcc-$(gcc_ver)*.diff)
 newlib_patches := $(wildcard $(patches)/newlib-$(newlib_ver)*.diff)
 kos_patches    := $(wildcard $(patches)/kos-*.diff)
 
-patch_targets=patch-binutils patch-gcc patch-newlib patch-kos
+patch_targets=patch-binutils patch-gcc patch-newlib #patch-kos
 
 patch: $(patch_targets)
 patch-binutils: $(binutils_patches)
