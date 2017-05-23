@@ -91,7 +91,7 @@ gcc_patches    := $(wildcard $(patches)/gcc-$(gcc_ver)*.diff)
 newlib_patches := $(wildcard $(patches)/newlib-$(newlib_ver)*.diff)
 kos_patches    := $(wildcard $(patches)/kos-*.diff)
 
-patch_targets=patch-binutils patch-gcc patch-newlib #patch-kos
+patch_targets=patch-binutils patch-gcc patch-newlib patch-kos
 
 patch: $(patch_targets)
 patch-binutils: $(binutils_patches)
