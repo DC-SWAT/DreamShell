@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C)2009-2016 SWAT
+!   Copyright (C)2009-2017 SWAT
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -22,6 +22,7 @@
 	.globl _lock_gdsys
 	.globl _unlock_gdsys
 	.globl _gdc_lock_state
+	.globl _gdcExitToGame
 .align 2
 	
 _gdc_syscall_save:
@@ -74,26 +75,36 @@ _unlock_gdsys:
 gdcExecServerInternal:
 	mova    gdc_lock, r0
 	tas.b   @r0
-	bt      process_exec_server
+	bt      es_save_regs
 	rts
 	nop
-process_exec_server:
-	mova    saved_regs, r0
-	add     #40, r0
-	sts.l   pr, @-r0
-	sts.l   mach, @-r0
-	sts.l   macl, @-r0
-	mov.l   r14, @-r0
-	mov.l   r13, @-r0
-	mov.l   r12, @-r0
-	mov.l   r11, @-r0
-	mov.l   r10, @-r0
-	mov.l   r9, @-r0
-	mov.l   r8, @-r0
-	mov.l   gdcExecServerExternal, r1
-	jsr     @r1
-	nop
-	mova    saved_regs, r0
+es_save_regs:
+	sts.l   pr, @-r15
+	sts.l   mach, @-r15
+	sts.l   macl, @-r15
+	mov.l   r14, @-r15
+	mov.l   r13, @-r15
+	mov.l   r12, @-r15
+	mov.l   r11, @-r15
+	mov.l   r10, @-r15
+	mov.l   r9, @-r15
+	mov.l   r8, @-r15
+	mova    saved_stack, r0
+	mov.l   r15, @r0
+	mova    saved_regs_k, r0
+	mov.l   @r0, r0
+	mov.l   @r0+, r2
+	mov     r0, r3
+	mov     r2, r0
+	cmp/eq  #0, r0
+	bt/s    es_restore_regs
+	mov     r3, r0
+es_copy_stack_loop:
+	mov.l   @r0+, r3
+	dt      r2
+	mov.l   r3, @-r15
+	bf      es_copy_stack_loop
+es_restore_regs:
 	mov.l   @r0+, r8
 	mov.l   @r0+, r9
 	mov.l   @r0+, r10
@@ -104,17 +115,46 @@ process_exec_server:
 	lds.l   @r0+, macl
 	lds.l   @r0+, mach
 	lds.l   @r0+, pr
-	mova    gdc_lock, r0
-	mov     #0, r2
-	rts
+	mov     r0, r2
+	mova    saved_regs_k, r0
 	mov.l   r2, @r0
-	
+	rts
+	nop
+
 gdcInitSystemInternal:
 	mova    gdc_lock, r0
 	mov     #1, r2
 	mov.l   r2, @r0
-	mova    saved_regs, r0
-	add     #40, r0
+	sts.l   pr, @-r15
+	sts.l   mach, @-r15
+	sts.l   macl, @-r15
+	mov.l   r14, @-r15
+	mov.l   r13, @-r15
+	mov.l   r12, @-r15
+	mov.l   r11, @-r15
+	mov.l   r10, @-r15
+	mov.l   r9, @-r15
+	mov.l   r8, @-r15
+	mova    saved_stack, r0
+	mov.l   r15, @r0
+	mova    saved_regs_end, r0
+	mov     r0, r2
+	mova    saved_regs_k, r0
+	mov.l   r2, @r0
+	mov.l   gdcInitSystemExternal, r1
+	jmp     @r1
+	nop
+
+_gdcExitToGame:
+	mova    saved_stack, r0
+	mov.l   @r0, r2
+	sub     r15, r2
+	shlr2   r2
+	mov     r2, r0
+	cmp/eq  #0, r0
+	mova    saved_regs_k, r0
+	mov.l   @r0, r0
+	mov     r2, r1
 	sts.l   pr, @-r0
 	sts.l   mach, @-r0
 	sts.l   macl, @-r0
@@ -125,20 +165,27 @@ gdcInitSystemInternal:
 	mov.l   r10, @-r0
 	mov.l   r9, @-r0
 	mov.l   r8, @-r0
-	mov.l   gdcInitSystemExternal, r1
-	jsr     @r1
-	nop
-	mova    saved_regs, r0
-	mov.l   @r0+, r8
-	mov.l   @r0+, r9
-	mov.l   @r0+, r10
-	mov.l   @r0+, r11
-	mov.l   @r0+, r12
-	mov.l   @r0+, r13
-	mov.l   @r0+, r14
-	lds.l   @r0+, macl
-	lds.l   @r0+, mach
-	lds.l   @r0+, pr
+	bt      eg_restore_regs
+eg_copy_stack_loop:
+	mov.l   @r15+, r3
+	dt      r2
+	mov.l   r3, @-r0
+	bf      eg_copy_stack_loop
+eg_restore_regs:
+	mov.l   r1, @-r0
+	mov     r0, r2
+	mova    saved_regs_k, r0
+	mov.l   r2, @r0
+	mov.l   @r15+, r8
+	mov.l   @r15+, r9
+	mov.l   @r15+, r10
+	mov.l   @r15+, r11
+	mov.l   @r15+, r12
+	mov.l   @r15+, r13
+	mov.l   @r15+, r14
+	lds.l   @r15+, macl
+	lds.l   @r15+, mach
+	lds.l   @r15+, pr
 	mova    gdc_lock, r0
 	mov     #0, r2
 	rts
@@ -166,8 +213,6 @@ nop_syscall:
 	mov     r6, r0
 
 	.align 4
-gdcExecServerExternal:
-	.long _gdcExecServer
 gdcInitSystemExternal:
 	.long _gdcInitSystem
 _gdc_lock_state:
@@ -187,9 +232,15 @@ gdc_redir_c0_k:
 	.long gdc_redir_c0
 _gdc_redir:
 	.long gdc_redir_bc
+saved_stack:
+	.long 0
+saved_regs_k:
+	.long saved_regs_end
 saved_regs:
-	.long 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	
+	.long 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+saved_regs_end:
+    .long 0
+
 gdc_syscall:
 	.long gdcReqCmd
 gdcReqCmd:

@@ -17,7 +17,7 @@
 int iso_fd = -1;
 static int _iso_fd[3] = {-1, -1, -1};
 
-static uint16 b_seek, a_seek;
+static uint16 b_seek = 0, a_seek = 0;
 uint8 *sector_buffer = NULL;
 int sector_buffer_size = 0;
 
@@ -89,23 +89,23 @@ static void _open_iso() {
 
 
 int InitReader() {
-	
+
 	uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + SECTOR_BUFFER_PAD;
-	
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	loader_end = (loader_end / 32) * 32;
 #endif
 
 	sector_buffer = (uint8 *)loader_end;
 	sector_buffer_size = ISOLDR_MAX_MEM_USAGE - (ISOLDR_PARAMS_SIZE + loader_size + SECTOR_BUFFER_PAD);
-	
+
 	/* If the loader placed at 0x8c004800 or 0x8c000100, need correct the buffer size */
 	if(loader_addr <= 0x8c000100) {
 		sector_buffer_size -= 0x100;
 	} else if(loader_end < 0x8c010000 && (loader_end + sector_buffer_size) > 0x8c00C000) {
 		sector_buffer_size -= ((loader_end + sector_buffer_size) - 0x8c00C000) - SECTOR_BUFFER_PAD;
 	}
-	
+
 	if(fs_init() < 0) {
 		return 0;
 	}
@@ -117,14 +117,14 @@ int InitReader() {
 #endif
 
 	LOGF("Sector buffer at 0x%08lx size %d\n", (uint32)sector_buffer, sector_buffer_size);
-	
+
 	gd_state_t *GDS = get_GDS();
 	memset(GDS, 0, sizeof(gd_state_t));
 	GDS->data_track = IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ? 0x03 : 0x01;
 	GDS->lba = 150;
-	
+
 	_open_iso();
-	
+
 	if(iso_fd < 0) {
 #ifdef LOG
 		printf("Error %d, can't open %s\n", iso_fd, IsoInfo->image_file);
@@ -138,9 +138,9 @@ int InitReader() {
 
 #ifdef HAVE_LZO
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO || IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO) {
-		
+
 		LOGF("Opening CISO...\n");
-		
+
 		if(_open_ciso() < 0) {
 			printf("Error, can't open CISO image\n");
 			return 0;
@@ -167,7 +167,7 @@ int InitReader() {
 			a_seek = 0;
 			break;
 	}
-	
+
 	return 1;
 }
 
@@ -176,11 +176,11 @@ static void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 
 	if(lba < IsoInfo->track_lba[0] && GDS->data_track != 1) {
 
-			int len = strlen(IsoInfo->image_file);
-			IsoInfo->image_file[len - 6] = '0';
-			IsoInfo->image_file[len - 5] = '1';
-			GDS->data_track = 1;
-			_open_iso();
+		int len = strlen(IsoInfo->image_file);
+		IsoInfo->image_file[len - 6] = '0';
+		IsoInfo->image_file[len - 5] = '1';
+		GDS->data_track = 1;
+		_open_iso();
 
 	} else if((IsoInfo->track_lba[0] == IsoInfo->track_lba[1] || lba < IsoInfo->track_lba[1]) && GDS->data_track != 3) {
 
@@ -192,15 +192,15 @@ static void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 
 	} else if(lba >= IsoInfo->track_lba[1] && GDS->data_track <= 3) {
 
-			int len = strlen(IsoInfo->image_file);
-			IsoInfo->image_file[len - 6] = IsoInfo->image_second[5];
-			IsoInfo->image_file[len - 5] = IsoInfo->image_second[6];
+		int len = strlen(IsoInfo->image_file);
+		IsoInfo->image_file[len - 6] = IsoInfo->image_second[5];
+		IsoInfo->image_file[len - 5] = IsoInfo->image_second[6];
 
-			uint8 n = (IsoInfo->image_second[5] - '0') & 0xf;
-			GDS->data_track = n * 10;
-			n = (IsoInfo->image_second[6] - '0');
-			GDS->data_track += n;
-			_open_iso();
+		uint8 n = (IsoInfo->image_second[5] - '0') & 0xf;
+		GDS->data_track = n * 10;
+		n = (IsoInfo->image_second[6] - '0');
+		GDS->data_track += n;
+		_open_iso();
 	}
 
 	DBGFF("%d\n", GDS->data_track);
@@ -208,7 +208,7 @@ static void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 
 
 int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
-	
+
 	DBGFF("%d from %d\n", num, sec);
 
 	int rv;
@@ -219,44 +219,44 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 #ifdef HAVE_LZO
 		case ISOFS_IMAGE_TYPE_CSO:
 		case ISOFS_IMAGE_TYPE_ZSO:
-		
+
 #	if 0//defined(_FS_ASYNC) && defined(DEV_TYPE_SD)
 			if(cb)
 				rv = _read_ciso_sectors_async(buf, sec - IsoInfo->track_lba[0], num, cb);
 			else
 #	endif
 				rv = _read_ciso_sectors(buf, sec - IsoInfo->track_lba[0], num);
-				
+
 			break;
 #endif /* HAVE_LZO */
 		case ISOFS_IMAGE_TYPE_CDI:
-		
+
 			rv = _read_data_sectors(buf, sec - IsoInfo->track_lba[0], num, cb);
 			break;
-			
+
 		case ISOFS_IMAGE_TYPE_GDI:
 		{
-			
+
 			uint32 lba = 0;
-			
+
 			if(sec) {
 
 				switch_gdi_data_track(sec, GDS);
 				lba = sec - ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
-				
+
 				/* Check for data exists */
 				if(GDS->data_track > 3 && lba > IsoInfo->track_lba[1] + (total(iso_fd) / IsoInfo->sector_size)) {
 					LOGFF("ERROR! Track %d LBA %d\n", GDS->data_track, sec);
 					return COMPLETED;
 				}
 			}
-			
+
 			if(GDS->cmd == CMD_DMAREAD_TA || GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM) {
-				
+
 				size_t offset = sec ? (lba * IsoInfo->sector_size) : 0;
 				rv = _read_data_sectors2(buf, offset, num, cb);
 				DBGFF("Stream reading, offset=%d size=%d\n", offset, num);
-				
+
 			} else {
 				rv = _read_data_sectors(buf, lba, num, cb);
 			}
@@ -267,19 +267,19 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 		{
 			size_t offset;
 			size_t len;
-			
+
 			if(!sec) {
 				offset = 0;
 			} else {
 				offset = (sec - IsoInfo->track_lba[0]) * IsoInfo->sector_size;
 			}
-			
+
 			if(GDS->cmd == CMD_DMAREAD_TA || GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM) {
 				len = num;
 			} else {
 				len = num * IsoInfo->sector_size;
 			}
-			
+
 			lseek(iso_fd, offset, SEEK_SET);
 			
 			if(cb != NULL) {
@@ -292,40 +292,40 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 #else
 				rv = FAILED;
 #endif /* _FS_ASYNC */
-				
+
 			} else {
-			
+
 				if(read(iso_fd, buf, len) < 0) {
 					rv = FAILED;
 				} else {
 					rv = COMPLETED;
 				}
 			}
-			
+
 			break;
 		}
 	}
-	
+
 	return rv;
 }
 
 
 int PreReadSectors(int sec, int num) {
-	
+
 //	LOGF("%s: %d from %d\n", __func__, num, sec);
 
 	gd_state_t *GDS = get_GDS();
 	GDS->lba = sec + num;
 	size_t offset, len = num * IsoInfo->sector_size;
 	uint lba = IsoInfo->track_lba[0];
-	
+
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 		switch_gdi_data_track(sec, GDS);
 		lba = ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
 	}
 
 	offset = (sec - lba) * IsoInfo->sector_size;
-	
+
 	if(pre_read(iso_fd, offset, len) < 0) {
 		return FAILED;
 	}
@@ -341,23 +341,23 @@ static int _read_sector_by_sector(uint8 *buff, uint cnt, uint sec_size
 ) {
 
 	while(cnt-- > 0) {
-		
+
 		lseek(iso_fd, b_seek, SEEK_CUR);
-		
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if(!cnt && old_dma) {
 			fs_enable_dma(old_dma);
 		}
 #endif
-		
+
 		if(read(iso_fd, buff, sec_size) < 0) {
 			return FAILED;
 		}
-		
+
 		lseek(iso_fd, a_seek, SEEK_CUR);
 		buff += sec_size;
 	}
-	
+
 	return COMPLETED;
 }
 
@@ -366,16 +366,16 @@ static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f 
 
 	const uint sec_size = 2048;
 	int tmps = sec_size * cnt;
-	
+
 	lseek(iso_fd, IsoInfo->track_offset + (sector * IsoInfo->sector_size), SEEK_SET);
-	
+
 	if(IsoInfo->sector_size > sec_size) {  /* If not optimized GDI or CDI */
 
 		uint8 *tmpb;
 		
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		int old_dma = fs_dma_enabled();
-		
+
 		if(old_dma) {
 			fs_enable_dma(FS_DMA_HIDDEN);
 		}
@@ -386,23 +386,23 @@ static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f 
 #endif
 
 		while(cnt > 2) {
-			
+
 			tmpb = buff;
 			tmps = (tmps / IsoInfo->sector_size);
-			
+
 //			DBGFF("size=%d count=%d buff=%p\n", tmps * IsoInfo->sector_size, tmps, tmpb);
-		
+
 			if(read(iso_fd, tmpb, tmps * IsoInfo->sector_size) < 0) {
 				return FAILED;
 			}
-			
+
 			while(tmps--) {
 				memmove(buff, tmpb + b_seek, sec_size);
 				tmpb += IsoInfo->sector_size;
 				buff += sec_size;
 				cnt--;
 			}
-			
+
 			tmps = sec_size * cnt;
 		}
 
@@ -411,7 +411,7 @@ static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f 
 #else
 		return _read_sector_by_sector(buff, cnt, sec_size);
 #endif
-		
+
 	/* Reading normal data sectors (2048) */
 	} else {
 
@@ -420,19 +420,19 @@ static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f 
 			if(read_async(iso_fd, buff, tmps, cb) < 0) {
 				return FAILED;
 			}
-			
+
 			return PROCESSING;
 #else
 			return FAILED;
 #endif
-			
+
 		} else {
 			if(read(iso_fd, buff, tmps) < 0) {
 				return FAILED;
 			}
 		}
 	}
-	
+
 	return COMPLETED;
 }
 

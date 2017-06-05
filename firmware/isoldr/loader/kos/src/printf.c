@@ -331,6 +331,8 @@ int vsnprintf (char *buf, int size, const char *fmt, va_list args)
             /* STAGE: Uppercase hexidecimal. */
             case 'X' :
                 flags |= N_LARGE;
+                base = 16;
+                break;
             /* STAGE: Lowercase hexidecimal. */
             case 'x' :
                 base = 16;

@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017 SWAT <http://www.dc-swat.ru>
  */
  
 #ifndef _SYSCALLS_H
@@ -23,15 +23,12 @@
 /* GDC syscalls busy response */
 #define BUSY 4
 
-/* Additional command Status responses */
-#define WAITING   4
-
-/* gdcGetCmdStat response codes */
-#define CMD_STAT_FAILED    FAILED
-#define CMD_STAT_IDLE      NO_ACTIVE
-#define CMD_STAT_PROCESS   PROCESSING
-#define CMD_STAT_COMPLETED COMPLETED
-#define CMD_STAT_WAIT      3
+/* Сommand status */
+#define CMD_STAT_FAILED     FAILED
+#define CMD_STAT_IDLE       NO_ACTIVE
+#define CMD_STAT_PROCESSING PROCESSING
+#define CMD_STAT_COMPLETED  COMPLETED
+#define CMD_STAT_STREAMING  3
 
 /* Additional status values */
 #define CD_STATUS_RETRY     8
@@ -72,6 +69,9 @@ typedef struct gd_state {
 	int req_count;
 	int cmd;
 	int status;
+//	int err;
+//	int err2;
+	int dma_status;
 	
 	uint32 requested;
 	uint32 transfered;
@@ -92,12 +92,6 @@ typedef struct gd_state {
 	int drv_stat;
 	int disk_type;
 	disk_format_t gdc;
-	
-//	uint32 dma_status_reg;
-//	
-//#ifdef LOG
-//	uint32 monitored_value;
-//#endif
 
 } gd_state_t;
 
@@ -110,7 +104,7 @@ int lock_gdsys(void);
 int unlock_gdsys(void);
 extern volatile int gdc_lock_state;
 
-void gdcExecServer(void);
+void gdcExitToGame(void);
 
 extern uint8 bios_patch_base[];
 extern void *bios_patch_handler;
