@@ -6,6 +6,7 @@
 
 #include <main.h>
 #include <asic.h>
+#include <ide/ide.h>
 #include <arch/cache.h>
 
 #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
@@ -25,61 +26,14 @@ int g1_dma_irq_enabled() {
 	return _g1_dma_irq_enabled;
 }
 
-#define MAKE_SYSCALL(rs, p1, p2, idx) \
-	int (*syscall)() = (int (*)())(gdc_saved_vector); \
-	rs syscall((p1), (p2), 0, (idx));
-
-/* Reset system functions */
-static void gdc_init_system() {
-	MAKE_SYSCALL(/**/, 0, 0, 3);
-}
-
-/* Submit a command to the system */
-static int gdc_req_cmd(int cmd, void *param) {
-	MAKE_SYSCALL(return, cmd, param, 0);
-}
-
-/* Check status on an executed command */
-static int gdc_get_cmd_stat(int f, void *status) {
-	MAKE_SYSCALL(return, f, status, 1);
-}
-
-/* Execute submitted commands */
-static void gdc_exec_server() {
-	MAKE_SYSCALL(/**/, 0, 0, 2);
-}
-
-/* Check drive status and get disc type */
-static int gdc_get_drv_stat(void *param) {
-	MAKE_SYSCALL(return, param, 0, 4);
-}
-
-/* Set disc access mode */
-static int gdc_change_data_type(void *param) {
-	MAKE_SYSCALL(return, param, 0, 10);
-}
-
-/*  */
-//static void gdc_g1_dma_end(uint32 func, uint32 param) {	MAKE_SYSCALL(/**/, func, param, 5); }
-
-/*  */
-static int gdc_req_dma_trans(int f, int *dmabuf) {
-	MAKE_SYSCALL(return, f, dmabuf, 6);
-}
-
-/*  */
-//static int gdc_check_dma_trans(int f, int *size) { MAKE_SYSCALL(return, f, size, 7); }
-
-/* Abort the current command */
-static void gdc_abort_cmd(int cmd) {
-	MAKE_SYSCALL(/**/, cmd, 0, 8);
-}
-
 static int dma_enabled = 0;
 
 /* Sector buffer */
+#ifdef LOG
+#define cd_sector_buffer sector_buffer
+#else
 static uint cd_sector_buffer[2048/4] __attribute__((aligned(32)));
-
+#endif
 
 void fs_enable_dma(int state) {
 	dma_enabled = state;
@@ -90,7 +44,7 @@ int fs_dma_enabled() {
 }
 
 
-void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
+void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
 #ifdef LOG
 	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
@@ -103,7 +57,7 @@ void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 //	dump_regs(stack);
 
 	/* Processing filesystem */
-//	poll_all(); FIXME
+	poll_all();
 
 	if(!_g1_dma_irq_enabled) {
 		(void)passer;
@@ -135,172 +89,8 @@ int g1_dma_init_irq() {
 }
 
 
-/*
- * GDROM system access
- */
-
-static int exec_cmd(int cmd, void *param) {
-	int status[4];
-	int f, n;
-
-	/* Submit the command to the system */
-	f = gdc_req_cmd(cmd, param);
-
-	/* Wait for the command to complete */
-	do {
-		gdc_exec_server();
-	} while((n = gdc_get_cmd_stat(f, status))==1);
-
-	/* If command completed normally, return 0 */
-	if(n == CMD_STAT_COMPLETED)
-		return 0;
-
-	if(n == CMD_STAT_WAIT)
-		return f;
-
-	/* Detect conditions that have special error codes */
-	else switch(status[0]) {
-		case 2:
-			return FS_ERR_NODISK;
-		case 6:
-			return FS_ERR_DISKCHG;
-		default:
-			return FS_ERR_SYSERR;
-		}
-}
-
-static int init_drive() {
-	int i, r;
-	unsigned int param[4];
-	int cdxa;
-
-	/*
-	 * Retry the init disc command a few times if it fails,
-	 * for example if the disc has been changed
-	 */
-	for(i=0; i<8; i++)
-		if(!(r = exec_cmd(CMD_INIT, NULL)))
-			break;
-
-	/* If it failed all times, give up */
-	if(r)
-		return r;
-
-	/* Check type of disc */
-	gdc_get_drv_stat(param);
-
-
-	/* CD/XA? */
-	cdxa = (param[1] == 32);
-
-	/* Select disc access mode */
-	param[0] = 0;                    /* 0 = set, 1 = get */
-	param[1] = 8192;                 /* ?                */
-	param[2] = (cdxa ? 2048 : 1024); /* mode 1/2         */
-	param[3] = 2048;                 /* sector size      */
-	if(gdc_change_data_type(param)<0) {
-		DBGFF("FS_ERR_SYSERR: %d\n", param[1]);
-		return FS_ERR_SYSERR;
-	}
-
-	/* All done */
-	return 0;
-}
-
-
-static int read_toc(CDROM_TOC *toc, int session) {
-	struct {
-		int session;
-		void *buffer;
-	} param;
-	param.session = session;
-	param.buffer = toc;
-	return exec_cmd(CMD_GETTOC2, &param);
-}
-
-//int req_stat(void *param) {
-//	return exec_cmd(CMD_REQ_STAT, param);
-//}
-
-//static int gdc_req_dma_trans(void *param) { MAKE_SYSCALL(return, param, 0, 6); }
-//static int gdc_check_dma_trans(void *param) { MAKE_SYSCALL(return, param, 0, 7); }
-
-
-static int read_sectors(char *buf, int sec, int num) {
-
-	DBGFF("%s %d from %d to 0x%08lx\n",
-	      (dma_enabled ? "DMA" : "PIO"), num, sec, (uint32)buf);
-
-	/* Buffer aling workaround */
-	if((uint32)buf & (dma_enabled ? 0x1F : 0x01)) {
-		while(num) {
-			read_sectors((char *)&cd_sector_buffer, sec, 1);
-			memcpy(buf, cd_sector_buffer, 2048);
-			buf += 2048;
-			sec++;
-			num--;
-		}
-		return 0;
-	}
-
-	if(dma_enabled && (((uint32_t)buf) & 0xF0000000)) {
-		dcache_inval_range((uint32)buf, num * 2048);
-	}
-
-	struct {
-		int sec, num;
-		void *buffer;
-		int dunno;
-	} param;
-	param.sec = sec;    /* Starting sector number */
-	param.num = num;    /* Number of sectors      */
-	param.buffer = buf; /* Pointer to buffer      */
-	param.dunno = 0;
-
-	return exec_cmd(dma_enabled ? CMD_DMAREAD : CMD_PIOREAD, &param);
-}
-
-static int read_sectors_async(char *buf, int sec, int num) {
-
-	DBGFF("%s %d from %d to 0x%08lx\n",
-	      (dma_enabled ? "DMA" : "PIO"), num, sec, (uint32)buf);
-
-	/* Buffer aling workaround */
-	if((uint32)buf & 0x1F) {
-		dma_enabled = 0;
-	}
-
-	if(dma_enabled && (((uint32_t)buf) & 0xF0000000)) {
-		dcache_inval_range((uint32)buf, num * 2048);
-	}
-
-	struct {
-		int sec, num;
-		void *buffer;
-		int dunno;
-	} param;
-	param.sec = sec;    /* Starting sector number */
-	param.num = num;    /* Number of sectors      */
-	param.buffer = buf; /* Pointer to buffer      */
-	param.dunno = 0;
-
-	return gdc_req_cmd(dma_enabled ? CMD_DMAREAD : CMD_PIOREAD, &param);
-}
-
-static int pre_read_sectors(int sec, int num) {
-
-	DBGFF("%s %d from %d\n", (dma_enabled ? "DMA" : "PIO"), num, sec);
-
-	struct {
-		int sec, num, dunno1, dunno2;
-	} param;
-	param.sec = sec;    /* Starting sector number */
-	param.num = num;    /* Number of sectors      */
-	param.dunno1 = 0;
-	param.dunno2 = 0;
-
-//	return gdc_req_cmd(dma_enabled ? CMD_DMAREAD_STREAM : CMD_PIOREAD_STREAM, &param);
-	return exec_cmd(dma_enabled ? CMD_DMAREAD_STREAM : CMD_PIOREAD_STREAM, &param);
+static int read_sectors(char *buf, int sec, int num, int async) {
+	return cdrom_read_sectors_ex(buf, sec, num, async, dma_enabled, 0);
 }
 
 static char *strchr0(const char *s, int c) {
@@ -343,40 +133,21 @@ static int fncompare(const char *fn1, int fn1len, const char *fn2, int fn2len) {
  * Low file I/O
  */
 
-
-static unsigned int find_datatrack(CDROM_TOC *toc) {
-	/* Find the last track which has a ctrl of 4.
-	   This method should work with multisession discs. */
-
-	int i, first, last;
-	first = TOC_TRACK(toc->first);
-	last = TOC_TRACK(toc->last);
-
-	if(first < 1 || last > 99 || first > last)
-		return 0;
-
-	for(i=last; i>=first; --i) {
-		if(TOC_CTRL(toc->entry[i-1])==4)
-			return TOC_LBA(toc->entry[i-1]);
-	}
-	return 0;
-}
-
 static int find_root(unsigned int *psec, unsigned int *plen) {
 	/* Find location and length of root directory.
 	   Plain ISO9660 only.                         */
 
-	CDROM_TOC toc;
+	CDROM_TOC *toc;
 	int r;
 	unsigned int sec;
 
-	if((r=init_drive())!=0)
+	if((r=cdrom_reinit(2048, 0))!=0)
 		return r;
-	if((r=read_toc(&toc, 0))!=0)
+	if(!(toc = cdrom_get_toc(0, 0)))
 		return r;
-	if(!(sec = find_datatrack(&toc)))
+	if(!(sec = cdrom_locate_data_track(toc)))
 		return FS_ERR_DIRERR;
-	if((r=read_sectors((char *)cd_sector_buffer, sec+16, 1))!=0)
+	if((r=read_sectors((char *)cd_sector_buffer, sec+16, 1, 0))!=0)
 		return r;
 	if(memcmp((char *)cd_sector_buffer, "\001CD001", 6))
 		return FS_ERR_DIRERR;
@@ -402,7 +173,7 @@ static int low_find(unsigned int sec, unsigned int dirlen, int isdir,
 	while(dirlen>0) {
 		unsigned int r, i;
 		unsigned char *rec = (unsigned char *)cd_sector_buffer;
-		if((r=read_sectors((char *)cd_sector_buffer, sec, 1))!=0)
+		if((r=read_sectors((char *)cd_sector_buffer, sec, 1, 0))!=0)
 			return r;
 		for(i=0; i<2048 && i<dirlen && rec[0] != 0; i += rec[0], rec += rec[0]) {
 			//WriteLog("low_find: %s = %s\n", fname, rec+33);
@@ -430,9 +201,12 @@ static struct {
 	unsigned int sec0;  /* First sector                     */
 	unsigned int loc;   /* Current read position (in bytes) */
 	unsigned int len;   /* Length of file (in bytes)        */
-	int gd_chn;
+	int async;
 	fs_callback_f *poll_cb;
 } fh[MAX_OPEN_FILES];
+
+static unsigned int root_sector = 0;
+static unsigned int root_len = 0;
 
 int open(const char *path, int oflag) {
 	int fd, r;
@@ -447,9 +221,19 @@ int open(const char *path, int oflag) {
 		return FS_ERR_NUMFILES;
 
 	/* Find the root directory */
-	if((r=find_root(&sec, &len)))
-		return r;
-
+	if (!root_sector) {
+		if((r=find_root(&sec, &len)))
+			return r;
+		root_sector = sec;
+		root_len = len;
+	} else {
+		sec = root_sector;
+		len = root_len;
+	}
+	
+	int old_dma_enabled = dma_enabled;
+	dma_enabled = 0;
+	
 	/* If the file we want is in a subdirectory, first locate
 	   this subdirectory                                      */
 	while((p = strchr0(path, '/'))) {
@@ -461,25 +245,29 @@ int open(const char *path, int oflag) {
 
 	/* Locate the file in the resulting directory */
 	if(*path) {
-		if((r = low_find(sec, len, oflag&O_DIR, &sec, &len, path,
-		                 strchr0(path, '\0')-path)))
+		if((r = low_find(sec, len, oflag&O_DIR, &sec, &len, path, strchr0(path, '\0')-path))) {
+			dma_enabled = old_dma_enabled;
 			return r;
+		}
 	} else {
 		/* If the path ends with a slash, check that it's really
 		   the dir that is wanted                                */
-		if(!(oflag&O_DIR))
+		if(!(oflag&O_DIR)) {
+			dma_enabled = old_dma_enabled;
 			return FS_ERR_NOFILE;
+		}
 	}
 
 	/* Fill in the file handle and return the fd */
-	//WriteLog("File: %s %d %d\n", (strchr0(path, '\0')-path), sec, len);
+	//LOGF("File: %s %d %d\n", (strchr0(path, '\0')-path), sec, len);
 
 	fh[fd].sec0 = sec;
 	fh[fd].loc = 0;
 	fh[fd].len = len;
-	fh[fd].gd_chn = 0;
+	fh[fd].async = 0;
 	fh[fd].poll_cb = NULL;
 
+	dma_enabled = old_dma_enabled;
 	return fd;
 }
 
@@ -492,7 +280,7 @@ int close(int fd) {
 	/* Zeroing the sector number marks the handle as unused */
 	fh[fd].sec0 = 0;
 
-	if(fh[fd].gd_chn > 0) {
+	if(fh[fd].async > 0) {
 		abort_async(fd);
 	}
 
@@ -517,7 +305,7 @@ int pread(int fd, void *buf, unsigned int nbyte, unsigned int offset) {
 
 	/* Read whole sectors directly into buf if possible */
 	if(nbyte>=2048 && !(offset & 2047))
-		if((r = read_sectors(buf, fh[fd].sec0 + (offset>>11), nbyte>>11)))
+		if((r = read_sectors(buf, fh[fd].sec0 + (offset>>11), nbyte>>11, 0)))
 			return r;
 		else {
 			t = nbyte & ~2047;
@@ -556,7 +344,7 @@ int pread(int fd, void *buf, unsigned int nbyte, unsigned int offset) {
 			t += r;
 	} else {
 		/* Just one sector.  Read it and copy the relevant part. */
-		if((r = read_sectors((char *)cd_sector_buffer, fh[fd].sec0+(offset>>11), 1)))
+		if((r = read_sectors((char *)cd_sector_buffer, fh[fd].sec0+(offset>>11), 1, 0)))
 			return r;
 
 		memcpy(buf, ((char *)cd_sector_buffer)+(offset&2047), nbyte);
@@ -583,55 +371,30 @@ int read(int fd, void *buf, unsigned int nbyte) {
 	}
 }
 
-
 int poll(int fd) {
 
 	if(fd < 0)
 		return FS_ERR_NOFILE;
 
-	if(!fh[fd].poll_cb || fh[fd].gd_chn < 1) {
+	if(!fh[fd].poll_cb || fh[fd].async < 1) {
 		return 0;
 	}
-
-	int status[4];
-	int rs;
-
-	gdc_exec_server();
-	rs = gdc_get_cmd_stat(fh[fd].gd_chn, status);
-
-	DBGFF("stat=%d size=%d err=%d\n", rs, status[2], status[0]);
-
-	if(rs == PROCESSING)
-		return status[2] ? status[2] : 32;
-
-	fh[fd].gd_chn = 0;
-
-	/* If command completed normally, return 0 */
-	if(rs == COMPLETED) {
-		fh[fd].loc += status[2];
-		fh[fd].poll_cb(status[2]);
+	
+	int transfered = g1_dma_transfered();
+	
+	if (g1_dma_in_progress()) {
+		return transfered;
+	} else {
+		fh[fd].loc += transfered;
+		fh[fd].poll_cb(transfered);
 		fh[fd].poll_cb = NULL;
 		return 0;
 	}
-
-	fh[fd].poll_cb(-1);
-	fh[fd].poll_cb = NULL;
-
-	/* Detect conditions that have special error codes */
-	switch(status[0]) {
-		case CD_STATUS_STANDBY:
-			return FS_ERR_NODISK;
-		case CD_STATUS_OPEN:
-			return FS_ERR_DISKCHG;
-		default:
-			return FS_ERR_SYSERR;
-	}
 }
-
 
 void poll_all() {
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
-		if(fh[i].sec0 > 0 && fh[i].gd_chn > 0) {
+		if(fh[i].sec0 > 0 && fh[i].async > 0) {
 			poll(i);
 		}
 	}
@@ -643,10 +406,10 @@ int abort_async(int fd) {
 	if(fd < 0 || fd >= MAX_OPEN_FILES)
 		return FS_ERR_PARAM;
 
-	if(fh[fd].gd_chn > 0) {
-		fh[fd].gd_chn = 0;
+	if(fh[fd].async > 0) {
+		fh[fd].async = 0;
 		fh[fd].poll_cb = NULL;
-		gdc_abort_cmd(dma_enabled ? CMD_DMAREAD : CMD_PIOREAD);
+		g1_dma_abort();
 	}
 
 	return 0;
@@ -669,55 +432,42 @@ int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
 		if(fh[fd].loc + nbyte > fh[fd].len)
 			nbyte = fh[fd].len - fh[fd].loc;
 
-		fh[fd].gd_chn = read_sectors_async(buf, fh[fd].sec0 + (fh[fd].loc >> 11), nbyte >> 11);
-
-
-		DBGFF("chn=%d offset=%d size=%d count=%d\n",
-		      fh[fd].gd_chn, fh[fd].loc, nbyte, nbyte >> 11);
-
-		/* Update current position */
-		if(fh[fd].gd_chn > 0) {
-			fh[fd].poll_cb = cb;
-			return 0;
+		if (read_sectors(buf, fh[fd].sec0 + (fh[fd].loc >> 11), nbyte >> 11, 1) < 0) {
+			fh[fd].async = 0;
+			fh[fd].poll_cb = NULL;
+			return FS_ERR_SYSERR;
 		}
+		
+		fh[fd].async = 1;
+		fh[fd].poll_cb = cb;
 
-		fh[fd].poll_cb = NULL;
-		return FS_ERR_SYSERR;
+		DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
+		return 0;
 	}
 }
 
 // FIXME
-static int pre_read_fd = 0;
-
-int pre_read(int fd, unsigned long offset, unsigned int size) {
-
-	fh[fd].gd_chn = pre_read_sectors(fh[fd].sec0 + (offset >> 11), size >> 11);
-
-	if(fh[fd].gd_chn > 0) {
-		pre_read_fd = fd;
-		return 0;
-	}
-
-	return FS_ERR_SYSERR;
-}
-
-//int pre_read_status(int fd) {
-//	int status[4];
-//	gdc_exec_server();
-//	return gdc_get_cmd_stat(fh[fd].gd_chn, status);
+//static int pre_read_fd = 0;
+//
+//int pre_read(int fd, unsigned long offset, unsigned int size) {
+//
+//	if (pre_read_sectors(fh[fd].sec0 + (offset >> 11), size >> 11, 0) < 0) {
+//		return FS_ERR_SYSERR;
+//	}
+//
+//	fh[fd].async = 1;
+//	pre_read_fd = fd;
+//	return 0;
 //}
 
-int pre_read_xfer_start(uint32_t addr, size_t bytes) {
-	int dmabuf[2];
-	dmabuf[0] = addr;
-	dmabuf[1] = bytes;
-	return gdc_req_dma_trans(fh[pre_read_fd].gd_chn, (int*)&dmabuf);
-}
+//int pre_read_status(int fd) {
+//}
+
+//int pre_read_xfer_start(uint32_t addr, size_t bytes) {
+//}
 
 //int pre_read_xfer_size() {
-//	int size = 0;
-//	gdc_check_dma_trans(fh[pre_read_fd].gd_chn, &size);
-//	return size;
+//	return g1_dma_transfered();
 //}
 
 long int lseek(int fd, long int offset, int whence) {
@@ -771,7 +521,7 @@ int ioctl(int fd, int request, void *data) {
 /* Init function */
 
 int fs_init() {
-	LOGF("Init gdrom system...\n");
-	gdc_init_system();
+	g1_bus_init();
+//	cdrom_reinit(2048, 0);
 	return 0;
 }

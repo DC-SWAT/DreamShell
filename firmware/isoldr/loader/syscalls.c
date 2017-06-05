@@ -1379,9 +1379,6 @@ void disable_syscalls(int all) {
 /* Patch the GDC driver in the BIOS syscalls */
 void gdc_syscall_patch(void) {
 
-#ifdef DEV_TYPE_GD
-	patch_memory(0x8c0010f0, (uint32)gdc_redir);
-#else
 	size_t size = bios_patch_end - bios_patch_base;
 	
 	if((uint32)IsoInfo > (0x8c0010f0 + size)) {
@@ -1398,5 +1395,4 @@ void gdc_syscall_patch(void) {
 	} else {
 		patch_memory(0x8c0010f0, (uint32)gdc_redir);
 	}
-#endif
 }

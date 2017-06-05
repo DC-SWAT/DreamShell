@@ -691,6 +691,9 @@ int CDDA_Init() {
 		
 	} else {
 		cdda->filename = (char *)sector_buffer;
+#if defined(DEV_TYPE_GD) && defined(LOG)
+		cdda->filename += 2048;
+#endif
 		cdda->fd = FILEHND_INVALID;
 	}
 	

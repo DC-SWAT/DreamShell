@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -32,19 +32,16 @@ int main(int argc, char *argv[]) {
 	
 	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
 	loader_addr = (uint32)IsoInfo;
-//	timer_init();
+
+#if defined(DEV_TYPE_GD)
+	timer_init();
+#endif
 
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 	
 	if(loader_addr < 0x8c004000 || (is_custom_bios() && is_no_syscalls())) {
 		emu_all_sc = 1;
-#if defined(DEV_TYPE_GD)
-		printf(DEV_NAME" loader can't be used in this mode!\n");
-//		timer_spin_sleep(3000);
-		return -1;
-#else
 		printf("Emulate all syscalls: enabled\n");
-#endif
 	}
 	
 	enable_syscalls(emu_all_sc);
@@ -79,10 +76,11 @@ int main(int argc, char *argv[]) {
 		IsoInfo->boot_mode
 	);
 
-	LOGF("Loader size: %ld + %d = %ld\n", 
+	LOGF("Loader size: %ld + %d = %ld at %08lx\n", 
 		loader_size, 
 		ISOLDR_PARAMS_SIZE, 
-		loader_size + ISOLDR_PARAMS_SIZE
+		loader_size + ISOLDR_PARAMS_SIZE,
+		loader_addr
 	);
 	
 	printf("Initializing "DEV_NAME"...\n");
@@ -147,11 +145,11 @@ int main(int argc, char *argv[]) {
 		
 		/* Patch G1 DMA regs in binary */
 //		gd_state_t *GDS = get_GDS();
-//		int cnt = patch_memory(0xA05F7418, (uint32)&GDS->dma_status_reg);
+//		int cnt = patch_memory(0xA05F7418, (uint32)&GDS->dma_status);
 //	
 //#ifdef LOG
 //		LOGF("Found DMA status reg %d times\n", cnt);
-//		cnt = patch_memory(0xA05F7414, (uint32)&GDS->monitored_value);
+//		cnt = patch_memory(0xA05F7414, (uint32)&GDS->streamed);
 //		LOGF("Found 0xA05F7414 %d times\n", cnt);
 //#else
 //		(void)cnt;

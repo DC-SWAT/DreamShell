@@ -171,7 +171,7 @@ typedef struct {
 
     \param  size            The size of the sector data.
 */
-void cdrom_set_sector_size(int size);
+//void cdrom_set_sector_size(int size);
 
 /** \brief  Execute a CD-ROM command.
 
@@ -183,7 +183,7 @@ void cdrom_set_sector_size(int size);
 
     \return                 \ref cd_cmd_response
 */
-int cdrom_exec_cmd(int cmd, void *param);
+//int cdrom_exec_cmd(int cmd, void *param);
 
 /** \brief  Get the status of the GD-ROM drive.
 
@@ -194,7 +194,7 @@ int cdrom_exec_cmd(int cmd, void *param);
     \see    cd_status_values
     \see    cd_disc_types
 */
-int cdrom_get_status(int *status, int *disc_type);
+//int cdrom_get_status(int *status, int *disc_type);
 
 /** \brief  Re-initialize the GD-ROM drive.
 
@@ -203,7 +203,7 @@ int cdrom_get_status(int *status, int *disc_type);
 
     \return                 \ref cd_cmd_response
 */
-int cdrom_reinit();
+//int cdrom_reinit();
 
 /** \brief  Read the table of contents from the disc.
 
@@ -213,7 +213,7 @@ int cdrom_reinit();
     \param  session         The session of the disc to read.
     \return                 \ref cd_cmd_response
 */
-int cdrom_read_toc(CDROM_TOC *toc_buffer, int session);
+//int cdrom_read_toc(CDROM_TOC *toc_buffer, int session);
 
 /** \brief  Read one or more sector from a CD-ROM.
 
@@ -227,7 +227,7 @@ int cdrom_read_toc(CDROM_TOC *toc_buffer, int session);
     \param  cnt             The number of sectors to read.
     \return                 \ref cd_cmd_response
 */
-int cdrom_read_sectors(void *buffer, int sector, int cnt);
+//int cdrom_read_sectors(void *buffer, int sector, int cnt);
 
 /** \brief  Locate the sector of the data track.
 
@@ -237,7 +237,7 @@ int cdrom_read_sectors(void *buffer, int sector, int cnt);
     \param  toc             The TOC to search through.
     \return                 The FAD of the track, or 0 if none is found.
 */
-uint32 cdrom_locate_data_track(CDROM_TOC *toc);
+//uint32 cdrom_locate_data_track(CDROM_TOC *toc);
 
 /** \brief  Play CDDA audio tracks or sectors.
 
@@ -249,19 +249,19 @@ uint32 cdrom_locate_data_track(CDROM_TOC *toc);
     \param  mode            The mode to play (see \ref cdda_read_modes).
     \return                 \ref cd_cmd_response
 */
-int cdrom_cdda_play(uint32 start, uint32 end, uint32 loops, int mode);
+//int cdrom_cdda_play(uint32 start, uint32 end, uint32 loops, int mode);
 
 /** \brief  Pause CDDA audio playback.
 
     \return                 \ref cd_cmd_response
 */
-int cdrom_cdda_pause();
+//int cdrom_cdda_pause();
 
 /** \brief  Resume CDDA audio playback after a pause.
 
     \return                 \ref cd_cmd_response
 */
-int cdrom_cdda_resume();
+//int cdrom_cdda_resume();
 
 /** \brief  Spin down the CD.
 
@@ -269,7 +269,7 @@ int cdrom_cdda_resume();
 
     \return                 \ref cd_cmd_response
 */
-int cdrom_spin_down();
+//int cdrom_spin_down();
 
 /** \brief  Initialize the GD-ROM for reading CDs.
 
@@ -279,10 +279,10 @@ int cdrom_spin_down();
     \retval 0               On success.
     \retval -1              If cdrom_init() has already been called.
 */
-int cdrom_init();
+//int cdrom_init();
 
 /** \brief  Shutdown the CD reading system. */
-void cdrom_shutdown();
+//void cdrom_shutdown();
 
 __END_DECLS
 
