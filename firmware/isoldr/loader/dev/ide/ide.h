@@ -1,6 +1,8 @@
 /**
  * Copyright (c) 2017 Megavolt85
  *
+ * Modified for ISO Loader by SWAT <http://www.dc-swat.ru>
+ *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -67,13 +69,13 @@ typedef long long s64;
 #define CD_GDROM    0x80    /**< \brief GD-ROM */
 /** @} */
 
-typedef struct 
-{
-    uint32  entry[99];          /**< \brief TOC space for 99 tracks */
-    uint32  first;              /**< \brief Point A0 information (1st track) */
-    uint32  last;               /**< \brief Point A1 information (last track) */
-    uint32  leadout_sector;     /**< \brief Point A2 information (leadout) */
-} CDROM_TOC;
+//typedef struct 
+//{
+//    uint32  entry[99];          /**< \brief TOC space for 99 tracks */
+//    uint32  first;              /**< \brief Point A0 information (1st track) */
+//    uint32  last;               /**< \brief Point A1 information (last track) */
+//    uint32  leadout_sector;     /**< \brief Point A2 information (leadout) */
+//} CDROM_TOC;
 
 typedef struct pt_struct 
 { 
@@ -108,15 +110,19 @@ typedef struct ide_device
 	u16 sign;			// Drive Signature
 	u16 capabilities;	// Features.
 	u32 command_sets;	// Command Sets Supported.
-	s8     model[41];		// Model in string.
+//	s8  model[41];		// Model in string.
 	u64 max_lba;
     u16 cylinders;
     u16 heads;
     u16 sectors;
     u16 wdma_modes;
+#ifdef DEV_TYPE_IDE
     pt_t pt[4];
     u8 pt_num;
+#endif
+#ifdef DEV_TYPE_GD
     cdri_t cd_info;
+#endif
 } ide_device_t;
 
 /** \defgroup cd_toc_access         CD-ROM TOC access macros
@@ -148,9 +154,11 @@ typedef struct ide_device
 /** @} */
 
 void g1_bus_init(void);
+void g1_dma_abort(void);
 void cdrom_spin_down(u8 drive);
 s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive);
 s32 cdrom_read_toc(CDROM_TOC *toc_buffer, u8 session, u8 drive);
+CDROM_TOC *cdrom_get_toc(u8 session, u8 drive);
 u32 cdrom_locate_data_track(CDROM_TOC *toc);
 
 void cdrom_set_sector_size(s32 sec_size, u8 drive);
@@ -159,4 +167,5 @@ s32 cdrom_cdda_play(u32 start, u32 end, u32 loops, s32 mode);
 s32 cdrom_cdda_pause();
 s32 cdrom_cdda_resume();
 s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive);
+s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u8 drive);
 s32 cdrom_chk_disc_change(u8 drive);

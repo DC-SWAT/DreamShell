@@ -1,12 +1,16 @@
 /**
  * Copyright (c) 2017 Megavolt85
  *
+ * Modified for ISO Loader by SWAT <http://www.dc-swat.ru>
+ *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <kos/dbglog.h>
-#include <kos.h>
+
+#include <main.h>
+#include <arch/cache.h>
+#include <arch/timer.h>
 #include "ide.h"
 
 #define ATA_SR_BSY				0x80
@@ -134,6 +138,7 @@ typedef struct ide_req
 	u64		lba;
 	u32		count;
 	u8		cmd;
+	u8		async;
 	struct ide_device *dev;
 } ide_req_t;
 
@@ -142,8 +147,8 @@ static struct ide_device ide_devices[2];
 static s32 initted = 0;
 
 /* The G1 ATA access mutex */
-static mutex_t g1_ata_mutex = RECURSIVE_MUTEX_INITIALIZER;
-static semaphore_t g1_dma_done = SEM_INITIALIZER(0);
+//static mutex_t g1_ata_mutex = RECURSIVE_MUTEX_INITIALIZER;
+//static semaphore_t g1_dma_done = SEM_INITIALIZER(0);
 
 #define g1_ata_wait_status(n) \
     do {} while((IN8(G1_ATA_ALTSTATUS) & (n)))
@@ -154,6 +159,9 @@ static semaphore_t g1_dma_done = SEM_INITIALIZER(0);
 
 #define g1_ata_wait_drdy() \
     do {} while(!(IN8(G1_ATA_ALTSTATUS) & ATA_SR_DRDY))
+		
+#define g1_ata_wait_dma() \
+    do {} while(IN32(G1_ATA_DMA_STATUS))
 
 u8 swap8(u8 n)
 {
@@ -177,23 +185,21 @@ s32 dma_in_progress(void)
     return IN32(G1_ATA_DMA_STATUS);
 }
 
-static void dma_irq_hnd(uint32 code) 
-{
-    /* XXXX: Probably should look at the code to make sure it isn't an error. */
-    (void)code;
-	
-	sem_signal(&g1_dma_done);
-	//thd_schedule(1, 0);
-}
+//static void dma_irq_hnd(uint32 code) 
+//{
+//    /* XXXX: Probably should look at the code to make sure it isn't an error. */
+//    (void)code;
+//	
+//	sem_signal(&g1_dma_done);
+//	//thd_schedule(1, 0);
+//}
 
-static void dma_abort(void)
+void g1_dma_abort(void)
 {
 	if (IN8(G1_ATA_DMA_STATUS) == 1) 
 	{
 		OUT8(G1_ATA_DMA_ENABLE, 0);
-		
-		while (IN8(G1_ATA_DMA_STATUS)) 
-			thd_pass();
+		g1_ata_wait_dma();
 	}
 }
 
@@ -233,7 +239,7 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
 
     if((status & ATA_SR_ERR) || (status & ATA_SR_DF)) 
     {
-        dbglog(DBG_KDEBUG, "Error setting transfer mode %02x\n", mode);
+        LOGFF("Error setting transfer mode %02x\n", mode);
         return -1;
     }
 
@@ -242,10 +248,26 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
 
 static void g1_dev_scan(void)
 {
+
+#ifdef DEV_TYPE_EMU
+	ide_devices[0].wdma_modes = 0x0407;
+	ide_devices[0].cd_info.sec_type = 0x10;
+	ide_devices[0].reserved     = 1;
+	ide_devices[0].type         = IDE_SPI;
+	ide_devices[0].drive        = 0;
+	g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
+	g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2));
+	OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
+	OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
+	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+	return;
+#else
+
 	s32 i;
-	u8 j, st, err,type ,count = 0;
+	u8 j, st, err, type, count = 0
+	int d = 0;
 	u16 data[256];
-	
+
 	for (j = 0; j < 2; j++)
 	{
 		err = 0;
@@ -254,6 +276,8 @@ static void g1_dev_scan(void)
 		
 		OUT8(G1_ATA_DEVICE_SELECT, (0xA0 | (j << 4)));
 		timer_spin_sleep(1);
+//		for(d = 0; d < 10; d++)
+//			IN8(G1_ATA_ALTSTATUS);
 		
 		OUT8(G1_ATA_SECTOR_COUNT, 0);
 		OUT8(G1_ATA_LBA_LOW, 0);
@@ -262,31 +286,34 @@ static void g1_dev_scan(void)
 		
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_IDENTIFY);
 		timer_spin_sleep(1);
+//		for(d = 0; d < 10; d++)
+//			IN8(G1_ATA_ALTSTATUS);
 		
 		st = IN8(G1_ATA_STATUS_REG);
 		
 		if(!st || st == 0xff || st == 0xEC)
 		{
-			dbglog(DBG_KDEBUG, "%s device not found\n", (!j)?"MASTER":"SLAVE");
+			LOGFF("%s device not found\n", (!j)?"MASTER":"SLAVE");
 			continue;
 		}
-		dbglog(DBG_KDEBUG,"st = %02X\n", st);
-		dbglog(DBG_KDEBUG,"1.....................\n");
+		DBGF("st = %02X\n", st);
+		DBGF("1.....................\n");
 		
-		while (1)
+		while (d++ < 1000)
 		{
 			if (st & ATA_SR_ERR)
 			{
 				err = 1;
 				break;
-			}
-			else 
-			if (!(st & ATA_SR_BSY) && (st & ATA_SR_DRQ)) 
+			} else if (!(st & ATA_SR_BSY) && (st & ATA_SR_DRQ)) {
 				break; // Everything is right.
+			}/* else {
+				DBGF("st = %02X\n", st);
+			}*/
 			
 			st = IN8(G1_ATA_STATUS_REG);
 		}
-		dbglog(DBG_KDEBUG,"2.....................\n");
+		DBGF("2.....................\n");
 		if (err)
 		{
 			OUT8(G1_ATA_COMMAND_REG, ATAPI_CMD_RESET);
@@ -314,14 +341,14 @@ static void g1_dev_scan(void)
 		{
 			type = IDE_SPI;
 			
-			strncpy(ide_devices[count].model, "GD-ROM V.", 9);
-			
-			for (i = 0; i < 8; i++)
-			{
-				ide_devices[count].model[i*2+9] = (s8) data[i+24];
-				ide_devices[count].model[i*2+10] = (s8) (data[i+24] >> 8);
-			}
-			ide_devices[count].model[32] = '\0';
+//			memcpy(ide_devices[count].model, "GD-ROM V.", 9);
+//			
+//			for (i = 0; i < 8; i++)
+//			{
+//				ide_devices[count].model[i*2+9] = (s8) data[i+24];
+//				ide_devices[count].model[i*2+10] = (s8) (data[i+24] >> 8);
+//			}
+//			ide_devices[count].model[32] = '\0';
 			
 			ide_devices[count].wdma_modes = 0x0407;
 			
@@ -335,20 +362,20 @@ static void g1_dev_scan(void)
 		}
 		else
 		{
-			for (i = 0; i < 20; i++)
-			{
-				ide_devices[count].model[i*2]   = (s8) (data[i+27] >> 8);
-				ide_devices[count].model[i*2+1] = (s8)  data[i+27];
-			}
+//			for (i = 0; i < 20; i++)
+//			{
+//				ide_devices[count].model[i*2]   = (s8) (data[i+27] >> 8);
+//				ide_devices[count].model[i*2+1] = (s8)  data[i+27];
+//			}
+//			
+//			for (i = strlen(ide_devices[count].model)-1; 
+//				 i && ide_devices[count].model[i] == ' '; 
+//				 i--)
+//			{
+//				ide_devices[count].model[i] = '\0';
+//			}
 			
-			for (i = strlen(ide_devices[count].model)-1; 
-				 i && ide_devices[count].model[i] == ' '; 
-				 i--)
-			{
-				ide_devices[count].model[i] = '\0';
-			}
-			
-			
+#if defined(DEV_TYPE_IDE)
 			if (type == IDE_ATA)
 			{
 				ide_devices[count].command_sets  = (u32)(data[82]) | ((u32)(data[83]) << 16);
@@ -393,8 +420,10 @@ static void g1_dev_scan(void)
 					ide_devices[count].wdma_modes = 0;
 				}
 			}
-			else if (type == IDE_ATAPI)
+#elif defined(DEV_TYPE_GD)
+			if (type == IDE_ATAPI)
 				ide_devices[count].cd_info.sec_type = 0x10;
+#endif
 		}
 		
 		ide_devices[count].reserved     = 1;
@@ -402,12 +431,13 @@ static void g1_dev_scan(void)
 		ide_devices[count].drive        = j;
 		count++;
 	}
-	
+
+#ifdef LOG
 	for (i = 0; i < 2; i++)
 		if (ide_devices[i].reserved == 1) 
 		{
 			if (ide_devices[i].type == IDE_ATA)
-				dbglog (DBG_KDEBUG, "%s %s ATA drive %llu Kb - %s\n",
+				DBGF("%s %s ATA drive %llu Kb - %s\n",
 											(const s8 *[]){"MASTER", "SLAVE"}[i],
 											(!(ide_devices[i].capabilities & (1 << 9))) ? "CHS" : 
 											(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
@@ -416,16 +446,19 @@ static void g1_dev_scan(void)
 																	   ide_devices[count].heads *
 																	   ide_devices[count].sectors ) >> 1), /* Size */
 											ide_devices[i].model);
+
 			else
-				dbglog(DBG_KDEBUG, "%s %s drive - %s\n",
+				LOGF("%s %s drive - %s\n",
 						(const s8 *[]){"MASTER", "SLAVE"}[i],
 						(const s8 *[]){"ATAPI", "SPI"}[ide_devices[i].type-1],         /* Type */
 						ide_devices[i].model);
 		}
 		else
 		{
-			dbglog(DBG_KDEBUG,"%s device not found\n", (const s8 *[]){"MASTER", "SLAVE"}[i]);
+			DBGF("%s device not found\n", (const s8 *[]){"MASTER", "SLAVE"}[i]);
 		}
+#endif
+#endif /* DEV_TYPE_EMU */
 }
 
 static s32 ide_polling(u8 advanced_check) 
@@ -480,7 +513,7 @@ static s32 g1_ata_access(struct ide_req *req)
 	{
 		if ((u32)buff & 0x1f)
 		{
-			dbglog(DBG_KDEBUG, "Unaligned output address\n");
+			LOGFF("Unaligned output address\n");
 			return -1;
 		}
 		
@@ -491,10 +524,10 @@ static s32 g1_ata_access(struct ide_req *req)
 		cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO;
 	}
 	
-	while (mutex_is_locked(&g1_ata_mutex))
-		thd_pass();
-	
-	mutex_lock(&g1_ata_mutex);
+//	while (mutex_is_locked(&g1_ata_mutex))
+//		thd_pass();
+//	
+//	mutex_lock(&g1_ata_mutex);
 	
 	g1_ata_wait_bsydrq();
 	
@@ -576,10 +609,15 @@ static s32 g1_ata_access(struct ide_req *req)
 		
 		if ((req->cmd & 2))
 		{
-			dma_abort();
+			g1_dma_abort();
 			
-			 /* Invalidate the dcache over the range of the data. */
-			dcache_inval_range((u32) buff, len * 512);
+			if (req->cmd == G1_READ_DMA) {
+				 /* Invalidate the dcache over the range of the data. */
+				dcache_inval_range((u32) buff, len * 512);
+			} else {
+				/* Flush the dcache over the range of the data. */
+				dcache_flush_range((u32) buff, len * 512);
+			}
 			
 			/* Set the DMA parameters up. */
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
@@ -601,7 +639,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			{
 				if ((err = ide_polling(1)))
 				{
-					mutex_unlock(&g1_ata_mutex);
+//					mutex_unlock(&g1_ata_mutex);
 					return err; // Polling, set error and exit if there is.
 				}
 				
@@ -619,7 +657,7 @@ static s32 g1_ata_access(struct ide_req *req)
 				
 				if ((err = ide_polling(1)))
 				{
-					mutex_unlock(&g1_ata_mutex);
+//					mutex_unlock(&g1_ata_mutex);
 					return err; // Polling, set error and exit if there is.
 				}
 				
@@ -635,23 +673,231 @@ static s32 g1_ata_access(struct ide_req *req)
 			/* Start the DMA transfer. */
 			OUT8(G1_ATA_DMA_STATUS, 1);
 			
-			if ((err = sem_wait(&g1_dma_done)))
-			{
-				dma_abort();
-				mutex_unlock(&g1_ata_mutex);
-				return err;
-			}
+//			if ((err = sem_wait(&g1_dma_done)))
+//			{
+//				g1_dma_abort();
+//				mutex_unlock(&g1_ata_mutex);
+//				return err;
+//			}
+			g1_ata_wait_dma();
 			
 			buff += len;
 			g1_ata_wait_bsydrq();
 		}
 	}
 	
-	mutex_unlock(&g1_ata_mutex);
+//	mutex_unlock(&g1_ata_mutex);
 	
 	return 0;
 }
 
+
+s32 g1_pio_read(struct ide_req *req)
+{
+	if (req->dev->reserved)
+	{
+		switch (req->dev->type)
+		{
+			case IDE_ATA:
+				return g1_ata_access(req);
+//#ifdef DEV_TYPE_GD
+//			case IDE_ATAPI:
+//			case IDE_SPI:
+//				return g1_packet_read(req);
+//#endif
+			default:
+				break;
+		}
+	}
+	
+	return -1;
+}
+
+#ifdef DEV_TYPE_IDE
+void g1_get_partition(void) 
+{
+	s32 i, j; 
+	u8 buff[0x200];// __attribute__((aligned(32)));//memalign(32, 0x200)
+	struct ide_req req;
+	
+	req.buff = (void *) buff;
+	req.cmd = G1_READ_PIO;
+	req.count = 1;
+	req.lba = 0;
+
+	//Опрашиваем все ATA устройства и получаем от каждого таблицу разделов: 
+	for(i = 0; i < 2; i++) 
+	{  
+		if(!ide_devices[i].reserved || ide_devices[i].type != IDE_ATA) 
+			continue; 
+		
+		req.dev = &ide_devices[i];
+		
+		if(g1_ata_access(&req)) 
+			continue; 
+		
+		/* Make sure the ATA disk uses MBR partitions.
+			TODO: Support GPT partitioning at some point. */
+		if(((u16 *)buff)[0xFF] != 0xAA55) 
+		{
+			LOGFF("ATA device doesn't appear to have a MBR %04X\n",
+								((u16 *)buff)[0xFF]);
+			continue;
+		}
+		
+		memcpy(ide_devices[i].pt, (struct pt_struct *)(&buff[0x1BE]), 0x40);
+		
+		for (j = 0; j < 4; j++)
+		{
+			if (!ide_devices[i].pt[j].sect_total)
+				continue;
+			
+			u8 type = 0;
+			
+			switch (ide_devices[i].pt[j].type_part)
+			{
+				case 0x00:
+					type = 0;
+					break;
+				case 0x04:
+					type = 1;
+					break;
+				case 0x06:
+					type = 2;
+					break;
+				case 0x0B:
+					type = 3;
+					break;
+				case 0x0C:
+					type = 4;
+					break;
+				case 0x83:
+					type = 5;
+					break;
+				case 0x07:
+					type = 6;
+					break;
+				case 0x05:
+				case 0x0F:
+				case 0xCF:
+					type = 7;
+					break;
+				default:
+					type = 8;
+					break;
+					
+			}
+			
+			if (!type)
+			{
+				LOGF("%s device don't have partations\n", (const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive]);
+				break;
+			}
+#ifdef LOG
+			else if (type < 6)
+			{
+				LOGF("%s device part%d %s - %u Kb\n", (const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive],
+																	j,
+																	(const s8 *[]){ "FAT16", 
+																					  "FAT16B", 
+																					  "FAT32", 
+																					  "FAT32X", 
+																					  "EXT2"  }[type - 1],
+																	ide_devices[i].pt[j].sect_total >> 1);
+			}
+			else if (type < 8)
+			{
+				LOGF("%s device part%d EXTENDED partation don't supported\n", 
+								(const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive], j);
+			}
+			else 
+				LOGF("%s device part%d partation type 0x%02X don't supported\n", 
+									(const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive], 
+									 j, ide_devices[i].pt[j].type_part);
+#endif
+			ide_devices[i].pt_num++;
+		}
+	}
+//	free(buff);
+	return;
+}
+#endif
+
+void g1_bus_init(void)
+{
+
+//	u32 p;
+//    volatile u32 *status = (u32 *) 0xa05f74ec;
+//	volatile u32 *react  = (u32 *) 0xa05f74e4,
+//					  *bios   = (u32 *) 0xa0000000;
+//	
+//	switch(*status)
+//	{
+//		case 0:
+//			/* Reactivate drive: send the BIOS size and then read each
+//			   word across the bus so the controller can verify it. */
+//			if((*(u32 *)0xa0000000) == 0x4628e6ff) 
+//			{
+//				*react = 0x3ff;
+//				for(p = 0; p < 0x400 / sizeof(bios[0]); p++) 
+//					(void)bios[p];
+//			} 
+//			else 
+//			{
+//				*react = 0x1fffff;
+//				for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) 
+//					(void)bios[p];
+//			}
+//			
+//			if (*status != 3)
+//			{
+//				initted = -1;
+//				return;
+//			}
+//			break;
+//			
+//		case 2:
+//			initted = -1;
+//			return;
+//			break;
+//		
+//		case 3:
+//			break;
+//		
+//		default:
+//			initted = -1;
+//			return;
+//			break;
+//	}
+
+	g1_dev_scan();
+	
+	/* Hook all the DMA related events. */
+//    asic_evt_set_handler(ASIC_EVT_GD_DMA, dma_irq_hnd);
+//    asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQ_DEFAULT);
+//    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, dma_irq_hnd);
+//    asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQ_DEFAULT);
+//    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, dma_irq_hnd);
+//    asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQ_DEFAULT);
+	
+#ifdef DEV_TYPE_IDE
+	g1_get_partition();
+#endif
+	
+//	for (p = 0; p < 2; p++)
+//	{
+//		if (ide_devices[p].reserved && 
+//			(ide_devices[p].type == IDE_ATAPI ||
+//			 ide_devices[p].type == IDE_SPI))
+//				fs_iso9660_mount((void *) &ide_devices[p]);
+//	}
+//	
+	
+	initted = 1;
+}
+
+
+#ifdef DEV_TYPE_GD
 static void send_packet_command(u8 *cmd_buff, u8 drive)
 {
 	s32 i;
@@ -797,7 +1043,7 @@ static cd_sense_t *request_sense(u8 drive)
 	/* Посылаем устройству команду и считываем sense data */
 	if(send_packet_data_command(14-type, cmd_buff, drive, 0) < 0) 
 	{
-		dbglog(DBG_KDEBUG, "Error request sense\n");
+		LOGF("Error request sense\n");
 		sense.sk = 0XFF;
 		return &sense;
 	}
@@ -807,7 +1053,7 @@ static cd_sense_t *request_sense(u8 drive)
 	
 	if (SK)
 	{
-		dbglog(DBG_KDEBUG, "SK/ASC/ASCQ: 0x%X/0x%X/0x%X\n", SK, ASC, ASCQ);
+		LOGF("SK/ASC/ASCQ: 0x%X/0x%X/0x%X\n", SK, ASC, ASCQ);
 		
 		sense.sk = SK;
 		sense.asc = ASC;
@@ -830,8 +1076,8 @@ static s32 read_toc(u8 drive)
 	
 	s32 i, j = 0, n, total_tracks;
 	u8 cmd_buff[12];
-	u8 *data_buff;
 	u16 toc_len = (dev->type == IDE_ATAPI) ? 804 : 408; // toc_len - размер TOC
+	u8 data_buff[toc_len];
 	
 	/* Формируем пакетную команду. Поле Track/Session Number содержит 0,
 	* по команде READ TOC будет выдана информация обо всех треках диска,
@@ -871,7 +1117,7 @@ static s32 read_toc(u8 drive)
 			toc_len = swap16(IN16(G1_ATA_DATA));
 			
 			/* Выделяем память для хранения данных TOC */
-			data_buff = (u8 *)calloc(1, toc_len);
+//			data_buff = (u8 *)calloc(1, toc_len);
 			
 			/* Считываем результат */
 			for(i = 0; i < (toc_len >> 1); i++) 
@@ -902,7 +1148,7 @@ static s32 read_toc(u8 drive)
 															  (data_buff[total_tracks*8+2+5]  << 16) | 
 															  (data_buff[total_tracks*8+2+6]  << 8 ) | 
 															   data_buff[total_tracks*8+2+7]	   );
-			free(data_buff);
+//			free(data_buff);
 		}
 		else
 		{
@@ -915,21 +1161,21 @@ static s32 read_toc(u8 drive)
 		}
 	}
 	
-#if 1	
+#if 0
 	for (n = 0; n < j; n++)
 	{
 		/* Отобразим результаты чтения TOC */
-		dbglog(DBG_KDEBUG, "Session: %d\t", n);
-		dbglog(DBG_KDEBUG, "First: %d\t",   (u8) (dev->cd_info.tocs[n].first >> 16));
-		dbglog(DBG_KDEBUG, "Last: %d\n\n" , (u8) (dev->cd_info.tocs[n].last  >> 16));
+		LOGF("Session: %d\t", n);
+		LOGF("First: %d\t",   (u8) (dev->cd_info.tocs[n].first >> 16));
+		LOGF("Last: %d\n\n" , (u8) (dev->cd_info.tocs[n].last  >> 16));
 		
 		total_tracks = (s32)((dev->cd_info.tocs[n].last >> 16) & 0xFF);
 		
 		for(i = ((u8) (dev->cd_info.tocs[n].first >> 16)) - 1; i < total_tracks; i++)
-			dbglog(DBG_KDEBUG, "track: %d\tlba: %05lu\tadr/cntl: %02X\n", (i + 1), (dev->cd_info.tocs[n].entry[i] & 0xffffff), 
+			LOGF("track: %d\tlba: %05lu\tadr/cntl: %02X\n", (i + 1), (dev->cd_info.tocs[n].entry[i] & 0xffffff), 
 																		  (u8)(dev->cd_info.tocs[n].entry[i] >> 24));
 		
-		dbglog(DBG_KDEBUG, "lead out \tlba: %lu\tadr/cntl: %02X\n\n", (dev->cd_info.tocs[n].leadout_sector & 0xffffff),
+		LOGF("lead out \tlba: %lu\tadr/cntl: %02X\n\n", (dev->cd_info.tocs[n].leadout_sector & 0xffffff),
 																	  (u8)(dev->cd_info.tocs[n].leadout_sector >> 24));
 	}
 #endif
@@ -966,7 +1212,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 			if (!(sense->sk == 6 && sense->asc == 0x29) || i > 20)
 				return ERR_DISC_CHG;
 			
-			thd_pass();
+//			thd_pass();
 			wait_while_ready(dev);
 		}
 		
@@ -980,7 +1226,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 		if (sense)
 			return ERR_SYS;
 		
-		dbglog(DBG_KDEBUG, "Disc type: %02X\n",type);
+		LOGFF("Disc type: %02X\n",type);
 		
 		if (type < 0x50)
 		{
@@ -1051,7 +1297,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 				{
 					case 2:
 					case 6:
-						dbglog(DBG_KDEBUG, "NO DISC\n");
+						LOGFF("NO DISC\n");
 						
 						if (status)
 							*status = CD_STATUS_NO_DISC;
@@ -1060,7 +1306,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 						break;
 					
 					default:
-						dbglog(DBG_KDEBUG, "SK = %02X\tASC = %02X\tASCQ = %02X\n", sense->sk, sense->asc, sense->ascq);
+						LOGF("SK = %02X\tASC = %02X\tASCQ = %02X\n", sense->sk, sense->asc, sense->ascq);
 				}
 			
 			return ERR_SYS;
@@ -1088,7 +1334,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 				
 				case 2:
 				case 6:
-					dbglog(DBG_KDEBUG, "NO DISC");
+					LOGFF("NO DISC");
 					
 					if (status)
 						*status = CD_STATUS_NO_DISC;
@@ -1101,8 +1347,8 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 					break;
 			}
 			
-#if 1		
-		dbglog(DBG_KDEBUG, "status: %s\t disc type: %s\n", (const s8 *[])
+#if 1
+		DBGF("status: %s\t disc type: %s\n", (const s8 *[])
 															{
 																"BUSY",
 																"PAUSE",
@@ -1147,7 +1393,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 	return ERR_OK;
 }
 
-static s32 send_packet_dma_command(u8 *cmd_buff, u8 drive, s32 timeout)
+static s32 send_packet_dma_command(u8 *cmd_buff, u8 drive, s32 timeout, u8 async)
 {
 	s32 i, err;
 	
@@ -1180,11 +1426,16 @@ static s32 send_packet_dma_command(u8 *cmd_buff, u8 drive, s32 timeout)
 	OUT8(G1_ATA_DMA_ENABLE, 1);
 	OUT8(G1_ATA_DMA_STATUS, 1);
 	
-	sem_wait_timed(&g1_dma_done, timeout);
-	
-	dma_abort();
-	
-	err = ide_polling(1);
+	(void)timeout;
+//	sem_wait_timed(&g1_dma_done, timeout);
+
+	if (!async) {
+		g1_ata_wait_dma();
+		g1_dma_abort();
+		err = ide_polling(1);
+	} else {
+		err = 0;
+	}
 	
 	return err;
 }
@@ -1211,10 +1462,10 @@ static s32 g1_packet_read(struct ide_req *req)
 			break;
 	}
 	
-	while (mutex_is_locked(&g1_ata_mutex))
-		thd_pass();
+//	while (mutex_is_locked(&g1_ata_mutex))
+//		thd_pass();
 	
-	mutex_lock(&g1_ata_mutex);
+//	mutex_lock(&g1_ata_mutex);
 	
 	memset((void *)cmd_buff, 0, 12);
 	
@@ -1248,18 +1499,18 @@ static s32 g1_packet_read(struct ide_req *req)
 	{
 		if ((u32)buff & 0x1f)
 		{
-			dbglog(DBG_KDEBUG, "Unaligned output address\n");
+			LOGFF("Unaligned output address\n");
 			err = -1;
 			goto exit_packet_read;
 		}
 		
-		dma_abort();
+		g1_dma_abort();
 		OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 		OUT32(G1_ATA_DMA_ADDRESS, ((u32) buff) & 0x0FFFFFFF);
 		OUT32(G1_ATA_DMA_LENGTH, (req->count * (data_len << 1)));
 		OUT8(G1_ATA_DMA_DIRECTION, 1);
 		
-		send_packet_dma_command(cmd_buff, req->dev->drive, req->count*100+5000);
+		send_packet_dma_command(cmd_buff, req->dev->drive, req->count*100+5000, req->async);
 	}
 	else
 	{
@@ -1290,7 +1541,7 @@ static s32 g1_packet_read(struct ide_req *req)
 	
 exit_packet_read:
 
-	mutex_unlock(&g1_ata_mutex);
+//	mutex_unlock(&g1_ata_mutex);
 	
 	return err;
 }
@@ -1368,203 +1619,6 @@ void packet_soft_reset(u8 drive)
 	g1_ata_wait_nbsy();
 }
 
-s32 g1_pio_read(struct ide_req *req)
-{
-	if (req->dev->reserved)
-	{
-		switch (req->dev->type)
-		{
-			case IDE_ATA:
-				return g1_ata_access(req);
-				break;
-			
-			case IDE_ATAPI:
-			case IDE_SPI:
-				return g1_packet_read(req);
-				break;
-		}
-	}
-	
-	return -1;
-}
-
-void g1_get_partation(void) 
-{
-	s32 i, j; 
-	u8 *buff = memalign(32, 0x200);
-	struct ide_req req;
-	
-	req.buff = (void *) buff;
-	req.cmd = G1_READ_PIO;
-	req.count = 1;
-	req.lba = 0;
-
-	//Опрашиваем все ATA устройства и получаем от каждого таблицу разделов: 
-	for(i = 0; i < 2; i++) 
-	{  
-		if(!ide_devices[i].reserved || ide_devices[i].type != IDE_ATA) 
-			continue; 
-		
-		req.dev = &ide_devices[i];
-		
-		if(g1_ata_access(&req)) 
-			continue; 
-		
-		/* Make sure the ATA disk uses MBR partitions.
-			TODO: Support GPT partitioning at some point. */
-		if(((u16 *)buff)[0xFF] != 0xAA55) 
-		{
-			dbglog(DBG_DEBUG, "ATA device doesn't appear to have a MBR %04X\n",
-								((u16 *)buff)[0xFF]);
-			continue;
-		}
-		
-		memcpy(ide_devices[i].pt, (struct pt_struct *)(&buff[0x1BE]), 0x40);
-		
-		for (j = 0; j < 4; j++)
-		{
-			if (!ide_devices[i].pt[j].sect_total)
-				continue;
-			
-			u8 type = 0;
-			
-			switch (ide_devices[i].pt[j].type_part)
-			{
-				case 0x00:
-					type = 0;
-					break;
-				case 0x04:
-					type = 1;
-					break;
-				case 0x06:
-					type = 2;
-					break;
-				case 0x0B:
-					type = 3;
-					break;
-				case 0x0C:
-					type = 4;
-					break;
-				case 0x83:
-					type = 5;
-					break;
-				case 0x07:
-					type = 6;
-					break;
-				case 0x05:
-				case 0x0F:
-				case 0xCF:
-					type = 7;
-					break;
-				default:
-					type = 8;
-					break;
-					
-			}
-			
-			if (!type)
-			{
-				dbglog(DBG_KDEBUG, "%s device don't have partations\n", (const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive]);
-				break;
-			}
-			else if (type < 6)
-			{
-				dbglog(DBG_KDEBUG, "%s device part%d %s - %u Kb\n", (const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive],
-																	j,
-																	(const s8 *[]){ "FAT16", 
-																					  "FAT16B", 
-																					  "FAT32", 
-																					  "FAT32X", 
-																					  "EXT2"  }[type - 1],
-																	ide_devices[i].pt[j].sect_total >> 1);
-			}
-			else if (type < 8)
-			{
-				dbglog(DBG_KDEBUG, "%s device part%d EXTENDED partation don't supported\n", 
-								(const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive], j);
-			}
-			else 
-				dbglog(DBG_KDEBUG, "%s device part%d partation type 0x%02X don't supported\n", 
-									(const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive], 
-									 j, ide_devices[i].pt[j].type_part);
-			
-			ide_devices[i].pt_num++;
-		}
-	}
-	free(buff);
-	return;
-}
-
-void g1_bus_init(void)
-{
-	u32 p;
-    volatile u32 *status = (u32 *) 0xa05f74ec;
-	volatile u32 *react  = (u32 *) 0xa05f74e4,
-					  *bios   = (u32 *) 0xa0000000;
-	
-	switch(*status)
-	{
-		case 0:
-			/* Reactivate drive: send the BIOS size and then read each
-			   word across the bus so the controller can verify it. */
-			if((*(u32 *)0xa0000000) == 0x4628e6ff) 
-			{
-				*react = 0x3ff;
-				for(p = 0; p < 0x400 / sizeof(bios[0]); p++) 
-					(void)bios[p];
-			} 
-			else 
-			{
-				*react = 0x1fffff;
-				for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) 
-					(void)bios[p];
-			}
-			
-			if (*status != 3)
-			{
-				initted = -1;
-				return;
-			}
-			break;
-			
-		case 2:
-			initted = -1;
-			return;
-			break;
-		
-		case 3:
-			break;
-		
-		default:
-			initted = -1;
-			return;
-			break;
-	}
-	
-	g1_dev_scan();
-	
-	/* Hook all the DMA related events. */
-    asic_evt_set_handler(ASIC_EVT_GD_DMA, dma_irq_hnd);
-    asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQ_DEFAULT);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, dma_irq_hnd);
-    asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQ_DEFAULT);
-    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, dma_irq_hnd);
-    asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQ_DEFAULT);
-	
-	g1_get_partation();
-	
-	for (p = 0; p < 2; p++)
-	{
-		if (ide_devices[p].reserved && 
-			(ide_devices[p].type == IDE_ATAPI ||
-			 ide_devices[p].type == IDE_SPI))
-				fs_iso9660_mount((void *) &ide_devices[p]);
-	}
-	
-	
-	initted = 1;
-}
-
 s32 cdrom_read_toc(CDROM_TOC *toc_buffer, u8 session, u8 drive)
 {
 	struct ide_device *dev = &ide_devices[drive & 1];
@@ -1582,6 +1636,22 @@ s32 cdrom_read_toc(CDROM_TOC *toc_buffer, u8 session, u8 drive)
 	memcpy((void *) toc_buffer, (void *) &dev->cd_info.tocs[session], sizeof(CDROM_TOC));
 	
 	return 0;
+}
+
+CDROM_TOC *cdrom_get_toc(u8 session, u8 drive) {
+	struct ide_device *dev = &ide_devices[drive & 1];
+	
+	if (!dev->reserved || 
+		(dev->type != IDE_ATAPI &&
+		 dev->type != IDE_SPI))
+		return NULL;
+	
+	session &= 1;
+	
+	if (session && dev->type != IDE_SPI)
+		return NULL;
+		
+	return &dev->cd_info.tocs[session];
 }
 
 /* Locate the LBA sector of the data track; use after reading TOC */
@@ -1624,8 +1694,8 @@ s32 cdrom_reinit(s32 sec_size, u8 drive)
 {
 	cdrom_set_sector_size(sec_size, drive);
 	
-	if (cdrom_get_status(NULL, NULL, drive))
-		return -1;
+//	if (cdrom_get_status(NULL, NULL, drive))
+//		return -1;
 	
 	if (ide_devices[drive&1].type == IDE_SPI)
 		spi_check_license();
@@ -1672,19 +1742,40 @@ s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive)
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = G1_READ_DMA;
 	req.lba = sector;
+	req.async = 0;
 	
 	if ((((u32) buffer) & 0x1f))
 	{
-		dbglog(DBG_KDEBUG, "cdrom_read_sectors: Unaligned output address used PIO READ\n");
+		LOGFF("Unaligned output address used PIO READ\n");
 		req.cmd = G1_READ_PIO;
 	}
 	else
 	{
-		//req.cmd = G1_READ_PIO;
-		dbglog(DBG_KDEBUG, "cdrom_read_sectors: used DMA READ\n");
+		LOGFF("used DMA READ\n");
 	}
-	
 	
 	return g1_packet_read(&req);
 }
 
+s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u8 drive)
+{
+	struct ide_req req;
+	
+	req.buff = buffer;
+	req.count = cnt;
+	req.dev = &ide_devices[drive & 1];
+	req.cmd = dma ? G1_READ_DMA : G1_READ_PIO;
+	req.lba = sector;
+	req.async = async;
+	
+	if (dma && (((u32) buffer) & 0x1f)) {
+		LOGFF("Unaligned output address\n");
+		return -1;
+	} else {
+		LOGFF("%s%s READ\n", async ? "ASYNC " : "", dma ? "DMA" : "PIO");
+	}
+	
+	return g1_packet_read(&req);
+}
+
+#endif /* DEV_TYPE_GD */
