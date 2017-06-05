@@ -804,6 +804,12 @@
       <File Name="firmware/isoldr/loader/descramble.c"/>
       <File Name="firmware/isoldr/loader/gdb.c"/>
       <File Name="firmware/isoldr/loader/mmu.c"/>
+      <VirtualDirectory Name="dev">
+        <VirtualDirectory Name="ide">
+          <File Name="firmware/isoldr/loader/dev/ide/ide.c"/>
+          <File Name="firmware/isoldr/loader/dev/ide/ide.h"/>
+        </VirtualDirectory>
+      </VirtualDirectory>
     </VirtualDirectory>
     <VirtualDirectory Name="boot">
       <File Name="firmware/bootloader/src/main.c"/>
