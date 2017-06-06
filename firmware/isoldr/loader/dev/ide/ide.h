@@ -155,6 +155,12 @@ typedef struct ide_device
 
 void g1_bus_init(void);
 void g1_dma_abort(void);
+void g1_dma_set_irq_mask(s32 enable);
+s32 g1_dma_init_irq(void);
+s32 g1_dma_irq_enabled(void);
+s32 g1_dma_in_progress(void);
+u32 g1_dma_transfered(void);
+
 void cdrom_spin_down(u8 drive);
 s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive);
 s32 cdrom_read_toc(CDROM_TOC *toc_buffer, u8 session, u8 drive);

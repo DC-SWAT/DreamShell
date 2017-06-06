@@ -37,9 +37,7 @@ extern int sl_mode;
 
 #elif defined(DEV_TYPE_GD)
 
-int g1_dma_in_progress(void);
-uint32_t g1_dma_transfered(void);
-int g1_dma_irq_enabled();
+#include <ide/ide.h>
 
 #endif /* DEV_TYPE_NET */
 

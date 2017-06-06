@@ -9,9 +9,10 @@
  */
 
 #include <main.h>
+#include <exception.h>
+#include <asic.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
-#include "ide.h"
 
 #define ATA_SR_BSY				0x80
 #define ATA_SR_DRDY				0x40
@@ -98,6 +99,8 @@
 #define G1_ATA_DMA_DIRECTION    0xA05F740C      /* Read/Write */
 #define G1_ATA_DMA_ENABLE       0xA05F7414      /* Read/Write */
 #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
+#define G1_ATA_DMA_STARD        0xA05F74F4      /* Read-only */
+#define G1_ATA_DMA_LEND         0xA05F74F8      /* Read-only */
 #define G1_ATA_DMA_PRO          0xA05F74B8      /* Write-only */
 #define G1_ATA_DMA_PRO_SYSMEM   0x8843407F
 
@@ -144,7 +147,9 @@ typedef struct ide_req
 
 static struct ide_device ide_devices[2];
 
-static s32 initted = 0;
+static s32 initted = 0,
+		g1_dma_irq_visible = 0,
+		_g1_dma_irq_enabled = 0;
 
 /* The G1 ATA access mutex */
 //static mutex_t g1_ata_mutex = RECURSIVE_MUTEX_INITIALIZER;
@@ -180,27 +185,125 @@ u32 swap32(u32 n)
 }
 
 /* Is a G1 DMA in progress? */
-s32 dma_in_progress(void) 
-{
+s32 g1_dma_in_progress(void) {
     return IN32(G1_ATA_DMA_STATUS);
 }
 
-//static void dma_irq_hnd(uint32 code) 
-//{
-//    /* XXXX: Probably should look at the code to make sure it isn't an error. */
-//    (void)code;
-//	
-//	sem_signal(&g1_dma_done);
-//	//thd_schedule(1, 0);
-//}
+u32 g1_dma_transfered(void) {
+	return *(volatile u32 *)G1_ATA_DMA_LEND;
+}
 
-void g1_dma_abort(void)
-{
-	if (IN8(G1_ATA_DMA_STATUS) == 1) 
-	{
+s32 g1_dma_irq_enabled() {
+	return _g1_dma_irq_enabled;
+}
+
+void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
+
+#ifdef LOG
+	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+#endif
+
+	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n",
+	      *REG_INTEVT, st,
+	      ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT],
+	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+//	dump_regs(stack);
+
+	if(!_g1_dma_irq_enabled) {
+		(void)passer;
+		(void)stack;
+		_g1_dma_irq_enabled = 1;
+	}
+
+	if(!g1_dma_irq_visible) {
+		
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+		
+		/* Ack the IRQ. */
+		st = IN8(G1_ATA_STATUS_REG);
+		
+		if(st & ATA_SR_ERR) {
+			LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+					(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
+					(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
+					(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+		}
+		
+		/* Processing filesystem */
+		poll_all();
+		return my_exception_finish;
+	}
+
+	/* Processing filesystem */
+	poll_all();
+
+	return current_vector;
+}
+
+
+s32 g1_dma_init_irq() {
+
+#ifdef NO_ASIC_LT
+	return 0;
+#else
+
+	asic_lookup_table_entry a_entry;
+
+	a_entry.irq = EXP_CODE_ALL;
+	a_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+	a_entry.mask[ASIC_MASK_EXT_INT] = 0; //ASIC_EXT_GD_CMD;
+	a_entry.mask[ASIC_MASK_ERR_INT] = 0; /*ASIC_ERR_G1DMA_ILLEGAL |
+											ASIC_ERR_G1DMA_OVERRUN |
+											ASIC_ERR_G1DMA_ROM_FLASH;*/
+	a_entry.handler = g1_dma_handler;
+	return asic_add_handler(&a_entry, NULL, 0);
+#endif
+}
+
+void g1_dma_abort(void) {
+	if (g1_dma_in_progress()) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
 		g1_ata_wait_dma();
 	}
+}
+
+void g1_dma_set_irq_mask(s32 enable) {
+
+	// FIXME
+	if(fs_dma_enabled() == FS_DMA_HIDDEN) {
+		/* Hide all internal DMA transfers (CDDA, etc...) */
+		if(g1_dma_irq_visible) {
+			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+			g1_dma_irq_visible = 0;
+		}
+		return;
+	}
+	
+	if(!enable && ((*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) || !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA))) {
+		
+		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+		
+		LOGFF("%d %d %d\n",
+			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
+			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
+			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0);
+		
+	} else if(enable && (!(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) || (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA))) {
+		
+		*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
+		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
+		
+		LOGFF("%d %d %d\n",
+			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
+			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
+			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0);
+	}
+
+	g1_dma_irq_visible = enable;
 }
 
 /* This one is an inline function since it needs to return something... */
@@ -1773,6 +1876,10 @@ s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u
 		return -1;
 	} else {
 		LOGFF("%s%s READ\n", async ? "ASYNC " : "", dma ? "DMA" : "PIO");
+	}
+	
+	if (dma) {
+		g1_dma_set_irq_mask(1);
 	}
 	
 	return g1_packet_read(&req);

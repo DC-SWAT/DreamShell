@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ASIC IRQ handling
- * (c)2014-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2017 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -15,8 +15,6 @@ void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
 
 static asic_lookup_table   asic_table;
 static exception_handler_f old_handler;
-extern int start_data_transfer;
-void data_transfer();
 //void dump_maple_dma_buffer();
 
 static void* asic_handle_exception(register_stack *stack, void *current_vector) {

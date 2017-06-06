@@ -1,32 +1,12 @@
 /**
  * DreamShell ISO Loader
  * ISO9660 file system
- * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2017 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
 #include <asic.h>
-#include <ide/ide.h>
 #include <arch/cache.h>
-
-#define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
-#define G1_ATA_DMA_LEND         0xA05F74F8      /* Read-only */
-
-static int _g1_dma_irq_enabled = 0;
-
-int g1_dma_in_progress(void) {
-	return *(volatile uint32_t *)G1_ATA_DMA_STATUS;
-}
-
-uint32_t g1_dma_transfered(void) {
-	return *(volatile uint32_t *)G1_ATA_DMA_LEND;
-}
-
-int g1_dma_irq_enabled() {
-	return _g1_dma_irq_enabled;
-}
-
-static int dma_enabled = 0;
 
 /* Sector buffer */
 #ifdef LOG
@@ -35,6 +15,8 @@ static int dma_enabled = 0;
 static uint cd_sector_buffer[2048/4] __attribute__((aligned(32)));
 #endif
 
+static int dma_enabled = 0;
+
 void fs_enable_dma(int state) {
 	dma_enabled = state;
 }
@@ -42,52 +24,6 @@ void fs_enable_dma(int state) {
 int fs_dma_enabled() {
 	return dma_enabled;
 }
-
-
-void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
-
-#ifdef LOG
-	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-#endif
-
-	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n",
-	      *REG_INTEVT, st,
-	      ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT],
-	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
-//	dump_regs(stack);
-
-	/* Processing filesystem */
-	poll_all();
-
-	if(!_g1_dma_irq_enabled) {
-		(void)passer;
-		(void)stack;
-		_g1_dma_irq_enabled = 1;
-	}
-
-	return current_vector;
-}
-
-
-int g1_dma_init_irq() {
-
-#ifdef NO_ASIC_LT
-	return 0;
-#else
-
-	asic_lookup_table_entry a_entry;
-
-	a_entry.irq = EXP_CODE_ALL;
-	a_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-	a_entry.mask[ASIC_MASK_EXT_INT] = 0; //ASIC_EXT_GD_CMD;
-	a_entry.mask[ASIC_MASK_ERR_INT] = 0; /*ASIC_ERR_G1DMA_ILLEGAL |
-											ASIC_ERR_G1DMA_OVERRUN |
-											ASIC_ERR_G1DMA_ROM_FLASH;*/
-	a_entry.handler = g1_dma_handler;
-	return asic_add_handler(&a_entry, NULL, 0);
-#endif
-}
-
 
 static int read_sectors(char *buf, int sec, int num, int async) {
 	return cdrom_read_sectors_ex(buf, sec, num, async, dma_enabled, 0);
@@ -522,6 +458,5 @@ int ioctl(int fd, int request, void *data) {
 
 int fs_init() {
 	g1_bus_init();
-//	cdrom_reinit(2048, 0);
 	return 0;
 }

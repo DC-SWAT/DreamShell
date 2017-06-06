@@ -145,8 +145,10 @@ int asic_add_handler(const asic_lookup_table_entry *new_entry,
 						asic_handler_f *parent_handler, int enable_irq);
 void asic_enable_irq(const asic_lookup_table_entry *entry);
 
+#ifdef DEV_TYPE_IDE
 /* Initialize DMA interrupt handling for IDE and GD */
 int g1_dma_init_irq();
+#endif
 
 int irq_disabled();
 

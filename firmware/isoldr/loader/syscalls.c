@@ -358,14 +358,14 @@ static void get_ver_str() {
 
 #ifdef _FS_ASYNC
 
-static void data_trans_cb(size_t size) {
+static void data_transfer_cb(size_t size) {
 
 	gd_state_t *GDS = get_GDS();
 	
 	GDS->transfered = size;
 	GDS->dma_status = 0;
 	GDS->drv_stat = CD_STATUS_PAUSED;
-	GDS->status = CMD_STAT_COMPLETED;
+	GDS->status = (size > 0 ? CMD_STAT_COMPLETED : CMD_STAT_FAILED);
 	
 # ifdef DEV_TYPE_SD
 	if(size > 0) {
@@ -375,17 +375,94 @@ static void data_trans_cb(size_t size) {
 
 //	LOGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
 }
+
+void data_transfer_true_async() {
+
+	gd_state_t *GDS = get_GDS();
+	int ps;
+
+#ifdef DEV_TYPE_SD
+	fs_enable_dma(IsoInfo->emu_async);
+#elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	fs_enable_dma(FS_DMA_SHARED);
 #endif
+
+	GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_transfer_cb);
+
+	if(GDS->status != CMD_STAT_PROCESSING) {
+		return;
+	}
+
+	GDS->dma_status = 1;
+
+	while((ps = poll(iso_fd)) > 0) {
+		GDS->transfered += ps;
+		gdcExitToGame();
+	}
+}
+#endif /* _FS_ASYNC */
+
+
+void data_transfer_emu_async() {
+
+	gd_state_t *GDS = get_GDS();
+	uint sc, sc_size;
+
+	if(GDS->cmd != CMD_PIOREAD) {
+		GDS->dma_status = 1;
+	}
+
+	while(GDS->param[1] > 0) {
+
+		if(GDS->param[1] <= (uint32)IsoInfo->emu_async) {
+			sc = GDS->param[1];
+		} else {
+			sc = IsoInfo->emu_async;
+		}
+
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		if(IsoInfo->use_dma) {
+			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
+		}
+#endif
+
+		sc_size = (GDS->gdc.sec_size * sc);
+
+		if(ReadSectors((uint8*)GDS->param[2], GDS->param[0], sc, NULL) == CMD_STAT_FAILED) {
+			GDS->status = CMD_STAT_FAILED;
+			return;
+		}
+
+		GDS->param[1] -= sc;
+		GDS->transfered += sc_size;
+
+		if(GDS->cmd != CMD_PIOREAD
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+			&& !IsoInfo->use_dma
+#endif
+		) {
+			dcache_purge_range(GDS->param[2], sc_size);
+		}
+
+		if(GDS->param[1] <= 0) {
+			GDS->status = CMD_STAT_COMPLETED;
+			GDS->drv_stat = CD_STATUS_PAUSED;
+			GDS->dma_status = 0;
+			return;
+		}
+
+		GDS->param[2] += sc_size;
+		GDS->param[0] += sc;
+		DBGFF("%s %d %d\n", stat_name[GDS->status + 1], GDS->req_count, GDS->transfered);
+
+		gdcExitToGame();
+	}
+}
 
 
 /**
  * Data transfer
- * TODO: Rewrite it
  */
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-static int dma_check_pass = 0;
-#endif
-
 void data_transfer() {
 
 	gd_state_t *GDS = get_GDS();
@@ -393,116 +470,49 @@ void data_transfer() {
 #ifdef _FS_ASYNC
 	/* Use true async DMA transfer (or pseudo async for SD) */
 	if(GDS->cmd == CMD_DMAREAD && GDS->true_async
-#ifdef DEV_TYPE_SD
+# ifdef DEV_TYPE_SD
 		/* Doesn't use pseudo async for SD in some cases (improve the general loading speed) */
 		&& GDS->param[1] > 1 && GDS->param[1] < 100
-#endif
+# endif
 	) {
-
-		if(!GDS->dma_status) {
-
-#ifdef DEV_TYPE_SD
-			fs_enable_dma(IsoInfo->emu_async);
-#elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-			fs_enable_dma(FS_DMA_SHARED);
-			dma_check_pass = 0;
-#endif
-
-			GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_trans_cb);
-
-			if(GDS->status == CMD_STAT_PROCESSING) {
-				GDS->dma_status = 1;
-			}
-		}
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		else if(!g1_dma_irq_enabled() || (!g1_dma_in_progress() && dma_check_pass++)) {
-			dma_check_pass = 0;
-#else
-		else {
-#endif
-			int ps = poll(iso_fd);
-
-			if(ps > 0) {
-				GDS->transfered = ps;
-			} else if(ps < 0) {
-				GDS->status = CMD_STAT_FAILED;
-				GDS->dma_status = 0;
-			}
-		}
-
+		data_transfer_true_async();
 		return;
 	}
-#ifndef DEV_TYPE_SD
+# ifndef DEV_TYPE_SD
 	else {
 		fs_enable_dma(GDS->cmd != CMD_DMAREAD ? FS_DMA_DISABLED : IsoInfo->use_dma);
 	}
-#endif
+# endif
 #endif /* _FS_ASYNC */
 
-	if(IsoInfo->emu_async <= 0 || GDS->cmd != CMD_DMAREAD || GDS->param[1] == 1) {
+
+	/**
+	 * Read in PIO mode or if requested 1/100 sector(s)
+	 * 
+	 * 100 sectors is additional optimization.
+	 * It's looks like the game in loading state (request big data),
+	 * so we can increase general loading speed if load it for one frame
+	 */
+	if(!IsoInfo->emu_async || GDS->cmd != CMD_DMAREAD || GDS->param[1] == 1 || GDS->param[1] >= 100) {
 
 		GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
+		GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
 
-//		if(GDS->status != CMD_STAT_FAILED) {
-			GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
-//		}
-
+		if(GDS->cmd != CMD_PIOREAD
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(GDS->cmd != CMD_PIOREAD && !IsoInfo->use_dma) {
-#else
-		if(GDS->cmd != CMD_PIOREAD) {
+			&& !IsoInfo->use_dma
 #endif
+		) {
 			dcache_purge_range(GDS->param[2], GDS->param[1] * GDS->gdc.sec_size);
 		}
 
 		GDS->drv_stat = CD_STATUS_PAUSED;
-
-	} else {
-
-		uint sc, sc_size;
-
-		if(GDS->param[1] <= (uint32)IsoInfo->emu_async + 1 || GDS->param[1] > 100) {
-			sc = GDS->param[1];
-		} else {
-			sc = IsoInfo->emu_async;
-		}
-
-		sc_size = (GDS->gdc.sec_size * sc);
-		
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(IsoInfo->use_dma) {
-			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
-		}
-#endif
-
-		if(ReadSectors((uint8*)GDS->param[2], GDS->param[0], sc, NULL) == CMD_STAT_FAILED) {
-			GDS->status = CMD_STAT_FAILED;
-		} else {
-
-			GDS->param[1] -= sc;
-			GDS->transfered += sc_size;
-
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-			if(GDS->cmd != CMD_PIOREAD && !IsoInfo->use_dma) {
-#else
-			if(GDS->cmd != CMD_PIOREAD) {
-#endif
-				dcache_purge_range(GDS->param[2], sc_size);
-			}
-
-			if(GDS->param[1] > 0) {
-				GDS->param[2] += sc_size;
-				GDS->param[0] += sc;
-				GDS->dma_status = 1;
-			} else {
-				GDS->status = CMD_STAT_COMPLETED;
-				GDS->drv_stat = CD_STATUS_PAUSED;
-				GDS->dma_status = 0;
-			}
-		}
+		DBGFF("%s %d %d\n", stat_name[GDS->status + 1], GDS->req_count, GDS->transfered);
+		return;
 	}
 
-	DBGFF("%s %d %d\n", stat_name[GDS->status + 1], GDS->req_count, GDS->transfered);
+	/* Read in PIO/DMA mode with emu async (if true async disabled or can't be used) */
+	data_transfer_emu_async();
 }
 
 
@@ -511,8 +521,6 @@ static void data_transfer_dma_stream() {
 	gd_state_t *GDS = get_GDS();
 
 	if(GDS->status == CMD_STAT_PROCESSING) {
-		
-		GDS->drv_stat = CD_STATUS_PLAYING;
 		
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		fs_enable_dma(IsoInfo->use_dma ? FS_DMA_SHARED : FS_DMA_DISABLED);
@@ -729,7 +737,13 @@ void gdcMainLoop(void) {
 					break;
 			}
 
-		} else if (GDS->status == CMD_STAT_STREAMING && GDS->dma_status && (!g1_dma_irq_enabled() || !g1_dma_in_progress())) {
+		}
+#ifdef _FS_ASYNC
+		else if (GDS->status == CMD_STAT_STREAMING && GDS->dma_status
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+				&& (!g1_dma_irq_enabled() || !g1_dma_in_progress())
+#endif
+		) {
 			int ps = poll(iso_fd);
 			
 			if(ps > 0) {
@@ -741,7 +755,7 @@ void gdcMainLoop(void) {
 			}
 			//LOGF("POLL: %d\n", ps);
 		}
-
+#endif
 		gdcExitToGame();
 	}
 }
@@ -1006,7 +1020,7 @@ int gdcReadAbort(int gd_chn) {
 }
 
 
-#if defined(HAVE_EXPT) && defined(_FS_ASYNC)
+#ifdef _FS_ASYNC
 static void data_stream_cb(size_t size) {
 
 	gd_state_t *GDS = get_GDS();
@@ -1015,7 +1029,7 @@ static void data_stream_cb(size_t size) {
 	GDS->streamed = size;
 	GDS->dma_status = 0;
 	
-	if (!GDS->requested) {
+	if(!GDS->requested) {
 		GDS->status = CMD_STAT_COMPLETED;
 	}
 	LOGFF("%d %d\n", size, GDS->transfered);
@@ -1048,17 +1062,22 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	/* FIXME: fragmented files */
 //	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 
-	GDS->dma_status = 1;
-	GDS->streamed = 32;
-	ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
-
-#else
-
-	GDS->streamed = dmabuf[1];
-	GDS->transfered += dmabuf[1];
-	ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], NULL);
-
+	if(IsoInfo->use_dma) {
+		GDS->dma_status = 1;
+		GDS->streamed = 32;
+		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
+	} else
 #endif /*_FS_ASYNC */
+	{
+		GDS->streamed = dmabuf[1];
+		GDS->transfered += dmabuf[1];
+		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], NULL);
+
+		if(!GDS->requested) {
+			GDS->status = CMD_STAT_COMPLETED;
+		}
+	}
+
 	return 0;
 }
 
