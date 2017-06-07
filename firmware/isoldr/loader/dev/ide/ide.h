@@ -71,9 +71,9 @@ typedef struct ide_device
     u16 heads;
     u16 sectors;
     u16 wdma_modes;
-#ifdef DEV_TYPE_IDE
-//    pt_t pt[4];
-//    u8 pt_num;
+#if defined(DEV_TYPE_IDE) && defined(DEBUG)
+    pt_t pt[4];
+    u8 pt_num;
 #endif
 #ifdef DEV_TYPE_GD
     cdri_t cd_info;

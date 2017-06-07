@@ -396,7 +396,14 @@ void data_transfer_true_async() {
 
 	GDS->dma_status = 1;
 
-	while((ps = poll(iso_fd)) > 0) {
+	while(GDS->dma_status) {
+
+		ps = poll(iso_fd);
+
+		if (ps <= 0) {
+			break;
+		}
+
 		GDS->transfered += ps;
 		gdcExitToGame();
 	}
@@ -467,6 +474,13 @@ void data_transfer_emu_async() {
 void data_transfer() {
 
 	gd_state_t *GDS = get_GDS();
+	
+	// FIXME: gdcExitToGame works incorrectly?
+	if (GDS->dma_status) {
+		poll(iso_fd);
+		LOGFF("WARNING, data transfer already requested!\n");
+		return;
+	}
 
 #ifdef _FS_ASYNC
 	/* Use true async DMA transfer (or pseudo async for SD) */

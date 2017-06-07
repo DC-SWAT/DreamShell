@@ -88,13 +88,6 @@ int main(int argc, char *argv[]) {
 	if(!InitReader()) {
 		goto error;
 	}
-	
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	LOGF("ENABLED IRQs: 0x%08lx 0x%08lx 0x%08lx\n", *ASIC_IRQ9_MASK, *ASIC_IRQ11_MASK, *ASIC_IRQ13_MASK);
-//	*ASIC_IRQ9_MASK  = 0;
-//	*ASIC_IRQ11_MASK = 0;
-//	*ASIC_IRQ13_MASK = 0;
-#endif
 
 	if(IsoInfo->emu_cdda) {
 		CDDA_Init();
@@ -175,6 +168,12 @@ int main(int argc, char *argv[]) {
 		}
 	}
 #endif
+
+	/* Clear all IRQ masks and status */
+	*ASIC_IRQ9_MASK  = 0;
+	*ASIC_IRQ11_MASK = 0;
+	*ASIC_IRQ13_MASK = 0;
+	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 #ifdef LOG

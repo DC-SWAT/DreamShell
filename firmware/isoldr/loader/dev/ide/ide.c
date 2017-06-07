@@ -285,8 +285,9 @@ void g1_dma_start(u32 addr, size_t bytes) {
 
 void g1_dma_set_irq_mask(s32 enable) {
 
-	// FIXME
-	if(fs_dma_enabled() == FS_DMA_HIDDEN) {
+	if (fs_dma_enabled() == FS_DMA_DISABLED) {
+		return;
+	} else if(fs_dma_enabled() == FS_DMA_HIDDEN) {
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		if(g1_dma_irq_visible) {
 			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
@@ -416,7 +417,7 @@ static s32 g1_dev_scan(void)
 		DBGF("st = %02X\n", st);
 		DBGF("1.....................\n");
 		
-		while (d++ < 1000)
+		while (d++ < 10000)
 		{
 			if (st & ATA_SR_ERR)
 			{
@@ -533,7 +534,7 @@ static s32 g1_dev_scan(void)
 		if (ide_devices[i].reserved == 1) 
 		{
 			if (ide_devices[i].type == IDE_ATA)
-				DBGF("%s %s ATA drive %llu Kb\n",
+				LOGF("%s %s ATA drive %ld Kb\n",
 											(const s8 *[]){"MASTER", "SLAVE"}[i],
 											(!(ide_devices[i].capabilities & (1 << 9))) ? "CHS" : 
 											(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
@@ -549,7 +550,7 @@ static s32 g1_dev_scan(void)
 		}
 		else
 		{
-			DBGF("%s device not found\n", (const s8 *[]){"MASTER", "SLAVE"}[i]);
+			LOGF("%s device not found\n", (const s8 *[]){"MASTER", "SLAVE"}[i]);
 		}
 #endif
 	return count;
@@ -701,11 +702,11 @@ static s32 g1_ata_access(struct ide_req *req)
 		
 		if ((req->cmd & 2))
 		{
-			g1_dma_abort();
+//			g1_dma_abort();
 			
 			if (req->cmd == G1_READ_DMA) {
 				 /* Invalidate the dcache over the range of the data. */
-				dcache_inval_range((u32) buff, len * 512);
+				dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * 512));
 			}
 #if _FS_READONLY == 0
 			else {
@@ -894,17 +895,19 @@ void g1_get_partition(void)
 
 s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	
-	DBGFF("%ld %d 0x%08lx %s\n", block, count, (uint32)buf, fs_dma_enabled() ? "DMA" : "PIO");
+	DBGFF("%ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
+			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
 
 	const u8 drive = 1; // TODO
 	struct ide_req req;
 
 	req.buff = buf;
 	req.count = count;
+	req.bytes = 0;
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = fs_dma_enabled() ? G1_READ_DMA : G1_READ_PIO;
 	req.lba = block;
-	req.async = !wait_dma;
+	req.async = wait_dma ? 0 : 1;
 
 	return g1_ata_access(&req);
 }

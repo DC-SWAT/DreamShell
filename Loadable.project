@@ -700,18 +700,6 @@
             <File Name="firmware/isoldr/loader/fs/fat/include/integer.h"/>
             <File Name="firmware/isoldr/loader/fs/fat/include/fstime.h"/>
           </VirtualDirectory>
-          <VirtualDirectory Name="dev">
-            <VirtualDirectory Name="sd">
-              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/sd.c"/>
-              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/sd.h"/>
-              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/spi.c"/>
-              <File Name="firmware/isoldr/loader/fs/fat/dev/sd/spi.h"/>
-            </VirtualDirectory>
-            <VirtualDirectory Name="ide">
-              <File Name="firmware/isoldr/loader/fs/fat/dev/ide/g1ata.c"/>
-              <File Name="firmware/isoldr/loader/fs/fat/dev/ide/g1ata.h"/>
-            </VirtualDirectory>
-          </VirtualDirectory>
           <File Name="firmware/isoldr/loader/fs/fat/src/fstime.c"/>
         </VirtualDirectory>
         <VirtualDirectory Name="net">
@@ -808,6 +796,12 @@
         <VirtualDirectory Name="ide">
           <File Name="firmware/isoldr/loader/dev/ide/ide.c"/>
           <File Name="firmware/isoldr/loader/dev/ide/ide.h"/>
+        </VirtualDirectory>
+        <VirtualDirectory Name="sd">
+          <File Name="firmware/isoldr/loader/dev/sd/sd.c"/>
+          <File Name="firmware/isoldr/loader/dev/sd/sd.h"/>
+          <File Name="firmware/isoldr/loader/dev/sd/spi.c"/>
+          <File Name="firmware/isoldr/loader/dev/sd/spi.h"/>
         </VirtualDirectory>
       </VirtualDirectory>
     </VirtualDirectory>
