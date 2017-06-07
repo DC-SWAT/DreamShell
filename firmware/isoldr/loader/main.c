@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
 	loader_addr = (uint32)IsoInfo;
 
-#if defined(DEV_TYPE_GD)
+#if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	timer_init();
 #endif
 

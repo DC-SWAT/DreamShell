@@ -140,20 +140,23 @@ typedef struct ide_req
 	void	*buff;
 	u64		lba;
 	u32		count;
+	u32		bytes;
 	u8		cmd;
 	u8		async;
 	struct ide_device *dev;
 } ide_req_t;
 
-static struct ide_device ide_devices[2];
+#ifdef DEV_TYPE_EMU
+# define MAX_DEVICE_COUNT 1
+#else
+# define MAX_DEVICE_COUNT 2
+#endif
 
-static s32 initted = 0,
-		g1_dma_irq_visible = 0,
-		_g1_dma_irq_enabled = 0;
+static struct ide_device ide_devices[MAX_DEVICE_COUNT];
+static s32 g1_dma_irq_visible = 0,
+			_g1_dma_irq_enabled = 0,
+			g1_dma_part_avail = 0;
 
-/* The G1 ATA access mutex */
-//static mutex_t g1_ata_mutex = RECURSIVE_MUTEX_INITIALIZER;
-//static semaphore_t g1_dma_done = SEM_INITIALIZER(0);
 
 #define g1_ata_wait_status(n) \
     do {} while((IN8(G1_ATA_ALTSTATUS) & (n)))
@@ -199,9 +202,9 @@ s32 g1_dma_irq_enabled() {
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
-#ifdef LOG
+//#ifdef LOG
 	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-#endif
+//#endif
 
 	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n",
 	      *REG_INTEVT, st,
@@ -267,6 +270,17 @@ void g1_dma_abort(void) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
 		g1_ata_wait_dma();
 	}
+}
+
+void g1_dma_start(u32 addr, size_t bytes) {
+	/* Set the DMA parameters up. */
+	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+	OUT32(G1_ATA_DMA_ADDRESS, (addr & 0x0FFFFFFF));
+	OUT32(G1_ATA_DMA_LENGTH, bytes);
+	OUT8(G1_ATA_DMA_DIRECTION, 1);
+	
+	 /* Enable G1 DMA. */
+	OUT8(G1_ATA_DMA_ENABLE, 1);
 }
 
 void g1_dma_set_irq_mask(s32 enable) {
@@ -349,7 +363,7 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
     return 0;
 }
 
-static void g1_dev_scan(void)
+static s32 g1_dev_scan(void)
 {
 
 #ifdef DEV_TYPE_EMU
@@ -363,15 +377,15 @@ static void g1_dev_scan(void)
 	OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
 	OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
 	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
-	return;
+	return 1;
 #else
 
 	s32 i;
-	u8 j, st, err, type, count = 0
+	u8 j, st, err, type, count = 0;
 	int d = 0;
 	u16 data[256];
 
-	for (j = 0; j < 2; j++)
+	for (j = 0; j < MAX_DEVICE_COUNT; j++)
 	{
 		err = 0;
 		type = IDE_ATA;
@@ -439,22 +453,12 @@ static void g1_dev_scan(void)
 		
 		for(i = 0; i < 256; i++)
 			data[i] = IN16(G1_ATA_DATA);
-		
+
+#if defined(DEV_TYPE_GD)
 		if (!memcmp(&data[40], &data[136], 192))
 		{
 			type = IDE_SPI;
-			
-//			memcpy(ide_devices[count].model, "GD-ROM V.", 9);
-//			
-//			for (i = 0; i < 8; i++)
-//			{
-//				ide_devices[count].model[i*2+9] = (s8) data[i+24];
-//				ide_devices[count].model[i*2+10] = (s8) (data[i+24] >> 8);
-//			}
-//			ide_devices[count].model[32] = '\0';
-			
 			ide_devices[count].wdma_modes = 0x0407;
-			
 			ide_devices[count].cd_info.sec_type = 0x10;
 			
 			g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
@@ -464,19 +468,8 @@ static void g1_dev_scan(void)
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 		}
 		else
+#endif
 		{
-//			for (i = 0; i < 20; i++)
-//			{
-//				ide_devices[count].model[i*2]   = (s8) (data[i+27] >> 8);
-//				ide_devices[count].model[i*2+1] = (s8)  data[i+27];
-//			}
-//			
-//			for (i = strlen(ide_devices[count].model)-1; 
-//				 i && ide_devices[count].model[i] == ' '; 
-//				 i--)
-//			{
-//				ide_devices[count].model[i] = '\0';
-//			}
 			
 #if defined(DEV_TYPE_IDE)
 			if (type == IDE_ATA)
@@ -540,27 +533,26 @@ static void g1_dev_scan(void)
 		if (ide_devices[i].reserved == 1) 
 		{
 			if (ide_devices[i].type == IDE_ATA)
-				DBGF("%s %s ATA drive %llu Kb - %s\n",
+				DBGF("%s %s ATA drive %llu Kb\n",
 											(const s8 *[]){"MASTER", "SLAVE"}[i],
 											(!(ide_devices[i].capabilities & (1 << 9))) ? "CHS" : 
 											(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
 											(ide_devices[i].max_lba) ? (u64)(ide_devices[i].max_lba >> 1): 
 																	 ( (u64) (ide_devices[count].cylinders *
 																	   ide_devices[count].heads *
-																	   ide_devices[count].sectors ) >> 1), /* Size */
-											ide_devices[i].model);
+																	   ide_devices[count].sectors ) >> 1));
 
 			else
-				LOGF("%s %s drive - %s\n",
+				LOGF("%s %s drive\n",
 						(const s8 *[]){"MASTER", "SLAVE"}[i],
-						(const s8 *[]){"ATAPI", "SPI"}[ide_devices[i].type-1],         /* Type */
-						ide_devices[i].model);
+						(const s8 *[]){"ATAPI", "SPI"}[ide_devices[i].type-1]);
 		}
 		else
 		{
 			DBGF("%s device not found\n", (const s8 *[]){"MASTER", "SLAVE"}[i]);
 		}
 #endif
+	return count;
 #endif /* DEV_TYPE_EMU */
 }
 
@@ -600,6 +592,8 @@ static s32 ide_polling(u8 advanced_check)
 	return 0; // No Error.
 }
 
+#ifdef DEV_TYPE_IDE
+
 static s32 g1_ata_access(struct ide_req *req)
 {
 	struct ide_device *dev = req->dev;
@@ -626,11 +620,6 @@ static s32 g1_ata_access(struct ide_req *req)
 	{
 		cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO;
 	}
-	
-//	while (mutex_is_locked(&g1_ata_mutex))
-//		thd_pass();
-//	
-//	mutex_lock(&g1_ata_mutex);
 	
 	g1_ata_wait_bsydrq();
 	
@@ -717,19 +706,22 @@ static s32 g1_ata_access(struct ide_req *req)
 			if (req->cmd == G1_READ_DMA) {
 				 /* Invalidate the dcache over the range of the data. */
 				dcache_inval_range((u32) buff, len * 512);
-			} else {
+			}
+#if _FS_READONLY == 0
+			else {
 				/* Flush the dcache over the range of the data. */
 				dcache_flush_range((u32) buff, len * 512);
 			}
+#endif
 			
 			/* Set the DMA parameters up. */
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 			OUT32(G1_ATA_DMA_ADDRESS, ((u32) buff & 0x0FFFFFFF));
-			OUT32(G1_ATA_DMA_LENGTH, (len * 512));
+			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * 512));
 			OUT8(G1_ATA_DMA_DIRECTION, (req->cmd == G1_READ_DMA));
 			
 			 /* Enable G1 DMA. */
-			OUT8(G1_ATA_DMA_ENABLE, 1);
+//			OUT8(G1_ATA_DMA_ENABLE, 1);
 		}
 		
 		g1_ata_wait_bsydrq();
@@ -742,7 +734,6 @@ static s32 g1_ata_access(struct ide_req *req)
 			{
 				if ((err = ide_polling(1)))
 				{
-//					mutex_unlock(&g1_ata_mutex);
 					return err; // Polling, set error and exit if there is.
 				}
 				
@@ -752,6 +743,7 @@ static s32 g1_ata_access(struct ide_req *req)
 				}
 			}
 		}
+#if _FS_READONLY == 0
 		else if (req->cmd == G1_WRITE_PIO)
 		{
 			for (i = 0; i < len; i++)
@@ -760,7 +752,6 @@ static s32 g1_ata_access(struct ide_req *req)
 				
 				if ((err = ide_polling(1)))
 				{
-//					mutex_unlock(&g1_ata_mutex);
 					return err; // Polling, set error and exit if there is.
 				}
 				
@@ -771,17 +762,17 @@ static s32 g1_ata_access(struct ide_req *req)
 			OUT8(G1_ATA_COMMAND_REG, (lba_mode == 2) ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 			err = ide_polling(0);
 		}
+#endif
 		else
 		{
 			/* Start the DMA transfer. */
 			OUT8(G1_ATA_DMA_STATUS, 1);
 			
-//			if ((err = sem_wait(&g1_dma_done)))
-//			{
-//				g1_dma_abort();
-//				mutex_unlock(&g1_ata_mutex);
-//				return err;
-//			}
+			if (req->async) {
+				// FIXME: Check count
+				return 0;
+			}
+
 			g1_ata_wait_dma();
 			
 			buff += len;
@@ -789,38 +780,14 @@ static s32 g1_ata_access(struct ide_req *req)
 		}
 	}
 	
-//	mutex_unlock(&g1_ata_mutex);
-	
 	return 0;
 }
 
-
-s32 g1_pio_read(struct ide_req *req)
-{
-	if (req->dev->reserved)
-	{
-		switch (req->dev->type)
-		{
-			case IDE_ATA:
-				return g1_ata_access(req);
-//#ifdef DEV_TYPE_GD
-//			case IDE_ATAPI:
-//			case IDE_SPI:
-//				return g1_packet_read(req);
-//#endif
-			default:
-				break;
-		}
-	}
-	
-	return -1;
-}
-
-#ifdef DEV_TYPE_IDE
+#ifdef DEBUG
 void g1_get_partition(void) 
 {
 	s32 i, j; 
-	u8 buff[0x200];// __attribute__((aligned(32)));//memalign(32, 0x200)
+	u8 buff[0x200];
 	struct ide_req req;
 	
 	req.buff = (void *) buff;
@@ -829,10 +796,10 @@ void g1_get_partition(void)
 	req.lba = 0;
 
 	//Опрашиваем все ATA устройства и получаем от каждого таблицу разделов: 
-	for(i = 0; i < 2; i++) 
+	for(i = 0; i < MAX_DEVICE_COUNT; i++) 
 	{  
 		if(!ide_devices[i].reserved || ide_devices[i].type != IDE_ATA) 
-			continue; 
+			continue;
 		
 		req.dev = &ide_devices[i];
 		
@@ -921,82 +888,134 @@ void g1_get_partition(void)
 			ide_devices[i].pt_num++;
 		}
 	}
-//	free(buff);
 	return;
 }
 #endif
 
-void g1_bus_init(void)
+s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
+	
+	DBGFF("%ld %d 0x%08lx %s\n", block, count, (uint32)buf, fs_dma_enabled() ? "DMA" : "PIO");
+
+	const u8 drive = 1; // TODO
+	struct ide_req req;
+
+	req.buff = buf;
+	req.count = count;
+	req.dev = &ide_devices[drive & 1];
+	req.cmd = fs_dma_enabled() ? G1_READ_DMA : G1_READ_PIO;
+	req.lba = block;
+	req.async = !wait_dma;
+
+	return g1_ata_access(&req);
+}
+
+#if _FS_READONLY == 0
+
+s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
+	// TODO
+	(void)block;
+	(void)count;
+	(void)buf;
+	(void)wait_dma;
+	return 0;
+}
+
+#endif
+
+s32 g1_ata_read_lba_dma_part(u64 sector, size_t offset, size_t bytes, u8 *buf) {
+
+	if(offset && g1_dma_part_avail > 0) {
+
+		g1_dma_part_avail -= bytes;
+		g1_dma_start((u32)buf, bytes);
+		return 0;
+
+	} else if(g1_dma_part_avail > 0) {
+
+		// TODO: abort last command
+
+	} else if(bytes < 512) {
+		g1_dma_part_avail = 512 - bytes;
+	}
+	
+	const u8 drive = 1; // TODO
+	struct ide_req req;
+
+	req.buff = buf;
+	req.count = 1;
+	req.bytes = bytes;
+	req.dev = &ide_devices[drive & 1];
+	req.cmd = G1_READ_DMA;
+	req.lba = sector;
+	req.async = 1;
+
+	return g1_ata_access(&req);
+}
+
+s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
+	// TODO
+	(void)sector;
+	(void)count;
+	return 0;
+}
+
+s32 g1_ata_poll(void) {
+	
+//	if(exception_inside_int()) {
+//		return 0;
+//	} else
+	if(g1_dma_in_progress()) {
+		
+		int rv = g1_dma_transfered();
+		DBGFF("%d\n", rv);
+		return rv > 0 ? rv : 32;
+	}
+	
+	g1_ata_wait_bsydrq();
+	return 0;
+}
+
+#if _USE_MKFS && !_FS_READONLY
+u64 g1_ata_max_lba(void) {
+	
+	const u8 drive = 1; // TODO
+	ide_device_t *device = &ide_devices[drive & 1];
+
+    if(device.max_lba) {
+		return device.max_lba;
+	} else {
+		return (device.cylinders * device.heads * device.sectors);
+	}
+}
+#endif
+
+s32 g1_ata_flush(void) {
+	// TODO
+	return 0;
+}
+
+s32 g1_ata_abort(void) {
+	g1_dma_abort();
+	return 0;
+}
+
+#endif /* DEV_TYPE_IDE */
+
+
+s32 g1_bus_init(void)
 {
 
-//	u32 p;
-//    volatile u32 *status = (u32 *) 0xa05f74ec;
-//	volatile u32 *react  = (u32 *) 0xa05f74e4,
-//					  *bios   = (u32 *) 0xa0000000;
-//	
-//	switch(*status)
-//	{
-//		case 0:
-//			/* Reactivate drive: send the BIOS size and then read each
-//			   word across the bus so the controller can verify it. */
-//			if((*(u32 *)0xa0000000) == 0x4628e6ff) 
-//			{
-//				*react = 0x3ff;
-//				for(p = 0; p < 0x400 / sizeof(bios[0]); p++) 
-//					(void)bios[p];
-//			} 
-//			else 
-//			{
-//				*react = 0x1fffff;
-//				for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) 
-//					(void)bios[p];
-//			}
-//			
-//			if (*status != 3)
-//			{
-//				initted = -1;
-//				return;
-//			}
-//			break;
-//			
-//		case 2:
-//			initted = -1;
-//			return;
-//			break;
-//		
-//		case 3:
-//			break;
-//		
-//		default:
-//			initted = -1;
-//			return;
-//			break;
-//	}
+	s32 count = g1_dev_scan();
 
-	g1_dev_scan();
-	
-	/* Hook all the DMA related events. */
-//    asic_evt_set_handler(ASIC_EVT_GD_DMA, dma_irq_hnd);
-//    asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQ_DEFAULT);
-//    asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, dma_irq_hnd);
-//    asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQ_DEFAULT);
-//    asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, dma_irq_hnd);
-//    asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQ_DEFAULT);
-	
-#ifdef DEV_TYPE_IDE
+	if (!count) {
+		return -1;
+	}
+
+#if defined(DEV_TYPE_IDE) && defined(DEBUG)
 	g1_get_partition();
 #endif
-	
-//	for (p = 0; p < 2; p++)
-//	{
-//		if (ide_devices[p].reserved && 
-//			(ide_devices[p].type == IDE_ATAPI ||
-//			 ide_devices[p].type == IDE_SPI))
-//				fs_iso9660_mount((void *) &ide_devices[p]);
-//	}
-//	
-	
-	initted = 1;
+
+	return 0;
 }
 
 
@@ -1219,9 +1238,6 @@ static s32 read_toc(u8 drive)
 		{
 			toc_len = swap16(IN16(G1_ATA_DATA));
 			
-			/* Выделяем память для хранения данных TOC */
-//			data_buff = (u8 *)calloc(1, toc_len);
-			
 			/* Считываем результат */
 			for(i = 0; i < (toc_len >> 1); i++) 
 				((u16 *)data_buff)[i] = IN16(G1_ATA_DATA);
@@ -1251,7 +1267,6 @@ static s32 read_toc(u8 drive)
 															  (data_buff[total_tracks*8+2+5]  << 16) | 
 															  (data_buff[total_tracks*8+2+6]  << 8 ) | 
 															   data_buff[total_tracks*8+2+7]	   );
-//			free(data_buff);
 		}
 		else
 		{
@@ -1314,8 +1329,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 			
 			if (!(sense->sk == 6 && sense->asc == 0x29) || i > 20)
 				return ERR_DISC_CHG;
-			
-//			thd_pass();
+
 			wait_while_ready(dev);
 		}
 		
@@ -1530,7 +1544,6 @@ static s32 send_packet_dma_command(u8 *cmd_buff, u8 drive, s32 timeout, u8 async
 	OUT8(G1_ATA_DMA_STATUS, 1);
 	
 	(void)timeout;
-//	sem_wait_timed(&g1_dma_done, timeout);
 
 	if (!async) {
 		g1_ata_wait_dma();
@@ -1564,11 +1577,6 @@ static s32 g1_packet_read(struct ide_req *req)
 			return 0;
 			break;
 	}
-	
-//	while (mutex_is_locked(&g1_ata_mutex))
-//		thd_pass();
-	
-//	mutex_lock(&g1_ata_mutex);
 	
 	memset((void *)cmd_buff, 0, 12);
 	
@@ -1643,9 +1651,6 @@ static s32 g1_packet_read(struct ide_req *req)
 	err = (!request_sense(req->dev->drive)) ? 0 : -1;
 	
 exit_packet_read:
-
-//	mutex_unlock(&g1_ata_mutex);
-	
 	return err;
 }
 

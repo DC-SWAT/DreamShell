@@ -7,10 +7,15 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+
+#ifndef __IDE_H
+#define __IDE_H
+
 #include <sys/cdefs.h>
 __BEGIN_DECLS
 
 #include <arch/types.h>
+#include <dc/cdrom.h>
 
 typedef unsigned char u8; 
 typedef unsigned short u16; 
@@ -22,60 +27,10 @@ typedef int s32;
 typedef long long s64;
 
 // Directions:
-#define G1_READ_PIO				0
-#define G1_WRITE_PIO			1
-#define G1_READ_DMA				2
-#define G1_WRITE_DMA			3
-
-/** \defgroup cd_cmd_response       CD-ROM command responses
-
-    These are the values that the various functions can return as error codes.
-    @{
-*/
-#define ERR_OK          0   /**< \brief No error */
-#define ERR_NO_DISC     1   /**< \brief No disc in drive */
-#define ERR_DISC_CHG    2   /**< \brief Disc changed, but not reinitted yet */
-#define ERR_SYS         3   /**< \brief System error */
-#define ERR_ABORTED     4   /**< \brief Command aborted */
-#define ERR_NO_ACTIVE   5   /**< \brief System inactive? */
-/** @} */
-
-/** \defgroup cd_status_values      CD-ROM status values
-
-    These are the values that can be returned as the status parameter from the
-    cdrom_get_status() function.
-    @{
-*/
-#define CD_STATUS_BUSY      0   /**< \brief Drive is busy */
-#define CD_STATUS_PAUSED    1   /**< \brief Disc is paused */
-#define CD_STATUS_STANDBY   2   /**< \brief Drive is in standby */
-#define CD_STATUS_PLAYING   3   /**< \brief Drive is currently playing */
-#define CD_STATUS_SEEKING   4   /**< \brief Drive is currently seeking */
-#define CD_STATUS_SCANNING  5   /**< \brief Drive is scanning */
-#define CD_STATUS_OPEN      6   /**< \brief Disc tray is open */
-#define CD_STATUS_NO_DISC   7   /**< \brief No disc inserted */
-/** @} */
-
-/** \defgroup cd_disc_types         CD-ROM drive disc types
-
-    These are the values that can be returned as the disc_type parameter from
-    the cdrom_get_status() function.
-    @{
-*/
-#define CD_CDDA     0       /**< \brief Audio CD (Red book) */
-#define CD_CDROM    0x10    /**< \brief CD-ROM or CD-R (Yellow book) */
-#define CD_CDROM_XA 0x20    /**< \brief CD-ROM XA (Yellow book extension) */
-#define CD_CDI      0x30    /**< \brief CD-i (Green book) */
-#define CD_GDROM    0x80    /**< \brief GD-ROM */
-/** @} */
-
-//typedef struct 
-//{
-//    uint32  entry[99];          /**< \brief TOC space for 99 tracks */
-//    uint32  first;              /**< \brief Point A0 information (1st track) */
-//    uint32  last;               /**< \brief Point A1 information (last track) */
-//    uint32  leadout_sector;     /**< \brief Point A2 information (leadout) */
-//} CDROM_TOC;
+#define G1_READ_PIO		0
+#define G1_WRITE_PIO	1
+#define G1_READ_DMA		2
+#define G1_WRITE_DMA	3
 
 typedef struct pt_struct 
 { 
@@ -117,49 +72,23 @@ typedef struct ide_device
     u16 sectors;
     u16 wdma_modes;
 #ifdef DEV_TYPE_IDE
-    pt_t pt[4];
-    u8 pt_num;
+//    pt_t pt[4];
+//    u8 pt_num;
 #endif
 #ifdef DEV_TYPE_GD
     cdri_t cd_info;
 #endif
 } ide_device_t;
 
-/** \defgroup cd_toc_access         CD-ROM TOC access macros
-    @{
-*/
-/** \brief  Get the FAD address of a TOC entry.
-    \param  n               The actual entry from the TOC to look at.
-    \return                 The FAD of the entry.
-*/
-#define TOC_LBA(n) ((n) & 0x00ffffff)
 
-/** \brief  Get the address of a TOC entry.
-    \param  n               The entry from the TOC to look at.
-    \return                 The entry's address.
-*/
-#define TOC_ADR(n) ( ((n) & 0x0f000000) >> 24 )
-
-/** \brief  Get the control data of a TOC entry.
-    \param  n               The entry from the TOC to look at.
-    \return                 The entry's control value.
-*/
-#define TOC_CTRL(n) ( ((n) & 0xf0000000) >> 28 )
-
-/** \brief  Get the track number of a TOC entry.
-    \param  n               The entry from the TOC to look at.
-    \return                 The entry's track.
-*/
-#define TOC_TRACK(n) ( ((n) & 0x00ff0000) >> 16 )
-/** @} */
-
-void g1_bus_init(void);
+s32 g1_bus_init(void);
 void g1_dma_abort(void);
 void g1_dma_set_irq_mask(s32 enable);
 s32 g1_dma_init_irq(void);
 s32 g1_dma_irq_enabled(void);
 s32 g1_dma_in_progress(void);
 u32 g1_dma_transfered(void);
+void g1_dma_start(u32 addr, size_t bytes);
 
 void cdrom_spin_down(u8 drive);
 s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive);
@@ -175,3 +104,104 @@ s32 cdrom_cdda_resume();
 s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive);
 s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u8 drive);
 s32 cdrom_chk_disc_change(u8 drive);
+
+/** \brief  DMA read disk sector part with Linear Block Addressing (LBA).
+
+    This function reads partial disk block from the slave device
+    on the G1 ATA bus using LBA mode (either 28 or 48 bits, as appropriate).
+
+    \param  sector          The sector reading.
+    \param  offset          The number of bytes to skip.
+    \param  bytes           The number of bytes to read.
+    \param  buf             Storage for the read-in disk sectors. This should be
+                            at least 32-byte aligned.
+    \return                 0 on success. < 0 on failure, setting errno as
+                            appropriate.
+*/
+s32 g1_ata_read_lba_dma_part(u64 sector, size_t offset, size_t bytes, u8 *buf);
+
+
+/** \brief  Pre-read disk sector part with Linear Block Addressing (LBA).
+ * 
+ * This function for pre-reading sectors from the slave device.
+ **/
+s32 g1_ata_pre_read_lba(u64 sector, size_t count);
+
+
+/** \brief  Read one or more blocks from the ATA device.
+
+    This function reads the specified number of blocks from the ATA device from the
+    beginning block specified into the buffer passed in. It is your
+    responsibility to allocate the buffer properly for the number of bytes that
+    is to be read (512 * the number of blocks requested).
+
+    \param  block           The starting block number to read from.
+    \param  count           The number of 512 byte blocks of data to read.
+    \param  buf             The buffer to read into.
+    \param  wait_dma        Wait DMA complete
+    \retval 0               On success.
+    \retval -1              On error, errno will be set as appropriate.
+*/
+s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma);
+
+
+/** \brief  Write one or more blocks to the ATA device.
+
+    This function writes the specified number of blocks to the ATA device at the
+    beginning block specified from the buffer passed in. Each block is 512 bytes
+    in length, and you must write at least one block at a time. You cannot write
+    partial blocks.
+
+    If this function returns an error, you have quite possibly corrupted
+    something on the ATA device or have a damaged device in general (unless errno is
+    ENXIO).
+
+    \param  block           The starting block number to write to.
+    \param  count           The number of 512 byte blocks of data to write.
+    \param  buf             The buffer to write from.
+    \param  wait_dma        Wait DMA complete
+    \retval 0               On success.
+    \retval -1              On error, errno will be set as appropriate.
+*/
+s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma);
+
+
+/** \brief  Polling the ATA device.
+
+    This function used for async reading.
+
+    \return                 On succes, the transfered size. On error, -1.
+*/
+s32 g1_ata_poll(void);
+
+
+/** \brief  Retrieve the size of the ATA device.
+
+    \return                 On succes, max LBA
+                            error, (uint64)-1.
+*/
+u64 g1_ata_max_lba(void);
+
+
+/** \brief  Flush the write cache on the attached disk.
+
+    This function flushes the write cache on the disk attached as the slave
+    device on the G1 ATA bus. This ensures that all writes that have previously
+    completed are fully persisted to the disk. You should do this before
+    unmounting any disks or exiting your program if you have called any of the
+    write functions in here.
+
+    \return                 0 on success. <0 on error, setting errno as
+                            appropriate.
+*/
+s32 g1_ata_flush(void);
+
+
+/** \brief  Abort the ATA device.
+ * 
+ */
+s32 g1_ata_abort(void);
+
+__END_DECLS
+
+#endif  /* __IDE_H */

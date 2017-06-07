@@ -457,6 +457,5 @@ int ioctl(int fd, int request, void *data) {
 /* Init function */
 
 int fs_init() {
-	g1_bus_init();
-	return 0;
+	return g1_bus_init();
 }

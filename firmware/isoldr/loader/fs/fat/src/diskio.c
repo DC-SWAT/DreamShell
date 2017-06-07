@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader 
  * disk I/O for FatFs
- * (c)2009-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017 SWAT <http://www.dc-swat.ru>
  */
 #include <main.h>
 #include "diskio.h"
@@ -11,7 +11,7 @@
 #endif
 
 #ifdef DEV_TYPE_IDE
-#include "../dev/ide/g1ata.h"
+#include <ide/ide.h>
 #endif
 
 
@@ -59,7 +59,7 @@ DSTATUS disk_initialize (
 
 
 #ifdef DEV_TYPE_IDE
-	return g1_ata_init() ? STA_NOINIT : 0;
+	return g1_bus_init() ? STA_NOINIT : 0;
 #endif
 
 	return STA_NOINIT;

@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * File system
- * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2017 SWAT <http://www.dc-swat.ru>
  */
 
 #if defined(DEV_TYPE_NET)
@@ -28,7 +28,7 @@ extern int sl_mode;
 #if defined(DEV_TYPE_SD)
 #include "spi.h"
 #elif defined(DEV_TYPE_IDE)
-#include "g1ata.h"
+#include <ide/ide.h>
 #endif
 
 #if defined(LOG) && _FS_READONLY == 1
@@ -125,10 +125,7 @@ void poll_all();
  */
 int pre_read(int fd, unsigned long offset, unsigned int size);
 
-#if defined(DEV_TYPE_GD)
-#	define pre_read_xfer_busy   g1_dma_in_progress
-#	define pre_read_xfer_size   g1_dma_transfered
-#elif defined(DEV_TYPE_IDE)
+#if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 #	define pre_read_xfer_start  g1_dma_start
 #	define pre_read_xfer_busy   g1_dma_in_progress
 #	define pre_read_xfer_size   g1_dma_transfered

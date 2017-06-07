@@ -127,6 +127,7 @@ __BEGIN_DECLS
 
     \headerfile dc/cdrom.h
 */
+
 typedef struct {
     uint32  entry[99];          /**< \brief TOC space for 99 tracks */
     uint32  first;              /**< \brief Point A0 information (1st track) */

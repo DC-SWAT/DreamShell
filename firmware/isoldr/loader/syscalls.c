@@ -373,7 +373,7 @@ static void data_transfer_cb(size_t size) {
 	}
 # endif
 
-//	LOGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
+	LOGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
 }
 
 void data_transfer_true_async() {
@@ -390,6 +390,7 @@ void data_transfer_true_async() {
 	GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_transfer_cb);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
+		LOGFF("Error %d\n", GDS->status);
 		return;
 	}
 
@@ -1032,7 +1033,7 @@ static void data_stream_cb(size_t size) {
 	if(!GDS->requested) {
 		GDS->status = CMD_STAT_COMPLETED;
 	}
-	LOGFF("%d %d\n", size, GDS->transfered);
+	LOGFF("%d %d %d\n", size, GDS->transfered, GDS->requested);
 }
 #endif
 
@@ -1066,6 +1067,16 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 		GDS->dma_status = 1;
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
+
+		// FIXME
+		if(IsoInfo->exec.type == BIN_TYPE_WINCE) {
+			while(GDS->dma_status) {
+				if (poll(iso_fd) <= 0) {
+					break;
+				}
+			}
+		}
+
 	} else
 #endif /*_FS_ASYNC */
 	{

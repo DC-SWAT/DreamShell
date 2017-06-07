@@ -2581,7 +2581,6 @@ FRESULT f_open (
 #ifdef DEV_TYPE_IDE
 //#include <arch/cache.h>
 #include <mmu.h>
-#include "../dev/ide/g1ata.h"
 #endif
 
 FRESULT f_read (
