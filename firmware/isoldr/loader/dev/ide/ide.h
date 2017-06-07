@@ -67,9 +67,6 @@ typedef struct ide_device
 	u32 command_sets;	// Command Sets Supported.
 //	s8  model[41];		// Model in string.
 	u64 max_lba;
-    u16 cylinders;
-    u16 heads;
-    u16 sectors;
     u16 wdma_modes;
 #if defined(DEV_TYPE_IDE) && defined(DEBUG)
     pt_t pt[4];

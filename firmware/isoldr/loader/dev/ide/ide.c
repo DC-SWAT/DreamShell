@@ -390,7 +390,7 @@ static s32 g1_dev_scan(void)
 	{
 		err = 0;
 		type = IDE_ATA;
-		ide_devices[count].reserved   = 0; // Assuming that no drive here.
+		ide_devices[j].reserved   = 0; // Assuming that no drive here.
 		
 		OUT8(G1_ATA_DEVICE_SELECT, (0xA0 | (j << 4)));
 		timer_spin_sleep(1);
@@ -409,13 +409,11 @@ static s32 g1_dev_scan(void)
 		
 		st = IN8(G1_ATA_STATUS_REG);
 		
-		if(!st || st == 0xff || st == 0xEC)
+		if(st != 0xD0 && st != 0x51 && st != 0x01)
 		{
 			LOGFF("%s device not found\n", (!j)?"MASTER":"SLAVE");
 			continue;
 		}
-		DBGF("st = %02X\n", st);
-		DBGF("1.....................\n");
 		
 		while (d++ < 10000)
 		{
@@ -425,13 +423,11 @@ static s32 g1_dev_scan(void)
 				break;
 			} else if (!(st & ATA_SR_BSY) && (st & ATA_SR_DRQ)) {
 				break; // Everything is right.
-			}/* else {
-				DBGF("st = %02X\n", st);
-			}*/
+			}
 			
 			st = IN8(G1_ATA_STATUS_REG);
 		}
-		DBGF("2.....................\n");
+		
 		if (err)
 		{
 			OUT8(G1_ATA_COMMAND_REG, ATAPI_CMD_RESET);
@@ -459,8 +455,8 @@ static s32 g1_dev_scan(void)
 		if (!memcmp(&data[40], &data[136], 192))
 		{
 			type = IDE_SPI;
-			ide_devices[count].wdma_modes = 0x0407;
-			ide_devices[count].cd_info.sec_type = 0x10;
+			ide_devices[j].wdma_modes = 0x0407;
+			ide_devices[j].cd_info.sec_type = 0x10;
 			
 			g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
 			g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2));
@@ -475,38 +471,33 @@ static s32 g1_dev_scan(void)
 #if defined(DEV_TYPE_IDE)
 			if (type == IDE_ATA)
 			{
-				ide_devices[count].command_sets  = (u32)(data[82]) | ((u32)(data[83]) << 16);
-				ide_devices[count].capabilities  = (u32)(data[49]) | ((u32)(data[50]) << 16);
-				ide_devices[count].wdma_modes = data[63];
+				ide_devices[j].command_sets  = (u32)(data[82]) | ((u32)(data[83]) << 16);
+				ide_devices[j].capabilities  = (u32)(data[49]) | ((u32)(data[50]) << 16);
+				ide_devices[j].wdma_modes = data[63];
 				
-				if (!(ide_devices[count].capabilities & (1 << 9)))
+				if (!(ide_devices[j].capabilities & (1 << 9)))
 				{
-					ide_devices[count].max_lba = 0;
-					ide_devices[count].cylinders = data[1];
-					ide_devices[count].heads = data[3];
-					ide_devices[count].sectors = data[6];
+					LOGF("CHS don't supported\n");
+					continue;
 				}
 				else 
-				if(!(ide_devices[count].command_sets & (1 << 26)))
+				if(!(ide_devices[j].command_sets & (1 << 26)))
 				{
-					ide_devices[count].max_lba = (u64)(data[60]) | ((u64)(data[61]) << 16);
-					ide_devices[count].cylinders = ide_devices[count].heads = ide_devices[count].sectors = 0;
+					ide_devices[j].max_lba = (u64)(data[60]) | ((u64)(data[61]) << 16);
 				}
 				else
 				{
-					ide_devices[count].max_lba = (u64)(data[100]) | 
+					ide_devices[j].max_lba = (u64)(data[100]) | 
 												((u64)(data[101]) << 16) |
 												((u64)(data[102]) << 32) |
 												((u64)(data[103]) << 48);
-					
-					ide_devices[count].cylinders = ide_devices[count].heads = ide_devices[count].sectors = 0;
 				}
 				
 				g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
 				
 				/*  Do we support Multiword DMA mode 2? If so, enable it. Otherwise, we won't
 					even bother doing DMA at all. */
-				if(ide_devices[count].wdma_modes & 0x0004 && !g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) 
+				if(ide_devices[j].wdma_modes & 0x0004 && !g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) 
 				{
 					OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
 					OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
@@ -514,18 +505,18 @@ static s32 g1_dev_scan(void)
 				}
 				else 
 				{
-					ide_devices[count].wdma_modes = 0;
+					ide_devices[j].wdma_modes = 0;
 				}
 			}
 #elif defined(DEV_TYPE_GD)
 			if (type == IDE_ATAPI)
-				ide_devices[count].cd_info.sec_type = 0x10;
+				ide_devices[j].cd_info.sec_type = 0x10;
 #endif
 		}
 		
-		ide_devices[count].reserved     = 1;
-		ide_devices[count].type         = type;
-		ide_devices[count].drive        = j;
+		ide_devices[j].reserved     = 1;
+		ide_devices[j].type         = type;
+		ide_devices[j].drive        = j;
 		count++;
 	}
 
@@ -536,12 +527,8 @@ static s32 g1_dev_scan(void)
 			if (ide_devices[i].type == IDE_ATA)
 				LOGF("%s %s ATA drive %ld Kb\n",
 											(const s8 *[]){"MASTER", "SLAVE"}[i],
-											(!(ide_devices[i].capabilities & (1 << 9))) ? "CHS" : 
 											(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
-											(ide_devices[i].max_lba) ? (u64)(ide_devices[i].max_lba >> 1): 
-																	 ( (u64) (ide_devices[count].cylinders *
-																	   ide_devices[count].heads *
-																	   ide_devices[count].sectors ) >> 1));
+											(u64)(ide_devices[i].max_lba >> 1));
 
 			else
 				LOGF("%s %s drive\n",
@@ -604,8 +591,8 @@ static s32 g1_ata_access(struct ide_req *req)
 	u64 lba = req->lba;
 	u8 lba_io[6];
 	u8 lba_mode /* 0: CHS, 1:LBA28, 2: LBA48 */;
-	u8 head, sect, err;
-	u16 cyl, i, j, cmd;
+	u8 head, err;
+	u16 i, j, cmd;
 	
 	if ((req->cmd & 2))
 	{
@@ -626,7 +613,7 @@ static s32 g1_ata_access(struct ide_req *req)
 	
 	while(count)
 	{
-		// (I) Select one from LBA28, LBA48 or CHS;
+		// (I) Select one from LBA28, LBA48;
 		if (lba >= 0x10000000) // Sure Drive should support LBA in this case, or you are
 		{					  // giving a wrong LBA.
 			// LBA48:
@@ -639,8 +626,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			lba_io[5] = 0; // LBA28 is integer, so 32-bits are enough to access 2TB.
 			head      = 0; // Lower 4-bits of HDDEVSEL are not used here.
 		}
-		else 
-		if (dev->capabilities & 0x200) // Drive supports LBA?
+		else
 		{
 			// LBA28:
 			lba_mode  = 1;
@@ -652,25 +638,8 @@ static s32 g1_ata_access(struct ide_req *req)
 			lba_io[5] = 0; // These Registers are not used here.
 			head      = (lba & 0xF000000) >> 24;
 		}
-		else 
-		{
-			// CHS:
-			lba_mode  = 0;
-			sect      = (lba % 63) + 1;
-			cyl       = (lba + 1  - sect) / (16 * 63);
-			lba_io[0] = sect;
-			lba_io[1] = (cyl >> 0) & 0xFF;
-			lba_io[2] = (cyl >> 8) & 0xFF;
-			lba_io[3] = 0;
-			lba_io[4] = 0;
-			lba_io[5] = 0;
-			head      = (lba + 1 - sect) % (16 * 63) / (63); // Head number is written to HDDEVSEL lower 4-bits.
-		}
 		
-		if (lba_mode == 0)
-			OUT8(G1_ATA_DEVICE_SELECT, (0xA0 | (dev->drive << 4) | head));
-		else
-			OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
+		OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
 		
 		if (lba_mode == 2) 
 		{
@@ -696,8 +665,8 @@ static s32 g1_ata_access(struct ide_req *req)
 		
 		OUT8(G1_ATA_CTL, 0);
 		OUT8(G1_ATA_SECTOR_COUNT, (u8)(len & 0xff));
-		OUT8(G1_ATA_LBA_LOW, lba_io[0]);
-		OUT8(G1_ATA_LBA_MID, lba_io[1]);
+		OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
+		OUT8(G1_ATA_LBA_MID,  lba_io[1]);
 		OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
 		
 		if ((req->cmd & 2))
@@ -982,13 +951,8 @@ s32 g1_ata_poll(void) {
 u64 g1_ata_max_lba(void) {
 	
 	const u8 drive = 1; // TODO
-	ide_device_t *device = &ide_devices[drive & 1];
-
-    if(device.max_lba) {
-		return device.max_lba;
-	} else {
-		return (device.cylinders * device.heads * device.sectors);
-	}
+	
+	return ide_devices[drive & 1].max_lba;
 }
 #endif
 
