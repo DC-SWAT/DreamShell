@@ -6,6 +6,7 @@
 
 #include <main.h>
 #include <asic.h>
+#include <mmu.h>
 #include <arch/cache.h>
 
 /* Sector buffer */
@@ -137,6 +138,8 @@ static struct {
 	unsigned int sec0;  /* First sector                     */
 	unsigned int loc;   /* Current read position (in bytes) */
 	unsigned int len;   /* Length of file (in bytes)        */
+	unsigned int rcnt;
+	void *rbuf;
 	int async;
 	fs_callback_f *poll_cb;
 } fh[MAX_OPEN_FILES];
@@ -279,11 +282,22 @@ int pread(int fd, void *buf, unsigned int nbyte, unsigned int offset) {
 		else
 			t += r;
 	} else {
-		/* Just one sector.  Read it and copy the relevant part. */
-		if((r = read_sectors((char *)cd_sector_buffer, fh[fd].sec0+(offset>>11), 1, 0)))
-			return r;
 
-		memcpy(buf, ((char *)cd_sector_buffer)+(offset&2047), nbyte);
+		if ((uint32)buf != 0x8c000000 && mmu_enabled()) {
+
+			if((r = cdrom_read_sectors_part(buf, fh[fd].sec0+(offset>>11), offset, nbyte, 0))) {
+				return r;
+			}
+
+		} else {
+			/* Just one sector.  Read it and copy the relevant part. */
+			if((r = read_sectors((char *)cd_sector_buffer, fh[fd].sec0+(offset>>11), 1, 0))) {
+				return r;
+			}
+
+			memcpy(buf, ((char *)cd_sector_buffer)+(offset&2047), nbyte);
+		}
+
 		t += nbyte;
 	}
 	return t;
@@ -309,8 +323,9 @@ int read(int fd, void *buf, unsigned int nbyte) {
 
 int poll(int fd) {
 
-	if(fd < 0)
+	if(fd < 0) {
 		return FS_ERR_NOFILE;
+	}
 
 	if(!fh[fd].poll_cb || fh[fd].async < 1) {
 		return 0;
@@ -321,7 +336,20 @@ int poll(int fd) {
 	if (g1_dma_in_progress()) {
 		return transfered;
 	} else {
+		
 		fh[fd].loc += transfered;
+		
+		if (fh[fd].rcnt) {
+			if (cdrom_read_sectors_part(fh[fd].rbuf, fh[fd].sec0 + (fh[fd].loc >> 11), fh[fd].loc % 2048, fh[fd].rcnt, 0) < 0) {
+				fh[fd].async = 0;
+				fh[fd].poll_cb(-1);
+				fh[fd].poll_cb = NULL;
+				return FS_ERR_SYSERR;
+			}
+			
+			return transfered + fh[fd].rcnt - 32;
+		}
+		
 		fh[fd].poll_cb(transfered);
 		fh[fd].poll_cb = NULL;
 		return 0;
@@ -353,22 +381,53 @@ int abort_async(int fd) {
 
 
 int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
+	
+	unsigned int sector, count; 
 
 	/* Check that the fd is valid */
 	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
 		return FS_ERR_PARAM;
 	} else {
 
-		/* If async is not possible, just use sync read */
-		if((fh[fd].loc & 2047) || (nbyte & 2047) || (uint32)buf & 0x1F) {
+		if(fh[fd].loc + nbyte > fh[fd].len) {
+			nbyte = fh[fd].len - fh[fd].loc;
+		}
+		
+		sector = fh[fd].sec0 + (fh[fd].loc >> 11);
+
+		/* If DMA is not possible, just use sync pio read */
+		if((uint32)buf & 0x1F) {
+
 			cb(read(fd, buf, nbyte));
 			return 0;
+
+		} else if((fh[fd].loc & 2047) || (nbyte & 2047)) {
+			
+			if((fh[fd].loc & 2047) + nbyte > 2048) {
+
+				count = (2048-(fh[fd].loc & 2047)) >> 11;
+				fh[fd].rcnt = nbyte - (count << 11);
+				fh[fd].rbuf = buf + (count << 11);
+
+			} else {
+
+				if (cdrom_read_sectors_part(buf, fh[fd].sec0 + (fh[fd].loc >> 11), fh[fd].loc % 2048, nbyte, 0) < 0) {
+					fh[fd].async = 0;
+					fh[fd].poll_cb = NULL;
+					return FS_ERR_SYSERR;
+				}
+				
+				fh[fd].async = 1;
+				fh[fd].poll_cb = cb;
+				DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
+				return 0;
+			}
+
+		} else {
+			count = nbyte >> 11;
 		}
 
-		if(fh[fd].loc + nbyte > fh[fd].len)
-			nbyte = fh[fd].len - fh[fd].loc;
-
-		if (read_sectors(buf, fh[fd].sec0 + (fh[fd].loc >> 11), nbyte >> 11, 1) < 0) {
+		if (read_sectors(buf, sector, count, 1) < 0) {
 			fh[fd].async = 0;
 			fh[fd].poll_cb = NULL;
 			return FS_ERR_SYSERR;
@@ -376,7 +435,6 @@ int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
 		
 		fh[fd].async = 1;
 		fh[fd].poll_cb = cb;
-
 		DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
 		return 0;
 	}

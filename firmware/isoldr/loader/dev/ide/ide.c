@@ -1,7 +1,5 @@
 /**
- * Copyright (c) 2017 Megavolt85
- *
- * Modified for ISO Loader by SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2017 Megavolt85, SWAT <http://www.dc-swat.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -155,7 +153,8 @@ typedef struct ide_req
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static s32 g1_dma_irq_visible = 0,
 			_g1_dma_irq_enabled = 0,
-			g1_dma_part_avail = 0;
+			g1_dma_part_avail = 0,
+			g1_dma_irq11 = 1;
 
 
 #define g1_ata_wait_status(n) \
@@ -241,12 +240,18 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 	/* Processing filesystem */
 	poll_all();
-
 	return current_vector;
 }
 
 
 s32 g1_dma_init_irq() {
+	
+	g1_dma_irq11 = (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA);
+	g1_dma_irq_visible = (
+		g1_dma_irq11 ?
+		(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) :
+		(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA)
+	);
 
 #ifdef NO_ASIC_LT
 	return 0;
@@ -277,7 +282,7 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 	OUT32(G1_ATA_DMA_ADDRESS, (addr & 0x0FFFFFFF));
 	OUT32(G1_ATA_DMA_LENGTH, bytes);
-	OUT8(G1_ATA_DMA_DIRECTION, 1);
+	OUT8(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
 	
 	 /* Enable G1 DMA. */
 	OUT8(G1_ATA_DMA_ENABLE, 1);
@@ -286,38 +291,55 @@ void g1_dma_start(u32 addr, size_t bytes) {
 void g1_dma_set_irq_mask(s32 enable) {
 
 	if (fs_dma_enabled() == FS_DMA_DISABLED) {
+
 		return;
+
 	} else if(fs_dma_enabled() == FS_DMA_HIDDEN) {
+
+		enable = 0;
+
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		if(g1_dma_irq_visible) {
-			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+
+			if(g1_dma_irq11) {
+				*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+			} else {
+				*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
+			}
+
 			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
 			g1_dma_irq_visible = 0;
 		}
-		return;
-	}
-	
-	if(!enable && ((*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) || !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA))) {
+
+	} else if(!enable && !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 		
-		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+		if(g1_dma_irq11) {
+			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+		} else {
+			*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
+		}
+
 		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
 		
-		LOGFF("%d %d %d\n",
-			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
-			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
-			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0);
-		
-	} else if(enable && (!(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) || (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA))) {
-		
-		*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
+	} else if(enable && (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
+
+		if(g1_dma_irq11) {
+			*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
+		} else {
+			*ASIC_IRQ13_MASK |= ASIC_NRM_GD_DMA;
+		}
+
 		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
-		
+	}
+
+#ifdef LOG
+	if(g1_dma_irq_visible != enable) {
 		LOGFF("%d %d %d\n",
 			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0);
 	}
-
+#endif
 	g1_dma_irq_visible = enable;
 }
 
@@ -671,7 +693,7 @@ static s32 g1_ata_access(struct ide_req *req)
 		
 		if ((req->cmd & 2))
 		{
-//			g1_dma_abort();
+			g1_dma_abort();
 			
 			if (req->cmd == G1_READ_DMA) {
 				 /* Invalidate the dcache over the range of the data. */
@@ -1585,8 +1607,8 @@ static s32 g1_packet_read(struct ide_req *req)
 		g1_dma_abort();
 		OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 		OUT32(G1_ATA_DMA_ADDRESS, ((u32) buff) & 0x0FFFFFFF);
-		OUT32(G1_ATA_DMA_LENGTH, (req->count * (data_len << 1)));
-		OUT8(G1_ATA_DMA_DIRECTION, 1);
+		OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (req->count * (data_len << 1)));
+		OUT8(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
 		
 		send_packet_dma_command(cmd_buff, req->dev->drive, req->count*100+5000, req->async);
 	}
@@ -1838,22 +1860,53 @@ s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u
 	
 	req.buff = buffer;
 	req.count = cnt;
+	req.bytes = 0;
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = dma ? G1_READ_DMA : G1_READ_PIO;
 	req.lba = sector;
 	req.async = async;
 	
 	if (dma && (((u32) buffer) & 0x1f)) {
-		LOGFF("Unaligned output address\n");
-		return -1;
-	} else {
-		LOGFF("%s%s READ\n", async ? "ASYNC " : "", dma ? "DMA" : "PIO");
+		req.cmd = G1_READ_PIO;
+		req.async = 0;
 	}
-	
+
+	LOGFF("%s%s READ\n", async ? "ASYNC " : "", dma ? "DMA" : "PIO");
+
 	if (dma) {
 		g1_dma_set_irq_mask(1);
 	}
 	
+	return g1_packet_read(&req);
+}
+
+s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t bytes, u8 drive) {
+
+	if(offset && g1_dma_part_avail > 0) {
+
+		g1_dma_part_avail -= bytes;
+		g1_dma_start((u32)buffer, bytes);
+		return 0;
+
+	} else if(g1_dma_part_avail > 0) {
+
+		// TODO: abort last command
+
+	} else if(bytes < 512) {
+		g1_dma_part_avail = 512 - bytes;
+	}
+	
+	struct ide_req req;
+
+	req.buff = buffer;
+	req.count = 1;
+	req.bytes = bytes;
+	req.dev = &ide_devices[drive & 1];
+	req.cmd = G1_READ_DMA;
+	req.lba = sector;
+	req.async = 1;
+	
+	g1_dma_set_irq_mask(1);
 	return g1_packet_read(&req);
 }
 

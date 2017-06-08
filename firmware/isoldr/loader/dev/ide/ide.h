@@ -1,7 +1,5 @@
 /**
- * Copyright (c) 2017 Megavolt85
- *
- * Modified for ISO Loader by SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2017 Megavolt85, SWAT <http://www.dc-swat.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -100,6 +98,7 @@ s32 cdrom_cdda_pause();
 s32 cdrom_cdda_resume();
 s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive);
 s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u8 drive);
+s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t bytes, u8 drive);
 s32 cdrom_chk_disc_change(u8 drive);
 
 /** \brief  DMA read disk sector part with Linear Block Addressing (LBA).

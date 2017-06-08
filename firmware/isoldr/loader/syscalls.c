@@ -387,14 +387,14 @@ void data_transfer_true_async() {
 	fs_enable_dma(FS_DMA_SHARED);
 #endif
 
+	GDS->dma_status = 1;
 	GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_transfer_cb);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		LOGFF("Error %d\n", GDS->status);
+		GDS->dma_status = 0;
 		return;
 	}
-
-	GDS->dma_status = 1;
 
 	while(GDS->dma_status) {
 
@@ -475,12 +475,14 @@ void data_transfer() {
 
 	gd_state_t *GDS = get_GDS();
 	
+#ifdef _FS_ASYNC
 	// FIXME: gdcExitToGame works incorrectly?
 	if (GDS->dma_status) {
 		poll(iso_fd);
 		LOGFF("WARNING, data transfer already requested!\n");
 		return;
 	}
+#endif
 
 #ifdef _FS_ASYNC
 	/* Use true async DMA transfer (or pseudo async for SD) */
