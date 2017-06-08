@@ -154,7 +154,7 @@ static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static s32 g1_dma_irq_visible = 0,
 			_g1_dma_irq_enabled = 0,
 			g1_dma_part_avail = 0,
-			g1_dma_irq11 = 1;
+			g1_dma_irq_idx = 0;
 
 
 #define g1_ata_wait_status(n) \
@@ -218,11 +218,11 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	}
 
 	if(!g1_dma_irq_visible) {
-		
+
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
 		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-		
+
 		/* Ack the IRQ. */
 		st = IN8(G1_ATA_STATUS_REG);
 		
@@ -246,12 +246,8 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 s32 g1_dma_init_irq() {
 	
-	g1_dma_irq11 = (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA);
-	g1_dma_irq_visible = (
-		g1_dma_irq11 ?
-		(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) :
-		(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA)
-	);
+	g1_dma_irq_idx = 0;
+	g1_dma_irq_visible = 1;
 
 #ifdef NO_ASIC_LT
 	return 0;
@@ -301,10 +297,18 @@ void g1_dma_set_irq_mask(s32 enable) {
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		if(g1_dma_irq_visible) {
 
-			if(g1_dma_irq11) {
+			if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
+
+				g1_dma_irq_idx = 11;
 				*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
-			} else {
+
+			} else if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) {
+
+				g1_dma_irq_idx = 13;
 				*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
+
+			} else {
+				g1_dma_irq_idx = 0;
 			}
 
 			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
@@ -312,20 +316,28 @@ void g1_dma_set_irq_mask(s32 enable) {
 		}
 
 	} else if(!enable && !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
-		
-		if(g1_dma_irq11) {
-			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
-		} else {
-			*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
-		}
 
+		if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
+
+			g1_dma_irq_idx = 11;
+			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+
+		} else if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) {
+
+			g1_dma_irq_idx = 13;
+			*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
+
+		} else {
+			g1_dma_irq_idx = 0;
+		}
+		
 		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
 		
 	} else if(enable && (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 
-		if(g1_dma_irq11) {
+		if(g1_dma_irq_idx == 11) {
 			*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
-		} else {
+		} else if(g1_dma_irq_idx == 13) {
 			*ASIC_IRQ13_MASK |= ASIC_NRM_GD_DMA;
 		}
 
@@ -428,10 +440,10 @@ static s32 g1_dev_scan(void)
 		timer_spin_sleep(1);
 //		for(d = 0; d < 10; d++)
 //			IN8(G1_ATA_ALTSTATUS);
-		
+
 		st = IN8(G1_ATA_STATUS_REG);
-		
-		if(st != 0xD0 && st != 0x51 && st != 0x01)
+
+		if(!(st & (ATA_SR_DRDY | ATA_SR_DSC)) && !(st & ATA_SR_ERR))
 		{
 			LOGFF("%s device not found\n", (!j)?"MASTER":"SLAVE");
 			continue;
@@ -959,12 +971,12 @@ s32 g1_ata_poll(void) {
 //		return 0;
 //	} else
 	if(g1_dma_in_progress()) {
-		
+
 		int rv = g1_dma_transfered();
 		DBGFF("%d\n", rv);
 		return rv > 0 ? rv : 32;
 	}
-	
+
 	g1_ata_wait_bsydrq();
 	return 0;
 }
