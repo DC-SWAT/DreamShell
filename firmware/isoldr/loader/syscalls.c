@@ -671,7 +671,7 @@ void gdcMainLoop(void) {
 	while(1) {
 
 		gd_state_t *GDS = get_GDS();
-		LOGFF(NULL);
+		DBGFF(NULL);
 		
 #ifndef HAVE_EXPT
 		if(IsoInfo->emu_cdda && GDS->cdda_stat < SCD_AUDIO_STATUS_ENDED) {

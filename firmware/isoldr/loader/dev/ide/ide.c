@@ -203,7 +203,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 	uint32 st;
 	
-#ifdef LOG
+#ifdef DEBUG
 	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n",
 	      *REG_INTEVT, st,
@@ -266,6 +266,7 @@ void g1_dma_abort(void) {
 	if (g1_dma_in_progress()) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
 		g1_ata_wait_dma();
+		g1_ata_wait_bsydrq();
 	}
 }
 
@@ -278,6 +279,7 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	
 	 /* Enable G1 DMA. */
 	OUT8(G1_ATA_DMA_ENABLE, 1);
+	OUT8(G1_ATA_DMA_STATUS, 1);
 }
 
 static void g1_dma_hide_irq(void) {
@@ -960,6 +962,7 @@ s32 g1_ata_poll(void) {
 		return rv > 0 ? rv : 32;
 	}
 
+	OUT8(G1_ATA_DMA_ENABLE, 0);
 	g1_ata_wait_bsydrq();
 	return 0;
 }
