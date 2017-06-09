@@ -2776,15 +2776,10 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 		g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
 
 		if (addr != 0x8c000000 && mmu_enabled()) {
-			
-			if (g1_ata_read_lba_dma_part(fp->dsect, fp->fptr % SS(fp->fs), rcnt, fp->rbuff)) {
+
+			if (disk_read_part(/*fp->fs->drv, */fp->rbuff, fp->dsect, fp->fptr % SS(fp->fs), rcnt)) {
 				ABORT(fp->fs, FR_DISK_ERR);
 			}
-			
-			/* No sense really */
-//			if (disk_read_part(/*fp->fs->drv, */fp->rbuff, fp->dsect, fp->fptr % SS(fp->fs), rcnt)) {
-//				ABORT(fp->fs, FR_DISK_ERR);
-//			}
 
 		} else {
 	

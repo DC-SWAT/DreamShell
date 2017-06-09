@@ -2,7 +2,7 @@
  * DreamShell ISO Loader
  * Link script for loader binary
  * Script for -z combreloc: combine and sort reloc sections
- * (c)2009-2014 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017 SWAT <http://www.dc-swat.ru>
  */
 
 OUTPUT_FORMAT("elf32-shl", "elf32-shl",
@@ -92,7 +92,7 @@ SECTIONS
   .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
-  . = ALIGN(128) + (. & (128 - 1));
+  . = ALIGN(32) + (. & (32 - 1));
   /* Exception handling  */
   .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }
   .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }

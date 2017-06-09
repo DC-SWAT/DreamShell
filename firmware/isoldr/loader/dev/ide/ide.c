@@ -710,7 +710,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			OUT8(G1_ATA_DMA_DIRECTION, (req->cmd == G1_READ_DMA));
 			
 			 /* Enable G1 DMA. */
-//			OUT8(G1_ATA_DMA_ENABLE, 1);
+			OUT8(G1_ATA_DMA_ENABLE, 1);
 		}
 		
 		g1_ata_wait_bsydrq();
