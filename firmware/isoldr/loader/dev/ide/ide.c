@@ -201,46 +201,42 @@ s32 g1_dma_irq_enabled() {
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
-//#ifdef LOG
-	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-//#endif
-
+	uint32 st;
+	
+#ifdef LOG
+	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n",
 	      *REG_INTEVT, st,
 	      ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT],
 	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
 //	dump_regs(stack);
+#endif
 
 	if(!_g1_dma_irq_enabled) {
 		(void)passer;
 		(void)stack;
 		_g1_dma_irq_enabled = 1;
 	}
-
-	if(!g1_dma_irq_visible) {
-
+	
+	/* Ack the IRQ. */
+	st = IN8(G1_ATA_STATUS_REG);
+	
+	if(st & ATA_SR_ERR) {
+		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
+				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
+				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+	}
+	
+	if (!g1_dma_irq_visible) {
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
 		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-
-		/* Ack the IRQ. */
-		st = IN8(G1_ATA_STATUS_REG);
-		
-		if(st & ATA_SR_ERR) {
-			LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
-					(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
-					(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
-					(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
-		}
-		
-		/* Processing filesystem */
-		poll_all();
-		return my_exception_finish;
 	}
 
 	/* Processing filesystem */
 	poll_all();
-	return current_vector;
+	return g1_dma_irq_visible ? current_vector : my_exception_finish;
 }
 
 
@@ -331,10 +327,12 @@ void g1_dma_set_irq_mask(s32 enable) {
 
 #ifdef LOG
 	if(g1_dma_irq_visible != enable) {
-		LOGFF("%d %d %d\n",
+		LOGFF("%d %d %d (%d)\n",
 			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
-			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0);
+			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0,
+			enable
+		);
 	}
 #endif
 	g1_dma_irq_visible = enable;
@@ -896,10 +894,6 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	req.cmd = fs_dma_enabled() ? G1_READ_DMA : G1_READ_PIO;
 	req.lba = block;
 	req.async = wait_dma ? 0 : 1;
-	
-	if (req.cmd == G1_READ_DMA) {
-		g1_dma_set_irq_mask(fs_dma_enabled() != FS_DMA_HIDDEN);
-	}
 
 	return g1_ata_access(&req);
 }

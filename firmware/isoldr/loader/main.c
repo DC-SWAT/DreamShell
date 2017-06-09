@@ -132,21 +132,20 @@ int main(int argc, char *argv[]) {
 	}
 	
 	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
-		
+
 		/* Patch GDC driver entry */
 		gdc_syscall_patch();
-		
+
 		/* Patch G1 DMA regs in binary */
-//		gd_state_t *GDS = get_GDS();
-//		int cnt = patch_memory(0xA05F7418, (uint32)&GDS->dma_status);
-//	
-//#ifdef LOG
-//		LOGF("Found DMA status reg %d times\n", cnt);
-//		cnt = patch_memory(0xA05F7414, (uint32)&GDS->streamed);
-//		LOGF("Found 0xA05F7414 %d times\n", cnt);
-//#else
-//		(void)cnt;
-//#endif
+		gd_state_t *GDS = get_GDS();
+		int cnt = patch_memory(0xA05F7418, (uint32)&GDS->dma_status);
+
+		LOGF("Found DMA status reg %d times\n", cnt);
+		cnt = patch_memory(0xA05F7414, (uint32)&GDS->streamed);
+		LOGF("Found DMA len reg %d times\n", cnt);
+#ifndef LOG
+		(void)cnt;
+#endif
 	}
 
 	/* HW widescreen and VGA forcing (incomplete) */

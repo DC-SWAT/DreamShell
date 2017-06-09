@@ -37,12 +37,12 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
 #ifdef DEBUG
-	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
+//	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
-	if(statusExt & ASIC_EXT_GD_CMD) {
-		LOGF("IDE CMD INT: 0x%08lx\n", statusExt);
-	}
+//	if(statusExt & ASIC_EXT_GD_CMD) {
+//		LOGF("IDE CMD INT: 0x%08lx\n", statusExt);
+//	}
 
 	if((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
 		LOGF("G1DMA ERR: 0x%08lx\n", statusErr);
