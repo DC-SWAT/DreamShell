@@ -401,6 +401,8 @@ void data_transfer_true_async() {
 		ps = poll(iso_fd);
 
 		if (ps < 0) {
+			GDS->dma_status = 0;
+			GDS->status = CMD_STAT_FAILED;
 			LOGFF("ERROR, code %d\n", ps);
 			break;
 		}

@@ -284,54 +284,39 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	OUT8(G1_ATA_DMA_ENABLE, 1);
 }
 
+static void g1_dma_hide_irq(void) {
+	if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
+
+		g1_dma_irq_idx = 11;
+		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+
+	} else if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) {
+
+		g1_dma_irq_idx = 13;
+		*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
+
+	} else {
+		g1_dma_irq_idx = 0;
+	}
+
+	*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+}
+
 void g1_dma_set_irq_mask(s32 enable) {
 
 	if (fs_dma_enabled() == FS_DMA_DISABLED) {
 
 		return;
 
-	} else if(fs_dma_enabled() == FS_DMA_HIDDEN) {
-
-		enable = 0;
+	} else if(fs_dma_enabled() == FS_DMA_HIDDEN && g1_dma_irq_visible) {
 
 		/* Hide all internal DMA transfers (CDDA, etc...) */
-		if(g1_dma_irq_visible) {
-
-			if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
-
-				g1_dma_irq_idx = 11;
-				*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
-
-			} else if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) {
-
-				g1_dma_irq_idx = 13;
-				*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
-
-			} else {
-				g1_dma_irq_idx = 0;
-			}
-
-			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
-			g1_dma_irq_visible = 0;
-		}
+		enable = 0;
+		g1_dma_hide_irq();
 
 	} else if(!enable && !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 
-		if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
-
-			g1_dma_irq_idx = 11;
-			*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
-
-		} else if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) {
-
-			g1_dma_irq_idx = 13;
-			*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
-
-		} else {
-			g1_dma_irq_idx = 0;
-		}
-		
-		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+		g1_dma_hide_irq();
 		
 	} else if(enable && (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 
@@ -911,6 +896,10 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	req.cmd = fs_dma_enabled() ? G1_READ_DMA : G1_READ_PIO;
 	req.lba = block;
 	req.async = wait_dma ? 0 : 1;
+	
+	if (req.cmd == G1_READ_DMA) {
+		g1_dma_set_irq_mask(fs_dma_enabled() != FS_DMA_HIDDEN);
+	}
 
 	return g1_ata_access(&req);
 }
@@ -1886,7 +1875,7 @@ s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u
 	LOGFF("%s%s READ\n", async ? "ASYNC " : "", dma ? "DMA" : "PIO");
 
 	if (dma) {
-		g1_dma_set_irq_mask(1);
+		g1_dma_set_irq_mask(fs_dma_enabled() != FS_DMA_HIDDEN);
 	}
 	
 	return g1_packet_read(&req);
