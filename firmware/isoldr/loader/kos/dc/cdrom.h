@@ -40,20 +40,20 @@ __BEGIN_DECLS
 
     @{
 */
-#define CMD_PIOREAD 16  /**< \brief Read via PIO */
-#define CMD_DMAREAD 17  /**< \brief Read via DMA */
-#define CMD_GETTOC  18  /**< \brief Read TOC */
-#define CMD_GETTOC2 19  /**< \brief Read TOC */
-#define CMD_PLAY    20  /**< \brief Play track */
-#define CMD_PLAY2   21  /**< \brief Play sectors */
-#define CMD_PAUSE   22  /**< \brief Pause playback */
-#define CMD_RELEASE 23  /**< \brief Resume from pause */
-#define CMD_INIT    24  /**< \brief Initialize the drive */
-#define CMD_SEEK    27  /**< \brief Seek to a new position */
-#define CMD_READ    28  /**< \brief Read raw sectors */
-#define CMD_STOP    33  /**< \brief Stop the disc from spinning */
-#define CMD_GETSCD  34  /**< \brief Get subcode data */
-#define CMD_GETSES  35  /**< \brief Get session */
+//#define CMD_PIOREAD 16  /**< \brief Read via PIO */
+//#define CMD_DMAREAD 17  /**< \brief Read via DMA */
+//#define CMD_GETTOC  18  /**< \brief Read TOC */
+//#define CMD_GETTOC2 19  /**< \brief Read TOC */
+//#define CMD_PLAY    20  /**< \brief Play track */
+//#define CMD_PLAY2   21  /**< \brief Play sectors */
+//#define CMD_PAUSE   22  /**< \brief Pause playback */
+//#define CMD_RELEASE 23  /**< \brief Resume from pause */
+//#define CMD_INIT    24  /**< \brief Initialize the drive */
+//#define CMD_SEEK    27  /**< \brief Seek to a new position */
+//#define CMD_READ    28  /**< \brief Read raw sectors */
+//#define CMD_STOP    33  /**< \brief Stop the disc from spinning */
+//#define CMD_GETSCD  34  /**< \brief Get subcode data */
+//#define CMD_GETSES  35  /**< \brief Get session */
 /** @} */
 
 /** \defgroup cd_cmd_response       CD-ROM command responses

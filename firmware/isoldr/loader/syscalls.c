@@ -58,12 +58,13 @@ static inline void lock_gdsys_wait(void) {
 
 #ifdef LOG
 
-static const char cmd_name[47][15] = {
+static const char cmd_name[48][18] = {
 	{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0},
 	{"PIOREAD"}, {"DMAREAD"}, {"GETTOC"}, {"GETTOC2"}, 
-	{"PLAY"}, {"PLAY2"}, {"PAUSE"}, {"RELEASE"}, {"INIT"}, {0}, {0}, {"SEEK"}, {"DMAREAD_TA"}, 
-	{0}, {"REQ_MODE"}, {"SET_MODE"}, {0}, {"STOP"}, {"GETSCD"}, {"GETSES"}, {"REQ_STAT"}, 
-	{0}, "DMAREAD_STREAM", "PIOREAD_STREAM", {"GETVER"}, {0}, {0}, {0}, {0}
+	{"PLAY"}, {"PLAY2"}, {"PAUSE"}, {"RELEASE"}, {"INIT"}, {"DMA_ABORT"}, {"OPEN_TRAY"},
+	{"SEEK"}, {"DMAREAD_STREAM"}, {"NOP"}, {"REQ_MODE"}, {"SET_MODE"}, {"SCAN_CD"},
+	{"STOP"}, {"GETSCD"}, {"GETSES"}, {"REQ_STAT"}, {"PIOREAD_STREAM"},
+	{"DMAREAD_STREAM_EX"}, {"PIOREAD_STREAM_EX"}, {"GETVER"}, {0}, {0}, {0}, {0}, {0}
 };
 
 static const char stat_name[8][12] = {
@@ -86,7 +87,6 @@ static inline int get_params_count(int cmd) {
 	if(cmd < 16 || cmd > 40) {
 		return 0;
 	}
-	
 	return cmdp[cmd - 16];
 }
 
@@ -617,7 +617,9 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		
 		LOGF("\n");
 
-		if(cmd == CMD_PIOREAD || cmd == CMD_DMAREAD || cmd == CMD_DMAREAD_TA || cmd == CMD_DMAREAD_STREAM || cmd == CMD_PIOREAD_STREAM) {
+		if(cmd == CMD_PIOREAD || cmd == CMD_DMAREAD ||
+			cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX ||
+			cmd == CMD_PIOREAD_STREAM || cmd == CMD_PIOREAD_STREAM_EX) {
 			
 			/* Stop CDDA playback if it's used */
 			if(IsoInfo->emu_cdda && GDS->cdda_stat != SCD_AUDIO_STATUS_NO_INFO) {
@@ -692,11 +694,22 @@ void gdcMainLoop(void) {
 						data_transfer();
 					}
 					break;
-				case CMD_DMAREAD_TA:
 				case CMD_DMAREAD_STREAM:
 					data_transfer_dma_stream();
 					break;
+				case CMD_DMAREAD_STREAM_EX:
+					if(GDS->param[3]) {
+						GDS->status = CMD_STAT_COMPLETED;
+					}
+					data_transfer_dma_stream();
+					break;
 				case CMD_PIOREAD_STREAM:
+					data_transfer_pio_stream();
+					break;
+				case CMD_PIOREAD_STREAM_EX:
+					if(GDS->param[3]) {
+						GDS->status = CMD_STAT_COMPLETED;
+					}
 					data_transfer_pio_stream();
 					break;
 				//case CMD_GETTOC:

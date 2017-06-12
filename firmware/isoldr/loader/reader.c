@@ -251,7 +251,8 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 				}
 			}
 
-			if(GDS->cmd == CMD_DMAREAD_TA || GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM) {
+			if(GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_DMAREAD_STREAM_EX ||
+				GDS->cmd == CMD_PIOREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM_EX) {
 
 				size_t offset = sec ? (lba * IsoInfo->sector_size) : 0;
 				rv = _read_data_sectors2(buf, offset, num, cb);
@@ -274,7 +275,8 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 				offset = (sec - IsoInfo->track_lba[0]) * IsoInfo->sector_size;
 			}
 
-			if(GDS->cmd == CMD_DMAREAD_TA || GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM) {
+			if(GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_DMAREAD_STREAM_EX ||
+				GDS->cmd == CMD_PIOREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM_EX) {
 				len = num;
 			} else {
 				len = num * IsoInfo->sector_size;

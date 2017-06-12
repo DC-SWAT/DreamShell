@@ -3,22 +3,45 @@
  * BIOS syscalls emulation
  * (c)2009-2017 SWAT <http://www.dc-swat.ru>
  */
- 
+
 #ifndef _SYSCALLS_H
 #define _SYSCALLS_H
 
 #include <arch/types.h>
 #include <dc/cdrom.h>
 
-/* Additional command codes for gdcReqCmd */
-#define CMD_DMAREAD_TA      28 /* read till abort */
-#define CMD_REQ_MODE        30
-#define CMD_SET_MODE        31
-#define CMD_REQ_STAT        36
-#define CMD_DMAREAD_STREAM  38 /* can read parts < sector size */
-#define CMD_PIOREAD_STREAM  39
-#define CMD_GET_VERS        40
-#define CMD_MAX             46
+/** \defgroup gdc_cmd_codes CD-ROM syscall command codes
+    @{
+*/
+#define CMD_CHECK_LICENSE       2  /**< \brief  */
+#define CMD_REQ_SPI_CMD         4  /**< \brief  */
+#define CMD_PIOREAD            16  /**< \brief Read via PIO */
+#define CMD_DMAREAD            17  /**< \brief Read via DMA */
+#define CMD_GETTOC             18  /**< \brief Read TOC */
+#define CMD_GETTOC2            19  /**< \brief Read TOC */
+#define CMD_PLAY               20  /**< \brief Play track */
+#define CMD_PLAY2              21  /**< \brief Play sectors */
+#define CMD_PAUSE              22  /**< \brief Pause playback */
+#define CMD_RELEASE            23  /**< \brief Resume from pause */
+#define CMD_INIT               24  /**< \brief Initialize the drive */
+#define CMD_DMA_ABORT          25  /**< \brief  */
+#define CMD_OPEN_TRAY          26  /**< \brief  */
+#define CMD_SEEK               27  /**< \brief Seek to a new position */
+#define CMD_DMAREAD_STREAM     28  /**< \brief  */
+#define CMD_NOP                29  /**< \brief  */
+#define CMD_REQ_MODE           30  /**< \brief  */
+#define CMD_SET_MODE           31  /**< \brief  */
+#define CMD_SCAN_CD            32  /**< \brief  */
+#define CMD_STOP               33  /**< \brief Stop the disc from spinning */
+#define CMD_GETSCD             34  /**< \brief Get subcode data */
+#define CMD_GETSES             35  /**< \brief Get session */
+#define CMD_REQ_STAT           36  /**< \brief  */
+#define CMD_PIOREAD_STREAM     37  /**< \brief  */
+#define CMD_DMAREAD_STREAM_EX  38  /**< \brief Can get parts < sector size in reqDmaStrans */
+#define CMD_PIOREAD_STREAM_EX  39  /**< \brief  */
+#define CMD_GET_VERS           40  /**< \brief  */
+#define CMD_MAX                47  /**< \brief  */
+/** @} */
 
 /* GDC syscalls busy response */
 #define BUSY 4

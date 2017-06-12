@@ -173,6 +173,7 @@ int main(int argc, char *argv[]) {
 	*ASIC_IRQ11_MASK = 0;
 	*ASIC_IRQ13_MASK = 0;
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
+	irq_disable();
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 #ifdef LOG

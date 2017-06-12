@@ -298,11 +298,13 @@ void g1_dma_set_irq_mask(s32 enable) {
 
 		return;
 
-	} else if(fs_dma_enabled() == FS_DMA_HIDDEN && g1_dma_irq_visible) {
+	} else if(fs_dma_enabled() == FS_DMA_HIDDEN) {
 
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		enable = 0;
-		g1_dma_hide_irq();
+		if (g1_dma_irq_visible) {
+			g1_dma_hide_irq();
+		}
 
 	} else if(!enable && !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 
@@ -321,11 +323,11 @@ void g1_dma_set_irq_mask(s32 enable) {
 
 #ifdef LOG
 	if(g1_dma_irq_visible != enable) {
-		LOGFF("%d %d %d (%d)\n",
+		LOGFF("%d %d %d (%d %d)\n",
 			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0,
-			enable
+			enable, fs_dma_enabled()
 		);
 	}
 #endif
