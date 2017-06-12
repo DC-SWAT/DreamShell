@@ -192,7 +192,7 @@ s32 g1_dma_in_progress(void) {
 }
 
 u32 g1_dma_transfered(void) {
-	return *(volatile u32 *)G1_ATA_DMA_LEND;
+	return IN32(G1_ATA_DMA_LEND);
 }
 
 s32 g1_dma_irq_enabled() {
@@ -205,27 +205,19 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	
 #ifdef DEBUG
 	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n",
+	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
 	      *REG_INTEVT, st,
 	      ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT],
-	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT],
+		  g1_dma_irq_visible);
 //	dump_regs(stack);
 #endif
 
 	if(!_g1_dma_irq_enabled) {
 		(void)passer;
 		(void)stack;
+		(void)st;
 		_g1_dma_irq_enabled = 1;
-	}
-	
-	/* Ack the IRQ. */
-	st = IN8(G1_ATA_STATUS_REG);
-	
-	if(st & ATA_SR_ERR) {
-		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
-				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
-				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
-				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
 	}
 	
 	if (!g1_dma_irq_visible) {
@@ -694,7 +686,9 @@ static s32 g1_ata_access(struct ide_req *req)
 			
 			if (req->cmd == G1_READ_DMA) {
 				 /* Invalidate the dcache over the range of the data. */
-				dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * 512));
+				if((u32)buff & 0xF0000000) {
+					dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * 512));
+				}
 			}
 #if _FS_READONLY == 0
 			else {
@@ -762,9 +756,9 @@ static s32 g1_ata_access(struct ide_req *req)
 				return 0;
 			}
 
-			g1_ata_wait_dma();
-			
 			buff += len;
+			g1_ata_wait_dma();
+			OUT8(G1_ATA_DMA_ENABLE, 0);
 			g1_ata_wait_bsydrq();
 		}
 	}
@@ -964,6 +958,17 @@ s32 g1_ata_poll(void) {
 
 	OUT8(G1_ATA_DMA_ENABLE, 0);
 	g1_ata_wait_bsydrq();
+
+	/* Ack the IRQ. */
+	u8 st = IN8(G1_ATA_STATUS_REG);
+
+	if(st & ATA_SR_ERR) {
+		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
+				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
+				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+		return -1;
+	}
 	return 0;
 }
 
