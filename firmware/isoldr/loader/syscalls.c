@@ -700,8 +700,9 @@ void gdcMainLoop(void) {
 				case CMD_DMAREAD_STREAM_EX:
 					if(GDS->param[3]) {
 						GDS->status = CMD_STAT_COMPLETED;
+					} else {
+						data_transfer_dma_stream();
 					}
-					data_transfer_dma_stream();
 					break;
 				case CMD_PIOREAD_STREAM:
 					data_transfer_pio_stream();
@@ -709,8 +710,9 @@ void gdcMainLoop(void) {
 				case CMD_PIOREAD_STREAM_EX:
 					if(GDS->param[3]) {
 						GDS->status = CMD_STAT_COMPLETED;
+					} else {
+						data_transfer_pio_stream();
 					}
-					data_transfer_pio_stream();
 					break;
 				//case CMD_GETTOC:
 				case CMD_GETTOC2:
