@@ -259,6 +259,7 @@ wince_gen:
     mov.l   @(8,r7), r0
     cmp/pz  r1
     bra wince_jmp
+    nop
 
 wince_int:
     mov.l   @(0x28,r7), r6

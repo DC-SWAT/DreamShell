@@ -59,7 +59,7 @@ static inline void lock_gdsys_wait(void) {
 #ifdef LOG
 
 static const char cmd_name[48][18] = {
-	{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0},
+	{0}, {0}, {"CHECK_LICENSE"}, {0}, {"REQ_SPI_CMD"}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0},
 	{"PIOREAD"}, {"DMAREAD"}, {"GETTOC"}, {"GETTOC2"}, 
 	{"PLAY"}, {"PLAY2"}, {"PAUSE"}, {"RELEASE"}, {"INIT"}, {"DMA_ABORT"}, {"OPEN_TRAY"},
 	{"SEEK"}, {"DMAREAD_STREAM"}, {"NOP"}, {"REQ_MODE"}, {"SET_MODE"}, {"SCAN_CD"},
@@ -967,9 +967,9 @@ void gdcInitSystem(void) {
 
 	if(
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-	((IsoInfo->use_dma && GDS->true_async) || IsoInfo->emu_cdda) && 
+	(/*(IsoInfo->use_dma && GDS->true_async) || */IsoInfo->emu_cdda) && 
 #endif
-	((uint32)vbr() == 0x8c00f400 || IsoInfo->exec.type == BIN_TYPE_WINCE)) {
+	(/*(uint32)vbr() == 0x8c00f400 || */IsoInfo->exec.type == BIN_TYPE_WINCE)) {
 		
 		int old = irq_disable();
 		
@@ -1093,12 +1093,10 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
 
-		// FIXME
-		if(IsoInfo->exec.type == BIN_TYPE_WINCE) {
-			while(GDS->dma_status) {
-				if (poll(iso_fd) <= 0) {
-					break;
-				}
+		// FIXME: Should not be blocked
+		while(GDS->dma_status) {
+			if (poll(iso_fd) < 0) {
+				break;
 			}
 		}
 
