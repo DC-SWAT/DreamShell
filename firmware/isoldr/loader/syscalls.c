@@ -361,19 +361,20 @@ static void get_ver_str() {
 static void data_transfer_cb(size_t size) {
 
 	gd_state_t *GDS = get_GDS();
-	
-	GDS->transfered = size;
-	GDS->dma_status = 0;
-	GDS->drv_stat = CD_STATUS_PAUSED;
-	GDS->status = (size > 0 ? CMD_STAT_COMPLETED : CMD_STAT_FAILED);
-	
+
 # ifdef DEV_TYPE_SD
 	if(size > 0) {
 		dcache_purge_range(GDS->param[2], size);
 	}
 # endif
 
+	GDS->transfered = size;
+	GDS->status = (size > 0 ? CMD_STAT_COMPLETED : CMD_STAT_FAILED);
+
 	LOGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
+
+	GDS->drv_stat = CD_STATUS_PAUSED;
+	GDS->dma_status = 0;
 }
 
 void data_transfer_true_async() {
@@ -1050,15 +1051,17 @@ int gdcReadAbort(int gd_chn) {
 static void data_stream_cb(size_t size) {
 
 	gd_state_t *GDS = get_GDS();
-	
+
 	GDS->transfered += size;
 	GDS->streamed = size;
-	GDS->dma_status = 0;
-	
+
+	LOGFF("%d %d %d\n", size, GDS->transfered, GDS->requested);
+
 	if(!GDS->requested) {
 		GDS->status = CMD_STAT_COMPLETED;
 	}
-	LOGFF("%d %d %d\n", size, GDS->transfered, GDS->requested);
+
+	GDS->dma_status = 0;
 }
 #endif
 
@@ -1095,7 +1098,12 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 
 		// FIXME: Should not be blocked
 		while(GDS->dma_status) {
-			if (poll(iso_fd) < 0) {
+# ifdef HAVE_EXPT
+			if(!exception_inited() && poll(iso_fd) < 0)
+# else
+			if(poll(iso_fd) < 0)
+# endif
+			{
 				break;
 			}
 		}

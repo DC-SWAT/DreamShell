@@ -2579,7 +2579,7 @@ FRESULT f_open (
 /* Read File                                                             */
 /*-----------------------------------------------------------------------*/
 #ifdef DEV_TYPE_IDE
-//#include <arch/cache.h>
+#include <arch/cache.h>
 #include <mmu.h>
 #endif
 

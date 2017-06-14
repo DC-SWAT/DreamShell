@@ -15,6 +15,7 @@ void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
 
 static asic_lookup_table   asic_table;
 static exception_handler_f old_handler;
+extern int g1_dma_irq_visible;
 //void dump_maple_dma_buffer();
 
 static void* asic_handle_exception(register_stack *stack, void *current_vector) {
@@ -36,18 +37,24 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	 */
 	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
-#ifdef LOG
+//#ifdef LOG
 	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
 	if(statusExt & ASIC_EXT_GD_CMD) {
 		LOGF("IDE CMD INT: 0x%08lx\n", statusExt);
+//		if (!g1_dma_irq_visible) {
+//			uint8 st = *((volatile uint8 *) 0xA05F709C);
+//			(void) st;
+//			return my_exception_finish;
+//		}
 	}
 
 	if((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
 		LOGF("G1DMA ERR: 0x%08lx\n", statusErr);
+		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
 	}
-#endif
+//#endif
 
 	void *back_vector = current_vector;
 	

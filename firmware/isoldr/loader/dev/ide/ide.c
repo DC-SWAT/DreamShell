@@ -151,8 +151,8 @@ typedef struct ide_req
 #endif
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
-static s32 g1_dma_irq_visible = 0,
-			_g1_dma_irq_enabled = 0,
+s32 g1_dma_irq_visible = 0;
+static s32 _g1_dma_irq_enabled = 0,
 			g1_dma_part_avail = 0,
 			g1_dma_irq_idx = 0;
 
@@ -203,7 +203,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 	uint32 st;
 	
-#ifdef DEBUG
+#ifdef LOG
 	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
 	      *REG_INTEVT, st,
@@ -231,16 +231,6 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
 	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-
-	/* Ack device IRQ. */
-	st = IN8(G1_ATA_STATUS_REG);
-
-	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
-		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
-				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0),
-				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0),
-				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
-	}
 
 	return my_exception_finish;
 }
@@ -783,6 +773,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			if (state & ATA_SR_ERR || state & ATA_SR_DF) {
 				return -1;
 			}
+		}
 	}
 	
 	return 0;
@@ -978,9 +969,6 @@ s32 g1_ata_poll(void) {
 		return rv > 0 ? rv : 32;
 	}
 
-	OUT8(G1_ATA_DMA_ENABLE, 0);
-	g1_ata_wait_bsydrq();
-
 	/* Ack device IRQ. */
 	u8 st = IN8(G1_ATA_STATUS_REG);
 
@@ -992,6 +980,8 @@ s32 g1_ata_poll(void) {
 		return -1;
 	}
 
+	g1_ata_wait_bsydrq();
+	OUT8(G1_ATA_DMA_ENABLE, 0);
 	return 0;
 }
 
