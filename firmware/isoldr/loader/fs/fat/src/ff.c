@@ -2681,11 +2681,11 @@ FRESULT f_read (
 			ABORT(fp->fs, FR_DISK_ERR);
 		mem_cpy(rbuff, &fp->fs->win[fp->fptr % SS(fp->fs)], rcnt);	/* Pick partial sector */
 		
-//#ifdef DEV_TYPE_IDE
-//		if(fs_dma_enabled()) {
-//			dcache_purge_range((uint32)rbuff, rcnt);
-//		}
-//#endif
+#ifdef DEV_TYPE_IDE
+		if(fs_dma_enabled()) {
+			dcache_purge_range((uint32)rbuff, rcnt);
+		}
+#endif
 		
 #else
 		mem_cpy(rbuff, &fp->buf[fp->fptr % SS(fp->fs)], rcnt);	/* Pick partial sector */
@@ -2772,10 +2772,9 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 
 #ifdef DEV_TYPE_IDE
 
-		uint32 addr = ((uint32)fp->rbuff) & 0xff000000;
 		g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
 
-		if (addr != 0x8c000000 && mmu_enabled()) {
+		if (!((uint32)fp->rbuff & 0xf0000000) && mmu_enabled()) {
 
 			if (disk_read_part(/*fp->fs->drv, */fp->rbuff, fp->dsect, fp->fptr % SS(fp->fs), rcnt)) {
 				ABORT(fp->fs, FR_DISK_ERR);
@@ -2787,7 +2786,7 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 				ABORT(fp->fs, FR_DISK_ERR);
 			
 			mem_cpy(fp->rbuff, &fp->fs->win[fp->fptr % SS(fp->fs)], rcnt);	/* Pick partial sector */
-//			dcache_purge_range((uint32)fp->rbuff, rcnt);
+			dcache_purge_range((uint32)fp->rbuff, rcnt);
 		}
 #else
 		if (move_window(fp->fs, fp->dsect))		/* Move sector window */

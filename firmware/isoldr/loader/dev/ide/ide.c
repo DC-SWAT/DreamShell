@@ -219,16 +219,30 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		(void)st;
 		_g1_dma_irq_enabled = 1;
 	}
-	
-	if (!g1_dma_irq_visible) {
-		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-		st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	}
 
 	/* Processing filesystem */
 	poll_all();
-	return g1_dma_irq_visible ? current_vector : my_exception_finish;
+
+	if (g1_dma_irq_visible) {
+		return current_vector;
+	}
+
+	/* Ack DMA IRQ. */
+	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+
+	/* Ack device IRQ. */
+	st = IN8(G1_ATA_STATUS_REG);
+
+	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
+		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0),
+				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0),
+				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+	}
+
+	return my_exception_finish;
 }
 
 
@@ -762,7 +776,13 @@ static s32 g1_ata_access(struct ide_req *req)
 			g1_ata_wait_dma();
 			OUT8(G1_ATA_DMA_ENABLE, 0);
 			g1_ata_wait_bsydrq();
-		}
+
+			/* Ack device IRQ. */
+			u8 state = IN8(G1_ATA_STATUS_REG);
+
+			if (state & ATA_SR_ERR || state & ATA_SR_DF) {
+				return -1;
+			}
 	}
 	
 	return 0;
@@ -961,16 +981,17 @@ s32 g1_ata_poll(void) {
 	OUT8(G1_ATA_DMA_ENABLE, 0);
 	g1_ata_wait_bsydrq();
 
-	/* Ack the IRQ. */
+	/* Ack device IRQ. */
 	u8 st = IN8(G1_ATA_STATUS_REG);
 
-	if(st & ATA_SR_ERR) {
+	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
 		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
 				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
 				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
 				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
 		return -1;
 	}
+
 	return 0;
 }
 
@@ -1166,7 +1187,11 @@ static cd_sense_t *request_sense(u8 drive)
 	
 	for(i = 0; i < ((14-type) >> 1); i++) 
 		((u16 *)sense_buff)[i] = IN16(G1_ATA_DATA);
-	
+
+	if (ide_polling(1)) {
+		return NULL;
+	}
+
 	if (SK)
 	{
 		LOGF("SK/ASC/ASCQ: 0x%X/0x%X/0x%X\n", SK, ASC, ASCQ);
@@ -1541,12 +1566,10 @@ static s32 send_packet_dma_command(u8 *cmd_buff, u8 drive, s32 timeout, u8 async
 
 	if (!async) {
 		g1_ata_wait_dma();
-		g1_dma_abort();
-		err = ide_polling(1);
-	} else {
-		err = 0;
+		OUT8(G1_ATA_DMA_ENABLE, 0);
 	}
-	
+
+	err = ide_polling(1);
 	return err;
 }
 

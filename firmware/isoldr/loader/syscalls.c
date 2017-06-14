@@ -967,9 +967,9 @@ void gdcInitSystem(void) {
 
 	if(
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-	(/*(IsoInfo->use_dma && GDS->true_async) || */IsoInfo->emu_cdda) && 
+	((IsoInfo->use_dma && GDS->true_async) || IsoInfo->emu_cdda) && 
 #endif
-	(/*(uint32)vbr() == 0x8c00f400 || */IsoInfo->exec.type == BIN_TYPE_WINCE)) {
+	((uint32)vbr() == 0x8c00f400 || IsoInfo->exec.type == BIN_TYPE_WINCE)) {
 		
 		int old = irq_disable();
 		
