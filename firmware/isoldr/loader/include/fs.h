@@ -92,7 +92,8 @@ typedef void fs_callback_f(size_t);
 enum FS_DMA_STATE {
 	FS_DMA_DISABLED = 0,
 	FS_DMA_SHARED   = 1,
-	FS_DMA_HIDDEN   = 2
+	FS_DMA_HIDDEN   = 2,
+	FS_DMA_NO_IRQ   = 3
 };
 
 int fs_init();

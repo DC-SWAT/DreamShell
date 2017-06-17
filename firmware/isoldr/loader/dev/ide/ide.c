@@ -200,23 +200,22 @@ s32 g1_dma_irq_enabled() {
 }
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
-
-	uint32 st;
 	
-#ifdef LOG
-	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+#ifdef DEBUG
 	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
-	      *REG_INTEVT, st,
+	      *REG_INTEVT,
+		  ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT],
 	      ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT],
 	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT],
 		  g1_dma_irq_visible);
 //	dump_regs(stack);
+#else
+	LOGFF("%08lx 0x%08lx\n", *REG_INTEVT, ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT]);
 #endif
 
 	if(!_g1_dma_irq_enabled) {
 		(void)passer;
 		(void)stack;
-		(void)st;
 		_g1_dma_irq_enabled = 1;
 	}
 
@@ -229,8 +228,8 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 	/* Ack DMA IRQ. */
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+	(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+	(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 
 	return my_exception_finish;
 }
@@ -278,7 +277,7 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	OUT8(G1_ATA_DMA_STATUS, 1);
 }
 
-static void g1_dma_hide_irq(void) {
+static void g1_dma_hide_irq(int all) {
 	if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
 
 		g1_dma_irq_idx = 11;
@@ -293,26 +292,42 @@ static void g1_dma_hide_irq(void) {
 		g1_dma_irq_idx = 0;
 	}
 
-	*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+	if (all) {
+		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
+	}
+#ifdef HAVE_EXPT
+	else {
+		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+	}
+#endif
 }
 
 void g1_dma_set_irq_mask(s32 enable) {
 
-	if (fs_dma_enabled() == FS_DMA_DISABLED) {
+	s32 dma = fs_dma_enabled();
+
+	if (dma == FS_DMA_DISABLED) {
 
 		return;
 
-	} else if(fs_dma_enabled() == FS_DMA_HIDDEN) {
+	} else if(dma == FS_DMA_HIDDEN) {
 
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		enable = 0;
 		if (g1_dma_irq_visible) {
-			g1_dma_hide_irq();
+			g1_dma_hide_irq(0);
+		}
+
+	} else if(dma == FS_DMA_NO_IRQ) {
+
+		enable = 0;
+		if (g1_dma_irq_visible) {
+			g1_dma_hide_irq(1);
 		}
 
 	} else if(!enable && !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 
-		g1_dma_hide_irq();
+		g1_dma_hide_irq(0);
 		
 	} else if(enable && (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
 
@@ -765,7 +780,6 @@ static s32 g1_ata_access(struct ide_req *req)
 			buff += len;
 			g1_ata_wait_dma();
 			OUT8(G1_ATA_DMA_ENABLE, 0);
-			g1_ata_wait_bsydrq();
 
 			/* Ack device IRQ. */
 			u8 state = IN8(G1_ATA_STATUS_REG);
@@ -773,6 +787,8 @@ static s32 g1_ata_access(struct ide_req *req)
 			if (state & ATA_SR_ERR || state & ATA_SR_DF) {
 				return -1;
 			}
+
+			g1_ata_wait_bsydrq();
 		}
 	}
 	

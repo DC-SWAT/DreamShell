@@ -371,7 +371,7 @@ static void data_transfer_cb(size_t size) {
 	GDS->transfered = size;
 	GDS->status = (size > 0 ? CMD_STAT_COMPLETED : CMD_STAT_FAILED);
 
-	LOGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
+	DBGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
 
 	GDS->drv_stat = CD_STATUS_PAUSED;
 	GDS->dma_status = 0;
@@ -385,7 +385,7 @@ void data_transfer_true_async() {
 #ifdef DEV_TYPE_SD
 	fs_enable_dma(IsoInfo->emu_async);
 #elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	fs_enable_dma(FS_DMA_SHARED);
+	fs_enable_dma(FS_DMA_HIDDEN);
 #endif
 
 	GDS->dma_status = 1;
@@ -399,16 +399,21 @@ void data_transfer_true_async() {
 
 	while(GDS->dma_status) {
 
-		ps = poll(iso_fd);
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		if (!g1_dma_irq_enabled() || !g1_dma_in_progress())
+#endif
+		{
+			ps = poll(iso_fd);
 
-		if (ps < 0) {
-			GDS->dma_status = 0;
-			GDS->status = CMD_STAT_FAILED;
-			LOGFF("ERROR, code %d\n", ps);
-			break;
+			if (ps < 0) {
+				GDS->dma_status = 0;
+				GDS->status = CMD_STAT_FAILED;
+				LOGFF("ERROR, code %d\n", ps);
+				break;
+			}
+
+			GDS->transfered += ps;
 		}
-
-		GDS->transfered += ps;
 		gdcExitToGame();
 	}
 }
@@ -424,6 +429,12 @@ void data_transfer_emu_async() {
 		GDS->dma_status = 1;
 	}
 
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		if(IsoInfo->use_dma) {
+			fs_enable_dma(FS_DMA_HIDDEN);
+		}
+#endif
+
 	while(GDS->param[1] > 0) {
 
 		if(GDS->param[1] <= (uint32)IsoInfo->emu_async) {
@@ -432,11 +443,11 @@ void data_transfer_emu_async() {
 			sc = IsoInfo->emu_async;
 		}
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(IsoInfo->use_dma) {
-			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
-		}
-#endif
+//#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+//		if(IsoInfo->use_dma) {
+//			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
+//		}
+//#endif
 
 		sc_size = (GDS->gdc.sec_size * sc);
 
@@ -492,7 +503,7 @@ void data_transfer() {
 	}
 # ifndef DEV_TYPE_SD
 	else {
-		fs_enable_dma(GDS->cmd != CMD_DMAREAD ? FS_DMA_DISABLED : IsoInfo->use_dma);
+		fs_enable_dma((GDS->cmd == CMD_DMAREAD && IsoInfo->use_dma) ? FS_DMA_SHARED : FS_DMA_DISABLED);
 	}
 # endif
 #endif /* _FS_ASYNC */
@@ -1098,8 +1109,8 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 
 		// FIXME: Should not be blocked
 		while(GDS->dma_status) {
-# ifdef HAVE_EXPT
-			if(!exception_inited() && poll(iso_fd) < 0)
+# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+			if((!g1_dma_irq_enabled() || !g1_dma_in_progress()) && poll(iso_fd) < 0) 
 # else
 			if(poll(iso_fd) < 0)
 # endif
@@ -1264,8 +1275,10 @@ int menu_syscall(int func) {
 				break;
 		}
 	} else if(func == 1) {
-		irq_disable();
-		Load_DS();
+//		irq_disable();
+//		Load_DS();
+		volatile uint32 *reset_reg = (uint32 *)0xa05f6890, reset_val = 0x00007611;
+		*reset_reg = reset_val;
 	}
 
 	if((uint32)IsoInfo >= 0x8c004000 && !is_custom_bios()) {

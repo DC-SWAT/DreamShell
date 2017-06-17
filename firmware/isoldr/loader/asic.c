@@ -42,7 +42,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
 	if(statusExt & ASIC_EXT_GD_CMD) {
-		LOGF("IDE CMD INT: 0x%08lx\n", statusExt);
+		DBGF("IDE CMD INT: 0x%08lx\n", statusExt);
 //		if (!g1_dma_irq_visible) {
 //			uint8 st = *((volatile uint8 *) 0xA05F709C);
 //			(void) st;

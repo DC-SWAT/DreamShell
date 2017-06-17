@@ -168,11 +168,13 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	/* Clear all IRQ masks and statuse */
+	/* Clear IRQ stuff */
 	*ASIC_IRQ9_MASK  = 0;
 	*ASIC_IRQ11_MASK = 0;
 	*ASIC_IRQ13_MASK = 0;
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
+	uint8 st = *((volatile uint8 *)0xA05F709C);
+	(void)st;
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 #ifdef LOG
