@@ -118,6 +118,7 @@ __BEGIN_DECLS
 #define CD_CDROM_XA 0x20    /**< \brief CD-ROM XA (Yellow book extension) */
 #define CD_CDI      0x30    /**< \brief CD-i (Green book) */
 #define CD_GDROM    0x80    /**< \brief GD-ROM */
+#define CD_DVDROM   0xF0    /**< \brief DVD-ROM */
 /** @} */
 
 /** \brief  TOC structure returned by the BIOS.

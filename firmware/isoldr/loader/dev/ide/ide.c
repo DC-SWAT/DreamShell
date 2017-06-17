@@ -1590,16 +1590,28 @@ static s32 g1_packet_read(struct ide_req *req)
 	/* Формируем командный пакет */
 	if (req->dev->type == IDE_ATAPI)
 	{
-		cmd_buff[0] = ATAPI_CMD_READ_CD; // код команды READ CD
-		cmd_buff[1] = 0; // считываем сектор любого типа (Any Type)
 		cmd_buff[2] = (u8)(req->lba >> 24);
 		cmd_buff[3] = (u8)(req->lba >> 16);
 		cmd_buff[4] = (u8)(req->lba >>  8);
 		cmd_buff[5] = (u8)(req->lba >>  0);
-		cmd_buff[6] = (u8)(req->count >> 16);
-		cmd_buff[7] = (u8)(req->count >>  8);
-		cmd_buff[8] = (u8)(req->count >>  0);
-		cmd_buff[9] = req->dev->cd_info.sec_type;
+		
+		if (req->dev->cd_info.disc_type != CD_DVDROM)
+		{
+			cmd_buff[0] = ATAPI_CMD_READ_CD; // код команды READ CD
+			cmd_buff[1] = 0; // считываем сектор любого типа (Any Type)
+			cmd_buff[6] = (u8)(req->count >> 16);
+			cmd_buff[7] = (u8)(req->count >>  8);
+			cmd_buff[8] = (u8)(req->count >>  0);
+			cmd_buff[9] = req->dev->cd_info.sec_type;
+		}
+		else
+		{
+			cmd_buff[0] = ATAPI_CMD_READ; // код команды READ
+			cmd_buff[6] = (u8)(req->count >> 24);
+			cmd_buff[7] = (u8)(req->count >> 16);
+			cmd_buff[8] = (u8)(req->count >>  8);
+			cmd_buff[9] = (u8)(req->count >>  0);
+		}
 	}
 	else
 	{
@@ -1809,8 +1821,8 @@ s32 cdrom_reinit(s32 sec_size, u8 drive)
 {
 	cdrom_set_sector_size(sec_size, drive);
 	
-//	if (cdrom_get_status(NULL, NULL, drive))
-//		return -1;
+	if (cdrom_get_status(NULL, &ide_devices[drive].cd_info.disc_type, drive))
+		return -2;
 	
 	if (ide_devices[drive&1].type == IDE_SPI)
 		spi_check_license();
