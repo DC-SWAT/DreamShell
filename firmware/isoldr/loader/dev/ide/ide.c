@@ -943,15 +943,10 @@ s32 g1_ata_read_lba_dma_part(u64 sector, size_t offset, size_t bytes, u8 *buf) {
 		g1_dma_part_avail -= bytes;
 		g1_dma_start((u32)buf, bytes);
 		return 0;
-
-	} else if(g1_dma_part_avail > 0) {
-
-		// TODO: abort last command
-
-	} else if(bytes < 512) {
-		g1_dma_part_avail = 512 - bytes;
 	}
-	
+
+	g1_dma_part_avail = 512 - bytes;
+
 	const u8 drive = 1; // TODO
 	struct ide_req req;
 
@@ -994,6 +989,10 @@ s32 g1_ata_poll(void) {
 				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
 				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
 		return -1;
+	}
+
+	if (g1_dma_part_avail) {
+		return 0;
 	}
 
 	g1_ata_wait_bsydrq();
@@ -1933,15 +1932,9 @@ s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t byte
 		g1_dma_part_avail -= bytes;
 		g1_dma_start((u32)buffer, bytes);
 		return 0;
-
-	} else if(g1_dma_part_avail > 0) {
-
-		// TODO: abort last command
-
-	} else if(bytes < 512) {
-		g1_dma_part_avail = 512 - bytes;
 	}
-	
+
+	g1_dma_part_avail = 512 - bytes;
 	struct ide_req req;
 
 	req.buff = buffer;
