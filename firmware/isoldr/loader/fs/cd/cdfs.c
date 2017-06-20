@@ -79,18 +79,37 @@ static int find_root(unsigned int *psec, unsigned int *plen) {
 	unsigned int sec;
 
 	if((r=cdrom_reinit(2048, 0))!=0)
+	{
+		LOGFF("can't reinit cdrom (%d)\n", r);
 		return r;
+	}
 	if(!(toc = cdrom_get_toc(0, 0)))
+	{
+		LOGFF("can't get toc (%d)\n", r);
 		return r;
-	if(!(sec = cdrom_locate_data_track(toc)))
+	}
+	if((sec = cdrom_locate_data_track(toc)) == (u32)-1)
+	{
+		LOGFF("can't locate data track (%d)\n", FS_ERR_DIRERR);
 		return FS_ERR_DIRERR;
+	}
 	if((r=read_sectors((char *)cd_sector_buffer, sec+16, 1, 0))!=0)
+	{
+		LOGFF("can't read root (%d)\n", r);
 		return r;
+	}
 	if(memcmp((char *)cd_sector_buffer, "\001CD001", 6))
+	{
+		LOGFF("bad root (%d)\n", FS_ERR_DIRERR);
 		return FS_ERR_DIRERR;
+	}
 
 	/* Need to add 150 to LBA to get physical sector number */
-	*psec = ntohlp(((unsigned char *)cd_sector_buffer)+156+6) + 150;
+	*psec = ntohlp(((unsigned char *)cd_sector_buffer)+156+6);
+	
+	if (cdrom_get_dev_type(0) == 2)
+		*psec += 150;
+	
 	*plen = ntohlp(((unsigned char *)cd_sector_buffer)+156+14);
 
 	return 0;
@@ -116,7 +135,11 @@ static int low_find(unsigned int sec, unsigned int dirlen, int isdir,
 			//WriteLog("low_find: %s = %s\n", fname, rec+33);
 			if((rec[25]&2) == isdir && fncompare(fname, fnlen, (char*)rec+33, rec[32])) {
 				/* Entry found.  Copy start sector and length.  Add 150 to LBA. */
-				*psec = ntohlp(rec+6)+150;
+				*psec = ntohlp(rec+6);
+				
+				if (cdrom_get_dev_type(0) == 2)
+					*psec += 150;
+				
 				*plen = ntohlp(rec+14);
 				return 0;
 			}
@@ -162,7 +185,10 @@ int open(const char *path, int oflag) {
 	/* Find the root directory */
 	if (!root_sector) {
 		if((r=find_root(&sec, &len)))
+		{
+			LOGFF("can't find root (%d)\n", r);
 			return r;
+		}
 		root_sector = sec;
 		root_len = len;
 	} else {
@@ -178,14 +204,19 @@ int open(const char *path, int oflag) {
 	while((p = strchr0(path, '/'))) {
 		if(p != path)
 			if((r = low_find(sec, len, 1, &sec, &len, path, p-path)))
+			{
+				LOGFF("can't find file in a subdirectory (%d)\n", r);
 				return r;
+			}
 		path = p+1;
 	}
 
 	/* Locate the file in the resulting directory */
 	if(*path) {
-		if((r = low_find(sec, len, oflag&O_DIR, &sec, &len, path, strchr0(path, '\0')-path))) {
+		if((r = low_find(sec, len, oflag&O_DIR, &sec, &len, path, strchr0(path, '\0')-path))) 
+		{
 			dma_enabled = old_dma_enabled;
+			LOGFF("can't find file in resulting directory (%d)\n", r);
 			return r;
 		}
 	} else {
@@ -193,6 +224,7 @@ int open(const char *path, int oflag) {
 		   the dir that is wanted                                */
 		if(!(oflag&O_DIR)) {
 			dma_enabled = old_dma_enabled;
+			LOGFF("can't find file (%d)\n", FS_ERR_NOFILE);
 			return FS_ERR_NOFILE;
 		}
 	}

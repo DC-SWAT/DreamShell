@@ -1369,7 +1369,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 		
 		LOGFF("Disc type: %02X\n",type);
 		
-		if (type < 0x50)
+		if (type < 0x40)
 		{
 			switch (type & 0xF)
 			{
@@ -1408,6 +1408,16 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 					return ERR_NO_DISC;
 					break;
 			}
+			
+			return ERR_OK;
+		}
+		else if ((type & 0xF0) == 0x40)
+		{
+			if (status)
+				*status = CD_STATUS_PLAYING;
+					
+			if (disc_type)
+				*disc_type = CD_DVDROM;
 			
 			return ERR_OK;
 		}
@@ -1780,7 +1790,8 @@ s32 cdrom_read_toc(CDROM_TOC *toc_buffer, u8 session, u8 drive)
 	return 0;
 }
 
-CDROM_TOC *cdrom_get_toc(u8 session, u8 drive) {
+CDROM_TOC *cdrom_get_toc(u8 session, u8 drive) 
+{
 	struct ide_device *dev = &ide_devices[drive & 1];
 	
 	if (!dev->reserved || 
@@ -1810,7 +1821,7 @@ u32 cdrom_locate_data_track(CDROM_TOC *toc)
     /* Find the last track which as a CTRL of 4 */
     for(i = last; i >= first; i--) 
     {
-        if(TOC_CTRL(toc->entry[i - 1]) == 4)
+        if(TOC_CTRL(toc->entry[i - 1]) == 4 || TOC_CTRL(toc->entry[i - 1]) == 7)
             return TOC_LBA(toc->entry[i - 1]);
     }
 
@@ -1949,4 +1960,9 @@ s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t byte
 	return g1_packet_read(&req);
 }
 
+u8 cdrom_get_dev_type(u8 drive)
+{
+	return ide_devices[drive].type;
+}
 #endif /* DEV_TYPE_GD */
+

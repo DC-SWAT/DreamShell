@@ -100,6 +100,7 @@ s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive);
 s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u8 drive);
 s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t bytes, u8 drive);
 s32 cdrom_chk_disc_change(u8 drive);
+u8 cdrom_get_dev_type(u8 drive);
 
 /** \brief  DMA read disk sector part with Linear Block Addressing (LBA).
 
