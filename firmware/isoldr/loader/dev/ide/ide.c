@@ -288,9 +288,9 @@ static void g1_dma_hide_irq(int all) {
 		g1_dma_irq_idx = 13;
 		*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
 
-	} else {
+	}/* else {
 		g1_dma_irq_idx = 0;
-	}
+	}*/
 
 	if (all) {
 		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
@@ -325,11 +325,11 @@ void g1_dma_set_irq_mask(s32 enable) {
 			g1_dma_hide_irq(1);
 		}
 
-	} else if(!enable && !(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
+	} else if(!enable && ((*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) || (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA))) {
 
 		g1_dma_hide_irq(0);
 		
-	} else if(enable && (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA)) {
+	} else if(enable && !((*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) || (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA))) {
 
 		if(g1_dma_irq_idx == 11) {
 			*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
@@ -342,11 +342,11 @@ void g1_dma_set_irq_mask(s32 enable) {
 
 #ifdef LOG
 	if(g1_dma_irq_visible != enable) {
-		LOGFF("%d %d %d (%d %d)\n",
+		LOGFF("%d %d %d (%d %d %d)\n",
 			(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 1 : 0, 
 			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 1 : 0,
-			enable, fs_dma_enabled()
+			enable, fs_dma_enabled(), g1_dma_irq_idx
 		);
 	}
 #endif

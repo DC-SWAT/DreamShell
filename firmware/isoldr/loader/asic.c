@@ -58,16 +58,12 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 
 	void *back_vector = current_vector;
 	
-	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
+	if(status & ASIC_NRM_GD_DMA) {
+		back_vector = g1_dma_handler(NULL, stack, current_vector);
+	}
 	
-		if(status & ASIC_NRM_GD_DMA &&
-			((code == EXP_CODE_INT9 && *ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ||
-			(code == EXP_CODE_INT11 && *ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ||
-			(code == EXP_CODE_INT13 && *ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA))
-		) {
-			back_vector = g1_dma_handler(NULL, stack, current_vector);
-		}
-		
+	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
+
 		if(status & ASIC_NRM_VSYNC) {
 			if(IsoInfo->emu_cdda) {
 				CDDA_MainLoop();

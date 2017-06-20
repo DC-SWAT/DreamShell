@@ -16,7 +16,8 @@
 
 enum FILE_STATE {
 	FILE_STATE_UNUSED = 0,
-	FILE_STATE_USED = 1
+	FILE_STATE_USED = 1,
+	FILE_STATE_POLL = 2
 };
 
 typedef struct {
@@ -379,10 +380,11 @@ int poll(int fd) {
 
 	CHECK_FD();
 
-	if(!_files[fd].poll_cb) {
+	if(!_files[fd].poll_cb || _files[fd].state == FILE_STATE_POLL) {
 		return 0;
 	}
 
+	_files[fd].state = FILE_STATE_POLL;
 	rc = f_poll(&_files[fd].fp, &bp);
 
 //	LOGFF("%d %d %d\n", fd, rc, bp);
@@ -406,6 +408,7 @@ int poll(int fd) {
 			break;
 	}
 
+	_files[fd].state = FILE_STATE_USED;
 	return rv;
 }
 

@@ -385,7 +385,7 @@ void data_transfer_true_async() {
 #ifdef DEV_TYPE_SD
 	fs_enable_dma(IsoInfo->emu_async);
 #elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	fs_enable_dma(FS_DMA_HIDDEN);
+	fs_enable_dma(FS_DMA_SHARED);
 #endif
 
 	GDS->dma_status = 1;
