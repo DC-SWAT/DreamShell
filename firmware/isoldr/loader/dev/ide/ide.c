@@ -969,15 +969,22 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 }
 
 s32 g1_ata_poll(void) {
-	
-//	if(exception_inside_int()) {
-//		return 0;
-//	} else
-	if(g1_dma_in_progress()) {
 
+#ifdef HAVE_EXPT
+	if(exception_inside_int()) {
+		goto poll_end;
+	}
+#endif
+
+	if(g1_dma_in_progress()) {
 		int rv = g1_dma_transfered();
 		DBGFF("%d\n", rv);
 		return rv > 0 ? rv : 32;
+	}
+
+poll_end:
+	if (g1_dma_part_avail) {
+		return 0;
 	}
 
 	/* Ack device IRQ. */
@@ -991,11 +998,6 @@ s32 g1_ata_poll(void) {
 		return -1;
 	}
 
-	if (g1_dma_part_avail) {
-		return 0;
-	}
-
-	g1_ata_wait_bsydrq();
 	OUT8(G1_ATA_DMA_ENABLE, 0);
 	return 0;
 }
