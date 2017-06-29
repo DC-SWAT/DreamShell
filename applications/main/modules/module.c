@@ -307,28 +307,14 @@ static void *ClockThread() {
 
 void MainApp_SlideLeft() {
 	if(self.cur_x > 0) {
-
-		for(int x = 0; x < self.panel_area.w; x += 10) {
-			self.cur_x -= 10;
-			GUI_PanelSetXOffset(self.panel, self.cur_x);
-			thd_sleep(5);
-		}
-		
-		thd_sleep(50);
+		self.cur_x -= self.panel_area.w;
 		GUI_PanelSetXOffset(self.panel, self.cur_x);
 	}
 }
 
 void MainApp_SlideRight() {
 	if(self.x > self.cur_x) {
-
-		for(int x = 0; x < self.panel_area.w; x += 10) {
-			self.cur_x += 10;
-			GUI_PanelSetXOffset(self.panel, self.cur_x);
-			thd_sleep(5);
-		}
-		
-		thd_sleep(50);
+		self.cur_x += self.panel_area.w;
 		GUI_PanelSetXOffset(self.panel, self.cur_x);
 	}
 }
