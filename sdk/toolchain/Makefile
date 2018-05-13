@@ -20,6 +20,16 @@
 # gdb
 # insight
 
+#
+# macOS build intruction:
+# $ brew install gcc
+# $ export PATH=/usr/local/Cellar/gcc/X.X.X/bin:$PATH
+# $ sudo make <target> CC=gcc-X CXX=g++-X CPP=cpp-X LD=g++-X
+# where X - gcc version, for instance:
+# $ export PATH=/usr/local/Cellar/gcc/8.1.0/bin:$PATH
+# $ sudo make all CC=gcc-8 CXX=g++-8 CPP=cpp-8 LD=g++-8
+#
+
 # User configuration
 sh_target=sh-elf
 arm_target=arm-eabi
