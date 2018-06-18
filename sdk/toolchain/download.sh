@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # These version numbers are all that should ever have to be changed.
-export GCC_VER=7.1.0
+export GCC_VER=5.2.0
 export BINUTILS_VER=2.25
 export NEWLIB_VER=2.2.0
 export GMP_VER=6.1.0

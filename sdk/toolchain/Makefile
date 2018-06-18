@@ -36,11 +36,11 @@ arm_target=arm-eabi
 sh_prefix  := /opt/toolchains/dc/$(sh_target)
 arm_prefix := /opt/toolchains/dc/$(arm_target)
 # kos_root: KOS Git root (contains kos/ and kos-ports/)
-kos_root=/usr/local/dc/kos
+kos_root=/opt/toolchains/dc
 # kos_base: equivalent of KOS_BASE (contains include/ and kernel/)
-kos_base=/usr/local/dc/kos/kos
+kos_base=/opt/toolchains/dc/kos
 binutils_ver=2.25
-gcc_ver=7.1.0
+gcc_ver=5.2.0
 newlib_ver=2.2.0
 gdb_ver=7.6
 insight_ver=6.7.1
