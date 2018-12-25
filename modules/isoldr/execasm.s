@@ -1,8 +1,8 @@
 ! DreamShell ##version##
 !
 !   execasm.s
-!   (c)2002 Dan Potter
-!   (c)2013-2014 SWAT
+!   Copyright (C) 2002 Dan Potter
+!   Copyright (C) 2013-2018 SWAT
 !
 ! This is the assembler code on which exec.c bases its trampoline.
 !
@@ -16,9 +16,8 @@
 __isoldr_exec_template:
 	mov.l		.ccraddr,r0	! Disable/invalidate cache
 	mov.l		.ccrdata,r1
-	mov.l		@r1,r1
 	mov.l		r1,@r0
-	
+
 	mov.l		.srcval,r0	! Get src/dst pointers
 	mov.l		.dstval,r1
 	mov.l		.count,r2	! Get uint32 count
