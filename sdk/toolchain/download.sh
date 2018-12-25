@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # These version numbers are all that should ever have to be changed.
-export GCC_VER=7.1.0
+export GCC_VER=8.2.0
 export BINUTILS_VER=2.25
 export NEWLIB_VER=2.2.0
 export GMP_VER=6.1.0
@@ -38,7 +38,7 @@ if command -v wget >/dev/null 2>&1; then
     echo "Downloading binutils-$BINUTILS_VER..."
     wget -c ftp://ftp.gnu.org/gnu/binutils/binutils-$BINUTILS_VER.tar.bz2 || exit 1
     echo "Downloading GCC $GCC_VER..."
-    wget -c ftp://ftp.gnu.org/gnu/gcc/gcc-$GCC_VER/gcc-$GCC_VER.tar.bz2 || exit 1
+    wget -c ftp://ftp.gnu.org/gnu/gcc/gcc-$GCC_VER/gcc-$GCC_VER.tar.gz || exit 1
     echo "Downloading Newlib $NEWLIB_VER..."
     wget -c ftp://sourceware.org/pub/newlib/newlib-$NEWLIB_VER.tar.gz || exit 1
 

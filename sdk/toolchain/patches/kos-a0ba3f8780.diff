@@ -7,7 +7,7 @@ index 29ce451..ced13f0 100644
  
  case $KOS_GCCVER in
 -  4*)
-+  4*|5*|6*|7*)
++  4*|5*|6*|7*|8*)
      export KOS_LDFLAGS="${KOS_LDFLAGS} ${KOS_LD_SCRIPT} -nodefaultlibs ${KOS_LIB_PATHS}" ;;
    *)
      export KOS_LDFLAGS="${KOS_LDFLAGS} -nostartfiles -nostdlib ${KOS_LIB_PATHS}" ;;
@@ -16,7 +16,7 @@ index 29ce451..ced13f0 100644
  
  case $KOS_GCCVER in
 -  4*)
-+  4*|5*|6*|7*)
++  4*|5*|6*|7*|8*)
      export KOS_START="" ;;
    *)
      export KOS_START="${KOS_ARCH_DIR}/kernel/startup.o" ;;
@@ -861,3 +861,16 @@ index 6fdc05f..96cd5bc 100644
 +#endif
  
  include $(KOS_BASE)/Makefile.prefab
+
+diff -ruN a/addons/libppp/Makefile b/addons/libppp/Makefile
+--- a/addons/libppp/Makefile	2017-02-02 23:29:14.000000000 +0200
++++ b/addons/libppp/Makefile	2018-12-24 20:57:27.000000000 +0200
+@@ -5,7 +5,7 @@
+ OBJS = ppp.o lcp.o pap.o ipcp.o
+ 
+ # Make sure everything compiles nice and cleanly (or not at all).
+-KOS_CFLAGS += -W -pedantic -Werror -std=c99 -I$(KOS_BASE)/kernel/net
++KOS_CFLAGS += -W -pedantic -Werror -Wno-implicit-fallthrough -std=c99 -I$(KOS_BASE)/kernel/net
+ 
+ # Uncomment the line below to enable all manner of debugging output.
+ KOS_CFLAGS += -DPPP_DEBUG
