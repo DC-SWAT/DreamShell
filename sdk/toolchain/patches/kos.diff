@@ -1,25 +1,3 @@
-diff --git a/environ_base.sh b/environ_base.sh
-index 29ce451..ced13f0 100644
---- a/environ_base.sh
-+++ b/environ_base.sh
-@@ -42,7 +42,7 @@ export KOS_CPPSTD="-std=gnu++98"
- export KOS_GCCVER="`kos-cc -v 2>&1 | tail -1 | awk '{print $3}'`"
- 
- case $KOS_GCCVER in
--  4*)
-+  4*|5*|6*|7*|8*)
-     export KOS_LDFLAGS="${KOS_LDFLAGS} ${KOS_LD_SCRIPT} -nodefaultlibs ${KOS_LIB_PATHS}" ;;
-   *)
-     export KOS_LDFLAGS="${KOS_LDFLAGS} -nostartfiles -nostdlib ${KOS_LIB_PATHS}" ;;
-@@ -52,7 +52,7 @@ esac
- export KOS_ARCH_DIR="${KOS_BASE}/kernel/arch/${KOS_ARCH}"
- 
- case $KOS_GCCVER in
--  4*)
-+  4*|5*|6*|7*|8*)
-     export KOS_START="" ;;
-   *)
-     export KOS_START="${KOS_ARCH_DIR}/kernel/startup.o" ;;
 diff --git a/include/assert.h b/include/assert.h
 index 583992e..439da09 100644
 --- a/include/assert.h
@@ -42,30 +20,6 @@ index 583992e..439da09 100644
  #endif
  
  /* \cond */
-diff --git a/include/kos/cdefs.h b/include/kos/cdefs.h
-index 335947a..ebfceca 100644
---- a/include/kos/cdefs.h
-+++ b/include/kos/cdefs.h
-@@ -38,16 +38,16 @@
- 
- /** \brief  Identify a function that has no side effects other than its return,
-             and only uses its arguments for any work. */
--#define __pure      __attribute__((__const__))
-+//#define __pure      __attribute__((__const__))
- 
- /** \brief  Identify a function or variable that may be unused. */
- #define __unused    __attribute__((__unused__))
- 
- /** \brief  Alias for \ref __noreturn. For BSD compatibility. */
--#define __dead2     __noreturn  /* BSD compat */
-+//#define __dead2     __noreturn  /* BSD compat */
- 
- /** \brief  Alias for \ref __pure. Fore BSD compatibility. */
--#define __pure2     __pure      /* ditto */
-+//#define __pure2     __pure      /* ditto */
- 
- /* Printf/Scanf-like declaration */
- /** \brief  Identify a function as accepting formatting like printf().
 diff --git a/include/kos/elf.h b/include/kos/elf.h
 index 154edf8..e6f2831 100644
 --- a/include/kos/elf.h
@@ -367,31 +321,6 @@ index 331bcbe..04f38b9 100644
          }
          else {
              device.wdma_modes = 0;
-diff --git a/kernel/arch/dreamcast/hardware/hardware.c b/kernel/arch/dreamcast/hardware/hardware.c
-index 312150d..afaaf7e 100644
---- a/kernel/arch/dreamcast/hardware/hardware.c
-+++ b/kernel/arch/dreamcast/hardware/hardware.c
-@@ -46,7 +46,7 @@ int hardware_periph_init() {
-     spu_dma_init();
- 
-     /* Init CD-ROM.. NOTE: NO GD-ROM SUPPORT. ONLY CDs/CDRs. */
--    cdrom_init();
-+	cdrom_init();
- 
-     /* Setup maple bus */
-     maple_init();
-diff --git a/kernel/arch/dreamcast/hardware/network/broadband_adapter.c b/kernel/arch/dreamcast/hardware/network/broadband_adapter.c
-index 0da0a39..345744d 100644
---- a/kernel/arch/dreamcast/hardware/network/broadband_adapter.c
-+++ b/kernel/arch/dreamcast/hardware/network/broadband_adapter.c
-@@ -1115,6 +1115,7 @@ static void bba_if_netinput(uint8 *pkt, int pktsize) {
- 
- /* Set ISP configuration from the flashrom, as long as we're configured staticly */
- static void bba_set_ispcfg() {
-+	
-     flashrom_ispcfg_t isp;
-     uint32 fields = FLASHROM_ISP_IP | FLASHROM_ISP_NETMASK |
-                     FLASHROM_ISP_BROADCAST | FLASHROM_ISP_GATEWAY;
 diff --git a/kernel/arch/dreamcast/include/arch/arch.h b/kernel/arch/dreamcast/include/arch/arch.h
 index 847d53c..807632c 100644
 --- a/kernel/arch/dreamcast/include/arch/arch.h
@@ -829,9 +758,6 @@ index 5c7020f..e97e4bf 100644
 +	.align	2
 +l1align:
 +	.long	~31		! ~(L1_CACHE_BYTES-1)
-diff --git a/kernel/arch/dreamcast/sound/arm/stream.drv b/kernel/arch/dreamcast/sound/arm/stream.drv
-index d5c91b5..0b1d0db 100755
-Binary files a/kernel/arch/dreamcast/sound/arm/stream.drv and b/kernel/arch/dreamcast/sound/arm/stream.drv differ
 diff --git a/kernel/fs/elf.c b/kernel/fs/elf.c
 index 643c5a1..9a566cd 100644
 --- a/kernel/fs/elf.c

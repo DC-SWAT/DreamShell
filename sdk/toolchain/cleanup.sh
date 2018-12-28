@@ -1,12 +1,7 @@
 #!/bin/sh
 
 # These version numbers are all that should ever have to be changed.
-export GCC_VER=5.2.0
-export BINUTILS_VER=2.25
-export NEWLIB_VER=2.2.0
-export GMP_VER=6.1.0
-export MPFR_VER=3.1.4
-export MPC_VER=1.0.3
+source versions.sh
 
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`
@@ -36,7 +31,7 @@ done
 # Clean up downloaded tarballs...
 echo "Deleting downloaded packages..."
 rm -f binutils-$BINUTILS_VER.tar.bz2
-rm -f gcc-$GCC_VER.tar.bz2
+rm -f gcc-$GCC_VER.tar.gz
 rm -f newlib-$NEWLIB_VER.tar.gz
 
 if [ -n "$GMP_VER" ]; then
