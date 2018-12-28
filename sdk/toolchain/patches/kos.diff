@@ -800,3 +800,4 @@ diff -ruN a/addons/libppp/Makefile b/addons/libppp/Makefile
  
  # Uncomment the line below to enable all manner of debugging output.
  KOS_CFLAGS += -DPPP_DEBUG
+
