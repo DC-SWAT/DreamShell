@@ -7,6 +7,12 @@
 *.os
 *.build
 *.log
+*.lo
+*.la
+*.cache
+*.status
+*.sym
+.libs
 DS.cdi
 build/1DS_CORE.BIN
 romdisk.img

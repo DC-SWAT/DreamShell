@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<CodeLite_Workspace Name="DreamShell" Database="./DreamShell.tags">
+<CodeLite_Workspace Name="DreamShell" Database="./DreamShell.tags" Version="10.0.0">
   <Project Name="Core" Path="Core.project" Active="No"/>
   <Project Name="Loadable" Path="Loadable.project" Active="No"/>
   <Project Name="Resources" Path="Resources.project" Active="Yes"/>
