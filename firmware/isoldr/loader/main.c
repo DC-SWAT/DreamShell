@@ -89,10 +89,12 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
+#ifdef HAVE_CDDA
 	if(IsoInfo->emu_cdda) {
 		CDDA_Init();
 //		CDDA_Test();
 	}
+#endif
 
 #ifdef LOG
 	printf("Loading %s %d Kb\n", IsoInfo->exec.file, IsoInfo->exec.size / 1024);

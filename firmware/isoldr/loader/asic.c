@@ -65,9 +65,11 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 
 		if(status & ASIC_NRM_VSYNC) {
+#ifdef HAVE_CDDA
 			if(IsoInfo->emu_cdda) {
 				CDDA_MainLoop();
 			}
+#endif
 			apply_patch_list();
 		}
 

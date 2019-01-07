@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2019 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -328,9 +328,13 @@ static void get_scd() {
 void get_stat(void) {
 	
 	gd_state_t *GDS = get_GDS();
-	cdda_ctx_t *cdda = get_CDDA();
 	
+#ifdef HAVE_CDDA
+	cdda_ctx_t *cdda = get_CDDA();
 	*((uint32*)GDS->param[0]) = cdda->loop << 8 | GDS->drv_stat;
+#else
+	*((uint32*)GDS->param[0]) = 0 << 8 | GDS->drv_stat;
+#endif
 	
 	if(GDS->cdda_track) {
 		*((uint32*)GDS->param[1]) = GDS->cdda_track;
@@ -633,10 +637,12 @@ int gdcReqCmd(int cmd, uint32 *param) {
 			cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX ||
 			cmd == CMD_PIOREAD_STREAM || cmd == CMD_PIOREAD_STREAM_EX) {
 			
+#ifdef HAVE_CDDA
 			/* Stop CDDA playback if it's used */
 			if(IsoInfo->emu_cdda && GDS->cdda_stat != SCD_AUDIO_STATUS_NO_INFO) {
 				CDDA_Stop();
 			}
+#endif
 
 			GDS->drv_stat = CD_STATUS_PLAYING;
 
@@ -688,10 +694,11 @@ void gdcMainLoop(void) {
 		DBGFF(NULL);
 		
 #ifndef HAVE_EXPT
+#ifdef HAVE_CDDA
 		if(IsoInfo->emu_cdda && GDS->cdda_stat < SCD_AUDIO_STATUS_ENDED) {
 			CDDA_MainLoop();
 		}
-		
+#endif
 		apply_patch_list();
 #endif
 
@@ -742,6 +749,7 @@ void gdcMainLoop(void) {
 				case CMD_GETSCD:
 					get_scd();
 					break;
+#ifdef HAVE_CDDA
 				case CMD_PLAY:
 					GDS->status = CDDA_Play(GDS->param[0], GDS->param[1], GDS->param[2]);
 					break;
@@ -760,6 +768,26 @@ void gdcMainLoop(void) {
 				case CMD_STOP:
 					GDS->status = CDDA_Stop();
 					break;
+#else
+				case CMD_PLAY:
+					GDS->status = CMD_STAT_COMPLETED;
+					break;
+				case CMD_PLAY2:
+					GDS->status = CMD_STAT_COMPLETED;
+					break;
+				case CMD_RELEASE:
+					GDS->status = CMD_STAT_COMPLETED;
+					break;
+				case CMD_PAUSE:
+					GDS->status = CMD_STAT_COMPLETED;
+					break;
+				case CMD_SEEK:
+					GDS->status = CMD_STAT_COMPLETED;
+					break;
+				case CMD_STOP:
+					GDS->status = CMD_STAT_COMPLETED;
+					break;
+#endif
 				case CMD_REQ_MODE:
 				case CMD_SET_MODE:
 					// TODO param[0]
