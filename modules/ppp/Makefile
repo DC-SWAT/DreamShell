@@ -1,6 +1,6 @@
 #
 # PPP module for DreamShell
-# Copyright (C) 2014 SWAT
+# Copyright (C) 2014-2019 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -14,7 +14,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 0
-VER_MICRO = 0
+VER_MICRO = 1
 
 all: rm-elf
 

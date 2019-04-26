@@ -1,6 +1,6 @@
 #
 # http module for DreamShell
-# Copyright (C) 2011-2014 SWAT
+# Copyright (C) 2011-2019 SWAT
 #
 
 TARGET_NAME = http
@@ -11,7 +11,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 2
-VER_MICRO = 0
+VER_MICRO = 1
 
 all: rm-elf
 

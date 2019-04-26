@@ -33,7 +33,6 @@ int main(int argc, char *argv[]) {
             memcpy(&addr, hent->h_addr, hent->h_length);
             name = inet_ntoa(addr);
             ds_printf("DS_OK: %s %s\n", hent->h_name, name);
-            free(hent);
         } else {
             ds_printf("DS_ERROR: Can't lookup host %s\n", name);
             return CMD_ERROR;

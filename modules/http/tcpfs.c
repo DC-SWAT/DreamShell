@@ -1,7 +1,7 @@
 /*
  * HTTP protocol for file system
  * Copyright (c) 2000-2001 Fabrice Bellard
- * Copyright (c) 2011-2014 SWAT
+ * Copyright (c) 2011-2019 SWAT
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -34,7 +34,7 @@ typedef struct {
 
 /* return zero if error */
 static uint32 t_open(const char *uri, int flags, int udp) {
-	
+
     char hostname[128];
     char options[128];
     int port;
@@ -49,11 +49,11 @@ static uint32 t_open(const char *uri, int flags, int udp) {
 #ifdef DEBUG
 		dbglog(DBG_DEBUG, "TCPFS: Error, dir not supported\n");
 #endif
-      return 0;
+		return 0;
 	}
 
     s = malloc(sizeof(TCPContext));
-	
+
     if (!s) {
 #ifdef DEBUG
 		dbglog(DBG_DEBUG, "TCPFS: Malloc error\n");
@@ -72,18 +72,28 @@ static uint32 t_open(const char *uri, int flags, int udp) {
 #ifdef DEBUG
 	dbglog(DBG_DEBUG, "TCP: %s:%d\n", hostname, port);
 #endif
-	
-	struct hostent *he = gethostbyname(hostname);
 
-	if(he == NULL) {
-		free(s);
-		return 0;
+	in_addr_t addr;
+
+	if ((addr = inet_addr(hostname)) == -1) {
+		struct hostent *he = gethostbyname(hostname);
+
+		if(he == NULL) {
+#ifdef DEBUG
+			dbglog(DBG_DEBUG, "TCPFS: can't resolve host %s\n", hostname);
+#endif
+			goto fail;
+		}
+
+		memcpy(&sa.sin_addr, he->h_addr_list[0], he->h_length);
+
+	} else {
+		sa.sin_addr.s_addr = addr;
 	}
-	
-	memcpy(&sa.sin_addr, he->h_addr_list[0], he->h_length);
+
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(port);
-	
+
 	sock = socket(PF_INET, udp ? SOCK_DGRAM : SOCK_STREAM, 0);
 
 	if (sock < 0) {
@@ -94,9 +104,9 @@ static uint32 t_open(const char *uri, int flags, int udp) {
 	}
 
 	res = connect(sock, (struct sockaddr*)&sa, sizeof(sa));
-	
+
 #ifdef DEBUG
-		dbglog(DBG_DEBUG, "TCPFS: connect --> %d\n", res);
+	dbglog(DBG_DEBUG, "TCPFS: connect --> %d\n", res);
 #endif
 
     if(res) {
@@ -113,8 +123,9 @@ static uint32 t_open(const char *uri, int flags, int udp) {
     return (uint32) s;
 	
 fail:
-	if (sock >= 0)
+	if (sock >= 0) {
 		close(sock);
+	}
 	free(s);
 	return 0;
 }
@@ -281,7 +292,7 @@ static vfs_handler_t vh_udpfs = {
 static int inited = 0;
 
 int tcpfs_init() {
-	
+
 	if (inited)
 		return 0;
 
@@ -292,14 +303,11 @@ int tcpfs_init() {
 }
 
 void tcpfs_shutdown() {
-	
+
 	if (!inited)
 		return;
-		
+
 	inited = 0;
 	nmmgr_handler_remove(&vh.nmmgr);
 	nmmgr_handler_remove(&vh_udpfs.nmmgr);
 }
-
-
-

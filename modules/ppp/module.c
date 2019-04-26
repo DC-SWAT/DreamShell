@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - PPP module
-   Copyright (C)2014 SWAT 
+   Copyright (C)2014-2019 SWAT 
 
 */          
 
@@ -23,14 +23,14 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 				  " -b, --bps        -Baudrate for scif\n"
 				  " -n, --number     -Number to dial\n"
 				  " -u, --username   -Username (dream by default)\n"
-				  " -p, --password   -Password (shell by default)\n"
+				  " -p, --password   -Password (dreamcast by default)\n"
 				  " -d, --device     -Device, scif or modem (default)\n\n");
         return CMD_NO_ARG; 
     }
     
-	int rc, init_ppp = 0, shut_ppp = 0;
+	int rc, isSerial = 0, init_ppp = 0, shut_ppp = 0;
 	int conn_rate = 0, blind = 0, bps = 115200;
-	char *number = "123", *username = "dream", *password = "shell";
+	char *number = "1111111", *username = "dream", *password = "dreamcast";
 	char *device = "modem";
 
 	struct cfg_option options[] = {
@@ -52,6 +52,7 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 		ppp_init();
 		
 		if(!strncasecmp(device, "scif", 4)) {
+			isSerial = 1;
 			rc = ppp_scif_init(bps);
 		} else {
 			rc = ppp_modem_init(number, blind, &conn_rate);
@@ -59,6 +60,11 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 		
 		if(rc < 0) {
 			ds_printf("DS_ERROR: Modem PPP initialization failed!\n");
+			if (isSerial) {
+				scif_shutdown();
+			} else {
+				modem_shutdown();
+			}
 			return CMD_ERROR;
 		}
 
@@ -76,6 +82,11 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 
 	if(shut_ppp) {
 		ppp_shutdown();
+
+		if(modem_is_connected() || modem_is_connecting()) {
+			modem_shutdown();
+		}
+
 		ds_printf("DS_OK: Complete!\n");
 		return CMD_OK;
 	}
