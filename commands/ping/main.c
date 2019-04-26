@@ -22,6 +22,7 @@ int main(int argc, char *argv[]) {
     uint8 data[DATA_SIZE];
     char *name = argv[1];
     struct hostent *hent;
+    struct in_addr addr;
 
     i = sscanf(name, "%d.%d.%d.%d", &scan_ip[0], &scan_ip[1], &scan_ip[2], &scan_ip[3]);
 
@@ -29,8 +30,10 @@ int main(int argc, char *argv[]) {
         hent = gethostbyname((const char *)name);
 
         if(hent) {
-            name = hent->h_addr;
-            ds_printf("DS_OK: %s\n", hent->h_name);
+            memcpy(&addr, hent->h_addr, hent->h_length);
+            name = inet_ntoa(addr);
+            ds_printf("DS_OK: %s %s\n", hent->h_name, name);
+            free(hent);
         } else {
             ds_printf("DS_ERROR: Can't lookup host %s\n", name);
             return CMD_ERROR;
@@ -64,7 +67,6 @@ int main(int argc, char *argv[]) {
         }
         thd_sleep(250);
     }
-
     ds_printf("DS_OK: Done.\n");
     return CMD_OK;
 }
