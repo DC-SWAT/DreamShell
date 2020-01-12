@@ -14,6 +14,7 @@
 *.sym
 .libs
 DS.cdi
+DS_CORE.BIN
 build/1DS_CORE.BIN
 romdisk.img
 applications/*/*/*.klf
