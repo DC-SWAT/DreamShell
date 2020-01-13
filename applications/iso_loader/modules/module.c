@@ -1211,6 +1211,8 @@ void isoLoader_DefaultPreset() {
 
 //	if(self.used_preset == true) {
 		
+		GUI_TextEntrySetText(self.device, "auto");
+		
 		GUI_WidgetSetState(self.preset, 0);
 		
 		GUI_WidgetSetState(self.cdda, 0);
@@ -1351,8 +1353,8 @@ int isoLoader_LoadPreset() {
 	int fastboot = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
-	char title[32];
-	char device[4];
+	char title[32] = "";
+	char device[8] = "";
 	char memory[12] = "0x8c004000";
 	char patchtxt[4][10];
 	int i;
@@ -1408,10 +1410,14 @@ int isoLoader_LoadPreset() {
 	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
 	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
 	
-	GUI_LabelSetText(self.title, title);
-	vmu_draw_string(title);
+	if(strlen(title) > 0) {
+		GUI_LabelSetText(self.title, title);
+		vmu_draw_string(title);
+	}
 
-	GUI_TextEntrySetText(self.device, device);
+	if(strlen(device) > 0) {
+		GUI_TextEntrySetText(self.device, device);
+	}
 	
 	for(i = 0; self.memory_chk[i]; i++) {
 			
