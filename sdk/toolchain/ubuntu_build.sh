@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 # exports
 export SH_PREFIX=/opt/toolchains/dc/sh-elf
@@ -9,27 +9,31 @@ export KOS_PORTS=$KOS_ROOT/kos-ports
 
 # install deps and setup directories
 sudo apt-get update
-sudo apt-get install -y subversion build-essential gcc-4.7 make
+sudo apt-get install -y subversion build-essential gcc-4.7 make \
 	autoconf bison flex libelf-dev texinfo latex2html \
 	git wget sed lyx libjpeg62-dev libpng-dev
 
 sudo mkdir -p $KOS_ROOT
 sudo mkdir -p $SH_PREFIX/sh-elf/include
 sudo mkdir -p $ARM_PREFIX/share
-sudo chown -R $USER:$USER $KOS_ROOT
+sudo chown -R $USER:$USER $ARM_PREFIX
 sudo chown -R $USER:$USER $SH_PREFIX
 sudo chown -R $USER:$USER $KOS_ROOT
 
 # clone kos
-git clone git://git.code.sf.net/p/cadcdev/kallistios $KOS_BASE
-git clone --recursive git://git.code.sf.net/p/cadcdev/kos-ports $KOS_PORTS
+git clone git://git.code.sf.net/p/cadcdev/kallistios kos
+git clone --recursive git://git.code.sf.net/p/cadcdev/kos-ports kos-ports
+cp -r kos $KOS_ROOT
+rm -rf kos
+cp -r kos-ports $KOS_ROOT
+rm -rf kos-ports
 
 # prepare
 ./download.sh
 ./unpack.sh
 cd gcc-5.2.0
 ./contrib/download_prerequisites
-make patch
+cd .. && make patch
 
 # build
 make -j9 build-sh4-binutils
