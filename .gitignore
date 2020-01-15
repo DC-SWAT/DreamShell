@@ -14,6 +14,7 @@
 *.sym
 .libs
 DS.cdi
+DS_CORE.BIN
 build/1DS_CORE.BIN
 romdisk.img
 applications/*/*/*.klf
@@ -30,3 +31,8 @@ sdk/toolchain/
 !sdk/toolchain/unpack.sh
 !sdk/toolchain/cleanup.sh
 !sdk/toolchain/versions.sh
+lib/freetype/builds/
+lib/freetype/objs/
+lib/mxml/Makefile
+lib/mxml/mxml.list
+lib/mxml/mxml.pc

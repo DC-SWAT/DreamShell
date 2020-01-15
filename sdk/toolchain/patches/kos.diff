@@ -801,3 +801,164 @@ diff -ruN a/addons/libppp/Makefile b/addons/libppp/Makefile
  # Uncomment the line below to enable all manner of debugging output.
  KOS_CFLAGS += -DPPP_DEBUG
 
+diff -ruN kos/kernel/arch/dreamcast/include/dc/vec3f.h kos-patched/kernel/arch/dreamcast/include/dc/vec3f.h
+--- kos/kernel/arch/dreamcast/include/dc/vec3f.h	2020-01-12 13:21:18.106226837 +0100
++++ kos-patched/kernel/arch/dreamcast/include/dc/vec3f.h	2020-01-12 19:57:02.534719556 +0100
+@@ -2,6 +2,7 @@
+ 
+    dc/vec3f.h
+    Copyright (C) 2013, 2014 Josh "PH3NOM" Pearson
++   Copyright (C) 2019 HaydenKow
+ 
+ */
+ 
+@@ -13,6 +14,7 @@
+     of these.
+ 
+     \author Josh "PH3NOM" Pearson
++    \author HaydenKow aka NeoDC
+     \see    dc/matrix.h
+ */
+ 
+@@ -44,23 +46,22 @@
+     \param  w                The result of the calculation.
+ */
+ #define vec3f_dot(x1, y1, z1, x2, y2, z2, w) { \
+-        register float __x __asm__("fr0") = (x1); \
+-        register float __y __asm__("fr1") = (y1); \
+-        register float __z __asm__("fr2") = (z1); \
+-        register float __w __asm__("fr3"); \
+-        register float __a __asm__("fr4") = (x2); \
+-        register float __b __asm__("fr5") = (y2); \
+-        register float __c __asm__("fr6") = (z2); \
+-        register float __d __asm__("fr7"); \
+         __asm__ __volatile__( \
++                              "fmov %1, fr0\n" \
++                              "fmov %2, fr1\n" \
++                              "fmov %3, fr2\n" \
++                              "fmov %4, fr4\n" \
++                              "fmov %5, fr5\n" \
++                              "fmov %6, fr6\n" \
+                               "fldi0 fr3\n" \
+                               "fldi0 fr7\n" \
+-                              "fipr    fv4,fv0" \
+-                              : "+f" (__w) \
+-                              : "f" (__x), "f" (__y), "f" (__z), "f" (__w), \
+-                              "f" (__a), "f" (__b), "f" (__c), "f" (__d) \
++                              "fipr    fv4,fv0\n" \
++                              "fmov fr4, %0\n" \
++                              : "+f" (w) \
++                              : "f" (x1), "f" (y1), "f" (z1), \
++                              "f" (x2), "f" (y2), "f" (z2) \
++                              : "fr3", "fr7" \
+                             ); \
+-        w = __w; \
+     }
+ 
+ /** \brief  Macro to return scalar Euclidean length of a 3d vector.
+@@ -75,20 +76,19 @@
+     \param  w               The result of the calculation.
+ */
+ #define vec3f_length(x, y, z, w) { \
+-        register float __x __asm__("fr0") = (x); \
+-        register float __y __asm__("fr1") = (y); \
+-        register float __z __asm__("fr2") = (z); \
+-        register float __w __asm__("fr3"); \
+         __asm__ __volatile__( \
++                              "fmov %1, fr0\n" \
++                              "fmov %2, fr1\n" \
++                              "fmov %3, fr2\n" \
+                               "fldi0 fr3\n" \
+                               "fipr  fv0,fv0\n" \
+                               "fsqrt fr3\n" \
+-                              : "+f" (__w) \
+-                              : "f" (__x), "f" (__y), "f" (__z), "f" (__w) \
++                              : "+f" (w) \
++                              : "f" (x), "f" (y), "f" (z), "0f" (w) \
+                             ); \
+-        w = __w; \
+     }
+ 
++
+ /** \brief  Macro to return the Euclidean distance between two 3d vectors.
+ 
+     This macro is an inline assembly operation using the SH4's fast
+@@ -104,18 +104,16 @@
+     \param  w                The result of the calculation.
+ */
+ #define vec3f_distance(x1, y1, z1, x2, y2, z2, w) { \
+-        register float __x  __asm__("fr0") = (x2-x1); \
+-        register float __y  __asm__("fr1") = (y2-y1); \
+-        register float __z  __asm__("fr2") = (z2-z1); \
+-        register float __w  __asm__("fr3"); \
+         __asm__ __volatile__( \
+-                       "fldi0 fr3\n" \
++                              "fmov %1, fr0\n" \
++                              "fmov %2, fr1\n" \
++                              "fmov %3, fr2\n" \
++                              "fldi0 fr3\n" \
+                               "fipr  fv0,fv0\n" \
+                               "fsqrt fr3\n" \
+                               : "+f" (__w) \
+-                              : "f" (__x), "f" (__y), "f" (__z), "f" (__w) \
++                              : "f" (x2-x1), "f" (y2-y1), "f" (z2-z1), "0f" (w) \
+                             ); \
+-        w = __w; \
+     }
+ 
+ /** \brief  Macro to return the normalized version of a vector.
+@@ -130,20 +128,19 @@
+     \param  z               The Z coordinate of vector.
+ */
+ #define vec3f_normalize(x, y, z) { \
+-        register float __x __asm__("fr0") = x; \
+-        register float __y __asm__("fr1") = y; \
+-        register float __z __asm__("fr2") = z; \
+         __asm__ __volatile__( \
++                              "fmov %3, fr0\n" \
++                              "fmov %4, fr1\n" \
++                              "fmov %5, fr2\n" \
+                               "fldi0 fr3\n" \
+                               "fipr  fv0,fv0\n" \
+                               "fsrra fr3\n" \
+                               "fmul  fr3, fr0\n" \
+                               "fmul  fr3, fr1\n" \
+                               "fmul  fr3, fr2\n" \
+-                              : "=f" (__x), "=f" (__y), "=f" (__z) \
+-                              : "0" (__x), "1" (__y), "2" (__z) \
++                              : "+f" (x), "+f" (y), "+f" (z) \
++                              : "0f" (x), "1f" (y), "2f" (z) \
+                               : "fr3" ); \
+-        x = __x; y = __y; z = __z; \
+     }
+ 
+ /** \brief  Macro to return the normalized version of a vector minus another
+@@ -164,22 +161,20 @@
+     \param  z3               The Z coordinate of output vector.
+ */
+ #define vec3f_sub_normalize(x1, y1, z1, x2, y2, z2, x3, y3, z3) { \
+-        register float __x __asm__("fr0") = x1 - x2; \
+-        register float __y __asm__("fr1") = y1 - y2; \
+-        register float __z __asm__("fr2") = z1 - z2; \
+         __asm__ __volatile__( \
++                              "fmov %3, fr0\n" \
++                              "fmov %4, fr1\n" \
++                              "fmov %5, fr2\n" \
+                               "fldi0 fr3\n" \
+                               "fipr  fv0,fv0\n" \
+                               "fsrra fr3\n" \
+                               "fmul  fr3, fr0\n" \
+                               "fmul  fr3, fr1\n" \
+                               "fmul  fr3, fr2\n" \
+-                              : "=f" (__x), "=f" (__y), "=f" (__z) \
+-                              : "0" (__x), "1" (__y), "2" (__z) \
++                              : "=f" (x3), "=f" (y3), "=f" (z3) \
++                              : "0f" (x1 - x2), "f" (y1 - y2), "2f" (z1 - z2) \
+                               : "fr3" ); \
+-        x3 = __x; y3 = __y; z3 = __z; \
+     }
+-
+ /** \brief  Macro to rotate a vector about its origin on the x, y plane.
+ 
+     This macro is an inline assembly operation using the SH4's fast
+
