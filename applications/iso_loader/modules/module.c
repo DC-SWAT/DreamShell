@@ -1370,8 +1370,8 @@ int isoLoader_LoadPreset() {
 		{ "async",    CONF_INT,   (void *) &emu_async  },
 		{ "mode",     CONF_INT,   (void *) &boot_mode  },
 		{ "type",     CONF_INT,   (void *) &bin_type   },
-		{ "title",    CONF_STR,   (void *) &title      },
-		{ "device",   CONF_STR,   (void *) &device     },
+		{ "title",    CONF_STR,   (void *) title       },
+		{ "device",   CONF_STR,   (void *) device      },
 		{ "fastboot", CONF_INT,   (void *) &fastboot   },
 		{ "pa1",      CONF_STR,   (void *) patchtxt[0] },
 		{ "pv1",      CONF_STR,   (void *) patchtxt[1] },
@@ -1417,6 +1417,10 @@ int isoLoader_LoadPreset() {
 
 	if(strlen(device) > 0) {
 		GUI_TextEntrySetText(self.device, device);
+	}
+	else
+	{
+		GUI_TextEntrySetText(self.device, "auto");
 	}
 	
 	for(i = 0; self.memory_chk[i]; i++) {
