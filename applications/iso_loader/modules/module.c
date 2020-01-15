@@ -328,7 +328,7 @@ static void get_md5_hash(const char *mountpoint) {
 	
 	if(fd != FILEHND_INVALID) {
 
-		if(fs_ioctl(fd, self.boot_sector, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA) < 0) {
+		if(fs_ioctl(fd, (int) self.boot_sector, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA) < 0) {
 			memset(self.md5, 0, sizeof(self.md5));
 			memset(self.boot_sector, 0, sizeof(self.boot_sector));
 		} else {
@@ -336,11 +336,11 @@ static void get_md5_hash(const char *mountpoint) {
 		}
 		
 		/* Also get image type and sector size */
-		if(fs_ioctl(fd, &self.image_type, ISOFS_IOCTL_GET_IMAGE_TYPE) < 0) {
+		if(fs_ioctl(fd, (int) &self.image_type, ISOFS_IOCTL_GET_IMAGE_TYPE) < 0) {
 			ds_printf("%s: Can't get image type\n", lib_get_name());
 		}
 		
-		if(fs_ioctl(fd, &self.sector_size, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE) < 0) {
+		if(fs_ioctl(fd, (int) &self.sector_size, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE) < 0) {
 			ds_printf("%s: Can't get sector size\n", lib_get_name());
 		}
 		
@@ -544,7 +544,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	
 	tmpval = GUI_TextEntryGetText(self.device);
 	
-	if(strncasecmp(tmpval, "auto", 4)) 
+	if(strncasecmp(tmpval, "auto", 4) != 0)
 	{
 		strcat(cmd, " -d ");
 		strcat(cmd, tmpval);
@@ -960,7 +960,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	
 	tmpval = GUI_TextEntryGetText(self.device);
 	
-	if(strncasecmp(tmpval, "auto", 4)) {
+	if(strncasecmp(tmpval, "auto", 4) != 0) {
 		strncpy(self.isoldr->fs_dev, tmpval, sizeof(self.isoldr->fs_dev));
 	}
 	
@@ -1211,6 +1211,8 @@ void isoLoader_DefaultPreset() {
 
 //	if(self.used_preset == true) {
 		
+		GUI_TextEntrySetText(self.device, "auto");
+		
 		GUI_WidgetSetState(self.preset, 0);
 		
 		GUI_WidgetSetState(self.cdda, 0);
@@ -1262,7 +1264,7 @@ int isoLoader_SavePreset() {
 	file_t fd;
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	char text[32];
-	char result[512];
+	char result[1024];
 	int async = 0, type = 0, mode = 0;
 	
 	filename = makePresetFilename();
@@ -1326,8 +1328,8 @@ int isoLoader_SavePreset() {
 	memset(result, 0, sizeof(result));
 	
 	snprintf(result, sizeof(result),
-			"title = %s\ndma = %d\nasync = %d\ncdda = %d\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\npa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n", 
-			text, GUI_WidgetGetState(self.dma), async, 
+			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %d\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\npa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
+			text, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
 			GUI_WidgetGetState(self.cdda), GUI_WidgetGetState(self.fastboot), type, mode, memory, self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
 	fs_write(fd, result, /*sizeof*/strlen(result));
@@ -1351,7 +1353,8 @@ int isoLoader_LoadPreset() {
 	int fastboot = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
-	char *title = NULL;
+	char title[32] = "";
+	char device[8] = "";
 	char memory[12] = "0x8c004000";
 	char patchtxt[4][10];
 	int i;
@@ -1367,7 +1370,8 @@ int isoLoader_LoadPreset() {
 		{ "async",    CONF_INT,   (void *) &emu_async  },
 		{ "mode",     CONF_INT,   (void *) &boot_mode  },
 		{ "type",     CONF_INT,   (void *) &bin_type   },
-		{ "title",    CONF_STR,   (void *) title       },
+		{ "title",    CONF_STR,   (void *) &title      },
+		{ "device",   CONF_STR,   (void *) &device     },
 		{ "fastboot", CONF_INT,   (void *) &fastboot   },
 		{ "pa1",      CONF_STR,   (void *) patchtxt[0] },
 		{ "pv1",      CONF_STR,   (void *) patchtxt[1] },
@@ -1406,9 +1410,13 @@ int isoLoader_LoadPreset() {
 	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
 	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
 	
-	if(title) {
+	if(strlen(title) > 0) {
 		GUI_LabelSetText(self.title, title);
 		vmu_draw_string(title);
+	}
+
+	if(strlen(device) > 0) {
+		GUI_TextEntrySetText(self.device, device);
 	}
 	
 	for(i = 0; self.memory_chk[i]; i++) {
