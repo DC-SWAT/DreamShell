@@ -231,7 +231,7 @@ static int search_root() {
 	
 	while ((ent = fs_readdir(hnd)) != NULL) {
 		
-		if(ent->name[0] == 0 || !strncasecmp(ent->name, "pty", 3) ||
+		if(ent->name[0] == 0 || !strncasecmp(ent->name, "pty", 3) || !strncasecmp(ent->name, "ram", 3) ||
 			!strncasecmp(ent->name, "sock", 4) || !strncasecmp(ent->name, "vmu", 3)) {
 			continue;
 		}
