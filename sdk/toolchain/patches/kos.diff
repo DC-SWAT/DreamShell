@@ -961,4 +961,25 @@ diff -ruN kos/kernel/arch/dreamcast/include/dc/vec3f.h kos-patched/kernel/arch/d
  /** \brief  Macro to rotate a vector about its origin on the x, y plane.
  
      This macro is an inline assembly operation using the SH4's fast
-
+--- b/kernel/arch/dreamcast/kernel/init.c
++++ a/kernel/arch/dreamcast/kernel/init.c
+@@ -24,7 +24,7 @@
+ 
+ void _atexit_call_all();
+ 
+-#if __GNUC__ == 4
++#if __GNUC__ >= 4
+ #define _init init
+ #define _fini fini
+ #endif
+--- b/kernel/libc/koslib/Makefile
++++ a/kernel/libc/koslib/Makefile
+@@ -19,8 +19,6 @@
+ GCC_MAJORMINOR = $(basename $(KOS_GCCVER))
+ GCC_MAJOR = $(basename $(GCC_MAJORMINOR))
+ 
+-ifeq ($(strip $(GCC_MAJOR)), 3)
+ OBJS += crtbegin.o crtend.o
+-endif
+ 
+ include $(KOS_BASE)/Makefile.prefab
