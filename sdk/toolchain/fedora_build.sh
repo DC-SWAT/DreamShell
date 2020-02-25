@@ -11,10 +11,10 @@ export KOS_BASE=$KOS_ROOT/kos
 export KOS_PORTS=$KOS_ROOT/kos-ports
 
 # install deps and setup directories
-sudo dnf install subversion gcc gcc-c++ make automake autoconf  m4 \
+sudo dnf install subversion gcc gcc-c++ make automake autoconf m4 \
 	bison elfutils-libelf-devel flex libtool texinfo gawk \
 	latex2html git sed wget libpng-devel lyx libjpeg-turbo-devel \
-	mpfr-devel gmp-devel isl-devel intltool zlib-devel
+	mpfr-devel gmp-devel isl-devel intltool zlib-devel diffutils patch
 
 sudo mkdir -p $KOS_ROOT
 sudo mkdir -p $SH_PREFIX/sh-elf/include
