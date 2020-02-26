@@ -771,23 +771,6 @@ index 643c5a1..9a566cd 100644
  
      if(img == NULL) {
          dbglog(DBG_ERROR, "elf_load: can't allocate %d bytes for ELF load\n", sz);
-diff --git a/kernel/libc/koslib/Makefile b/kernel/libc/koslib/Makefile
-index 6fdc05f..96cd5bc 100644
---- a/kernel/libc/koslib/Makefile
-+++ b/kernel/libc/koslib/Makefile
-@@ -18,8 +18,8 @@ OBJS = abort.o byteorder.o memset2.o memset4.o memcpy2.o memcpy4.o \
- GCC_MAJORMINOR = $(basename $(KOS_GCCVER))
- GCC_MAJOR = $(basename $(GCC_MAJORMINOR))
- 
--ifneq ($(strip $(GCC_MAJOR)), 4)
--OBJS += crtbegin.o crtend.o
--endif
-+#ifneq ($(strip $(GCC_MAJOR)), 4)
-+#OBJS += crtbegin.o crtend.o
-+#endif
- 
- include $(KOS_BASE)/Makefile.prefab
-
 diff -ruN a/addons/libppp/Makefile b/addons/libppp/Makefile
 --- a/addons/libppp/Makefile	2017-02-02 23:29:14.000000000 +0200
 +++ b/addons/libppp/Makefile	2018-12-24 20:57:27.000000000 +0200
@@ -972,14 +955,3 @@ diff -ruN kos/kernel/arch/dreamcast/include/dc/vec3f.h kos-patched/kernel/arch/d
  #define _init init
  #define _fini fini
  #endif
---- b/kernel/libc/koslib/Makefile
-+++ a/kernel/libc/koslib/Makefile
-@@ -19,8 +19,6 @@
- GCC_MAJORMINOR = $(basename $(KOS_GCCVER))
- GCC_MAJOR = $(basename $(GCC_MAJORMINOR))
- 
--ifeq ($(strip $(GCC_MAJOR)), 3)
- OBJS += crtbegin.o crtend.o
--endif
- 
- include $(KOS_BASE)/Makefile.prefab
