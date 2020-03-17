@@ -24,29 +24,34 @@
 #ifndef __CISO_H__
 #define __CISO_H__
 /*
-	complessed ISO(9660) header format
+	compressed ISO(9660) header format
 */
+
+#include <stdint.h>   /*uintx_t */
+
 typedef struct ciso_header
 {
 	unsigned char magic[4];			/* +00 : 'C','I','S','O'                 */
-	unsigned long header_size;		/* +04 : header size (==0x18)            */
-	unsigned long long total_bytes;	/* +08 : number of original data size    */
-	unsigned long block_size;		/* +10 : number of compressed block size */
+	uint32_t header_size;			/* +04 : header size (==0x18)            */
+	uint64_t total_bytes;			/* +08 : number of original data size    */
+	uint32_t block_size;			/* +10 : number of compressed block size */
 	unsigned char ver;				/* +14 : version 01                      */
 	unsigned char align;			/* +15 : align of index value            */
 	unsigned char rsv_06[2];		/* +16 : reserved                        */
 #if 0
+// For documentation
+// Note : a link to a spec of the format would be welcomed
 // INDEX BLOCK
-	unsigned int index[0];			/* +18 : block[0] index                  */
-	unsigned int index[1];			/* +1C : block[1] index                  */
+	uint32_t index[0];			/* +18 : block[0] index                  */
+	uint32_t index[1];			/* +1C : block[1] index                  */
              :
              :
-	unsigned int index[last];		/* +?? : block[last]                     */
-	unsigned int index[last+1];		/* +?? : end of last data point          */
+	uint32_t index[last];		/* +?? : block[last]                     */
+	uint32_t index[last+1];		/* +?? : end of last data point          */
 // DATA BLOCK
 	unsigned char data[];			/* +?? : compressed or plain sector data */
 #endif
-}CISO_H;
+} CISO_H;   // total size should be checked with a static assert
 
 /*
 note:
@@ -59,5 +64,9 @@ if(index[n]&0x80000000)
 else
   // read file_size_sector[n] bytes and decompress data
 */
+
+/* ensure that header size is correct (control unwanted padding) */
+enum { __ciso_static_assert = 1 / (sizeof(CISO_H) == 24) };
+
 
 #endif

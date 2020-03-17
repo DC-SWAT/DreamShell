@@ -1,28 +1,30 @@
 
-LBITS := $(shell getconf LONG_BIT)
-ifeq ($(LBITS),64)
-INCS = -I/usr/include/x86_64-linux-gnu -I/usr/include/$(gcc -print-multiarch)
-LIBS = -L/usr/lib32
-CC = gcc -m32 $(INCS)
-LD = gcc -m32 $(LIBS)
-else
-CC = gcc
-LD = gcc
-endif
+CFLAGS ?= -O2  # can be overriden by environment variable
+DEBUGFLAGS = -g -Wall -Wextra -Wconversion -Wcast-qual -Wcast-align -Wdeclaration-after-statement -Werror
+LDLIBS  = -lz -llzo2
 
 INSTALL = install
 DESTDIR = ../..
 
+.PHONY: release
+release : CPPFLAGS += -DNDEBUG
+release : ciso
+
+.PHONY: all
 all : ciso
-ciso : ciso.o
-	$(LD) -o ciso ciso.o -lz -llzo2
 
-ciso.o : ciso.c
-	$(CC) -o ciso.o -c ciso.c
+.PHONY: debug
+debug: ciso-debug
 
+.PHONY: ciso-debug
+ciso-debug: CFLAGS = $(DEBUGFLAGS)
+ciso-debug: ciso
+
+.PHONY: install
 install : ciso
 	$(INSTALL) -m 755 ciso $(DESTDIR)/ciso
 
+.PHONY: clean
 clean:
-	rm -rf *.o
-	rm -rf ciso
+	$(RM) *.o
+	$(RM) ciso
