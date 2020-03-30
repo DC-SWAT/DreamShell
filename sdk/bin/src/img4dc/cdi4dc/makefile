@@ -4,13 +4,8 @@
 
 # proggys
 LBITS := $(shell getconf LONG_BIT)
-ifeq ($(LBITS),64)
-CC = gcc -m32
-else
-CC = gcc
-endif
-AR = ar
-RM = rm
+CC ?= gcc
+AR  = ar
 STRIP = strip
 WINDRES = windres
 PACKER = upx
@@ -25,14 +20,17 @@ TARGET = bin/$(BIN)$(OS:Windows_NT=.exe)
 LIBS = -ledc $(OSTYPE:linux=-lncurses)
 
 OBJSDIR = obj/
-OBJS = $(OBJSDIR)main.o $(OBJSDIR)cdiaudio.o $(OBJSDIR)cdidata.o $(OBJSDIR)common.o $(OBJSDIR)tools.o $(OS:Windows_NT=$(OBJSDIR)version.o) 
+OBJS = $(OBJSDIR)main.o $(OBJSDIR)cdiaudio.o $(OBJSDIR)cdidata.o $(OBJSDIR)common.o $(OBJSDIR)tools.o $(OS:Windows_NT=$(OBJSDIR)version.o)
 
-# go !	
-all : $(OBJS)
+# go !
+.PHONY: all
+all : $(TARGET)
+
+$(TARGET) : $(OBJS)
 	$(CC) -o $(TARGET) $(OBJS) $(CFLAGS) $(LIBS)
 	$(STRIP) $(TARGET)
 #	$(PACKER) $(PACKEROPT) $(TARGET)
-	
+
 # compile source
 $(OBJSDIR)%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -40,9 +38,15 @@ $(OBJSDIR)%.o: %.c
 # include win32 resources
 $(OBJSDIR)%.o: %.rc
 	$(WINDRES) -i $< -o $@
-	
+
+.PHONY: install
+install : $(TARGET)
+	cp $(TARGET) ../../..
+
+.PHONY: clean
 clean:
 	$(RM) $(OBJS)
-	
+
+.PHONY: clean-all
 clean-all:
 	$(RM) $(OBJS) $(TARGET)

@@ -1,54 +1,54 @@
-/* 
+/*
 	:: C D I 4 D C ::
-	
+
 	By SiZiOUS, http://sbibuilder.shorturl.com/
 	5 july 2006, v0.2b
-	
+
 	File : 	CDIHEAD.H
 	Desc : 	This file contains the CDI structure file.
-			
+
 			Sorry comments are in french. If you need some help you can contact me at sizious[at]dc-france.com.
 */
 
-/* 
-	Un CDI bootable pour Dreamcast de type Audio/Data est composé de plusieurs parties (dans l'ordre) :
-	
-		- 352 800 octets de zéros binaires (padding ?),
-		- La piste audio (mode audio donc) de 302 secteurs (numérotés de 0 à 301) dans le cas d'un CDI avec la 
+/*
+	Un CDI bootable pour Dreamcast de type Audio/Data est composï¿½ de plusieurs parties (dans l'ordre) :
+
+		- 352 800 octets de zï¿½ros binaires (padding ?),
+		- La piste audio (mode audio donc) de 302 secteurs (numï¿½rotï¿½s de 0 ï¿½ 301) dans le cas d'un CDI avec la
 		  piste "audio.raw" du kit ECHELON.
-		- Une piste "GAP" servant à délimiter la piste audio de la piste de données, sur 350408 bytes. Elle est de deux types
-		  différents détaillés ci-dessous.
-		- Une piste de données, en Mode 2 Form 1 (CD/XA), commencant au secteur (lba ou msinfo) 11702 (toujours pour audio.raw 
+		- Une piste "GAP" servant ï¿½ dï¿½limiter la piste audio de la piste de donnï¿½es, sur 350408 bytes. Elle est de deux types
+		  diffï¿½rents dï¿½taillï¿½s ci-dessous.
+		- Une piste de donnï¿½es, en Mode 2 Form 1 (CD/XA), commencant au secteur (lba ou msinfo) 11702 (toujours pour audio.raw
 		  de ECHELON).
-		- Quelques secteurs de padding (2 pour être exact)
+		- Quelques secteurs de padding (2 pour ï¿½tre exact)
 		- Et enfin le vrai header du CDI de longueur variable.
-		
+
 	Une piste doit faire au minimum 302 secteurs. Si l'ISO est trop petit et que la piste fait en dessous de 302 secteurs,
-	il faut rajouter des secteurs de padding pour arriver à 302. Si c'est supérieur à 302, on fait rien. En effet, 302 secteurs 
-	est la taille minimale d'une piste. Certains graveurs ont du mal à graver ce genre de pistes si c'est inférieur.
-	
-	Voici la structure du CDI en schéma :
+	il faut rajouter des secteurs de padding pour arriver ï¿½ 302. Si c'est supï¿½rieur ï¿½ 302, on fait rien. En effet, 302 secteurs
+	est la taille minimale d'une piste. Certains graveurs ont du mal ï¿½ graver ce genre de pistes si c'est infï¿½rieur.
+
+	Voici la structure du CDI en schï¿½ma :
 
 	+=================================================+
-	|         352 800 octets de zéros binaires        |
+	|         352 800 octets de zï¿½ros binaires        |
 	+=================================================+
 	|     Piste audio : 302 secteurs min, 710 304     |
-	+-------------------------------------------------+	
-	 |            0x108 octets de zéros              |
+	+-------------------------------------------------+
+	 |            0x108 octets de zï¿½ros              |
 	 +-----------------------------------------------+
-	 |  --- La piste elle même (705 600 octets)---   |
+	 |  --- La piste elle mï¿½me (705ï¿½600 octets)---   |
 	 +-----------------------------------------------+
-	 |              11760 octets de zéros            |
+	 |              11760 octets de zï¿½ros            |
 	+=================================================+
 	|                    piste GAP                    |
 	+-------------------------------------------------+
 	 |   1st piste : gap_dummy_sector 175 200 octets |
 	 +-----------------------------------------------+
-	 |   2nd piste : gap_dummy_sector2 : même taille |
+	 |   2nd piste : gap_dummy_sector2 : mï¿½me taille |
 	+=================================================+
-	|  Données : au secteur 11702, taille bloc : 2336 |
+	|  Donnï¿½es : au secteur 11702, taille bloc : 2336 |
 	+-------------------------------------------------+
-	 |             2048 octets de données            |
+	 |             2048 octets de donnï¿½es            |
 	 +-----------------------------------------------+
 	 |                4 octets d'EDC                 |
 	 +-----------------------------------------------+
@@ -82,7 +82,7 @@
 	   +-------------------------------------------+
 	   |         Nom de fichier en absolu          |
 	   +-------------------------------------------+
-	   |         Valeurs diverses et variées...    |
+	   |         Valeurs diverses et variï¿½es...    |
 	   +-------------------------------------------+
 	   |         Nombre de secteurs (0x012e)       |
 	   +-------------------------------------------+
@@ -98,11 +98,11 @@
 	  +---------------------------------------------+
 	  |             Infos piste datas :             |
 	  +---------------------------------------------+
-	   |        Même chose que la piste audio...   |
+	   |        Mï¿½me chose que la piste audio...   |
 	  +---------------------------------------------+
 	  |                 Header final                |
 	  +---------------------------------------------+
-	   |  même chose que les autres jusqu'au nom   |
+	   |  mï¿½me chose que les autres jusqu'au nom   |
 	   +-------------------------------------------+
 	   |   la taille totale de tous les secteurs   |
 	   +-------------------------------------------+
@@ -117,44 +117,44 @@
 #ifndef __CDIHEAD__H__
 #define __CDIHEAD__H__
 
-// début de l'image : 352 800 bytes de zero binaires
+// debut de l'image : 352 800 bytes de zero binaires
 static const unsigned int cdi_start_file_header = 352800;
 
 // --- AUDIO TRACK ---
 
-// une "piste" audio fait en tout 710 304 bytes ... (en fait la piste + les secteurs d'en-tête)
+// une "piste" audio fait en tout 710 304 bytes ... (en fait la piste + les secteurs d'en-tï¿½te)
 static const int cdi_audio_track_total_size = 710304;
 
-// ... mais elle commence uniquement 108h bytes  après. Les 108h bytes avant de commencer la vraie piste audio sont des zéros binaires.
+// ... mais elle commence uniquement 108h bytes  aprï¿½s. Les 108h bytes avant de commencer la vraie piste audio sont des zï¿½ros binaires.
 static const int cdi_audio_start_offset = 0x108;
 
-// une piste audio se termine par 11760 octets de full zéro... ça correspond à cette adresse dans le bloc audio
+// une piste audio se termine par 11760 octets de full zï¿½ro... ï¿½a correspond ï¿½ cette adresse dans le bloc audio
 static const int cdi_audio_end_padding = 0xaa8b0;
 
 // --- GAP ---
 
-// ce "gap" là est pour le cas d'une image data/data. Ce type d'image commence par une piste GAP de 350 400 bytes (soit 150 secteurs).
+// ce "gap" lï¿½ est pour le cas d'une image data/data. Ce type d'image commence par une piste GAP de 350ï¿½400 bytes (soit 150 secteurs).
 static const int gap_data_start_image_count = 150;
 
-// le "gap" est une piste qui sépare la piste audio et la piste de datas.
+// le "gap" est une piste qui sï¿½pare la piste audio et la piste de datas.
 
 static const int gap_sector_size = 2336;
 
 // il y'a 75 secteurs GAP 1 et 75 secteurs GAP 2
 static const int gap_sector_count = 75;
 
-// un secteur GAP 1 est constitué de ça :
+// un secteur GAP 1 est constituï¿½ de ï¿½a :
 static const int gap_dummy_sector_size = 6;
 static const unsigned int gap_dummy_sector[6][2] = {
-		{0x002, 0x20}, 
-		{0x006, 0x20}, 
-		{0x91c, 0x3f}, 
-		{0x91d, 0x13}, 
-		{0x91e, 0xb0}, 
+		{0x002, 0x20},
+		{0x006, 0x20},
+		{0x91c, 0x3f},
+		{0x91d, 0x13},
+		{0x91e, 0xb0},
 		{0x91f, 0xbe}
 };
 
-// un secteur GAP 2 est constitué de ça :
+// un secteur GAP 2 est constituï¿½ de ï¿½a :
 static const int gap_dummy_sector_2_size = 101;
 static const unsigned int gap_dummy_sector_2[101][2] = {
 		{0x00008, 0x54}, {0x00009, 0x44}, {0x0000a, 0x49}, {0x0000b, 0x01}, {0x0000c, 0x50}, {0x0000d, 0x01}, {0x0000e, 0x02},
@@ -183,7 +183,7 @@ static const int data_sector_size = 2336;
 struct cdi_header {
 	unsigned short int track_count; // 0x02
 	unsigned short int first_track_num; //0x01
-	unsigned long padding; //0x00000000
+	unsigned int padding; //0x00000000
 };
 
 static const unsigned int track_start_mark[10] = {
@@ -206,29 +206,29 @@ static const int sector2_size = 195;
 static const int sector2_entries = 31;
 static const unsigned int sector2[31][2] = {
 		{0x00000, 0x02}, {0x00002, 0x96}, {0x00006, 0x9c}, {0x00007, 0x04}, {0x00010, 0x02}, {0x00018, 0x01}, {0x00020, 0xb6},
-		{0x00021, 0x2d}, {0x00038, 0x01}, {0x0003c, 0x04}, {0x0005a, 0xff}, {0x0005b, 0xff}, {0x0005c, 0xff}, {0x0005d, 0xff}, 
-		{0x0005e, 0xff}, {0x0005f, 0xff}, {0x00060, 0xff}, {0x00061, 0xff}, {0x00062, 0x01}, {0x00066, 0x80}, {0x0006a, 0x02}, 
-		{0x0006e, 0x10}, {0x00072, 0x44}, {0x00073, 0xac}, {0x000a0, 0xff}, {0x000a1, 0xff}, {0x000a2, 0xff}, {0x000a3, 0xff}, 
+		{0x00021, 0x2d}, {0x00038, 0x01}, {0x0003c, 0x04}, {0x0005a, 0xff}, {0x0005b, 0xff}, {0x0005c, 0xff}, {0x0005d, 0xff},
+		{0x0005e, 0xff}, {0x0005f, 0xff}, {0x00060, 0xff}, {0x00061, 0xff}, {0x00062, 0x01}, {0x00066, 0x80}, {0x0006a, 0x02},
+		{0x0006e, 0x10}, {0x00072, 0x44}, {0x00073, 0xac}, {0x000a0, 0xff}, {0x000a1, 0xff}, {0x000a2, 0xff}, {0x000a3, 0xff},
 		{0x000b0, 0x02}, {0x000b8, 0xb6}, {0x000b9, 0x2d},
 };
 
 static const int cdi_head_data_data_track_sector_size = 195;
 static const int cdi_head_data_data_track_sector_entries = 27;
 static const unsigned int cdi_head_data_data_track_sector[27][2] = {
-		{0x00000, 0x02}, {0x00002, 0x96}, {0x00006, 0x9c}, {0x00007, 0x04}, {0x00010, 0x02}, {0x00038, 0x01}, {0x0003c, 0x04}, 
-		{0x0005a, 0xff}, {0x0005b, 0xff}, {0x0005c, 0xff}, {0x0005d, 0xff}, {0x0005e, 0xff}, {0x0005f, 0xff}, {0x00060, 0xff}, 
-		{0x00061, 0xff}, {0x00062, 0x01}, {0x00066, 0x80}, {0x0006a, 0x02}, {0x0006e, 0x10}, {0x00072, 0x44}, {0x00073, 0xac}, 
+		{0x00000, 0x02}, {0x00002, 0x96}, {0x00006, 0x9c}, {0x00007, 0x04}, {0x00010, 0x02}, {0x00038, 0x01}, {0x0003c, 0x04},
+		{0x0005a, 0xff}, {0x0005b, 0xff}, {0x0005c, 0xff}, {0x0005d, 0xff}, {0x0005e, 0xff}, {0x0005f, 0xff}, {0x00060, 0xff},
+		{0x00061, 0xff}, {0x00062, 0x01}, {0x00066, 0x80}, {0x0006a, 0x02}, {0x0006e, 0x10}, {0x00072, 0x44}, {0x00073, 0xac},
 		{0x000a0, 0xff}, {0x000a1, 0xff}, {0x000a2, 0xff}, {0x000a3, 0xff}, {0x000b0, 0x02}, {0x000bd, 0x01},
 };
 
 static const unsigned int cdi_head_data_data_track_2_sector_size = 195;
 static const unsigned int cdi_head_data_data_track_2_sector_entries = 31;
 static const unsigned int cdi_head_data_data_track_2_sector[31][2] = {
-		{0x00000, 0x02}, {0x00002, 0x96}, {0x00006, 0x2e}, {0x00007, 0x01}, {0x00010, 0x02}, {0x00018, 0x01}, {0x00024, 0xc4}, 
-		{0x00025, 0x01}, {0x00038, 0x01}, {0x0003c, 0x04}, {0x00041, 0xc4}, {0x00042, 0x01}, {0x0005a, 0xff}, {0x0005b, 0xff}, 
-		{0x0005c, 0xff}, {0x0005d, 0xff}, {0x0005e, 0xff}, {0x0005f, 0xff}, {0x00060, 0xff}, {0x00061, 0xff}, {0x00062, 0x01}, 
-		{0x00066, 0x80}, {0x0006a, 0x02}, {0x0006e, 0x10}, {0x00072, 0x44}, {0x00073, 0xac}, {0x000a0, 0xff}, {0x000a1, 0xff}, 
-		{0x000a2, 0xff}, {0x000a3, 0xff}, {0x000b0, 0x02}, 
+		{0x00000, 0x02}, {0x00002, 0x96}, {0x00006, 0x2e}, {0x00007, 0x01}, {0x00010, 0x02}, {0x00018, 0x01}, {0x00024, 0xc4},
+		{0x00025, 0x01}, {0x00038, 0x01}, {0x0003c, 0x04}, {0x00041, 0xc4}, {0x00042, 0x01}, {0x0005a, 0xff}, {0x0005b, 0xff},
+		{0x0005c, 0xff}, {0x0005d, 0xff}, {0x0005e, 0xff}, {0x0005f, 0xff}, {0x00060, 0xff}, {0x00061, 0xff}, {0x00062, 0x01},
+		{0x00066, 0x80}, {0x0006a, 0x02}, {0x0006e, 0x10}, {0x00072, 0x44}, {0x00073, 0xac}, {0x000a0, 0xff}, {0x000a1, 0xff},
+		{0x000a2, 0xff}, {0x000a3, 0xff}, {0x000b0, 0x02},
 };
 
 static const int cdi_head_next_size = 31;
