@@ -31,7 +31,7 @@ rm -rf kos-ports
 # prepare
 ./download.sh
 ./unpack.sh
-cd gcc-5.2.0
+cd gcc-9.3.0
 ./contrib/download_prerequisites
 cd .. && make patch
 

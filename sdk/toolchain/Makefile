@@ -39,11 +39,11 @@ arm_prefix := /opt/toolchains/dc/$(arm_target)
 kos_root=/usr/local/dc/kos
 # kos_base: equivalent of KOS_BASE (contains include/ and kernel/)
 kos_base=/usr/local/dc/kos/kos
-binutils_ver=2.31.1
-gcc_ver=5.2.0
-newlib_ver=2.2.0
-gdb_ver=7.6
-insight_ver=6.7.1
+binutils_ver=2.34
+gcc_ver=9.3.0
+newlib_ver=3.3.0
+gdb_ver=9.2
+insight_ver=6.8.1
 
 # With GCC 4.x versions, the patches provide a kos thread model, so you should
 # use it. With 3.4.6, you probably want posix here. If you really don't want
@@ -58,7 +58,7 @@ verbose=1
 # Tracking down problems with multiple make jobs is much more difficult than
 # with just one running at a time. So, if you run into trouble, then you should
 # clear this variable and try again with just one job running.
-makejobs=
+makejobs=-j2
 
 # Set the languages to build for pass 2 of building gcc for sh-elf. The default
 # here is to build C, C++, Objective C, and Objective C++. You may want to take

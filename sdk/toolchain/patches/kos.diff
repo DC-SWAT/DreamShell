@@ -1,37 +1,3 @@
-diff --git a/include/assert.h b/include/assert.h
-index 583992e..439da09 100644
---- a/include/assert.h
-+++ b/include/assert.h
-@@ -42,7 +42,7 @@ __BEGIN_DECLS
-     \param  e               A value or expression to be evaluated as true or
-                             false.
- */
--#   define assert(e)        ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, NULL, __FUNCTION__))
-+#   define assert(e)        ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, NULL, __func__))
- 
- /** \brief  assert() with a custom message.
- 
-@@ -53,7 +53,7 @@ __BEGIN_DECLS
-                             false.
-     \param  m               A message (const char *).
- */
--#   define assert_msg(e, m) ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, m, __FUNCTION__))
-+#   define assert_msg(e, m) ((e) ? (void)0 : __assert(__FILE__, __LINE__, #e, m, __func__))
- #endif
- 
- /* \cond */
-diff --git a/include/kos/elf.h b/include/kos/elf.h
-index 154edf8..e6f2831 100644
---- a/include/kos/elf.h
-+++ b/include/kos/elf.h
-@@ -241,6 +241,7 @@ struct elf_rel_t {
-     @{
- */
- #define R_SH_DIR32  1       /**< \brief SuperH: Rel = Symbol + Addend */
-+#define R_SH_REL32  2       /**< \brief SuperH: Rel = Symbol + Addend - Value */
- #define R_386_32    1       /**< \brief x86: Rel = Symbol + Addend */
- #define R_386_PC32  2       /**< \brief x86: Rel = Symbol + Addend - Value */
- /** @} */
 diff --git a/kernel/arch/dreamcast/hardware/cdrom.c b/kernel/arch/dreamcast/hardware/cdrom.c
 index a41cd69..1101a71 100644
 --- a/kernel/arch/dreamcast/hardware/cdrom.c
@@ -68,7 +34,7 @@ index a41cd69..1101a71 100644
      mutex_lock(&_g1_ata_mutex);
      /* Make sure to select the GD-ROM drive. */
 diff --git a/kernel/arch/dreamcast/hardware/g1ata.c b/kernel/arch/dreamcast/hardware/g1ata.c
-index 331bcbe..04f38b9 100644
+index 7a55913..2d52b85 100644
 --- a/kernel/arch/dreamcast/hardware/g1ata.c
 +++ b/kernel/arch/dreamcast/hardware/g1ata.c
 @@ -1,7 +1,7 @@
@@ -80,7 +46,7 @@ index 331bcbe..04f38b9 100644
  */
  
  #include <errno.h>
-@@ -103,6 +103,13 @@ typedef struct ata_devdata {
+@@ -102,6 +102,13 @@ typedef struct ata_devdata {
  #define G1_ATA_DMA_DIRECTION    0xA05F740C      /* Read/Write */
  #define G1_ATA_DMA_ENABLE       0xA05F7414      /* Read/Write */
  #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
@@ -94,7 +60,7 @@ index 331bcbe..04f38b9 100644
  
  /* Bitmasks for the STATUS_REG/ALT_STATUS registers. */
  #define G1_ATA_SR_ERR   0x01
-@@ -115,6 +122,7 @@ typedef struct ata_devdata {
+@@ -114,6 +121,7 @@ typedef struct ata_devdata {
  #define G1_ATA_SR_BSY   0x80
  
  /* ATA Commands we might like to send. */
@@ -102,7 +68,7 @@ index 331bcbe..04f38b9 100644
  #define ATA_CMD_READ_SECTORS        0x20
  #define ATA_CMD_READ_SECTORS_EXT    0x24
  #define ATA_CMD_READ_DMA_EXT        0x25
-@@ -123,10 +131,17 @@ typedef struct ata_devdata {
+@@ -122,10 +130,17 @@ typedef struct ata_devdata {
  #define ATA_CMD_WRITE_DMA_EXT       0x35
  #define ATA_CMD_READ_DMA            0xC8
  #define ATA_CMD_WRITE_DMA           0xCA
@@ -120,7 +86,7 @@ index 331bcbe..04f38b9 100644
  
  /* Subcommands we might care about for the SET FEATURES command. */
  #define ATA_FEATURE_TRANSFER_MODE   0x03
-@@ -140,6 +155,7 @@ typedef struct ata_devdata {
+@@ -139,6 +154,7 @@ typedef struct ata_devdata {
  
  /* Access timing data. */
  #define G1_ACCESS_WDMA_MODE2        0x00001001
@@ -128,7 +94,7 @@ index 331bcbe..04f38b9 100644
  
  /* DMA Settings. */
  #define G1_DMA_TO_DEVICE            0
-@@ -267,7 +283,7 @@ static inline int g1_ata_wait_drq(void) {
+@@ -266,7 +282,7 @@ static inline int g1_ata_wait_drq(void) {
  static int dma_common(uint8_t cmd, size_t nsects, uint32_t addr, int dir,
                        int block) {
      uint8_t status;
@@ -137,7 +103,7 @@ index 331bcbe..04f38b9 100644
      /* Set the thread ID that initiated this DMA. */
      dma_thd = thd_current;
  
-@@ -316,6 +332,9 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -315,6 +331,9 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -147,7 +113,7 @@ index 331bcbe..04f38b9 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -362,6 +381,8 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -361,6 +380,8 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
  
                  s = 1;
              }
@@ -156,7 +122,7 @@ index 331bcbe..04f38b9 100644
  
              /* Wait for data */
              if(g1_ata_wait_drq()) {
-@@ -374,7 +395,11 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -373,7 +394,11 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
              }
  
              for(j = 0; j < 256; ++j) {
@@ -169,7 +135,7 @@ index 331bcbe..04f38b9 100644
              }
          }
      }
-@@ -392,6 +417,8 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -391,6 +416,8 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -178,7 +144,7 @@ index 331bcbe..04f38b9 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -438,13 +465,18 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -437,13 +464,18 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
  
                  s = 1;
              }
@@ -198,7 +164,7 @@ index 331bcbe..04f38b9 100644
              }
          }
      }
-@@ -463,6 +495,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -462,6 +494,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -208,7 +174,7 @@ index 331bcbe..04f38b9 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -535,6 +570,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -534,6 +569,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
  
          /* Now, wait for the drive to give us back each sector. */
          for(i = 0; i < nsects; ++i, ++sector) {
@@ -218,7 +184,7 @@ index 331bcbe..04f38b9 100644
              /* Wait for data */
              if(g1_ata_wait_drq()) {
                  dbglog(DBG_KDEBUG, "g1_ata_read_lba: error reading sector %d "
-@@ -545,7 +583,11 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -544,7 +582,11 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
              }
  
              for(j = 0; j < 256; ++j) {
@@ -231,7 +197,7 @@ index 331bcbe..04f38b9 100644
              }
          }
      }
-@@ -682,6 +724,8 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+@@ -681,6 +723,8 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -240,7 +206,7 @@ index 331bcbe..04f38b9 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -747,11 +791,15 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+@@ -746,11 +790,15 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
          /* Now, send the drive each sector. */
          for(i = 0; i < nsects; ++i, ++sector) {
              /* Wait for the device to signal it is ready. */
@@ -257,7 +223,7 @@ index 331bcbe..04f38b9 100644
              }
          }
      }
-@@ -915,6 +963,55 @@ int g1_ata_flush(void) {
+@@ -914,6 +962,55 @@ int g1_ata_flush(void) {
      return 0;
  }
  
@@ -313,7 +279,7 @@ index 331bcbe..04f38b9 100644
  static int g1_ata_set_transfer_mode(uint8_t mode) {
      uint8_t status;
  
-@@ -1034,6 +1131,7 @@ static int g1_ata_scan(void) {
+@@ -1033,6 +1130,7 @@ static int g1_ata_scan(void) {
          if(!g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) {
              OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
              OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
@@ -322,10 +288,10 @@ index 331bcbe..04f38b9 100644
          else {
              device.wdma_modes = 0;
 diff --git a/kernel/arch/dreamcast/include/arch/arch.h b/kernel/arch/dreamcast/include/arch/arch.h
-index 847d53c..807632c 100644
+index 2e53d22..19b7150 100644
 --- a/kernel/arch/dreamcast/include/arch/arch.h
 +++ b/kernel/arch/dreamcast/include/arch/arch.h
-@@ -48,7 +48,7 @@ __BEGIN_DECLS
+@@ -52,7 +52,7 @@ __BEGIN_DECLS
  #define DEFAULT_PIXEL_MODE  PM_RGB565
  
  /** \brief  Default serial bitrate. */
@@ -401,302 +367,86 @@ index 1c648aa..107e7f7 100644
  #endif  /* __ARCH_CACHE_H */
 -
 diff --git a/kernel/arch/dreamcast/kernel/cache.s b/kernel/arch/dreamcast/kernel/cache.s
-index 5c7020f..e97e4bf 100644
+index 5c7020f..94e7145 100644
 --- a/kernel/arch/dreamcast/kernel/cache.s
 +++ b/kernel/arch/dreamcast/kernel/cache.s
-@@ -1,165 +1,188 @@
--! This routine was such a PIA to get working in inside the C program
--! that I finally gave up and moved it out to an assembler file.
--
--! Routine to flush parts of cache.. thanks to the Linux-SH guys
--! for the algorithm. The original version of this routine was
--! taken from sh-stub.c.
--
--	.text
--	.globl _icache_flush_range
--	.globl _dcache_inval_range
--	.globl _dcache_flush_range
--
--! r4 is starting address
--! r5 is count
--_icache_flush_range:
--	mov.l	fraddr,r0
--	mov.l	p2mask,r1
--	or	r1,r0
--	jmp	@r0
--	nop
--
--	.align	2
--fraddr:	.long	flush_real
--p2mask:	.long	0x20000000
--	
--
--flush_real:
--	! Save old SR and disable interrupts
--	stc	sr,r0
--	mov.l	r0,@-r15
--	mov.l	ormask,r1
--	or	r1,r0
--	ldc	r0,sr
--
--	! Get ending address from count and align start address
--	add	r4,r5
--	mov.l	l1align,r0
--	and	r0,r4
--	mov.l	addrarray,r1
--	mov.l	entrymask,r2
--	mov.l	validmask,r3
--
--flush_loop:
--	! Write back O cache
--	ocbwb	@r4
--
--	! Invalidate I cache
--	mov	r4,r6		! v & CACHE_IC_ENTRY_MASK
--	and	r2,r6
--	or	r1,r6		! CACHE_IC_ADDRESS_ARRAY | ^
--
--	mov	r4,r7		! v & 0xfffffc00
--	and	r3,r7
--
--	add	#32,r4		! += L1_CACHE_BYTES
--	cmp/hs	r4,r5
--	bt/s	flush_loop
--	mov.l	r7,@r6		! *addr = data	
--
--	! Restore old SR
--	mov.l	@r15+,r0
--	ldc	r0,sr
--
--	! make sure we have enough instrs before returning to P1
--	nop
--	nop
--	nop
--	nop
--	nop
--	nop
--	nop
--	rts
--	nop
--
--	.align	2
--ormask:
--	.long	0x100000f0
--addrarray:
--	.long	0xf0000000	! CACHE_IC_ADDRESS_ARRAY
--entrymask:
--	.long	0x1fe0		! CACHE_IC_ENTRY_MASK
--validmask:
--	.long	0xfffffc00
--	
--
--! Goes through and invalidates the O-cache for a given block of
--! RAM. Make sure that you've called dcache_flush_range first if
--! you care about the contents.
--! r4 is starting address
--! r5 is count
--_dcache_inval_range:
--	! Get ending address from count and align start address
--	add	r4,r5
--	mov.l	l1align,r0
--	and	r0,r4
--
--dinval_loop:
--	! Invalidate the O cache
--	ocbi	@r4		! r4
--	
--	mov	#0x10,r0	! r4 | 0x1000
--	shll8	r0
--	or	r4,r0
--	ocbi	@r0
--	
--	mov	#0x20,r0	! r4 | 0x2000
--	shll8	r0
--	or	r4,r0
--	ocbi	@r0
--	
--	mov	#0x30,r0	! r4 | 0x3000
--	shll8	r0
--	or	r4,r0
--	ocbi	@r0
--	
--	cmp/hs	r4,r5
--	bt/s	dinval_loop
--	add	#32,r4		! += L1_CACHE_BYTES
--
--	rts
--	nop
--
--
--! This routine just goes through and forces a write-back on the
--! specified data range. Use prior to dcache_inval_range if you
--! care about the contents.
--! r4 is starting address
--! r5 is count
--_dcache_flush_range:
--	! Get ending address from count and align start address
--	add	r4,r5
--	mov.l	l1align,r0
--	and	r0,r4
--
--dflush_loop:
--	! Write back the O cache
--	ocbwb	@r4
--
--	mov	#0x10,r0	! r4 | 0x1000
--	shll8	r0
--	or	r4,r0
--	ocbwb	@r0
--	
--	mov	#0x20,r0	! r4 | 0x2000
--	shll8	r0
--	or	r4,r0
--	ocbwb	@r0
--	
--	mov	#0x30,r0	! r4 | 0x3000
--	shll8	r0
--	or	r4,r0
--	ocbwb	@r0
--	
--	cmp/hs	r4,r5
--	bt/s	dflush_loop
--	add	#32,r4		! += L1_CACHE_BYTES
--
--	rts
--	nop
--
--
--
--	.align	2
--l1align:
--	.long	~31		! ~(L1_CACHE_BYTES-1)
-+! This routine was such a PIA to get working in inside the C program
-+! that I finally gave up and moved it out to an assembler file.
-+
-+! Routine to flush parts of cache.. thanks to the Linux-SH guys
-+! for the algorithm. The original version of this routine was
-+! taken from sh-stub.c.
+@@ -4,11 +4,17 @@
+ ! Routine to flush parts of cache.. thanks to the Linux-SH guys
+ ! for the algorithm. The original version of this routine was
+ ! taken from sh-stub.c.
 +!
 +! Optimized and extended by SWAT <http://www.dc-swat.ru>
 +!
-+
-+	.text
-+	.globl _icache_flush_range
-+	.globl _dcache_inval_range
-+	.globl _dcache_flush_range
+ 
+ 	.text
+ 	.globl _icache_flush_range
+ 	.globl _dcache_inval_range
+ 	.globl _dcache_flush_range
 +	.globl _dcache_purge_range
 +	.globl _dcache_pref_range
 +	.globl _dcache_alloc_range
-+
-+! r4 is starting address
-+! r5 is count
-+_icache_flush_range:
-+	mov.l	fraddr,r0
-+	mov.l	p2mask,r1
-+	or	r1,r0
-+	jmp	@r0
-+	nop
-+
-+	.align	2
-+fraddr:	.long	flush_real
-+p2mask:	.long	0x20000000
-+	
-+
-+flush_real:
-+	! Save old SR and disable interrupts
-+	stc	sr,r0
-+	mov.l	r0,@-r15
-+	mov.l	ormask,r1
-+	or	r1,r0
-+	ldc	r0,sr
-+
-+	! Get ending address from count and align start address
-+	add	r4,r5
-+	mov.l	l1align,r0
-+	and	r0,r4
-+	mov.l	addrarray,r1
-+	mov.l	entrymask,r2
-+	mov.l	validmask,r3
-+
-+flush_loop:
-+	! Write back O cache
-+	ocbwb	@r4
-+
-+	! Invalidate I cache
-+	mov	r4,r6		! v & CACHE_IC_ENTRY_MASK
-+	and	r2,r6
-+	or	r1,r6		! CACHE_IC_ADDRESS_ARRAY | ^
-+
-+	mov	r4,r7		! v & 0xfffffc00
-+	and	r3,r7
-+
-+	add	#32,r4		! += L1_CACHE_BYTES
-+	cmp/hs	r4,r5
-+	bt/s	flush_loop
-+	mov.l	r7,@r6		! *addr = data	
-+
-+	! Restore old SR
-+	mov.l	@r15+,r0
-+	ldc	r0,sr
-+
-+	! make sure we have enough instrs before returning to P1
-+	nop
-+	nop
-+	nop
-+	nop
-+	nop
-+	nop
-+	nop
-+	rts
-+	nop
-+
-+	.align	2
-+ormask:
-+	.long	0x100000f0
-+addrarray:
-+	.long	0xf0000000	! CACHE_IC_ADDRESS_ARRAY
-+entrymask:
-+	.long	0x1fe0		! CACHE_IC_ENTRY_MASK
-+validmask:
-+	.long	0xfffffc00
-+	
-+
-+! Goes through and invalidates the O-cache for a given block of
-+! RAM. Make sure that you've called dcache_flush_range first if
-+! you care about the contents.
-+! r4 is starting address
-+! r5 is count
-+_dcache_inval_range:
-+	! Get ending address from count and align start address
-+	add	r4,r5
-+	mov.l	l1align,r0
-+	and	r0,r4
-+dinval_loop:
-+	! Invalidate the O cache
-+	ocbi	@r4		! r4
-+	cmp/hs	r4,r5
-+	bt/s	dinval_loop
-+	add	#32,r4		! += L1_CACHE_BYTES
-+	rts
-+	nop
-+
-+
-+! This routine just goes through and forces a write-back on the
-+! specified data range. Use prior to dcache_inval_range if you
-+! care about the contents.
-+! r4 is starting address
-+! r5 is count
-+_dcache_flush_range:
-+	! Get ending address from count and align start address
-+	add	r4,r5
-+	mov.l	l1align,r0
-+	and	r0,r4
-+dflush_loop:
-+	! Write back the O cache
-+	ocbwb	@r4
-+	cmp/hs	r4,r5
-+	bt/s	dflush_loop
-+	add	#32,r4		! += L1_CACHE_BYTES
+ 
+ ! r4 is starting address
+ ! r5 is count
+@@ -93,30 +99,12 @@ _dcache_inval_range:
+ 	add	r4,r5
+ 	mov.l	l1align,r0
+ 	and	r0,r4
+-
+ dinval_loop:
+ 	! Invalidate the O cache
+ 	ocbi	@r4		! r4
+-	
+-	mov	#0x10,r0	! r4 | 0x1000
+-	shll8	r0
+-	or	r4,r0
+-	ocbi	@r0
+-	
+-	mov	#0x20,r0	! r4 | 0x2000
+-	shll8	r0
+-	or	r4,r0
+-	ocbi	@r0
+-	
+-	mov	#0x30,r0	! r4 | 0x3000
+-	shll8	r0
+-	or	r4,r0
+-	ocbi	@r0
+-	
+ 	cmp/hs	r4,r5
+ 	bt/s	dinval_loop
+ 	add	#32,r4		! += L1_CACHE_BYTES
+-
+ 	rts
+ 	nop
+ 
+@@ -131,34 +119,69 @@ _dcache_flush_range:
+ 	add	r4,r5
+ 	mov.l	l1align,r0
+ 	and	r0,r4
+-
+ dflush_loop:
+ 	! Write back the O cache
+ 	ocbwb	@r4
+-
+-	mov	#0x10,r0	! r4 | 0x1000
+-	shll8	r0
+-	or	r4,r0
+-	ocbwb	@r0
+-	
+-	mov	#0x20,r0	! r4 | 0x2000
+-	shll8	r0
+-	or	r4,r0
+-	ocbwb	@r0
+-	
+-	mov	#0x30,r0	! r4 | 0x3000
+-	shll8	r0
+-	or	r4,r0
+-	ocbwb	@r0
+-	
+ 	cmp/hs	r4,r5
+ 	bt/s	dflush_loop
+ 	add	#32,r4		! += L1_CACHE_BYTES
+-
 +	rts
 +	nop
 +	
@@ -715,9 +465,10 @@ index 5c7020f..e97e4bf 100644
 +	cmp/hs	r4,r5
 +	bt/s	dpurge_loop
 +	add	#32,r4		! += L1_CACHE_BYTES
-+	rts
-+	nop
-+
+ 	rts
+ 	nop
+ 
+-
 +! This routine just prefetch to operand cache the
 +! specified data range. 
 +! r4 is starting address
@@ -754,10 +505,12 @@ index 5c7020f..e97e4bf 100644
 +	add	#32,r4		! += L1_CACHE_BYTES
 +	rts
 +	nop
-+
-+	.align	2
-+l1align:
-+	.long	~31		! ~(L1_CACHE_BYTES-1)
+ 
+ 	.align	2
+ l1align:
+diff --git a/kernel/arch/dreamcast/sound/arm/stream.drv b/kernel/arch/dreamcast/sound/arm/stream.drv
+index ab87097..52807b7 100755
+Binary files a/kernel/arch/dreamcast/sound/arm/stream.drv and b/kernel/arch/dreamcast/sound/arm/stream.drv differ
 diff --git a/kernel/fs/elf.c b/kernel/fs/elf.c
 index 643c5a1..9a566cd 100644
 --- a/kernel/fs/elf.c
@@ -771,187 +524,3 @@ index 643c5a1..9a566cd 100644
  
      if(img == NULL) {
          dbglog(DBG_ERROR, "elf_load: can't allocate %d bytes for ELF load\n", sz);
-diff -ruN a/addons/libppp/Makefile b/addons/libppp/Makefile
---- a/addons/libppp/Makefile	2017-02-02 23:29:14.000000000 +0200
-+++ b/addons/libppp/Makefile	2018-12-24 20:57:27.000000000 +0200
-@@ -5,7 +5,7 @@
- OBJS = ppp.o lcp.o pap.o ipcp.o
- 
- # Make sure everything compiles nice and cleanly (or not at all).
--KOS_CFLAGS += -W -pedantic -Werror -std=c99 -I$(KOS_BASE)/kernel/net
-+KOS_CFLAGS += -W -pedantic -Werror -Wno-implicit-fallthrough -std=c99 -I$(KOS_BASE)/kernel/net
- 
- # Uncomment the line below to enable all manner of debugging output.
- KOS_CFLAGS += -DPPP_DEBUG
-
-diff -ruN kos/kernel/arch/dreamcast/include/dc/vec3f.h kos-patched/kernel/arch/dreamcast/include/dc/vec3f.h
---- kos/kernel/arch/dreamcast/include/dc/vec3f.h	2020-01-12 13:21:18.106226837 +0100
-+++ kos-patched/kernel/arch/dreamcast/include/dc/vec3f.h	2020-01-12 19:57:02.534719556 +0100
-@@ -2,6 +2,7 @@
- 
-    dc/vec3f.h
-    Copyright (C) 2013, 2014 Josh "PH3NOM" Pearson
-+   Copyright (C) 2019 HaydenKow
- 
- */
- 
-@@ -13,6 +14,7 @@
-     of these.
- 
-     \author Josh "PH3NOM" Pearson
-+    \author HaydenKow aka NeoDC
-     \see    dc/matrix.h
- */
- 
-@@ -44,23 +46,22 @@
-     \param  w                The result of the calculation.
- */
- #define vec3f_dot(x1, y1, z1, x2, y2, z2, w) { \
--        register float __x __asm__("fr0") = (x1); \
--        register float __y __asm__("fr1") = (y1); \
--        register float __z __asm__("fr2") = (z1); \
--        register float __w __asm__("fr3"); \
--        register float __a __asm__("fr4") = (x2); \
--        register float __b __asm__("fr5") = (y2); \
--        register float __c __asm__("fr6") = (z2); \
--        register float __d __asm__("fr7"); \
-         __asm__ __volatile__( \
-+                              "fmov %1, fr0\n" \
-+                              "fmov %2, fr1\n" \
-+                              "fmov %3, fr2\n" \
-+                              "fmov %4, fr4\n" \
-+                              "fmov %5, fr5\n" \
-+                              "fmov %6, fr6\n" \
-                               "fldi0 fr3\n" \
-                               "fldi0 fr7\n" \
--                              "fipr    fv4,fv0" \
--                              : "+f" (__w) \
--                              : "f" (__x), "f" (__y), "f" (__z), "f" (__w), \
--                              "f" (__a), "f" (__b), "f" (__c), "f" (__d) \
-+                              "fipr    fv4,fv0\n" \
-+                              "fmov fr4, %0\n" \
-+                              : "+f" (w) \
-+                              : "f" (x1), "f" (y1), "f" (z1), \
-+                              "f" (x2), "f" (y2), "f" (z2) \
-+                              : "fr3", "fr7" \
-                             ); \
--        w = __w; \
-     }
- 
- /** \brief  Macro to return scalar Euclidean length of a 3d vector.
-@@ -75,20 +76,19 @@
-     \param  w               The result of the calculation.
- */
- #define vec3f_length(x, y, z, w) { \
--        register float __x __asm__("fr0") = (x); \
--        register float __y __asm__("fr1") = (y); \
--        register float __z __asm__("fr2") = (z); \
--        register float __w __asm__("fr3"); \
-         __asm__ __volatile__( \
-+                              "fmov %1, fr0\n" \
-+                              "fmov %2, fr1\n" \
-+                              "fmov %3, fr2\n" \
-                               "fldi0 fr3\n" \
-                               "fipr  fv0,fv0\n" \
-                               "fsqrt fr3\n" \
--                              : "+f" (__w) \
--                              : "f" (__x), "f" (__y), "f" (__z), "f" (__w) \
-+                              : "+f" (w) \
-+                              : "f" (x), "f" (y), "f" (z), "0f" (w) \
-                             ); \
--        w = __w; \
-     }
- 
-+
- /** \brief  Macro to return the Euclidean distance between two 3d vectors.
- 
-     This macro is an inline assembly operation using the SH4's fast
-@@ -104,18 +104,16 @@
-     \param  w                The result of the calculation.
- */
- #define vec3f_distance(x1, y1, z1, x2, y2, z2, w) { \
--        register float __x  __asm__("fr0") = (x2-x1); \
--        register float __y  __asm__("fr1") = (y2-y1); \
--        register float __z  __asm__("fr2") = (z2-z1); \
--        register float __w  __asm__("fr3"); \
-         __asm__ __volatile__( \
--                       "fldi0 fr3\n" \
-+                              "fmov %1, fr0\n" \
-+                              "fmov %2, fr1\n" \
-+                              "fmov %3, fr2\n" \
-+                              "fldi0 fr3\n" \
-                               "fipr  fv0,fv0\n" \
-                               "fsqrt fr3\n" \
-                               : "+f" (__w) \
--                              : "f" (__x), "f" (__y), "f" (__z), "f" (__w) \
-+                              : "f" (x2-x1), "f" (y2-y1), "f" (z2-z1), "0f" (w) \
-                             ); \
--        w = __w; \
-     }
- 
- /** \brief  Macro to return the normalized version of a vector.
-@@ -130,20 +128,19 @@
-     \param  z               The Z coordinate of vector.
- */
- #define vec3f_normalize(x, y, z) { \
--        register float __x __asm__("fr0") = x; \
--        register float __y __asm__("fr1") = y; \
--        register float __z __asm__("fr2") = z; \
-         __asm__ __volatile__( \
-+                              "fmov %3, fr0\n" \
-+                              "fmov %4, fr1\n" \
-+                              "fmov %5, fr2\n" \
-                               "fldi0 fr3\n" \
-                               "fipr  fv0,fv0\n" \
-                               "fsrra fr3\n" \
-                               "fmul  fr3, fr0\n" \
-                               "fmul  fr3, fr1\n" \
-                               "fmul  fr3, fr2\n" \
--                              : "=f" (__x), "=f" (__y), "=f" (__z) \
--                              : "0" (__x), "1" (__y), "2" (__z) \
-+                              : "+f" (x), "+f" (y), "+f" (z) \
-+                              : "0f" (x), "1f" (y), "2f" (z) \
-                               : "fr3" ); \
--        x = __x; y = __y; z = __z; \
-     }
- 
- /** \brief  Macro to return the normalized version of a vector minus another
-@@ -164,22 +161,20 @@
-     \param  z3               The Z coordinate of output vector.
- */
- #define vec3f_sub_normalize(x1, y1, z1, x2, y2, z2, x3, y3, z3) { \
--        register float __x __asm__("fr0") = x1 - x2; \
--        register float __y __asm__("fr1") = y1 - y2; \
--        register float __z __asm__("fr2") = z1 - z2; \
-         __asm__ __volatile__( \
-+                              "fmov %3, fr0\n" \
-+                              "fmov %4, fr1\n" \
-+                              "fmov %5, fr2\n" \
-                               "fldi0 fr3\n" \
-                               "fipr  fv0,fv0\n" \
-                               "fsrra fr3\n" \
-                               "fmul  fr3, fr0\n" \
-                               "fmul  fr3, fr1\n" \
-                               "fmul  fr3, fr2\n" \
--                              : "=f" (__x), "=f" (__y), "=f" (__z) \
--                              : "0" (__x), "1" (__y), "2" (__z) \
-+                              : "=f" (x3), "=f" (y3), "=f" (z3) \
-+                              : "0f" (x1 - x2), "f" (y1 - y2), "2f" (z1 - z2) \
-                               : "fr3" ); \
--        x3 = __x; y3 = __y; z3 = __z; \
-     }
--
- /** \brief  Macro to rotate a vector about its origin on the x, y plane.
- 
-     This macro is an inline assembly operation using the SH4's fast
---- b/kernel/arch/dreamcast/kernel/init.c
-+++ a/kernel/arch/dreamcast/kernel/init.c
-@@ -24,7 +24,7 @@
- 
- void _atexit_call_all();
- 
--#if __GNUC__ == 4
-+#if __GNUC__ >= 4
- #define _init init
- #define _fini fini
- #endif
