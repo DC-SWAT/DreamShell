@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # These version numbers are all that should ever have to be changed.
-source $PWD/versions.sh
+. $PWD/versions.sh
 
 while [ "$1" != "" ]; do
     PARAM=`echo $1 | awk -F= '{print $1}'`

@@ -1,6 +1,6 @@
 diff -ruN gcc-9.3.0/gcc/configure gcc-9.3.0-kos/gcc/configure
---- gcc-9.3.0/gcc/configure	2020-03-12 07:08:30.000000000 -0400
-+++ gcc-9.3.0-kos/gcc/configure	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/gcc/configure	2020-03-12 18:08:30.000000000 +0700
++++ gcc-9.3.0-kos/gcc/configure	2020-10-30 10:37:37.808055847 +0700
 @@ -11862,7 +11862,7 @@
      target_thread_file='single'
      ;;
@@ -11,9 +11,9 @@ diff -ruN gcc-9.3.0/gcc/configure gcc-9.3.0-kos/gcc/configure
      ;;
    *)
 diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.S
---- gcc-9.3.0/libgcc/config/sh/crt1.S	2020-03-12 07:07:23.000000000 -0400
-+++ gcc-9.3.0-kos/libgcc/config/sh/crt1.S	2020-04-03 16:07:04.540000000 -0400
-@@ -1,724 +1,197 @@
+--- gcc-9.3.0/libgcc/config/sh/crt1.S	2020-03-12 18:07:23.000000000 +0700
++++ gcc-9.3.0-kos/libgcc/config/sh/crt1.S	2020-10-30 11:00:51.064504247 +0700
+@@ -1,724 +1,199 @@
 -/* Copyright (C) 2000-2019 Free Software Foundation, Inc.
 -   This file was pretty much copied from newlib.
 +! KallistiOS ##version##
@@ -81,16 +81,63 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -profiling_enabled:
 -	.long 0
 -#endif
--
--
++_start:
++start:
++	! Disable interrupts (if they're enabled)
++	mov.l	old_sr_addr,r0
++	stc	sr,r1
++	mov.l	r1,@r0
++	mov.l	init_sr,r0
++	ldc	r0,sr
++
++	! Run in the P2 area
++	mov.l	setup_cache_addr,r0
++	mov.l	p2_mask,r1
++	or	r1,r0
++	jmp	@r0
++	nop
+ 
++setup_cache:
++	! Now that we are in P2, it's safe to enable the cache
++	! Check to see if we should enable OCRAM.
++	mov.l	kos_init_flags_addr, r0
++	add	#2, r0
++	mov.w	@r0, r0
++	tst	#1, r0
++	bf	.L_setup_cache_L0
++	mov.w	ccr_data,r1
++	bra	.L_setup_cache_L1
++	nop
++.L_setup_cache_L0:
++	mov.w	ccr_data_ocram,r1
++.L_setup_cache_L1:
++	mov.l	ccr_addr,r0
++	mov.l	r1,@r0
++
++	! After changing CCR, eight instructions must be executed before
++	! it's safe to enter a cached area such as P1
++	nop			! 1
++	nop			! 2
++	nop			! 3
++	nop			! 4
++	nop			! 5 (d-cache now safe)
++	nop			! 6
++	mov.l	init_addr,r0	! 7
++	mov	#0,r1		! 8
++	jmp	@r0		! go
++	mov	r1,r0
++	nop
+ 
 -	.section .text
 -	.global	start
 -	.import ___rtos_profiler_start_timer
 -	.weak   ___rtos_profiler_start_timer
-+_start:
- start:
+-start:
 -	mov.l	stack_k,r15
--
++init:
++	! Save old PR on old stack so we can get to it later
++	sts.l	pr,@-r15
+ 
 -#if defined (__SH3__) || (defined (__SH_FPU_ANY__) && ! defined (__SH2E__) && ! defined (__SH2A__)) || defined (__SH4_NOFPU__)
 -#define VBR_SETUP
 -	! before zeroing the bss ...
@@ -118,8 +165,17 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	add	#4,r0
 -	cmp/ge	r0,r1
 -	bt	start_l
--
--#if defined (__SH_FPU_ANY__)
++	! Save the current stack, and set a new stack (higher up in RAM)
++	mov.l	old_stack_addr,r0
++	mov.l	r15,@r0
++	mov.l	new_stack,r15
++
++	! Save VBR
++	mov.l	old_vbr_addr,r0
++	stc	vbr,r1
++	mov.l	r1,@r0
+ 
+ #if defined (__SH_FPU_ANY__)
 -	mov.l set_fpscr_k, r1
 -	mov #4,r4
 -	jsr @r1
@@ -156,21 +212,17 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	! arrange for exit to call fini
 -	mov.l	atexit_k,r0
 -	mov.l	fini_k,r4
--	jsr	@r0
-+	! Disable interrupts (if they're enabled)
-+	mov.l	old_sr_addr,r0
-+	stc	sr,r1
++	! Save FPSCR
++	mov.l	old_fpscr_addr,r0
++	sts	fpscr,r1
 +	mov.l	r1,@r0
-+	mov.l	init_sr,r0
-+	ldc	r0,sr
 +
-+	! Run in the P2 area
-+	mov.l	setup_cache_addr,r0
-+	mov.l	p2_mask,r1
-+	or	r1,r0
-+	jmp	@r0
- 	nop
- 
++	! Reset FPSCR
++	mov	#4,r4		! Use 00040000 (DN=1)
++	mov.l	fpscr_addr,r0
+ 	jsr	@r0
+-	nop
+-
 -#ifdef PROFILE
 -	! arrange for exit to call _mcleanup (via stop_profiling)
 -	mova    stop_profiling,r0
@@ -183,36 +235,9 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	mov.l start_k, r4
 -	mov.l etext_k, r5
 -	jsr @r0
-+setup_cache:
-+	! Now that we are in P2, it's safe to enable the cache
-+	! Check to see if we should enable OCRAM.
-+	mov.l	kos_init_flags_addr, r0
-+	add	#2, r0
-+	mov.w	@r0, r0
-+	tst	#1, r0
-+	bf	.L_setup_cache_L0
-+	mov.w	ccr_data,r1
-+	bra	.L_setup_cache_L1
-+	nop
-+.L_setup_cache_L0:
-+	mov.w	ccr_data_ocram,r1
-+.L_setup_cache_L1:
-+	mov.l	ccr_addr,r0
-+	mov.l	r1,@r0
-+
-+	! After changing CCR, eight instructions must be executed before
-+	! it's safe to enter a cached area such as P1
-+	nop			! 1
-+	nop			! 2
-+	nop			! 3
-+	nop			! 4
-+	nop			! 5 (d-cache now safe)
-+	nop			! 6
-+	mov.l	init_addr,r0	! 7
-+	mov	#0,r1		! 8
-+	jmp	@r0		! go
-+	mov	r1,r0
- 	nop
+-	nop
++	shll16	r4
++#endif /* defined (__SH_FPU_ANY__) */
  
 -	! enable profiling trap
 -	! until now any trap 33s will have been ignored
@@ -223,49 +248,52 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	mov	#1, r1
 -	mov.l	r1, @r0
 -#endif /* PROFILE */
-+init:
-+	! Save old PR on old stack so we can get to it later
-+	sts.l	pr,@-r15
++	! Setup a sentinel value for frame pointer in case we're using
++	! FRAME_POINTERS for stack tracing.
++	mov	#-1,r14
  
 -	! call init
 -	mov.l	init_k,r0
-+	! Save the current stack, and set a new stack (higher up in RAM)
-+	mov.l	old_stack_addr,r0
-+	mov.l	r15,@r0
-+	mov.l	new_stack,r15
-+
-+	! Save VBR
-+	mov.l	old_vbr_addr,r0
-+	stc	vbr,r1
-+	mov.l	r1,@r0
-+
-+	! Save FPSCR
-+	mov.l	old_fpscr_addr,r0
-+	sts	fpscr,r1
-+	mov.l	r1,@r0
-+
-+	! Reset FPSCR
-+	mov	#4,r4		! Use 00040000 (DN=1)
-+	mov.l	fpscr_addr,r0
++	! Jump to the kernel main
++	mov.l	main_addr,r0
  	jsr	@r0
--	nop
-+	shll16	r4
+ 	nop
  
 -	! call the mainline	
 -	mov.l	main_k,r0
 -	jsr	@r0
 -	nop
-+	! Setup a sentinel value for frame pointer in case we're using
-+	! FRAME_POINTERS for stack tracing.
-+	mov	#-1,r14
++	! Program can return here (not likely) or jump here directly
++	! from anywhere in it to go straight back to the monitor
++_arch_real_exit:
++	! Reset SR
++	mov.l	old_sr,r0
++	ldc	r0,sr
++
++	! Disable MMU, invalidate TLB
++	mov	#4,r0
++	mov.l	mmu_addr,r1
++	mov.l	r0,@r1
++
++	! Wait (just in case)
++	nop				! 1
++	nop				! 2
++	nop				! 3
++	nop				! 4
++	nop				! 5
++	nop				! 6
++	nop				! 7
++	nop				! 8
++
++	! Restore VBR
++	mov.l	old_vbr,r0
++	ldc	r0,vbr
  
 -	! call exit
 -	mov	r0,r4
 -	mov.l	exit_k,r0
-+	! Jump to the kernel main
-+	mov.l	main_addr,r0
- 	jsr	@r0
- 	nop
+-	jsr	@r0
+-	nop
 -	
 -		.balign 4
 -#ifdef PROFILE
@@ -274,6 +302,12 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	mov.l	profiling_enabled_k2, r0
 -	mov	#0, r1
 -	mov.l	r1, @r0
++	! If we're working under dcload, call its EXIT syscall
++	mov.l	dcload_magic_addr,r0
++	mov.l	@r0,r0
++	mov.l	dcload_magic_value,r1
++	cmp/eq	r0,r1
++	bf	normal_exit
  
 -	# call mcleanup
 -	mov.l	mcleanup_k, r0
@@ -292,7 +326,11 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -etext_k:
 -	.long __etext
 -#endif /* PROFILE */
--
++	mov.l	dcload_syscall,r0
++	mov.l	@r0,r0
++	jsr	@r0
++	mov	#15,r4
+ 
 -	.align 2
 -#if defined (__SH_FPU_ANY__)
 -set_fpscr_k:
@@ -348,8 +386,12 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	! code whose main() was compiled with an older version of GCC.
 -	.global ___main
 -___main:
--	rts
--	nop
++	! Set back the stack and return (presumably to a serial debug)
++normal_exit:
++	mov.l	old_stack,r15
++	lds.l	@r15+,pr
+ 	rts
+ 	nop
 -#ifdef VBR_SETUP
 -! Exception handlers	
 -	.section .text.vbr, "ax"
@@ -391,32 +433,7 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	mov.l	r6,@-r15
 -	mov.l	r7,@-r15
 -	sts.l	pr,@-r15
-+	! Program can return here (not likely) or jump here directly
-+	! from anywhere in it to go straight back to the monitor
-+_arch_real_exit:
-+	! Reset SR
-+	mov.l	old_sr,r0
-+	ldc	r0,sr
-+
-+	! Disable MMU, invalidate TLB
-+	mov	#4,r0
-+	mov.l	mmu_addr,r1
-+	mov.l	r0,@r1
-+
-+	! Wait (just in case)
-+	nop				! 1
-+	nop				! 2
-+	nop				! 3
-+	nop				! 4
-+	nop				! 5
-+	nop				! 6
-+	nop				! 7
-+	nop				! 8
-+	
-+	! Restore VBR
-+	mov.l	old_vbr,r0
-+	ldc	r0,vbr
- 
+-
 -	! r4 is frompc.
 -	! r5 is selfpc
 -	! r0 is the branch back address.
@@ -529,12 +546,6 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	! jmp to trap handler to avoid disturbing pr. 
 -	jmp @r2
 -	nop
-+	! If we're working under dcload, call its EXIT syscall
-+	mov.l	dcload_magic_addr,r0
-+	mov.l	@r0,r0
-+	mov.l	dcload_magic_value,r1
-+	cmp/eq	r0,r1
-+	bf	normal_exit
  
 -	.org 0x600
 -vbr_600:
@@ -568,8 +579,7 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	mov.l	pervading_precision_k,r0
 -	fmov	fr4,@-r15
 -	fmov	fr5,@-r15
-+	mov.l	dcload_syscall,r0
- 	mov.l	@r0,r0
+-	mov.l	@r0,r0
 -	fmov	fr6,@-r15
 -	fmov	fr7,@-r15
 -	lds	r0,fpscr
@@ -685,15 +695,7 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	mov	r14,r15
 -	mov.l	@r15+,r14
 -	rts	
-+	jsr	@r0
-+	mov	#15,r4
-+
-+	! Set back the stack and return (presumably to a serial debug)
-+normal_exit:
-+	mov.l	old_stack,r15
-+	lds.l	@r15+,pr
-+	rts
- 	nop
+-	nop
 -.LFE1:
 -.Lfe1:
 -	.size	__superh_trap_handler,.Lfe1-__superh_trap_handler
@@ -865,7 +867,6 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 -	.ualong	0x0
 -	.ualong	0x0
 -#endif /* VBR_SETUP */
-+
 +! Misc variables
 +	.align	2
 +dcload_magic_addr:
@@ -918,9 +919,43 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/crt1.S gcc-9.3.0-kos/libgcc/config/sh/crt1.
 +	.word	0x090d
 +ccr_data_ocram:
 +	.word	0x092d
+diff -ruN gcc-9.3.0/libgcc/config/sh/crti.S gcc-9.3.0-kos/libgcc/config/sh/crti.S
+--- gcc-9.3.0/libgcc/config/sh/crti.S	2020-03-12 18:07:23.000000000 +0700
++++ gcc-9.3.0-kos/libgcc/config/sh/crti.S	2020-10-30 10:37:37.808055847 +0700
+@@ -22,8 +22,6 @@
+ see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
+ <http://www.gnu.org/licenses/>.  */
+ 
+-#include "crt.h"
+-
+ /* The code in sections .init and .fini is supposed to be a single
+    regular function.  The function in .init is called directly from
+    start in crt1.S.  The function in .fini is atexit()ed in crt1.S
+@@ -45,8 +43,8 @@
+ #else
+ 	.p2align 1
+ #endif
+-	.global	 GLOBAL(_init)
+-GLOBAL(_init):
++	.global	 _init
++_init:
+ #ifdef __ELF__
+ 	mov.l	r12,@-r15
+ 	mova	0f,r0
+@@ -76,8 +74,8 @@
+ #else
+ 	.p2align 1
+ #endif
+-	.global  GLOBAL(_fini)
+-GLOBAL(_fini):	
++	.global  _fini
++_fini:	
+ #ifdef __ELF__
+ 	mov.l	r12,@-r15
+ 	mova	0f,r0
 diff -ruN gcc-9.3.0/libgcc/config/sh/fake-kos.S gcc-9.3.0-kos/libgcc/config/sh/fake-kos.S
---- gcc-9.3.0/libgcc/config/sh/fake-kos.S	1969-12-31 19:00:00.000000000 -0500
-+++ gcc-9.3.0-kos/libgcc/config/sh/fake-kos.S	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/libgcc/config/sh/fake-kos.S	1970-01-01 07:00:00.000000000 +0700
++++ gcc-9.3.0-kos/libgcc/config/sh/fake-kos.S	2020-10-30 10:37:37.808055847 +0700
 @@ -0,0 +1,78 @@
 +! Weakly linked symbols used to get GCC to hopefully compile itself properly.
 +! These will be replaced by the real symbols in actual compiled programs.
@@ -1001,8 +1036,8 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/fake-kos.S gcc-9.3.0-kos/libgcc/config/sh/f
 +    rts
 +    mov     #-1, r0
 diff -ruN gcc-9.3.0/libgcc/config/sh/gthr-kos.h gcc-9.3.0-kos/libgcc/config/sh/gthr-kos.h
---- gcc-9.3.0/libgcc/config/sh/gthr-kos.h	1969-12-31 19:00:00.000000000 -0500
-+++ gcc-9.3.0-kos/libgcc/config/sh/gthr-kos.h	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/libgcc/config/sh/gthr-kos.h	1970-01-01 07:00:00.000000000 +0700
++++ gcc-9.3.0-kos/libgcc/config/sh/gthr-kos.h	2020-10-30 10:37:37.808055847 +0700
 @@ -0,0 +1,401 @@
 +/* Copyright (C) 2009, 2010, 2011, 2012, 2020 Lawrence Sebald */
 +
@@ -1406,8 +1441,8 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/gthr-kos.h gcc-9.3.0-kos/libgcc/config/sh/g
 +
 +#endif /* ! GCC_GTHR_KOS_H */
 diff -ruN gcc-9.3.0/libgcc/config/sh/t-sh gcc-9.3.0-kos/libgcc/config/sh/t-sh
---- gcc-9.3.0/libgcc/config/sh/t-sh	2020-03-12 07:07:23.000000000 -0400
-+++ gcc-9.3.0-kos/libgcc/config/sh/t-sh	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/libgcc/config/sh/t-sh	2020-03-12 18:07:23.000000000 +0700
++++ gcc-9.3.0-kos/libgcc/config/sh/t-sh	2020-10-30 10:37:37.808055847 +0700
 @@ -23,6 +23,8 @@
    $(LIB1ASMFUNCS_CACHE)
  LIB1ASMFUNCS_CACHE = _ic_invalidate _ic_invalidate_array
@@ -1418,8 +1453,8 @@ diff -ruN gcc-9.3.0/libgcc/config/sh/t-sh gcc-9.3.0-kos/libgcc/config/sh/t-sh
  	$(gcc_compile) -c $<
  
 diff -ruN gcc-9.3.0/libgcc/configure gcc-9.3.0-kos/libgcc/configure
---- gcc-9.3.0/libgcc/configure	2020-03-12 07:07:23.000000000 -0400
-+++ gcc-9.3.0-kos/libgcc/configure	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/libgcc/configure	2020-03-12 18:07:23.000000000 +0700
++++ gcc-9.3.0-kos/libgcc/configure	2020-10-30 10:37:37.812055814 +0700
 @@ -5550,6 +5550,7 @@
      tpf)	thread_header=config/s390/gthr-tpf.h ;;
      vxworks)	thread_header=config/gthr-vxworks.h ;;
@@ -1429,8 +1464,8 @@ diff -ruN gcc-9.3.0/libgcc/configure gcc-9.3.0-kos/libgcc/configure
  
  
 diff -ruN gcc-9.3.0/libstdc++-v3/config/cpu/sh/atomicity.h gcc-9.3.0-kos/libstdc++-v3/config/cpu/sh/atomicity.h
---- gcc-9.3.0/libstdc++-v3/config/cpu/sh/atomicity.h	2020-03-12 07:07:24.000000000 -0400
-+++ gcc-9.3.0-kos/libstdc++-v3/config/cpu/sh/atomicity.h	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/libstdc++-v3/config/cpu/sh/atomicity.h	2020-03-12 18:07:24.000000000 +0700
++++ gcc-9.3.0-kos/libstdc++-v3/config/cpu/sh/atomicity.h	2020-10-30 10:37:37.812055814 +0700
 @@ -22,14 +22,40 @@
  // see the files COPYING3 and COPYING.RUNTIME respectively.  If not, see
  // <http://www.gnu.org/licenses/>.
@@ -1482,8 +1517,8 @@ diff -ruN gcc-9.3.0/libstdc++-v3/config/cpu/sh/atomicity.h gcc-9.3.0-kos/libstdc
 +_GLIBCXX_END_NAMESPACE_VERSION
 +} // namespace
 diff -ruN gcc-9.3.0/libstdc++-v3/configure gcc-9.3.0-kos/libstdc++-v3/configure
---- gcc-9.3.0/libstdc++-v3/configure	2020-03-12 07:07:24.000000000 -0400
-+++ gcc-9.3.0-kos/libstdc++-v3/configure	2020-04-03 16:07:04.540000000 -0400
+--- gcc-9.3.0/libstdc++-v3/configure	2020-03-12 18:07:24.000000000 +0700
++++ gcc-9.3.0-kos/libstdc++-v3/configure	2020-10-30 10:37:37.820055749 +0700
 @@ -15629,6 +15629,7 @@
      tpf)	thread_header=config/s390/gthr-tpf.h ;;
      vxworks)	thread_header=config/gthr-vxworks.h ;;

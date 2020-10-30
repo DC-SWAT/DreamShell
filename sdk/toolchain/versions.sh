@@ -1,3 +1,5 @@
+#!/bin/sh
+
 export GCC_VER=9.3.0
 export BINUTILS_VER=2.34
 export NEWLIB_VER=3.3.0

@@ -1,5 +1,6 @@
-# Dreamcast toolchain makefile    by Jim Ursetto
+# Dreamcast toolchain makefile by Jim Ursetto
 # adapted from Stalin's build script version 0.3
+# and modified for DreamShell by SWAT and YevDev
 #
 # Interesting parameters:
 # erase=0|1                     Erase build directories on the fly to save space
@@ -43,7 +44,7 @@ binutils_ver=2.34
 gcc_ver=9.3.0
 newlib_ver=3.3.0
 gdb_ver=9.2
-insight_ver=6.8.1
+insight_ver=6.8-1a
 
 # With GCC 4.x versions, the patches provide a kos thread model, so you should
 # use it. With 3.4.6, you probably want posix here. If you really don't want
@@ -96,10 +97,10 @@ newlib_dir=newlib-$(newlib_ver)
 all: patch build
 
 # ---- patch {{{
-binutils_patches    := $(wildcard $(patches)/binutils-$(binutils_ver)*.diff)
-gcc_patches    := $(wildcard $(patches)/gcc-$(gcc_ver)*.diff)
-newlib_patches := $(wildcard $(patches)/newlib-$(newlib_ver)*.diff)
-kos_patches    := $(wildcard $(patches)/kos.diff)
+binutils_patches := $(wildcard $(patches)/binutils-$(binutils_ver)*.diff)
+gcc_patches      := $(wildcard $(patches)/gcc-$(gcc_ver)*.diff)
+newlib_patches   := $(wildcard $(patches)/newlib-$(newlib_ver)*.diff)
+kos_patches      := $(wildcard $(patches)/kos.diff)
 
 patch_targets=patch-binutils patch-gcc patch-newlib patch-kos
 

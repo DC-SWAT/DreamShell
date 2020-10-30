@@ -508,9 +508,6 @@ index 5c7020f..94e7145 100644
  
  	.align	2
  l1align:
-diff --git a/kernel/arch/dreamcast/sound/arm/stream.drv b/kernel/arch/dreamcast/sound/arm/stream.drv
-index ab87097..52807b7 100755
-Binary files a/kernel/arch/dreamcast/sound/arm/stream.drv and b/kernel/arch/dreamcast/sound/arm/stream.drv differ
 diff --git a/kernel/fs/elf.c b/kernel/fs/elf.c
 index 643c5a1..9a566cd 100644
 --- a/kernel/fs/elf.c
