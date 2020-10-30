@@ -86,45 +86,45 @@ general_exception_xt:
     mov.l   r12, @-r15
     mov.l   r13, @-r15
     mov.l   r14, @-r15
-!FLOATING POINT (Not used by ISO Loader for now)
-!    sts.l   fpul, @-r15
-!    sts.l   fpscr, @-r15
-!    mov     #0, r2          ! Set known FP flags
-!    lds     r2, fpscr
-!    fmov.s  fr15, @-r15
-!    fmov.s  fr14, @-r15
-!    fmov.s  fr13, @-r15
-!    fmov.s  fr12, @-r15
-!    fmov.s  fr11, @-r15
-!    fmov.s  fr10, @-r15
-!    fmov.s  fr9, @-r15
-!    fmov.s  fr8, @-r15
-!    fmov.s  fr7, @-r15
-!    fmov.s  fr6, @-r15
-!    fmov.s  fr5, @-r15
-!    fmov.s  fr4, @-r15
-!    fmov.s  fr3, @-r15
-!    fmov.s  fr2, @-r15
-!    fmov.s  fr1, @-r15
-!    fmov.s  fr0, @-r15
-!    frchg
-!    fmov.s  fr15, @-r15
-!    fmov.s  fr14, @-r15
-!    fmov.s  fr13, @-r15
-!    fmov.s  fr12, @-r15
-!    fmov.s  fr11, @-r15
-!    fmov.s  fr10, @-r15
-!    fmov.s  fr9, @-r15
-!    fmov.s  fr8, @-r15
-!    fmov.s  fr7, @-r15
-!    fmov.s  fr6, @-r15
-!    fmov.s  fr5, @-r15
-!    fmov.s  fr4, @-r15
-!    fmov.s  fr3, @-r15
-!    fmov.s  fr2, @-r15
-!    fmov.s  fr1, @-r15
-!    fmov.s  fr0, @-r15
-!    frchg
+!FLOATING POINT
+    sts.l   fpul, @-r15
+    sts.l   fpscr, @-r15
+    mov     #0, r2          ! Set known FP flags
+    lds     r2, fpscr
+    fmov.s  fr15, @-r15
+    fmov.s  fr14, @-r15
+    fmov.s  fr13, @-r15
+    fmov.s  fr12, @-r15
+    fmov.s  fr11, @-r15
+    fmov.s  fr10, @-r15
+    fmov.s  fr9, @-r15
+    fmov.s  fr8, @-r15
+    fmov.s  fr7, @-r15
+    fmov.s  fr6, @-r15
+    fmov.s  fr5, @-r15
+    fmov.s  fr4, @-r15
+    fmov.s  fr3, @-r15
+    fmov.s  fr2, @-r15
+    fmov.s  fr1, @-r15
+    fmov.s  fr0, @-r15
+    frchg
+    fmov.s  fr15, @-r15
+    fmov.s  fr14, @-r15
+    fmov.s  fr13, @-r15
+    fmov.s  fr12, @-r15
+    fmov.s  fr11, @-r15
+    fmov.s  fr10, @-r15
+    fmov.s  fr9, @-r15
+    fmov.s  fr8, @-r15
+    fmov.s  fr7, @-r15
+    fmov.s  fr6, @-r15
+    fmov.s  fr5, @-r15
+    fmov.s  fr4, @-r15
+    fmov.s  fr3, @-r15
+    fmov.s  fr2, @-r15
+    fmov.s  fr1, @-r15
+    fmov.s  fr0, @-r15
+    frchg
 !CONTROL
     stc.l   r0_bank, @-r15
     stc.l   r1_bank, @-r15
@@ -179,45 +179,45 @@ general_exception_xt:
     ldc.l   @r15+, r2_bank
     ldc.l   @r15+, r1_bank
     ldc.l   @r15+, r0_bank
-!FLOATING POINT (Not used by ISO Loader for now)
-!    mov     #0, r2          ! Set known FP flags
-!    lds     r2, fpscr
-!    frchg
-!    fmov.s  @r15+, fr0
-!    fmov.s  @r15+, fr1
-!    fmov.s  @r15+, fr2
-!    fmov.s  @r15+, fr3
-!    fmov.s  @r15+, fr4
-!    fmov.s  @r15+, fr5
-!    fmov.s  @r15+, fr6
-!    fmov.s  @r15+, fr7
-!    fmov.s  @r15+, fr8
-!    fmov.s  @r15+, fr9
-!    fmov.s  @r15+, fr10
-!    fmov.s  @r15+, fr11
-!    fmov.s  @r15+, fr12
-!    fmov.s  @r15+, fr13
-!    fmov.s  @r15+, fr14
-!    fmov.s  @r15+, fr15
-!    frchg
-!    fmov.s  @r15+, fr0
-!    fmov.s  @r15+, fr1
-!    fmov.s  @r15+, fr2
-!    fmov.s  @r15+, fr3
-!    fmov.s  @r15+, fr4
-!    fmov.s  @r15+, fr5
-!    fmov.s  @r15+, fr6
-!    fmov.s  @r15+, fr7
-!    fmov.s  @r15+, fr8
-!    fmov.s  @r15+, fr9
-!    fmov.s  @r15+, fr10
-!    fmov.s  @r15+, fr11
-!    fmov.s  @r15+, fr12
-!    fmov.s  @r15+, fr13
-!    fmov.s  @r15+, fr14
-!    fmov.s  @r15+, fr15
-!    lds.l   @r15+, fpscr
-!    lds.l   @r15+, fpul
+!FLOATING POINT
+    mov     #0, r2          ! Set known FP flags
+    lds     r2, fpscr
+    frchg
+    fmov.s  @r15+, fr0
+    fmov.s  @r15+, fr1
+    fmov.s  @r15+, fr2
+    fmov.s  @r15+, fr3
+    fmov.s  @r15+, fr4
+    fmov.s  @r15+, fr5
+    fmov.s  @r15+, fr6
+    fmov.s  @r15+, fr7
+    fmov.s  @r15+, fr8
+    fmov.s  @r15+, fr9
+    fmov.s  @r15+, fr10
+    fmov.s  @r15+, fr11
+    fmov.s  @r15+, fr12
+    fmov.s  @r15+, fr13
+    fmov.s  @r15+, fr14
+    fmov.s  @r15+, fr15
+    frchg
+    fmov.s  @r15+, fr0
+    fmov.s  @r15+, fr1
+    fmov.s  @r15+, fr2
+    fmov.s  @r15+, fr3
+    fmov.s  @r15+, fr4
+    fmov.s  @r15+, fr5
+    fmov.s  @r15+, fr6
+    fmov.s  @r15+, fr7
+    fmov.s  @r15+, fr8
+    fmov.s  @r15+, fr9
+    fmov.s  @r15+, fr10
+    fmov.s  @r15+, fr11
+    fmov.s  @r15+, fr12
+    fmov.s  @r15+, fr13
+    fmov.s  @r15+, fr14
+    fmov.s  @r15+, fr15
+    lds.l   @r15+, fpscr
+    lds.l   @r15+, fpul
 !GENERAL
     mov.l   @r15+, r14
     mov.l   @r15+, r13

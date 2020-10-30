@@ -140,7 +140,7 @@ build_sh4_targets=build-sh4-binutils build-sh4-gcc build-sh4-gcc-pass1 build-sh4
 build_arm_targets=build-arm-binutils build-arm-gcc build-arm-gcc-pass1 build-arm-newlib build-arm-newlib-only
 $(build_sh4_targets): prefix = $(sh_prefix)
 $(build_sh4_targets): target = $(sh_target)
-$(build_sh4_targets): extra_configure_args = --with-multilib-list=m4-single-only,m4-nofpu,m4 --with-endian=little --with-cpu=m4-single-only
+$(build_sh4_targets): extra_configure_args = --with-multilib-list=m4-single-only --with-endian=little --with-cpu=m4-single-only
 $(build_arm_targets): prefix = $(arm_prefix)
 $(build_arm_targets): target = $(arm_target)
 $(build_arm_targets): extra_configure_args = --with-arch=armv4
