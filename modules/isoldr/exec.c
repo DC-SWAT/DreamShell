@@ -67,7 +67,9 @@ static void isoldr_arch_shutdown() {
 #if __GNUC__ < 4
     arch_dtors();
 #else
+# if __GNUC__ < 8
     fini();
+# endif
 #endif
 
     dbglog(DBG_CRITICAL, "Shutting down DreamShell kernel\n");

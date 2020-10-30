@@ -1,6 +1,6 @@
 #
 # zip module for DreamShell
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2020 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -20,7 +20,7 @@ all: rm-elf
 
 include ../../sdk/Makefile.loadable
 
-KOS_CFLAGS += -I./minizip -I$(DS_SDK)/include/zlib -DHAVE_BZIP2=1 -DIOAPI_NO_64=1
+KOS_CFLAGS += -I./minizip -DHAVE_BZIP2=1 -DIOAPI_NO_64=1
 
 rm-elf:
 	-rm -f $(TARGET)

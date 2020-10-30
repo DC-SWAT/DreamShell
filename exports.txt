@@ -1574,7 +1574,7 @@ expf
 lrintf
 sinf
 cbrtf
-__ctype_ptr__
+#__ctype_ptr__
 _impure_ptr
 log10
 cosf
@@ -2001,7 +2001,7 @@ fs_pty_shutdown
 fs_shutdown
 thd_shutdown
 rtc_shutdown
-fini
+#fini
 #_arch_exec_template_end
 #_arch_exec_template
 #_arch_exec_template_values

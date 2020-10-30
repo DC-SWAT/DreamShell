@@ -371,7 +371,9 @@ void gdplay_play(GUI_Widget *widget)
 #if __GNUC__ < 4
     arch_dtors();
 #else
+# if __GNUC__ < 8
     fini();
+# endif
 #endif
 
     ubc_disable_all();

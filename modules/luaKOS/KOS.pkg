@@ -253,19 +253,6 @@ uint64 fs_total64(file_t hnd);
 */
 dirent_t *fs_readdir(file_t hnd);
 
-/** \brief  Execute a device-specific command on a file descriptor.
-
-    The types and formats of the commands are device/filesystem specific, and
-    are not documented here. Each filesystem may define any commands that are
-    specific to it with its implementation of this function.
-
-    \param  hnd             The file descriptor to operate on.
-    \param  data            The command to send.
-    \param  size            The size of the command, in bytes.
-    \return                 -1 on failure.
-*/
-int fs_ioctl(file_t hnd, void *data, size_t size);
-
 /** \brief  Rename the specified file to the given filename.
 
     This function renames the file specified by the first argument to the second

@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    DreamShell ISO Loader module
-   Copyright (C)2009-2016 SWAT
+   Copyright (C)2009-2020 SWAT
 
 */
 
@@ -24,7 +24,7 @@ static void get_ipbin_info(isoldr_info_t *info, file_t fd, uint8 *sec, char *pse
 
 	uint32 len;
 
-	if(fs_ioctl(fd, sec, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA) < 0) {
+	if(fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, sec) < 0) {
 
 		ds_printf("DS_ERROR: Can't get boot sector data\n");
 
@@ -182,20 +182,20 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 	}
 
 	/* TODO check errors */
-	fs_ioctl(fd, &info->exec.lba, ISOFS_IOCTL_GET_FD_LBA);
-	fs_ioctl(fd, &info->image_type, ISOFS_IOCTL_GET_IMAGE_TYPE);
-	fs_ioctl(fd, &info->track_lba[0], ISOFS_IOCTL_GET_DATA_TRACK_LBA);
-	fs_ioctl(fd, &info->sector_size, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE);
-	fs_ioctl(fd, &info->toc, ISOFS_IOCTL_GET_TOC_DATA);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_FD_LBA, &info->exec.lba);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, &info->image_type);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_LBA, &info->track_lba[0]);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, &info->sector_size);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_TOC_DATA, &info->toc);
 
 	if(info->image_type == ISOFS_IMAGE_TYPE_CDI) {
 
 		uint32 *offset = (uint32 *)sec;
-		fs_ioctl(fd, offset, ISOFS_IOCTL_GET_CDDA_OFFSET);
+		fs_ioctl(fd, ISOFS_IOCTL_GET_CDDA_OFFSET, offset);
 		memcpy_sh4(&info->cdda_offset, offset, sizeof(info->cdda_offset));
 		memset_sh4(&sec, 0, sizeof(sec));
 
-		fs_ioctl(fd, &info->track_offset, ISOFS_IOCTL_GET_DATA_TRACK_OFFSET);
+		fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_OFFSET, &info->track_offset);
 	}
 
 	if(info->image_type == ISOFS_IMAGE_TYPE_CSO ||
@@ -203,16 +203,16 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 
 		uint32 ptr = 0;
 
-		if(!fs_ioctl(fd, &ptr, ISOFS_IOCTL_GET_IMAGE_HEADER_PTR) && ptr != 0) {
+		if(!fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_HEADER_PTR, &ptr) && ptr != 0) {
 			memcpy_sh4(&info->ciso, (void*)ptr, sizeof(CISO_header_t));
 		}
 	}
 
 	if(info->image_type == ISOFS_IMAGE_TYPE_GDI) {
 
-		fs_ioctl(fd, sec, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME);
-		fs_ioctl(fd, info->image_second, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME2);
-		fs_ioctl(fd, &info->track_lba[1], ISOFS_IOCTL_GET_DATA_TRACK_LBA2);
+		fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME, sec);
+		fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME2, info->image_second);
+		fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_LBA2, &info->track_lba[1]);
 
 		psec = strchr(psec + 1, '/');
 
@@ -495,7 +495,7 @@ void isoldr_exec_dcio(isoldr_info_t *info, const char *file) {
 		return;
 	}
 
-	if(fs_ioctl(fd, &lba, FATFS_IOCTL_GET_FD_LBA) < 0) {
+	if(fs_ioctl(fd, FATFS_IOCTL_GET_FD_LBA, &lba) < 0) {
 		fs_close(fd);
 		ds_printf("DS_ERROR: Can't get file LBA: %d\n", errno);
 		return;

@@ -2,7 +2,7 @@
 	
 	module.c - Speedtest app module
 	Copyright (C)2014 megavolt85
-	Copyright (C)2014 SWAT
+	Copyright (C)2014-2020 SWAT
 	
 	http://www.dc-swat.ru
 */
@@ -141,7 +141,7 @@ readtest:
 	if(read_only) {
 		GUI_LabelSetText(self.speedwr, "Write test passed");
 		/* Reset ISO9660 filesystem cache */
-		fs_ioctl(fd, NULL, 0);
+		fs_ioctl(fd, 0, NULL);
 		fs_close(fd);
 		fd = fs_open(name, O_RDONLY);
 	}

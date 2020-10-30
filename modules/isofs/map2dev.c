@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015-2016 by SWAT <swat@211.ru> www.dc-swat.ru
+ * Copyright (c) 2015-2020 by SWAT <swat@211.ru> www.dc-swat.ru
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,12 +45,12 @@ int fs_iso_map2dev(const char *filename, kos_blockdev_t *dev) {
 		return -1;
 	}
 	
-	fs_ioctl(fd, &image_type, ISOFS_IOCTL_GET_IMAGE_TYPE);
-	fs_ioctl(fd, &image_hdr, ISOFS_IOCTL_GET_IMAGE_HEADER_PTR);
-	fs_ioctl(fd, &fdi, ISOFS_IOCTL_GET_IMAGE_FD);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, &image_type);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_HEADER_PTR, &image_hdr);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_FD, &fdi);
 	
-	fs_ioctl(fd, &lba, ISOFS_IOCTL_GET_DATA_TRACK_LBA);
-	fs_ioctl(fd, &total_length, ISOFS_IOCTL_GET_TRACK_SECTOR_COUNT);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_LBA, &lba);
+	fs_ioctl(fd, ISOFS_IOCTL_GET_TRACK_SECTOR_COUNT, &total_length);
 	
 	fs_close(fd);
 	total_length += lba;

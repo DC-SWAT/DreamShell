@@ -13,6 +13,7 @@ __fixunssfdi
 __floatundisf
 __movmem_i4_even
 __movmem_i4_odd
+__movmemSI12_i4
 __ctzsi2
 __clzsi2
 __umoddi3
@@ -28,6 +29,7 @@ __ltdf2
 __adddf3
 __gedf2
 __eqdf2
+__ashldi3
 _Unwind_Resume
 _Unwind_DeleteException
 _Unwind_GetRegionStart

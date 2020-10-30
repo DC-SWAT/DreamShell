@@ -4,7 +4,7 @@
    Copyright (C)2000,2001,2003 Dan Potter
    Copyright (C)2001 Andrew Kieschnick
    Copyright (C)2002 Bero
-   Copyright (C)2011-2016 SWAT
+   Copyright (C)2011-2020 SWAT
 */
 
 #include <ds.h>
@@ -16,6 +16,10 @@
 
 /* List of cache blocks (ordered least recently used to most recently) */
 #define NUM_CACHE_BLOCKS 4
+
+#ifndef MAX_ISO_FILES
+# define MAX_ISO_FILES 16
+#endif
 
 /* Holds the data for one cache block, and a pointer to the next one.
    As sectors are read from the disc, they are added to the front of
@@ -1060,15 +1064,17 @@ static int virt_iso_reset(isofs_t *ifs) {
 /** 
  * Needed for isoldr module 
  */
-static int virt_iso_ioctl(void * hnd, void *data, size_t size) {
+static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 	
 	file_t fd = (file_t)hnd;
 	
 #ifdef DEBUG
-	ds_printf("%s: %d\n", __func__, size);
+	ds_printf("%s: %d\n", __func__, cmd);
 #endif
 	
-	switch(size) {
+	void *data = va_arg(ap, void *);
+
+	switch(cmd) {
 		case ISOFS_IOCTL_RESET:
 		
 			virt_iso_reset(fh[fd].ifs);
