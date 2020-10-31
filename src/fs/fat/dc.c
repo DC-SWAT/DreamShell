@@ -594,12 +594,13 @@ static int fat_rewinddir(void * hnd) {
 /* !=0: Sector number, 0: Failed - invalid cluster# */
 DWORD clust2sect(FATFS *fs, DWORD clst);
 
-static int fat_ioctl(void * hnd, void *data, size_t size) {
+static int fat_ioctl(void * hnd, int cmd, va_list ap) {
 	
 	DRESULT rc = RES_OK;
 	FAT_GET_HND(hnd, -1);
+	void *data = va_arg(ap, void *);
 
-	switch(size) {
+	switch(cmd) {
 		case FATFS_IOCTL_GET_BOOT_SECTOR_DATA:
 			rc = disk_read(sf->fil.fs->drv, (BYTE*)data, 0, 1);
 			break;
@@ -624,7 +625,7 @@ static int fat_ioctl(void * hnd, void *data, size_t size) {
 			}
 			break;
 		default:
-			rc = disk_ioctl(sf->fil.fs->drv, (BYTE)size, data);
+			rc = disk_ioctl(sf->fil.fs->drv, (BYTE)cmd, data);
 			break;
 	}
 
@@ -1472,8 +1473,9 @@ int fs_fat_is_mounted(const char *mp) {
 
 int fs_fat_init(void) {
 	
-	if(initted)
+	if(initted) {
 		return 0;
+	}
 
 	/* Reset mounts */
 	memset_sh4(fat_mnt, 0, sizeof(fat_mnt));
@@ -1496,8 +1498,9 @@ int fs_fat_shutdown(void) {
 	int i;
 	fatfs_mnt_t *mnt;
 
-    if(!initted)
+    if(!initted) {
         return 0;
+	}
 
 	for(i = 0; i < MAX_FAT_MOUNTS; i++) {
 		

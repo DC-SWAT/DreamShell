@@ -1,10 +1,10 @@
 #
 # DreamShell boot loader
-# (c)2011-2016 SWAT
+# (c)2011-2020 SWAT
 #
 
 TARGET = loader
-VERSION = 2.4
+VERSION = 2.5
 TARGET_NAME = DreamShell_boot_$(TARGET)_v$(VERSION)
 TARGET_CD = cd/1DS_BOOT.BIN
 
