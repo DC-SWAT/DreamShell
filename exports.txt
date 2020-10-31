@@ -1957,13 +1957,13 @@ dreameye_shutdown
 #scif_spi_read_byte
 #
 # SD
-#sd_crc7
-#sd_init
-#sd_shutdown
-#sd_read_blocks
-#sd_write_blocks
-#sd_get_size
-#sd_blockdev_for_partition
+sd_crc7
+sd_init
+sd_shutdown
+sd_read_blocks
+sd_write_blocks
+sd_get_size
+sd_blockdev_for_partition
 sdc_init
 sdc_shutdown
 sdc_read_blocks

@@ -1,6 +1,6 @@
 #
 # ffmpeg module for DreamShell
-# Copyright (C)2011-2014 SWAT
+# Copyright (C)2011-2020 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -18,15 +18,15 @@ VER_MICRO = 3
 KOS_CFLAGS += -I./include
 KOS_LIB_PATHS += -L./lib
 
-all: rm-elf
+all: rm-elf ffmpeg-0.6.3/config.h include/libavcodec/avcodec.h
 
 include ../../sdk/Makefile.loadable
 
-config:
+ffmpeg-0.6.3/config.h:
 	./config.sh
 	
-library:
-	cd ./ffmpeg-0.6.3 && make clean && make install
+include/libavcodec/avcodec.h:
+	cd ./ffmpeg-0.6.3 && make install
 
 rm-elf:
 	-rm -f $(TARGET)

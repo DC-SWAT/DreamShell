@@ -1,6 +1,6 @@
 #
 # xvid module for DreamShell
-# Copyright (C) 2011-2014 SWAT
+# Copyright (C) 2011-2020 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -16,7 +16,7 @@ VER_MICRO = 0
 
 KOS_LIB_PATHS += -L./xvidcore/build/generic/=build
 
-all: rm-elf
+all: rm-elf library
 
 library:
 	cd ./xvidcore/build/generic && make
@@ -35,3 +35,4 @@ install: $(TARGET) $(TARGET_LIB)
 	-rm $(DS_SDK)/lib/$(TARGET_LIB)
 	cp $(TARGET) $(DS_BUILD)/modules/$(TARGET)
 	cp $(TARGET_LIB) $(DS_SDK)/lib/$(TARGET_LIB)
+	ln -nsf $(DS_SDK)/lib/$(TARGET_LIB) $(DS_SDK)/lib/libxvidcore.a

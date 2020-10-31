@@ -1,16 +1,15 @@
 #
 # DreamShell modules Makefile
-# Copyright (C) 2009-2016 SWAT
+# Copyright (C) 2009-2020 SWAT
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = bzip2 ffmpeg isofs isoldr ppp \
+_SUBDIRS = isofs isoldr ppp bflash dreameye vkb aicaos \
+		bzip2 zip minilzo opkg ini sqlite3 \
+		luaTask luaSocket tolua tolua++ \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
-		mp3 ogg SDL_net sqlite3 zip luaSocket luaTask \
-		http xvid adx s3m tolua tolua++ vkb opkg ini aicaos \
-		minilzo http httpd telnetd mongoose gumbo \
-		bflash dreameye
-
+		SDL_net http httpd telnetd mongoose gumbo \
+		adx s3m mp3 ogg xvid ffmpeg
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

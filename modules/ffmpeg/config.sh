@@ -1,3 +1,8 @@
+#
+# ffmpeg library config for DreamShell
+# Copyright (C)2011-2020 SWAT
+# http://www.dc-swat.ru
+#
 cd ./ffmpeg-0.6.3
 ./configure \
 	--disable-debug --disable-network --disable-swscale \
@@ -10,7 +15,7 @@ cd ./ffmpeg-0.6.3
 	\
 	--enable-gpl --prefix=../ --enable-cross-compile --cross-prefix=sh-elf- --arch=sh4 --target-os=gnu \
 	--extra-cflags="${KOS_CFLAGS} -I${KOS_BASE}/ds/include -I${KOS_BASE}/ds/include/zlib -I${KOS_BASE}/ds/sdk/include/freetype -I${KOS_BASE}/ds/modules/ogg/liboggvorbis/liboggvorbis/libvorbis/include -I${KOS_BASE}/ds/modules/ogg/liboggvorbis/liboggvorbis/libogg/include" \
-	--extra-ldflags="${KOS_LDFLAGS} -L${KOS_BASE}/ds/lib ${KOS_LIBS}" --enable-zlib --enable-bzlib --enable-libvorbis --enable-libxvid \
+	--extra-ldflags="${KOS_LDFLAGS} -L${KOS_BASE}/ds/sdk/lib ${KOS_LIBS}" --enable-zlib --enable-bzlib --enable-libvorbis --enable-libxvid \
 	\
 	--enable-decoder=h264 --enable-decoder=mpeg2video --enable-decoder=mpeg4 --enable-decoder=msmpeg4v1 --enable-decoder=ape \
 	--enable-decoder=mpeg1video --enable-decoder=ac3 --enable-decoder=eac3 --enable-decoder=vp6 --enable-decoder=vp5 --enable-decoder=vp3 \

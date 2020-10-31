@@ -1,6 +1,6 @@
 # DreamShell ##version##
 #
-# Copyright (C) 2014 SWAT
+# Copyright (C) 2014-2020 SWAT
 # DreamShell command Makefile
 # http://www.dc-swat.ru
 #
@@ -13,7 +13,7 @@ all: rm-elf
 
 include ../../sdk/Makefile.loadable
 
-KOS_CFLAGS += -I$(KOS_BASE)/addons -Werror -W -std=gnu99
+KOS_CFLAGS += -I$(KOS_BASE)/addons/libkosext2fs -Werror -W -std=gnu99
 
 rm-elf:
 	-rm -f $(TARGET)

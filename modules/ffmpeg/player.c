@@ -16,7 +16,6 @@
 #endif
 #include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
-#include "libswscale/swscale.h"
 
 
 #define ASIC_EVT_PVR_YUV_DONE 0x0006

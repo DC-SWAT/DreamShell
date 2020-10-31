@@ -1,6 +1,6 @@
 #
 # Bzip2 module for DreamShell
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2020 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -36,4 +36,4 @@ install: $(TARGET) $(TARGET_LIB)
 	-rm $(DS_SDK)/lib/$(TARGET_LIB)
 	cp $(TARGET) $(DS_BUILD)/modules/$(TARGET)
 	cp $(TARGET_LIB) $(DS_SDK)/lib/$(TARGET_LIB)
-	cd $(DS_SDK)/lib && ln -nsf $(TARGET_LIB) libbz2.a
+	ln -nsf $(DS_SDK)/lib/$(TARGET_LIB) $(DS_SDK)/lib/libbz2.a

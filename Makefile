@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2019 SWAT
+# Copyright (C) 2004-2020 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -164,16 +164,16 @@ nulldcl: $(TARGET).cdi
 	@run ./emu/nullDC.exe -serial "debug.log" > emu.log
 	
 run: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ip -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
 
 run-serial: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ser -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
 	
 debug: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool -g -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ip -g -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
 
 debug-serial: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool -g -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ser -g -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
 
 gdb: $(TARGET)-DBG.elf
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2159"
@@ -181,10 +181,10 @@ gdb: $(TARGET)-DBG.elf
 lxdream: $(TARGET).cdi
 	lxdream -p $(TARGET).cdi
 	
-lxelf: $(TARGET).elf
+lxdelf: $(TARGET).elf
 	lxdream -u -p -e $(TARGET).elf
 
-lxgdb:
+lxdgdb:
 	lxdream -g 2000 -n $(TARGET).cdi &
 	sleep 2
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"

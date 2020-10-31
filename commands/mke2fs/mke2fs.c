@@ -28,17 +28,16 @@
 #include <arch/arch.h>
 
 #include <dc/sd.h>
-#include <dc/g1ata.h>
 #include <dc/maple.h>
 #include <dc/maple/controller.h>
 #endif
 
 #include "ds.h"
-#include "libkosext2fs/ext2fs.h"
-#include "libkosext2fs/block.h"
-#include "libkosext2fs/inode.h"
-#include "libkosext2fs/superblock.h"
-#include "libkosext2fs/utils.h"
+#include "ext2fs.h"
+#include "block.h"
+#include "inode.h"
+#include "superblock.h"
+#include "utils.h"
 
 #define KiB 1024LLU
 #define MiB (KiB * 1024LLU)
@@ -108,11 +107,12 @@ static void __attribute__((__noreturn__)) exit_with_error(const char *err) {
     ds_printf("%s\n", err);
     exit(EXIT_FAILURE);
 #endif
-}*/
+}
+*/
 
 static int exit_with_error(const char *err) {
-	ds_printf("DS_ERROR: %s\n", err);
-	return CMD_ERROR;
+    ds_printf(err);
+    return CMD_ERROR;
 }
 
 static int write_fs_block(ext2_superblock_t *sb, kos_blockdev_t *bd,
@@ -644,6 +644,12 @@ static int write_root_dir(ext2_superblock_t *sb, kos_blockdev_t *bd) {
     return 0;
 }
 
+static inline void ext2_bit_set(uint32_t *btbl, uint32_t bit_num) {
+    int byte = (bit_num >> 5);
+    int bit = (bit_num & 0x1F);
+    btbl[byte] |= (1 << bit);
+}
+
 static int write_bitmaps(ext2_superblock_t *sb, kos_blockdev_t *bd) {
     int i;
     uint32_t block_size = 1024 << sb->s_log_block_size;
@@ -813,7 +819,6 @@ static void sd_shutdown(void) {
 }
 #endif
 
-
 int main(int argc, char *argv[]) {
     kos_blockdev_t sd_dev;
     uint8_t partition_type;
@@ -823,94 +828,57 @@ int main(int argc, char *argv[]) {
     ext2_superblock_t sb;
     time_t now = time(NULL);
     int i;
-	int part = 0;
-	
-	if(argc < 3) {
-		ds_printf("Usage: %s device(ide,sd) partition(0-3)\n", argv[0]);
-		return CMD_NO_ARG;
-	}
-	
-	part = atoi(argv[2]);
-	
-	if(part < 0 || part > 3) {
-		ds_printf("DS_ERROR: partition number can be only 0-3\n");
-		return CMD_ERROR;
-	}
 
-    /* Use framebuffer debug output. */
-#ifdef _arch_dreamcast
-    //dbgio_dev_select("fb");
-#endif
+    int part = 0;
+    
+    if(argc < 3) {
+        ds_printf("Usage: %s device(ide,sd) partition(0-3)\n", argv[0]);
+        return CMD_NO_ARG;
+    }
+    
+    part = atoi(argv[2]);
+    
+    if(part < 0 || part > 3) {
+        ds_printf("DS_ERROR: partition number can be only 0-3\n");
+        return CMD_ERROR;
+    }
 
     srand(now);
-/*
+
     if(sd_init()) {
         return exit_with_error("Could not initialize the SD card.\n"
                         "Please make sure that you have an SD card\n"
                         "adapter plugged in and an SD card inserted.");        
     }
-*/
+
 #ifdef _arch_dreamcast
-//    (void)argc;
-//    (void)argv;
+    (void)argc;
+    (void)argv;
 
-	if(!strncasecmp(argv[1], "sd", 2)) {
+    /* Grab the block device for the first partition on the SD card. Note that
+       you must have the SD card formatted with an MBR partitioning scheme. */
+    if(sd_blockdev_for_partition(0, &sd_dev, &partition_type)) {
+        //sd_shutdown();
+        return exit_with_error("Could not find the first partition on the SD card!\n");
+    }
 
-		/* Grab the block device for the first partition on the SD card. Note that
-		   you must have the SD card formatted with an MBR partitioning scheme. */
-		if(sd_blockdev_for_partition(part, &sd_dev, &partition_type)) {
-			//sd_shutdown();
-			return exit_with_error("Could not find partition on the SD card!\n");
-		}
+    /* Read the MBR so we can change the partition type if needed. */
+    if(sd_read_blocks(0, 1, block)) {
+        //sd_shutdown();
+        return exit_with_error("Cannot read the MBR from the SD card!\n");
+    }
 
-		/* Read the MBR so we can change the partition type if needed. */
-		if(sd_read_blocks(0, 1, block)) {
-			//sd_shutdown();
-			return exit_with_error("Cannot read the MBR from the SD card!\n");
-		}
+    /* If it isn't already set to 0x83 (Linux), set it to 0x83. */
+    if(block[0x01BE + 4] != 0x83) {
+        ds_printf("Partition type 0x%02x will be replaced by 0x83\n",
+               block[0x01BE + 4]);
+        block[0x01BE + 4] = 0x83;
 
-		/* If it isn't already set to 0x83 (Linux), set it to 0x83. */
-		if(block[0x01BE + 4 + (16 * part)] != 0x83) {
-			ds_printf("Partition type 0x%02x will be replaced by 0x83\n",
-				   block[0x01BE + 4 + (16 * part)]);
-			block[0x01BE + 4 + (16 * part)] = 0x83;
-
-			if(sd_write_blocks(0, 1, block)) {
-				//sd_shutdown();
-				return exit_with_error("Cannot write MBR back to the SD card!\n");
-			}
-		}
-	
-	} else if(!strncasecmp(argv[1], "ide", 3)) {
-		/* Grab the block device for the first partition on the G1-ATA. Note that
-       you must have the G1-ATA formatted with an MBR partitioning scheme. */
-		if(g1_ata_blockdev_for_partition(part, 0, &sd_dev, &partition_type)) {
-			//sd_shutdown();
-			return exit_with_error("Could not find partition on the IDE!\n");
-		}
-
-		/* Read the MBR so we can change the partition type if needed. */
-		if(g1_ata_read_lba(0, 1, (uint16_t*)block)) {
-			//sd_shutdown();
-			return exit_with_error("Cannot read the MBR from the IDE!\n");
-		}
-
-		/* If it isn't already set to 0x83 (Linux), set it to 0x83. */
-		if(block[0x01BE + 4 + part] != 0x83) {
-			ds_printf("Partition type 0x%02x will be replaced by 0x83\n",
-				   block[0x01BE + 4 + part]);
-			block[0x01BE + 4 + part] = 0x83;
-
-			if(g1_ata_write_lba(0, 1, (uint16_t*)block)) {
-				//sd_shutdown();
-				return exit_with_error("Cannot write MBR back to the IDE!\n");
-			}
-		}
-	} else {
-		ds_printf("DS_ERROR: Unknown device '%s', support only sd and ide devices\n", argv[1]);
-		return CMD_ERROR;
-	}
-	
+        if(sd_write_blocks(0, 1, block)) {
+            //sd_shutdown();
+            return exit_with_error("Cannot write MBR back to the SD card!\n");
+        }
+    }
 #else
     (void)partition_type;
 
@@ -1041,6 +1009,5 @@ int main(int argc, char *argv[]) {
     sd_dev.shutdown(&sd_dev);
     //sd_shutdown();
 
-    exit_with_error("Format complete.");
-    return CMD_OK;
+    return exit_with_error("Format complete.");
 }

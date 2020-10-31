@@ -32,7 +32,7 @@ OBJECT_EXTENSION=o
 CC=/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
 SPECIFIC_CFLAGS= 
 ALTIVEC_CFLAGS=
-CFLAGS=-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing -I/usr/local/dc/kos/kos/ds/include
+CFLAGS=-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections  -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -I/usr/local/dc/kos/kos/../kos-ports/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -I/usr/local/dc/kos/kos/ds/include
 
 # ============================================================================
 # Assembler

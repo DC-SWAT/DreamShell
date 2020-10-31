@@ -12,6 +12,7 @@
 *.cache
 *.status
 *.sym
+*.d
 .libs
 DS.cdi
 DS_CORE.BIN

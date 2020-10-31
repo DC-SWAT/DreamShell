@@ -1,6 +1,6 @@
 #
 # mp3 module for DreamShell
-# Copyright (C) 2011-2014 SWAT
+# Copyright (C) 2011-2020 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -16,9 +16,9 @@ VER_MICRO = 0
 
 KOS_LIB_PATHS += -L./libmp3
 
-all: rm-elf
+all: rm-elf library
 
-makelib:
+library:
 	cd ./libmp3 && make
 
 include ../../sdk/Makefile.loadable
