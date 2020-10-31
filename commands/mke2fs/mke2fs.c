@@ -1009,5 +1009,6 @@ int main(int argc, char *argv[]) {
     sd_dev.shutdown(&sd_dev);
     //sd_shutdown();
 
-    return exit_with_error("Format complete.");
+    exit_with_error("Format complete.");
+    return CMD_OK;
 }
