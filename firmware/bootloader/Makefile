@@ -7,14 +7,17 @@ TARGET = loader
 VERSION = 2.5
 TARGET_NAME = DreamShell_boot_$(TARGET)_v$(VERSION)
 TARGET_CD = cd/1DS_BOOT.BIN
+TARGET_DUMMY = cd/0.0
 
 all: rm-elf $(TARGET).elf
 
 clean: rm-elf
 	-rm -f $(OBJS)
+	-rm -rf ./cd
 
 rm-elf:
-	-rm -f $(TARGET).elf $(TARGET).bin $(TARGET_CD) romdisk.*
+	-rm -f $(TARGET).elf $(TARGET_NAME).elf $(TARGET).bin $(TARGET_NAME).bin \
+		$(TARGET_CD) $(TARGET_NAME).cdi $(TARGET_DUMMY) romdisk.*
 
 include ../../sdk/Makefile.cfg
 
@@ -55,16 +58,20 @@ cdi: $(TARGET_CD)
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d > cdi4dc.out
-	@-rm -f $(TARGET).iso
+	@-rm -f $(TARGET).iso cdi4dc.out
 
 #@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G res/IP.BIN -joliet -rock -l -o $(TARGET).iso ./cd
 #@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi > cdi4dc.out
 
-release: all cdi
+release: all $(TARGET_DUMMY) cdi
 	rm -f $(TARGET_NAME).elf $(TARGET_NAME).bin $(TARGET_NAME).cdi
 	mv $(TARGET).elf $(TARGET_NAME).elf
 	mv $(TARGET).bin $(TARGET_NAME).bin
 	mv $(TARGET).cdi $(TARGET_NAME).cdi
+
+$(TARGET_DUMMY):
+	@mkdir -p ./cd
+	dd if=/dev/zero of=cd/0.0 bs=1024k count=500
 
 nulldc: all cdi
 	@echo Running...
@@ -76,8 +83,11 @@ lxdream: all cdi
 	@echo Running...
 	@lxdream -p $(TARGET).cdi
 	
-lxelf: $(TARGET).elf
+lxdelf: $(TARGET).elf
 	lxdream -u -p -e $(TARGET).elf
-	
+
 run: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool -t $(DC_IP) -x $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ip -t $(DC_LAN_IP) -x $(TARGET).elf
+
+run-serial: $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ser -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
