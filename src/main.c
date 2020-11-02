@@ -79,8 +79,9 @@ static int is_emulator() {
 }
 
 static uint8 *get_board_id() {
-	uint8 *(*sc)(int, int, int, int);
-	*((uint32 *)&sc) = *((uint32 *)0x8c0000b0);
+	uint8 *(*sc)(int, int, int, int) = NULL;
+	uint32 *scv = (uint32 *)&sc;
+	*scv = *((uint32 *)0x8c0000b0);
 	return sc(0, 0, 0, 3);
 }
 

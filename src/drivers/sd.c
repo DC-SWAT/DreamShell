@@ -241,8 +241,9 @@ int sdc_init(void) {
 	int i;
 	uint8 n, ty = 0, ocr[4];
 	
-    if(initted)
-        return 0;
+	if(initted) {
+		return 0;
+	}
 	
 	if(spi_init(0)) {
 		return -1;
