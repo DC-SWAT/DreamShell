@@ -328,7 +328,7 @@ static void get_md5_hash(const char *mountpoint) {
 	
 	if(fd != FILEHND_INVALID) {
 
-		if(fs_ioctl(fd, (int) self.boot_sector, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA) < 0) {
+		if(fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, (int) self.boot_sector) < 0) {
 			memset(self.md5, 0, sizeof(self.md5));
 			memset(self.boot_sector, 0, sizeof(self.boot_sector));
 		} else {
@@ -336,11 +336,11 @@ static void get_md5_hash(const char *mountpoint) {
 		}
 		
 		/* Also get image type and sector size */
-		if(fs_ioctl(fd, (int) &self.image_type, ISOFS_IOCTL_GET_IMAGE_TYPE) < 0) {
+		if(fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int) &self.image_type) < 0) {
 			ds_printf("%s: Can't get image type\n", lib_get_name());
 		}
 		
-		if(fs_ioctl(fd, (int) &self.sector_size, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE) < 0) {
+		if(fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, (int) &self.sector_size) < 0) {
 			ds_printf("%s: Can't get sector size\n", lib_get_name());
 		}
 		
