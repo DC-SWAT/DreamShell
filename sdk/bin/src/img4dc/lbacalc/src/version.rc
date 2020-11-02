@@ -1,0 +1,33 @@
+#include <winver.h>
+#include <windows.h>
+
+1 VERSIONINFO
+FILEVERSION 0,2,0,0
+PRODUCTVERSION 0,2,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+
+BEGIN
+
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040C04E4"
+		BEGIN
+			VALUE "Comments", "http://www.sizious.com/\0"
+			VALUE "CompanyName", "SiZiOUS\0"
+			VALUE "FileDescription", "LBACALC: Multi-Sessions Offset Calculator\0"
+			VALUE "FileVersion", "0.2.0.0\0"
+			VALUE "InternalName", "lbacalc.exe\0"
+			VALUE "LegalCopyright", "© Copyleft 2002, 2007, 2015\0"
+			VALUE "OriginalFilename", "lbacalc.exe\0"
+			VALUE "ProductName", "IMG4DC: Dreamcast Selfboot Toolkit\0"
+			VALUE "ProductVersion", "0.2.0.0\0"
+		END
+	END
+
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 1036, 1252
+	END
+
+END
