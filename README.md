@@ -9,17 +9,24 @@ We are glad if this code will help someone and we will be glad of your support t
 
 
 ## Build
-- Make directories: `/opt/toolchains/dc` and `/usr/local/dc/kos`
-- Checkout KallistiOS to `/usr/local/dc/kos/kos`
-- Checkout KallistiOS ports to `/usr/local/dc/kos/kos-ports`
-- Checkout DreamShell to `/usr/local/dc/kos/kos/ds`
 
 ### Environment
 ```console
-sudo apt install tolua
+sudo apt-get install -y genisoimage squashfs-tools
+sudo apt-get install -y libpng-dev libjpeg-dev
+cd /tmp && git clone https://github.com/LuaDist/tolua.git && cd tolua
+mkdir build && cd ./build
+cmake ../ && make && sudo make install
+cd /usr/local && mkdir -p dc && cd dc && mkdir -p kos && cd kos
+git clone https://github.com/KallistiOS/KallistiOS.git kos && cd kos
+git clone https://github.com/DC-SWAT/DreamShell.git ds
+git checkout `cat ds/sdk/doc/KallistiOS.txt`
+cp ds/sdk/toolchain/environ.sh environ.sh && cd ../
+git clone https://github.com/KallistiOS/kos-ports.git
+cd /opt && mkdir -p toolchains && cd toolchains && mkdir -p dc
 cd /usr/local/dc/kos/kos
 source ./environ.sh
-cd ds/sdk/toolchain && ./donwload.sh && ./unpack.sh
+cd ds/sdk/toolchain && ./download.sh && ./unpack.sh
 make && cd ../../../
 make && cd ../kos-ports && ./utils/build-all.sh
 cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a
