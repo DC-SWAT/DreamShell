@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ASIC IRQ handling
- * (c)2014-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -9,59 +9,62 @@
 #include <asic.h>
 #include <cdda.h>
 
-#ifdef NO_ASIC_LT
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+# ifdef NO_ASIC_LT
 void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
+# endif
+extern int g1_dma_irq_visible;
 #endif
 
 static asic_lookup_table   asic_table;
 static exception_handler_f old_handler;
-extern int g1_dma_irq_visible;
 //void dump_maple_dma_buffer();
 
 static void* asic_handle_exception(register_stack *stack, void *current_vector) {
 	
-//	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	uint32 code = *REG_INTEVT;
+	// uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
-//	if(code == EXP_CODE_INT11/* || code == EXP_CODE_INT9*/)
-//		LOGFF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-//					*REG_INTEVT & 0x0fff, status, 
-//					ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
-//					ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
-//
+	// if(code == EXP_CODE_INT11/* || code == EXP_CODE_INT9*/) {
+	// 	LOGFF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
+	// 				*REG_INTEVT & 0x0fff, status, 
+	// 				ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
+	// 				ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+	// }
 //	dump_regs(stack);
 
 #ifdef NO_ASIC_LT
 	/**
 	 * Use ASIC handlers directly instead of lookup table
 	 */
+
+	void *back_vector = current_vector;
 	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	
-//#ifdef LOG
+
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
-	if(statusExt & ASIC_EXT_GD_CMD) {
-		LOGF("IDE CMD INT: 0x%08lx\n", statusExt);
-//		if (!g1_dma_irq_visible) {
-//			uint8 st = *((volatile uint8 *) 0xA05F709C);
-//			(void) st;
-//			return my_exception_finish;
-//		}
-	}
-
 	if((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
-		LOGF("G1DMA ERR: 0x%08lx\n", statusErr);
+		LOGFF("ASIC_ERR_G1DMA: 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
 		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
 	}
-//#endif
 
-	void *back_vector = current_vector;
-	
+	if(statusExt & ASIC_EXT_GD_CMD) {
+		DBGFF("ASIC_EXT_GD_CMD: 0x%08lx %d\n", statusExt, g1_dma_irq_visible);
+		if (!g1_dma_irq_visible) {
+			ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT] = ASIC_EXT_GD_CMD;
+			back_vector = my_exception_finish;
+		}
+	}
+
 	if(status & ASIC_NRM_GD_DMA) {
 		back_vector = g1_dma_handler(NULL, stack, current_vector);
 	}
-	
+#else
+	(void)stack;
+#endif
+
 	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 
 		if(status & ASIC_NRM_VSYNC) {
@@ -112,8 +115,6 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 				
 				if(passer.mask[ASIC_MASK_NRM_INT]) {
 					ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = passer.mask[ASIC_MASK_NRM_INT];
-					(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-					(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 				}
 				
 				if(passer.mask[ASIC_MASK_ERR_INT]) {

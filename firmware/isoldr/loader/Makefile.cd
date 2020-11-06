@@ -1,14 +1,13 @@
 #
 # DreamShell ISO Loader
 # GD-ROM/CD-ROM (SPI/ATAPI)
-# (c) 2009-2017 SWAT
+# (c) 2009-2020 SWAT
 #
 
 include Makefile.cfg
 
-TARGETCFLAGS += $(CD_CFLAGS) #-DDEV_TYPE_EMU -DLOG #-DDEBUG
-LOBJECTS += $(CD) 
-LOBJECTS += $(KOS_DIR)/src/scif.o $(KOS_DIR)/src/printf.o #gdb.o
+TARGETCFLAGS += $(CD_CFLAGS)
+LOBJECTS += $(CD)
 
 all: rm-elf $(BUILD)/cd.bin
 

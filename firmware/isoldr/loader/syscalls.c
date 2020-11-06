@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2019 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -32,9 +32,16 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->lba = 150;
 	GDS->req_count = 0;
 	GDS->drv_stat = CD_STATUS_PAUSED;
+	GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
-//	GDS->err = 0;
-//	GDS->err2 = 0;
+	GDS->err = CMD_ERR_OK;
+	// GDS->err2 = 0;
+	GDS->disc_change = 0;
+	GDS->disc_num = 0;
+
+	GDS->gdc.sec_size = 2048;
+	GDS->gdc.mode = 2048;
+	GDS->gdc.flags = 8192;
 }
 
 /* This lock function needed for access to flashrom/bootrom */
@@ -234,24 +241,7 @@ static void get_scd() {
 	uint8 *buf = (uint8 *)GDS->param[2];
 	uint32 offset = GDS->lba - 150;
 	
-	/**
-	 * Some games works incorrectly without real hw delay in getting of sub channels
-	 * FIXME: find better way
-	 */
-//	if(scd_delay++ < 4) {
-//		return;
-//	} else {
-//		scd_delay = 0;
-//	}
-
-//	if(!scd_delay) {
-//		scd_delay = timer_count(TMU0);
-//		return;
-//	} else if((scd_delay - timer_count(TMU0)) < 0x4000) {
-//		return;
-//	} else {
-//		scd_delay = 0;
-//	}
+	// FIXME: Some games works incorrectly without real hw delay in getting of sub channels
 
 	switch(GDS->param[0] & 0xF) {
 		
@@ -403,6 +393,8 @@ void data_transfer_true_async() {
 
 	while(GDS->dma_status) {
 
+		LOGFF("%d\n", GDS->transfered);
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if (!g1_dma_irq_enabled() || !g1_dma_in_progress())
 #endif
@@ -433,12 +425,6 @@ void data_transfer_emu_async() {
 		GDS->dma_status = 1;
 	}
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(IsoInfo->use_dma) {
-			fs_enable_dma(FS_DMA_HIDDEN);
-		}
-#endif
-
 	while(GDS->param[1] > 0) {
 
 		if(GDS->param[1] <= (uint32)IsoInfo->emu_async) {
@@ -447,11 +433,11 @@ void data_transfer_emu_async() {
 			sc = IsoInfo->emu_async;
 		}
 
-//#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-//		if(IsoInfo->use_dma) {
-//			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
-//		}
-//#endif
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		if(IsoInfo->use_dma) {
+			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
+		}
+#endif
 
 		sc_size = (GDS->gdc.sec_size * sc);
 
@@ -619,8 +605,8 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		GDS->cmd = cmd;
 		GDS->status = CMD_STAT_PROCESSING;
 		GDS->transfered = 0;
-		//GDS->err = 0;
-		//GDS->err2 = 0;
+		GDS->err = CMD_ERR_OK;
+		// GDS->err2 = 0;
 		GDS->dma_status = 0;
 		gd_chn = GDS->req_count;
 		
@@ -691,7 +677,7 @@ void gdcMainLoop(void) {
 	while(1) {
 
 		gd_state_t *GDS = get_GDS();
-		DBGFF(NULL);
+		LOGFF(NULL);
 		
 #ifndef HAVE_EXPT
 #ifdef HAVE_CDDA
@@ -804,24 +790,6 @@ void gdcMainLoop(void) {
 			}
 
 		}
-#ifdef _FS_ASYNC
-		else if (GDS->status == CMD_STAT_STREAMING && GDS->dma_status
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-				&& (!g1_dma_irq_enabled() || !g1_dma_in_progress())
-#endif
-		) {
-			int ps = poll(iso_fd);
-			
-			if(ps > 0) {
-				GDS->transfered += ps;
-				GDS->streamed += ps;
-			} else if(ps < 0) {
-				GDS->status = CMD_STAT_FAILED;
-				GDS->dma_status = 0;
-			}
-			//LOGF("POLL: %d\n", ps);
-		}
-#endif
 		gdcExitToGame();
 	}
 }
@@ -834,61 +802,69 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 
 	if(lock_gdsys()) {
 		DBGF("%s: already locked\n", __func__);
-		return BUSY;
+		return CMD_STAT_WAITING;
 	}
 
+	int rv = CMD_STAT_IDLE;
 	gd_state_t *GDS = get_GDS();
 	memset(status, 0, sizeof(uint32) * 4);
 
-	if(gd_chn <= 0) {
+	if(gd_chn == 0) {
 
 		LOGFF("WARNING: id = %d\n", gd_chn);
+
+		if(GDS->status != CMD_STAT_IDLE) {
+			rv = CMD_STAT_PROCESSING;
+		}
 		unlock_gdsys();
-		return GDS->status == CMD_STAT_IDLE ? NO_ACTIVE : PROCESSING;
+		return rv;
 
 	} else if(gd_chn != GDS->req_count) {
 
 		LOGFF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
-		status[0] = 5;
+		status[0] = CMD_STAT_ERROR;
+		rv = CMD_STAT_FAILED;
 		unlock_gdsys();
-		return FAILED;
+		return rv;
 	}
 
 	LOGFF("%d %s\n", gd_chn, stat_name[GDS->status + 1]);
-	int rv;
 
-	status[0] = 0;//GDS->err;
-	status[1] = 0;//GDS->err2;
-	status[3] = GDS->dma_status;
-
-	switch(GDS->status) 
-	{
+	switch(GDS->status) {
 		case CMD_STAT_PROCESSING:
-//		case CMD_STAT_REQUESTED:
 
 			status[2] = GDS->transfered;
-			rv = PROCESSING;
+			status[3] = GDS->dma_status;
+			rv = CMD_STAT_PROCESSING;
 			break;
 
 		case CMD_STAT_COMPLETED:
 
 			status[2] = GDS->transfered;
+			status[3] = GDS->dma_status;
 			GDS->status = CMD_STAT_IDLE;
-			rv = /*GDS->err ? FAILED : */COMPLETED;
+			rv = CMD_STAT_COMPLETED;
 			break;
 
 		case CMD_STAT_STREAMING:
 
 			status[2] = (!GDS->transfered) ? 2048 : GDS->transfered;
-			rv = /*GDS->err ? FAILED : */ABORTED;
+
+			if (GDS->err != CMD_ERR_OK) {
+				status[0] = GDS->err;
+				status[1] = 0; //GDS->err2;
+				rv = CMD_STAT_FAILED;
+				break;
+			}
+
+			rv = CMD_STAT_ABORTED;
 			break;
 
 		case CMD_STAT_FAILED:
-			rv = FAILED;
+			rv = CMD_STAT_FAILED;
 			break;
 
 		default:
-			rv = NO_ACTIVE;
 			break;
 	}
 
@@ -900,21 +876,44 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 /**
  * Get status of the drive syscall
  */
-int gdcGetDrvStat(uint32 *param) {
+int gdcGetDrvStat(uint32 *status) {
 	
 	if(lock_gdsys()) {
 		DBGFF("already locked\n");
-		return BUSY;
+		return CMD_STAT_WAITING;
 	}
 	
  	DBGF("%s\r", __func__);
 	gd_state_t *GDS = get_GDS();
+
+	if (GDS->disc_change) {
+
+		GDS->disc_change++;
+
+		if (GDS->disc_change == 2) {
+
+			GDS->drv_media = CD_CDDA;
+			GDS->drv_stat = CD_STATUS_OPEN;
+
+		} else if (GDS->disc_change > 30) {
+
+			GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
+			GDS->drv_stat = CD_STATUS_PAUSED;
+			GDS->disc_change = 0;
+			unlock_gdsys();
+			return 2;
+
+		} else {
+			status[0] = GDS->drv_stat;
+			status[1] = GDS->drv_media;
+			unlock_gdsys();
+			return 1;
+		}
+	}
 	
-	param[0] = GDS->drv_stat;
-	param[1] = GDS->disk_type;
-	
+	status[0] = GDS->drv_stat;
+	status[1] = GDS->drv_media;
 	unlock_gdsys();
-	
 	return 0;
 }
 
@@ -925,7 +924,7 @@ int gdcGetDrvStat(uint32 *param) {
 int gdcChangeDataType(int *param) {
 
 	if(lock_gdsys()) {
-		return BUSY;
+		return CMD_STAT_WAITING;
 	}
 	
 	gd_state_t *GDS = get_GDS();
@@ -974,10 +973,6 @@ void gdcInitSystem(void) {
 
 	gd_state_t *GDS = get_GDS();
 	reset_GDS(GDS);
-	GDS->disk_type = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
-	GDS->gdc.sec_size = 2048;
-	GDS->gdc.mode = 2048;
-	GDS->gdc.flags = 8192;
 
 	if(
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
@@ -1006,9 +1001,9 @@ void gdcInitSystem(void) {
 #ifdef HAVE_EXPT
 
 	if(
-#if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
+# if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	((IsoInfo->use_dma && GDS->true_async) || IsoInfo->emu_cdda) && 
-#endif
+# endif
 	((uint32)vbr() == 0x8c00f400 || IsoInfo->exec.type == BIN_TYPE_WINCE)) {
 		
 		int old = irq_disable();
@@ -1019,15 +1014,15 @@ void gdcInitSystem(void) {
 			/* Use ASIC interrupts */
 			asic_init();
 
-#if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
+# if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 			/* Initialize G1 DMA interrupt */
 			g1_dma_init_irq();
-#endif
+# endif
 		}
 		
 		irq_restore(old);
 
-#	ifdef USE_GDB
+#  ifdef USE_GDB
 
 		gdb_init();
 		
@@ -1041,9 +1036,9 @@ void gdcInitSystem(void) {
 			gdb_init();
 		}
 	}
-#	else
+#  else
 	}
-#	endif /* USE_GDB */
+#  endif /* USE_GDB */
 	
 #endif /* HAVE_EXPT */
 
@@ -1081,8 +1076,36 @@ int gdcReadAbort(int gd_chn) {
 	}
 #endif
 
-	GDS->status = CMD_STAT_COMPLETED;
-	return 0;
+	switch(GDS->cmd) {
+		case CMD_PIOREAD:
+		case CMD_DMAREAD:
+		case CMD_PLAY:
+		case CMD_PLAY2:
+		case CMD_PAUSE:
+		case CMD_SEEK:
+		case CMD_DMAREAD_STREAM:
+		case CMD_NOP:
+		case CMD_SCAN_CD:
+		case CMD_STOP:
+		case CMD_GETSCD:
+		case CMD_PIOREAD_STREAM:
+		case CMD_DMAREAD_STREAM_EX:
+		case CMD_PIOREAD_STREAM_EX:
+			switch(GDS->status) {
+				case CMD_STAT_PROCESSING:
+				case CMD_STAT_COMPLETED:
+				case CMD_STAT_WAITING:
+					GDS->status = CMD_STAT_COMPLETED;
+					return 0;
+				default:
+					return 0;
+			}
+			break;
+		default:
+			break;
+	}
+
+	return -1;
 }
 
 
@@ -1130,22 +1153,22 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	/* FIXME: fragmented files */
 //	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 
-	if(IsoInfo->use_dma) {
+	if(IsoInfo->use_dma || GDS->true_async) {
 		GDS->dma_status = 1;
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
 
-		// FIXME: Should not be blocked
+# if (defined(DEV_TYPE_IDE) && !defined(HAVE_EXPT)) || defined(DEV_TYPE_SD)
+		// NOTE: In general this syscall should not be blocked
 		while(GDS->dma_status) {
-# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-			if((!g1_dma_irq_enabled() || !g1_dma_in_progress()) && poll(iso_fd) < 0) 
-# else
-			if(poll(iso_fd) < 0)
-# endif
-			{
+			if(poll(iso_fd) < 0) {
+				GDS->status = CMD_STAT_FAILED;
 				break;
 			}
 		}
+# else
+		return 0;
+# endif
 
 	} else
 #endif /*_FS_ASYNC */
@@ -1209,8 +1232,6 @@ void gdcG1DmaEnd(uint32 func, uint32 param) {
 
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-//	(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-//	(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 #endif
 
 	if(func != 0) {
@@ -1274,6 +1295,13 @@ int gdcCheckPioTrans(int gd_chn, int *size) {
 
 	*size = GDS->requested;
 	return 0;
+}
+
+void gdGdcChangeDisc(int disc_num) {
+	LOGFF("%d\n", disc_num);
+	gd_state_t *GDS = get_GDS();
+	GDS->disc_change = 1;
+	GDS->disc_num = disc_num;
 }
 
 void gdcDummy(int gd_chn, int *arg2) {

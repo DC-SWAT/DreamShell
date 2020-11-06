@@ -1,14 +1,13 @@
 #
 # DreamShell ISO Loader
 # SD Card
-# (c) 2009-2016 SWAT
+# (c) 2009-2020 SWAT
 #
 
 include Makefile.cfg
 
-TARGETCFLAGS += $(SD_CFLAGS) -DNO_SD_INIT #-DLOG
-LOBJECTS += $(SD) 
-#LOBJECTS += $(DCLFS_DIR)/dcload-syscall.o $(KOS_DIR)/src/printf.o
+TARGETCFLAGS += $(SD_CFLAGS)
+LOBJECTS += $(SD)
 
 all: rm-elf $(BUILD)/sd.bin
 

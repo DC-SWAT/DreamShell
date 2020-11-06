@@ -1,12 +1,14 @@
 /**
  * DreamShell ISO Loader
  * ISO, CSO, CDI and GDI reader
- * (c)2009-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
 #include <mmu.h>
+#ifdef HAVE_LZO
 #include <minilzo.h>
+#endif
 
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 #define SECTOR_BUFFER_PAD 32

@@ -1,14 +1,13 @@
 #
 # DreamShell ISO Loader
 # Network
-# (c) 2009-2016 SWAT
+# (c) 2009-2020 SWAT
 #
 
 include Makefile.cfg
 
-TARGETCFLAGS += $(DCL_CFLAGS) -DLOG #-DDEBUG
-LOBJECTS += $(NET) 
-LOBJECTS += $(KOS_DIR)/src/scif.o $(KOS_DIR)/src/printf.o
+TARGETCFLAGS += $(DCL_CFLAGS)
+LOBJECTS += $(NET)
 
 all: rm-elf $(BUILD)/net.bin
 

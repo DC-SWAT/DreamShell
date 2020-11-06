@@ -17,7 +17,7 @@
 
 #include "asm.h"
 
-#if defined (__LITTLE_ENDIAN__) && defined (__SH_FPU_ANY__)
+#if 0 //defined (__LITTLE_ENDIAN__) && defined (__SH_FPU_ANY__)
 #define MEMSET_USES_FPU
 /* Use paired single precision load or store mode for 64-bit tranfering.
  * FPSCR.SZ=1,FPSCR.SZ=0 is well defined on both SH4-200 and SH4-300.

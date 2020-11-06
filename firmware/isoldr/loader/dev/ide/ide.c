@@ -210,7 +210,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		  g1_dma_irq_visible);
 //	dump_regs(stack);
 #else
-	LOGFF("%08lx 0x%08lx\n", *REG_INTEVT, ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT]);
+	LOGFF("%08lx 0x%08lx %d\n", *REG_INTEVT, ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT], g1_dma_irq_visible);
 #endif
 
 	if(!_g1_dma_irq_enabled) {
@@ -228,8 +228,6 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 	/* Ack DMA IRQ. */
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-	(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	(void)ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 
 	return my_exception_finish;
 }
@@ -982,7 +980,9 @@ s32 g1_ata_poll(void) {
 		return rv > 0 ? rv : 32;
 	}
 
+#ifdef HAVE_EXPT
 poll_end:
+#endif
 	if (g1_dma_part_avail) {
 		return 0;
 	}

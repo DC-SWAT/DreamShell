@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C)2009-2017 SWAT
+!   Copyright (C)2009-2020 SWAT
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -273,8 +273,8 @@ gdcCheckPioTrans:
 	.long _gdcCheckPioTrans
 gdcUnk1:
 	.long _gdcDummy
-gdcUnk2:
-	.long _gdcDummy
+gdGdcChangeDisc:
+	.long _gdGdcChangeDisc
 gdcUnk3:
 	.long _gdcDummy
 gdcUnk4:

@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _SYSCALLS_H
@@ -11,7 +11,7 @@
 #include <dc/cdrom.h>
 
 /** \defgroup gdc_cmd_codes CD-ROM syscall command codes
-    @{
+	@{
 */
 #define CMD_CHECK_LICENSE       2  /**< \brief  */
 #define CMD_REQ_SPI_CMD         4  /**< \brief  */
@@ -43,15 +43,21 @@
 #define CMD_MAX                47  /**< \brief  */
 /** @} */
 
-/* GDC syscalls busy response */
-#define BUSY 4
-
 /* Сommand status */
-#define CMD_STAT_FAILED     FAILED
-#define CMD_STAT_IDLE       NO_ACTIVE
-#define CMD_STAT_PROCESSING PROCESSING
-#define CMD_STAT_COMPLETED  COMPLETED
-#define CMD_STAT_STREAMING  3
+#define CMD_STAT_FAILED     -1
+#define CMD_STAT_IDLE        0
+#define CMD_STAT_PROCESSING  1
+#define CMD_STAT_COMPLETED   2
+#define CMD_STAT_ABORTED     3
+#define CMD_STAT_WAITING     4
+#define CMD_STAT_ERROR       5
+#define CMD_STAT_STREAMING   3 // FIXME
+
+#define CMD_ERR_OK           0
+#define CMD_ERR_HW_ERR       2
+#define CMD_ERR_INVALID_CMD  5
+#define CMD_ERR_NOT_INITED   6
+#define CMD_ERR_GDSYS_LOCKED 32
 
 /* Additional status values */
 #define CD_STATUS_RETRY     8
@@ -76,6 +82,7 @@
 #define GDC_PARAMS_COUNT 4
 #define GDC_CHN_ERROR    0
 
+
 /**
  * GD-ROM params
  */
@@ -92,8 +99,8 @@ typedef struct gd_state {
 	int req_count;
 	int cmd;
 	int status;
-//	int err;
-//	int err2;
+	int err;
+	// int err2;
 	int dma_status;
 	
 	uint32 requested;
@@ -113,7 +120,9 @@ typedef struct gd_state {
 	
 	int cdda_stat;
 	int drv_stat;
-	int disk_type;
+	int drv_media;
+	int disc_change;
+	int disc_num;
 	disk_format_t gdc;
 
 } gd_state_t;

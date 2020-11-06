@@ -365,7 +365,7 @@ static int PutLog(char *buff) {
 		}
 #	else
 
-#	if defined(DEV_TYPE_DCL) || defined(DEV_TYPE_SD) || (defined(LOG_DCL) && defined(DEV_TYPE_IDE))
+#	if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
 		dcload_write_buffer((uint8 *)buff, len);
 #	else
 		scif_write_buffer((uint8 *)buff, len, 1);

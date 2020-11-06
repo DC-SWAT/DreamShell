@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C) 2014-2016 SWAT <http://www.dc-swat.ru>
+!   Copyright (C) 2014-2020 SWAT <http://www.dc-swat.ru>
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -34,6 +34,8 @@
     .global _vbr
     .global _ubc_wait
     .global _exception_os_type
+!   .global _general_stack
+    .global _interrupt_stack
 
 !_dbr:
 !    stc     DBR, r0
@@ -87,44 +89,46 @@ general_exception_xt:
     mov.l   r13, @-r15
     mov.l   r14, @-r15
 !FLOATING POINT
-    sts.l   fpul, @-r15
-    sts.l   fpscr, @-r15
-    mov     #0, r2          ! Set known FP flags
-    lds     r2, fpscr
-    fmov.s  fr15, @-r15
-    fmov.s  fr14, @-r15
-    fmov.s  fr13, @-r15
-    fmov.s  fr12, @-r15
-    fmov.s  fr11, @-r15
-    fmov.s  fr10, @-r15
-    fmov.s  fr9, @-r15
-    fmov.s  fr8, @-r15
-    fmov.s  fr7, @-r15
-    fmov.s  fr6, @-r15
-    fmov.s  fr5, @-r15
-    fmov.s  fr4, @-r15
-    fmov.s  fr3, @-r15
-    fmov.s  fr2, @-r15
-    fmov.s  fr1, @-r15
-    fmov.s  fr0, @-r15
-    frchg
-    fmov.s  fr15, @-r15
-    fmov.s  fr14, @-r15
-    fmov.s  fr13, @-r15
-    fmov.s  fr12, @-r15
-    fmov.s  fr11, @-r15
-    fmov.s  fr10, @-r15
-    fmov.s  fr9, @-r15
-    fmov.s  fr8, @-r15
-    fmov.s  fr7, @-r15
-    fmov.s  fr6, @-r15
-    fmov.s  fr5, @-r15
-    fmov.s  fr4, @-r15
-    fmov.s  fr3, @-r15
-    fmov.s  fr2, @-r15
-    fmov.s  fr1, @-r15
-    fmov.s  fr0, @-r15
-    frchg
+#ifdef defined(__SH_FPU_ANY__)
+!    sts.l   fpul, @-r15
+!    sts.l   fpscr, @-r15
+!    mov     #0, r2          ! Set known FP flags
+!    lds     r2, fpscr
+!    fmov.s  fr15, @-r15
+!    fmov.s  fr14, @-r15
+!    fmov.s  fr13, @-r15
+!    fmov.s  fr12, @-r15
+!    fmov.s  fr11, @-r15
+!    fmov.s  fr10, @-r15
+!    fmov.s  fr9, @-r15
+!    fmov.s  fr8, @-r15
+!    fmov.s  fr7, @-r15
+!    fmov.s  fr6, @-r15
+!    fmov.s  fr5, @-r15
+!    fmov.s  fr4, @-r15
+!    fmov.s  fr3, @-r15
+!    fmov.s  fr2, @-r15
+!    fmov.s  fr1, @-r15
+!    fmov.s  fr0, @-r15
+!    frchg
+!    fmov.s  fr15, @-r15
+!    fmov.s  fr14, @-r15
+!    fmov.s  fr13, @-r15
+!    fmov.s  fr12, @-r15
+!    fmov.s  fr11, @-r15
+!    fmov.s  fr10, @-r15
+!    fmov.s  fr9, @-r15
+!    fmov.s  fr8, @-r15
+!    fmov.s  fr7, @-r15
+!    fmov.s  fr6, @-r15
+!    fmov.s  fr5, @-r15
+!    fmov.s  fr4, @-r15
+!    fmov.s  fr3, @-r15
+!    fmov.s  fr2, @-r15
+!    fmov.s  fr1, @-r15
+!    fmov.s  fr0, @-r15
+!    frchg
+#endif
 !CONTROL
     stc.l   r0_bank, @-r15
     stc.l   r1_bank, @-r15
@@ -180,44 +184,46 @@ general_exception_xt:
     ldc.l   @r15+, r1_bank
     ldc.l   @r15+, r0_bank
 !FLOATING POINT
-    mov     #0, r2          ! Set known FP flags
-    lds     r2, fpscr
-    frchg
-    fmov.s  @r15+, fr0
-    fmov.s  @r15+, fr1
-    fmov.s  @r15+, fr2
-    fmov.s  @r15+, fr3
-    fmov.s  @r15+, fr4
-    fmov.s  @r15+, fr5
-    fmov.s  @r15+, fr6
-    fmov.s  @r15+, fr7
-    fmov.s  @r15+, fr8
-    fmov.s  @r15+, fr9
-    fmov.s  @r15+, fr10
-    fmov.s  @r15+, fr11
-    fmov.s  @r15+, fr12
-    fmov.s  @r15+, fr13
-    fmov.s  @r15+, fr14
-    fmov.s  @r15+, fr15
-    frchg
-    fmov.s  @r15+, fr0
-    fmov.s  @r15+, fr1
-    fmov.s  @r15+, fr2
-    fmov.s  @r15+, fr3
-    fmov.s  @r15+, fr4
-    fmov.s  @r15+, fr5
-    fmov.s  @r15+, fr6
-    fmov.s  @r15+, fr7
-    fmov.s  @r15+, fr8
-    fmov.s  @r15+, fr9
-    fmov.s  @r15+, fr10
-    fmov.s  @r15+, fr11
-    fmov.s  @r15+, fr12
-    fmov.s  @r15+, fr13
-    fmov.s  @r15+, fr14
-    fmov.s  @r15+, fr15
-    lds.l   @r15+, fpscr
-    lds.l   @r15+, fpul
+#if defined(__SH_FPU_ANY__)
+!    mov     #0, r2          ! Set known FP flags
+!    lds     r2, fpscr
+!    frchg
+!    fmov.s  @r15+, fr0
+!    fmov.s  @r15+, fr1
+!    fmov.s  @r15+, fr2
+!    fmov.s  @r15+, fr3
+!    fmov.s  @r15+, fr4
+!    fmov.s  @r15+, fr5
+!    fmov.s  @r15+, fr6
+!    fmov.s  @r15+, fr7
+!    fmov.s  @r15+, fr8
+!    fmov.s  @r15+, fr9
+!    fmov.s  @r15+, fr10
+!    fmov.s  @r15+, fr11
+!    fmov.s  @r15+, fr12
+!    fmov.s  @r15+, fr13
+!    fmov.s  @r15+, fr14
+!    fmov.s  @r15+, fr15
+!    frchg
+!    fmov.s  @r15+, fr0
+!    fmov.s  @r15+, fr1
+!    fmov.s  @r15+, fr2
+!    fmov.s  @r15+, fr3
+!    fmov.s  @r15+, fr4
+!    fmov.s  @r15+, fr5
+!    fmov.s  @r15+, fr6
+!    fmov.s  @r15+, fr7
+!    fmov.s  @r15+, fr8
+!    fmov.s  @r15+, fr9
+!    fmov.s  @r15+, fr10
+!    fmov.s  @r15+, fr11
+!    fmov.s  @r15+, fr12
+!    fmov.s  @r15+, fr13
+!    fmov.s  @r15+, fr14
+!    fmov.s  @r15+, fr15
+!    lds.l   @r15+, fpscr
+!    lds.l   @r15+, fpul
+#endif
 !GENERAL
     mov.l   @r15+, r14
     mov.l   @r15+, r13
@@ -286,7 +292,7 @@ _exception_os_type:
 
 !_general_sub_handler:
 !general_exception_handler:
-!    mov.l   interrupt_tmp_stack, r15 ! Only for WinCE, for other replaced by nop
+!    mov.l   general_stack, r15 ! Only for WinCE, for other replaced by nop
 !    mov.l   r0, @-r15
 !    mov     #1, r0
 !    mov.l   r0, @-r15
@@ -298,8 +304,9 @@ _exception_os_type:
 !
 !general_handler:
 !    .long   general_exception_xt
-!general_tmp_stack:
-!    .long 0x8c011000
+!_general_stack:
+!general_stack:
+!    .long 0x8c011000 ! Only for WinCE
 !
 !_general_sub_handler_base:
 !    nop
@@ -358,7 +365,7 @@ interrupt_exception:
 
 _interrupt_sub_handler:
 interrupt_exception_handler:
-    mov.l   interrupt_tmp_stack, r15 ! Only for WinCE, for other replaced by nop
+    mov.l   interrupt_stack, r15 ! Only for WinCE, for other replaced by nop
     mov.l   r0, @-r15
     mov     #3, r0
     mov.l   r0, @-r15
@@ -370,8 +377,9 @@ interrupt_exception_handler:
 
 interrupt_handler:
     .long   general_exception_xt
-interrupt_tmp_stack:
-	.long 0x8c011000
+_interrupt_stack:
+interrupt_stack:
+	.long 0x8c011000 ! Only for WinCE
 
 _interrupt_sub_handler_base:
     nop

@@ -9,6 +9,7 @@
 #include <arch/cache.h>
 
 extern uint32 exception_os_type;
+extern uint32 interrupt_stack;
 static exception_table exp_table;
 static volatile int inside_int = 0;
 static int inited = 0;
@@ -62,9 +63,12 @@ int exception_init(uint32 vbr_addr) {
 		LOGFF("already initialized\n");
 		return 0;
 	}
-	
+
+	if(IsoInfo->exec.type != BIN_TYPE_WINCE) {
+		interrupt_stack = (uint32)sector_buffer + sector_buffer_size + 4096;
+	}
 	exception_os_type = IsoInfo->exec.type;
-	LOGFF("VBR buffer at 0x%08lx\n", vbr_buffer);
+	LOGFF("VBR buffer at 0x%08lx, IRQ stack at 0x%08lx\n", vbr_buffer, interrupt_stack);
 
 	/* Interrupt hack for VBR. */
 	memcpy(
@@ -95,13 +99,12 @@ int exception_init(uint32 vbr_addr) {
 	if(IsoInfo->exec.type == BIN_TYPE_WINCE) {
 		vbr_buffer_orig = vbr_buffer + (sizeof (uint16) * 3);
 	} else {
-		
 		vbr_buffer_orig = vbr_buffer + (sizeof (uint16) * 4);
-		uint16 *change_stack = VBR_INT(vbr_buffer) - (interrupt_sub_handler_base - interrupt_sub_handler);
-		*change_stack = 0x0009; // nop
-		
-//		change_stack = VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler);
-//		*change_stack = 0x0009; // nop
+		// uint16 *change_stack = VBR_INT(vbr_buffer) - (interrupt_sub_handler_base - interrupt_sub_handler);
+		// *change_stack = 0x0009; // nop
+
+		// change_stack = VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler);
+		// *change_stack = 0x0009; // nop
 	}
 
 	inited = 1;

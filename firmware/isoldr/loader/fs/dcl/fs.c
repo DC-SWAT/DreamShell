@@ -1,6 +1,7 @@
 /* 
- * DreamShell isoldr dcload fs
- * (c)2009-2016 SWAT
+ * DreamShell ISO Loader
+ * dcload file system
+ * (c)2009-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -30,8 +31,7 @@ int dcload_reinit() {
     return dclsc(DCLOAD_REINIT, 0, 0, 0);
 }
 
-
-#if 0
+#ifdef USE_GDB
 size_t dcload_gdbpacket(const char* in_buf, size_t in_size, char* out_buf, size_t out_size) {
     size_t ret = -1;
 
@@ -43,6 +43,7 @@ size_t dcload_gdbpacket(const char* in_buf, size_t in_size, char* out_buf, size_
     return ret;
 }
 #endif
+
 
 int dcload_type = DCLOAD_TYPE_NONE;
 
@@ -133,4 +134,3 @@ unsigned long total(int fd) {
 	dclsc(DCLOAD_LSEEK, fd, cur, SEEK_SET);
 	return (unsigned long)ret;
 }
-

@@ -1,15 +1,13 @@
 #
 # DreamShell ISO Loader
 # G1-ATA (IDE)
-# (c) 2009-2016 SWAT
+# (c) 2009-2020 SWAT
 #
 
 include Makefile.cfg
 
-TARGETCFLAGS += $(IDE_CFLAGS) #-DLOG #-DDEBUG #-DLOG_DCL -DUSE_GDB
+TARGETCFLAGS += $(IDE_CFLAGS)
 LOBJECTS += $(IDE)
-LOBJECTS += $(KOS_DIR)/src/scif.o $(KOS_DIR)/src/printf.o #gdb.o
-#LOBJECTS += $(DCLFS_DIR)/dcload-syscall.o $(KOS_DIR)/src/printf.o
 
 all: rm-elf $(BUILD)/ide.bin
 

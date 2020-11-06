@@ -64,7 +64,7 @@ int scif_init() {
 	
 	/* If baudrate unset, set baudrate, N = P0/(32*B)-1 */
 //	if (SCBRR2 == 0xff)
-		SCBRR2 = (uint8)(50000000 / (32 * 115200)) - 1;
+		SCBRR2 = (uint8)(50000000 / (32 * 57600)) - 1;
 
 	/* Wait a bit for it to stabilize */
 	for (i=0; i<10000; i++)
