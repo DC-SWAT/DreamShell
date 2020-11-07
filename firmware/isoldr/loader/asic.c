@@ -2,6 +2,7 @@
  * DreamShell ISO Loader
  * ASIC IRQ handling
  * (c)2014-2020 SWAT <http://www.dc-swat.ru>
+ * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
 #include <main.h>

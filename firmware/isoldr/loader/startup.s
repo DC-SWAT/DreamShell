@@ -1,5 +1,6 @@
 !   This file is part of DreamShell ISO Loader
 !   Copyright (C) 2009-2016 SWAT <http://www.dc-swat.ru>
+!   Based on Sylverant PSO Patcher code by Lawrence Sebald
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as

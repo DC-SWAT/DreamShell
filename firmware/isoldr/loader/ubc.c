@@ -1,7 +1,8 @@
 /**
  * DreamShell ISO Loader
  * SH4 UBC
- * (c)2013-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2013-2020 SWAT <http://www.dc-swat.ru>
+ * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
 #include <main.h>
