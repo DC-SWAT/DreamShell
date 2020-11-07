@@ -35,7 +35,8 @@ typedef struct cdda_ctx {
 	uint32 track_size;     /* Track size */
 	uint32 lba;            /* Track LBA */
 	
-	uint8 *buff[2];        /* PCM buff */
+	uint8 *alloc_buff;     /* Dynamic PCM buffer from malloc */
+	uint8 *buff[2];        /* PCM buffer in main RAM */
 	uint32 aica_left[2];   /* First/second buffer for channel in sound RAM */
 	uint32 aica_right[2];  /* First/second buffer for channel in sound RAM */
 	uint32 cur_buff;       /* AICA channel buffer */

@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _ISO_LOADER_H
@@ -88,11 +88,10 @@ void CloseLog();
 
 #endif
 
-
-// void  malloc_init (void);
-// void  malloc_stat (uint32 *freesize, uint32 *max_freesize);
-// void *malloc      (uint32 size);
-// void  free        (void *data);
-// void *realloc     (void *data, uint32 size);
+int malloc_init(void);
+void malloc_stat(uint32 *free_size, uint32 *max_free_size);
+void *malloc(uint32 size);
+void free(void *data);
+void *realloc(void *data, uint32 size);
 
 #endif /* _ISO_LOADER */

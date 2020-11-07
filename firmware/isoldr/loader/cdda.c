@@ -113,6 +113,7 @@ static void setup_pcm_buffer() {
 	 * 16 KB = 36186 / chn
 	 */
 	cdda->end_tm = 72374 / cdda->chn;
+	size_t old_size = cdda->size;
 //	cdda->size = (cdda->bitsize << 10) * cdda->chn;
 	
 	switch(cdda->bitsize) {
@@ -127,14 +128,14 @@ static void setup_pcm_buffer() {
 		case 16:
 		default:
 			cdda->size = 0x8000;
-#ifdef LOG
+#if 0//def LOG
 			cdda->size >>= 2;
 			cdda->end_tm >>= 2;
 #endif
 			break;
 	}
 	
-	/* Search free memory area */
+	/* Search free memory area in main RAM */
 	if((loader_addr > 0x8c010000 && cdda->size <= 0x8000) || (loader_addr <= 0x8c000100 && cdda->size <= 0x4000 && IsoInfo->exec.type != BIN_TYPE_WINCE)) {
 		
 		cdda->buff[0] = (uint8 *)0x8C00C000 - cdda->size;
@@ -144,12 +145,30 @@ static void setup_pcm_buffer() {
 		cdda->buff[0] = (uint8 *)0x8c010000 - cdda->size;
 
 	} else {
-		cdda->buff[0] = (uint8 *)0x8D000000 - cdda->size - 0x18000;
+
+		if (cdda->alloc_buff && old_size != cdda->size) {
+
+			cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size);
+
+		} else if (cdda->alloc_buff == NULL && IsoInfo->emu_cdda == 2) {
+
+			// uint32 free_size, max_free_size;
+			// malloc_stat(&free_size, &max_free_size);
+			// if (freesize >= cdda->size << 1) {
+				cdda->alloc_buff = malloc(cdda->size + 32);
+			// }
+		}
+
+		if (cdda->alloc_buff) {
+			cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
+		} else {
+			cdda->buff[0] = (uint8 *)0x8D000000 - cdda->size - 0x18000;
+		}
 	}
 	
 	cdda->buff[1] = cdda->buff[0] + (cdda->size >> 1);
 	
-	/* Setup buffer in sound memory */
+	/* Setup buffer at end of sound memory */
 	cdda->aica_left[0] = 0x00A00000 - cdda->size;
 	cdda->aica_left[1] = cdda->aica_left[0] + (cdda->size >> 2);
 	
@@ -982,6 +1001,11 @@ int CDDA_Stop(void) {
 			close(cdda->fd);
 			cdda->fd = FILEHND_INVALID;
 		}
+	}
+
+	if (cdda->alloc_buff) {
+		free(cdda->alloc_buff);
+		cdda->alloc_buff = NULL;
 	}
 	
 	GDS->cdda_track = 0;
