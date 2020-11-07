@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback
- * (c)2014-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _CDDA_H

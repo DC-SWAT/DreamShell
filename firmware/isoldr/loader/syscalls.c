@@ -1043,7 +1043,7 @@ void gdcInitSystem(void) {
 #endif /* HAVE_EXPT */
 
 #ifdef HAVE_CDDA
-	if (IsoInfo->emu_cdda == 2 && malloc_init()) {
+	if (IsoInfo->emu_cdda == CDDA_EN_DYNAMIC_MEM && malloc_init()) {
 		LOGF("Dynamic memory enabled\n");
 	}
 #endif
