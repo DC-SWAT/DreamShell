@@ -94,14 +94,13 @@ typedef struct isoldr_exec_info {
 
 
 /**
- * CDDA modes
+ * Buffer modes
  */
-typedef enum isoldr_cdda_mode {
-	CDDA_DISABLED = 0,
-	CDDA_EN_STATIC_MEM = 1,
-	CDDA_EN_DYNAMIC_MEM = 2,
-	CDDA_EN_SPECIFY_MEM = 0x8c000000 // +offset
-} isoldr_cdda_mode_t;
+typedef enum isoldr_buff_mode {
+	BUFF_MEM_STATIC = 0,
+	BUFF_MEM_DYNAMIC = 1,
+	BUFF_MEM_SPECIFY = 0x8c000000 // +offset
+} isoldr_buff_mode_t;
 
 
 typedef struct isoldr_info {
@@ -123,8 +122,8 @@ typedef struct isoldr_info {
 	uint32 sector_size;                 /* Data track sector size */
 
 	uint32 boot_mode;                   /* See isoldr_boot_mode_t */
-	uint32 emu_cdda;                    /* Emulate CDDA audio. See isoldr_cdda_mode_t */
-	uint32 emu_async;                   /* Emulate async data transfer */
+	uint32 emu_cdda;                    /* Emulate CDDA audio */
+	uint32 emu_async;                   /* Emulate async data transfer (value is sectors count per frame) */
 	uint32 use_dma;                     /* Use DMA data transfer for G1-bus devices (GD drive and IDE) */
 	uint32 fast_boot;                   /* Don't show any info on screen */
 
@@ -133,8 +132,9 @@ typedef struct isoldr_info {
 	uint32 gdtex;                       /* Memory address for GD texture (draw it on screen) */
 	uint32 patch_addr[2];               /* Memory addresses for patching every frame */
 	uint32 patch_value[2];              /* Values for patching */
+	uint32 buff_mode;                   /* Memory mode or address for buffers like CDDA. See isoldr_buff_mode_t */
 
-	uint32 cdda_offset[50];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[49];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

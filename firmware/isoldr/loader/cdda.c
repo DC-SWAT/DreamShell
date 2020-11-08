@@ -146,7 +146,7 @@ static void setup_pcm_buffer() {
 
 			cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size);
 
-		} else if (cdda->alloc_buff == NULL && IsoInfo->emu_cdda == CDDA_EN_DYNAMIC_MEM) {
+		} else if (cdda->alloc_buff == NULL && IsoInfo->buff_mode == BUFF_MEM_DYNAMIC) {
 
 			// uint32 free_size, max_free_size;
 			// malloc_stat(&free_size, &max_free_size);
@@ -157,8 +157,8 @@ static void setup_pcm_buffer() {
 
 		if (cdda->alloc_buff) {
 			cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
-		} else if (IsoInfo->emu_cdda >= CDDA_EN_SPECIFY_MEM) {
-			cdda->buff[0] = (uint8 *)(IsoInfo->emu_cdda);
+		} else if (IsoInfo->buff_mode >= BUFF_MEM_SPECIFY) {
+			cdda->buff[0] = (uint8 *)(IsoInfo->buff_mode);
 		} else {
 			cdda->buff[0] = (uint8 *)(0x8D000000 - cdda->size - 0x18000);
 		}

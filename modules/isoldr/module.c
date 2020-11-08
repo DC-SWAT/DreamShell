@@ -557,6 +557,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      3 = WINCE\n");
 		ds_printf(" -r, --addr       -Executable memory address (default 0xac010000)\n"
 		          " -b, --boot       -Executable file name (default from IP.BIN)\n");
+		ds_printf(" -b, --buffer     -Buffer mode or memory address\n"
+		          "                      0 = static (default)\n"
+		          "                      1 = dynamic\n"
+		          "                     0x = address\n");
 		ds_printf("     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"
@@ -567,12 +571,11 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	uint32 p_addr[2]  = {0, 0};
 	uint32 p_value[2] = {0, 0};
-	uint32 addr = 0, use_dma = 0, lex = 0;
+	uint32 addr = 0, use_dma = 0, lex = 0, buff_mode = BUFF_MEM_STATIC;
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
-	int emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
-	int bin_type = BIN_TYPE_AUTO, nogdtex = 0,
-	    fast_boot = 0, fspart = -1, verbose = 0;
-
+	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
+	uint32 bin_type = BIN_TYPE_AUTO, nogdtex = 0, fast_boot = 0, verbose = 0;
+	int fspart = -1;
 	isoldr_info_t *info;
 
 	struct cfg_option options[] = {
@@ -585,12 +588,13 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"memory",    'x', NULL, CFG_ULONG, (void *) &lex,         0},
 		{"addr",      'r', NULL, CFG_ULONG, (void *) &addr,        0},
 		{"file",      'f', NULL, CFG_STR,   (void *) &file,        0},
-		{"async",     'e', NULL, CFG_INT,   (void *) &emu_async,   0},
+		{"async",     'e', NULL, CFG_ULONG, (void *) &emu_async,   0},
 		{"cdda",      'c', NULL, CFG_BOOL,  (void *) &emu_cdda,    0},
-		{"jmp",       'j', NULL, CFG_INT,   (void *) &boot_mode,   0},
-		{"os",        'o', NULL, CFG_INT,   (void *) &bin_type,    0},
+		{"buffer",    'm', NULL, CFG_ULONG, (void *) &buff_mode,   0},
+		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
+		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
-		{"fast",      's', NULL, CFG_INT,   (void *) &fast_boot,   0},
+		{"fast",      's', NULL, CFG_ULONG, (void *) &fast_boot,   0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -662,6 +666,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->emu_cdda  = emu_cdda;
 	info->use_dma   = use_dma;
 	info->fast_boot = fast_boot;
+	info->buff_mode = buff_mode;
 	
 	info->patch_addr[0]  = p_addr[0];
 	info->patch_addr[1]  = p_addr[1];
@@ -702,12 +707,14 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "Device: %s\n "
 		          "Filesystem: %s (partition %d)\n "
 		          "Address: 0x%08lx\n "
+		          "Buffer: %lx\n "
 		          "Emu async: %d\n "
 		          "Emu CDDA: %d\n\n",
 		          info->fs_dev,
 		          info->fs_type,
 		          info->fs_part,
 		          lex,
+		          info->buff_mode,
 		          info->emu_async,
 		          info->emu_cdda);
 	}
