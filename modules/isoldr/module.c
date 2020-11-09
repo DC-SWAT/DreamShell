@@ -557,10 +557,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      3 = WINCE\n");
 		ds_printf(" -r, --addr       -Executable memory address (default 0xac010000)\n"
 		          " -b, --boot       -Executable file name (default from IP.BIN)\n");
-		ds_printf(" -b, --buffer     -Buffer mode or memory address\n"
-		          "                      0 = static (default)\n"
-		          "                      1 = dynamic\n"
-		          "                     0x = address\n");
+		ds_printf(" -m, --buffer     -Buffer mode or memory address\n"
+		          "                      0 = static (default, uses some hardcoded memory variants)\n"
+		          "                      1 = dynamic (ingame memory allocation)\n"
+		          "                     0x = address (specify valid address)\n");
 		ds_printf("     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"

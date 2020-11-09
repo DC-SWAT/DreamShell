@@ -62,7 +62,7 @@ typedef struct {
     uint32  r2_bank;
     uint32  r1_bank;
     uint32  r0_bank;
-/*  FPU not used by ISO Loader for now
+#if 0//defined(__SH_FPU_ANY__) // FPU not used by ISO Loader for now
     float   fr0_b;
     float   fr1_b;
     float   fr2_b;
@@ -99,7 +99,7 @@ typedef struct {
 
     uint32  fpscr;
     uint32  fpul;
-*/
+#endif
     uint32  r14;
     uint32  r13;
     uint32  r12;

@@ -200,34 +200,56 @@ s32 g1_dma_irq_enabled() {
 }
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
-	
-#ifdef DEBUG
-	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
-	      *REG_INTEVT,
-		  ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT],
-	      ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT],
-	      ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT],
-		  g1_dma_irq_visible);
-//	dump_regs(stack);
-#else
-	LOGFF("%08lx 0x%08lx %d\n", *REG_INTEVT, ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT], g1_dma_irq_visible);
-#endif
 
-	if(!_g1_dma_irq_enabled) {
+	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
+	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
+
+	if((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
+		LOGF("ASIC_ERR_G1DMA: 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
+		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
+	}
+
+	if (!_g1_dma_irq_enabled) {
 		(void)passer;
 		(void)stack;
 		_g1_dma_irq_enabled = 1;
 	}
+	
+#ifdef DEBUG
+	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
+	      *REG_INTEVT, status, statusExt, statusErr, g1_dma_irq_visible);
+//	dump_regs(stack);
+#else
+	LOGFF("%08lx 0x%08lx %d\n", *REG_INTEVT, status, g1_dma_irq_visible);
+#endif
 
-	/* Processing filesystem */
-	poll_all();
+	if(statusExt & ASIC_EXT_GD_CMD) {
+		DBGF("ASIC_EXT_GD_CMD: 0x%08lx %d\n", statusExt, g1_dma_irq_visible);
 
-	if (g1_dma_irq_visible) {
-		return current_vector;
+		if (!(status & ASIC_NRM_GD_DMA)) {
+
+			/* Ack device IRQ. */
+			u8 state = IN8(G1_ATA_STATUS_REG);
+
+			if (state & ATA_SR_ERR) {
+				LOGF("G1_ATA_STATUS_REG: %x\n", state);
+			}
+		}
 	}
 
-	/* Ack DMA IRQ. */
-	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+	if (status & ASIC_NRM_GD_DMA) {
+
+		/* Processing filesystem */
+		poll_all();
+
+		if (g1_dma_irq_visible) {
+			return current_vector;
+		}
+
+		/* Ack DMA IRQ. */
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+	}
 
 	return my_exception_finish;
 }
@@ -245,11 +267,10 @@ s32 g1_dma_init_irq() {
 	asic_lookup_table_entry a_entry;
 
 	a_entry.irq = EXP_CODE_ALL;
+	a_entry.clear_irq = 0;
 	a_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-	a_entry.mask[ASIC_MASK_EXT_INT] = 0; //ASIC_EXT_GD_CMD;
-	a_entry.mask[ASIC_MASK_ERR_INT] = 0; /*ASIC_ERR_G1DMA_ILLEGAL |
-											ASIC_ERR_G1DMA_OVERRUN |
-											ASIC_ERR_G1DMA_ROM_FLASH;*/
+	a_entry.mask[ASIC_MASK_EXT_INT] = ASIC_EXT_GD_CMD;
+	a_entry.mask[ASIC_MASK_ERR_INT] = (ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN | ASIC_ERR_G1DMA_ROM_FLASH);
 	a_entry.handler = g1_dma_handler;
 	return asic_add_handler(&a_entry, NULL, 0);
 #endif

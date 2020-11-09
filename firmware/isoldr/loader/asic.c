@@ -27,10 +27,10 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	// uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
 	// if(code == EXP_CODE_INT11/* || code == EXP_CODE_INT9*/) {
-	// 	LOGFF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-	// 				*REG_INTEVT & 0x0fff, status, 
-	// 				ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
-	// 				ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+		// LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
+		// 			*REG_INTEVT & 0x0fff, status, 
+		// 			ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
+		// 			ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
 	// }
 //	dump_regs(stack);
 
@@ -46,20 +46,10 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
-	if((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
-		LOGFF("ASIC_ERR_G1DMA: 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
-		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
-	}
-
-	if(statusExt & ASIC_EXT_GD_CMD) {
-		DBGFF("ASIC_EXT_GD_CMD: 0x%08lx %d\n", statusExt, g1_dma_irq_visible);
-		if (!g1_dma_irq_visible) {
-			ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT] = ASIC_EXT_GD_CMD;
-			back_vector = my_exception_finish;
-		}
-	}
-
-	if(status & ASIC_NRM_GD_DMA) {
+	if((status & ASIC_NRM_GD_DMA) ||
+		(statusExt & ASIC_EXT_GD_CMD) ||
+		(statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)
+	) {
 		back_vector = g1_dma_handler(NULL, stack, current_vector);
 	}
 #else
@@ -99,17 +89,17 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 			where the SH4 combines them and/or the exceptions have been
 			placed in a queue. However, this doesn't bother me too much.
 		*/
-		for(int i = 0; i < 3; i++) {
+		for (int i = 0; i < 3; i++) {
 			passer.mask[i] = ASIC_IRQ_STATUS[i] & asic_table.table[index].mask[i];
 		}
 		
 		passer.irq = code;
-		passer.clear_irq = 1;
+		passer.clear_irq = asic_table.table[index].clear_irq;
 
 		if ((passer.mask[ASIC_MASK_NRM_INT] || passer.mask[ASIC_MASK_EXT_INT] || passer.mask[ASIC_MASK_ERR_INT]) && 
 			(asic_table.table[index].irq == passer.irq || asic_table.table[index].irq == EXP_CODE_ALL)) {
 			
-			new_vector = asic_table.table[index].handler (&passer, stack, new_vector);
+			new_vector = asic_table.table[index].handler(&passer, stack, new_vector);
 
 			/* Clear the IRQ by default - but the option is controllable. */
 			if (passer.clear_irq) {
@@ -127,7 +117,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 
 	/* Return properly, depending if there is an older handler. */
 	if (old_handler)
-		return old_handler (stack, new_vector);
+		return old_handler(stack, new_vector);
 	else
 		return new_vector;
 #endif

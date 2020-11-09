@@ -90,7 +90,7 @@ general_exception_xt:
     mov.l   r13, @-r15
     mov.l   r14, @-r15
 !FLOATING POINT
-#ifdef defined(__SH_FPU_ANY__)
+#if defined(__SH_FPU_ANY__)  ! FPU not used by ISO Loader for now
 !    sts.l   fpul, @-r15
 !    sts.l   fpscr, @-r15
 !    mov     #0, r2          ! Set known FP flags
@@ -185,7 +185,7 @@ general_exception_xt:
     ldc.l   @r15+, r1_bank
     ldc.l   @r15+, r0_bank
 !FLOATING POINT
-#if defined(__SH_FPU_ANY__)
+#if defined(__SH_FPU_ANY__)  ! FPU not used by ISO Loader for now
 !    mov     #0, r2          ! Set known FP flags
 !    lds     r2, fpscr
 !    frchg

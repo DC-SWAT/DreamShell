@@ -1002,9 +1002,9 @@ void gdcInitSystem(void) {
 
 	if(
 # if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-	((IsoInfo->use_dma && GDS->true_async) || IsoInfo->emu_cdda) && 
+	(IsoInfo->use_dma || IsoInfo->emu_cdda) && 
 # endif
-	((uint32)vbr() == 0x8c00f400 || IsoInfo->exec.type == BIN_TYPE_WINCE)) {
+	((uint32)vbr() == 0x8c00f400 || IsoInfo->exec.type != BIN_TYPE_KATANA)) {
 		
 		int old = irq_disable();
 		
@@ -1163,14 +1163,21 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	/* FIXME: fragmented files */
 //	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 
-	if(IsoInfo->use_dma || GDS->true_async) {
+	if(IsoInfo->use_dma) {
 		GDS->dma_status = 1;
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
 
-# if (defined(DEV_TYPE_IDE) && !defined(HAVE_EXPT)) || defined(DEV_TYPE_SD)
+# if defined(DEV_TYPE_IDE) && !defined(HAVE_EXPT)
 		// NOTE: In general this syscall should not be blocked
 		while(GDS->dma_status) {
+
+			GDS->streamed = pre_read_xfer_size();
+
+			if(!GDS->streamed) {
+				GDS->streamed = 32;
+			}
+
 			if(poll(iso_fd) < 0) {
 				GDS->status = CMD_STAT_FAILED;
 				break;

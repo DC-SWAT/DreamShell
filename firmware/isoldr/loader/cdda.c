@@ -132,35 +132,53 @@ static void setup_pcm_buffer() {
 	}
 	
 	/* Search free memory area in main RAM */
-	if((loader_addr > 0x8c010000 && cdda->size <= 0x8000) || (loader_addr <= 0x8c000100 && cdda->size <= 0x4000 && IsoInfo->exec.type != BIN_TYPE_WINCE)) {
-		
-		cdda->buff[0] = (uint8 *)0x8C00C000 - cdda->size;
-		
-	} else if((loader_addr <= 0x8c000100 || loader_addr > 0x8c010000) && IsoInfo->exec.type == BIN_TYPE_WINCE && cdda->size <= 0x8000) {
-		
-		cdda->buff[0] = (uint8 *)0x8c010000 - cdda->size;
+	if (IsoInfo->buff_mode >= BUFF_MEM_SPECIFY) {
 
-	} else {
+		cdda->buff[0] = (uint8 *)(IsoInfo->buff_mode);
+
+	} else if (IsoInfo->buff_mode == BUFF_MEM_DYNAMIC) {
 
 		if (cdda->alloc_buff && old_size != cdda->size) {
 
-			cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size);
+			cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size + 32);
 
-		} else if (cdda->alloc_buff == NULL && IsoInfo->buff_mode == BUFF_MEM_DYNAMIC) {
+		} else if (cdda->alloc_buff == NULL) {
 
-			// uint32 free_size, max_free_size;
-			// malloc_stat(&free_size, &max_free_size);
-			// if (freesize >= cdda->size << 1) {
-				cdda->alloc_buff = malloc(cdda->size + 32);
-			// }
+			cdda->alloc_buff = malloc(cdda->size + 32);
 		}
 
 		if (cdda->alloc_buff) {
 			cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
-		} else if (IsoInfo->buff_mode >= BUFF_MEM_SPECIFY) {
-			cdda->buff[0] = (uint8 *)(IsoInfo->buff_mode);
+		}
+	}
+
+	if (IsoInfo->buff_mode == BUFF_MEM_STATIC ||
+		(IsoInfo->buff_mode == BUFF_MEM_DYNAMIC && cdda->alloc_buff == NULL)
+	) {
+
+		if(loader_addr > 0x8c010000) {
+
+			if (IsoInfo->exec.type == BIN_TYPE_KATANA) {
+				cdda->buff[0] = (uint8 *)0x8c00c000 - cdda->size;
+			} else {
+				cdda->buff[0] = (uint8 *)0x8c010000 - cdda->size;
+			}
+
+		} else if (loader_addr <= 0x8c000100) {
+
+			if (IsoInfo->exec.type == BIN_TYPE_KATANA) {
+
+				if (cdda->size <= 0x4000) {
+					cdda->buff[0] = (uint8 *)0x8c00c000 - cdda->size;
+				} else {
+					cdda->buff[0] = (uint8 *)(0x8cfe8000 - cdda->size);
+				}
+
+			} else {
+				cdda->buff[0] = (uint8 *)0x8c010000 - cdda->size;
+			}
 		} else {
-			cdda->buff[0] = (uint8 *)(0x8D000000 - cdda->size - 0x18000);
+			cdda->buff[0] = (uint8 *)(0x8cfe8000 - cdda->size);
 		}
 	}
 	
