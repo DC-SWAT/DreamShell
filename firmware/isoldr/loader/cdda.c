@@ -318,67 +318,6 @@ static void setup_pcm_buffer() {
 		(uint32)cdda->buff[0], (uint32)cdda->aica_left[0], cdda->size);
 }
 
-
-static void clean_pcm_buffer() {
-	
-	DBGFF(NULL);
-	
-	if(aica_transfer_in_progress()) {
-		aica_transfer_stop();
-	}
-
-	/* Wait transfer done */
-	aica_transfer_wait();
-
-#if 0
-
-	/* Clean main RAM */
-	memset(cdda->buff[0], 0, cdda->size);
-
-	/**
-	 * FIXME: We can't use direct memory access if MMU enabled,
-	 * because this memory can be mapped.
-	 * The store queue can help, but WinCE doesn't like it.
-	 */
-	if(mmu_enabled()) {
-		return;
-	}
-	
-	size_t count;
-	register uint *d = (unsigned int *)(void *)(0xe0000000 | (cdda->aica_left[0] & 0x03ffffe0));
-//	register vuint32 *d = (vuint32*)cdda->aica_left[0];
-//	register int old;
-
-	/* Set store queue memory area as desired */
-	QACR0 = ((((unsigned int)cdda->aica_left[0]) >> 26) << 2) & 0x1c;
-	QACR1 = ((((unsigned int)cdda->aica_left[0]) >> 26) << 2) & 0x1c;
-
-	/* Fill both store queues with zeroes */
-	d[0] = d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = d[7] =
-		d[8] = d[9] = d[10] = d[11] = d[12] = d[13] = d[14] = d[15] = 0;
-
-	/* Write them as many times necessary */
-	count = cdda->size >> 5;
-	g2_fifo_wait();
-
-	while(count--) {
-//		g2_fifo_wait();
-//		g2_lock();
-//		d[0] = d[1] = d[2] = d[3] = d[4] = d[5] = d[6] = d[7] = 0;
-//		g2_unlock();
-		__asm__("pref @%0" : : "r"(d));
-		d += 8;
-	}
-	
-	cdda->cur_buff = 0;
-
-	/* Wait for both store queues to complete */
-	d = (unsigned int *)0xe0000000;
-	d[0] = d[8] = 0;
-#endif
-}
-
-
 static void aica_set_volume(int volume) {
 
 	uint32 val;
@@ -422,6 +361,13 @@ static void aica_stop_cdda(void) {
 	CHNREG32(AICA_CDDA_CH_LEFT,  0) = (l & ~0x4000) | 0x8000;
 	
 	g2_unlock();
+
+	if(aica_transfer_in_progress()) {
+		aica_transfer_stop();
+	}
+
+	/* Wait transfer done */
+	aica_transfer_wait();
 }
 
 static void aica_setup_cdda(int clean) {
@@ -443,7 +389,6 @@ static void aica_setup_cdda(int clean) {
 	freq_base = (freq_hi << 11) | (freq_lo & 1023);
 	
 	/* Setup SH4 timer */
-
 	if (IsoInfo->emu_cdda == CDDA_MODE_DMA_TMU1 || IsoInfo->emu_cdda == CDDA_MODE_SQ_TMU1) {
 		cdda->timer = TMU1;
 	} else {
@@ -459,9 +404,6 @@ static void aica_setup_cdda(int clean) {
 	if(clean) {
 		/* Stop AICA channels */
 		aica_stop_cdda();
-
-		/* Clean PCM buffers */
-		clean_pcm_buffer();
 	}
 	
 	/* Setup AICA channels */
@@ -758,7 +700,6 @@ static void stop_clean_cdda() {
 	cdda->stat = CDDA_STAT_IDLE;
 	aica_transfer_wait();
 	aica_stop_cdda();
-	clean_pcm_buffer();
 }
 
 #if defined(HAVE_EXPT) && !defined(NO_ASIC_LT)
@@ -1313,7 +1254,7 @@ void CDDA_MainLoop(void) {
 		cdda->cur_buff = cdda->cur_buff ? 0 : 1;
 		
 #ifdef DEV_TYPE_SD
-		if(cdda->stat = CDDA_STAT_WAIT) {
+		if(cdda->stat == CDDA_STAT_WAIT) {
 			poll(cdda->fd);
 		} else {
 			cdda->stat = CDDA_STAT_FILL;
