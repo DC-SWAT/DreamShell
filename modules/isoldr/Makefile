@@ -10,7 +10,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
 VER_MINOR = 6
-VER_MICRO = 1
+VER_MICRO = 2
 
 all: rm-elf
 

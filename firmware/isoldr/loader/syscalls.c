@@ -677,7 +677,7 @@ void gdcMainLoop(void) {
 	while(1) {
 
 		gd_state_t *GDS = get_GDS();
-		LOGFF(NULL);
+		DBGFF(NULL);
 		
 #ifndef HAVE_EXPT
 #ifdef HAVE_CDDA
@@ -756,21 +756,19 @@ void gdcMainLoop(void) {
 					break;
 #else
 				case CMD_PLAY:
-					GDS->status = CMD_STAT_COMPLETED;
-					break;
 				case CMD_PLAY2:
-					GDS->status = CMD_STAT_COMPLETED;
-					break;
 				case CMD_RELEASE:
 					GDS->status = CMD_STAT_COMPLETED;
+					GDS->drv_stat = CD_STATUS_PLAYING;
+					GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
 					break;
 				case CMD_PAUSE:
+				case CMD_STOP:
 					GDS->status = CMD_STAT_COMPLETED;
+					GDS->drv_stat = CD_STATUS_PAUSED;
+					GDS->cdda_stat = SCD_AUDIO_STATUS_PAUSED;
 					break;
 				case CMD_SEEK:
-					GDS->status = CMD_STAT_COMPLETED;
-					break;
-				case CMD_STOP:
 					GDS->status = CMD_STAT_COMPLETED;
 					break;
 #endif

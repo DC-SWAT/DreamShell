@@ -103,6 +103,18 @@ typedef enum isoldr_buff_mode {
 } isoldr_buff_mode_t;
 
 
+/**
+ * CDDA modes
+ */
+typedef enum isoldr_cdda_mode {
+	CDDA_MODE_DISABLED = 0,
+	CDDA_MODE_DMA_TMU2 = 1,
+	CDDA_MODE_DMA_TMU1,
+	CDDA_MODE_SQ_TMU2,
+	CDDA_MODE_SQ_TMU1
+} isoldr_cdda_mode_t;
+
+
 typedef struct isoldr_info {
 
 	char magic[12];                     /* isoldr magic code - 'DSISOLDRXXX' where XXX is version */
@@ -122,7 +134,7 @@ typedef struct isoldr_info {
 	uint32 sector_size;                 /* Data track sector size */
 
 	uint32 boot_mode;                   /* See isoldr_boot_mode_t */
-	uint32 emu_cdda;                    /* Emulate CDDA audio */
+	uint32 emu_cdda;                    /* Emulate CDDA audio. See isoldr_cdda_mode_t */
 	uint32 emu_async;                   /* Emulate async data transfer (value is sectors count per frame) */
 	uint32 use_dma;                     /* Use DMA data transfer for G1-bus devices (GD drive and IDE) */
 	uint32 fast_boot;                   /* Don't show any info on screen */

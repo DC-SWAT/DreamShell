@@ -531,7 +531,6 @@ void isoldr_exec_dcio(isoldr_info_t *info, const char *file) {
 int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	if(argc < 2) {
-
 		ds_printf("\n  ## ISO Loader v%d.%d.%d build %d ##\n\n"
 		          "Usage: %s options args\n"
 		          "Options: \n", VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD, argv[0]);
@@ -561,6 +560,11 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      0 = static (default, uses some hardcoded memory variants)\n"
 		          "                      1 = dynamic (ingame memory allocation)\n"
 		          "                     0x = address (specify valid address)\n");
+		ds_printf(" -g, --cddamode   -CDDA emulation mode\n"
+		          "                      1 = DMA and TMU2 (default)\n"
+		          "                      2 = DMA and TMU1\n"
+		          "                      3 = SQ and TMU2\n"
+		          "                      4 = SQ and TMU1\n");
 		ds_printf("     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"
@@ -575,6 +579,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, nogdtex = 0, fast_boot = 0, verbose = 0;
+	uint32 cdda_mode = CDDA_MODE_DMA_TMU2;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -590,6 +595,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"file",      'f', NULL, CFG_STR,   (void *) &file,        0},
 		{"async",     'e', NULL, CFG_ULONG, (void *) &emu_async,   0},
 		{"cdda",      'c', NULL, CFG_BOOL,  (void *) &emu_cdda,    0},
+		{"cddamode",  'g', NULL, CFG_ULONG, (void *) &cdda_mode,   0},
 		{"buffer",    'm', NULL, CFG_ULONG, (void *) &buff_mode,   0},
 		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
 		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
@@ -663,7 +669,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	info->boot_mode = boot_mode;
 	info->emu_async = emu_async;
-	info->emu_cdda  = emu_cdda;
+	info->emu_cdda  = (emu_cdda ? cdda_mode : emu_cdda);
 	info->use_dma   = use_dma;
 	info->fast_boot = fast_boot;
 	info->buff_mode = buff_mode;
