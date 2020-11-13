@@ -35,7 +35,6 @@
     .global _vbr
     .global _ubc_wait
     .global _exception_os_type
-!   .global _general_stack
     .global _interrupt_stack
 
 !_dbr:
@@ -242,11 +241,21 @@ general_exception_xt:
 !   mov.l   @r15+, r1
 	
     mov.l   _exception_os_type, r1
+    mov #2, r2
+    cmp/eq  r2, r1
+    bt katana_entry
     mov #3, r2
     cmp/eq  r2, r1
     bt wince_entry
 
-katana:
+kos_entry:
+    mov.l   @r15+, r2
+    mov.l   @r15+, r1
+    mov.l   @r15+, r4  ! Get the exception code
+    jmp     @r0
+    mov.l   @r15+, r0
+
+katana_entry:
     mov.l   @r15+, r2
     mov.l   @r15+, r1
     add     #4, r15    ! Skip the exception code
@@ -293,7 +302,7 @@ _exception_os_type:
 
 !_general_sub_handler:
 !general_exception_handler:
-!    mov.l   general_stack, r15 ! Only for WinCE, for other replaced by nop
+!    nop
 !    mov.l   r0, @-r15
 !    mov     #1, r0
 !    mov.l   r0, @-r15
@@ -305,10 +314,6 @@ _exception_os_type:
 !
 !general_handler:
 !    .long   general_exception_xt
-!_general_stack:
-!general_stack:
-!    .long 0x8c011000 ! Only for WinCE
-!
 !_general_sub_handler_base:
 !    nop
 !    bra     general_exception_handler
@@ -328,11 +333,6 @@ hdl_except:
 !
 ! HANDLE CACHE EXCEPTIONS
 !
-
-!cache_exception:
-!    nop
-!    bra     cache_exception_handler
-!    nop
 !
 !_cache_sub_handler:
 !cache_exception_handler:
@@ -358,11 +358,6 @@ hdl_except:
 !
 ! HANDLE INTERRUPT EXCEPTIONS
 !
-
-interrupt_exception:
-    nop
-    bra     interrupt_exception_handler
-    nop
 
 _interrupt_sub_handler:
 interrupt_exception_handler:

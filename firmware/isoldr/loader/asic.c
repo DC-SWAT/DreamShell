@@ -10,11 +10,8 @@
 #include <asic.h>
 #include <cdda.h>
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-# ifdef NO_ASIC_LT
+#if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(NO_ASIC_LT)
 void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
-# endif
-extern int g1_dma_irq_visible;
 #endif
 
 static asic_lookup_table   asic_table;
@@ -26,13 +23,13 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	uint32 code = *REG_INTEVT;
 	// uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
-	// if(code == EXP_CODE_INT11/* || code == EXP_CODE_INT9*/) {
-		// LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-		// 			*REG_INTEVT & 0x0fff, status, 
-		// 			ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
-		// 			ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+	// if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
+	// 	LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
+	// 				*REG_INTEVT & 0x0fff, status, 
+	// 				ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
+	// 				ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
 	// }
-//	dump_regs(stack);
+	// dump_regs(stack);
 
 #ifdef NO_ASIC_LT
 	/**
@@ -42,28 +39,26 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	void *back_vector = current_vector;
 	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
-	if((status & ASIC_NRM_GD_DMA) ||
+	if ((status & ASIC_NRM_GD_DMA) ||
 		(statusExt & ASIC_EXT_GD_CMD) ||
 		(statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)
 	) {
 		back_vector = g1_dma_handler(NULL, stack, current_vector);
 	}
-#else
+# else
 	(void)stack;
-#endif
+# endif
 
-	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
+	if (code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 
-		if(status & ASIC_NRM_VSYNC) {
-#ifdef HAVE_CDDA
-			if(IsoInfo->emu_cdda) {
-				CDDA_MainLoop();
-			}
-#endif
+		if (status & ASIC_NRM_VSYNC) {
+# ifdef HAVE_CDDA
+			CDDA_MainLoop();
+# endif
 			apply_patch_list();
 		}
 

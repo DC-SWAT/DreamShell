@@ -393,8 +393,6 @@ void data_transfer_true_async() {
 
 	while(GDS->dma_status) {
 
-		LOGFF("%d\n", GDS->transfered);
-
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if (!g1_dma_irq_enabled() || !g1_dma_in_progress())
 #endif
@@ -406,10 +404,12 @@ void data_transfer_true_async() {
 				GDS->status = CMD_STAT_FAILED;
 				LOGFF("ERROR, code %d\n", ps);
 				break;
+			} else if(ps > 0) {
+				GDS->transfered = ps;
 			}
-
-			GDS->transfered += ps;
 		}
+		
+		DBGFF("%d\n", GDS->transfered);
 		gdcExitToGame();
 	}
 }
@@ -855,7 +855,7 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 				break;
 			}
 
-			rv = CMD_STAT_ABORTED;
+			rv = CMD_STAT_STREAMING;
 			break;
 
 		case CMD_STAT_FAILED:
@@ -1000,21 +1000,24 @@ void gdcInitSystem(void) {
 
 	if(
 # if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-	(IsoInfo->use_dma || IsoInfo->emu_cdda) && 
+		IsoInfo->use_dma ||
 # endif
-	((uint32)vbr() == 0x8c00f400 || IsoInfo->exec.type != BIN_TYPE_KATANA)) {
-		
+		(IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_KATANA)
+	) {
+
 		int old = irq_disable();
 		
 		/* Injection to exception handling */
-		if(!exception_init(0)) {
+		if (!exception_init(0)) {
 
 			/* Use ASIC interrupts */
 			asic_init();
 
 # if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 			/* Initialize G1 DMA interrupt */
-			g1_dma_init_irq();
+			if (IsoInfo->use_dma) {
+				g1_dma_init_irq();
+			}
 # endif
 		}
 		
@@ -1091,17 +1094,17 @@ int gdcReadAbort(int gd_chn) {
 		case CMD_PLAY2:
 		case CMD_PAUSE:
 		case CMD_SEEK:
-		case CMD_DMAREAD_STREAM:
 		case CMD_NOP:
 		case CMD_SCAN_CD:
 		case CMD_STOP:
 		case CMD_GETSCD:
+		case CMD_DMAREAD_STREAM:
 		case CMD_PIOREAD_STREAM:
 		case CMD_DMAREAD_STREAM_EX:
 		case CMD_PIOREAD_STREAM_EX:
 			switch(GDS->status) {
 				case CMD_STAT_PROCESSING:
-				case CMD_STAT_COMPLETED:
+				case CMD_STAT_STREAMING:
 				case CMD_STAT_WAITING:
 					GDS->status = CMD_STAT_COMPLETED;
 					return 0;
@@ -1161,12 +1164,23 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	/* FIXME: fragmented files */
 //	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 
+# if defined(DEV_TYPE_IDE)
+	// NOTE: If exception is not used just polling to complete prev request
+	while(GDS->dma_status) {
+		if(poll(iso_fd) < 0) {
+			break;
+		}
+	}
+#endif
+
 	if(IsoInfo->use_dma) {
 		GDS->dma_status = 1;
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
 
-# if defined(DEV_TYPE_IDE) && !defined(HAVE_EXPT)
+# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		return 0;
+# else
 		// NOTE: In general this syscall should not be blocked
 		while(GDS->dma_status) {
 
@@ -1181,9 +1195,7 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 				break;
 			}
 		}
-# else
-		return 0;
-# endif
+#endif
 
 	} else
 #endif /*_FS_ASYNC */

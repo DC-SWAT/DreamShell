@@ -1137,7 +1137,9 @@ file_error:
 
 void CDDA_MainLoop(void) {
 	
-	if(cdda->stat == CDDA_STAT_IDLE) {
+	DBGFF("%d\n", cdda->stat);
+
+	if(cdda->stat == CDDA_STAT_IDLE || !IsoInfo->emu_cdda) {
 		return;
 	}
 	
