@@ -1,5 +1,6 @@
 /**
- * Copyright (c) 2017 Megavolt85, SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2014-2020 SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2017 Megavolt85
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -78,7 +79,8 @@ typedef struct ide_device
 
 s32 g1_bus_init(void);
 void g1_dma_abort(void);
-void g1_dma_set_irq_mask(s32 enable);
+void g1_dma_set_irq_mask(s32 last_transfer);
+s32 g1_dma_has_irq_mask();
 s32 g1_dma_init_irq(void);
 s32 g1_dma_irq_enabled(void);
 s32 g1_dma_in_progress(void);
