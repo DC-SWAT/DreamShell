@@ -371,15 +371,22 @@ static void data_transfer_cb(size_t size) {
 	GDS->dma_status = 0;
 }
 
+#if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(HAVE_EXPT)
+static int dma_check_pass;
+#endif
+
 void data_transfer_true_async() {
 
 	gd_state_t *GDS = get_GDS();
 	int ps;
 
-#ifdef DEV_TYPE_SD
+#if defined(DEV_TYPE_SD)
 	fs_enable_dma(IsoInfo->emu_async);
 #elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	fs_enable_dma(FS_DMA_SHARED);
+# if defined(HAVE_EXPT)
+	dma_check_pass = 0;
+# endif
 #endif
 
 	GDS->dma_status = 1;
@@ -391,10 +398,12 @@ void data_transfer_true_async() {
 		return;
 	}
 
+	dma_check_pass = 0;
 	while(GDS->dma_status) {
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if (!g1_dma_irq_enabled() || !g1_dma_in_progress())
+#if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(HAVE_EXPT)
+		// FIXME: dma_check_pass it's a hack for fix conflict of polling and IRQ
+		if (!(g1_dma_irq_enabled()/* && g1_dma_has_irq_mask()*/) || (++dma_check_pass > 5 && !g1_dma_in_progress()))
 #endif
 		{
 			ps = poll(iso_fd);
@@ -436,6 +445,8 @@ void data_transfer_emu_async() {
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if(IsoInfo->use_dma) {
 			fs_enable_dma((GDS->param[1] - sc) > 0 ? FS_DMA_HIDDEN : FS_DMA_SHARED);
+		} else {
+			fs_enable_dma(FS_DMA_DISABLED);
 		}
 #endif
 
@@ -500,13 +511,17 @@ void data_transfer() {
 
 
 	/**
-	 * Read in PIO mode or if requested 1/100 sector(s)
+	 * Read if emu async is disabled or if requested 1/100 sector(s)
 	 * 
 	 * 100 sectors is additional optimization.
 	 * It's looks like the game in loading state (request big data),
 	 * so we can increase general loading speed if load it for one frame
 	 */
-	if(!IsoInfo->emu_async || GDS->cmd != CMD_DMAREAD || GDS->param[1] == 1 || GDS->param[1] >= 100) {
+	if(!IsoInfo->emu_async
+#ifdef DEV_TYPE_SD
+	 || GDS->param[1] == 1 || GDS->param[1] >= 100
+#endif
+	) {
 
 		GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
 		GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
@@ -678,13 +693,11 @@ void gdcMainLoop(void) {
 
 		gd_state_t *GDS = get_GDS();
 		DBGFF(NULL);
-		
+
 #ifndef HAVE_EXPT
-#ifdef HAVE_CDDA
-		if(IsoInfo->emu_cdda && GDS->cdda_stat < SCD_AUDIO_STATUS_ENDED) {
-			CDDA_MainLoop();
-		}
-#endif
+# ifdef HAVE_CDDA
+		CDDA_MainLoop();
+# endif
 		apply_patch_list();
 #endif
 
@@ -975,7 +988,7 @@ void gdcInitSystem(void) {
 	if(
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		IsoInfo->use_dma && !IsoInfo->emu_async &&
-#else
+#elif defined(DEV_TYPE_SD)
 		IsoInfo->emu_async &&
 #endif
 		IsoInfo->sector_size == 2048
@@ -1259,6 +1272,20 @@ void gdcG1DmaEnd(uint32 func, uint32 param) {
 
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+	// g1_dma_irq_hide();
+#endif
+
+#if defined(_FS_ASYNC) && defined(DEV_TYPE_IDE)
+	/**
+	 * Trying to fix undefined behavior, because we shouldn't be here with this status.
+	 * Maybe IRQ issue.
+	 */
+	gd_state_t *GDS = get_GDS();
+	while(GDS->dma_status) {
+		if(poll(iso_fd) < 0) {
+			break;
+		}
+	}
 #endif
 
 	if(func != 0) {

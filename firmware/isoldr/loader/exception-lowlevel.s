@@ -31,7 +31,7 @@
 !    .global _dbr
     .global _dbr_set
 !    .global _sgr
-!    .global _r15
+    .global _r15
     .global _vbr
     .global _ubc_wait
     .global _exception_os_type
@@ -52,10 +52,10 @@ _dbr_set:
 !    rts
 !    nop
 !
-!_r15:
-!    mov     r15, r0
-!    rts
-!    nop
+_r15:
+    mov     r15, r0
+    rts
+    nop
 	
 _vbr:
     stc     VBR, r0

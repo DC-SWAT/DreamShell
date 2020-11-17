@@ -151,7 +151,8 @@ typedef struct ide_req {
 #endif
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
-static s16 g1_dma_part_avail = 0;
+static s16 g1_dma_part_avail = 0,
+			g1_dma_irq_count = 0;
 static s8 g1_dma_irq_visible = 0,
 			g1_dma_irq_called = 0,
 			g1_dma_irq_idx_game = 0;
@@ -199,11 +200,12 @@ s32 g1_dma_irq_enabled() {
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
+	uint32 code = *REG_INTEVT;
 	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
 	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
-	if((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
+	if ((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
 		LOGF("ASIC_ERR_G1DMA: 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
 		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
 	}
@@ -213,16 +215,25 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		(void)stack;
 		g1_dma_irq_called = 1;
 	}
+
+	uint32 g1_dma_irq_idx = (g1_dma_irq_visible ? g1_dma_irq_idx_game : g1_dma_irq_idx_internal);
+
+	if ((g1_dma_irq_idx == 13 && code != EXP_CODE_INT13) ||
+		(g1_dma_irq_idx == 11 && code != EXP_CODE_INT11) || 
+		(g1_dma_irq_idx == 9 && code != EXP_CODE_INT9)
+	) {
+		return current_vector;
+	}
 	
 #ifdef DEBUG
 	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
 	      *REG_INTEVT, status, statusExt, statusErr, g1_dma_irq_visible);
 //	dump_regs(stack);
 #else
-	LOGFF("%08lx 0x%08lx %d\n", *REG_INTEVT, status, g1_dma_irq_visible);
+	LOGFF("%08lx 0x%08lx %d 0x%08lx\n", *REG_INTEVT, status, g1_dma_irq_visible, (uint32)r15());
 #endif
 
-	if(statusExt & ASIC_EXT_GD_CMD) {
+	if (statusExt & ASIC_EXT_GD_CMD) {
 		DBGF("ASIC_EXT_GD_CMD: 0x%08lx %d\n", statusExt, g1_dma_irq_visible);
 
 		if (!(status & ASIC_NRM_GD_DMA)) {
@@ -241,7 +252,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		/* Processing filesystem */
 		poll_all();
 
-		if (g1_dma_irq_visible) {
+		if (g1_dma_irq_visible && ++g1_dma_irq_count < 5) {
 			return current_vector;
 		}
 
@@ -287,6 +298,9 @@ void g1_dma_abort(void) {
 }
 
 void g1_dma_start(u32 addr, size_t bytes) {
+
+	g1_dma_irq_count = 0;
+
 	/* Set the DMA parameters up. */
 	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 	OUT32(G1_ATA_DMA_ADDRESS, (addr & 0x0FFFFFFF));
@@ -338,7 +352,7 @@ void g1_dma_irq_hide(s32 all) {
 #endif
 }
 
-void g1_dma_irq_restore() {
+void g1_dma_irq_restore(void) {
 
 #ifdef HAVE_EXPT
 	if (g1_dma_irq_idx_internal == 9) {

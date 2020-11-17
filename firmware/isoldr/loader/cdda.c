@@ -755,19 +755,19 @@ int CDDA_Init() {
 int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 	
 	gd_state_t *GDS = get_GDS();
-	
+
+	if(!IsoInfo->emu_cdda) {
+		goto end;
+	}
+
 	if(cdda->stat) {
 		stop_clean_cdda();
 	} else if(GDS->cdda_stat == SCD_AUDIO_STATUS_PAUSED && 
 				first == cdda->first && cdda->fd > FILEHND_INVALID) {
 		return CDDA_Release();
 	}
-	
-	if(!IsoInfo->emu_cdda) {
-		
-		goto end;
-		
-	} else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
+
+	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
 		
 		if(IsoInfo->cdda_offset[first - 3] > 0) {
 			cdda->offset = IsoInfo->cdda_offset[first - 3] + 2520;
@@ -1137,15 +1137,21 @@ file_error:
 
 void CDDA_MainLoop(void) {
 	
-	DBGFF("%d\n", cdda->stat);
+	DBGFF("%d %d\n", IsoInfo->emu_cdda, cdda->stat);
 
 	if(cdda->stat == CDDA_STAT_IDLE || !IsoInfo->emu_cdda) {
 		return;
 	}
 	
 #ifdef _FS_ASYNC
-	/* Polling async data transfer */
-	if(cdda->stat == CDDA_STAT_WAIT && poll(cdda->fd) >= 0) {
+	if(cdda->stat == CDDA_STAT_WAIT) {
+# ifndef HAVE_EXPT
+		/* Polling async data transfer */
+		if(poll(cdda->fd) < 0) {
+			/* Retry on error */
+			cdda->stat == CDDA_STAT_FILL;
+		}
+# endif
 		aica_check_cdda();
 		return;
 	}

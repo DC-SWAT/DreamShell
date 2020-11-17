@@ -303,6 +303,8 @@ void video_screen_shot() {
 static int log_fd;
 #endif /* _FS_READONLY */
 
+static char log_buff[128];
+
 size_t strnlen(const char *s, size_t maxlen) {
 	const char *e;
 	size_t n;
@@ -339,6 +341,8 @@ int hex_to_int(char c) {
 
 
 int OpenLog() {
+
+	memset(log_buff, 0, sizeof(log_buff));
 
 #if _FS_READONLY == 0 && !defined(DEV_TYPE_GD)
 	log_fd = open("/isoldr.log", O_WRONLY);
@@ -377,15 +381,14 @@ static int PutLog(char *buff) {
 }
 
 int WriteLog(const char *fmt, ...) {
-	char buff[128];
 	va_list args;
 	int i;
 
 	va_start(args, fmt);
-	i = vsnprintf(buff, sizeof(buff), fmt, args);
+	i = vsnprintf(log_buff, sizeof(log_buff), fmt, args);
 	va_end(args);
 
-	PutLog(buff);
+	PutLog(log_buff);
 	return i;
 }
 
@@ -400,15 +403,14 @@ int WriteLogFunc(const char *func, const char *fmt, ...) {
 	
 	PutLog(": ");
 	
-	char buff[128];
 	va_list args;
 	int i;
 
 	va_start(args, fmt);
-	i = vsnprintf(buff, sizeof(buff), fmt, args);
+	i = vsnprintf(log_buff, sizeof(log_buff), fmt, args);
 	va_end(args);
 
-	PutLog(buff);
+	PutLog(log_buff);
 	return i;
 }
 
