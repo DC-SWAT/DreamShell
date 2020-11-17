@@ -17,41 +17,43 @@
 
     .section .text
 
-!    .global _ubc_handler_lowlevel
-!    .global _general_sub_handler
-!    .global _general_sub_handler_base
-!    .global _general_sub_handler_end
-    .global _my_exception_finish
 !    .global _cache_sub_handler
 !    .global _cache_sub_handler_base
 !    .global _cache_sub_handler_end
     .global _interrupt_sub_handler
     .global _interrupt_sub_handler_base
     .global _interrupt_sub_handler_end
-!    .global _dbr
-    .global _dbr_set
-!    .global _sgr
+    .global _my_exception_finish
     .global _r15
     .global _vbr
-    .global _ubc_wait
     .global _exception_os_type
     .global _interrupt_stack
 
-!_dbr:
-!    stc     DBR, r0
-!    rts
-!    nop
-!
+#ifdef USE_GDB
+    .global _ubc_handler_lowlevel
+    .global _ubc_wait
+    .global _general_sub_handler
+    .global _general_sub_handler_base
+    .global _general_sub_handler_end
+    .global _dbr
+    .global _dbr_set
+    .global _sgr
+_dbr:
+    stc     DBR, r0
+    rts
+    nop
+
 _dbr_set:
     ldc     r4, DBR
     rts
     nop
 
-!_sgr:
-!    stc     SGR, r0
-!    rts
-!    nop
-!
+_sgr:
+    stc     SGR, r0
+    rts
+    nop
+#endif
+
 _r15:
     mov     r15, r0
     rts
@@ -66,13 +68,15 @@ _vbr:
 ! HANDLE GENERAL EXCEPTIONS
 !
 
-!_ubc_handler_lowlevel:
-!ubc_exception:
+#ifdef USE_GDB
+_ubc_handler_lowlevel:
+ubc_exception:
 !BEGIN REGISTER SAVE
 !UBC via DBR
-!    mov.l   r0, @-r15
-!    mov     #1, r0
-!    mov.l   r0, @-r15
+    mov.l   r0, @-r15
+    mov     #1, r0
+    mov.l   r0, @-r15
+#endif
 general_exception_xt:
     mov.l   r1, @-r15
     mov.l   r2, @-r15
@@ -89,45 +93,45 @@ general_exception_xt:
     mov.l   r13, @-r15
     mov.l   r14, @-r15
 !FLOATING POINT
-#if defined(__SH_FPU_ANY__)  ! FPU not used by ISO Loader for now
-!    sts.l   fpul, @-r15
-!    sts.l   fpscr, @-r15
-!    mov     #0, r2          ! Set known FP flags
-!    lds     r2, fpscr
-!    fmov.s  fr15, @-r15
-!    fmov.s  fr14, @-r15
-!    fmov.s  fr13, @-r15
-!    fmov.s  fr12, @-r15
-!    fmov.s  fr11, @-r15
-!    fmov.s  fr10, @-r15
-!    fmov.s  fr9, @-r15
-!    fmov.s  fr8, @-r15
-!    fmov.s  fr7, @-r15
-!    fmov.s  fr6, @-r15
-!    fmov.s  fr5, @-r15
-!    fmov.s  fr4, @-r15
-!    fmov.s  fr3, @-r15
-!    fmov.s  fr2, @-r15
-!    fmov.s  fr1, @-r15
-!    fmov.s  fr0, @-r15
-!    frchg
-!    fmov.s  fr15, @-r15
-!    fmov.s  fr14, @-r15
-!    fmov.s  fr13, @-r15
-!    fmov.s  fr12, @-r15
-!    fmov.s  fr11, @-r15
-!    fmov.s  fr10, @-r15
-!    fmov.s  fr9, @-r15
-!    fmov.s  fr8, @-r15
-!    fmov.s  fr7, @-r15
-!    fmov.s  fr6, @-r15
-!    fmov.s  fr5, @-r15
-!    fmov.s  fr4, @-r15
-!    fmov.s  fr3, @-r15
-!    fmov.s  fr2, @-r15
-!    fmov.s  fr1, @-r15
-!    fmov.s  fr0, @-r15
-!    frchg
+#if 0//defined(__SH_FPU_ANY__)
+    sts.l   fpul, @-r15
+    sts.l   fpscr, @-r15
+    mov     #0, r2          ! Set known FP flags
+    lds     r2, fpscr
+    fmov.s  fr15, @-r15
+    fmov.s  fr14, @-r15
+    fmov.s  fr13, @-r15
+    fmov.s  fr12, @-r15
+    fmov.s  fr11, @-r15
+    fmov.s  fr10, @-r15
+    fmov.s  fr9, @-r15
+    fmov.s  fr8, @-r15
+    fmov.s  fr7, @-r15
+    fmov.s  fr6, @-r15
+    fmov.s  fr5, @-r15
+    fmov.s  fr4, @-r15
+    fmov.s  fr3, @-r15
+    fmov.s  fr2, @-r15
+    fmov.s  fr1, @-r15
+    fmov.s  fr0, @-r15
+    frchg
+    fmov.s  fr15, @-r15
+    fmov.s  fr14, @-r15
+    fmov.s  fr13, @-r15
+    fmov.s  fr12, @-r15
+    fmov.s  fr11, @-r15
+    fmov.s  fr10, @-r15
+    fmov.s  fr9, @-r15
+    fmov.s  fr8, @-r15
+    fmov.s  fr7, @-r15
+    fmov.s  fr6, @-r15
+    fmov.s  fr5, @-r15
+    fmov.s  fr4, @-r15
+    fmov.s  fr3, @-r15
+    fmov.s  fr2, @-r15
+    fmov.s  fr1, @-r15
+    fmov.s  fr0, @-r15
+    frchg
 #endif
 !CONTROL
     stc.l   r0_bank, @-r15
@@ -184,45 +188,45 @@ general_exception_xt:
     ldc.l   @r15+, r1_bank
     ldc.l   @r15+, r0_bank
 !FLOATING POINT
-#if defined(__SH_FPU_ANY__)  ! FPU not used by ISO Loader for now
-!    mov     #0, r2          ! Set known FP flags
-!    lds     r2, fpscr
-!    frchg
-!    fmov.s  @r15+, fr0
-!    fmov.s  @r15+, fr1
-!    fmov.s  @r15+, fr2
-!    fmov.s  @r15+, fr3
-!    fmov.s  @r15+, fr4
-!    fmov.s  @r15+, fr5
-!    fmov.s  @r15+, fr6
-!    fmov.s  @r15+, fr7
-!    fmov.s  @r15+, fr8
-!    fmov.s  @r15+, fr9
-!    fmov.s  @r15+, fr10
-!    fmov.s  @r15+, fr11
-!    fmov.s  @r15+, fr12
-!    fmov.s  @r15+, fr13
-!    fmov.s  @r15+, fr14
-!    fmov.s  @r15+, fr15
-!    frchg
-!    fmov.s  @r15+, fr0
-!    fmov.s  @r15+, fr1
-!    fmov.s  @r15+, fr2
-!    fmov.s  @r15+, fr3
-!    fmov.s  @r15+, fr4
-!    fmov.s  @r15+, fr5
-!    fmov.s  @r15+, fr6
-!    fmov.s  @r15+, fr7
-!    fmov.s  @r15+, fr8
-!    fmov.s  @r15+, fr9
-!    fmov.s  @r15+, fr10
-!    fmov.s  @r15+, fr11
-!    fmov.s  @r15+, fr12
-!    fmov.s  @r15+, fr13
-!    fmov.s  @r15+, fr14
-!    fmov.s  @r15+, fr15
-!    lds.l   @r15+, fpscr
-!    lds.l   @r15+, fpul
+#if 0//defined(__SH_FPU_ANY__)
+    mov     #0, r2          ! Set known FP flags
+    lds     r2, fpscr
+    frchg
+    fmov.s  @r15+, fr0
+    fmov.s  @r15+, fr1
+    fmov.s  @r15+, fr2
+    fmov.s  @r15+, fr3
+    fmov.s  @r15+, fr4
+    fmov.s  @r15+, fr5
+    fmov.s  @r15+, fr6
+    fmov.s  @r15+, fr7
+    fmov.s  @r15+, fr8
+    fmov.s  @r15+, fr9
+    fmov.s  @r15+, fr10
+    fmov.s  @r15+, fr11
+    fmov.s  @r15+, fr12
+    fmov.s  @r15+, fr13
+    fmov.s  @r15+, fr14
+    fmov.s  @r15+, fr15
+    frchg
+    fmov.s  @r15+, fr0
+    fmov.s  @r15+, fr1
+    fmov.s  @r15+, fr2
+    fmov.s  @r15+, fr3
+    fmov.s  @r15+, fr4
+    fmov.s  @r15+, fr5
+    fmov.s  @r15+, fr6
+    fmov.s  @r15+, fr7
+    fmov.s  @r15+, fr8
+    fmov.s  @r15+, fr9
+    fmov.s  @r15+, fr10
+    fmov.s  @r15+, fr11
+    fmov.s  @r15+, fr12
+    fmov.s  @r15+, fr13
+    fmov.s  @r15+, fr14
+    fmov.s  @r15+, fr15
+    lds.l   @r15+, fpscr
+    lds.l   @r15+, fpul
 #endif
 !GENERAL
     mov.l   @r15+, r14
@@ -300,25 +304,27 @@ _exception_os_type:
 	
 	.align 4
 
-!_general_sub_handler:
-!general_exception_handler:
-!    nop
-!    mov.l   r0, @-r15
-!    mov     #1, r0
-!    mov.l   r0, @-r15
-!    mov.l   general_handler, r0
-!    jmp     @r0
-!    nop
-!
-!    .align  4
-!
-!general_handler:
-!    .long   general_exception_xt
-!_general_sub_handler_base:
-!    nop
-!    bra     general_exception_handler
-!    nop
-!_general_sub_handler_end:
+#ifdef USE_GDB
+_general_sub_handler:
+general_exception_handler:
+    nop
+    mov.l   r0, @-r15
+    mov     #1, r0
+    mov.l   r0, @-r15
+    mov.l   general_handler, r0
+    jmp     @r0
+    nop
+
+    .align  4
+
+general_handler:
+    .long   general_exception_xt
+_general_sub_handler_base:
+    nop
+    bra     general_exception_handler
+    nop
+_general_sub_handler_end:
+#endif
 
 _my_exception_finish:
     stc     sgr, r15    ! Recover in case of missing stack (paranoia)
@@ -387,26 +393,28 @@ _interrupt_sub_handler_end:
 !
 ! Wait enough instructions for the UBC to be refreshed
 !
-!_ubc_wait:
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    nop
-!    rts
-!    nop
+#ifdef USE_GDB
+_ubc_wait:
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+    rts
+    nop
+#endif

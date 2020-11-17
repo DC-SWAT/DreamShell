@@ -857,16 +857,24 @@ gdb_handle_exception(int exceptionVector) {
                 /* sAA..AA   Step one instruction from AA..AA(optional) */
             case 's':
                 stepping = 1;
-            case 'c': {
-                /* tRY, to read optional parameter, pc unchanged if no parm */
-                if(hexToInt(&ptr, &addr))
-                    registers[PC] = addr;
 
-                if(stepping)
+                /* tRY, to read optional parameter, pc unchanged if no parm */
+                if(hexToInt(&ptr, &addr)) {
+                    registers[PC] = addr;
+                }
+
+                doSStep();
+                break;
+
+            case 'c':
+                if(hexToInt(&ptr, &addr)) {
+                    registers[PC] = addr;
+                }
+
+                if (stepping) {
                     doSStep();
-            }
-            return;
-            break;
+                }
+                break;
 
             /* kill the program */
             case 'k':       /* reboot */

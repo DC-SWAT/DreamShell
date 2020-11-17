@@ -26,7 +26,9 @@ int exception_inited(void) {
 static int exception_vbr_ok(void) {
 	
 	uint32 int_changed;
-//	uint32 gen_changed;
+#ifdef USE_GDB
+	uint32 gen_changed;
+#endif
 //	uint32 cache_changed;
 
     /* Check to see if our VBR hooks are still installed. */
@@ -35,12 +37,13 @@ static int exception_vbr_ok(void) {
 		interrupt_sub_handler,
 		interrupt_sub_handler_end - interrupt_sub_handler
 	);
-
-//	gen_changed = memcmp(
-//		VBR_GEN (vbr_buffer) - (general_sub_handler_base - general_sub_handler),
-//		general_sub_handler,
-//		general_sub_handler_end - general_sub_handler
-//	);
+#ifdef USE_GDB
+	gen_changed = memcmp(
+		VBR_GEN (vbr_buffer) - (general_sub_handler_base - general_sub_handler),
+		general_sub_handler,
+		general_sub_handler_end - general_sub_handler
+	);
+#endif
 //
 //	cache_changed = memcmp(
 //		VBR_GEN (vbr_buffer) - (cache_sub_handler_base - cache_sub_handler),
@@ -49,7 +52,13 @@ static int exception_vbr_ok(void) {
 //	);
 
     /* After enough exceptions, allow the initialization. */
-    return !(int_changed/* || gen_changed || cache_changed*/);
+    return !(
+		int_changed
+#ifdef USE_GDB
+		|| gen_changed
+#endif
+		/* || cache_changed*/
+	);
 }
 
 int exception_init(uint32 vbr_addr) {
@@ -92,12 +101,19 @@ int exception_init(uint32 vbr_addr) {
 		interrupt_sub_handler_end - interrupt_sub_handler
 	);
 
+	if (exception_os_type != BIN_TYPE_WINCE) {
+		uint16 *change_stack_instr = VBR_INT(vbr_buffer) - (interrupt_sub_handler_base - interrupt_sub_handler);
+		*change_stack_instr = 0x0009; // nop
+	}
+
+#ifdef USE_GDB
 	/* General exception hack for VBR. */
-//	memcpy(
-//		VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler),
-//		general_sub_handler,
-//		general_sub_handler_end - general_sub_handler
-//	);
+	memcpy(
+		VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler),
+		general_sub_handler,
+		general_sub_handler_end - general_sub_handler
+	);
+#endif
 
 	/* Cache exception hack for VBR. */
 //	memcpy(
@@ -105,11 +121,6 @@ int exception_init(uint32 vbr_addr) {
 //		cache_sub_handler,
 //		cache_sub_handler_end - cache_sub_handler
 //	);
-
-	if (exception_os_type != BIN_TYPE_WINCE) {
-		uint16 *change_stack_instr = VBR_INT(vbr_buffer) - (interrupt_sub_handler_base - interrupt_sub_handler);
-		*change_stack_instr = 0x0009; // nop
-	}
 
 	/* Flush cache after modifying application memory. */
 	dcache_flush_range((uint32)vbr_buffer, 0xC08);
@@ -184,21 +195,23 @@ void *exception_handler(register_stack *stack) {
 	/* Increase our counters and set the proper back_vectors. */
 	switch (stack->exception_type)
 	{
-//		case EXP_TYPE_GEN :
-//		{
-//			//exp_table.general_exception_count++;
-//			exception_code = *REG_EXPEVT;
-//
-//			/* Never pass on UBC interrupts to the game. */
-//			if ((exception_code == EXP_CODE_UBC) || (exception_code == EXP_CODE_TRAP)) {
-//				//exp_table.ubc_exception_count++;
-//				back_vector = my_exception_finish;
-//			} else {
-//				back_vector = exception_os_type == BIN_TYPE_KOS ? vbr_buffer_orig : VBR_GEN(vbr_buffer_orig);
-//			}
-//
-//			break; 
-//		}
+#ifdef USE_GDB
+		case EXP_TYPE_GEN :
+		{
+			//exp_table.general_exception_count++;
+			exception_code = *REG_EXPEVT;
+
+			/* Never pass on UBC interrupts to the game. */
+			if ((exception_code == EXP_CODE_UBC) || (exception_code == EXP_CODE_TRAP)) {
+				//exp_table.ubc_exception_count++;
+				back_vector = my_exception_finish;
+			} else {
+				back_vector = exception_os_type == BIN_TYPE_KOS ? vbr_buffer_orig : VBR_GEN(vbr_buffer_orig);
+			}
+
+			break; 
+		}
+#endif
 //
 //		case EXP_TYPE_CACHE :
 //		{

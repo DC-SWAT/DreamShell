@@ -398,7 +398,6 @@ void data_transfer_true_async() {
 		return;
 	}
 
-	dma_check_pass = 0;
 	while(GDS->dma_status) {
 
 #if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(HAVE_EXPT)
