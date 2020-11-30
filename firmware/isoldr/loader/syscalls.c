@@ -1010,12 +1010,7 @@ void gdcInitSystem(void) {
 
 #ifdef HAVE_EXPT
 
-	if(
-# if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-		IsoInfo->use_dma ||
-# endif
-		(IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_KATANA)
-	) {
+	if(IsoInfo->use_irq) {
 
 		int old = irq_disable();
 		
@@ -1176,23 +1171,16 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	/* FIXME: fragmented files */
 //	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 
-# if defined(DEV_TYPE_IDE)
-	// NOTE: If exception is not used just polling to complete prev request
-	while(GDS->dma_status) {
-		if(poll(iso_fd) < 0) {
-			break;
-		}
-	}
-#endif
-
-	if(IsoInfo->use_dma) {
+	if(GDS->true_async
+# if defined(DEV_TYPE_IDE) && defined(HAVE_EXPT)
+		&& exception_inited()
+# endif
+	) {
 		GDS->dma_status = 1;
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
 
-# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		return 0;
-# else
+# if !(defined(DEV_TYPE_IDE) && defined(HAVE_EXPT)) && !defined(DEV_TYPE_GD)
 		// NOTE: In general this syscall should not be blocked
 		while(GDS->dma_status) {
 
@@ -1207,18 +1195,17 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 				break;
 			}
 		}
-#endif
-
-	} else
+# endif
+		return 0;
+	}
 #endif /*_FS_ASYNC */
-	{
-		GDS->streamed = dmabuf[1];
-		GDS->transfered += dmabuf[1];
-		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], NULL);
 
-		if(!GDS->requested) {
-			GDS->status = CMD_STAT_COMPLETED;
-		}
+	GDS->streamed = dmabuf[1];
+	GDS->transfered += dmabuf[1];
+	ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], NULL);
+
+	if(!GDS->requested) {
+		GDS->status = CMD_STAT_COMPLETED;
 	}
 
 	return 0;

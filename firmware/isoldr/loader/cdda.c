@@ -1149,7 +1149,7 @@ void CDDA_MainLoop(void) {
 		/* Polling async data transfer */
 		if(poll(cdda->fd) < 0) {
 			/* Retry on error */
-			cdda->stat == CDDA_STAT_FILL;
+			cdda->stat = CDDA_STAT_FILL;
 		}
 # endif
 		aica_check_cdda();

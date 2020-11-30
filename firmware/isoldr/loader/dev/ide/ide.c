@@ -153,7 +153,7 @@ typedef struct ide_req {
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static s16 g1_dma_part_avail = 0,
 			g1_dma_irq_count = 0;
-static s8 g1_dma_irq_visible = 0,
+static s8 g1_dma_irq_visible = 1,
 			g1_dma_irq_called = 0,
 			g1_dma_irq_idx_game = 0;
 
@@ -408,6 +408,9 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 		} else if (!last_transfer && g1_dma_irq_visible) {
 			g1_dma_irq_hide(0);
 		} else {
+			if(!g1_dma_irq_idx_game) {
+				g1_dma_irq_idx_game = g1_dma_has_irq_mask();
+			}
 			return;
 		}
 	}
@@ -429,9 +432,10 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 }
 
 s32 g1_dma_has_irq_mask() {
-	return ((*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ||
-			(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ||
-			(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA));
+	if (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) return 9; 
+	if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) return 11; 
+	if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) return 13;
+	return 0;
 }
 
 /* This one is an inline function since it needs to return something... */

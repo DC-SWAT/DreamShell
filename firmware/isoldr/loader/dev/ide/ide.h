@@ -60,7 +60,7 @@ typedef struct ide_device
 {
 	u8  reserved;		// 0 (Empty) or 1 (This Drive really exists).
 	u8  drive;			// 0 (Master Drive) or 1 (Slave Drive).
-	u8  type;			// 0: ATA, 1: ATAPI, 2: SPI.
+	u8  type;			// 0: ATA, 1: ATAPI, 2: SPI (Sega Packet Interface)
 	u16 sign;			// Drive Signature
 	u16 capabilities;	// Features.
 	u32 command_sets;	// Command Sets Supported.

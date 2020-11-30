@@ -537,7 +537,9 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf(" -s, --fast       -Fast boot mode (don't show any info on screen)\n",
 		          " -i, --verbose    -Show additional info\n",
 		          " -a, --dma        -Use DMA transfer if available\n"
-		          " -c, --cdda       -Emulate CDDA audio\n");
+		          " -q, --irq        -Use IRQ handling injection\n"
+		          " -c, --cdda       -Emulate CDDA audio\n"
+		          " -s, --fast       -Don't show loader text and disc texture on screen\n");
 		ds_printf("Arguments: \n"
 		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
 		          " -d, --device     -Loader device (sd/ide/cd/dcl/dcio), default auto\n"
@@ -578,13 +580,12 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 addr = 0, use_dma = 0, lex = 0, buff_mode = BUFF_MEM_STATIC;
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
-	uint32 bin_type = BIN_TYPE_AUTO, nogdtex = 0, fast_boot = 0, verbose = 0;
-	uint32 cdda_mode = CDDA_MODE_DMA_TMU2;
+	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
+	uint32 cdda_mode = CDDA_MODE_DMA_TMU2, use_irq = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
 	struct cfg_option options[] = {
-		{"nogdtex",   'n', NULL, CFG_BOOL,  (void *) &nogdtex,     0}, /* Deprecated */
 		{"verbose",   'i', NULL, CFG_BOOL,  (void *) &verbose,     0},
 		{"dma",       'a', NULL, CFG_BOOL,  (void *) &use_dma,     0},
 		{"device",    'd', NULL, CFG_STR,   (void *) &device,      0},
@@ -600,7 +601,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
 		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
-		{"fast",      's', NULL, CFG_ULONG, (void *) &fast_boot,   0},
+		{"fast",      's', NULL, CFG_BOOL,  (void *) &fast_boot,   0},
+		{"irq",       'q', NULL, CFG_BOOL,  (void *) &use_irq,     0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -623,11 +625,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		}
 	}
 
-	if(fast_boot) {
-		nogdtex = 1;
-	}
-
-	info = isoldr_get_info(file, nogdtex ? 0 : 1);
+	info = isoldr_get_info(file, fast_boot ? 0 : 1);
 
 	if(info == NULL) {
 		return CMD_ERROR;
@@ -673,6 +671,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->use_dma   = use_dma;
 	info->fast_boot = fast_boot;
 	info->buff_mode = buff_mode;
+	info->use_irq   = use_irq;
 	
 	info->patch_addr[0]  = p_addr[0];
 	info->patch_addr[1]  = p_addr[1];
