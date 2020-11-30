@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2020 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -160,7 +160,7 @@ int main(int argc, char *argv[]) {
 	timer_start(TMU0);
 	
 #ifdef HAVE_EXPT
-	if(IsoInfo->exec.type == BIN_TYPE_WINCE) {
+	if(IsoInfo->exec.type == BIN_TYPE_WINCE && IsoInfo->use_irq) {
 		/* Check WinCE version and hack VBR before executing */
 		if(*((uint8 *)0xac01000c) == 0xe0) {
 			exception_init(0x8c012110);

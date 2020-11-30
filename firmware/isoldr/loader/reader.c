@@ -102,6 +102,7 @@ int InitReader() {
 	sector_buffer_size = ISOLDR_MAX_MEM_USAGE - (ISOLDR_PARAMS_SIZE + loader_size + SECTOR_BUFFER_PAD);
 
 	/* If the loader placed at 0x8c004800 or 0x8c000100, need correct the buffer size */
+	// TODO: Try dynamic buffer
 	if(loader_addr <= 0x8c000100) {
 		sector_buffer_size -= 0x100;
 	} else if(loader_end < 0x8c010000 && (loader_end + sector_buffer_size) > 0x8c00C000) {
@@ -666,7 +667,8 @@ static int ciso_read_init(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb)
 	cst.p_buff_size = cnt << 2;
 	
 	uint len = cst.p_buff_size + sizeof(uint);
-	
+
+	// TODO: Try dynamic buffer
 	if((uint32)IsoInfo > 0x8c010000 || (uint32)IsoInfo < 0x8c004000) {
 		
 		if(IsoInfo->boot_mode != BOOT_MODE_DIRECT)

@@ -9,6 +9,7 @@
 #include <main.h>
 #include <mmu.h>
 #include <asic.h>
+#include <exception.h>
 #include <drivers/aica.h>
 #include <arch/irq.h>
 #include <arch/cache.h>
@@ -1145,13 +1146,19 @@ void CDDA_MainLoop(void) {
 	
 #ifdef _FS_ASYNC
 	if(cdda->stat == CDDA_STAT_WAIT) {
-# ifndef HAVE_EXPT
+
 		/* Polling async data transfer */
-		if(poll(cdda->fd) < 0) {
-			/* Retry on error */
-			cdda->stat = CDDA_STAT_FILL;
-		}
+		if(!IsoInfo->use_irq
+# ifdef HAVE_EXPT
+			|| !exception_inited()
 # endif
+		) {
+			if(poll(cdda->fd) < 0) {
+				/* Retry on error */
+				cdda->stat = CDDA_STAT_FILL;
+			}
+		}
+
 		aica_check_cdda();
 		return;
 	}

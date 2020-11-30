@@ -336,7 +336,7 @@ void g1_dma_irq_hide(s32 all) {
 	}
 
 #ifdef HAVE_EXPT
-	if (!all) {
+	if (!all && exception_inited()) {
 		if (g1_dma_irq_idx_game == 9) {
 			*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
 			g1_dma_irq_idx_internal = 11;
@@ -1055,21 +1055,16 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 
 s32 g1_ata_poll(void) {
 
+	if(g1_dma_in_progress()
 #ifdef HAVE_EXPT
-	if(exception_inside_int()) {
-		goto poll_end;
-	}
+		&& !exception_inside_int()
 #endif
-
-	if(g1_dma_in_progress()) {
+	) {
 		int rv = g1_dma_transfered();
 		DBGFF("%d\n", rv);
 		return rv > 0 ? rv : 32;
 	}
 
-#ifdef HAVE_EXPT
-poll_end:
-#endif
 	if (g1_dma_part_avail) {
 		return 0;
 	}

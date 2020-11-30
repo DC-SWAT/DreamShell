@@ -401,8 +401,8 @@ void data_transfer_true_async() {
 	while(GDS->dma_status) {
 
 #if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(HAVE_EXPT)
-		// FIXME: dma_check_pass it's a hack for fix conflict of polling and IRQ
-		if (!(g1_dma_irq_enabled()/* && g1_dma_has_irq_mask()*/) || (++dma_check_pass > 5 && !g1_dma_in_progress()))
+		// FIXME: dma_check_pass it's a hack for fix conflict of polling and IRQ (suddenly turned on)
+		if (!exception_inited() || !g1_dma_irq_enabled() || (++dma_check_pass > 5 && !g1_dma_in_progress()))
 #endif
 		{
 			ps = poll(iso_fd);
@@ -693,12 +693,17 @@ void gdcMainLoop(void) {
 		gd_state_t *GDS = get_GDS();
 		DBGFF(NULL);
 
-#ifndef HAVE_EXPT
-# ifdef HAVE_CDDA
-		CDDA_MainLoop();
-# endif
-		apply_patch_list();
+		if(!IsoInfo->use_irq
+#ifdef HAVE_EXPT
+			|| !exception_inited()
 #endif
+		) {
+
+#ifdef HAVE_CDDA
+			CDDA_MainLoop();
+#endif
+			apply_patch_list();
+		}
 
 		if(GDS->status == CMD_STAT_PROCESSING) {
 
@@ -1030,7 +1035,7 @@ void gdcInitSystem(void) {
 		
 		irq_restore(old);
 
-#  ifdef USE_GDB
+# ifdef USE_GDB
 
 		gdb_init();
 		
@@ -1044,9 +1049,9 @@ void gdcInitSystem(void) {
 			gdb_init();
 		}
 	}
-#  else
+# else
 	}
-#  endif /* USE_GDB */
+# endif /* USE_GDB */
 	
 #endif /* HAVE_EXPT */
 
