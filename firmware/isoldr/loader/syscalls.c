@@ -34,6 +34,7 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->drv_stat = CD_STATUS_PAUSED;
 	GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
+	GDS->cdda_track = 0;
 	GDS->err = CMD_ERR_OK;
 	// GDS->err2 = 0;
 	GDS->disc_change = 0;
@@ -518,7 +519,7 @@ void data_transfer() {
 	 */
 	if(!IsoInfo->emu_async
 #ifdef DEV_TYPE_SD
-	 || GDS->param[1] == 1 || GDS->param[1] >= 100
+		|| GDS->param[1] == 1 || GDS->param[1] >= 100
 #endif
 	) {
 
@@ -693,12 +694,10 @@ void gdcMainLoop(void) {
 		gd_state_t *GDS = get_GDS();
 		DBGFF(NULL);
 
-		if(!IsoInfo->use_irq
 #ifdef HAVE_EXPT
-			|| !exception_inited()
+		if(!exception_inited())
 #endif
-		) {
-
+		{
 #ifdef HAVE_CDDA
 			CDDA_MainLoop();
 #endif
@@ -863,7 +862,7 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 
 		case CMD_STAT_STREAMING:
 
-			status[2] = (!GDS->transfered) ? 2048 : GDS->transfered;
+			status[2] = GDS->streamed;
 
 			if (GDS->err != CMD_ERR_OK) {
 				status[0] = GDS->err;
@@ -1096,6 +1095,7 @@ int gdcReadAbort(int gd_chn) {
 #if _FS_ASYNC
 	if(GDS->dma_status) {
 		abort_async(iso_fd);
+		GDS->dma_status = 0;
 	}
 #endif
 
@@ -1151,7 +1151,10 @@ static void data_stream_cb(size_t size) {
 #endif
 
 /**
- * Request DMA transfer syscall
+ * Request DMA transfer syscall.
+ * 
+ * In general this syscall should not be blocked
+ * but we will work out all possible options.
  */
 int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	
@@ -1176,21 +1179,22 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	/* FIXME: fragmented files */
 //	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 
-	if(GDS->true_async
-# if defined(DEV_TYPE_IDE) && defined(HAVE_EXPT)
-		&& exception_inited()
-# endif
-	) {
+	if(GDS->true_async) {
 		GDS->dma_status = 1;
 		GDS->streamed = 32;
 		ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
 
-# if !(defined(DEV_TYPE_IDE) && defined(HAVE_EXPT)) && !defined(DEV_TYPE_GD)
-		// NOTE: In general this syscall should not be blocked
+# if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(HAVE_EXPT)
+		if(exception_inited()) {
+			// This is only right case, returning without waiting
+			return 0;
+		}
+# endif
 		while(GDS->dma_status) {
 
 			GDS->streamed = pre_read_xfer_size();
 
+			// NOTE: Just to be sure for gdcCheckDmaTrans 
 			if(!GDS->streamed) {
 				GDS->streamed = 32;
 			}
@@ -1200,7 +1204,6 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 				break;
 			}
 		}
-# endif
 		return 0;
 	}
 #endif /*_FS_ASYNC */
@@ -1263,20 +1266,6 @@ void gdcG1DmaEnd(uint32 func, uint32 param) {
 
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-	// g1_dma_irq_hide();
-#endif
-
-#if defined(_FS_ASYNC) && defined(DEV_TYPE_IDE)
-	/**
-	 * Trying to fix undefined behavior, because we shouldn't be here with this status.
-	 * Maybe IRQ issue.
-	 */
-	gd_state_t *GDS = get_GDS();
-	while(GDS->dma_status) {
-		if(poll(iso_fd) < 0) {
-			break;
-		}
-	}
 #endif
 
 	if(func != 0) {
@@ -1452,6 +1441,8 @@ int flashrom_read(int offset, void *buffer, int bytes) {
 #else
 	safe_memcpy(buffer, (void*)(0xa0200000 + offset), bytes);
 #endif
+
+	dcache_purge_range((uint32)buffer, bytes);
 	return 0;
 }
 

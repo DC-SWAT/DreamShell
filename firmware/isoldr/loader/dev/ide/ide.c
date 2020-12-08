@@ -1055,11 +1055,11 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 
 s32 g1_ata_poll(void) {
 
-	if(g1_dma_in_progress()
 #ifdef HAVE_EXPT
-		&& !exception_inside_int()
+	if(!exception_inside_int() && g1_dma_in_progress()) {
+#else
+	if(g1_dma_in_progress()) {
 #endif
-	) {
 		int rv = g1_dma_transfered();
 		DBGFF("%d\n", rv);
 		return rv > 0 ? rv : 32;
