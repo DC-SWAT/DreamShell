@@ -20,7 +20,7 @@ export KOS_ARCH="dreamcast"
 export KOS_SUBARCH="pristine"
 
 # KOS main base path
-export KOS_BASE="/usr/local/dc/kos"
+export KOS_BASE="/usr/local/dc/kos/kos"
 export KOS_PORTS="${KOS_BASE}/../kos-ports"
 
 # Make utility
