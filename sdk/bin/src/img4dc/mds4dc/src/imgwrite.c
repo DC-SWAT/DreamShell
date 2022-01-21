@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "imgwrite.h"
 #include "mdsaudio.h"
+#include "mdsdata.h"
 #include "mdfwrt.h"
 #include "tools.h"
 #include "config.h"
@@ -35,7 +36,7 @@ void write_audio_data_image(FILE* mds, FILE* mdf, FILE* iso, int cdda_tracks_cou
 		/* Ecriture des pistes CDDA en session 1 */
 		if (image_format == AUDIO_DATA_CUSTOM_CDDA_IMAGE_FORMAT) {
 			
-			// on va écrire chaque piste audio dans le fichier.
+			// on va ï¿½crire chaque piste audio dans le fichier.
 			for(i = 0 ; i < cdda_tracks_count ; i++) {
 				raw = fopen(audio_files_array[i], "rb");
 				
@@ -65,7 +66,7 @@ void write_audio_data_image(FILE* mds, FILE* mdf, FILE* iso, int cdda_tracks_cou
 			
 		} else { 
 			// AUDIO_DATA_IMAGE_FORMAT
-			// une fausse piste audio de 302 secteurs est écrite.
+			// une fausse piste audio de 302 secteurs est ï¿½crite.
 			audio_infos[0].lba = 0;
 			audio_infos[0].sectors_count = MINIMAL_TRACK_SIZE_BLOCKS + 2;
 			cdda_session_sectors_count = audio_infos[0].sectors_count;
@@ -96,7 +97,7 @@ void write_audio_data_image(FILE* mds, FILE* mdf, FILE* iso, int cdda_tracks_cou
 #endif
 		}
 		
-		// écriture du MDF terminée.
+		// ï¿½criture du MDF terminï¿½e.
 		fclose(mdf);
 	} else {
 		image_creation_okay = 0;
@@ -111,7 +112,7 @@ void write_audio_data_image(FILE* mds, FILE* mdf, FILE* iso, int cdda_tracks_cou
 
 	/* ECRITURE DU MDS */
 	if (mds != NULL) {
-		// en-tête
+		// en-tï¿½te
 		ad_write_mds_header(mds);
 		
 		// session 1 (audio)
@@ -207,7 +208,7 @@ void write_data_data_image(FILE* mds, FILE* mdf, FILE* iso) {
 #endif
 		}
 		
-		// écriture du MDF terminée.
+		// ï¿½criture du MDF terminï¿½e.
 		fclose(mdf);
 	} else {
 		image_creation_okay = 0;
@@ -222,7 +223,7 @@ void write_data_data_image(FILE* mds, FILE* mdf, FILE* iso) {
 
 	/* ECRITURE DU MDS */
 	if (mds != NULL) {
-		// en-tête
+		// en-tï¿½te
 		dd_write_mds_header(mds);
 		
 		// session 1
@@ -238,7 +239,7 @@ void write_data_data_image(FILE* mds, FILE* mdf, FILE* iso) {
 		dd_write_boot_lead_in_track_last_infos(mds);
 		dd_write_boot_lead_in_track_leadout_infos(mds, data_session_sectors_count, data_boothead_session_sectors_count);
 		dd_write_boot_track_infos(mds, data_session_sectors_count);
-		dd_write_boot_track_infos_header(mds);
+		dd_write_boot_track_infos_header(mds, data_session_sectors_count);
 		
 		// pied
 		dd_write_mds_footer(mds);

@@ -16,5 +16,12 @@ char* check_ext(char* in, char* ext);
 char* get_friendly_unit(float* size);
 int check_iso_is_bootable(FILE* iso);
 char* extract_proggyname(char* in);
+void warning_msg(char* msg);
+void info_msg(char* msg);
+void start_progressbar();
+void padding_event(int sector_count);
+void writing_track_event(uint32_t current, uint32_t total);
+void writing_data_track_event(uint32_t current_pos, uint32_t total_iso_size);
+void writing_track_event_end(uint32_t block_count, uint32_t track_size);
 
 #endif //__TOOLS__H__

@@ -16,8 +16,10 @@
 #include <stdio.h>
 #include "cdihead.h"
 #include "libedc.h"
+#include "tools.h"
 
 int write_gap_tracks(FILE* cdi);
+void write_gap_end_tracks(FILE *cdi);
 int write_data_track(FILE* cdi, FILE* iso);
 void write_cdi_header_start(FILE* cdi, char* cdiname);
 void write_cdi_head_end(FILE* cdi, char* volumename, uint32_t total_cdi_space_used, long cdi_end_image_tracks);

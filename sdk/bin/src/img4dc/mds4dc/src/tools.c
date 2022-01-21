@@ -1,19 +1,20 @@
 #include "tools.h"
+#include <ctype.h>
 
 /* 
-	Pour passer un tableau à plusieurs dimensions en paramètre à une fonction, il suffit fournir les différentes 
+	Pour passer un tableau ï¿½ plusieurs dimensions en paramï¿½tre ï¿½ une fonction, il suffit fournir les diffï¿½rentes 
 	dimensions dans le prototype de la fonction.
-	La dimension la plus à gauche (et uniquement celle-ci) peut être omise dans le prototype de la fonction.
+	La dimension la plus ï¿½ gauche (et uniquement celle-ci) peut ï¿½tre omise dans le prototype de la fonction.
 	
-	Comme on sait que les tableaux décrivant les secteurs correspondent à une adresse suivie de la valeur à cette adresse, 
+	Comme on sait que les tableaux dï¿½crivant les secteurs correspondent ï¿½ une adresse suivie de la valeur ï¿½ cette adresse, 
 	on peut donc mettre ici 2.
 */
 
-// remplir un buffer avec un tableau défini dans cdihead.h
+// remplir un buffer avec un tableau dï¿½fini dans cdihead.h
 void fill_buffer(unsigned char *buf, int total_size, int values_array_size, const unsigned int values_array[][2]) {
 	int i, offset;
 	
-	// on remplit de zéro tout le buffer
+	// on remplit de zï¿½ro tout le buffer
 	memset(buf, 0x0, total_size);
 	
 	// on rajoute nos valeurs
@@ -23,7 +24,7 @@ void fill_buffer(unsigned char *buf, int total_size, int values_array_size, cons
 	}
 }
 
-// ecrire size bytes de zéros dans le fichier cdi.
+// ecrire size bytes de zï¿½ros dans le fichier cdi.
 void write_null_block(FILE *target, int size) {
 	unsigned char* buf;
 	
@@ -111,35 +112,35 @@ uint32_t fsize(FILE *stream) {
 }
 
 /* 
-Renvoie l'équivalent "décimal" en hexadécimal d'un nombre décimal.
+Renvoie l'ï¿½quivalent "dï¿½cimal" en hexadï¿½cimal d'un nombre dï¿½cimal.
 Exemple :
 	0x45 = 45d
 	0x75 = 75d
 	
-	Ce qui est évidemment faux mais c'est utile pour les secteurs d'un CD...
+	Ce qui est ï¿½videmment faux mais c'est utile pour les secteurs d'un CD...
 */
 unsigned int int_2_inthex(int dec) {
 	unsigned long msb = dec / 10;
 	return dec + (msb * 6);
 }
 
-// permet de récupérer la taille en bytes de l'espace utilisé sur le disque.
+// permet de rï¿½cupï¿½rer la taille en bytes de l'espace utilisï¿½ sur le disque.
 unsigned int get_total_space_used_bytes(int cdda_session_sectors_count, int data_session_sectors_count) {
 	return 
 		((cdda_session_sectors_count + MSINFO_OFFSET_BASE) * AUDIO_SECTOR_SIZE) + 
 		((data_session_sectors_count + TAO_OFFSET) * DATA_SECTOR_SIZE);
 }
 
-// permet de récupérer la taille en blocks de l'espace utilisé sur le disque.
+// permet de rï¿½cupï¿½rer la taille en blocks de l'espace utilisï¿½ sur le disque.
 unsigned int get_total_space_used_blocks(int cdda_session_sectors_count, int data_session_sectors_count) {
 	int lba = MSINFO_OFFSET_BASE + cdda_session_sectors_count; // lba <=> msinfo
 	return (lba + data_session_sectors_count) + TAO_OFFSET;
 }
 
-// récuperer le nom de volume de l'iso passé en paramètre.
+// rï¿½cuperer le nom de volume de l'iso passï¿½ en paramï¿½tre.
 void get_volumename(FILE* iso, char* volume_name) {
 	unsigned long curpos;
-	char result[32 + 1]; // 16 + 1 (pour le zéro)
+	char result[32 + 1]; // 16 + 1 (pour le zï¿½ro)
 	int i = 0;
 	
 	curpos = ftell(iso); // garder la position courante
@@ -155,16 +156,16 @@ char* check_ext(char* in, char* ext) {
 	int i, j = 0;
 		
 	if((p = strrchr(in, '.')) != NULL) {
-		// une extension est présente
-		buf = (char*) malloc((strlen(in) - (p-in)) - 1); // va recevoir l'extension trouvée dans le nom
+		// une extension est prï¿½sente
+		buf = (char*) malloc((strlen(in) - (p-in)) - 1); // va recevoir l'extension trouvï¿½e dans le nom
 		for(i = (p-in) + 1 ; i < strlen(in) ; i++) {
 			buf[j] = tolower(in[i]); // on converti tout en minuscule au passage
 			j++;
 		}
-		// l'extension est extraite et présente dans buf.
+		// l'extension est extraite et prï¿½sente dans buf.
 		
 		// maintenant on va comparer les extensions.
-		if (strcasecmp(buf, ext) == 0) {// ok ! c'est la même extension
+		if (strcasecmp(buf, ext) == 0) {// ok ! c'est la mï¿½me extension
 			free(buf);
 			return in;
 		} else {
@@ -196,7 +197,7 @@ char* get_friendly_unit(float* size) {
 	return iec[i];
 }
 
-// vérifier si l'ISO passé en paramètre contient un IP.BIN
+// vï¿½rifier si l'ISO passï¿½ en paramï¿½tre contient un IP.BIN
 int check_iso_is_bootable(FILE* iso) {
     uint32_t curpos, length;
 	unsigned char signature[33] = "SEGA SEGAKATANA SEGA ENTERPRISES";
@@ -219,12 +220,12 @@ char* extract_proggyname(char* in) {
 	char* p, *prgname;
 	int i, j;
 	
-	if((p = strrchr(in, '.')) != NULL) { // l'extension est présente
-		int cpyend = p-in; // on va copier jusqu'à là
+	if((p = strrchr(in, '.')) != NULL) { // l'extension est prï¿½sente
+		int cpyend = p-in; // on va copier jusqu'ï¿½ lï¿½
 		int cpystart = 0;
 		int lgth;
 		
-		if((p = strrchr(in, '\\')) != NULL) // le dernier slash séparateur, le nom est entre les deux
+		if((p = strrchr(in, '\\')) != NULL) // le dernier slash sï¿½parateur, le nom est entre les deux
 			cpystart = (p-in) + 1;
 		
 		lgth = (cpyend - cpystart);

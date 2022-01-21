@@ -2,6 +2,7 @@
 #include "mdsaudio.h"
 #include "mdsdata.h"
 #include "config.h"
+#include "tools.h"
 
 extern unsigned int write_method;
 
