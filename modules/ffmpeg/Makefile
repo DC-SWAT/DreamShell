@@ -1,6 +1,6 @@
 #
 # ffmpeg module for DreamShell
-# Copyright (C)2011-2020 SWAT
+# Copyright (C)2011-2022 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -23,6 +23,9 @@ all: rm-elf ffmpeg-0.6.3/config.h include/libavcodec/avcodec.h
 include ../../sdk/Makefile.loadable
 
 ffmpeg-0.6.3/config.h:
+	ln -nsf $(DS_SDK)/lib/liboggvorbis.a $(DS_SDK)/lib/libvorbisenc.a
+	ln -nsf $(DS_SDK)/lib/liboggvorbis.a $(DS_SDK)/lib/libogg.a
+	ln -nsf $(DS_SDK)/lib/libxvid.a $(DS_SDK)/lib/libxvidcore.a
 	./config.sh
 	
 include/libavcodec/avcodec.h:

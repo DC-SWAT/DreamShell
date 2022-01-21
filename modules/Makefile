@@ -1,15 +1,15 @@
 #
 # DreamShell modules Makefile
-# Copyright (C) 2009-2020 SWAT
+# Copyright (C) 2009-2022 SWAT
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = isofs isoldr ppp bflash dreameye vkb aicaos \
+_SUBDIRS = isofs isoldr ppp bflash dreameye vkb \
 		bzip2 zip minilzo opkg ini sqlite3 \
 		luaTask luaSocket tolua tolua++ \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
 		SDL_net http httpd telnetd mongoose gumbo \
-		adx s3m mp3 ogg xvid ffmpeg
+		adx s3m mp3 ogg xvid ffmpeg # aicaos
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
