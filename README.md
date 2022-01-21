@@ -17,17 +17,23 @@ sudo apt-get install -y libpng-dev libjpeg-dev
 cd /tmp && git clone https://github.com/LuaDist/tolua.git && cd tolua
 mkdir build && cd ./build
 cmake ../ && make && sudo make install
-cd /usr/local && mkdir -p dc && cd dc && mkdir -p kos && cd kos
+sudo mkdir -p /usr/local/dc/kos
+sudo chown -R $(id -u):$(id -g) /usr/local/dc
+sudo mkdir -p /opt/toolchains/dc
+sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
+cd /usr/local/dc/kos
+git clone https://github.com/KallistiOS/kos-ports.git
 git clone https://github.com/KallistiOS/KallistiOS.git kos && cd kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
-cp ds/sdk/toolchain/environ.sh environ.sh && cd ../
-git clone https://github.com/KallistiOS/kos-ports.git
-cd /opt && mkdir -p toolchains && cd toolchains && mkdir -p dc
-cd /usr/local/dc/kos/kos
+patch -d ./ -p1 < ds/sdk/toolchain/patches/kos.diff
+cp ds/sdk/toolchain/environ.sh environ.sh
+ln -nsf `which tolua` ds/sdk/bin/tolua
+ln -nsf `which mkisofs` ds/sdk/bin/mkisofs
 source ./environ.sh
-cd ds/sdk/toolchain && ./download.sh && ./unpack.sh
-make && cd ../../../
+cd utils/dc-chain && cp config.mk.testing.sample config.mk
+./download.sh && ./unpack.sh
+make && cd ../../
 make && cd ../kos-ports && ./utils/build-all.sh
 cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a
 cd ../../kos/ds/sdk/bin/src && make && make install && cd ../../../
