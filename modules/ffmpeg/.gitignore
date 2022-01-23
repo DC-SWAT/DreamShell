@@ -1,0 +1,6 @@
+include/
+lib/
+*.pc
+config.err
+config.h
+config.mak
