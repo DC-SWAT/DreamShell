@@ -537,8 +537,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf(" -s, --fast       -Fast boot mode (don't show any info on screen)\n",
 		          " -i, --verbose    -Show additional info\n",
 		          " -a, --dma        -Use DMA transfer if available\n"
-		          " -q, --irq        -Use IRQ handling injection\n"
-		          " -c, --cdda       -Emulate CDDA audio\n"
+		          " -q, --irq        -Use IRQ hooking\n"
+		          " -c, --cdda       -Emulate CDDA audio (cddamode=1 by default)\n"
 		          " -s, --fast       -Don't show loader text and disc texture on screen\n");
 		ds_printf("Arguments: \n"
 		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
@@ -563,7 +563,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      1 = dynamic (ingame memory allocation)\n"
 		          "                     0x = address (specify valid address)\n");
 		ds_printf(" -g, --cddamode   -CDDA emulation mode\n"
-		          "                      1 = DMA and TMU2 (default)\n"
+		          "                      0 = Disabled (default)\n"
+		          "                      1 = DMA and TMU2\n"
 		          "                      2 = DMA and TMU1\n"
 		          "                      3 = SQ and TMU2\n"
 		          "                      4 = SQ and TMU1\n");
@@ -581,7 +582,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
-	uint32 cdda_mode = CDDA_MODE_DMA_TMU2, use_irq = 0;
+	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -667,11 +668,18 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	info->boot_mode = boot_mode;
 	info->emu_async = emu_async;
-	info->emu_cdda  = (emu_cdda ? cdda_mode : emu_cdda);
 	info->use_dma   = use_dma;
 	info->fast_boot = fast_boot;
 	info->buff_mode = buff_mode;
 	info->use_irq   = use_irq;
+
+	if (cdda_mode > CDDA_MODE_DISABLED) {
+		info->emu_cdda  = cdda_mode;
+	} else if(emu_cdda) {
+		info->emu_cdda  = CDDA_MODE_DMA_TMU2;
+	} else {
+		info->emu_cdda  = CDDA_MODE_DISABLED;
+	}
 	
 	info->patch_addr[0]  = p_addr[0];
 	info->patch_addr[1]  = p_addr[1];

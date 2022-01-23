@@ -145,7 +145,7 @@ typedef struct isoldr_info {
 	uint32 patch_addr[2];               /* Memory addresses for patching every frame */
 	uint32 patch_value[2];              /* Values for patching */
 	uint32 buff_mode;                   /* Memory mode or address for buffers like CDDA. See isoldr_buff_mode_t */
-	uint32 use_irq;                     /* Use IRQ handling injection */
+	uint32 use_irq;                     /* Use IRQ hooking */
 
 	uint32 cdda_offset[48];             /* CDDA tracks offset, only for CDI images */
 
