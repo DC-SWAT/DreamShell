@@ -2,24 +2,17 @@
 
    module.c - ISO Loader app module
    Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2016 SWAT
+   Copyright (C) 2011-2022 SWAT
 
 */
 
 #include "ds.h"
 #include "isoldr.h"
+#include "utils.h"
 #include <stdbool.h>
 #include <kos/md5.h>
 
 DEFAULT_MODULE_EXPORTS(app_iso_loader);
-
-/* Indexes of devices  */
-#define APP_DEVICE_CD    0
-#define APP_DEVICE_SD    1
-#define APP_DEVICE_IDE   2
-#define APP_DEVICE_PC    3
-//#define APP_DEVICE_NET   4
-#define APP_DEVICE_COUNT 4
 
 static struct {
 
@@ -52,6 +45,9 @@ static struct {
 	
 	GUI_Widget *dma;
 	GUI_Widget *cdda;
+	GUI_Widget *cdda_mode[5];
+	GUI_Widget *irq;
+	GUI_Widget *buff_mode[20];
 	GUI_Widget *fastboot;
 	GUI_Widget *async[10];
 	GUI_Widget *async_label;
@@ -59,9 +55,12 @@ static struct {
 	GUI_Widget *device;
 	GUI_Widget *os_chk[4];
 	
+	GUI_Widget *options_switch[4];
 	GUI_Widget *boot_mode_chk[3];
 	GUI_Widget *memory_chk[16];
 	GUI_Widget *memory_text;
+	GUI_Widget *buff_memory_chk[16];
+	GUI_Widget *buff_memory_text;
 
 	int current_dev;
 	GUI_Widget  *btn_dev[APP_DEVICE_COUNT];
@@ -74,9 +73,8 @@ static struct {
 	GUI_Widget *title;
 	
 	GUI_Widget *container_panel;
-	GUI_Widget *mem_patch_toggle;
+	GUI_Widget *options_panel;
 	GUI_Widget *memory_panel;
-	GUI_Widget *patch_panel;
 	
 	GUI_Widget *icosizebtn[5];
 	GUI_Widget *wlnkico;
@@ -105,96 +103,6 @@ void isoLoader_toggleMemory(GUI_Widget *widget);
 void isoLoader_toggleBootMode(GUI_Widget *widget);
 void isoLoader_toggleIconSize(GUI_Widget *widget);
 static void setico(int size, int force);
-
-#define CONF_END 0
-#define CONF_INT 1
-#define CONF_STR 2
-
-typedef struct
-{
-	const char *name;
-	int conf_type;
-	void *pointer;
-}isoldr_conf;
-
-static char *trim_spaces2(char *txt)
-{
-	int32_t i;
-	
-	while(txt[0] == ' ')
-	{
-		txt++;
-	}
-	
-	int32_t len = strlen(txt);
-	
-	for(i=len; i ; i--)
-	{
-		if(txt[i] > ' ') break;
-		txt[i] = '\0';
-	}
-	
-	return txt;
-}
-
-static int conf_parse(isoldr_conf *cfg, const char *filename)
-{
-	file_t fd;
-	int i;
-	
-	fd = fs_open(filename, O_RDONLY);
-	
-	if(fd == FILEHND_INVALID) 
-	{
-		ds_printf("DS_ERROR: Can't open %s\n", filename);
-		return -1;
-	}
-	
-	size_t size = fs_total(fd);
-	
-	char buf[512];
-	char *optname = NULL, *value = NULL;
-	
-	if(fs_read(fd, buf, size) != size)
-	{
-		fs_close(fd);
-		ds_printf("DS_ERROR: Can't read %s\n", filename);
-		return -1;
-	}
-	
-	fs_close(fd);
-	
-	while(1)
-	{
-		if(optname == NULL)
-			optname = strtok(buf, "=");
-		else
-			optname = strtok('\0', "=");
-		
-		value = strtok('\0', "\n");
-		
-		if(optname == NULL || value == NULL) break;
-		
-		for(i=0; cfg[i].conf_type; i++)
-		{
-			if(strncasecmp(cfg[i].name, trim_spaces2(optname), 32)) continue;
-			
-			switch(cfg[i].conf_type)
-			{
-				case CONF_INT:
-					*(int *)cfg[i].pointer = atoi(value);
-					break;
-					
-				case CONF_STR:
-					strcpy((char *)cfg[i].pointer, trim_spaces2(value));
-					break;
-			}
-			break;
-		}
-	}
-	
-	return 0;
-}
 
 static int canUseTrueAsyncDMA(void) {
 	return (self.sector_size == 2048 && 
@@ -284,29 +192,10 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 }
 
 
-static int getDeviceType() {
-	
-	const char *dir = GUI_FileManagerGetPath(self.filebrowser);
-
-	if(!strncasecmp(dir, "/cd", 3)) {
-		return APP_DEVICE_CD;
-	} else if(!strncasecmp(dir, "/sd",   3)) {
-		return APP_DEVICE_SD;
-	} else if(!strncasecmp(dir, "/ide",  4)) {
-		return APP_DEVICE_IDE;
-	} else if(!strncasecmp(dir, "/pc",   3)) {
-		return APP_DEVICE_PC;
-//	} else if(!strncasecmp(dir, "/???", 5)) {
-//		return APP_DEVICE_NET;
-	} else {
-		return -1;
-	}
-}
-
 /* Set the active volume in the menu */
 static void highliteDevice() {
 	
-	int dev = getDeviceType();
+	int dev = getDeviceType(GUI_FileManagerGetPath(self.filebrowser));
 	
 	if(dev > -1 && dev != self.current_dev) {
 		
@@ -345,33 +234,6 @@ static void get_md5_hash(const char *mountpoint) {
 		}
 		
 		fs_close(fd);
-	}
-}
-
-/* Trim begin/end spaces and copy into output buffer */
-static void trim_spaces(char *input, char *output, int size) {
-	char *p;
-	char *o;
-
-	p = input;
-	o = output;
-	
-	while(*p == ' ' && input + size > p) {
-		p++;
-	}
-
-	while(input + size > p) { 
-		*o = *p;
-		p++; 
-		o++; 
-	}
-	
-	*o = '\0';
-	o--;
-
-	while(*o == ' ' && o > output) {
-		*o='\0';
-		o--;
 	}
 }
 
@@ -476,20 +338,6 @@ check_default:
 	}
 }
 
-static char *fix_spaces(char *str)
-{
-	if(!str) return NULL;
-	
-	int i, len = (int) strlen(str);
-	
-	for(i=0; i<len; i++)
-	{
-		if(str[i] == ' ') str[i] = '\\';
-	}
-	
-	return str;
-}
-
 void isoLoader_MakeShortcut(GUI_Widget *widget) 
 {
 	(void)widget;
@@ -522,10 +370,10 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	{
 		strcat(cmd, " -a");
 	}
-	
-	if(GUI_WidgetGetState(self.cdda)) 
+
+	if(GUI_WidgetGetState(self.irq)) 
 	{
-		strcat(cmd, " -c");
+		strcat(cmd, " -q");
 	}
 	
 	for(i = 0; i < sizeof(self.async) >> 2; i++) 
@@ -618,6 +466,31 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		strcat(cmd, patchstr);
 		sprintf(patchstr," --pv%d 0x%s", i, GUI_TextEntryGetText(self.wpa[i-1]));
 		strcat(cmd, patchstr);
+	}
+
+	for(i = 0; i < sizeof(self.cdda_mode) >> 2; i++) 
+	{
+		if(i && GUI_WidgetGetState(self.cdda_mode[i])) 
+		{
+			char cdda_mode[3];
+			sprintf(cdda_mode, "%d", i);
+			strcat(cmd, " -g ");
+			strcat(cmd, cdda_mode);
+			break;
+		}
+	}
+
+	for(i = 0; i < sizeof(self.buff_mode) >> 2; i++) 
+	{
+		if(i && GUI_WidgetGetState(self.buff_mode[i])) 
+		{
+			char buff_mode[12];
+			sprintf(buff_mode, "%d", i);
+			strcat(cmd, " -m ");
+			strcat(cmd, buff_mode);
+			// TODO: Memory selection
+			break;
+		}
 	}
 	
 	fprintf(fd, "%s\n", cmd);
@@ -737,34 +610,17 @@ void isoLoader_toggleHideName(GUI_Widget *widget)
 	chk_save_file();
 }
 
-void isoLoader_toggleMemPatch(GUI_Widget *widget) 
+void isoLoader_toggleOptions(GUI_Widget *widget) 
 {
-	if(GUI_WidgetGetState(widget)) 
-	{
-		if(GUI_ContainerContains(self.container_panel, self.memory_panel))
-		{
-			GUI_ContainerRemove(self.container_panel, self.memory_panel);
-		}
-		
-		if(!GUI_ContainerContains(self.container_panel, self.patch_panel))
-		{
-			GUI_ContainerAdd(self.container_panel, self.patch_panel);
+	for(int i = 0; i < sizeof(self.options_switch) >> 2; i++) {
+		if(widget != self.options_switch[i]) {
+			GUI_WidgetSetState(self.options_switch[i], 0);
+		} else if(GUI_WidgetGetState(widget)) {
+			GUI_CardStackShowIndex(self.options_panel, i);
+		} else {
+			GUI_WidgetSetState(widget, 1);
 		}
 	}
-	else
-	{
-		if(GUI_ContainerContains(self.container_panel, self.patch_panel))
-		{
-			GUI_ContainerRemove(self.container_panel, self.patch_panel);
-		}
-		
-		if(!GUI_ContainerContains(self.container_panel, self.memory_panel))
-		{
-			GUI_ContainerAdd(self.container_panel, self.memory_panel);
-		}
-	}
-	
-	GUI_WidgetMarkChanged(self.container_panel);
 }
 
 void isoLoader_togglePatchAddr(GUI_Widget *widget)
@@ -820,19 +676,21 @@ void isoLoader_toggleAsync(GUI_Widget *widget) {
 
 void isoLoader_toggleDMA(GUI_Widget *widget) {
 	
-	if(GUI_WidgetGetState(widget)) {
-		
-		if(canUseTrueAsyncDMA()) {
-			
+	if(GUI_WidgetGetState(widget) && canUseTrueAsyncDMA()) {
+
+		if (!strncasecmp(GUI_LabelGetText(self.async_label), "none", 4)) {
 			GUI_LabelSetText(self.async_label, "true");
-			GUI_WidgetSetState(self.async[0], 1);
-			isoLoader_toggleAsync(self.async[0]);
 		}
-		
+
+		GUI_WidgetSetState(self.async[0], 1);
+		isoLoader_toggleAsync(self.async[0]);
+
 	} else {
-		
-		GUI_LabelSetText(self.async_label, "none");
-		
+
+		if (!strncasecmp(GUI_LabelGetText(self.async_label), "true", 4)) {
+			GUI_LabelSetText(self.async_label, "none");
+		}
+
 		if(GUI_WidgetGetState(self.async[0])) {
 			GUI_WidgetSetState(self.async[8], 1);
 			isoLoader_toggleAsync(self.async[8]);
@@ -841,21 +699,37 @@ void isoLoader_toggleDMA(GUI_Widget *widget) {
 }
 
 void isoLoader_toggleCDDA(GUI_Widget *widget) {
-	
-	if(GUI_WidgetGetState(widget) && GUI_WidgetGetState(self.memory_chk[1])) {
-		GUI_WidgetSetState(self.memory_chk[0], 1);
-		isoLoader_toggleMemory(self.memory_chk[0]);
+	for(int i = 0; i < sizeof(self.cdda_mode) >> 2; i++) {
+		if(widget != self.cdda_mode[i]) {
+			GUI_WidgetSetState(self.cdda_mode[i], 0);
+		} else {
+			GUI_WidgetSetState(widget, 1);
+		}
 	}
-	
-	if(GUI_WidgetGetState(widget) && !GUI_WidgetGetState(self.dma)) {
-		
-		GUI_WidgetSetState(self.async[9], 1);
-		isoLoader_toggleAsync(self.async[9]);
-		
-	} else if(GUI_WidgetGetState(self.async[9])) {
-		
-		GUI_WidgetSetState(self.async[8], 1);
-		isoLoader_toggleAsync(self.async[8]);
+
+	if (self.cdda == widget) {
+		if (GUI_WidgetGetState(widget)) {
+			isoLoader_toggleCDDA(self.cdda_mode[CDDA_MODE_DMA_TMU2]);
+		} else {
+			isoLoader_toggleCDDA(self.cdda_mode[CDDA_MODE_DISABLED]);
+		}
+	} else if(self.cdda_mode[CDDA_MODE_DISABLED] == widget) {
+		GUI_WidgetSetState(self.cdda, GUI_WidgetGetState(widget) ? 0 : 1);
+	} else if (!GUI_WidgetGetState(self.cdda)) {
+		GUI_WidgetSetState(self.cdda, 1);
+	}
+}
+
+void isoLoader_toggleBuffMode(GUI_Widget *widget) 
+{
+	for(int i = 0; i < sizeof(self.buff_mode) >> 2; i++) {
+		if (!self.buff_mode[i]) {
+			break;
+		} if(widget != self.buff_mode[i]) {
+			GUI_WidgetSetState(self.buff_mode[i], 0);
+		} else {
+			GUI_WidgetSetState(widget, 1);
+		}
 	}
 }
 
@@ -945,9 +819,27 @@ void isoLoader_Run(GUI_Widget *widget) {
 	if(self.isoldr->emu_async == 9) {
 		self.isoldr->emu_async = 16;
 	}
-	
-	if(GUI_WidgetGetState(self.cdda)) {
-		self.isoldr->emu_cdda = 1;
+
+	if(GUI_WidgetGetState(self.irq)) {
+		self.isoldr->use_irq = 1;
+	}
+
+	for(int i = 0; i < sizeof(self.cdda_mode) >> 2; i++) {
+		if(GUI_WidgetGetState(self.cdda_mode[i])) {
+			self.isoldr->emu_cdda = i;
+			break;
+		}
+	}
+
+	for(int i = 0; i < sizeof(self.buff_mode) >> 2; i++) {
+		if(GUI_WidgetGetState(self.buff_mode[i])) {
+			if (i <= BUFF_MEM_DYNAMIC) {
+				self.isoldr->buff_mode = i;
+			} else {
+				// TODO: Memory selection
+			}
+			break;
+		}
 	}
 	
 	if(GUI_WidgetGetState(self.dma)) {
@@ -1070,20 +962,6 @@ static void changeDir(dirent_t *ent) {
 	GUI_WidgetSetEnabled(self.btn_run, 0);
 }
 
-
-static int checkGDI(char *filepath, char *dirname, char *filename) {
-	memset(filepath, 0, MAX_FN_LEN);
-	snprintf(filepath, MAX_FN_LEN, "%s/%s/%s.gdi", GUI_FileManagerGetPath(self.filebrowser), dirname, filename);
-
-	if(FileExists(filepath)) {
-		memset(filepath, 0, MAX_FN_LEN);
-		snprintf(filepath, MAX_FN_LEN, "%s/%s.gdi", dirname, filename);
-		return 1;
-	}
-	
-	return 0;
-}
-
 void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 
 	if(!fm_ent) {
@@ -1098,10 +976,11 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 		dirent_t *dent;
 		char filepath[MAX_FN_LEN];
 		int count = 0;
+		const char *dir = GUI_FileManagerGetPath(self.filebrowser);
 
-		if(checkGDI(filepath, ent->name, "disk") ||
-			checkGDI(filepath, ent->name, "disc") ||
-			checkGDI(filepath, ent->name, "disc_optimized")) {
+		if(checkGDI(filepath, dir, ent->name, "disk") ||
+			checkGDI(filepath, dir, ent->name, "disc") ||
+			checkGDI(filepath, dir, ent->name, "disc_optimized")) {
 
 			selectFile(filepath, fm_ent->index);
 			self.current_item_dir = fm_ent->index;
@@ -1216,7 +1095,9 @@ void isoLoader_DefaultPreset() {
 		GUI_WidgetSetState(self.preset, 0);
 		
 		GUI_WidgetSetState(self.cdda, 0);
-//		isoLoader_toggleCDDA(self.cdda);
+		isoLoader_toggleCDDA(self.cdda);
+
+		GUI_WidgetSetState(self.irq, 0);
 		
 		GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 		isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
@@ -1266,6 +1147,8 @@ int isoLoader_SavePreset() {
 	char text[32];
 	char result[1024];
 	int async = 0, type = 0, mode = 0;
+	int buff_mode = BUFF_MEM_STATIC;
+	int cdda_mode = CDDA_MODE_DISABLED;
 	
 	filename = makePresetFilename();
 	
@@ -1306,6 +1189,24 @@ int isoLoader_SavePreset() {
 			break;
 		}
 	}
+
+	for(int i = 0; i < sizeof(self.buff_mode) >> 2; i++) {
+		if(self.buff_mode[i] && GUI_WidgetGetState(self.buff_mode[i])) {
+			if (i <= BUFF_MEM_DYNAMIC) {
+				buff_mode = i;
+			} else {
+				// TODO; Memory selection
+			}
+			break;
+		}
+	}
+
+	for(int i = 0; i < sizeof(self.cdda_mode) >> 2; i++) {
+		if(GUI_WidgetGetState(self.cdda_mode[i])) {
+			cdda_mode = i;
+			break;
+		}
+	}
 	
 	for(int i = 0; self.memory_chk[i]; i++) {
 		
@@ -1328,9 +1229,13 @@ int isoLoader_SavePreset() {
 	memset(result, 0, sizeof(result));
 	
 	snprintf(result, sizeof(result),
-			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %d\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\npa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
+			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %d\n"
+			"irq = %d\nbuffer = %d\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
+			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
 			text, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
-			GUI_WidgetGetState(self.cdda), GUI_WidgetGetState(self.fastboot), type, mode, memory, self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
+			cdda_mode, GUI_WidgetGetState(self.irq), buff_mode,
+			GUI_WidgetGetState(self.fastboot), type, mode, memory,
+			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
 	fs_write(fd, result, /*sizeof*/strlen(result));
 	fs_close(fd);
@@ -1349,10 +1254,11 @@ int isoLoader_LoadPreset() {
 		return -1;
 	}
 	
-	int use_dma = 0, emu_async = 8, emu_cdda = 0;
+	int use_dma = 0, emu_async = 8, emu_cdda = 0, use_irq = 0;
 	int fastboot = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
+	int buff_mode = BUFF_MEM_STATIC;
 	char title[32] = "";
 	char device[8] = "";
 	char memory[12] = "0x8c004000";
@@ -1366,6 +1272,8 @@ int isoLoader_LoadPreset() {
 	{
 		{ "dma",      CONF_INT,   (void *) &use_dma    },
 		{ "cdda",     CONF_INT,   (void *) &emu_cdda   },
+		{ "irq",      CONF_INT,   (void *) &use_irq    },
+		{ "buffer",   CONF_INT,   (void *) &buff_mode  },
 		{ "memory",   CONF_STR,   (void *) memory      },
 		{ "async",    CONF_INT,   (void *) &emu_async  },
 		{ "mode",     CONF_INT,   (void *) &boot_mode  },
@@ -1392,17 +1300,23 @@ int isoLoader_LoadPreset() {
 	} else {
 		widget = self.async[9];
 	}
-	
-	GUI_WidgetSetState(self.cdda, emu_cdda);
-	isoLoader_toggleCDDA(self.cdda);
-	
+
+	GUI_WidgetSetState(widget, 1);
+	isoLoader_toggleAsync(widget);
+
+	GUI_WidgetSetState(self.cdda, emu_cdda ? 1 : 0);
+	GUI_WidgetSetState(self.cdda_mode[emu_cdda], 1);
 	GUI_WidgetSetState(self.fastboot, fastboot);
+	GUI_WidgetSetState(self.irq, use_irq);
+
+	if (buff_mode <= BUFF_MEM_DYNAMIC) {
+		GUI_WidgetSetState(self.buff_mode[buff_mode], 1);
+	} else {
+		// TODO: Memory selection
+	}
 
 	GUI_WidgetSetState(self.dma, use_dma);
 	isoLoader_toggleDMA(self.dma);
-	
-	GUI_WidgetSetState(widget, 1);
-	isoLoader_toggleAsync(widget);
 	
 	GUI_WidgetSetState(self.os_chk[bin_type], 1);
 	isoLoader_toggleOS(self.os_chk[bin_type]);
@@ -1513,7 +1427,7 @@ void isoLoader_Init(App_t *app) {
 		self.pages    = APP_GET_WIDGET("pages");
 		self.settings = APP_GET_WIDGET("settings");
 		self.games    = APP_GET_WIDGET("games");
-		self.link    = APP_GET_WIDGET("link");
+		self.link     = APP_GET_WIDGET("link");
 		
 		self.filebrowser  = APP_GET_WIDGET("file_browser");
 		self.cover_widget = APP_GET_WIDGET("cover_image");
@@ -1523,18 +1437,16 @@ void isoLoader_Init(App_t *app) {
 		self.preset        = APP_GET_WIDGET("preset-checkbox");
 		self.dma           = APP_GET_WIDGET("dma-checkbox");
 		self.cdda          = APP_GET_WIDGET("cdda-checkbox");
+		self.irq           = APP_GET_WIDGET("irq-checkbox");
 		self.fastboot      = APP_GET_WIDGET("fastboot-checkbox");
 		
 		self.container_panel  = APP_GET_WIDGET("container-panel");
-		self.mem_patch_toggle = APP_GET_WIDGET("mem-patch-toggle");
-		self.memory_panel	  = APP_GET_WIDGET("memory-panel");
-		self.patch_panel	  = APP_GET_WIDGET("patch-panel");
+		self.memory_panel	  = APP_GET_WIDGET("boot-memory-panel");
+		self.options_panel	  = APP_GET_WIDGET("options-panel");
 		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
 		self.wpa[1]	          = APP_GET_WIDGET("pa2-text");
 		self.wpv[0]	          = APP_GET_WIDGET("pv1-text");
 		self.wpv[1]	          = APP_GET_WIDGET("pv2-text");
-		
-		isoLoader_toggleMemPatch(self.mem_patch_toggle);
 		
 		self.icosizebtn[0]	  = APP_GET_WIDGET("48x48");
 		self.icosizebtn[1]	  = APP_GET_WIDGET("64x64");
@@ -1565,11 +1477,36 @@ void isoLoader_Init(App_t *app) {
 
 		self.async_label   = APP_GET_WIDGET("async-label");
 		self.device        = APP_GET_WIDGET("device");
-		
-		w = APP_GET_WIDGET("boot-panel");
+
+		w = APP_GET_WIDGET("switch-panel");
+
+		for(int i = 0; i < (sizeof(self.options_switch) >> 2); i++) {
+			self.options_switch[i] = GUI_ContainerGetChild(w, i);
+		}
+
+		w = APP_GET_WIDGET("boot-mode-panel");
 		
 		for(int i = 0; i < (sizeof(self.boot_mode_chk) >> 2); i++) {
-			self.boot_mode_chk[i] = GUI_ContainerGetChild(w, i + 1);
+			self.boot_mode_chk[i] = GUI_ContainerGetChild(w, i);
+		}
+
+		w = APP_GET_WIDGET("buff-mode-panel");
+		
+		for(int i = 0, j = 0; i <= GUI_ContainerGetCount(w); i++) {
+
+			b = GUI_ContainerGetChild(w, i);
+
+			if(GUI_WidgetGetType(b) == WIDGET_TYPE_BUTTON) {
+				self.buff_mode[j++] = b;
+				if(j == sizeof(self.buff_mode) / 4)
+					break;
+			}
+		}
+
+		w = APP_GET_WIDGET("cdda-mode-panel");
+		
+		for(int i = 0; i < (sizeof(self.cdda_mode) >> 2); i++) {
+			self.cdda_mode[i] = GUI_ContainerGetChild(w, i);
 		}
 		
 		w = APP_GET_WIDGET("os-panel");
@@ -1578,7 +1515,7 @@ void isoLoader_Init(App_t *app) {
 			self.os_chk[i] = GUI_ContainerGetChild(w, i + 1);
 		}
 		
-		w = APP_GET_WIDGET("memory-panel");
+		w = APP_GET_WIDGET("boot-memory-panel");
 		
 		for(int i = 0, j = 0; i < GUI_ContainerGetCount(w); i++) {
 			
@@ -1593,7 +1530,8 @@ void isoLoader_Init(App_t *app) {
 			}
 		}
 
-		self.memory_text = APP_GET_WIDGET("memory-text");
+		self.memory_text = APP_GET_WIDGET("boot-memory-text");
+		self.buff_memory_text = APP_GET_WIDGET("buff-memory-text");
 
 		/* Disabling scrollbar on filemanager */
 		GUI_FileManagerRemoveScrollbar(self.filebrowser);

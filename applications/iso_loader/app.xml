@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app extensions=".iso .cso .cdi .gdi" icon="images/icon.png" name="ISO Loader" version="0.6.0">
+<app extensions=".iso .cso .cdi .gdi" icon="images/icon.png" name="ISO Loader" version="0.8.0">
 	<resources>
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" />
@@ -103,6 +103,23 @@
 			<fill color="#D4F129" height="16" width="99%" x="1%" y="1" />
 		</surface>
 
+		<surface height="25" name="sw_btn" width="60">
+			<fill color="#FFFFFF" />
+			<fill color="#31799F" height="86%" width="90%" x="5%" y="8%" />
+		</surface>
+		<surface height="25" name="sw_btn_hl" width="60">
+			<fill color="#FFFFFF" />
+			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
+		</surface>
+		<surface height="25" name="sw_btn_on" width="60">
+			<fill color="#3078A0" />
+			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
+		</surface>
+		<surface height="25" name="sw_btn_on_hl" width="60">
+			<fill color="#3078A0" />
+			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
+		</surface>
+
 		<theme>
 			<input offhighlight="iUncheckHigh" offnormal="iUncheck" onhighlight="iCheckHigh" onnormal="iCheck" type="checkbox" />
 			<input focus="input-text-focus" highlight="input-text-normal" normal="input-text-normal" type="text" />
@@ -112,13 +129,10 @@
 	<body height="480" onload="export:isoLoader_Init()" onunload="export:isoLoader_Shutdown()" width="100%" name="main_body">
 		<panel background="head_bg" height="104">
 			
-			<panel height="25" width="23%" x="20%" y="75">
+			<panel height="25" width="23%" x="21%" y="70">
 				<input disabled="btn_sd_disabled" height="23" highlight="btn_sd_over" inactive="true" name="btn_sd" normal="btn_sd_norm" pressed="btn_sd_over" type="button" width="21%" />
-							
 				<input disabled="btn_cd_disabled" height="23" highlight="btn_cd_over" inactive="true" name="btn_cd" normal="btn_cd_norm" pressed="btn_cd_over" type="button" width="21%" />
-							
 				<input disabled="btn_hdd_disabled" height="23" highlight="btn_hdd_over" inactive="true" name="btn_hdd" normal="btn_hdd_norm" pressed="btn_hdd_over" type="button" width="28%" />
-						
 				<input disabled="btn_pc_disabled" height="23" highlight="btn_pc_over" inactive="true" name="btn_pc" normal="btn_pc_norm" pressed="btn_pc_over" type="button" width="26%" />
 			</panel>
 			
@@ -129,10 +143,8 @@
 				<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="18%" x="82%" />
 			</panel>
 		</panel>
-
 		
 		<cardstack height="380" name="pages" y="100">
-			
 			
 			<panel background="games_bg" height="380">
 			
@@ -177,10 +189,8 @@
 				</panel>
 			</panel>
 
-			
 			<panel background="settings_bg" height="380">
 
-				
 				<panel height="350" width="50%" y="10">
 
 					<label align="left" color="#3078A0" font="m23" height="40" text="Settings:" width="41%" x="13%" y="5" />
@@ -188,12 +198,12 @@
 						<label align="left" color="#000000" font="arial" height="20" text="Save as preset" width="87%" x="17%" />
 					</input>
 
-					<panel height="135" width="84%" x="13%" y="45">
+					<panel height="155" width="84%" x="13%" y="45">
 						<input height="25" name="dma-checkbox" onclick="export:isoLoader_toggleDMA()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Use DMA transfer (GD/IDE only)" x="9%" />
 						</input>
 
-						<panel height="80" name="async-panel" width="100%">
+						<panel height="72" name="async-panel" width="100%">
 							<label align="left" color="#000000" font="arial" height="22" text="Emulate async read (in sectors):" width="100%" />
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="26%">
 								<label align="left" color="#000000" font="arial" height="20" name="async-label" text="none" width="86%" x="36%" />
@@ -230,9 +240,12 @@
 						<input height="25" name="cdda-checkbox" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="Emulate CDDA audio" x="9%" />
 						</input>
+						<input height="25" name="irq-checkbox" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="IRQ hooking" x="9%" />
+						</input>
 					</panel>
 
-					<panel height="125" name="os-panel" width="84%" x="13%" y="177">
+					<panel height="125" name="os-panel" width="84%" x="13%" y="187">
 						<label align="left" color="#000000" font="arial" height="25" text="Binary OS:" />
 						<input checked="true" height="25" onclick="export:isoLoader_toggleOS()" type="checkbox" width="41%">
 							<label align="left" color="#000000" font="arial" height="20" text="Auto" x="23%" />
@@ -248,121 +261,208 @@
 						</input>
 					</panel>
 
-					<panel height="45" width="52%" x="13%" y="252">
+					<panel height="45" width="52%" x="13%" y="257">
 						<label align="left" color="#000000" font="arial" height="22" text="Loader device:" width="100%" />
 						<input font="arial" fontcolor="#000000" height="18" name="device" size="30" type="text" value="auto" width="100%" />
 					</panel>
 				</panel>
 
-				
 				<panel height="370" width="55%" x="56%" y="10" name="container-panel" >
 
-					<panel height="55" name="boot-panel" width="100%" y="16">
-						<label align="left" color="#000000" font="arial" height="25" text="Boot mode:" />
-						<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="22%">
-							<label align="left" color="#000000" font="arial" height="20" text="Direct" width="81%" x="32%" />
+					<panel height="30" name="switch-panel" width="100%" y="16">
+						<input type="checkbox" checked="true" height="25" width="60" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
+							<label align="center" color="#ffffff" font="m23" height="20" text="Boot" width="100%" y="3" />
 						</input>
-						<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="21%">
-							<label align="left" color="#000000" font="arial" height="20" text="IP.BIN" width="86%" x="34%" />
+						<input type="checkbox" height="25" width="60" x="64" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
+							<label align="center" color="#ffffff" font="m23" height="20" text="CDDA" width="100%" y="3" />
 						</input>
-						<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
-							<label align="left" color="#000000" font="arial" height="20" text="IP.BIN cut" width="113%" x="31%" />
+						<input type="checkbox" height="25" width="60" x="128" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
+							<label align="center" color="#ffffff" font="m23" height="20" text="Buff" width="100%" y="3" />
 						</input>
-					</panel>
-					
-					<panel height="25" width="33%" >
-						<input name="fastboot-checkbox" type="checkbox" checked="true">
-							<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="100%" x="23%" />
-						</input>
-					</panel>
-					
-					<panel height="25" width="67%" >
-						<input name="mem-patch-toggle" onclick="export:isoLoader_toggleMemPatch()" type="checkbox" checked="false">
-							<label align="left" color="#000000" font="arial" height="20" text="Patch memory" width="100%" x="10%" />
+						<input type="checkbox" height="25" width="60" x="191" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
+							<label align="center" color="#ffffff" font="m23" height="20" text="Patch" width="100%" y="3" />
 						</input>
 					</panel>
 
-					<panel height="225" name="memory-panel" width="80%">
-						<label y="0" align="left" color="#000000" font="arial" height="25" text="Loader memory:" width="100%" />
-						
-						<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
-						</input>
-						<input checked="true" height="22" name="0x8c004000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
-						</input>
-						<input height="22" name="0x8c004800" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
-						</input>
-						<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
-						</input>
-						<input height="22" name="0x8cef8000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cef8000" x="19%" />
-						</input>
-						<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
-						</input>
-						<input height="22" name="0x8cfa0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cfa0000" x="19%" />
-						</input>
-						<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />
-						</input>
-						<input height="22" name="0x8cfd0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cfd0000" x="19%" />
-						</input>
-						<input height="22" name="0x8cfe0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cfe0000" x="19%" />
-						</input>
-						<input height="22" name="0x8cfe8000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cfe8000" x="19%" />
-						</input>
-						<input height="22" name="0x8cff0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cff0000" x="19%" />
-						</input>
-						<input height="22" name="0x8cff4800" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cff4800" x="19%" />
-						</input>
-						<input height="22" name="0x8cff6000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-							<label align="left" color="#000000" font="arial" height="20" text="0x8cff6000" x="19%" />
-						</input>
-						<input height="23" name="0x8c" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="20%">
-							<label align="left" color="#000000" font="arial" height="22" text="0x8c" width="109%" x="45%" />
-						</input>
-						<input font="arial" fontcolor="#000000" height="18" name="memory-text" onblur="export:isoLoader_toggleMemory()" size="30" type="text" value="e00000" width="59%" />
-					</panel>
-					
-					<panel y="105" height="225" name="patch-panel" width="80%">
-						
-						<label align="left" color="#000000" font="arial" height="20" text="Patch memory:" />
-						
-						<panel height="25">
-							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch address 1" />
+					<cardstack height="330" width="100%" name="options-panel" y="48">
+						<panel name="boot-panel">
+							<panel height="25" name="boot-mode-panel" width="100%">
+								<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="22%">
+									<label align="left" color="#000000" font="arial" height="20" text="Direct" width="81%" x="32%" />
+								</input>
+								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="21%">
+									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN" width="86%" x="34%" />
+								</input>
+								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
+									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN cut" width="113%" x="31%" />
+								</input>
+							</panel>
+
+							<panel height="25" width="33%">
+								<input name="fastboot-checkbox" type="checkbox" checked="true">
+									<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="100%" x="23%" />
+								</input>
+							</panel>
+
+							<panel height="225" name="boot-memory-panel" width="80%">
+								<label y="0" align="left" color="#000000" font="arial" height="25" text="Loader memory:" width="100%" />
+								
+								<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
+								</input>
+								<input checked="true" height="22" name="0x8c004000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
+								</input>
+								<input height="22" name="0x8c004800" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
+								</input>
+								<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
+								</input>
+								<input height="22" name="0x8cef8000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cef8000" x="19%" />
+								</input>
+								<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
+								</input>
+								<input height="22" name="0x8cfa0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cfa0000" x="19%" />
+								</input>
+								<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />
+								</input>
+								<input height="22" name="0x8cfd0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cfd0000" x="19%" />
+								</input>
+								<input height="22" name="0x8cfe0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cfe0000" x="19%" />
+								</input>
+								<input height="22" name="0x8cfe8000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cfe8000" x="19%" />
+								</input>
+								<input height="22" name="0x8cff0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cff0000" x="19%" />
+								</input>
+								<input height="22" name="0x8cff4800" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cff4800" x="19%" />
+								</input>
+								<input height="22" name="0x8cff6000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cff6000" x="19%" />
+								</input>
+								<input height="23" name="0x8c" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="20%">
+									<label align="left" color="#000000" font="arial" height="22" text="0x8c" width="109%" x="45%" />
+								</input>
+								<input font="arial" fontcolor="#000000" height="18" name="boot-memory-text" onblur="export:isoLoader_toggleMemory()" size="30" type="text" value="e00000" width="59%" />
+							</panel>
 						</panel>
-						<input font="arial" fontcolor="#000000" height="18" name="pa1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
-						
-						<panel height="25">
-							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 1" />
+
+						<panel name="cdda-panel">
+							<panel height="225" width="80%">
+								<panel name="cdda-mode-panel" width="100%">
+									<input checked="true" height="25" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Disable CDDA emulation" x="25" />
+									</input>
+									<input height="25" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Enable with DMA and TMU2" x="25" />
+									</input>
+									<input height="25" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Enable with DMA and TMU1" x="25" />
+									</input>
+									<input height="25" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Enable with SQ and TMU2" x="25" />
+									</input>
+									<input height="25" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Enable with SQ and TMU1" x="25" />
+									</input>
+								</panel>
+							</panel>
 						</panel>
-						<input font="arial" fontcolor="#000000" height="18" name="pv1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
-						
-						<panel height="25">
-							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch address 2" />
+
+						<panel name="buff-panel">
+							<panel height="225" width="80%">
+								<panel name="buff-mode-panel" width="100%">
+									<input checked="true" height="25" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Static (autoselect from hardcoded)" x="25" />
+									</input>
+									<input height="25" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Dynamic allocation (KANATA only)" x="25" />
+									</input>
+									<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
+									</input>
+									<input height="22" name="0x8c004000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
+									</input>
+									<input height="22" name="0x8c004800" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
+									</input>
+									<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
+									</input>
+									<input height="22" name="0x8cef8000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cef8000" x="19%" />
+									</input>
+									<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
+									</input>
+									<input height="22" name="0x8cfa0000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cfa0000" x="19%" />
+									</input>
+									<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />
+									</input>
+									<input height="22" name="0x8cfd0000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cfd0000" x="19%" />
+									</input>
+									<input height="22" name="0x8cfe0000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cfe0000" x="19%" />
+									</input>
+									<input height="22" name="0x8cfe8000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cfe8000" x="19%" />
+									</input>
+									<input height="22" name="0x8cff0000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cff0000" x="19%" />
+									</input>
+									<input height="22" name="0x8cff4800" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cff4800" x="19%" />
+									</input>
+									<input height="22" name="0x8cff6000" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8cff6000" x="19%" />
+									</input>
+									<input height="23" name="0x8c" onclick="export:isoLoader_toggleBuffMode()" type="checkbox" width="20%">
+										<label align="left" color="#000000" font="arial" height="22" text="0x8c" width="109%" x="45%" />
+									</input>
+									<input font="arial" fontcolor="#000000" height="18" name="buff-memory-text" onblur="export:isoLoader_toggleBuffMode()" size="30" type="text" value="e00000" width="59%" />
+								</panel>
+							</panel>
 						</panel>
-						<input font="arial" fontcolor="#000000" height="18" name="pa2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
-						
-						<panel height="25">
-							<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 2" />
+
+						<panel name="patch-panel">
+							<panel height="225" width="80%">
+								<panel height="20">
+									<label align="left" color="#000000" font="arial" height="20" text="Patch address 1" />
+								</panel>
+								<input font="arial" fontcolor="#000000" height="18" name="pa1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
+								<panel height="25">
+									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 1" />
+								</panel>
+								<input font="arial" fontcolor="#000000" height="18" name="pv1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+								<panel height="25">
+									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch address 2" />
+								</panel>
+								<input font="arial" fontcolor="#000000" height="18" name="pa2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
+								<panel height="25">
+									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 2" />
+								</panel>
+								<input font="arial" fontcolor="#000000" height="18" name="pv2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+							</panel>
 						</panel>
-						<input font="arial" fontcolor="#000000" height="18" name="pv2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
-					</panel>
+
+					</cardstack>
 					
 				</panel>
 			
-			
 			</panel>
-			
 			
 			<panel background="settings_bg" height="380">
 				
@@ -419,7 +519,6 @@
 				
 			</panel>
 			
-		
 		</cardstack>
 	</body>
 </app>
