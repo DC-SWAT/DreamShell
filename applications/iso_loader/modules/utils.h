@@ -30,3 +30,7 @@ int conf_parse(isoldr_conf *cfg, const char *filename);
 
 int getDeviceType(const char *dir);
 int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename);
+char *makePresetFilename(const char *dir, uint8 *md5);
+
+char *lib_get_name();
+uint32 lib_get_version();

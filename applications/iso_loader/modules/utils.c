@@ -158,3 +158,26 @@ int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename) 
 	
 	return 0;
 }
+
+char *makePresetFilename(const char *dir, uint8 *md5) {
+
+	char dev[8];
+	static char filename[MAX_FN_LEN];
+
+	memset(filename, 0, sizeof(filename));
+	strncpy(dev, &dir[1], 3);
+
+	if (dev[2] == '/') {
+		dev[2] = '\0';
+	} else {
+		dev[3] = '\0';
+	}
+
+	snprintf(filename, sizeof(filename),
+				"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg", 
+				getenv("PATH"), lib_get_name() + 4, dev, md5[0],
+				md5[1], md5[2], md5[3], md5[4], md5[5], 
+				md5[6], md5[7], md5[8], md5[9], md5[10], 
+				md5[11], md5[12], md5[13], md5[14], md5[15]);
+	return filename;
+}
