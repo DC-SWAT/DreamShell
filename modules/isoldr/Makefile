@@ -10,7 +10,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
 VER_MINOR = 6 # Keep interface version 0.6.x up to 0.8.x loaders
-VER_MICRO = 4
+VER_MICRO = 5
 
 all: rm-elf
 

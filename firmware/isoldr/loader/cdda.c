@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback emulation
- * (c)2014-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2022 SWAT <http://www.dc-swat.ru>
  */
 
 //#define DEBUG 1
@@ -249,11 +249,11 @@ static void setup_pcm_buffer() {
 	}
 	
 	/* Search free memory area in main RAM */
-	if (IsoInfo->buff_mode >= BUFF_MEM_SPECIFY) {
+	if (IsoInfo->heap >= HEAP_MODE_SPECIFY) {
 
-		cdda->buff[0] = (uint8 *)(IsoInfo->buff_mode);
+		cdda->buff[0] = (uint8 *)(IsoInfo->heap);
 
-	} else if (IsoInfo->buff_mode == BUFF_MEM_DYNAMIC) {
+	} else if (IsoInfo->heap == HEAP_MODE_INGAME) {
 
 		if (cdda->alloc_buff && old_size != cdda->size) {
 
@@ -269,8 +269,8 @@ static void setup_pcm_buffer() {
 		}
 	}
 
-	if (IsoInfo->buff_mode == BUFF_MEM_STATIC ||
-		(IsoInfo->buff_mode == BUFF_MEM_DYNAMIC && cdda->alloc_buff == NULL)
+	if (IsoInfo->heap == HEAP_MODE_STATIC ||
+		(IsoInfo->heap == HEAP_MODE_INGAME && cdda->alloc_buff == NULL)
 	) {
 
 		if(loader_addr > 0x8c010000) {

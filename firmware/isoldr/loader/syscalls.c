@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -1055,11 +1055,11 @@ void gdcInitSystem(void) {
 #endif /* HAVE_EXPT */
 
 #ifdef HAVE_CDDA
-	if (IsoInfo->buff_mode == BUFF_MEM_DYNAMIC) {
+	if (IsoInfo->heap == HEAP_MODE_INGAME) {
 		if (malloc_init()) {
 			LOGF("Dynamic memory enabled\n");
 		} else {
-			IsoInfo->buff_mode = BUFF_MEM_STATIC;
+			IsoInfo->heap = HEAP_MODE_STATIC;
 		}
 	}
 #endif

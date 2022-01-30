@@ -9,6 +9,7 @@
 #include "ds.h"
 #include "isoldr.h"
 #include "utils.h"
+#include "vmu.h"
 #include <stdbool.h>
 #include <kos/md5.h>
 
@@ -47,8 +48,8 @@ static struct {
 	GUI_Widget *cdda;
 	GUI_Widget *cdda_mode[5];
 	GUI_Widget *irq;
-	GUI_Widget *buff_mode[20];
-	GUI_Widget *buff_memory_text;
+	GUI_Widget *heap[20];
+	GUI_Widget *heap_memory_text;
 	GUI_Widget *fastboot;
 	GUI_Widget *async[10];
 	GUI_Widget *async_label;
@@ -479,15 +480,25 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		}
 	}
 
-	for(i = 0; i < sizeof(self.buff_mode) >> 2; i++) 
-	{
-		if(i && GUI_WidgetGetState(self.buff_mode[i])) 
-		{
-			char buff_mode[12];
-			sprintf(buff_mode, "%d", i);
-			strcat(cmd, " -m ");
-			strcat(cmd, buff_mode);
-			// TODO: Memory selection
+	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
+		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
+			if (i <= HEAP_MODE_INGAME) {
+				char mode[12];
+				sprintf(mode, "%d", i);
+				strcat(cmd, " -h ");
+				strcat(cmd, mode);
+				break;
+			} else {
+				char *addr = (char* )GUI_ObjectGetName((GUI_Object *)self.heap[i]);
+				if(strlen(addr) < 8) {
+					char text[24];
+					memset(text, 0, sizeof(text));
+					strncpy(text, addr, 10);
+					addr = strncat(text, GUI_TextEntryGetText(self.heap_memory_text), 10);
+				}
+				strcat(cmd, " -h ");
+				strcat(cmd, addr);
+			}
 			break;
 		}
 	}
@@ -727,13 +738,13 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	}
 }
 
-void isoLoader_toggleBuffMode(GUI_Widget *widget) 
+void isoLoader_toggleHeap(GUI_Widget *widget) 
 {
-	for(int i = 0; i < sizeof(self.buff_mode) >> 2; i++) {
-		if (!self.buff_mode[i]) {
+	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
+		if (!self.heap[i]) {
 			break;
-		} if(widget != self.buff_mode[i]) {
-			GUI_WidgetSetState(self.buff_mode[i], 0);
+		} if(widget != self.heap[i]) {
+			GUI_WidgetSetState(self.heap[i], 0);
 		} else {
 			GUI_WidgetSetState(widget, 1);
 		}
@@ -838,21 +849,21 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 
-	for(int i = 0; i < sizeof(self.buff_mode) >> 2; i++) {
-		if(GUI_WidgetGetState(self.buff_mode[i])) {
-			if (i <= BUFF_MEM_DYNAMIC) {
-				self.isoldr->buff_mode = i;
+	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
+		if(GUI_WidgetGetState(self.heap[i])) {
+			if (i <= HEAP_MODE_INGAME) {
+				self.isoldr->heap = i;
 			} else {
-				tmpval = GUI_ObjectGetName((GUI_Object *)self.buff_mode[i]);
+				tmpval = GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 
 				if(strlen(tmpval) < 8) {
 					char text[24];
 					memset(text, 0, sizeof(text));
 					strncpy(text, tmpval, 10);
-					tmpval = strncat(text, GUI_TextEntryGetText(self.buff_memory_text), 10);
+					tmpval = strncat(text, GUI_TextEntryGetText(self.heap_memory_text), 10);
 				}
 
-				self.isoldr->buff_mode = strtoul(tmpval, NULL, 16);
+				self.isoldr->heap = strtoul(tmpval, NULL, 16);
 			}
 			break;
 		}
@@ -1136,7 +1147,7 @@ int isoLoader_SavePreset() {
 	char text[32];
 	char result[1024];
 	int async = 0, type = 0, mode = 0;
-	uint32 buff_mode = BUFF_MEM_STATIC;
+	uint32 heap = HEAP_MODE_STATIC;
 	int cdda_mode = CDDA_MODE_DISABLED;
 
 	if (!self.filename[0]) {
@@ -1179,21 +1190,21 @@ int isoLoader_SavePreset() {
 		}
 	}
 
-	for(int i = 0; i < sizeof(self.buff_mode) >> 2; i++) {
-		if(self.buff_mode[i] && GUI_WidgetGetState(self.buff_mode[i])) {
-			if (i <= BUFF_MEM_DYNAMIC) {
-				buff_mode = i;
+	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
+		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
+			if (i <= HEAP_MODE_INGAME) {
+				heap = i;
 			} else {
-				char *tmpval = (char* )GUI_ObjectGetName((GUI_Object *)self.buff_mode[i]);
+				char *tmpval = (char* )GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 
 				if(strlen(tmpval) < 8) {
 					char text[24];
 					memset(text, 0, sizeof(text));
 					strncpy(text, tmpval, 10);
-					tmpval = strncat(text, GUI_TextEntryGetText(self.buff_memory_text), 10);
+					tmpval = strncat(text, GUI_TextEntryGetText(self.heap_memory_text), 10);
 				}
 
-				buff_mode = strtoul(tmpval, NULL, 16);
+				heap = strtoul(tmpval, NULL, 16);
 			}
 			break;
 		}
@@ -1228,10 +1239,10 @@ int isoLoader_SavePreset() {
 	
 	snprintf(result, sizeof(result),
 			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %d\n"
-			"irq = %d\nbuffer = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
+			"irq = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
 			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
 			text, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
-			cdda_mode, GUI_WidgetGetState(self.irq), buff_mode,
+			cdda_mode, GUI_WidgetGetState(self.irq), heap,
 			GUI_WidgetGetState(self.fastboot), type, mode, memory,
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
@@ -1261,11 +1272,11 @@ int isoLoader_LoadPreset() {
 	int fastboot = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
-	uint32 buff_mode = BUFF_MEM_STATIC;
+	uint32 heap = HEAP_MODE_STATIC;
 	char title[32] = "";
 	char device[8] = "";
 	char memory[12] = "0x8c004000";
-	char buff_memory[12] = "";
+	char heap_memory[12] = "";
 	char patchtxt[4][10];
 	int i, len;
 	char *name;
@@ -1276,7 +1287,7 @@ int isoLoader_LoadPreset() {
 		{ "dma",      CONF_INT,   (void *) &use_dma    },
 		{ "cdda",     CONF_INT,   (void *) &emu_cdda   },
 		{ "irq",      CONF_INT,   (void *) &use_irq    },
-		{ "buffer",   CONF_STR,   (void *) &buff_memory},
+		{ "heap",     CONF_STR,   (void *) &heap_memory},
 		{ "memory",   CONF_STR,   (void *) memory      },
 		{ "async",    CONF_INT,   (void *) &emu_async  },
 		{ "mode",     CONF_INT,   (void *) &boot_mode  },
@@ -1311,24 +1322,24 @@ int isoLoader_LoadPreset() {
 	GUI_WidgetSetState(self.fastboot, fastboot);
 	GUI_WidgetSetState(self.irq, use_irq);
 
-	buff_mode = strtoul(buff_memory, NULL, 16);
+	heap = strtoul(heap_memory, NULL, 16);
 
-	if (buff_mode <= BUFF_MEM_DYNAMIC) {
-		GUI_WidgetSetState(self.buff_mode[buff_mode], 1);
-		isoLoader_toggleBuffMode(self.buff_mode[buff_mode]);
+	if (heap <= HEAP_MODE_INGAME) {
+		GUI_WidgetSetState(self.heap[heap], 1);
+		isoLoader_toggleHeap(self.heap[heap]);
 	} else {
-		for (int i = BUFF_MEM_DYNAMIC; i < sizeof(self.buff_mode) >> 2; i++) {
-			if (!self.buff_mode[i]) {
+		for (int i = HEAP_MODE_INGAME; i < sizeof(self.heap) >> 2; i++) {
+			if (!self.heap[i]) {
 				break;
 			}
-			name = (char *)GUI_ObjectGetName((GUI_Object *)self.buff_mode[i]);
+			name = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 			len = strlen(name);
 
-			if (!strncasecmp(name, buff_memory, sizeof(buff_memory)) || len < 8) {
-				GUI_WidgetSetState(self.buff_mode[i], 1);
-				isoLoader_toggleBuffMode(self.buff_mode[i]);
+			if (!strncasecmp(name, heap_memory, sizeof(heap_memory)) || len < 8) {
+				GUI_WidgetSetState(self.heap[i], 1);
+				isoLoader_toggleHeap(self.heap[i]);
 				if (len < 8) {
-					GUI_TextEntrySetText(self.buff_memory_text, &buff_memory[4]);
+					GUI_TextEntrySetText(self.heap_memory_text, &heap_memory[4]);
 				}
 				break;
 			}
@@ -1502,15 +1513,15 @@ void isoLoader_Init(App_t *app) {
 			self.boot_mode_chk[i] = GUI_ContainerGetChild(w, i);
 		}
 
-		w = APP_GET_WIDGET("buff-mode-panel");
+		w = APP_GET_WIDGET("heap-memory-panel");
 		
 		for(int i = 0, j = 0; i <= GUI_ContainerGetCount(w); i++) {
 
 			b = GUI_ContainerGetChild(w, i);
 
 			if(GUI_WidgetGetType(b) == WIDGET_TYPE_BUTTON) {
-				self.buff_mode[j++] = b;
-				if(j == sizeof(self.buff_mode) / 4)
+				self.heap[j++] = b;
+				if(j == sizeof(self.heap) / 4)
 					break;
 			}
 		}
@@ -1543,7 +1554,7 @@ void isoLoader_Init(App_t *app) {
 		}
 
 		self.memory_text = APP_GET_WIDGET("boot-memory-text");
-		self.buff_memory_text = APP_GET_WIDGET("buff-memory-text");
+		self.heap_memory_text = APP_GET_WIDGET("heap-memory-text");
 
 		/* Disabling scrollbar on filemanager */
 		GUI_FileManagerRemoveScrollbar(self.filebrowser);

@@ -1,7 +1,7 @@
 /** 
  * \file    isoldr.h
  * \brief   DreamShell ISO loader
- * \date    2009-2020
+ * \date    2009-2022
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -94,13 +94,13 @@ typedef struct isoldr_exec_info {
 
 
 /**
- * Buffer modes
+ * Heap memory modes
  */
-typedef enum isoldr_buff_mode {
-	BUFF_MEM_STATIC = 0,
-	BUFF_MEM_DYNAMIC = 1,
-	BUFF_MEM_SPECIFY = 0x8c000000 // +offset
-} isoldr_buff_mode_t;
+typedef enum isoldr_heap_mode {
+	HEAP_MODE_STATIC = 0,
+	HEAP_MODE_INGAME = 1,
+	HEAP_MODE_SPECIFY = 0x8c000000 // +offset
+} isoldr_heap_mode_t;
 
 
 /**
@@ -144,7 +144,7 @@ typedef struct isoldr_info {
 	uint32 gdtex;                       /* Memory address for GD texture (draw it on screen) */
 	uint32 patch_addr[2];               /* Memory addresses for patching every frame */
 	uint32 patch_value[2];              /* Values for patching */
-	uint32 buff_mode;                   /* Memory mode or address for buffers like CDDA. See isoldr_buff_mode_t */
+	uint32 heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
 	uint32 use_irq;                     /* Use IRQ hooking */
 
 	uint32 cdda_offset[48];             /* CDDA tracks offset, only for CDI images */

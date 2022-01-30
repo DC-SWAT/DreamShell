@@ -17,7 +17,7 @@ isoLoader_DefaultPreset
 isoLoader_SavePreset
 isoLoader_LoadPreset
 isoLoader_toggleOptions
-isoLoader_toggleBuffMode
+isoLoader_toggleHeap
 isoLoader_togglePatchAddr
 isoLoader_ShowLink
 isoLoader_toggleIconSize
