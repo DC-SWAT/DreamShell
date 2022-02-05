@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * FAT file system
- * (c)2011-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -66,45 +66,6 @@ static int fs_get_fd() {
 }
 
 
-#if defined(LOG) && defined(LOG_DCL)
-
-#include "../dcl/include/fs_dcload.h"
-
-#define dclsc(...) ({                                 \
-		int rv, old;                                   \
-		old = irq_disable();                           \
-		do {} while ((*(vuint32 *)0xa05f688c) & 0x20); \
-		rv = dcloadsyscall(__VA_ARGS__);               \
-		irq_restore(old);                              \
-		rv;                                            \
-	})
-
-int dcload_type = DCLOAD_TYPE_NONE;
-
-int dcload_reinit() {
-    return dclsc(DCLOAD_REINIT, 0, 0, 0);
-}
-
-int dcload_write_buffer(const uint8 *data, int len) {
-    return dclsc(DCLOAD_WRITE, 1, data, len);
-}
-
-#ifdef USE_GDB
-size_t dcload_gdbpacket(const char* in_buf, size_t in_size, char* out_buf, size_t out_size) {
-    size_t ret = -1;
-
-    /* we have to pack the sizes together because the dcloadsyscall handler
-       can only take 4 parameters */
-    ret = dclsc(DCLOAD_GDBPACKET, in_buf, (in_size << 16) | (out_size & 0xffff), out_buf);
-
-    
-    return ret;
-}
-#endif
-
-#endif
-
-
 int fs_init() {
 
 	char path[3] = "0:";
@@ -112,21 +73,6 @@ int fs_init() {
 
 	VolToPart[0].pd = 0;
 	VolToPart[0].pt = IsoInfo->fs_part + 1;
-
-#if defined(LOG) && defined(LOG_DCL)
-    if(*DCLOADMAGICADDR == DCLOADMAGICVALUE) {
-
-		/* Give dcload the 64k it needs to compress data (if on serial) */
-
-		if(dclsc(DCLOAD_ASSIGNWRKMEM, (int*)(loader_addr < 0x8c010000 ? 0x8cfe0000 : 0x8cfb0000)) == -1) {
-			dcload_type = DCLOAD_TYPE_IP;
-		} else {
-			dcload_type = DCLOAD_TYPE_SER;
-		}
-
-		printf("dc-load-%s initialized\n", (dcload_type == DCLOAD_TYPE_IP ? "ip" : "serial"));
-	}
-#endif
 
 	/* Reset file handlers */
 	memset(&_files, 0, sizeof(_files));

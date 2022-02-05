@@ -29,7 +29,7 @@
     .global _exception_os_type
     .global _interrupt_stack
 
-#ifdef USE_GDB
+#ifdef HAVE_GDB
     .global _ubc_handler_lowlevel
     .global _ubc_wait
     .global _general_sub_handler
@@ -68,7 +68,7 @@ _vbr:
 ! HANDLE GENERAL EXCEPTIONS
 !
 
-#ifdef USE_GDB
+#ifdef HAVE_GDB
 _ubc_handler_lowlevel:
 ubc_exception:
 !BEGIN REGISTER SAVE
@@ -304,7 +304,7 @@ _exception_os_type:
 	
 	.align 4
 
-#ifdef USE_GDB
+#ifdef HAVE_GDB
 _general_sub_handler:
 general_exception_handler:
     nop
@@ -393,7 +393,7 @@ _interrupt_sub_handler_end:
 !
 ! Wait enough instructions for the UBC to be refreshed
 !
-#ifdef USE_GDB
+#ifdef HAVE_GDB
 _ubc_wait:
     nop
     nop

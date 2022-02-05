@@ -8,6 +8,7 @@
 #include <exception.h>
 #include <asic.h>
 #include <mmu.h>
+#include <dcload.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
 #include <arch/gdb.h>
@@ -1034,7 +1035,7 @@ void gdcInitSystem(void) {
 		
 		irq_restore(old);
 
-# ifdef USE_GDB
+# ifdef HAVE_GDB
 
 		gdb_init();
 		
@@ -1050,7 +1051,7 @@ void gdcInitSystem(void) {
 	}
 # else
 	}
-# endif /* USE_GDB */
+# endif /* HAVE_GDB */
 	
 #endif /* HAVE_EXPT */
 

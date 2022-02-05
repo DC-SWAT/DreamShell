@@ -1,24 +1,12 @@
 /**
  * DreamShell ISO Loader
  * File system
- * (c)2011-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #if defined(DEV_TYPE_NET)
 
 #include "commands.h"
-
-// Our execution mode
-extern int sl_mode;
-
-#define SLMODE_NONE 0	// not initialized yet
-#define SLMODE_EXCL 1	// exclusive
-#define SLMODE_IMME 2	// immediate
-#define SLMODE_COOP 3	// cooperative
-
-#elif defined(DEV_TYPE_DCL)
-
-#include "fs_dcload.h"
 
 #elif defined(DEV_TYPE_SD) || defined(DEV_TYPE_IDE)
 
@@ -29,10 +17,6 @@ extern int sl_mode;
 #include "spi.h"
 #elif defined(DEV_TYPE_IDE)
 #include <ide/ide.h>
-#endif
-
-#if defined(LOG) && _FS_READONLY == 1
-#include "../fs/dcl/include/fs_dcload.h"
 #endif
 
 #elif defined(DEV_TYPE_GD)

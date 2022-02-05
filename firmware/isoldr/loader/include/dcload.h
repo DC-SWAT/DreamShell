@@ -114,7 +114,10 @@ int dcload_write_buffer(const uint8 *data, int len);
 int dcload_reinit();
 
 /* GDB tunnel */
-//size_t dcload_gdbpacket(const char* in_buf, size_t in_size, char* out_buf, size_t out_size);
+size_t dcload_gdbpacket(const char* in_buf, size_t in_size, char* out_buf, size_t out_size);
+
+/* Init dc-load support */
+int dcload_init();
 
 /* \endcond */
 

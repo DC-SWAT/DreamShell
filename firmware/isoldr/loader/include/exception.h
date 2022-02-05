@@ -11,7 +11,7 @@
 #include <main.h>
 #include <exception-lowlevel.h>
 
-#ifdef USE_GDB
+#ifdef HAVE_GDB
 #	define EXP_TABLE_SIZE 8
 #else
 #	define EXP_TABLE_SIZE 1

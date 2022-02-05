@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
 	enable_syscalls(emu_all_sc);
 	OpenLog();
 
-	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[2] != 'I' || IsoInfo->magic[9] != '6') {
+	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[1] != 'S' || IsoInfo->magic[2] != 'I') {
 		LOGF("Magic is incorrect!\n");
 		goto error;
 	}

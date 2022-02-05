@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Utils
- * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -352,9 +352,11 @@ int OpenLog() {
 	}
 	LOGF("----- Start log -----\n\n");
 #else
-#if !defined(DEV_TYPE_SD) && !defined(DEV_TYPE_DCL) && !defined(LOG_DCL)// && !defined(DEV_TYPE_IDE)
-	scif_init();
-#endif
+#	if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
+		dcload_init();
+#	else
+		scif_init();
+#	endif
 #endif /* _FS_READONLY */
 	return 1;
 }
