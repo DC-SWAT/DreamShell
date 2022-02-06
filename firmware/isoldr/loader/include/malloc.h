@@ -1,5 +1,7 @@
 /**
- * \file malloc.h
+ * DreamShell ISO Loader
+ * Memory allocation
+ * (c)2022 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef __MALLOC_H
@@ -10,11 +12,11 @@ __BEGIN_DECLS
 
 #include <arch/types.h>
 
-void malloc_init(uint8 *ptr, size_t size_in_bytes);
-//void malloc_stat(uint32 *freesize, uint32 *max_freesize);
+int malloc_init(void);
+void malloc_stat(uint32 *free_size, uint32 *max_free_size);
 void *malloc(uint32 size);
 void free(void *data);
-//void *realloc(void *data, uint32 size);
+void *realloc(void *data, uint32 size);
 
 __END_DECLS
 

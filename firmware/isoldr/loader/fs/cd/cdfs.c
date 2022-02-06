@@ -10,7 +10,7 @@
 #include <arch/cache.h>
 
 /* Sector buffer */
-static uint cd_sector_buffer[2048/4] __attribute__((aligned(32)));
+static void *cd_sector_buffer;
 static int dma_enabled = 0;
 
 void fs_enable_dma(int state) {
@@ -542,5 +542,13 @@ int ioctl(int fd, int request, void *data) {
 /* Init function */
 
 int fs_init() {
+	cd_sector_buffer = malloc(2048);
+
+	LOGFF("Sector buffer at 0x%08lx\n", (uint32)cd_sector_buffer);
+
+	if (!cd_sector_buffer) {
+		return -1;
+	}
+
 	return g1_bus_init();
 }

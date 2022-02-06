@@ -35,14 +35,13 @@ int main(int argc, char *argv[]) {
 
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 	
-	if(loader_addr < 0x8c004000 || (is_custom_bios() && is_no_syscalls())) {
+	if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW || (is_custom_bios() && is_no_syscalls())) {
 		emu_all_sc = 1;
 		printf("Emulate all syscalls: enabled\n");
 	}
 
 	enable_syscalls(emu_all_sc);
 	OpenLog();
-	malloc_init();
 
 	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[1] != 'S' || IsoInfo->magic[2] != 'I') {
 		LOGF("Magic is incorrect!\n");
@@ -79,7 +78,10 @@ int main(int argc, char *argv[]) {
 		loader_size + ISOLDR_PARAMS_SIZE,
 		loader_addr
 	);
-	
+
+	malloc_init();
+	memset(get_GDS(), 0, sizeof(gd_state_t));
+
 	printf("Initializing "DEV_NAME"...\n");
 	
 	if(!InitReader()) {
@@ -105,9 +107,8 @@ int main(int argc, char *argv[]) {
 			LOGF("Detected scrambled homebrew executable\n");
 			printf("Descrambling...\n");
 			
-			uint32 bin_addr = IsoInfo->exec.addr & 0x0fffffff;
-			bin_addr |= 0x80000000;
-			uint8 *dest = (uint8*)(bin_addr + (IsoInfo->exec.size * 3));
+			uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
+			uint8 *dest = (uint8*)(exec_addr + (IsoInfo->exec.size * 3));
 			
 			descramble(src, dest, IsoInfo->exec.size);
 			memcpy(src, dest, IsoInfo->exec.size);
@@ -151,11 +152,12 @@ int main(int argc, char *argv[]) {
 	
 #ifdef HAVE_EXPT
 	if(IsoInfo->exec.type == BIN_TYPE_WINCE && IsoInfo->use_irq) {
+		uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
 		/* Check WinCE version and hack VBR before executing */
-		if(*((uint8 *)0xac01000c) == 0xe0) {
-			exception_init(0x8c012110);
+		if(*((uint8 *)IsoInfo->exec.addr + 0x0c) == 0xe0) {
+			exception_init(exec_addr + 0x2110);
 		} else {
-			exception_init(0x8c0120f0);
+			exception_init(exec_addr + 0x20f0);
 		}
 	}
 #endif
@@ -178,8 +180,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	printf("Executing from IP.BIN...\n");
-	uint32 addr = 0xac00b800; //(uint32)IsoInfo < 0x8c010000 ? 0xac00b800 : 0xac008300;
-	launch((IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC ? 0xac00e000 : addr));
+	launch((IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC ? 0xac00e000 : 0xac00b800));
 	
 error:
 	printf("Failed!\n");

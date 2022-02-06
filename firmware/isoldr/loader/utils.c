@@ -51,7 +51,8 @@ uint Load_IPBin() {
 	
 	if(IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
 		pass = 12;
-	} else if(loader_addr <= 0x8c004000 && loader_addr > 0x8c000100) {
+	} else if(loader_addr <= ISOLDR_DEFAULT_ADDR_LOW &&
+			loader_addr > ISOLDR_DEFAULT_ADDR_MIN) {
 		pass = 7;
 	}
 
@@ -83,9 +84,9 @@ void Load_DS() {
 
 	if(fd > FILEHND_INVALID) {
 		disable_syscalls(0);
-		read(fd, (uint8*)(IsoInfo->exec.addr), total(fd));
+		read(fd, (uint8*)APP_ADDR, total(fd));
 		close(fd);
-		launch(IsoInfo->exec.addr);
+		launch(APP_ADDR);
 	}
 }
 
@@ -414,13 +415,6 @@ int WriteLogFunc(const char *func, const char *fmt, ...) {
 
 	PutLog(log_buff);
 	return i;
-}
-
-void CloseLog() {
-#if _FS_READONLY == 0 && !defined(DEV_TYPE_GD)
-	LOGF("\n\n----- End log -----\n\n");
-	close(log_fd);
-#endif /* _FS_READONLY */
 }
 
 #endif /* LOG */

@@ -90,7 +90,7 @@
 /   1    - ASCII (Valid for only non-LFN configuration) */
 
 
-#define	_USE_LFN	2		/* 0 to 4 */
+#define	_USE_LFN	3		/* 0 to 3 */
 #define	_MAX_LFN	255		/* Maximum LFN length to handle (12 to 255) */
 /* The _USE_LFN option switches the LFN feature.
 /
@@ -98,7 +98,6 @@
 /   1: Enable LFN with static working buffer on the BSS. Always NOT thread-safe.
 /   2: Enable LFN with dynamic working buffer on the STACK.
 /   3: Enable LFN with dynamic working buffer on the HEAP.
-/   4: Enable LFN with dynamic working buffer on the sector buffer.
 /
 /  When enable LFN feature, Unicode handling functions ff_convert() and ff_wtoupper()
 /  function must be added to the project.

@@ -532,14 +532,6 @@ WCHAR LfnBuf[_MAX_LFN+1];
 							  (dobj).lfn = lfn;	(dobj).fn = sfn; }
 #define	FREE_BUF()			ff_memfree(lfn)
 
-#elif _USE_LFN == 4         /* LFN feature with dynamic working buffer on the sector buffer */
-
-extern CHAR *sector_buffer;
-#define	DEF_NAMEBUF			BYTE sfn[12]
-#define INIT_BUF(dobj)		{ (dobj).fn = sfn; (dobj).lfn = (WCHAR *)sector_buffer; }
-#define	FREE_BUF()
-
-
 #else
 #error Wrong LFN configuration.
 #endif

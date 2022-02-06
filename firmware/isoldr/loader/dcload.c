@@ -38,10 +38,6 @@ int dcload_type = DCLOAD_TYPE_NONE;
 
 int dcload_init() {
 
-	if (dcload_type != DCLOAD_TYPE_NONE) {
-		return 0;
-	}
-
 	if(*DCLOADMAGICADDR != DCLOADMAGICVALUE) {
 		return -1;
 	}

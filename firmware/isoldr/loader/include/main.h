@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _ISO_LOADER_H
@@ -20,9 +20,12 @@
 #include "syscalls.h"
 #include "reader.h"
 #include "cdda.h"
+#include "malloc.h"
 
-#define APP_ADDR	0xac010000
-#define IP_ADDR 	0xac008000
+#define APP_ADDR 0x8c010000
+#define IP_ADDR 0x8c008000
+#define RAM_END_ADDR 0x8d000000
+#define CACHED_ADDR(addr) ((addr & 0x0fffffff) | 0x80000000)
 
 #define SYD_DDS_FLAG_ADR   0x8c0080fc
 #define SYD_DDS_FLAG_CLEAR 0x20
@@ -87,11 +90,5 @@ void CloseLog();
 #	define DBGFF(...)
 
 #endif
-
-int malloc_init(void);
-void malloc_stat(uint32 *free_size, uint32 *max_free_size);
-void *malloc(uint32 size);
-void free(void *data);
-void *realloc(void *data, uint32 size);
 
 #endif /* _ISO_LOADER */

@@ -44,6 +44,22 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->gdc.sec_size = 2048;
 	GDS->gdc.mode = 2048;
 	GDS->gdc.flags = 8192;
+
+	if(GDS->true_async == 0
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		&& IsoInfo->use_dma && !IsoInfo->emu_async
+#elif defined(DEV_TYPE_SD)
+		&& IsoInfo->emu_async
+#endif
+		&& IsoInfo->sector_size == 2048
+		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_ZSO
+	) {
+#if defined(DEV_TYPE_SD)
+		/* Increase sectors count up to 1.5 if the emu async = 1 */
+		IsoInfo->emu_async = IsoInfo->emu_async == 1 ? 6 : (IsoInfo->emu_async << 2);
+#endif
+		GDS->true_async = 1;
+	}
 }
 
 /* This lock function needed for access to flashrom/bootrom */
@@ -963,56 +979,19 @@ int gdcChangeDataType(int *param) {
 	return 0;
 }
 
-
 /**
  * Initialize syscalls
  * This function calls from GDC ASM after saving registers
  */
 void gdcInitSystem(void) {
 
-#if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
-	/* Reinit BBA, because the game reset it */
-	dcload_reinit();
-#endif
-
-#ifdef DEV_TYPE_SD
-	/* Reinit SPI, because the game reinited SCIF */
-	spi_init();
-#else
-	/* Reinit logging, because the game reinited SCIF */
-	CloseLog();
 	OpenLog();
-#endif
-
-	malloc_init();
 	LOGFF(NULL);
 
 	gd_state_t *GDS = get_GDS();
 	reset_GDS(GDS);
 
-	if(
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		IsoInfo->use_dma && !IsoInfo->emu_async &&
-#elif defined(DEV_TYPE_SD)
-		IsoInfo->emu_async &&
-#endif
-		IsoInfo->sector_size == 2048
-#ifdef HAVE_LZO
-		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_CSO
-		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_ZSO
-#endif
-	) {
-
-#if defined(DEV_TYPE_SD)
-		/* Increase sectors count up to 1.5 if the emu async = 1 */
-		IsoInfo->emu_async = IsoInfo->emu_async == 1 ? 6 : (IsoInfo->emu_async << 2);
-#endif
-		GDS->true_async = 1;
-		
-	} else {
-		GDS->true_async = 0;
-	}
-
+	malloc_init();
 
 #ifdef HAVE_EXPT
 
@@ -1055,6 +1034,8 @@ void gdcInitSystem(void) {
 # endif /* HAVE_GDB */
 	
 #endif /* HAVE_EXPT */
+
+	InitReader();
 
 #ifdef HAVE_CDDA
 	if(IsoInfo->emu_cdda) {
@@ -1369,7 +1350,7 @@ int menu_syscall(int func) {
 		*reset_reg = reset_val;
 	}
 
-	if((uint32)IsoInfo >= 0x8c004000 && !is_custom_bios()) {
+	if((uint32)IsoInfo >= ISOLDR_DEFAULT_ADDR_LOW && !is_custom_bios()) {
 		int (*f)(int);
 		f = (void*)(menu_saved_vector);
 		return f(func);

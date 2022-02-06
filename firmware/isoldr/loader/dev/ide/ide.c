@@ -483,6 +483,7 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
 
 static s32 g1_dev_scan(void)
 {
+	memset(&ide_devices, 0, sizeof(ide_devices));
 
 #ifdef DEV_TYPE_EMU
 	ide_devices[0].wdma_modes = 0x0407;

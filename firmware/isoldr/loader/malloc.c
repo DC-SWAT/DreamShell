@@ -11,6 +11,7 @@ enum malloc_types {
     MALLOC_TYPE_KATANA = 1
 };
 static int malloc_type = MALLOC_TYPE_INTERNAL;
+static int init_count = 0;
 
 
 /**
@@ -31,7 +32,7 @@ static int katana_malloc_init(void) {
     }
     if (katana_malloc_root) {
         malloc_type = MALLOC_TYPE_KATANA;
-        LOGF("KATANA malloc initialized");
+        LOGF("KATANA malloc initialized\n");
         return 0;
     }
     return -1;
@@ -91,10 +92,33 @@ static void *internal_malloc_pos = NULL;
 static int internal_malloc_init(void) {
 
     if (IsoInfo->heap >= HEAP_MODE_SPECIFY) {
+
         internal_malloc_base = (void *)IsoInfo->heap;
+
     } else {
-        uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
-        internal_malloc_base = (void *)((loader_end / 32) * 32);
+
+        uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
+
+        if (loader_addr < exec_addr
+            && (IsoInfo->emu_cdda != CDDA_MODE_DISABLED
+                || IsoInfo->boot_mode != BOOT_MODE_DIRECT
+                || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO)
+        ) {
+
+            internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH;
+
+        } else if(loader_addr > exec_addr
+                  && IsoInfo->boot_mode == BOOT_MODE_DIRECT
+                  && IsoInfo->emu_cdda == CDDA_MODE_DISABLED
+                  && IsoInfo->image_type != ISOFS_IMAGE_TYPE_ZSO
+        ) {
+
+            internal_malloc_base = (void *)IP_ADDR;
+
+        } else {
+            uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
+            internal_malloc_base = (void *)((loader_end / 32) * 32);
+        }
     }
 
     internal_malloc_pos = internal_malloc_base;
@@ -105,15 +129,25 @@ static int internal_malloc_init(void) {
     b->free = 0;
     b->data = NULL;
 
-    LOGF("Internal malloc initialized");
+    LOGF("Internal malloc initialized\n");
     malloc_type = MALLOC_TYPE_INTERNAL;
     return 0;
 }
 
 static void internal_malloc_stat(uint32 *free_size, uint32 *max_free_size) {
-    // FIXME
-    *free_size = 0;
-    *max_free_size = 0;
+
+    uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
+
+    if ((uint32)internal_malloc_base < exec_addr) {
+
+        *free_size = exec_addr - (uint32)internal_malloc_pos;
+        *max_free_size = exec_addr - (uint32)internal_malloc_base;
+
+    } else {
+
+        *free_size = RAM_END_ADDR - (uint32)internal_malloc_pos;
+        *max_free_size = RAM_END_ADDR - (uint32)internal_malloc_base;
+    }
 }
 
 Chunk internal_malloc_chunk_find(size_t s, Chunk *heap) {
@@ -125,6 +159,7 @@ Chunk internal_malloc_chunk_find(size_t s, Chunk *heap) {
 void internal_malloc_merge_next(Chunk c) {
     c->size = c->size + c->next->size + sizeof(struct chunk);
     c->next = c->next->next;
+
     if (c->next) {
         c->next->prev = c;
     }
@@ -145,10 +180,15 @@ void internal_malloc_split_next(Chunk c, size_t size) {
 }
 
 void *internal_malloc(size_t size) {
-    if (!size) return NULL;
+
+    if (!size) {
+        return NULL;
+    }
+
     size_t length = word_align(size + sizeof(struct chunk));
     Chunk prev = NULL;
     Chunk c = internal_malloc_chunk_find(size, &prev);
+
     if (!c) {
         Chunk newc = internal_malloc_pos;
         internal_malloc_pos += length;
@@ -161,6 +201,7 @@ void *internal_malloc(size_t size) {
     } else if (length + sizeof(size_t) < c->size) {
         internal_malloc_split_next(c, length);
     }
+
     c->free = 0;
     return c->data;
 }
@@ -169,8 +210,13 @@ void internal_free(void *ptr) {
     if (!ptr || ptr < internal_malloc_base) {
         return;
     }
+
     Chunk c = (Chunk) ptr - 1;
-    if (c->data != ptr) return;
+
+    if (c->data != ptr) {
+        return;
+    }
+
     c->free = 1;
 
     if (c->next && c->next->free) {
@@ -187,8 +233,11 @@ void internal_free(void *ptr) {
 
 void *internal_realloc(void *ptr, size_t size) {
     void *newptr = internal_malloc(size);
+
     if (newptr && ptr && ptr >= internal_malloc_base) {
+
         Chunk c = (Chunk) ptr - 1;
+
         if (c->data == ptr) {
             size_t length = c->size > size ? size : c->size;
             memcpy(newptr, ptr, length);
@@ -200,11 +249,12 @@ void *internal_realloc(void *ptr, size_t size) {
 
 int malloc_init(void) {
     if (IsoInfo->heap == HEAP_MODE_INGAME && IsoInfo->exec.type == BIN_TYPE_KATANA) {
-        if (!katana_malloc_init()) {
+        if (!init_count++ || katana_malloc_init() < 0) {
             return internal_malloc_init();
         }
         return 0;
     }
+    init_count++;
     return internal_malloc_init();
 }
 
