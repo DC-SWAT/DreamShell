@@ -158,9 +158,7 @@ int open(const char *path, int mode) {
 
 #if _USE_FASTSEEK
 
-#if !_FS_READONLY
 if(mode == O_RDONLY) {
-#endif
 
 	/* Using fast seek feature */
 	_files[fd].fp.cltbl = _files[fd].lktbl;    /* Enable fast seek feature */
@@ -170,47 +168,24 @@ if(mode == O_RDONLY) {
 	r = f_lseek(&_files[fd].fp, CREATE_LINKMAP);
 
 	if(r == FR_NOT_ENOUGH_CORE) {
-
-#if 0 // Disable it for now
-		uint32 addr, sz;
-		sz = _files[fd].fp.cltbl[0];
-
-		/**
-		 * FIXME: Dangerous code!
-		 * Next file with the same error replace it!
-		 */
-		if((uint32)IsoInfo >= 0x8c004000) {
-			addr = 0x8c001300;
-		} else {
-			addr = 0x8cff4800;
+		
+		size_t count = _files[fd].fp.cltbl[0];
+		DWORD *cltbl = (DWORD *)malloc(count * sizeof(DWORD));
+		if (cltbl) {
+			memset(cltbl, 0, count * sizeof(DWORD));
+			cltbl[0] = count;
+			_files[fd].fp.cltbl = cltbl;
+			r = f_lseek(&_files[fd].fp, CREATE_LINKMAP);
 		}
-
-		LOGFF("WARNING, linkmap table at 0x08lx\n", addr);
-
-		_files[fd].fp.cltbl = (DWORD *)addr;
-		_files[fd].fp.cltbl[0] = sz;
-		memset(_files[fd].fp.cltbl, 0, sz * sizeof(DWORD));
 	}
 
-	/* Create linkmap */
-	r = f_lseek(&_files[fd].fp, CREATE_LINKMAP);
-
-#else
-		_files[fd].fp.cltbl = NULL;
-	}
-#endif
-
-#ifdef LOG
 	if(r != FR_OK) {
+		_files[fd].fp.cltbl = NULL;
 		LOGFF("ERROR, creating linkmap required %d (avail %d) dwords, code %d\n", _files[fd].lktbl[0], SZ_TBL, r);
 	} else {
 		LOGFF("Created linkmap with %d sequences\n", _files[fd].lktbl[0]);
 	}
-#endif
-
-#if !_FS_READONLY
 }
-#endif
 
 #endif /* _USE_FASTSEEK */
 
@@ -233,6 +208,11 @@ int close(int fd) {
 	}
 
 	rc = f_close(&_files[fd].fp);
+
+	if (_files[fd].fp.cltbl && _files[fd].fp.cltbl[0] > SZ_TBL) {
+		free(_files[fd].lktbl);
+	}
+
 	memset(&_files[fd], 0, sizeof(FILE));
 
 	if(rc != FR_OK) {

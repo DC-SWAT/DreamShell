@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ISO, CSO, CDI and GDI reader
- * (c)2009-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -10,18 +10,9 @@
 #include <minilzo.h>
 #endif
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-#define SECTOR_BUFFER_PAD 32
-#else
-#define SECTOR_BUFFER_PAD 4
-#endif
-
 int iso_fd = -1;
 static int _iso_fd[3] = {-1, -1, -1};
-
 static uint16 b_seek = 0, a_seek = 0;
-uint8 *sector_buffer = NULL;
-int sector_buffer_size = 0;
 
 #ifdef HAVE_LZO
 static int _open_ciso();
@@ -92,34 +83,9 @@ static void _open_iso() {
 
 int InitReader() {
 
-	uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + SECTOR_BUFFER_PAD;
-
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	loader_end = (loader_end / 32) * 32;
-#endif
-
-	sector_buffer = (uint8 *)loader_end;
-	sector_buffer_size = ISOLDR_MAX_MEM_USAGE - (ISOLDR_PARAMS_SIZE + loader_size + SECTOR_BUFFER_PAD);
-
-	/* If the loader placed at 0x8c004800 or 0x8c000100, need correct the buffer size */
-	// TODO: Try dynamic buffer
-	if(loader_addr <= 0x8c000100) {
-		sector_buffer_size -= 0x100;
-	} else if(loader_end < 0x8c010000 && (loader_end + sector_buffer_size) > 0x8c00C000) {
-		sector_buffer_size -= ((loader_end + sector_buffer_size) - 0x8c00C000) - SECTOR_BUFFER_PAD;
-	}
-
 	if(fs_init() < 0) {
 		return 0;
 	}
-
-#ifdef LOG
-	if(sector_buffer_size < (int)IsoInfo->sector_size) {
-		sector_buffer_size = IsoInfo->sector_size;
-	}
-#endif
-
-	LOGF("Sector buffer at 0x%08lx size %d\n", (uint32)sector_buffer, sector_buffer_size);
 
 	gd_state_t *GDS = get_GDS();
 	memset(GDS, 0, sizeof(gd_state_t));
@@ -558,6 +524,24 @@ static int _read_data_sectors2(uint8 *buff, uint32 offset, uint32 size, fs_callb
 #define isCompressed(block) ((block & 0x80000000) == 0)
 #define getPosition(block) ((block & 0x7FFFFFFF) << IsoInfo->ciso.align)
 
+static struct {
+	
+	uint cnt;
+	uint pkg;
+	
+	uint8 *p_buff;
+	uint32 p_buff_size;
+	
+	uint8 *c_buff;
+	uint32 c_buff_addr;
+	uint32 c_buff_size;
+	void *c_buff_alloc;
+	
+	uint *blocks;
+	fs_callback_f *cb;
+	
+} cst;
+
 static int _open_ciso() {
 	
 	DBGF("Magic: %c%c%c%c\n", 
@@ -576,35 +560,23 @@ static int _open_ciso() {
 	} else if(IsoInfo->ciso.magic[0] == 'Z') {
 		
 		if(lzo_init() != LZO_E_OK) {
-			LOGFF("lzo_init() failed\n");
+			LOGFF("lzo init failed\n");
 			return -1;
 		}
-		
+
+		cst.c_buff_size = 0x4000;
+		cst.c_buff_alloc = malloc(cst.c_buff_size);
+
+		if (!cst.c_buff_alloc) {
+			return -1;
+		}
+
 	} else {
 		return -1;
 	}
 	
 	return 0;
 }
-
-
-static struct {
-	
-	uint cnt;
-	uint pkg;
-	
-	uint8 *p_buff;
-	uint32 p_buff_size;
-	
-	uint8 *c_buff;
-	uint32 c_buff_addr;
-	uint32 c_buff_size;
-	
-	uint *blocks;
-	fs_callback_f *cb;
-	
-} cst;
-
 
 static inline uint _ciso_calc_read(uint *blocks, uint cnt, size_t size, size_t *rsize) {
 
@@ -663,37 +635,21 @@ static int ciso_read_init(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb)
 	cst.cb = cb;
 	cst.cnt = cnt;
 	cst.pkg = 0;
+	cst.c_buff_addr = (uint32)cst.c_buff_alloc;
 	cst.c_buff_size = 0x4000;
 	cst.p_buff_size = cnt << 2;
-	
-	uint len = cst.p_buff_size + sizeof(uint);
 
-	// TODO: Try dynamic buffer
-	if((uint32)IsoInfo > 0x8c010000 || (uint32)IsoInfo < 0x8c004000) {
-		
-		if(IsoInfo->boot_mode != BOOT_MODE_DIRECT)
-			cst.c_buff_addr = 0x0CFF0000;
-		else
-			cst.c_buff_addr = 0x0C00C000 - cst.c_buff_size;
-			
-	} else {
-		cst.c_buff_addr = 0x0D000000 - cst.c_buff_size - 0x18000;
-	}
-	
-	if(len > (uint)sector_buffer_size) {
-		len = ((len / 32) + 1) * 32;
-		cst.blocks = (uint *)(cst.c_buff_addr);
-		cst.c_buff_size -= len;
-		cst.c_buff_addr += len;
-	} else {
-		cst.blocks = (uint *)(sector_buffer);
-	}
-	
+	uint blocks_size = cnt * sizeof(uint);
+	blocks_size = ((blocks_size / 32) + 1) * 32;
+
+	cst.blocks = (uint *)(cst.c_buff_addr);
+	cst.c_buff_size -= blocks_size;
+	cst.c_buff_addr += blocks_size;
 	cst.c_buff = (uint8 *)cst.c_buff_addr;
 	
 	LOGFF("[0x%08lx %ld %ld] [0x%08lx %ld %ld]\n", 
 				(uint32)buff, sector, cnt,
-				cst.c_buff_addr, cst.c_buff_size, len);
+				cst.c_buff_addr, cst.c_buff_size, blocks_size);
 
 	cnt++;
 	

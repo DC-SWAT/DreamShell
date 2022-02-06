@@ -247,56 +247,15 @@ static void setup_pcm_buffer() {
 			cdda->size = 0x8000;
 			break;
 	}
-	
-	/* Search free memory area in main RAM */
-	if (IsoInfo->heap >= HEAP_MODE_SPECIFY) {
 
-		cdda->buff[0] = (uint8 *)(IsoInfo->heap);
-
-	} else if (IsoInfo->heap == HEAP_MODE_INGAME) {
-
-		if (cdda->alloc_buff && old_size != cdda->size) {
-
-			cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size + 32);
-
-		} else if (cdda->alloc_buff == NULL) {
-
-			cdda->alloc_buff = malloc(cdda->size + 32);
-		}
-
-		if (cdda->alloc_buff) {
-			cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
-		}
+	if (cdda->alloc_buff && old_size != cdda->size) {
+		cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size + 32);
+	} else if (cdda->alloc_buff == NULL) {
+		cdda->alloc_buff = malloc(cdda->size + 32);
 	}
 
-	if (IsoInfo->heap == HEAP_MODE_STATIC ||
-		(IsoInfo->heap == HEAP_MODE_INGAME && cdda->alloc_buff == NULL)
-	) {
-
-		if(loader_addr > 0x8c010000) {
-
-			if (IsoInfo->exec.type == BIN_TYPE_KATANA) {
-				cdda->buff[0] = (uint8 *)0x8c00c000 - cdda->size;
-			} else {
-				cdda->buff[0] = (uint8 *)0x8c010000 - cdda->size;
-			}
-
-		} else if (loader_addr <= 0x8c000100) {
-
-			if (IsoInfo->exec.type == BIN_TYPE_KATANA) {
-
-				if (cdda->size <= 0x4000) {
-					cdda->buff[0] = (uint8 *)0x8c00c000 - cdda->size;
-				} else {
-					cdda->buff[0] = (uint8 *)(0x8cfe8000 - cdda->size);
-				}
-
-			} else {
-				cdda->buff[0] = (uint8 *)0x8c010000 - cdda->size;
-			}
-		} else {
-			cdda->buff[0] = (uint8 *)(0x8cfe8000 - cdda->size);
-		}
+	if (cdda->alloc_buff) {
+		cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
 	}
 	
 	cdda->buff[1] = cdda->buff[0] + (cdda->size >> 1);
@@ -612,7 +571,7 @@ static void switch_cdda_track(uint8 track) {
 		if(!cdda->fn_len) {
 			cdda->fn_len = strlen(IsoInfo->image_file);
 		}
-		
+
 		memcpy(cdda->filename, IsoInfo->image_file, sizeof(IsoInfo->image_file));
 		
 		if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
@@ -717,21 +676,16 @@ static void *vsync_handler(void *passer, register_stack *stack, void *current_ve
 #endif
 
 int CDDA_Init() {
-	
+
 	memset(cdda, 0, sizeof(cdda_ctx_t));
-	
+
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
-		
 		cdda->fd = iso_fd;
-		
 	} else {
-		cdda->filename = (char *)sector_buffer;
-#if defined(DEV_TYPE_GD) && defined(LOG)
-		cdda->filename += 2048;
-#endif
+		cdda->filename = (char *)malloc(sizeof(IsoInfo->image_file));
 		cdda->fd = FILEHND_INVALID;
 	}
-	
+
 #if 0
 	/* It's not need for games (they do it), only for local test */
 	aica_init();

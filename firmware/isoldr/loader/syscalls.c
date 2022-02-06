@@ -984,6 +984,7 @@ void gdcInitSystem(void) {
 	OpenLog();
 #endif
 
+	malloc_init();
 	LOGFF(NULL);
 
 	gd_state_t *GDS = get_GDS();
@@ -1056,12 +1057,8 @@ void gdcInitSystem(void) {
 #endif /* HAVE_EXPT */
 
 #ifdef HAVE_CDDA
-	if (IsoInfo->heap == HEAP_MODE_INGAME) {
-		if (malloc_init()) {
-			LOGF("Dynamic memory enabled\n");
-		} else {
-			IsoInfo->heap = HEAP_MODE_STATIC;
-		}
+	if(IsoInfo->emu_cdda) {
+		CDDA_Init();
 	}
 #endif
 

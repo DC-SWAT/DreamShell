@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ISO9660 file system
- * (c)2011-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -10,12 +10,7 @@
 #include <arch/cache.h>
 
 /* Sector buffer */
-#ifdef LOG
-#define cd_sector_buffer sector_buffer
-#else
 static uint cd_sector_buffer[2048/4] __attribute__((aligned(32)));
-#endif
-
 static int dma_enabled = 0;
 
 void fs_enable_dma(int state) {

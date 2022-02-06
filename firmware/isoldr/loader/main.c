@@ -26,10 +26,6 @@ int main(int argc, char *argv[]) {
 	
 	printf(NULL);
 	
-	if(IsoInfo != NULL) {
-		Load_DS();
-	}
-	
 	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
 	loader_addr = (uint32)IsoInfo;
 
@@ -43,9 +39,10 @@ int main(int argc, char *argv[]) {
 		emu_all_sc = 1;
 		printf("Emulate all syscalls: enabled\n");
 	}
-	
+
 	enable_syscalls(emu_all_sc);
 	OpenLog();
+	malloc_init();
 
 	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[1] != 'S' || IsoInfo->magic[2] != 'I') {
 		LOGF("Magic is incorrect!\n");
@@ -88,13 +85,6 @@ int main(int argc, char *argv[]) {
 	if(!InitReader()) {
 		goto error;
 	}
-
-#ifdef HAVE_CDDA
-	if(IsoInfo->emu_cdda) {
-		CDDA_Init();
-//		CDDA_Test();
-	}
-#endif
 
 #ifdef LOG
 	printf("Loading %s %d Kb\n", IsoInfo->exec.file, IsoInfo->exec.size / 1024);
