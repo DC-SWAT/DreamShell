@@ -17,23 +17,23 @@ int main(int argc, char *argv[]) {
 
 	(void)argc;
 	(void)argv;
-
-	int emu_all_sc = 0;
 	
 	if(is_custom_bios() && is_no_syscalls()) {
 		bfont_saved_addr = 0xa0001000;
 	}
-	
-	printf(NULL);
-	
+
 	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
 	loader_addr = (uint32)IsoInfo;
+
+	OpenLog();
+	printf(NULL);
 
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	timer_init();
 #endif
 
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
+	int emu_all_sc = 0;
 	
 	if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW || (is_custom_bios() && is_no_syscalls())) {
 		emu_all_sc = 1;
@@ -41,7 +41,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	enable_syscalls(emu_all_sc);
-	OpenLog();
 
 	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[1] != 'S' || IsoInfo->magic[2] != 'I') {
 		LOGF("Magic is incorrect!\n");
@@ -51,6 +50,9 @@ int main(int argc, char *argv[]) {
 	if(IsoInfo->gdtex > 0) {
 		draw_gdtex((uint8 *)IsoInfo->gdtex);
 	}
+
+	malloc_init();
+	memset(get_GDS(), 0, sizeof(gd_state_t));
 
 	LOGF("Magic: %s\n"
 		"LBA: %d (%d)\n"
@@ -72,18 +74,15 @@ int main(int argc, char *argv[]) {
 		IsoInfo->boot_mode
 	);
 
-	LOGF("Loader size: %ld + %d = %ld at %08lx\n", 
-		loader_size, 
-		ISOLDR_PARAMS_SIZE, 
+	LOGF("Loader: %08lx - %08lx size %d, heap %08lx\n", 
+		loader_addr,
+		loader_addr + loader_size,
 		loader_size + ISOLDR_PARAMS_SIZE,
-		loader_addr
+		IsoInfo->heap > HEAP_MODE_SPECIFY ? IsoInfo->heap : malloc_heap_pos()
 	);
 
-	malloc_init();
-	memset(get_GDS(), 0, sizeof(gd_state_t));
-
 	printf("Initializing "DEV_NAME"...\n");
-	
+
 	if(!InitReader()) {
 		goto error;
 	}
@@ -99,26 +98,26 @@ int main(int argc, char *argv[]) {
 	}
 
 	if(IsoInfo->exec.type == BIN_TYPE_KOS) {
-		
-		uint8 *src = (uint8*)(IsoInfo->exec.addr);
-		
+
+		uint8 *src = (uint8 *)UNCACHED_ADDR(IsoInfo->exec.addr);
+
 		if(src[1] != 0xD0) {
 
 			LOGF("Detected scrambled homebrew executable\n");
 			printf("Descrambling...\n");
-			
+
 			uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
 			uint8 *dest = (uint8*)(exec_addr + (IsoInfo->exec.size * 3));
-			
+
 			descramble(src, dest, IsoInfo->exec.size);
 			memcpy(src, dest, IsoInfo->exec.size);
 		}
 	}
 
 	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
-		
+
 		printf("Loading IP.BIN...\n");
-		
+
 		if(!Load_IPBin()) {
 			goto error;
 		}
@@ -153,8 +152,9 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_EXPT
 	if(IsoInfo->exec.type == BIN_TYPE_WINCE && IsoInfo->use_irq) {
 		uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
+		uint8 wince_version = *((uint8 *)UNCACHED_ADDR(IsoInfo->exec.addr + 0x0c));
 		/* Check WinCE version and hack VBR before executing */
-		if(*((uint8 *)IsoInfo->exec.addr + 0x0c) == 0xe0) {
+		if(wince_version == 0xe0) {
 			exception_init(exec_addr + 0x2110);
 		} else {
 			exception_init(exec_addr + 0x20f0);
@@ -185,6 +185,6 @@ int main(int argc, char *argv[]) {
 error:
 	printf("Failed!\n");
 	disable_syscalls(emu_all_sc);
-//	timer_spin_sleep(3000);
+	timer_spin_sleep(30000);
 	return -1;
 }

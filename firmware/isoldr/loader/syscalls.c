@@ -52,6 +52,7 @@ static void reset_GDS(gd_state_t *GDS) {
 		&& IsoInfo->emu_async
 #endif
 		&& IsoInfo->sector_size == 2048
+		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_CSO
 		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_ZSO
 	) {
 #if defined(DEV_TYPE_SD)
@@ -670,7 +671,7 @@ int gdcReqCmd(int cmd, uint32 *param) {
 			}
 #ifdef LOG
 			else {
-				uint32 lm = ((uint32)IsoInfo) & 0x0fffffff;
+				uint32 lm = PHYS_ADDR(loader_addr);
 				uint32 rs = GDS->param[1] * GDS->gdc.sec_size;
 				
 				/* Protect the loader memory */
@@ -1350,7 +1351,7 @@ int menu_syscall(int func) {
 		*reset_reg = reset_val;
 	}
 
-	if((uint32)IsoInfo >= ISOLDR_DEFAULT_ADDR_LOW && !is_custom_bios()) {
+	if(loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && !is_custom_bios()) {
 		int (*f)(int);
 		f = (void*)(menu_saved_vector);
 		return f(func);
@@ -1525,18 +1526,18 @@ void disable_syscalls(int all) {
 void gdc_syscall_patch(void) {
 
 	size_t size = bios_patch_end - bios_patch_base;
-	
-	if((uint32)IsoInfo > (0x8c0010f0 + size)) {
+	uint32 second_offset = 0xf0;
+
+	if(loader_addr > (GDC_SYS_ADDR + second_offset + size)) {
 
 		bios_patch_handler = gdc_redir;
-		
-		memcpy((uint32 *) 0x8c001000, bios_patch_base, size);
-		memcpy((uint32 *) 0x8c0010f0, bios_patch_base, size);
-		
-		size += 0xf0;
-		icache_flush_range(0x8c001000, size);
-		dcache_flush_range(0x8c001000, size);
-		
+
+		memcpy((uint32 *) GDC_SYS_ADDR, bios_patch_base, size);
+		memcpy((uint32 *) (GDC_SYS_ADDR + second_offset), bios_patch_base, size);
+
+		size += second_offset;
+		icache_flush_range(GDC_SYS_ADDR, size);
+		dcache_flush_range(GDC_SYS_ADDR, size);
 	} else {
 		patch_memory(0x8c0010f0, (uint32)gdc_redir);
 	}

@@ -95,9 +95,9 @@ int InitReader() {
 
 	if(iso_fd < 0) {
 #ifdef LOG
-		printf("Error %d, can't open %s\n", iso_fd, IsoInfo->image_file);
+		printf("Error %d, can't open:\n%s\n", iso_fd, IsoInfo->image_file);
 #else
-		printf("Error, can't open ");
+		printf("Error, can't open: \n");
 		printf(IsoInfo->image_file);
 		printf("\n");
 #endif

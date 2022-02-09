@@ -7,25 +7,25 @@
 #include <main.h>
 #include <limits.h>
 #include <dc/sq.h>
+#include <dcload.h>
 
 uint Load_BootBin() {
 	
 	int rv, bsec;
 	uint32 bs = 0xfff000; /* FIXME: switch stack pointer for use all memory */
-	uint32 bin_addr = IsoInfo->exec.addr & 0x0fffffff;
-	bin_addr |= 0x80000000;
+	uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
 	const uint32 sec_size = 2048;
-	uint8 *buff = (uint8*)(IsoInfo->exec.addr);
-	
+	uint8 *buff = (uint8*)(UNCACHED_ADDR(IsoInfo->exec.addr));
+
 	if(IsoInfo->exec.size < bs) {
 		bs = IsoInfo->exec.size;
 	}
 	
 	bsec = (bs / sec_size) + ( bs % sec_size ? 1 : 0);
 	
-	if(loader_addr > bin_addr && loader_addr < (bin_addr + bs)) {
+	if(loader_addr > exec_addr && loader_addr < (exec_addr + bs)) {
 
-		int count = (loader_addr - bin_addr) / sec_size;
+		int count = (loader_addr - exec_addr) / sec_size;
 		int part = (ISOLDR_MAX_MEM_USAGE / sec_size) + count;
 		
 		rv = ReadSectors(buff, IsoInfo->exec.lba, count, NULL);
@@ -44,15 +44,15 @@ uint Load_BootBin() {
 
 uint Load_IPBin() {
 	
+	uint32 ipbin_addr = UNCACHED_ADDR(IPBIN_ADDR);
 	uint32 lba = IsoInfo->track_lba[0];
 	uint32 cnt = 16;
-	uint8 *buff = (uint8*)IP_ADDR;
+	uint8 *buff = (uint8*)ipbin_addr;
 	uint8 pass = 0;
 	
 	if(IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
 		pass = 12;
-	} else if(loader_addr <= ISOLDR_DEFAULT_ADDR_LOW &&
-			loader_addr > ISOLDR_DEFAULT_ADDR_MIN) {
+	} else if(loader_addr < APP_ADDR && loader_addr > ISOLDR_DEFAULT_ADDR_MIN) {
 		pass = 7;
 	}
 
@@ -65,9 +65,10 @@ uint Load_IPBin() {
 	if(ReadSectors(buff, lba, cnt, NULL) == COMPLETED) {
 		
 		if(IsoInfo->boot_mode != BOOT_MODE_IPBIN_TRUNC) {
-			*((uint16*)0xac0090d8) = 0x5113;
-			*((uint16*)0xac00940a) = 0x000b;
-			*((uint16*)0xac00940c) = 0x0009;
+
+			*((uint16*)ipbin_addr + 0x10d8) = 0x5113;
+			*((uint16*)ipbin_addr + 0x140a) = 0x000b;
+			*((uint16*)ipbin_addr + 0x140c) = 0x0009;
 		}
 		return 1;
 	}
@@ -93,8 +94,7 @@ void Load_DS() {
 
 void *search_memory(const uint8 *key, uint32 key_size) {
 	
-	uint32 start_loc = IsoInfo->exec.addr & 0x0fffffff;
-	start_loc |= 0x80000000;
+	uint32 start_loc = CACHED_ADDR(IsoInfo->exec.addr);
 	uint32 end_loc = start_loc + IsoInfo->exec.size;
 	
 	for(uint8 *cur_loc = (uint8 *)start_loc; (uint32)cur_loc <= end_loc; cur_loc++) {
@@ -111,23 +111,24 @@ void *search_memory(const uint8 *key, uint32 key_size) {
 
 
 int patch_memory(const uint32 key, const uint32 val) {
-	
-	uint32 end_loc = IsoInfo->exec.addr + IsoInfo->exec.size;
+
+	uint32 exec_addr = UNCACHED_ADDR(IsoInfo->exec.addr);
+	uint32 end_loc = exec_addr + IsoInfo->exec.size;
 	uint8 *k = (uint8 *)&key;
 	uint8 *v = (uint8 *)&val;
 	int count = 0;
-	
-	for(uint8 *cur_loc = (uint8 *)IsoInfo->exec.addr; (uint32)cur_loc <= end_loc; cur_loc++) {
+
+	for(uint8 *cur_loc = (uint8 *)exec_addr; (uint32)cur_loc <= end_loc; cur_loc++) {
 
 		if(*cur_loc == k[0]) {
 
-			if(!memcmp((const uint8 *)cur_loc, k, 4)) {
-				memcpy(cur_loc, v, 4);
+			if(!memcmp((const uint8 *)cur_loc, k, sizeof(val))) {
+				memcpy(cur_loc, v, sizeof(val));
 				count++;
 			}
 		}
 	}
-	
+
 	return count;
 }
 
@@ -139,7 +140,7 @@ void apply_patch_list() {
 	}
 
 	for(uint i = 0; i < sizeof(IsoInfo->patch_addr) >> 2; ++i) {
-		
+
 		if(*(uint32 *)IsoInfo->patch_addr[i] != IsoInfo->patch_value[i]) {
 			*(uint32 *)IsoInfo->patch_addr[i] = IsoInfo->patch_value[i];
 		}
@@ -197,23 +198,27 @@ int printf(const char *fmt, ...) {
 		return 0;
 	}
 	
-#ifdef LOG
+#if defined(LOG) && !defined(LOG_SCREEN)
 	char buff[128];
 	va_list args;
 
 	va_start(args, fmt);
 	i = vsnprintf(buff, sizeof(buff), fmt, args);
 	va_end(args);
-	
+
 	LOGF(buff);
 #else
 	char *buff = (char *)fmt;
 #endif
 
 	bfont_draw_str(vram + ((print_y * 24 + 4) * 640) + 12, 0xffff, 0x0000, buff);
-	
-	if(buff[strlen(buff)-1] == '\n')
-		print_y++;
+
+	if(buff[strlen(buff)-1] == '\n') {
+		if (print_y++ > 15) {
+			print_y = 0;
+			memset((uint32 *)vram, 0, 2 * 1024 * 1024);
+		}
+	}
 
 	return i;
 }
@@ -300,12 +305,6 @@ void video_screen_shot() {
 
 #ifdef LOG
 
-#if !_FS_READONLY && !defined(DEV_TYPE_GD)
-static int log_fd;
-#endif /* _FS_READONLY */
-
-static char log_buff[128];
-
 size_t strnlen(const char *s, size_t maxlen) {
 	const char *e;
 	size_t n;
@@ -340,46 +339,57 @@ int hex_to_int(char c) {
 	return -1;
 }*/
 
+static char log_buff[128];
+
+#if _FS_READONLY == 0 && defined(LOG_FILE)
+static int log_fd = FS_ERR_SYSERR;
+static int open_log_file() {
+	int fd = open(LOG_FILE, O_WRONLY | O_APPEND);
+	if (fd > FS_ERR_SYSERR) {
+		write(fd, "--- Start log ---\n", 18, len);
+	}
+	return fd;
+}
+#endif /* _FS_READONLY */
 
 int OpenLog() {
 
 	memset(log_buff, 0, sizeof(log_buff));
 
-#if _FS_READONLY == 0 && !defined(DEV_TYPE_GD)
-	log_fd = open("/isoldr.log", O_WRONLY);
-	
-	if(log_fd < 0) {
-		return 0;
-	}
-	LOGF("----- Start log -----\n\n");
+#if _FS_READONLY == 0 && defined(LOG_FILE)
+	log_fd = open_log_file();
+#endif
+
+#if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
+	dcload_init();
 #else
-#	if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
-		dcload_init();
-#	else
-		scif_init();
-#	endif
-#endif /* _FS_READONLY */
+	scif_init();
+#endif
 	return 1;
 }
 
 static int PutLog(char *buff) {
-	
+
 	int len = strlen(buff);
-	
-#if _FS_READONLY == 0 && !defined(DEV_TYPE_GD)
-		if(write(log_fd, buff, len) != len) {
-			return 0;
-		}
-#	else
 
-#	if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
-		dcload_write_buffer((uint8 *)buff, len);
-#	else
-		scif_write_buffer((uint8 *)buff, len, 1);
-#	endif
+#if _FS_READONLY == 0 && defined(LOG_FILE)
+	if (log_fd == FS_ERR_SYSERR) {
+		log_fd = open_log_file();
+	}
+	if(log_fd > FS_ERR_SYSERR) {
+		write(log_fd, buff, len);
+	}
+#endif
 
-#endif /* _FS_READONLY */
+#if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
+	dcload_write_buffer((uint8 *)buff, len);
+#else
+	scif_write_buffer((uint8 *)buff, len, 1);
+#endif
 
+#if defined(LOG_SCREEN)
+	printf(buff);
+#endif
 	return len;
 }
 

@@ -23,15 +23,21 @@
 #include "malloc.h"
 
 #define APP_ADDR 0x8c010000
-#define IP_ADDR 0x8c008000
-#define RAM_END_ADDR 0x8d000000
-#define CACHED_ADDR(addr) ((addr & 0x0fffffff) | 0x80000000)
+#define IPBIN_ADDR 0x8c008000
+#define GDC_SYS_ADDR 0x8c001000
 
-#define SYD_DDS_FLAG_ADR   0x8c0080fc
+#define RAM_START_ADDR 0x8c000000
+#define RAM_END_ADDR 0x8d000000
+
+#define PHYS_ADDR(addr) ((addr) & 0x0fffffff)
+#define CACHED_ADDR(addr) (PHYS_ADDR(addr) | 0x80000000)
+#define UNCACHED_ADDR(addr) (PHYS_ADDR(addr) | 0xa0000000)
+
+#define SYD_DDS_FLAG_ADDR UNCACHED_ADDR(IPBIN_ADDR + 0xfc))
 #define SYD_DDS_FLAG_CLEAR 0x20
 
 #define is_custom_bios() (*(uint16 *)0x00100018 != 0x4e46)
-#define is_no_syscalls() (*(uint16 *)0x8c000100 != 0x2f06)
+#define is_no_syscalls() (*(uint16 *)(RAM_START_ADDR + 0x100) != 0x2f06)
 
 extern isoldr_info_t *IsoInfo;
 extern uint32 loader_size;
@@ -40,7 +46,7 @@ extern void boot_stub(void *, uint32) __attribute__((noreturn));
 
 #define launch(addr) \
 	void (*fboot)(uint32) __attribute__((noreturn));     \
-	fboot = (void *)((uint32)(&boot_stub) | 0xa0000000); \
+	fboot = (void *)(UNCACHED_ADDR((uint32)&boot_stub)); \
 	fboot(addr)
 
 void video_init();
