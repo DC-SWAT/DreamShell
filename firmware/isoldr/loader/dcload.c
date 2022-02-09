@@ -5,9 +5,23 @@
  */
 
 #include <main.h>
+#include <dcload.h>
+#include <exception.h>
 #include <arch/irq.h>
-#include "dcload.h"
 
+#ifdef HAVE_IRQ
+#define dclsc(...) ({                                  \
+		int rv, old;                                   \
+        if (!exception_inside_int()) {                 \
+            old = irq_disable();                       \
+        }                                              \
+		do {} while ((*(vuint32 *)0xa05f688c) & 0x20); \
+		rv = dcloadsyscall(__VA_ARGS__);               \
+        if (!exception_inside_int())                   \
+            irq_restore(old);                          \
+		rv;                                            \
+})
+#else
 #define dclsc(...) ({                                  \
 		int rv, old;                                   \
 		old = irq_disable();                           \
@@ -16,6 +30,7 @@
 		irq_restore(old);                              \
 		rv;                                            \
 })
+#endif
 
 /* Printk replacement */
 int dcload_write_buffer(const uint8 *data, int len) {
@@ -45,7 +60,7 @@ int dcload_init() {
 	dcload_reinit();
 
 	/* Give dcload the 64k it needs to compress data (if on serial) */
-	if(dclsc(DCLOAD_ASSIGNWRKMEM, (uint32 *)0x8cfb0000) == -1) {
+	if(dclsc(DCLOAD_ASSIGNWRKMEM, NULL) == -1) {
 		dcload_type = DCLOAD_TYPE_IP;
 		printf("dc-load-ip initialized\n");
 	} else {

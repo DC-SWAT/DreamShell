@@ -19,7 +19,7 @@ enum FILE_STATE {
 typedef struct {
 
 	FIL fp;
-	int state;
+	uint32 state;
 	fs_callback_f *poll_cb;
 
 #if _USE_FASTSEEK
@@ -28,9 +28,8 @@ typedef struct {
 
 } FILE;
 
-
-static FATFS *_fat_fs;
-static FILE **_files;
+static FATFS *_fat_fs = NULL;
+static FILE *_files = NULL;
 
 #ifdef DEV_TYPE_IDE
 static int dma_enabled = FS_DMA_SHARED;
@@ -42,24 +41,22 @@ PARTITION VolToPart[_VOLUMES] = {{0, 0}};
 
 #ifdef LOG
 #	define CHECK_FD() \
-		if(fd < 0 || fd > (MAX_OPEN_FILES - 1) || _files[fd]->state == FILE_STATE_UNUSED) { \
+		if(fd < 0 || fd > (MAX_OPEN_FILES - 1) || _files[fd].state == FILE_STATE_UNUSED) { \
 			LOGFF("Bad fd = %d\n", fd); \
 			return FS_ERR_NOFILE; \
 		} \
-		FILE *file = _files[fd]
+		FILE *file = &_files[fd]
 #else
-#	define CHECK_FD() FILE *file = _files[fd]
+#	define CHECK_FD() FILE *file = &_files[fd]
 #endif
 
 
 static int fs_get_fd() {
-
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
-		if(_files[i]->state == FILE_STATE_UNUSED) {
+		if(_files[i].state == FILE_STATE_UNUSED) {
 			return i;
 		}
 	}
-
 	return FS_ERR_NUMFILES;
 }
 
@@ -73,7 +70,15 @@ int fs_init() {
 	VolToPart[0].pt = IsoInfo->fs_part + 1;
 
 	_fat_fs = (FATFS *) malloc(sizeof(FATFS));
-	_files = (FILE **) malloc(sizeof(FILE) * MAX_OPEN_FILES);
+	_files = (FILE *) malloc(sizeof(FILE) * MAX_OPEN_FILES);
+
+	if (!_fat_fs || !_files) {
+		LOGFF("Memory failed");
+		return -1;
+	}
+
+	LOGF("FATFS: 0x%08lx, secbuf: 0x%08lx, FILEs: 0x%08lx\n",
+		(uint32)_fat_fs, (uint32)_fat_fs->win, (uint32)_files);
 
 	memset(_fat_fs, 0, sizeof(FATFS));
 	memset(_files, 0, sizeof(FILE) * MAX_OPEN_FILES);
@@ -81,7 +86,6 @@ int fs_init() {
 	if(disk_initialize(0) == 0) {
 
 		printf("Mounting FAT filesystem...\n");
-		LOGF("FATFS at 0x%08lx, win at 0x%08lx\n", (uint32)_fat_fs, (uint32)_fat_fs.win);
 
 		if(f_mount(_fat_fs, path, 1) != FR_OK) {
 			return -1;
@@ -109,7 +113,11 @@ int fs_dma_enabled() {
 }
 
 
-int open(const char *path, int mode) {
+int open(const char *path, int flags) {
+
+	if (!_files) {
+		return FS_ERR_SYSERR;
+	}
 
 	int fd = fs_get_fd();
 
@@ -119,37 +127,43 @@ int open(const char *path, int mode) {
 	}
 
 	FRESULT r;
-	BYTE flags = 0;
-	FILE *file = _files[fd];
+	BYTE fat_flags = 0;
+	FILE *file = &_files[fd];
+	int mode = (flags & O_MODE_MASK);
 
+	switch(mode) {
+		case O_RDONLY:
+			fat_flags = (FA_OPEN_EXISTING | FA_READ);
+			break;
 #if !_FS_READONLY
-
-	if(mode == O_RDONLY) {
-		flags = FA_OPEN_EXISTING | FA_READ;
-	} else {
-		flags = FA_CREATE_ALWAYS | FA_WRITE;
-	}
-
-#else
-	(void)mode;
-	flags = FA_OPEN_EXISTING | FA_READ;
+		case O_WRONLY:
+			fat_flags = FA_WRITE | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
+			break;
+		case O_RDWR:
+			fat_flags = (FA_WRITE | FA_READ) | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
+			break;
 #endif
+		default:
+			return FS_ERR_PARAM;
+	}
 
 #ifdef DEV_TYPE_IDE
 	int old_dma_enabled = dma_enabled;
 	dma_enabled = 0;
 #endif
 
-	r = f_open(&file->fp, path, flags);
+	r = f_open(&file->fp, path, fat_flags);
 	
 	if(r != FR_OK) {
-
 		LOGFF("ERROR %d\n", r);
-
 #ifdef DEV_TYPE_IDE
 		dma_enabled = old_dma_enabled;
 #endif
 		return FS_ERR_NOFILE;
+	}
+
+	if((flags & O_APPEND) && file->fp.fsize > 0) {
+		f_lseek(&file->fp, file->fp.fsize - 1);
 	}
 
 #if _USE_FASTSEEK
@@ -210,7 +224,7 @@ int close(int fd) {
 		free(file->fp.cltbl);
 	}
 
-	memset(&_files[fd], 0, sizeof(FILE));
+	memset(file, 0, sizeof(FILE));
 
 	if(rc != FR_OK) {
 		LOGFF("ERROR, fd %d code %d\n", fd, rc);
@@ -354,7 +368,7 @@ int poll(int fd) {
 
 void poll_all() {
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
-		if(_files[i]->state == FILE_STATE_USED && _files[i]->poll_cb != NULL) {
+		if(_files[i].state == FILE_STATE_USED && _files[i].poll_cb != NULL) {
 			poll(i);
 		}
 	}

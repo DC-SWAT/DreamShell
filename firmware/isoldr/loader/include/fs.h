@@ -25,13 +25,11 @@
 
 #endif /* DEV_TYPE_NET */
 
-
-#if _FS_READONLY == 1
-#define MAX_OPEN_FILES 3
+#ifdef LOG_FILE
+# define MAX_OPEN_FILES 4
 #else
-#define MAX_OPEN_FILES 4
+# define MAX_OPEN_FILES 3
 #endif
-
 
 #define FS_ERR_SYSERR   -1    /* Generic error from device             */
 #define FS_ERR_DIRERR   -2    /* Root directory not found              */
