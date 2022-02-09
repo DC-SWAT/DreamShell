@@ -35,6 +35,7 @@ static int katana_malloc_init(void) {
         LOGF("KATANA malloc initialized\n");
         return 0;
     }
+    LOGF("KATANA malloc init failed\n");
     return -1;
 }
 
@@ -91,38 +92,41 @@ static void *internal_malloc_pos = NULL;
 
 static int internal_malloc_init(void) {
 
+    uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
+    internal_malloc_base = (void *)((loader_end / 32) * 32);
+    internal_malloc_pos = NULL;
+
     if (IsoInfo->heap >= HEAP_MODE_SPECIFY) {
 
         internal_malloc_base = (void *)IsoInfo->heap;
 
     } else {
 
-        uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
+        if (loader_addr < CACHED_ADDR(IsoInfo->exec.addr)) {
 
-        if (loader_addr < exec_addr
-            && (IsoInfo->emu_cdda != CDDA_MODE_DISABLED
+            if (loader_addr >= ISOLDR_DEFAULT_ADDR_LOW
+                || IsoInfo->emu_cdda
                 || IsoInfo->boot_mode != BOOT_MODE_DIRECT
-                || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO)
-        ) {
-
-            internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH;
-
-        } else if(loader_addr > exec_addr
-                  && IsoInfo->boot_mode == BOOT_MODE_DIRECT
-                  && IsoInfo->emu_cdda == CDDA_MODE_DISABLED
-                  && IsoInfo->image_type != ISOFS_IMAGE_TYPE_ZSO
-        ) {
-
-            internal_malloc_base = (void *)IP_ADDR;
+            ) {
+                internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH;
+            }
 
         } else {
-            uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
-            internal_malloc_base = (void *)((loader_end / 32) * 32);
+            if (!IsoInfo->emu_cdda && IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+
+                if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO ||
+                    IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
+                ) {
+                    internal_malloc_base = (void *)(ISOLDR_DEFAULT_ADDR_LOW + 0x800);
+                } else {
+                    internal_malloc_base = (void *)IPBIN_ADDR;
+                }
+            }
         }
     }
 
-    internal_malloc_pos = internal_malloc_base;
-    Chunk b = internal_malloc_pos;
+    internal_malloc_pos = internal_malloc_base + word_align(sizeof(struct chunk));
+    Chunk b = internal_malloc_base;
     b->next = NULL;
     b->prev = NULL;
     b->size = 0;
@@ -266,9 +270,23 @@ void malloc_stat(uint32 *free_size, uint32 *max_free_size) {
     }
 }
 
+uint32 malloc_heap_pos() {
+    if (malloc_type == MALLOC_TYPE_KATANA) {
+        return 0; // Not used
+    } else {
+        return (uint32)internal_malloc_pos;
+    }
+}
+
 void *malloc(uint32 size) {
     if (malloc_type == MALLOC_TYPE_KATANA) {
-        return katana_malloc(size);
+        void *ptr = katana_malloc(size);
+        if (ptr == NULL) {
+            LOGFF("KATANA failed, trying internal\n");
+            internal_malloc_init();
+            return internal_malloc(size);
+        }
+        return ptr;
     } else {
         return internal_malloc(size);
     }

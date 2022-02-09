@@ -249,15 +249,18 @@ static void setup_pcm_buffer() {
 	}
 
 	if (cdda->alloc_buff && old_size != cdda->size) {
-		cdda->alloc_buff = realloc(cdda->alloc_buff, cdda->size + 32);
-	} else if (cdda->alloc_buff == NULL) {
+		free(cdda->alloc_buff);
+		cdda->alloc_buff = NULL;
+	}
+
+	if (cdda->alloc_buff == NULL) {
 		cdda->alloc_buff = malloc(cdda->size + 32);
 	}
 
 	if (cdda->alloc_buff) {
 		cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
 	}
-	
+
 	cdda->buff[1] = cdda->buff[0] + (cdda->size >> 1);
 	
 	/* Setup buffer at end of sound memory */
@@ -1237,7 +1240,7 @@ void CDDA_MainLoop(void) {
 #ifdef DEBUG
 void CDDA_Test() {
 	/* Internal CDDA test */
-//	uint32 next = (uint32)IsoInfo;
+//	uint32 next = loader_addr;
 	int i = 0, track = 4;
 	
 	while(1) {

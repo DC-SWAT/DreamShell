@@ -14,6 +14,8 @@ __BEGIN_DECLS
 
 int malloc_init(void);
 void malloc_stat(uint32 *free_size, uint32 *max_free_size);
+uint32 malloc_heap_pos();
+
 void *malloc(uint32 size);
 void free(void *data);
 void *realloc(void *data, uint32 size);
