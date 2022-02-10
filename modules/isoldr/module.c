@@ -366,7 +366,12 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 		goto error;
 	}
 
-	snprintf(info->magic, 12, "DSISOLDR%d%d%d", VER_MAJOR, VER_MINOR, VER_MICRO);
+	// Keep interface version 0.6.x up to 0.8.x loaders
+	if (VER_MAJOR == 0 && VER_MINOR <= 8 && VER_MINOR >= 6) {
+		snprintf(info->magic, 12, "DSISOLDR%d%d%d", VER_MAJOR, 6, VER_MICRO);
+	} else {
+		snprintf(info->magic, 12, "DSISOLDR%d%d%d", VER_MAJOR, VER_MINOR, VER_MICRO);
+	}
 	info->magic[11] = '\0';
 	info->exec.addr = 0xac010000;
 
@@ -534,12 +539,11 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf("\n  ## ISO Loader v%d.%d.%d build %d ##\n\n"
 		          "Usage: %s options args\n"
 		          "Options: \n", VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD, argv[0]);
-		ds_printf(" -s, --fast       -Fast boot mode (don't show any info on screen)\n",
+		ds_printf(" -s, --fast       -Don't show loader text and disc texture on screen\n",
 		          " -i, --verbose    -Show additional info\n",
 		          " -a, --dma        -Use DMA transfer if available\n"
 		          " -q, --irq        -Use IRQ hooking\n"
-		          " -c, --cdda       -Emulate CDDA audio (cddamode=1 by default)\n"
-		          " -s, --fast       -Don't show loader text and disc texture on screen\n");
+		          " -c, --cdda       -Emulate CDDA audio (cddamode=1 by default)\n");
 		ds_printf("Arguments: \n"
 		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
 		          " -d, --device     -Loader device (sd/ide/cd/dcl/dcio), default auto\n"
@@ -598,7 +602,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"async",     'e', NULL, CFG_ULONG, (void *) &emu_async,   0},
 		{"cdda",      'c', NULL, CFG_BOOL,  (void *) &emu_cdda,    0},
 		{"cddamode",  'g', NULL, CFG_ULONG, (void *) &cdda_mode,   0},
-		{"buffer",    'm', NULL, CFG_ULONG, (void *) &heap,   0},
+		{"heap",      'h', NULL, CFG_ULONG, (void *) &heap,   0},
 		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
 		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
@@ -720,13 +724,15 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "Device: %s\n "
 		          "Filesystem: %s (partition %d)\n "
 		          "Address: 0x%08lx\n "
-		          "Buffer: %lx\n "
+		          "DMA: %d\n "
+		          "Heap: %lx\n "
 		          "Emu async: %d\n "
 		          "Emu CDDA: %d\n\n",
 		          info->fs_dev,
 		          info->fs_type,
 		          info->fs_part,
 		          lex,
+		          info->use_dma,
 		          info->heap,
 		          info->emu_async,
 		          info->emu_cdda);

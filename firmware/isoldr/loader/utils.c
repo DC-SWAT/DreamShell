@@ -184,29 +184,27 @@ void *sq_cpy(void *dest, const void *src, int n) {
 
 
 int printf(const char *fmt, ...) {
-	
+
 	if(IsoInfo != NULL && IsoInfo->fast_boot) {
 		return 0;
 	}
-	
+
 	static int print_y = 1;
 	int i = 0;
 	uint16 *vram = (uint16*)(VIDEO_VRAM_START);
-	
+
 	if(fmt == NULL) {
 		print_y = 1;
 		return 0;
 	}
-	
-#if defined(LOG) && !defined(LOG_SCREEN)
-	char buff[128];
+
+#if defined(LOG)
+	char buff[64];
 	va_list args;
 
 	va_start(args, fmt);
 	i = vsnprintf(buff, sizeof(buff), fmt, args);
 	va_end(args);
-
-	LOGF(buff);
 #else
 	char *buff = (char *)fmt;
 #endif
@@ -362,7 +360,7 @@ int OpenLog() {
 
 #if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
 	dcload_init();
-#else
+#elif !defined(LOG_SCREEN)
 	scif_init();
 #endif
 	return 1;
@@ -381,14 +379,12 @@ static int PutLog(char *buff) {
 	}
 #endif
 
-#if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
+#if defined(LOG_SCREEN)
+	printf(buff);
+#elif defined(DEV_TYPE_DCL) || defined(LOG_DCL)
 	dcload_write_buffer((uint8 *)buff, len);
 #else
 	scif_write_buffer((uint8 *)buff, len, 1);
-#endif
-
-#if defined(LOG_SCREEN)
-	printf(buff);
 #endif
 	return len;
 }
@@ -408,14 +404,14 @@ int WriteLog(const char *fmt, ...) {
 int WriteLogFunc(const char *func, const char *fmt, ...) {
 
 	PutLog((char *)func);
-	
+
 	if(fmt == NULL) {
 		PutLog("\n");
 		return 0;
 	}
-	
+
 	PutLog(": ");
-	
+
 	va_list args;
 	int i;
 
