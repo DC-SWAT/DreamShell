@@ -8,6 +8,19 @@
 #include <arch/irq.h>
 #include "dcload.h"
 
+#ifdef HAVE_IRQ
+#define dclsc(...) ({                                  \
+		int rv, old;                                   \
+        if (!exception_inside_int()) {                 \
+            old = irq_disable();                       \
+        }                                              \
+		do {} while ((*(vuint32 *)0xa05f688c) & 0x20); \
+		rv = dcloadsyscall(__VA_ARGS__);               \
+        if (!exception_inside_int())                   \
+            irq_restore(old);                          \
+		rv;                                            \
+})
+#else
 #define dclsc(...) ({                                  \
 		int rv, old;                                   \
 		old = irq_disable();                           \
@@ -16,6 +29,7 @@
 		irq_restore(old);                              \
 		rv;                                            \
 })
+#endif
 
 int fs_init() {
 	return dcload_init();

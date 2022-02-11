@@ -988,10 +988,6 @@ void gdcInitSystem(void) {
 
 	OpenLog();
 	LOGFF(NULL);
-
-	gd_state_t *GDS = get_GDS();
-	reset_GDS(GDS);
-
 	malloc_init();
 
 #ifdef HAVE_EXPT
@@ -1037,6 +1033,7 @@ void gdcInitSystem(void) {
 #endif /* HAVE_EXPT */
 
 	InitReader();
+	reset_GDS(get_GDS());
 
 #ifdef HAVE_CDDA
 	if(IsoInfo->emu_cdda) {

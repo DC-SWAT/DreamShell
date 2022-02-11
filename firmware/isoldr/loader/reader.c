@@ -10,8 +10,9 @@
 #include <minilzo.h>
 #endif
 
-int iso_fd = -1;
-static int _iso_fd[3] = {-1, -1, -1};
+#define MAX_OPEN_TRACKS 3
+int iso_fd = FILEHND_INVALID;
+static int _iso_fd[MAX_OPEN_TRACKS] = {FILEHND_INVALID, FILEHND_INVALID, FILEHND_INVALID};
 static uint16 b_seek = 0, a_seek = 0;
 
 #ifdef HAVE_LZO
@@ -83,13 +84,27 @@ static void _open_iso() {
 
 int InitReader() {
 
+	iso_fd = FILEHND_INVALID;
+	for(int i = 0; i < MAX_OPEN_TRACKS; ++i) {
+		_iso_fd[i] = FILEHND_INVALID;
+	}
+
 	if(fs_init() < 0) {
 		return 0;
 	}
 
 	gd_state_t *GDS = get_GDS();
-	GDS->data_track = IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ? 3 : 1;
+	memset(GDS, 0, sizeof(gd_state_t));
 	GDS->lba = 150;
+
+	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
+		int len = strlen(IsoInfo->image_file);
+		IsoInfo->image_file[len - 6] = '0';
+		IsoInfo->image_file[len - 5] = '3';
+		GDS->data_track = 3;
+	} else {
+		GDS->data_track = 1;
+	}
 
 	_open_iso();
 

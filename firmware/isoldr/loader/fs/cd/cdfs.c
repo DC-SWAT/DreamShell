@@ -542,6 +542,8 @@ int ioctl(int fd, int request, void *data) {
 /* Init function */
 
 int fs_init() {
+
+	memset(&fh, 0, sizeof(fh));
 	cd_sector_buffer = malloc(2048);
 
 	LOGFF("Sector buffer at 0x%08lx\n", (uint32)cd_sector_buffer);
@@ -550,5 +552,6 @@ int fs_init() {
 		return -1;
 	}
 
+	memset(cd_sector_buffer, 0, 2048);
 	return g1_bus_init();
 }

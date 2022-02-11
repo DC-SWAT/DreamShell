@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
 	}
 
 	malloc_init();
-	memset(get_GDS(), 0, sizeof(gd_state_t));
 
 	LOGF("Magic: %s\n"
 		"LBA: %d (%d)\n"
@@ -122,7 +121,7 @@ int main(int argc, char *argv[]) {
 			goto error;
 		}
 	}
-	
+
 	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
 
 		/* Patch GDC driver entry */
@@ -172,11 +171,11 @@ int main(int argc, char *argv[]) {
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 #ifdef LOG
-		printf("Executing at 0x%08lx...\n", IsoInfo->exec.addr);
+		printf("Executing at 0x%08lx...\n", UNCACHED_ADDR(IsoInfo->exec.addr));
 #else
 		printf("Executing...\n");
 #endif
-		launch(IsoInfo->exec.addr);
+		launch(UNCACHED_ADDR(IsoInfo->exec.addr));
 	}
 
 	printf("Executing from IP.BIN...\n");
