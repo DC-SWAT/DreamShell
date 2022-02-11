@@ -481,6 +481,11 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
     return 0;
 }
 
+#if defined(LOG) && !defined(DEV_TYPE_EMU)
+static const s8 *dev_bus_name[] = {"MASTER", "SLAVE"};
+static const s8 *dev_proto_name[] = {"ATAPI", "SPI"};
+#endif
+
 static s32 g1_dev_scan(void)
 {
 	memset(&ide_devices, 0, sizeof(ide_devices));
@@ -529,7 +534,7 @@ static s32 g1_dev_scan(void)
 
 		if(!(st & (ATA_SR_DRDY | ATA_SR_DSC)) && !(st & ATA_SR_ERR))
 		{
-			LOGFF("%s device not found\n", (!j)?"MASTER":"SLAVE");
+			LOGFF("%s device not found\n", dev_bus_name[j]);
 			continue;
 		}
 		
@@ -592,13 +597,13 @@ static s32 g1_dev_scan(void)
 				ide_devices[j].command_sets  = (u32)(data[82]) | ((u32)(data[83]) << 16);
 				ide_devices[j].capabilities  = (u32)(data[49]) | ((u32)(data[50]) << 16);
 				ide_devices[j].wdma_modes = data[63];
-				
+
 				if (!(ide_devices[j].capabilities & (1 << 9)))
 				{
 					LOGF("CHS don't supported\n");
 					continue;
 				}
-				else 
+
 				if(!(ide_devices[j].command_sets & (1 << 26)))
 				{
 					ide_devices[j].max_lba = (u64)(data[60]) | ((u64)(data[61]) << 16);
@@ -606,13 +611,13 @@ static s32 g1_dev_scan(void)
 				else
 				{
 					ide_devices[j].max_lba = (u64)(data[100]) | 
-												((u64)(data[101]) << 16) |
-												((u64)(data[102]) << 32) |
-												((u64)(data[103]) << 48);
+											((u64)(data[101]) << 16) |
+											((u64)(data[102]) << 32) |
+											((u64)(data[103]) << 48);
 				}
-				
+
 				g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
-				
+
 				/*  Do we support Multiword DMA mode 2? If so, enable it. Otherwise, we won't
 					even bother doing DMA at all. */
 				if(ide_devices[j].wdma_modes & 0x0004 && !g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) 
@@ -639,24 +644,26 @@ static s32 g1_dev_scan(void)
 	}
 
 #ifdef LOG
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < 2; i++) {
 		if (ide_devices[i].reserved == 1) 
 		{
 			if (ide_devices[i].type == IDE_ATA)
+			{
 				LOGF("%s %s ATA drive %ld Kb\n",
-											(const s8 *[]){"MASTER", "SLAVE"}[i],
-											(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
-											(u64)(ide_devices[i].max_lba >> 1));
-
+					dev_bus_name[i],
+					(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
+					(u64)(ide_devices[i].max_lba >> 1));
+			}
 			else
-				LOGF("%s %s drive\n",
-						(const s8 *[]){"MASTER", "SLAVE"}[i],
-						(const s8 *[]){"ATAPI", "SPI"}[ide_devices[i].type-1]);
+			{
+				LOGF("%s %s drive\n", dev_bus_name[i], dev_proto_name[ide_devices[i].type-1]);
+			}
 		}
 		else
 		{
-			LOGF("%s device not found\n", (const s8 *[]){"MASTER", "SLAVE"}[i]);
+			LOGF("%s device not found\n", dev_bus_name[i]);
 		}
+	}
 #endif
 	return count;
 #endif /* DEV_TYPE_EMU */
@@ -881,7 +888,10 @@ static s32 g1_ata_access(struct ide_req *req)
 	return 0;
 }
 
-#ifdef DEBUG
+#if defined(LOG) && defined(DEBUG)
+
+static const s8 *dev_fs_name[] = { "FAT16", "FAT16B", "FAT32", "FAT32X", "EXT2"};
+
 void g1_get_partition(void) 
 {
 	s32 i, j; 
@@ -908,8 +918,7 @@ void g1_get_partition(void)
 			TODO: Support GPT partitioning at some point. */
 		if(((u16 *)buff)[0xFF] != 0xAA55) 
 		{
-			LOGFF("ATA device doesn't appear to have a MBR %04X\n",
-								((u16 *)buff)[0xFF]);
+			LOGFF("ATA device doesn't appear to have a MBR %04X\n", ((u16 *)buff)[0xFF]);
 			continue;
 		}
 		
@@ -958,31 +967,25 @@ void g1_get_partition(void)
 			
 			if (!type)
 			{
-				LOGF("%s device don't have partations\n", (const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive]);
+				LOGF("%s device don't have partitions\n", dev_bus_name[ide_devices[i].drive]);
 				break;
 			}
-#ifdef LOG
 			else if (type < 6)
 			{
-				LOGF("%s device part%d %s - %u Kb\n", (const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive],
-																	j,
-																	(const s8 *[]){ "FAT16", 
-																					  "FAT16B", 
-																					  "FAT32", 
-																					  "FAT32X", 
-																					  "EXT2"  }[type - 1],
-																	ide_devices[i].pt[j].sect_total >> 1);
+				LOGF("%s device part%d %s - %ld Kb\n",
+					dev_bus_name[ide_devices[i].drive], j,
+					dev_fs_name[type - 1], ide_devices[i].pt[j].sect_total >> 1);
 			}
 			else if (type < 8)
 			{
-				LOGF("%s device part%d EXTENDED partation don't supported\n", 
-								(const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive], j);
+				LOGF("%s device part%d EXTENDED partition don't supported\n",
+					dev_bus_name[ide_devices[i].drive], j);
 			}
-			else 
-				LOGF("%s device part%d partation type 0x%02X don't supported\n", 
-									(const s8 *[]){"MASTER", "SLAVE"}[ide_devices[i].drive], 
-									 j, ide_devices[i].pt[j].type_part);
-#endif
+			else
+			{
+				LOGF("%s device part%d partition type 0x%02X don't supported\n",
+					dev_bus_name[ide_devices[i].drive], j, ide_devices[i].pt[j].type_part);
+			}
 			ide_devices[i].pt_num++;
 		}
 	}
@@ -1567,14 +1570,11 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 				case 5:
 					return ERR_SYS;
 					break;
-				
 				case 2:
 				case 6:
 					LOGFF("NO DISC");
-					
 					if (status)
 						*status = CD_STATUS_NO_DISC;
-					
 					return ERR_NO_DISC;
 					break;
 				
@@ -1583,49 +1583,33 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 					break;
 			}
 			
-#if 1
-		DBGF("status: %s\t disc type: %s\n", (const s8 *[])
-															{
-																"BUSY",
-																"PAUSE",
-																"STANDBY",
-																"PLAY",
-																"SEEK",
-																"SCAN",
-																"OPEN",
-																"NO DISC",
-																"RETRY",
-																"ERROR"
-															}[stat],
-														   (const s8 *[])
-														   {
-																"CD-DA",
-																"CD-ROM",
-																"CD-ROM XA",
-																"CD-I",
-																NULL,
-																NULL,
-																NULL,
-																NULL,
-																"GD-ROM"
-															}[type]);
+#ifdef DEBUG
+		const s8 *status_name[] = {
+			"BUSY", "PAUSE", "STANDBY", "PLAY", "SEEK",
+			"SCAN", "OPEN", "NO DISC", "RETRY","ERROR"
+		};
+		const s8 *disc_type[] = {
+			"CD-DA", "CD-ROM", "CD-ROM XA", "CD-I",
+			NULL, NULL, NULL, NULL, "GD-ROM"
+		};
+		DBGF("Status: %s, disc type: %s\n", status_name[stat], disc_type[type]);
 #endif
 		if (status)
 			*status = stat;
-		
+
 		switch (stat)
 		{
 			case CD_STATUS_NO_DISC:
 				return ERR_NO_DISC;
 				break;
 		}
-		
+
 		if (disc_type)
 			*disc_type = type << 4;
 	}
 	else
 		return ERR_SYS;
-	
+
 	return ERR_OK;
 }
 

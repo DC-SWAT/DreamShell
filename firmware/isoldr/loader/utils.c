@@ -205,6 +205,10 @@ int printf(const char *fmt, ...) {
 	va_start(args, fmt);
 	i = vsnprintf(buff, sizeof(buff), fmt, args);
 	va_end(args);
+
+# ifndef LOG_SCREEN
+	LOGF(buff);
+# endif
 #else
 	char *buff = (char *)fmt;
 #endif
