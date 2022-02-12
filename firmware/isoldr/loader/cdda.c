@@ -258,7 +258,7 @@ static void setup_pcm_buffer() {
 	}
 
 	if (cdda->alloc_buff) {
-		cdda->buff[0] = (uint8 *)((((uint32)cdda->alloc_buff + 31) / 32) * 32);
+		cdda->buff[0] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
 	}
 
 	cdda->buff[1] = cdda->buff[0] + (cdda->size >> 1);

@@ -544,14 +544,16 @@ int ioctl(int fd, int request, void *data) {
 int fs_init() {
 
 	memset(&fh, 0, sizeof(fh));
-	cd_sector_buffer = malloc(2048);
-
-	LOGFF("Sector buffer at 0x%08lx\n", (uint32)cd_sector_buffer);
+	cd_sector_buffer = malloc(2048 + 32);
 
 	if (!cd_sector_buffer) {
+		LOGFF("Memory failed");
 		return -1;
 	}
 
+	cd_sector_buffer = (void *)ALIGN32_ADDR((uint32)cd_sector_buffer);
 	memset(cd_sector_buffer, 0, 2048);
+	LOGFF("Sector buffer at 0x%08lx\n", (uint32)cd_sector_buffer);
+
 	return g1_bus_init();
 }

@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 		loader_addr,
 		loader_addr + loader_size,
 		loader_size + ISOLDR_PARAMS_SIZE,
-		IsoInfo->heap > HEAP_MODE_SPECIFY ? IsoInfo->heap : malloc_heap_pos()
+		malloc_heap_pos()
 	);
 
 	printf("Initializing "DEV_NAME"...\n");
@@ -139,7 +139,6 @@ int main(int argc, char *argv[]) {
 #endif
 	}
 
-	/* HW widescreen and VGA forcing (incomplete) */
 //	ubc_init();
 //	ubc_configure_channel(UBC_CHANNEL_A, 0xa05f80f4, UBC_BBR_OPERAND | UBC_BBR_WRITE);
 //	ubc_configure_channel(UBC_CHANNEL_B, (uint32)&GDS->dma_status_reg, UBC_BBR_OPERAND | UBC_BBR_READ | UBC_BBR_WRITE);

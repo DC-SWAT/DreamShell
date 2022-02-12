@@ -93,7 +93,7 @@ static void *internal_malloc_pos = NULL;
 static int internal_malloc_init(void) {
 
     uint32 loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
-    internal_malloc_base = (void *)((loader_end / 32) * 32);
+    internal_malloc_base = (void *)ALIGN32_ADDR(loader_end);
     internal_malloc_pos = NULL;
 
     if (IsoInfo->heap >= HEAP_MODE_SPECIFY) {

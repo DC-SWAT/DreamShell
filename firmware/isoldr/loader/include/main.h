@@ -32,6 +32,7 @@
 #define PHYS_ADDR(addr) ((addr) & 0x0fffffff)
 #define CACHED_ADDR(addr) (PHYS_ADDR(addr) | 0x80000000)
 #define UNCACHED_ADDR(addr) (PHYS_ADDR(addr) | 0xa0000000)
+#define ALIGN32_ADDR(addr) (((addr) + 0x1f) & ~0x1f)
 
 #define SYD_DDS_FLAG_ADDR UNCACHED_ADDR(IPBIN_ADDR + 0xfc))
 #define SYD_DDS_FLAG_CLEAR 0x20

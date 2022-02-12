@@ -69,13 +69,15 @@ int fs_init() {
 	VolToPart[0].pd = 0;
 	VolToPart[0].pt = IsoInfo->fs_part + 1;
 
-	_fat_fs = (FATFS *) malloc(sizeof(FATFS));
+	_fat_fs = (FATFS *) malloc(sizeof(FATFS) + 32);
 	_files = (FILE *) malloc(sizeof(FILE) * MAX_OPEN_FILES);
 
 	if (!_fat_fs || !_files) {
 		LOGFF("Memory failed");
 		return -1;
 	}
+
+	_fat_fs = (FATFS *)ALIGN32_ADDR((uint32)_fat_fs);
 
 	LOGF("FATFS: 0x%08lx, secbuf: 0x%08lx, FILEs: 0x%08lx\n",
 		(uint32)_fat_fs, (uint32)_fat_fs->win, (uint32)_files);
