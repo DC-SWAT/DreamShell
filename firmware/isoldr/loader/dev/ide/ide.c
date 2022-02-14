@@ -242,7 +242,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 			u8 state = IN8(G1_ATA_STATUS_REG);
 
 			if (state & ATA_SR_ERR) {
-				LOGF("G1_ATA_STATUS_REG: %x\n", state);
+				LOGF("ATA status has error, state %x\n", state);
 			}
 		}
 	}
@@ -488,7 +488,7 @@ static const s8 *dev_proto_name[] = {"ATAPI", "SPI"};
 
 static s32 g1_dev_scan(void)
 {
-	memset(&ide_devices, 0, sizeof(ide_devices));
+	memset(&ide_devices[0], 0, sizeof(ide_devices));
 
 #ifdef DEV_TYPE_EMU
 	ide_devices[0].wdma_modes = 0x0407;
@@ -507,7 +507,14 @@ static s32 g1_dev_scan(void)
 	s32 i;
 	u8 j, st, err, type, count = 0;
 	int d = 0;
-	u16 data[256];
+	u16 *data = (u16 *) malloc(512);
+
+	if (!data) {
+		LOGFF("Memory failed");
+		return 0;
+	}
+
+	memset(data, 0, 512);
 
 	for (j = 0; j < MAX_DEVICE_COUNT; j++)
 	{
@@ -601,7 +608,7 @@ static s32 g1_dev_scan(void)
 				if (!(ide_devices[j].capabilities & (1 << 9)))
 				{
 					LOGF("CHS don't supported\n");
-					continue;
+					// continue;
 				}
 
 				if(!(ide_devices[j].command_sets & (1 << 26)))
@@ -665,6 +672,7 @@ static s32 g1_dev_scan(void)
 		}
 	}
 #endif
+	free(data);
 	return count;
 #endif /* DEV_TYPE_EMU */
 }

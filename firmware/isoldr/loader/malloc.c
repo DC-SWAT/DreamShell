@@ -100,15 +100,15 @@ static int internal_malloc_init(void) {
 
         internal_malloc_base = (void *)IsoInfo->heap;
 
-    } else {
+    } else if(IsoInfo->heap == HEAP_MODE_AUTO) {
 
         if (loader_addr < CACHED_ADDR(IsoInfo->exec.addr)) {
 
             if (loader_addr >= ISOLDR_DEFAULT_ADDR_LOW
-                || IsoInfo->emu_cdda
+                || (IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_WINCE)
                 || IsoInfo->boot_mode != BOOT_MODE_DIRECT
             ) {
-                internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH;
+                internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
             }
 
         } else {

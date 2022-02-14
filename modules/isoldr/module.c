@@ -563,9 +563,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf(" -r, --addr       -Executable memory address (default 0xac010000)\n"
 		          " -b, --boot       -Executable file name (default from IP.BIN)\n");
 		ds_printf(" -h, --heap       -Heap mode or memory address\n"
-		          "                      0 = static (default, uses some hardcoded memory addrs)\n"
-		          "                      1 = dynamic (ingame memory allocation)\n"
-		          "                     0x = address (specify valid address)\n");
+		          "                      0 = auto address selection (default)\n"
+		          "                      1 = behind the loader\n"
+		          "                      2 = ingame memory allocation (KATANA only)\n"
+		          "             0x8cXXXXXX = address (specify valid address)\n");
 		ds_printf(" -g, --cddamode   -CDDA emulation mode\n"
 		          "                      0 = Disabled (default)\n"
 		          "                      1 = DMA and TMU2\n"
@@ -582,7 +583,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	uint32 p_addr[2]  = {0, 0};
 	uint32 p_value[2] = {0, 0};
-	uint32 addr = 0, use_dma = 0, lex = 0, heap = HEAP_MODE_STATIC;
+	uint32 addr = 0, use_dma = 0, lex = 0, heap = HEAP_MODE_AUTO;
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;

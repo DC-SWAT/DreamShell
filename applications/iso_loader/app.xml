@@ -299,7 +299,7 @@
 							</panel>
 
 							<panel height="25" width="33%">
-								<input name="fastboot-checkbox" type="checkbox" checked="true">
+								<input name="fastboot-checkbox" type="checkbox">
 									<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="100%" x="23%" />
 								</input>
 							</panel>
@@ -310,17 +310,17 @@
 								<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
 								</input>
-								<input checked="true" height="22" name="0x8c004000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
+								<input height="22" name="0x8c004000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c001100" x="19%" />
 								</input>
 								<input height="22" name="0x8c004800" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
 								</input>
 								<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
 								</input>
 								<input height="22" name="0x8cef8000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8cef8000" x="19%" />
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
 								</input>
 								<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
@@ -357,10 +357,13 @@
 						</panel>
 
 						<panel name="heap-panel">
-							<panel height="225" width="80%">
+							<panel height="255" width="80%">
 								<panel name="heap-memory-panel" width="100%">
 									<input checked="true" height="25" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="100%">
-										<label align="left" color="#000000" font="arial" height="20" text="Autoselect from hardcoded addrs" x="25" />
+										<label align="left" color="#000000" font="arial" height="20" text="Auto address selection" x="25" />
+									</input>
+									<input height="25" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Behind the loader" x="25" />
 									</input>
 									<input height="25" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="100%">
 										<label align="left" color="#000000" font="arial" height="20" text="Ingame heap (KANATA only)" x="25" />
@@ -369,16 +372,16 @@
 										<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
 									</input>
 									<input height="22" name="0x8c004000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-										<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c001100" x="19%" />
 									</input>
 									<input height="22" name="0x8c004800" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-										<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
 									</input>
 									<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-										<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
 									</input>
 									<input height="22" name="0x8cef8000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-										<label align="left" color="#000000" font="arial" height="20" text="0x8cef8000" x="19%" />
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
 									</input>
 									<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />

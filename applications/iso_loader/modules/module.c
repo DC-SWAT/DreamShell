@@ -71,10 +71,7 @@ static struct {
 	GUI_Surface *current_cover;
 	GUI_Widget *cover_widget;
 	GUI_Widget *title;
-	
-	GUI_Widget *container_panel;
 	GUI_Widget *options_panel;
-	GUI_Widget *memory_panel;
 	
 	GUI_Widget *icosizebtn[5];
 	GUI_Widget *wlnkico;
@@ -765,13 +762,13 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 		GUI_WidgetSetState(self.memory_chk[i-1], 1);
 	}
 	
-	if(GUI_WidgetGetState(self.memory_chk[1]) && 
+	if(GUI_WidgetGetState(self.memory_chk[2]) && 
 		GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN])) {
 		
 		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 0);
 		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
 		
-	} else if(GUI_WidgetGetState(self.memory_chk[2]) && 
+	} else if(GUI_WidgetGetState(self.memory_chk[3]) && 
 		(GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN]) || 
 		GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]))) {
 		
@@ -791,15 +788,15 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 	
 	if(widget == self.boot_mode_chk[BOOT_MODE_IPBIN]) {
 		
-		if(GUI_WidgetGetState(self.memory_chk[1])) {
+		if(GUI_WidgetGetState(self.memory_chk[2])) {
 			GUI_WidgetSetState(self.memory_chk[0], 1);
 			isoLoader_toggleMemory(self.memory_chk[0]);
 		}
 		
 	} else {
 		
-		GUI_WidgetSetState(self.memory_chk[1], 1);
-		isoLoader_toggleMemory(self.memory_chk[1]);
+		GUI_WidgetSetState(self.memory_chk[2], 1);
+		isoLoader_toggleMemory(self.memory_chk[2]);
 	}
 }
 
@@ -1147,7 +1144,7 @@ int isoLoader_SavePreset() {
 	char text[32];
 	char result[1024];
 	int async = 0, type = 0, mode = 0;
-	uint32 heap = HEAP_MODE_STATIC;
+	uint32 heap = HEAP_MODE_AUTO;
 	int cdda_mode = CDDA_MODE_DISABLED;
 
 	if (!self.filename[0]) {
@@ -1272,7 +1269,7 @@ int isoLoader_LoadPreset() {
 	int fastboot = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
-	uint32 heap = HEAP_MODE_STATIC;
+	uint32 heap = HEAP_MODE_AUTO;
 	char title[32] = "";
 	char device[8] = "";
 	char memory[12] = "0x8c004000";
@@ -1463,8 +1460,6 @@ void isoLoader_Init(App_t *app) {
 		self.irq           = APP_GET_WIDGET("irq-checkbox");
 		self.fastboot      = APP_GET_WIDGET("fastboot-checkbox");
 		
-		self.container_panel  = APP_GET_WIDGET("container-panel");
-		self.memory_panel	  = APP_GET_WIDGET("boot-memory-panel");
 		self.options_panel	  = APP_GET_WIDGET("options-panel");
 		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
 		self.wpa[1]	          = APP_GET_WIDGET("pa2-text");
