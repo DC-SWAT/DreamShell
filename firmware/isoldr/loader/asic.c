@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ASIC IRQ handling
- * (c)2014-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2022 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -10,32 +10,35 @@
 #include <asic.h>
 #include <cdda.h>
 
-#if (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)) && defined(NO_ASIC_LT)
+#ifdef NO_ASIC_LT
 void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
+void* maple_dma_handler(void *passer, register_stack *stack, void *current_vector);
 #endif
 
 static asic_lookup_table   asic_table;
 static exception_handler_f old_handler;
-//void dump_maple_dma_buffer();
 
 static void* asic_handle_exception(register_stack *stack, void *current_vector) {
 	
 	uint32 code = *REG_INTEVT;
-	// uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+#if 0//def DEBUG
+	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
-	// if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
-	// 	LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-	// 				*REG_INTEVT & 0x0fff, status, 
-	// 				ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
-	// 				ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
-	// }
-	// dump_regs(stack);
+	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
+		LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
+					*REG_INTEVT & 0x0fff, status, 
+					ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
+					ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+	}
+	dump_regs(stack);
+#endif
 
 #ifdef NO_ASIC_LT
 	/**
 	 * Use ASIC handlers directly instead of lookup table
 	 */
 
+	(void)stack;
 	void *back_vector = current_vector;
 	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 
@@ -45,12 +48,12 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 
 	if ((status & ASIC_NRM_GD_DMA) ||
 		(statusExt & ASIC_EXT_GD_CMD) ||
-		(statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)
+		(statusErr & ASIC_ERR_G1DMA_ILLEGAL) ||
+		(statusErr & ASIC_ERR_G1DMA_OVERRUN) ||
+		(statusErr & ASIC_ERR_G1DMA_ROM_FLASH)
 	) {
 		back_vector = g1_dma_handler(NULL, stack, current_vector);
 	}
-# else
-	(void)stack;
 # endif
 
 	if (code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
@@ -62,9 +65,11 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 			apply_patch_list();
 		}
 
-//		if(status & ASIC_NRM_MAPLE_DMA) {
-//			dump_maple_dma_buffer();
-//		}
+# ifdef HAVE_MAPLE
+		if(status & ASIC_NRM_MAPLE_DMA) {
+			back_vector = maple_dma_handler(NULL, stack, back_vector);
+		}
+# endif
 	}
 
 //	LOGFF("0x%08lx\n", (uint32)back_vector);

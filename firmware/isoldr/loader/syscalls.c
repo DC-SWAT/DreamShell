@@ -8,7 +8,8 @@
 #include <exception.h>
 #include <asic.h>
 #include <mmu.h>
-#include <dcload.h>
+#include <cdda.h>
+#include <maple.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
 #include <arch/gdb.h>
@@ -1007,6 +1008,9 @@ void gdcInitSystem(void) {
 			if (IsoInfo->use_dma) {
 				g1_dma_init_irq();
 			}
+# endif
+# ifdef HAVE_MAPLE
+			maple_init_irq();
 # endif
 		}
 		
