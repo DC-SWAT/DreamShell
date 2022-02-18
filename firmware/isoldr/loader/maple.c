@@ -9,6 +9,24 @@
 #include <exception.h>
 #include <dc/maple.h>
 
+#define MAPLE_SNIFFER 1
+
+typedef struct {
+    uint32 function;
+    uint16 size;
+    uint16 partition;
+    uint16 sys_block;
+    uint16 fat_block;
+    uint16 fat_cnt;
+    uint16 file_info_block;
+    uint16 file_info_cnt;
+    uint8  vol_icon;
+    uint8  reserved;
+    uint16 save_block;
+    uint16 save_cnt;
+    uint32 reserved_exec;
+} maple_memory_t;
+
 void maple_read_addr(uint8 addr, int *port, int *unit) {
     *port = (addr >> 6) & 3;
     if(addr & 0x20)
@@ -55,11 +73,19 @@ static void maple_dump_frame(const char *direction, uint32 num, maple_frame_t *f
     }
     LOGF("\n");
 }
+# ifdef MAPLE_SNIFFER
 static void maple_dump_device_info(maple_devinfo_t *di) {
-    LOGF(" MAPLE_DEV: %s | %s | 0x%08lx | 0x%08lx 0x%08lx 0x%08lx | 0x%02lx | 0x%02lx | 0x%04lx | 0x%04lx",
+    LOGF(" MAPLE_DEV: %s | %s | 0x%08lx | 0x%08lx 0x%08lx 0x%08lx | 0x%02lx | 0x%02lx | %d | %d\n",
         di->product_name, di->product_license, di->func, di->function_data[0], di->function_data[1],
         di->function_data[2], di->area_code, di->connector_direction, di->standby_power, di->max_power);
 }
+static void maple_dump_memory_info(maple_memory_t *mi) {
+    LOGF(" MAPLE_MEM: 0x%08lx | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | 0x%08lx\n",
+        mi->function, mi->size, mi->partition, mi->sys_block, mi->fat_block,
+        mi->fat_cnt, mi->file_info_block, mi->file_info_cnt, mi->vol_icon,
+        mi->reserved, mi->save_block, mi->save_cnt, mi->reserved_exec);
+}
+# endif
 #else
 # define maple_dump_frame(a, b, c)
 # define maple_dump_device_info(a)
@@ -75,41 +101,117 @@ void maple_read_frame(uint32 *buffer, maple_frame_t *frame) {
     frame->data = &b[4];
 }
 
+#ifndef MAPLE_SNIFFER
+static maple_devinfo_t device_info = {
+    MAPLE_FUNC_MEMCARD | MAPLE_FUNC_LCD | MAPLE_FUNC_CLOCK,
+    { 0x403f7e7e, 0x00100500, 0x00410f00 },
+    0xff,
+    0x00,
+    { 
+        'V','i','s','u','a','l',' ','M','e','m',
+        'o','r','y',' ',' ',' ',' ',' ',' ',' ',
+        ' ',' ',' ',' ',' ',' ',' ',' ',' ',' '
+    },
+    {
+        'P','r','o','d','u','c','e','d',' ','B','y',' ','o','r',' ',
+        'U','n','d','e','r',' ','L','i','c','e','n','s','e',' ','F',
+        'r','o','m',' ','S','E','G','A',' ','E','N','T','E','R','P',
+        'R','I','S','E','S',',','L','T','D','.',' ',' ',' ',' ',' '
+    },
+    0x007c,
+    0x0082
+};
+static maple_memory_t memory_info = {
+    MAPLE_FUNC_MEMCARD,
+    255,
+    0,
+    255,
+    254,
+    1,
+    253,
+    13,
+    0,
+    0,
+    200,
+    0,
+    0x00800000
+};
+
 static void maple_vmu_device_info(maple_frame_t *req, maple_frame_t *resp) {
     (void)req;
-    maple_devinfo_t *di = (maple_devinfo_t *)resp->data;
-    // TODO
-    (void)di;
-    maple_dump_device_info((maple_devinfo_t *)CACHED_ADDR((uint32)di));
+    maple_devinfo_t *di = (maple_devinfo_t *)&resp->data;
+
+    resp->cmd = MAPLE_RESPONSE_DATATRF;
+    resp->datalen = sizeof(maple_devinfo_t) / 4;
+    if (req->cmd == MAPLE_COMMAND_ALLINFO) {
+        resp->datalen += 20;
+    }
+    memset(di, 0, resp->datalen * 4);
+    memcpy(di, &device_info, sizeof(maple_devinfo_t));
+    LOGFF(NULL);
 }
 
 static void maple_vmu_memory_info(maple_frame_t *req, maple_frame_t *resp) {
     (void)req;
-    (void)resp;
-    // TODO
-    // resp->cmd = MAPLE_RESPONSE_DATATRF;
-    // resp->datalen = 25;
+    maple_memory_t *mi = (maple_memory_t *)&resp->data;
+
+    resp->cmd = MAPLE_RESPONSE_DATATRF;
+    resp->datalen = sizeof(maple_memory_t) / 4;
+    memcpy(mi, &memory_info, sizeof(maple_memory_t));
     LOGFF(NULL);
 }
 
 static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
     (void)req;
-    (void)resp;
-    // TODO
-    // resp->cmd = MAPLE_RESPONSE_DATATRF;
+    resp->cmd = MAPLE_RESPONSE_DATATRF;
+    resp->datalen = 130;
+    memset(&resp->data, 0, 130 * 4);
     LOGFF(NULL);
 }
 
 static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     (void)req;
-    (void)resp;
-    // TODO
-    // resp->cmd = MAPLE_RESPONSE_OK;
+    resp->cmd = MAPLE_RESPONSE_OK;
     LOGFF(NULL);
 }
+#endif
 
-static void maple_dma_process() {
+static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
+#ifdef MAPLE_SNIFFER
+    (void)req;
+    switch (cmd) {
+        case MAPLE_RESPONSE_DEVINFO:
+        case MAPLE_COMMAND_ALLINFO:
+            maple_dump_device_info((maple_devinfo_t *)CACHED_ADDR((uint32)&resp->data));
+            break;
+        case MAPLE_COMMAND_GETMINFO:
+            maple_dump_memory_info((maple_memory_t *)CACHED_ADDR((uint32)&resp->data));
+            break;
+        default:
+            break;
+    }
+#else
+    switch (cmd) {
+        case MAPLE_RESPONSE_DEVINFO:
+        case MAPLE_COMMAND_ALLINFO:
+            maple_vmu_device_info(req, resp);
+            break;
+        case MAPLE_COMMAND_GETMINFO:
+            maple_vmu_memory_info(req, resp);
+            break;
+        case MAPLE_COMMAND_BREAD:
+            maple_vmu_block_read(req, resp);
+            break;
+        case MAPLE_COMMAND_BWRITE:
+            maple_vmu_block_write(req, resp);
+            break;
+        default:
+            break;
+    }
+#endif
+}
 
+static void maple_dma_proc() {
     uint32 *data, *recv_data, addr, value;
     uint32 trans_count = 0;
     uint32 frame_count;
@@ -167,23 +269,8 @@ static void maple_dma_process() {
             recv_data += resp_frame.datalen + 1;
 
             maple_dump_frame("RECV", frame_count, &resp_frame);
+            maple_cmd_proc(cmd, &req_frame, resp_frame_ptr);
 
-            switch (cmd) {
-                case MAPLE_RESPONSE_DEVINFO:
-                    maple_vmu_device_info(&req_frame, resp_frame_ptr);
-                    break;
-                case MAPLE_COMMAND_GETMINFO:
-                    maple_vmu_memory_info(&req_frame, resp_frame_ptr);
-                    break;
-                case MAPLE_COMMAND_BREAD:
-                    maple_vmu_block_read(&req_frame, resp_frame_ptr);
-                    break;
-                case MAPLE_COMMAND_BWRITE:
-                    maple_vmu_block_write(&req_frame, resp_frame_ptr);
-                    break;
-                default:
-                    break;
-            }
             if (!len) {
                 break;
             }
@@ -207,7 +294,7 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
         current_vector = old_maple_dma_handler(passer, stack, current_vector);
     }
 #endif
-    maple_dma_process();
+    maple_dma_proc();
     return current_vector;
 }
 
