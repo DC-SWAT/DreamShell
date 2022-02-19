@@ -225,7 +225,7 @@ int open(const char *path, int oflag) {
 	}
 
 	/* Fill in the file handle and return the fd */
-	//LOGF("File: %s %d %d\n", (strchr0(path, '\0')-path), sec, len);
+	LOGF("Opened file: %s fd=%d sec=%d len=%d\n", path, fd, sec, len);
 
 	fh[fd].sec0 = sec;
 	fh[fd].loc = 0;
@@ -242,6 +242,8 @@ int close(int fd) {
 	/* Check that the fd is valid */
 	if(fd < 0 || fd >= MAX_OPEN_FILES)
 		return FS_ERR_PARAM;
+
+	LOGF("Closed file: fd=%d sec=%d len=%d\n", fd, fh[fd].sec0, fh[fd].len);
 
 	/* Zeroing the sector number marks the handle as unused */
 	fh[fd].sec0 = 0;
@@ -310,7 +312,7 @@ int pread(int fd, void *buf, unsigned int nbyte, unsigned int offset) {
 			t += r;
 	} else {
 
-		if ((uint32)buf != 0x8c000000 && mmu_enabled()) {
+		if (!((uint32)buf & PHYS_ADDR(RAM_START_ADDR)) && mmu_enabled()) {
 
 			if((r = cdrom_read_sectors_part(buf, fh[fd].sec0+(offset>>11), offset, nbyte, 0))) {
 				return r;
@@ -335,18 +337,28 @@ int read(int fd, void *buf, unsigned int nbyte) {
 	/* Check that the fd is valid */
 	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
 		return FS_ERR_PARAM;
-	} else {
-
-		/* Use pread to read at the current position */
-		int r = pread(fd, buf, nbyte, fh[fd].loc);
-
-		/* Update current position */
-		if(r > 0)
-			fh[fd].loc += r;
-
-		return r;
 	}
+
+	/* Use pread to read at the current position */
+	int r = pread(fd, buf, nbyte, fh[fd].loc);
+
+	/* Update current position */
+	if(r > 0)
+		fh[fd].loc += r;
+
+	return r;
 }
+
+#if _FS_READONLY == 0
+int write(int fd, void *buf, unsigned int nbyte) {
+	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
+		return FS_ERR_PARAM;
+	}
+	(void)buf;
+	(void)nbyte;
+	return FS_ERR_SYSERR;
+}
+#endif
 
 int poll(int fd) {
 
@@ -414,57 +426,56 @@ int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
 	/* Check that the fd is valid */
 	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
 		return FS_ERR_PARAM;
-	} else {
+	}
 
-		if(fh[fd].loc + nbyte > fh[fd].len) {
-			nbyte = fh[fd].len - fh[fd].loc;
-		}
+	if(fh[fd].loc + nbyte > fh[fd].len) {
+		nbyte = fh[fd].len - fh[fd].loc;
+	}
+	
+	sector = fh[fd].sec0 + (fh[fd].loc >> 11);
+
+	/* If DMA is not possible, just use sync pio read */
+	if((uint32)buf & 0x1F) {
+
+		cb(read(fd, buf, nbyte));
+		return 0;
+
+	} else if((fh[fd].loc & 2047) || (nbyte & 2047)) {
 		
-		sector = fh[fd].sec0 + (fh[fd].loc >> 11);
+		if((fh[fd].loc & 2047) + nbyte > 2048) {
 
-		/* If DMA is not possible, just use sync pio read */
-		if((uint32)buf & 0x1F) {
-
-			cb(read(fd, buf, nbyte));
-			return 0;
-
-		} else if((fh[fd].loc & 2047) || (nbyte & 2047)) {
-			
-			if((fh[fd].loc & 2047) + nbyte > 2048) {
-
-				count = (2048-(fh[fd].loc & 2047)) >> 11;
-				fh[fd].rcnt = nbyte - (count << 11);
-				fh[fd].rbuf = buf + (count << 11);
-
-			} else {
-
-				if (cdrom_read_sectors_part(buf, fh[fd].sec0 + (fh[fd].loc >> 11), fh[fd].loc % 2048, nbyte, 0) < 0) {
-					fh[fd].async = 0;
-					fh[fd].poll_cb = NULL;
-					return FS_ERR_SYSERR;
-				}
-				
-				fh[fd].async = 1;
-				fh[fd].poll_cb = cb;
-				DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
-				return 0;
-			}
+			count = (2048-(fh[fd].loc & 2047)) >> 11;
+			fh[fd].rcnt = nbyte - (count << 11);
+			fh[fd].rbuf = buf + (count << 11);
 
 		} else {
-			count = nbyte >> 11;
+
+			if (cdrom_read_sectors_part(buf, fh[fd].sec0 + (fh[fd].loc >> 11), fh[fd].loc % 2048, nbyte, 0) < 0) {
+				fh[fd].async = 0;
+				fh[fd].poll_cb = NULL;
+				return FS_ERR_SYSERR;
+			}
+			
+			fh[fd].async = 1;
+			fh[fd].poll_cb = cb;
+			DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
+			return 0;
 		}
 
-		if (read_sectors(buf, sector, count, 1) < 0) {
-			fh[fd].async = 0;
-			fh[fd].poll_cb = NULL;
-			return FS_ERR_SYSERR;
-		}
-		
-		fh[fd].async = 1;
-		fh[fd].poll_cb = cb;
-		DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
-		return 0;
+	} else {
+		count = nbyte >> 11;
 	}
+
+	if (read_sectors(buf, sector, count, 1) < 0) {
+		fh[fd].async = 0;
+		fh[fd].poll_cb = NULL;
+		return FS_ERR_SYSERR;
+	}
+	
+	fh[fd].async = 1;
+	fh[fd].poll_cb = cb;
+	DBGFF("offset=%d size=%d count=%d\n", fh[fd].loc, nbyte, nbyte >> 11);
+	return 0;
 }
 
 // FIXME
@@ -494,8 +505,9 @@ int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
 long int lseek(int fd, long int offset, int whence) {
 
 	/* Check that the fd is valid */
-	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0)
+	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
 		return FS_ERR_PARAM;
+	}
 
 	/* Update current position according to arguments */
 	switch(whence) {

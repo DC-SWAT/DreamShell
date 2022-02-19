@@ -348,7 +348,7 @@ static int log_fd = FS_ERR_SYSERR;
 static int open_log_file() {
 	int fd = open(LOG_FILE, O_WRONLY | O_APPEND);
 	if (fd > FS_ERR_SYSERR) {
-		write(fd, "--- Start log ---\n", 18, len);
+		write(fd, "--- Start log ---\n", 18);
 	}
 	return fd;
 }

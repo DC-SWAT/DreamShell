@@ -169,37 +169,35 @@ int open(const char *path, int flags) {
 	}
 
 #if _USE_FASTSEEK
+	if(mode == O_RDONLY) {
 
-if(mode == O_RDONLY) {
+		/* Using fast seek feature */
+		file->fp.cltbl = file->cltbl;    /* Enable fast seek feature */
+		file->cltbl[0] = SZ_TBL;         /* Set table size to the first item */
 
-	/* Using fast seek feature */
-	file->fp.cltbl = file->cltbl;    /* Enable fast seek feature */
-	file->cltbl[0] = SZ_TBL;         /* Set table size to the first item */
+		/* Create linkmap */
+		r = f_lseek(&file->fp, CREATE_LINKMAP);
 
-	/* Create linkmap */
-	r = f_lseek(&file->fp, CREATE_LINKMAP);
+		if(r == FR_NOT_ENOUGH_CORE) {
 
-	if(r == FR_NOT_ENOUGH_CORE) {
+			size_t count = file->fp.cltbl[0];
+			DWORD *cltbl = (DWORD *)malloc(count * sizeof(DWORD));
 
-		size_t count = file->fp.cltbl[0];
-		DWORD *cltbl = (DWORD *)malloc(count * sizeof(DWORD));
+			if (cltbl) {
+				memset(cltbl, 0, count * sizeof(DWORD));
+				cltbl[0] = count;
+				file->fp.cltbl = cltbl;
+				r = f_lseek(&file->fp, CREATE_LINKMAP);
+			}
+		}
 
-		if (cltbl) {
-			memset(cltbl, 0, count * sizeof(DWORD));
-			cltbl[0] = count;
-			file->fp.cltbl = cltbl;
-			r = f_lseek(&file->fp, CREATE_LINKMAP);
+		if(r != FR_OK) {
+			file->fp.cltbl = NULL;
+			LOGFF("ERROR, creating linkmap required %d dwords, code %d\n", file->fp.cltbl[0], r);
+		} else {
+			LOGFF("Created linkmap with %d sequences\n", file->fp.cltbl[0]);
 		}
 	}
-
-	if(r != FR_OK) {
-		file->fp.cltbl = NULL;
-		LOGFF("ERROR, creating linkmap required %d dwords, code %d\n", file->fp.cltbl[0], r);
-	} else {
-		LOGFF("Created linkmap with %d sequences\n", file->fp.cltbl[0]);
-	}
-}
-
 #endif /* _USE_FASTSEEK */
 
 #ifdef DEV_TYPE_IDE

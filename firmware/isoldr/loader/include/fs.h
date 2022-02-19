@@ -25,9 +25,7 @@
 
 #endif /* DEV_TYPE_NET */
 
-#ifdef LOG_FILE
-# define MAX_OPEN_FILES 4
-#else
+#ifndef MAX_OPEN_FILES
 # define MAX_OPEN_FILES 3
 #endif
 
