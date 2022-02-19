@@ -1010,7 +1010,9 @@ void gdcInitSystem(void) {
 			}
 # endif
 # ifdef HAVE_MAPLE
-			maple_init_irq();
+			if(IsoInfo->emu_vmu) {
+				maple_init_irq();
+			}
 # endif
 		}
 		
@@ -1042,6 +1044,12 @@ void gdcInitSystem(void) {
 #ifdef HAVE_CDDA
 	if(IsoInfo->emu_cdda) {
 		CDDA_Init();
+	}
+#endif
+
+#ifdef HAVE_MAPLE
+	if(IsoInfo->emu_vmu) {
+		maple_init_vmu();
 	}
 #endif
 

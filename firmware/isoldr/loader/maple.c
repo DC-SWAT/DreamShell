@@ -9,7 +9,7 @@
 #include <exception.h>
 #include <dc/maple.h>
 
-#define MAPLE_SNIFFER 1
+// #define MAPLE_SNIFFER 1
 
 typedef struct {
     uint32 function;
@@ -102,6 +102,7 @@ void maple_read_frame(uint32 *buffer, maple_frame_t *frame) {
 }
 
 #ifndef MAPLE_SNIFFER
+static int vmu_fd = FILEHND_INVALID;
 static maple_devinfo_t device_info = {
     MAPLE_FUNC_MEMCARD | MAPLE_FUNC_LCD | MAPLE_FUNC_CLOCK,
     { 0x403f7e7e, 0x00100500, 0x00410f00 },
@@ -138,17 +139,19 @@ static maple_memory_t memory_info = {
 };
 
 static void maple_vmu_device_info(maple_frame_t *req, maple_frame_t *resp) {
-    (void)req;
     maple_devinfo_t *di = (maple_devinfo_t *)&resp->data;
 
     resp->cmd = MAPLE_RESPONSE_DATATRF;
     resp->datalen = sizeof(maple_devinfo_t) / 4;
+    resp->from = req->to;
+    resp->to = req->from;
+
     if (req->cmd == MAPLE_COMMAND_ALLINFO) {
         resp->datalen += 20;
+        memset(di + sizeof(maple_devinfo_t), 0, 20 * 4);
     }
-    memset(di, 0, resp->datalen * 4);
+
     memcpy(di, &device_info, sizeof(maple_devinfo_t));
-    LOGFF(NULL);
 }
 
 static void maple_vmu_memory_info(maple_frame_t *req, maple_frame_t *resp) {
@@ -157,26 +160,75 @@ static void maple_vmu_memory_info(maple_frame_t *req, maple_frame_t *resp) {
 
     resp->cmd = MAPLE_RESPONSE_DATATRF;
     resp->datalen = sizeof(maple_memory_t) / 4;
+    resp->from = req->to;
+    resp->to = req->from;
+
     memcpy(mi, &memory_info, sizeof(maple_memory_t));
-    LOGFF(NULL);
 }
 
 static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
-    (void)req;
+    uint32 *req_params = (uint32 *)req->data;
+    uint32 *resp_params = (uint32 *)&resp->data;
+    resp_params[0] = req_params[0];
+    resp_params[1] = req_params[1];
+    resp->from = req->to;
+    resp->to = req->from;
+
+    uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
+    uint8 *buff = (uint8 *)&resp_params[2];
+
+    lseek(vmu_fd, block * 512, SEEK_SET);
+    int res = read(vmu_fd, buff, 512);
+    LOGFF("block=%d buff=0x%08lx res=%d\n", block, buff, res);
+
+    if (res < 0) {
+        resp->datalen = 2;
+        resp->cmd = MAPLE_RESPONSE_FILEERR;
+        return;
+    }
     resp->cmd = MAPLE_RESPONSE_DATATRF;
     resp->datalen = 130;
-    memset(&resp->data, 0, 130 * 4);
-    LOGFF(NULL);
 }
 
 static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
-    (void)req;
+    uint32 *req_params = (uint32 *)req->data;
+    uint32 *resp_params = (uint32 *)&resp->data;
+
     resp->cmd = MAPLE_RESPONSE_OK;
-    LOGFF(NULL);
+    resp->from = req->to;
+    resp->to = req->from;
+    resp_params[0] = req_params[0];
+    resp_params[1] = req_params[1];
+
+    if (req_params[0] != MAPLE_FUNC_MEMCARD) {
+        LOGFF("func=0x%08lx\n", req_params[0]);
+        return;
+    }
+
+    uint8 phase = (req_params[1] >> 8) & 0x0f;
+    uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
+    uint8 *buff = (uint8 *)&req_params[2];
+
+# if _FS_READONLY == 0
+    lseek(vmu_fd, (block * 512) + (128 * phase), SEEK_SET);
+    int res = write(vmu_fd, buff, 128);
+    LOGFF("block=%d phase=%d buff=0x%08lx res=%d\n", block, phase, buff, res);
+
+    if (res < 0) {
+        resp->datalen = 2;
+        resp->cmd = MAPLE_RESPONSE_FILEERR;
+        return;
+    }
+#else
+    (void)phase;
+    (void)block;
+    (void)buff;
+    LOGFF("block=%d phase=%d buff=0x%08lx disabled\n", block, phase, buff);
+# endif
 }
 #endif
 
-static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
+static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
 #ifdef MAPLE_SNIFFER
     (void)req;
     switch (cmd) {
@@ -188,9 +240,12 @@ static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
             maple_dump_memory_info((maple_memory_t *)CACHED_ADDR((uint32)&resp->data));
             break;
         default:
-            break;
+            return -1;
     }
 #else
+    if (vmu_fd < 0) {
+        return -1;
+    }
     switch (cmd) {
         case MAPLE_RESPONSE_DEVINFO:
         case MAPLE_COMMAND_ALLINFO:
@@ -206,9 +261,10 @@ static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
             maple_vmu_block_write(req, resp);
             break;
         default:
-            break;
+            return -1;
     }
 #endif
+    return 0;
 }
 
 static void maple_dma_proc() {
@@ -223,7 +279,7 @@ static void maple_dma_proc() {
     addr = *(vuint32 *)0xa05f6c04;
     data = (uint32 *)UNCACHED_ADDR(addr);
 
-    DBGF("--- START MAPLE DMA: %ld at 0x%08lx ---\n", ++maple_dma_count, addr);
+    // DBGF("--- START MAPLE DMA: %ld at 0x%08lx ---\n", ++maple_dma_count, addr);
 
     for (trans_count = 0; trans_count < 8; ++trans_count) {
 
@@ -268,9 +324,15 @@ static void maple_dma_proc() {
             resp_frame_ptr = (maple_frame_t *)recv_data;
             recv_data += resp_frame.datalen + 1;
 
-            maple_dump_frame("RECV", frame_count, &resp_frame);
-            maple_cmd_proc(cmd, &req_frame, resp_frame_ptr);
-
+            if (maple_cmd_proc(cmd, &req_frame, resp_frame_ptr) < 0) {
+                maple_dump_frame("RECV", frame_count, &resp_frame);
+            } 
+#ifndef MAPLE_SNIFFER
+            else {
+                maple_read_frame((uint32 *)resp_frame_ptr, &resp_frame);
+                maple_dump_frame("EMUL", 0, &resp_frame);
+            }
+#endif
             if (!len) {
                 break;
             }
@@ -279,7 +341,7 @@ static void maple_dma_proc() {
             break;
         }
     }
-    DBGF("--- END MAPLE DMA ---\n");
+    // DBGF("--- END MAPLE DMA ---\n");
 }
 
 
@@ -312,4 +374,20 @@ int maple_init_irq() {
 
     return asic_add_handler(&a_entry, &old_maple_dma_handler, 0);
 #endif
+}
+
+int maple_init_vmu() {
+#ifndef MAPLE_SNIFFER
+# if _FS_READONLY == 0
+    int flags = O_RDWR;
+# else
+    int flags = O_RDONLY;
+# endif
+    vmu_fd = open("/vmu/a1.vmu", flags);
+
+    if (vmu_fd < 0) {
+        return -1;
+    }
+#endif
+    return 0;
 }

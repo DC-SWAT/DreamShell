@@ -10,5 +10,6 @@
 #include <arch/types.h>
 
 int maple_init_irq();
+int maple_init_vmu();
 
 #endif /* _MAPLE_H */
