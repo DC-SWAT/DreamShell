@@ -59,9 +59,9 @@ static void maple_dump_frame(const char *direction, uint32 num, maple_frame_t *f
     maple_read_addr(frame->from, &from_port, &from_unit);
     maple_read_addr(frame->to, &to_port, &to_unit);
 
-    LOGF("      %s: %d cmd=%d from=%d|%d to=%d|%d len=%d",
-        direction, num, frame->cmd,
-        from_port, from_unit, to_port, to_unit, frame->datalen);
+    LOGF("      %s: %d cmd=%d from=0x%02lx|%d|%d to=0x%02lx|%d|%d len=%d",
+        direction, num, frame->cmd, frame->from,
+        from_port, from_unit, frame->to, to_port, to_unit, frame->datalen);
 
     if (frame->datalen) {
         LOGF(" data=");
@@ -93,7 +93,6 @@ static void maple_dump_memory_info(maple_memory_t *mi) {
 
 void maple_read_frame(uint32 *buffer, maple_frame_t *frame) {
     uint8 *b = (uint8 *) buffer;
-
     frame->cmd = b[0];
     frame->to = b[1];
     frame->from = b[2];
@@ -188,6 +187,10 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
     }
     resp->cmd = MAPLE_RESPONSE_DATATRF;
     resp->datalen = 130;
+
+    if (block == 255) {
+        memcpy((uint8 *)&memory_info.fat_block, &buff[70], 14);
+    }
 }
 
 static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
@@ -220,11 +223,12 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
         return;
     }
 #else
-    (void)phase;
-    (void)block;
-    (void)buff;
     LOGFF("block=%d phase=%d buff=0x%08lx disabled\n", block, phase, buff);
 # endif
+
+    if (block == 255 && phase == 0) {
+        memcpy((uint8 *)&memory_info.fat_block, &buff[70], 14);
+    }
 }
 #endif
 
@@ -303,6 +307,11 @@ static void maple_dma_proc() {
 
             maple_read_frame(data, &req_frame);
             cmd = req_frame.cmd;
+
+            if ((req_frame.to & 0x20) && vmu_fd > FILEHND_INVALID) {
+                resp_frame_ptr = (maple_frame_t *)recv_data;
+                resp_frame_ptr->from |= 0x01;
+            }
 
             /* Filter out controller messages */
             if (cmd == MAPLE_COMMAND_GETCOND) {
@@ -388,6 +397,10 @@ int maple_init_vmu() {
     if (vmu_fd < 0) {
         return -1;
     }
+
+    lseek(vmu_fd, (255 * 512) + 70, SEEK_SET);
+    read(vmu_fd, (uint8 *)&memory_info.fat_block, 14);
+
 #endif
     return 0;
 }
