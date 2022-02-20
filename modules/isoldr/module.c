@@ -573,6 +573,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      2 = DMA and TMU1\n"
 		          "                      3 = SQ and TMU2\n"
 		          "                      4 = SQ and TMU1\n");
+		ds_printf(" -v, --vmu        -Emulate VMU on port A1.\n"
+		          "                      0 = disabled (default)\n"
+		          "                      1 = number for VMU dump /vmu/vmudump001.vmd\n"
+		          "                    999 = max number\n");
 		ds_printf("     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"
@@ -587,7 +591,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
-	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0;
+	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -609,6 +613,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
 		{"fast",      's', NULL, CFG_BOOL,  (void *) &fast_boot,   0},
 		{"irq",       'q', NULL, CFG_BOOL,  (void *) &use_irq,     0},
+		{"vmu",       'v', NULL, CFG_ULONG, (void *) &emu_vmu,     0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -675,8 +680,9 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->emu_async = emu_async;
 	info->use_dma   = use_dma;
 	info->fast_boot = fast_boot;
-	info->heap = heap;
+	info->heap      = heap;
 	info->use_irq   = use_irq;
+	info->emu_vmu   = emu_vmu;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
@@ -728,7 +734,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "DMA: %d\n "
 		          "Heap: %lx\n "
 		          "Emu async: %d\n "
-		          "Emu CDDA: %d\n\n",
+		          "Emu CDDA: %d\n "
+		          "Emu VMU: %d\n\n",
 		          info->fs_dev,
 		          info->fs_type,
 		          info->fs_part,
@@ -736,7 +743,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          info->use_dma,
 		          info->heap,
 		          info->emu_async,
-		          info->emu_cdda);
+		          info->emu_cdda,
+		          info->emu_vmu);
 	}
 
 	if(!strncasecmp(info->fs_dev, ISOLDR_DEV_DCIO, 4)) {

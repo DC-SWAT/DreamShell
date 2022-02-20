@@ -148,7 +148,7 @@ typedef struct isoldr_info {
 	uint32 patch_value[2];              /* Values for patching */
 	uint32 heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
 	uint32 use_irq;                     /* Use IRQ hooking */
-	uint32 emu_vmu;                     /* Emulate VMU */
+	uint32 emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
 
 	uint32 cdda_offset[47];             /* CDDA tracks offset, only for CDI images */
 

@@ -371,9 +371,9 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
 
 
 int maple_init_irq() {
-#ifdef NO_ASIC_LT
+#if defined(NO_ASIC_LT)
     return 0;
-#else
+#elif defined(HAVE_EXPT)
     asic_lookup_table_entry a_entry;
     memset(&a_entry, 0, sizeof(a_entry));
     
@@ -385,21 +385,41 @@ int maple_init_irq() {
 #endif
 }
 
-int maple_init_vmu() {
+int maple_init_vmu(int num) {
 #ifndef MAPLE_SNIFFER
 # if _FS_READONLY == 0
-    int flags = O_RDWR;
+    int flags = O_RDWR | O_PIO;
 # else
-    int flags = O_RDONLY;
+    int flags = O_RDONLY | O_PIO;
 # endif
-    vmu_fd = open("/vmu/a1.vmu", flags);
+
+    char *filename = "/vmu/vmudump001.vmd";
+    int len = strlen(filename);
+
+    if (num < 10) {
+        filename[len - 5] = '0' + num;
+    } else if(num < 100) {
+        filename[len - 5] = '0' + (num % 10);
+        filename[len - 6] = '0' + (num / 10);
+    } else if(num < 1000) {
+        filename[len - 5] = '0' + (num % 10);
+        filename[len - 6] = '0' + (num % 100);
+        filename[len - 7] = '0' + (num / 100);
+    }
+
+    vmu_fd = open(filename, flags);
 
     if (vmu_fd < 0) {
+        LOGFF("can't find VMU dump\n");
         return -1;
     }
 
     lseek(vmu_fd, (255 * 512) + 70, SEEK_SET);
     read(vmu_fd, (uint8 *)&memory_info.fat_block, 14);
+
+    LOGFF("fat_blk=%d fat_cnt=%d fileinf_blk=%d fileinf_cnt=%d\n",
+            memory_info.fat_block, memory_info.fat_cnt,
+            memory_info.file_info_block, memory_info.file_info_cnt);
 
 #endif
     return 0;

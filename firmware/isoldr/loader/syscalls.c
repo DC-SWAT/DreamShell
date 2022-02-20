@@ -1049,7 +1049,7 @@ void gdcInitSystem(void) {
 
 #ifdef HAVE_MAPLE
 	if(IsoInfo->emu_vmu) {
-		maple_init_vmu();
+		maple_init_vmu(IsoInfo->emu_vmu);
 	}
 #endif
 
