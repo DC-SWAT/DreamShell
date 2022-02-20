@@ -68,6 +68,7 @@ typedef void fs_callback_f(size_t);
 #define O_APPEND    0x0008	/* append (writes guaranteed at the end) */
 #define O_CREAT     0x0200	/* open with file create */
 #define O_TRUNC     0x0400	/* open with truncation */
+#define O_PIO       0x1000	/* do not use DMA */
 
 enum FS_DMA_STATE {
 	FS_DMA_DISABLED = 0,

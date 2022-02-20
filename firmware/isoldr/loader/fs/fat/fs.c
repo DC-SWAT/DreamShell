@@ -21,6 +21,7 @@ typedef struct {
 	FIL fp;
 	uint32 state;
 	fs_callback_f *poll_cb;
+	int dma_mode;
 
 #if _USE_FASTSEEK
 	DWORD cltbl[SZ_TBL];
@@ -32,9 +33,9 @@ static FATFS *_fat_fs = NULL;
 static FILE *_files = NULL;
 
 #ifdef DEV_TYPE_IDE
-static int dma_enabled = FS_DMA_SHARED;
+static int dma_mode = FS_DMA_SHARED;
 #else
-static int dma_enabled = 0;
+static int dma_mode = 0;
 #endif
 
 PARTITION VolToPart[_VOLUMES] = {{0, 0}};
@@ -104,14 +105,14 @@ int fs_init() {
 void fs_enable_dma(int state) {
 
 #ifdef LOG
-	if(dma_enabled != state)
+	if(dma_mode != state)
 		LOGFF("%d\n", state);
 #endif
-	dma_enabled = state;
+	dma_mode = state;
 }
 
 int fs_dma_enabled() {
-	return dma_enabled;
+	return dma_mode;
 }
 
 
@@ -142,25 +143,21 @@ int open(const char *path, int flags) {
 			fat_flags = FA_WRITE | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
 			break;
 		case O_RDWR:
-			fat_flags = (FA_WRITE | FA_READ) | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
+			fat_flags = (FA_WRITE | FA_READ) | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_OPEN_EXISTING);
 			break;
 #endif
 		default:
 			return FS_ERR_PARAM;
 	}
 
-#ifdef DEV_TYPE_IDE
-	int old_dma_enabled = dma_enabled;
-	dma_enabled = 0;
-#endif
+	int old_dma_mode = dma_mode;
+	dma_mode = 0;
 
 	r = f_open(&file->fp, path, fat_flags);
 	
 	if(r != FR_OK) {
-		LOGFF("ERROR %d\n", r);
-#ifdef DEV_TYPE_IDE
-		dma_enabled = old_dma_enabled;
-#endif
+		LOGFF("%s 0x%08lx ERROR %d\n", r);
+		dma_mode = old_dma_mode;
 		return FS_ERR_NOFILE;
 	}
 
@@ -200,9 +197,12 @@ int open(const char *path, int flags) {
 	}
 #endif /* _USE_FASTSEEK */
 
-#ifdef DEV_TYPE_IDE
-	dma_enabled = old_dma_enabled;
-#endif
+	dma_mode = old_dma_mode;
+	if(flags & O_PIO) {
+		file->dma_mode = FS_DMA_DISABLED;
+	} else {
+		file->dma_mode = -1;
+	}
 
 	file->state = FILE_STATE_USED;
 	return fd;
@@ -237,7 +237,6 @@ int close(int fd) {
 
 int read(int fd, void *ptr, unsigned int size) {
 
-	uint br;
 	CHECK_FD();
 
 	if(file->poll_cb) {
@@ -245,30 +244,21 @@ int read(int fd, void *ptr, unsigned int size) {
 		abort_async(fd);
 	}
 
-#ifdef LOG
-	FRESULT r;
+	int old_dma_mode = dma_mode;
+	if(file->dma_mode > -1) {
+		dma_mode = file->dma_mode;
+	}
+	uint br;
+	FRESULT rs = f_read(&file->fp, ptr, size, &br);
 
-	if((r = f_read(&file->fp, ptr, size, &br)) == FR_OK) {
+	dma_mode = old_dma_mode;
 
-		if(size != br) {
-			LOGFF("%d != %d\n", size, br);
-		}
-
-		return br;
-
-	} else {
-		LOGFF("ERROR %d\n", r);
+	if(rs != FR_OK) {
+		LOGFF("ERROR %d\n", rs);
+		return FS_ERR_SYSERR;
 	}
 
-#else
-
-	if(f_read(&file->fp, ptr, size, &br) == FR_OK) {
-	    return br;
-	}
-
-#endif
-
-	return FS_ERR_SYSERR;
+	return br;
 }
 
 int pre_read(int fd, unsigned long offset, unsigned int size) {

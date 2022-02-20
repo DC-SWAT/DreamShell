@@ -11,18 +11,18 @@
 
 /* Sector buffer */
 static void *cd_sector_buffer;
-static int dma_enabled = 0;
+static int dma_mode = 0;
 
 void fs_enable_dma(int state) {
-	dma_enabled = state;
+	dma_mode = state;
 }
 
 int fs_dma_enabled() {
-	return dma_enabled;
+	return dma_mode;
 }
 
 static int read_sectors(char *buf, int sec, int num, int async) {
-	return cdrom_read_sectors_ex(buf, sec, num, async, dma_enabled, 0);
+	return cdrom_read_sectors_ex(buf, sec, num, async, dma_mode, 0);
 }
 
 static char *strchr0(const char *s, int c) {
@@ -160,6 +160,7 @@ static struct {
 	void *rbuf;
 	int async;
 	fs_callback_f *poll_cb;
+	int dma_mode;
 } fh[MAX_OPEN_FILES];
 
 static unsigned int root_sector = 0;
@@ -191,8 +192,8 @@ int open(const char *path, int oflag) {
 		len = root_len;
 	}
 	
-	int old_dma_enabled = dma_enabled;
-	dma_enabled = 0;
+	int old_dma_mode = dma_mode;
+	dma_mode = 0;
 	
 	/* If the file we want is in a subdirectory, first locate
 	   this subdirectory                                      */
@@ -200,7 +201,7 @@ int open(const char *path, int oflag) {
 		if(p != path)
 			if((r = low_find(sec, len, 1, &sec, &len, path, p-path)))
 			{
-				LOGFF("can't find file in a subdirectory (%d)\n", r);
+				LOGFF("can't find file %s in a subdirectory (%d)\n", path, r);
 				return r;
 			}
 		path = p+1;
@@ -210,16 +211,16 @@ int open(const char *path, int oflag) {
 	if(*path) {
 		if((r = low_find(sec, len, oflag&O_DIR, &sec, &len, path, strchr0(path, '\0')-path))) 
 		{
-			dma_enabled = old_dma_enabled;
-			LOGFF("can't find file in resulting directory (%d)\n", r);
+			dma_mode = old_dma_mode;
+			LOGFF("can't find file %s in resulting directory (%d)\n", path, r);
 			return r;
 		}
 	} else {
 		/* If the path ends with a slash, check that it's really
 		   the dir that is wanted                                */
-		if(!(oflag&O_DIR)) {
-			dma_enabled = old_dma_enabled;
-			LOGFF("can't find file (%d)\n", FS_ERR_NOFILE);
+		if(!(oflag & O_DIR)) {
+			dma_mode = old_dma_mode;
+			LOGFF("can't find file %s (%d)\n", path, FS_ERR_NOFILE);
 			return FS_ERR_NOFILE;
 		}
 	}
@@ -232,8 +233,13 @@ int open(const char *path, int oflag) {
 	fh[fd].len = len;
 	fh[fd].async = 0;
 	fh[fd].poll_cb = NULL;
+	fh[fd].dma_mode = -1;
 
-	dma_enabled = old_dma_enabled;
+	dma_mode = old_dma_mode;
+
+	if(oflag & O_PIO) {
+		fh[fd].dma_mode = FS_DMA_DISABLED;
+	}
 	return fd;
 }
 
@@ -339,8 +345,16 @@ int read(int fd, void *buf, unsigned int nbyte) {
 		return FS_ERR_PARAM;
 	}
 
+	int old_dma_mode = dma_mode;
+
+	if (fh[fd].dma_mode > -1) {
+		dma_mode = fh[fd].dma_mode;
+	}
+
 	/* Use pread to read at the current position */
 	int r = pread(fd, buf, nbyte, fh[fd].loc);
+
+	dma_mode = old_dma_mode;
 
 	/* Update current position */
 	if(r > 0)
