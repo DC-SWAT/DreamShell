@@ -54,8 +54,8 @@ typedef struct {
 	int8 cmd;			/* command (defined above) */
 	uint8 to;			/* recipient address */
 	uint8 from;			/* sender address */
-	void *data;			/* ptr to parameter data */
 	uint8 datalen;			/* length in words of data */
+	void *data;			/* ptr to parameter data */
 } maple_frame_t;
 
 /* transfer descriptor struct */

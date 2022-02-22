@@ -48,9 +48,7 @@ void maple_read_addr(uint8 addr, int *port, int *unit) {
 }
 
 #ifdef LOG
-# ifdef DEBUG
-static uint32 maple_dma_count;
-# endif
+// static uint32 maple_dma_count;
 static void maple_dump_frame(const char *direction, uint32 num, maple_frame_t *frame) {
 
     int from_port, to_port;
@@ -195,16 +193,13 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
 
 static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     uint32 *req_params = (uint32 *)req->data;
-    uint32 *resp_params = (uint32 *)&resp->data;
-
     resp->cmd = MAPLE_RESPONSE_OK;
     resp->from = req->to;
     resp->to = req->from;
-    resp_params[0] = req_params[0];
-    resp_params[1] = req_params[1];
+    resp->datalen = 0;
 
     if (req_params[0] != MAPLE_FUNC_MEMCARD) {
-        LOGFF("func=0x%08lx\n", req_params[0]);
+        LOGF("maple_vmu_draw_lcd\n");
         return;
     }
 
@@ -218,6 +213,9 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     LOGFF("block=%d phase=%d buff=0x%08lx res=%d\n", block, phase, buff, res);
 
     if (res < 0) {
+        uint32 *resp_params = (uint32 *)&resp->data;
+        resp_params[0] = req_params[0];
+        resp_params[1] = req_params[1];
         resp->datalen = 2;
         resp->cmd = MAPLE_RESPONSE_FILEERR;
         return;
@@ -275,7 +273,7 @@ static void maple_dma_proc() {
     uint32 *data, *recv_data, addr, value;
     uint32 trans_count = 0;
     uint32 frame_count;
-    uint8 len, last, port, cmd;
+    uint8 len, last, port, cmd, print_xfer;
     maple_frame_t req_frame;
     maple_frame_t resp_frame;
     maple_frame_t *resp_frame_ptr;
@@ -283,7 +281,7 @@ static void maple_dma_proc() {
     addr = *(vuint32 *)0xa05f6c04;
     data = (uint32 *)UNCACHED_ADDR(addr);
 
-    // DBGF("--- START MAPLE DMA: %ld at 0x%08lx ---\n", ++maple_dma_count, addr);
+    // LOGF("--- START MAPLE DMA: %ld at 0x%08lx ---\n", ++maple_dma_count, addr);
 
     for (trans_count = 0; trans_count < 8; ++trans_count) {
 
@@ -296,61 +294,58 @@ static void maple_dma_proc() {
         /* Second word: receive buffer physical address */
         addr = *data++;
 
-        if (!len || !(addr & UNCACHED_ADDR(RAM_START_ADDR)) || port > 0x04) {
+        if (!len || !(addr & PHYS_ADDR(RAM_START_ADDR)) || port > 0x04) {
             break;
         }
 
         recv_data = (uint32 *)UNCACHED_ADDR(addr);
-        int is_filtered = 1;
+        print_xfer = 1;
 
-        for (frame_count = 0; frame_count < 8; ++frame_count) {
+        for (frame_count = 0; frame_count < 8 && len > 0; ++frame_count) {
 
             maple_read_frame(data, &req_frame);
             cmd = req_frame.cmd;
-
-            if ((req_frame.to & 0x20) && vmu_fd > FILEHND_INVALID) {
-                resp_frame_ptr = (maple_frame_t *)recv_data;
-                resp_frame_ptr->from |= 0x01;
-            }
-
-            /* Filter out controller messages */
-            if (cmd == MAPLE_COMMAND_GETCOND) {
-                continue;
-            }
-            if (is_filtered) {
-                is_filtered = 0;
-                LOGF("MAPLE_XFER: %d val=0x%08lx len=%d port=%d addr=0x%08lx last=%d\n",
-                    trans_count, value, len, port, addr, last);
-            }
-
-            maple_dump_frame("SEND", frame_count, &req_frame);
-
             len -= req_frame.datalen;
             data += req_frame.datalen + 1;
-
-            maple_read_frame(recv_data, &resp_frame);
-
             resp_frame_ptr = (maple_frame_t *)recv_data;
             recv_data += resp_frame.datalen + 1;
 
+#ifndef MAPLE_SNIFFER
+            if (req_frame.to & 0x20) {
+                if (vmu_fd > FILEHND_INVALID) {
+                    resp_frame_ptr->from |= 0x01;
+                }
+            }
+#endif
+            /* Filter out conditional messages */
+            if (cmd == MAPLE_COMMAND_GETCOND || cmd == MAPLE_COMMAND_SETCOND) {
+                continue;
+            }
+
+            if (print_xfer) {
+                print_xfer = 0;
+                LOGF("MAPLE_XFER: %d val=0x%08lx len=%d port=%d addr=0x%08lx last=%d\n",
+                    trans_count, value, len + req_frame.datalen, port, addr, last);
+            }
+
+            maple_dump_frame("SEND", frame_count, &req_frame);
+            maple_read_frame((uint32 *)resp_frame_ptr, &resp_frame);
+
             if (maple_cmd_proc(cmd, &req_frame, resp_frame_ptr) < 0) {
                 maple_dump_frame("RECV", frame_count, &resp_frame);
-            } 
+            }
 #ifndef MAPLE_SNIFFER
             else {
                 maple_read_frame((uint32 *)resp_frame_ptr, &resp_frame);
                 maple_dump_frame("EMUL", 0, &resp_frame);
             }
 #endif
-            if (!len) {
-                break;
-            }
         }
         if (last) {
             break;
         }
     }
-    // DBGF("--- END MAPLE DMA ---\n");
+    // LOGF("--- END MAPLE DMA ---\n");
 }
 
 
@@ -386,7 +381,9 @@ int maple_init_irq() {
 }
 
 int maple_init_vmu(int num) {
-#ifndef MAPLE_SNIFFER
+#ifdef MAPLE_SNIFFER
+    (void)num;
+#else
 # if _FS_READONLY == 0
     int flags = O_RDWR | O_PIO;
 # else
@@ -410,7 +407,7 @@ int maple_init_vmu(int num) {
     vmu_fd = open(filename, flags);
 
     if (vmu_fd < 0) {
-        LOGFF("can't find VMU dump\n");
+        LOGFF("can't find VMU dump: %d\n", num);
         return -1;
     }
 
