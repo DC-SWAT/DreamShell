@@ -78,17 +78,29 @@ uint Load_IPBin() {
 
 
 void Load_DS() {
-	printf("Loading DreamShell core...\n");
-	
-	// FIXME: Get root path
-	int fd = open("/DS/DS_CORE.BIN", O_RDONLY);
+	printf("Loading DreamShell...\n");
 
-	if(fd > FILEHND_INVALID) {
-		disable_syscalls(0);
-		read(fd, (uint8*)APP_ADDR, total(fd));
-		close(fd);
+	if (iso_fd > FILEHND_INVALID) {
+		close(iso_fd);
+	}
+
+	char *fn = "/DS/DS_CORE.BIN";
+	int fd = open(fn, O_RDONLY);
+
+	if (fd < 0) {
+		fd = open(fn + 3, O_RDONLY);
+	}
+	if (fd < 0) {
+		printf("FAILED\n");
+		return;
+	}
+
+	disable_syscalls(loader_addr < ISOLDR_DEFAULT_ADDR_LOW);
+
+	if (read(fd, (uint8 *)UNCACHED_ADDR(APP_ADDR), total(fd)) > 0) {
 		launch(APP_ADDR);
 	}
+	close(fd);
 }
 
 

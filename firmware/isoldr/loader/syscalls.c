@@ -1340,33 +1340,11 @@ void gdcDummy(int gd_chn, int *arg2) {
 int menu_syscall(int func) {
 
 	LOGFF("%d\n", func);
-	
-	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
-		switch(func) {
-			case 0:
-			case 1:
-				// Skip exit to menu
-				return 0;
-			case 2:
-				// Skip disk checking
-				return 0;
-			default:
-				break;
-		}
-	} else if(func == 1) {
-//		irq_disable();
-//		Load_DS();
-		volatile uint32 *reset_reg = (uint32 *)0xa05f6890, reset_val = 0x00007611;
-		*reset_reg = reset_val;
-	}
 
-	if(loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && !is_custom_bios()) {
-		int (*f)(int);
-		f = (void*)(menu_saved_vector);
-		return f(func);
-	} else {
-		return 0;
+	if (func != 2 && IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+		Load_DS();
 	}
+	return 0;
 }
 
 /**
@@ -1484,50 +1462,48 @@ uint8 *sys_id(void) {
 }
 
 void enable_syscalls(int all) {
-	
+
 	gdc_syscall_save();
 	gdc_syscall_disable();
 	gdc_syscall_enable();
-	
-//	menu_syscall_save();
-//	menu_syscall_disable();
-//	menu_syscall_enable();
-	
-	if(all) {
-		bfont_syscall_save();
-		bfont_syscall_disable();
-		bfont_syscall_enable();
-		
-		flash_syscall_save();
-		flash_syscall_disable();
-		flash_syscall_enable();
-		
-		sys_syscall_save();
-		sys_syscall_disable();
-		sys_syscall_enable();
-		
+
+	printf("Syscalls emulation: ");
+
+	if (!all) {
+		printf("gdc, menu\n");
 		menu_syscall_save();
 		menu_syscall_disable();
 		menu_syscall_enable();
-		
-	} else if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
-		menu_syscall_save();
-		menu_syscall_disable();
-		menu_syscall_enable();
+		return;
 	}
+
+	printf("all\n");
+	bfont_syscall_save();
+	bfont_syscall_disable();
+	bfont_syscall_enable();
+
+	flash_syscall_save();
+	flash_syscall_disable();
+	flash_syscall_enable();
+
+	sys_syscall_save();
+	sys_syscall_disable();
+	sys_syscall_enable();
+
+	menu_syscall_save();
+	menu_syscall_disable();
+	menu_syscall_enable();
 }
 
 void disable_syscalls(int all) {
-	
+
 	gdc_syscall_disable();
-	
+	menu_syscall_disable();
+
 	if(all) {
 		bfont_syscall_disable();
 		flash_syscall_disable();
 		sys_syscall_disable();
-		menu_syscall_disable();
-	} else if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
-		menu_syscall_disable();
 	}
 }
 

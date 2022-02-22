@@ -34,10 +34,9 @@ int main(int argc, char *argv[]) {
 
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 	int emu_all_sc = 0;
-	
+
 	if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW || (is_custom_bios() && is_no_syscalls())) {
 		emu_all_sc = 1;
-		printf("Emulate all syscalls: enabled\n");
 	}
 
 	enable_syscalls(emu_all_sc);
