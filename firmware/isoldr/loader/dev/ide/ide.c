@@ -1023,12 +1023,22 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 #if _FS_READONLY == 0
 
 s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
-	// TODO
-	(void)block;
-	(void)count;
-	(void)buf;
-	(void)wait_dma;
-	return 0;
+
+	DBGFF("%ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
+			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
+
+	const u8 drive = 1; // TODO
+	struct ide_req req;
+
+	req.buff = buf;
+	req.count = count;
+	req.bytes = 0;
+	req.dev = &ide_devices[drive & 1];
+	req.cmd = fs_dma_enabled() ? G1_WRITE_DMA : G1_WRITE_PIO;
+	req.lba = block;
+	req.async = wait_dma ? 0 : 1;
+
+	return g1_ata_access(&req);
 }
 
 #endif

@@ -143,7 +143,7 @@ int open(const char *path, int flags) {
 			fat_flags = FA_WRITE | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
 			break;
 		case O_RDWR:
-			fat_flags = (FA_WRITE | FA_READ) | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_OPEN_EXISTING);
+			fat_flags = (FA_WRITE | FA_READ) | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_OPEN_ALWAYS);
 			break;
 #endif
 		default:
