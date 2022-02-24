@@ -1467,17 +1467,15 @@ void enable_syscalls(int all) {
 	gdc_syscall_disable();
 	gdc_syscall_enable();
 
-	printf("Syscalls emulation: ");
-
 	if (!all) {
-		printf("gdc, menu\n");
+		printf("Syscalls emulation: gdc, menu\n");
 		menu_syscall_save();
 		menu_syscall_disable();
 		menu_syscall_enable();
 		return;
 	}
 
-	printf("all\n");
+	printf("Syscalls emulation: all\n");
 	bfont_syscall_save();
 	bfont_syscall_disable();
 	bfont_syscall_enable();

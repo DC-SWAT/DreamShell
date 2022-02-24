@@ -21,16 +21,16 @@ static exception_handler_f old_handler;
 static void* asic_handle_exception(register_stack *stack, void *current_vector) {
 	
 	uint32 code = *REG_INTEVT;
-#if 0//def DEBUG
-	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+#if 0//def LOG
+	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 	
 	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 		LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-					*REG_INTEVT & 0x0fff, status, 
+					*REG_INTEVT & 0x0fff, st, 
 					ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
 					ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
 	}
-	dump_regs(stack);
+	// dump_regs(stack);
 #endif
 
 #ifdef NO_ASIC_LT
@@ -66,7 +66,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 		}
 
 # ifdef HAVE_MAPLE
-		if(status & ASIC_NRM_MAPLE_DMA) {
+		if(status & ASIC_NRM_MAPLE_DMA && code == EXP_CODE_INT11) {
 			back_vector = maple_dma_handler(NULL, stack, back_vector);
 		}
 # endif
