@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * SH4 UBC
- * (c)2013-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2013-2022 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -10,48 +10,31 @@
 #include <exception.h>
 
 extern void ubc_wait(void);
+void *maple_dma_handler(void *passer, register_stack *stack, void *current_vector);
 
-static void* ubc_handler(register_stack *stack, void *current_vector) {
+static void *ubc_handler(register_stack *stack, void *current_vector) {
 	
 	if(ubc_is_channel_break(UBC_CHANNEL_A)) {
-		
-		ubc_clear_channel(UBC_CHANNEL_A);
-		
-//		LOGF("UBC_A: Enabling widescreen\n");
 
-		/* Enable horizontal scaling */
-//		*((vuint32*)0xa05f80f4) = 0x10000;
-		
-		/* Enable pixel double */
-//		*((vuint32*)0xa05f80e8) |= 0x100;
-		
-//		UBC_R_BBRA = UBC_BBR_OPERAND | UBC_BBR_WRITE;
-//		ubc_wait();
-
+		// ubc_clear_channel(UBC_CHANNEL_A);
 		ubc_clear_break(UBC_CHANNEL_B);
-		LOGF("UBC: A\n");
-		dump_regs(stack);
+		// LOGF("UBC: A\n");
+		// dump_regs(stack);
+#ifdef HAVE_MAPLE
+        if(IsoInfo->emu_vmu) {
+            maple_dma_handler(NULL, stack, current_vector);
+        }
+#else
+        (void)stack;
+#endif
 	}
 
 	if(ubc_is_channel_break(UBC_CHANNEL_B)) {
-//		(void)stack;
+
+		// ubc_clear_channel(UBC_CHANNEL_A);
 		ubc_clear_break(UBC_CHANNEL_B);
-		LOGF("UBC: B\n");
-		dump_regs(stack);
-//		
-//		ubc_clear_channel(UBC_CHANNEL_A);
-//
-//		/* TODO force VGA */
-//		vuint32 *regs = *(vuint32*)0xa05f8000;
-//		
-//		/* VBlank IRQ */
-//		uint32 val = regs[0x33];
-//		uint16 sint2 = val & 0x0000ffff;
-//		regs[0x33] = (val & 0xffff0000) | (sint2 << 1);
-//		
-//#ifdef LOG
-//		WriteLog("UBC_B: %08lx\n", *(vuint32*)0xa0702c00);
-//#endif
+		// LOGF("UBC: B\n");
+		// dump_regs(stack);
 	}
 
 	return current_vector;

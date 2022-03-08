@@ -14,7 +14,7 @@
 #ifdef HAVE_GDB
 #	define EXP_TABLE_SIZE 8
 #else
-#	define EXP_TABLE_SIZE 1
+#	define EXP_TABLE_SIZE 2
 #endif
 
 typedef void *(* exception_handler_f) (register_stack *, void *);

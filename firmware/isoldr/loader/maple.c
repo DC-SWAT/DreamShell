@@ -7,9 +7,13 @@
 #include <main.h>
 #include <asic.h>
 #include <exception.h>
+#include <ubc.h>
 #include <dc/maple.h>
 
-// #define MAPLE_SNIFFER 1
+#define MAPLE_REG(x) (*(vuint32 *)(x))
+#define MAPLE_BASE 0xa05f6c00
+#define MAPLE_DMA_ADDR (MAPLE_BASE + 0x04)
+#define MAPLE_DMA_STATUS (MAPLE_BASE + 0x18)
 
 typedef struct {
     uint32 function;
@@ -271,7 +275,7 @@ static void maple_dma_proc() {
     maple_frame_t *resp_frame_ptr;
     static uint32 maple_dma_count = 0;
 
-    addr = *(vuint32 *)0xa05f6c04;
+    addr = MAPLE_REG(MAPLE_DMA_ADDR);
     data = (uint32 *)UNCACHED_ADDR(addr);
     maple_dma_count++;
 
@@ -301,11 +305,13 @@ static void maple_dma_proc() {
             cmd = req_frame.cmd;
             len -= req_frame.datalen;
             data += req_frame.datalen + 1;
+
+            maple_read_frame(recv_data, &resp_frame);
             resp_frame_ptr = (maple_frame_t *)recv_data;
             recv_data += resp_frame.datalen + 1;
 
 #ifndef MAPLE_SNIFFER
-            if ((req_frame.to & 0x20) && vmu_fd > FILEHND_INVALID) {
+            if ((resp_frame.from & 0x20) && vmu_fd > FILEHND_INVALID) {
                 resp_frame_ptr->from |= 0x01;
             }
 #endif
@@ -324,12 +330,19 @@ static void maple_dma_proc() {
                     trans_count, value, len + req_frame.datalen, port, addr, last);
             }
 
-            maple_read_frame((uint32 *)resp_frame_ptr, &resp_frame);
-
             maple_dump_frame("SEND", frame_count, &req_frame);
             maple_dump_frame("RECV", frame_count, &resp_frame);
 
+#if defined(MAPLE_SNIFFER) || !defined(LOG)
             maple_cmd_proc(cmd, &req_frame, resp_frame_ptr);
+#else
+            if (maple_cmd_proc(cmd, &req_frame, resp_frame_ptr) < 0) {
+                if ((resp_frame.from & 0x20) && vmu_fd > FILEHND_INVALID) {
+                    maple_read_frame((uint32 *)resp_frame_ptr, &resp_frame);
+                    maple_dump_frame("EMUL", frame_count, &resp_frame);
+                }
+            }
+#endif
         }
         if (last) {
             break;
@@ -350,15 +363,17 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
         current_vector = old_maple_dma_handler(passer, stack, current_vector);
     }
 #endif
+
+#ifndef MAPLE_SNIFFER
+    do {} while(MAPLE_REG(MAPLE_DMA_STATUS) & 1);
+#endif
     maple_dma_proc();
     return current_vector;
 }
 
 
 int maple_init_irq() {
-#if defined(NO_ASIC_LT)
-    return 0;
-#elif defined(HAVE_EXPT)
+#if defined(MAPLE_SNIFFER) && !defined(NO_ASIC_LT)
     asic_lookup_table_entry a_entry;
     memset(&a_entry, 0, sizeof(a_entry));
     
@@ -367,6 +382,12 @@ int maple_init_irq() {
     a_entry.handler = maple_dma_handler;
 
     return asic_add_handler(&a_entry, &old_maple_dma_handler, 0);
+#elif !defined(MAPLE_SNIFFER)
+    ubc_init();
+    ubc_configure_channel(UBC_CHANNEL_A, MAPLE_DMA_STATUS, UBC_BBR_OPERAND | UBC_BBR_WRITE);
+    return 0;
+#else
+    return 0;
 #endif
 }
 

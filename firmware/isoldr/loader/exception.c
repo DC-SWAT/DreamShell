@@ -89,7 +89,7 @@ int exception_init(uint32 vbr_addr) {
 	}
 
 	// if(IsoInfo->exec.type != BIN_TYPE_WINCE) {
-	// 	interrupt_stack = (uint32)sector_buffer + sector_buffer_size + 4096;
+	// 	interrupt_stack = (uint32)malloc(2048);
 	// }
 	// LOGFF("VBR buffer 0x%08lx -> 0x%08lx, stack 0x%08lx\n", vbr_buffer, vbr_buffer_orig, interrupt_stack);
 	LOGFF("VBR buffer 0x%08lx -> 0x%08lx\n", vbr_buffer, vbr_buffer_orig);
@@ -106,7 +106,7 @@ int exception_init(uint32 vbr_addr) {
 		*change_stack_instr = 0x0009; // nop
 	}
 
-#ifdef HAVE_GDB
+#if defined(HAVE_GDB) || defined(HAVE_MAPLE)
 	/* General exception hack for VBR. */
 	memcpy(
 		VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler),
@@ -195,7 +195,7 @@ void *exception_handler(register_stack *stack) {
 	/* Increase our counters and set the proper back_vectors. */
 	switch (stack->exception_type)
 	{
-#ifdef HAVE_GDB
+#if defined(HAVE_GDB) || defined(HAVE_MAPLE)
 		case EXP_TYPE_GEN :
 		{
 			//exp_table.general_exception_count++;
@@ -209,7 +209,7 @@ void *exception_handler(register_stack *stack) {
 				back_vector = exception_os_type == BIN_TYPE_KOS ? vbr_buffer_orig : VBR_GEN(vbr_buffer_orig);
 			}
 
-			break; 
+			break;
 		}
 #endif
 //
@@ -233,7 +233,7 @@ void *exception_handler(register_stack *stack) {
 		{
 			//exp_table.odd_exception_count++;
 			exception_code  = EXP_CODE_BAD;
-			back_vector     = my_exception_finish;
+			back_vector     = exception_os_type == BIN_TYPE_KOS ? vbr_buffer_orig : VBR_INT(vbr_buffer_orig);
 			break;
 		}
 	}

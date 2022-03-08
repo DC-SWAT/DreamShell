@@ -1030,7 +1030,7 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 	const u8 drive = 1; // TODO
 	struct ide_req req;
 
-	req.buff = buf;
+	req.buff = (u8 *)buf;
 	req.count = count;
 	req.bytes = 0;
 	req.dev = &ide_devices[drive & 1];

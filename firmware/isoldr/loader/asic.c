@@ -65,7 +65,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 			apply_patch_list();
 		}
 
-# ifdef HAVE_MAPLE
+# if defined(HAVE_MAPLE) && defined(MAPLE_SNIFFER)
 		if(status & ASIC_NRM_MAPLE_DMA && code == EXP_CODE_INT11) {
 			back_vector = maple_dma_handler(NULL, stack, back_vector);
 		}

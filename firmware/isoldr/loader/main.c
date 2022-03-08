@@ -85,6 +85,10 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
+	if (!IsoInfo->use_dma) {
+		fs_enable_dma(FS_DMA_DISABLED);
+	}
+
 #ifdef LOG
 	printf("Loading %s %d Kb\n", IsoInfo->exec.file, IsoInfo->exec.size / 1024);
 #else
@@ -137,10 +141,6 @@ int main(int argc, char *argv[]) {
 		(void)cnt;
 #endif
 	}
-
-//	ubc_init();
-//	ubc_configure_channel(UBC_CHANNEL_A, 0xa05f80f4, UBC_BBR_OPERAND | UBC_BBR_WRITE);
-//	ubc_configure_channel(UBC_CHANNEL_B, (uint32)&GDS->dma_status_reg, UBC_BBR_OPERAND | UBC_BBR_READ | UBC_BBR_WRITE);
 
 	/* Setup BIOS timer */
 	timer_prime_bios(TMU0);
