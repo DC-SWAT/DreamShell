@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Settings app module
-   Copyright (C)2016 SWAT 
+   Copyright (C)2016-2022 SWAT 
 */
 
 #include "ds.h"
@@ -14,9 +14,9 @@ DEFAULT_MODULE_EXPORTS(app_settings);
 
 enum {
 	NATIVE_MODE_AUTO = 0,
-	NATIVE_MOVE_PAL,
-	NATIVE_MOVE_NTSC,
-	NATIVE_MOVE_VGA
+	NATIVE_MODE_PAL,
+	NATIVE_MODE_NTSC,
+	NATIVE_MODE_VGA
 };
 
 enum {
@@ -151,15 +151,15 @@ void SettingsApp_ToggleNativeMode(GUI_Widget *widget) {
 			memset(&self.settings->video.mode, 0, sizeof(self.settings->video.mode));
 //			SetVideoMode(-1);
 			break;
-		case NATIVE_MOVE_PAL:
+		case NATIVE_MODE_PAL:
 			memcpy(&self.settings->video.mode, &vid_builtin[DM_640x480_PAL_IL], sizeof(self.settings->video.mode));
 //			SetVideoMode(DM_640x480_PAL_IL);
 			break;
-		case NATIVE_MOVE_NTSC:
+		case NATIVE_MODE_NTSC:
 			memcpy(&self.settings->video.mode, &vid_builtin[DM_640x480_NTSC_IL], sizeof(self.settings->video.mode));
 //			SetVideoMode(DM_640x480_NTSC_IL);
 			break;
-		case NATIVE_MOVE_VGA:
+		case NATIVE_MODE_VGA:
 			memcpy(&self.settings->video.mode, &vid_builtin[DM_640x480_VGA], sizeof(self.settings->video.mode));
 //			SetVideoMode(DM_640x480_VGA);
 			break;
@@ -235,13 +235,13 @@ static void SetupVideoSettings() {
 				
 				switch(i) {
 					case DM_640x480_PAL_IL:
-						value = NATIVE_MOVE_PAL;
+						value = NATIVE_MODE_PAL;
 						break;
 					case DM_640x480_NTSC_IL:
-						value = NATIVE_MOVE_NTSC;
+						value = NATIVE_MODE_NTSC;
 						break;
 					case DM_640x480_VGA:
-						value = NATIVE_MOVE_VGA;
+						value = NATIVE_MODE_VGA;
 						break;
 					default:
 						break;

@@ -85,9 +85,11 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
+#ifndef DEV_TYPE_DCL
 	if (!IsoInfo->use_dma) {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
+#endif
 
 #ifdef LOG
 	printf("Loading %s %d Kb\n", IsoInfo->exec.file, IsoInfo->exec.size / 1024);

@@ -94,7 +94,4 @@ void *memset_sh4(void *dest, uint32 val, size_t count);
 char *strcasestr(const char *str1, const char *str2);
 #endif
 
-void vmu_draw_string(const char *str);
-void vmu_draw_string_xy(const char *str, int x, int y);
-
 #endif /*_DS_UTILS_H */

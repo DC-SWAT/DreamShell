@@ -57,8 +57,7 @@ cd ../
 ```console
 cd ./firmware/bootloader && make && make release
 cd ../isoldr/loader && make && make install
-cd ../../aica && make && make install
-cd ../../
+cd ../../../
 ```
 
 ### Run

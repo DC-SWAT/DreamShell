@@ -8,6 +8,7 @@
 
 #include "ds.h"
 #include "fs.h"
+#include "vmu.h"
 
 //#define EMU
 //#define DEBUG
