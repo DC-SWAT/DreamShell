@@ -1,0 +1,68 @@
+# SHA
+SHA1_Init
+SHA1_Update
+SHA1_Final
+SHA1
+SHA1_Transform
+SHA224_Init
+SHA224_Update
+SHA224_Final
+SHA224
+SHA256_Init
+SHA256_Update
+SHA256_Final
+SHA256
+SHA256_Transform
+SHA384_Init
+SHA384_Update
+SHA384_Final
+SHA384
+SHA512_Init
+SHA512_Update
+SHA512_Final
+SHA512
+SHA512_Transform
+
+# RIPEMD
+RIPEMD160_Init
+RIPEMD160_Update
+RIPEMD160_Final
+RIPEMD160
+RIPEMD160_Transform
+
+# SEED
+SEED_set_key
+SEED_encrypt
+SEED_decrypt
+SEED_ecb_encrypt
+SEED_cbc_encrypt
+SEED_cfb128_encrypt
+
+# AES
+AES_options
+AES_set_encrypt_key
+AES_set_decrypt_key
+AES_encrypt
+AES_decrypt
+AES_ecb_encrypt
+AES_cbc_encrypt
+AES_cfb128_encrypt
+AES_cfb1_encrypt
+AES_cfb8_encrypt
+AES_ofb128_encrypt
+AES_ige_encrypt
+AES_bi_ige_encrypt
+AES_wrap_key
+AES_unwrap_key
+
+# Blowfish
+BF_set_key
+BF_encrypt
+BF_decrypt
+BF_ecb_encrypt
+BF_cbc_encrypt
+BF_cfb64_encrypt
+BF_ofb64_encrypt
+BF_options
+
+# Add more if needed
