@@ -13,7 +13,7 @@ We are glad if this code will help someone and we will be glad of your support t
 ### Environment
 ```console
 sudo apt-get install -y genisoimage squashfs-tools
-sudo apt-get install -y libpng-dev libjpeg-dev
+sudo apt-get install -y libpng-dev libjpeg-dev liblzo2-dev
 cd /tmp && git clone https://github.com/LuaDist/tolua.git && cd tolua
 mkdir build && cd ./build
 cmake ../ && make && sudo make install
@@ -30,10 +30,10 @@ patch -d ./ -p1 < ds/sdk/toolchain/patches/kos.diff
 cp ds/sdk/toolchain/environ.sh environ.sh
 ln -nsf `which tolua` ds/sdk/bin/tolua
 ln -nsf `which mkisofs` ds/sdk/bin/mkisofs
-source ./environ.sh
+ln -nsf `which mksquashfs` ds/sdk/bin/mksquashfs
 cd utils/dc-chain && cp config.mk.testing.sample config.mk
-./download.sh && ./unpack.sh
-make && cd ../../
+./download.sh && ./unpack.sh && make
+cd ../../ && source ./environ.sh
 make && cd ../kos-ports && ./utils/build-all.sh
 cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a
 cd ../../kos/ds/sdk/bin/src && make && make install && cd ../../../
