@@ -1,0 +1,3 @@
+DreamShell 4.0.0.RC.5
+Copyright (C)2004-2023 SWAT
+http://www.dc-swat.ru

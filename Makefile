@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2020 SWAT
+# Copyright (C) 2004-2023 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -14,6 +14,8 @@ TARGET = DS
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
 TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x25 #RC 5
+TARGET_DEBUG = 1
+# TARGET_EMU = 1
 
 all: rm-elf $(TARGET)
 
@@ -26,7 +28,14 @@ RES_DIR = ./resources
 
 KOS_LDFLAGS += -L$(LIB_DIR)
 KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs -I$(INC_DIR)/ntfs \
-			-DHAVE_SDLIMAGE $(TRAGET_VERSION) #-DEMU=1
+			-DHAVE_SDLIMAGE $(TRAGET_VERSION)
+
+ifdef TARGET_DEBUG
+KOS_CFLAGS += -g -DDS_DEBUG=1
+endif
+ifdef TARGET_EMU
+KOS_CFLAGS += -DDS_EMU=1
+endif
 
 SDL_VER = 1.2.13
 SDL_GFX_VER = 2.0.25
@@ -121,7 +130,7 @@ $(SRC_DIR)/exports_gcc.c: exports_gcc.txt
 	$(KOS_BASE)/utils/genexports/genexports.sh exports_gcc.txt $(SRC_DIR)/exports_gcc.c gcc_symtab
 	$(KOS_BASE)/utils/genexports/genexportstubs.sh exports_gcc.txt $(SRC_DIR)/exports_gcc_stubs.c
 	$(KOS_MAKE) -f Makefile.gcc_stubs
-	
+
 romdisk.img: romdisk/logo.kmg.gz
 	$(KOS_GENROMFS) -f romdisk.img -d romdisk -v
 
@@ -135,7 +144,23 @@ romdisk/logo.kmg.gz: $(RES_DIR)/logo_sq.png
 	gzip -9 logo.kmg
 	mv logo.kmg.gz romdisk/logo.kmg.gz
 
-$(TARGET): $(TARGET_BIN)
+mkbuild: $(RES_DIR)/lua/startup.lua
+	@echo Creating build directory...
+	@mkdir -p $(DS_BUILD)
+	@mkdir -p $(DS_BUILD)/apps
+	@mkdir -p $(DS_BUILD)/cmds
+	@mkdir -p $(DS_BUILD)/modules
+	@mkdir -p $(DS_BUILD)/screenshot
+	@mkdir -p $(DS_BUILD)/vmu
+	@cp -R $(RES_DIR)/doc $(DS_BUILD)
+	@cp -R $(RES_DIR)/firmware $(DS_BUILD)
+	@cp -R $(RES_DIR)/fonts $(DS_BUILD)
+	@cp -R $(RES_DIR)/gui $(DS_BUILD)
+	@cp -R $(RES_DIR)/lua $(DS_BUILD)
+	@mkdir -p $(DS_BUILD)/firmware/aica
+	@cp ../kernel/arch/dreamcast/sound/arm/stream.drv $(DS_BUILD)/firmware/aica/kos_stream.drv
+
+$(TARGET): $(TARGET_BIN) mkbuild
 
 $(TARGET).elf: $(OBJS)
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $(TARGET).elf \
@@ -155,6 +180,20 @@ $(TARGET_BIN_CD): $(TARGET_BIN)
 
 cdi: $(TARGET).cdi
 
+$(TARGET).cdi: $(TARGET_BIN_CD) mkbuild
+	@echo Creating ISO...
+	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
+	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
+	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .git -o $(TARGET).iso $(DS_BUILD)
+	@echo Convert ISO to CDI...
+	@-rm -f $(TARGET).cdi
+	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d > conv_log.txt
+	@-rm -f conv_log.txt
+	@-rm -f $(TARGET).iso
+
+#@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .git -o $(TARGET).iso $(DS_BUILD)
+
 nulldc: $(TARGET).cdi
 	@echo Running DreamShell...
 	@./emu/nullDC.exe -serial "debug.log"
@@ -164,22 +203,22 @@ nulldcl: $(TARGET).cdi
 	@run ./emu/nullDC.exe -serial "debug.log" > emu.log
 	
 run: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool-ip -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
+	sudo $(DS_SDK)/bin/dc-tool-ip -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
 
 run-serial: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool-ser -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
+	sudo $(DS_SDK)/bin/dc-tool-ser -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
 	
 debug: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool-ip -g -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
+	sudo $(DS_SDK)/bin/dc-tool-ip -g -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
 
 debug-serial: $(TARGET).elf
-	$(DS_SDK)/bin/dc-tool-ser -g -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
+	sudo $(DS_SDK)/bin/dc-tool-ser -g -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
 
 gdb: $(TARGET)-DBG.elf
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2159"
 
 lxdream: $(TARGET).cdi
-	lxdream -p $(TARGET).cdi
+	lxdream -d -p $(TARGET).cdi
 	
 lxdelf: $(TARGET).elf
 	lxdream -u -p -e $(TARGET).elf
@@ -188,26 +227,6 @@ lxdgdb:
 	lxdream -g 2000 -n $(TARGET).cdi &
 	sleep 2
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"
-
-dropbox: $(TARGET).elf
-	@$(KOS_STRIP) $(TARGET).elf
-	rm -f ~/Dropbox/Dev/DS/DS.elf
-	cp $(TARGET).elf ~/Dropbox/Dev/DS/DS.elf
-
-$(TARGET).cdi: $(TARGET_BIN_CD) $(DS_BUILD)/lua/startup.lua
-	@echo Creating ISO...
-	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
-	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
-	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .svn -o $(TARGET).iso $(DS_BUILD)
-	@echo Convert ISO to CDI...
-	@-rm -f $(TARGET).cdi
-	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d > conv_log.txt
-	@-rm -f conv_log.txt
-	@-rm -f $(TARGET).iso
-
-#@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .svn -o $(TARGET).iso $(DS_BUILD)
-#@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi > conv_log.txt
 
 TARGET_CLEAN_BIN = 1$(TARGET)_CORE.BIN $(TARGET)_CORE.BIN $(TARGET).elf $(TARGET).cdi
 

@@ -10,13 +10,6 @@
 #include "fs.h"
 #include "vmu.h"
 
-//#define EMU
-//#define DEBUG
-
-#ifdef EMU
-#	define DEBUG 1
-#endif
-
 extern uint8 romdisk[];
 KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT/* | INIT_NET | INIT_MALLOCSTATS | INIT_NO_DCLOAD*/);
 KOS_INIT_ROMDISK(romdisk);
@@ -71,14 +64,6 @@ const char *GetVersionBuildTypeString(int type) {
 	return build_str[type];
 }
 
-static int is_emulator() {
-#ifndef EMU
-	return 0;
-#else
-	return 1;
-#endif
-}
-
 static uint8 *get_board_id() {
 	uint8 *(*sc)(int, int, int, int) = NULL;
 	uint32 *scv = (uint32 *)&sc;
@@ -104,8 +89,12 @@ int InitDS() {
 	setenv("USER", getenv("HOST"), 1);
 	setenv("ARCH", hardware_sys_mode(&tmpi) == HW_TYPE_SET5 ? "Set5.xx" : "Dreamcast", 1);
 
-	emu = is_emulator();
-	
+#ifdef DS_EMU
+	emu = 1;
+#else
+	emu = 0;
+#endif
+
 	if(emu) {
 		setenv("EMU", "Unknown", 1); // TODO Emu name
 	}
@@ -123,7 +112,7 @@ int InitDS() {
 	vmu_draw_string(getenv("HOST"));
 	dbglog(DBG_INFO, "Initializing DreamShell Core...\n");
 
-#ifdef DEBUG
+#ifdef DS_DEBUG
 	uint64 t_start = timer_ms_gettime64();
 	dbglog_set_level(DBG_KDEBUG);
 #endif
@@ -224,7 +213,7 @@ int InitDS() {
 		return -1;
 	}
 
-#ifdef DEBUG
+#ifdef DS_DEBUG
 	uint64 t_end = timer_ms_gettime64();
 	dbglog(DBG_INFO, "Initializing time: %ld ms\n", (uint32)(t_end - t_start));
 #else
@@ -253,7 +242,7 @@ int InitDS() {
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
 	}
 	
-#ifdef DEBUG
+#ifdef DS_DEBUG
 	t_end = timer_ms_gettime64();
 	dbglog(DBG_INFO, "Startup time: %ld ms\n", (uint32)(t_end - t_start));
 #endif

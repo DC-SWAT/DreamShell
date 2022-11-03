@@ -1,5 +1,6 @@
 .DS_Store
 .codelite
+settings.json
 *.o
 *.a
 *.elf
@@ -13,6 +14,7 @@
 *.status
 *.sym
 *.d
+*.opk
 .libs
 DS.cdi
 DS_CORE.BIN
@@ -37,3 +39,4 @@ lib/freetype/objs/
 lib/mxml/Makefile
 lib/mxml/mxml.list
 lib/mxml/mxml.pc
+build/
