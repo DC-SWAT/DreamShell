@@ -1,6 +1,6 @@
 #
 # isofs module for DreamShell
-# Copyright (C) 2011-2015 SWAT
+# Copyright (C) 2011-2022 SWAT
 #
 
 TARGET_NAME = isofs
@@ -13,7 +13,7 @@ VER_MAJOR = 1
 VER_MINOR = 6
 VER_MICRO = 0
 
-all: rm-elf
+all: rm-elf install
 
 include ../../sdk/Makefile.loadable
 

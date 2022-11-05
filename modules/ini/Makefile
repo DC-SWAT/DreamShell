@@ -1,6 +1,6 @@
 #
 # libini module for DreamShell
-# Copyright (C) 2013 SWAT
+# Copyright (C) 2013-2022 SWAT
 #
 
 TARGET_NAME = ini
@@ -14,23 +14,27 @@ VER_MAJOR = 1
 VER_MINOR = 0
 VER_MICRO = 0
 
-all: rm-elf
+KOS_LIB_PATHS += -L./libini/src/.libs
 
-config:
-	cd libini && ./conf.sh
+all: rm-elf build_lib
 
-library:
-	cd libini && make
+libini/Makefile:
+	cd ./libini && ./configure --host=sh-elf \
+	--prefix="`pwd`/build" CFLAGS="${KOS_CFLAGS}" LDFLAGS="${KOS_LDFLAGS}" \
+	LIBS="${KOS_LIBS}" CC="${KOS_CC}" --disable-shared
+
+build_lib: libini/Makefile
+	cd ./libini && make
 
 include ../../sdk/Makefile.loadable
 
 rm-elf:
-	-rm -f $(TARGET)
-	-rm -f $(TARGET_LIB)
+	-rm -f $(TARGET) || true
+	-rm -f $(TARGET_LIB) || true
 
-install: $(TARGET) $(TARGET_LIB) opkg
-	-rm $(DS_BUILD)/modules/$(TARGET)
-	-rm $(DS_SDK)/lib/$(TARGET_LIB)
+install: $(TARGET) $(TARGET_LIB)
+	-rm -f $(DS_BUILD)/modules/$(TARGET) || true
+	-rm -f $(DS_SDK)/lib/$(TARGET_LIB) || true
 	cp $(TARGET) $(DS_BUILD)/modules/$(TARGET)
 	cp $(TARGET_LIB) $(DS_SDK)/lib/$(TARGET_LIB)
 

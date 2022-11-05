@@ -1,6 +1,6 @@
 #
 # Bzip2 module for DreamShell
-# Copyright (C) 2009-2020 SWAT
+# Copyright (C) 2009-2022 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -23,7 +23,7 @@ VER_MICRO = 6
 
 KOS_LIB_PATHS += -L./$(TARGET_NAME)
 
-all: rm-elf
+all: rm-elf install
 
 include ../../sdk/Makefile.loadable
 

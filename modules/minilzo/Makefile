@@ -1,6 +1,6 @@
 #
 # minilzo module for DreamShell
-# Copyright (C) 2009-2015 SWAT
+# Copyright (C) 2009-2022 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -15,7 +15,7 @@ VER_MICRO = 9
 
 KOS_CFLAGS += -I../../include/minilzo
 
-all: rm-elf
+all: rm-elf install
 
 include ../../sdk/Makefile.loadable
 

@@ -1,6 +1,6 @@
 #
 # oggvorbis module for DreamShell
-# Copyright (C) 2011-2020 SWAT
+# Copyright (C) 2011-2022 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -18,7 +18,7 @@ KOS_LIB_PATHS += -L./liboggvorbis/liboggvorbisplay/lib \
 				-L./liboggvorbis/liboggvorbis/libogg/build \
 				-L./liboggvorbis/liboggvorbis/libvorbis/build
 
-all: rm-elf library
+all: rm-elf library install
 
 library:
 	cd ./liboggvorbis && make

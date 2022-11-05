@@ -1,6 +1,6 @@
 #
 # sqlite3 module for DreamShell
-# Copyright (C) 2011-2014 SWAT
+# Copyright (C) 2011-2022 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -32,7 +32,7 @@ KOS_CFLAGS += -DSTDC_HEADERS=1 \
 				-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 				-DSQLITE_THREADSAFE=0
 
-all: rm-elf
+all: rm-elf install
 
 include ../../sdk/Makefile.loadable
 

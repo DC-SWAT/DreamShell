@@ -4,8 +4,8 @@
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = isofs isoldr ppp bflash dreameye vkb \
-		bzip2 zip minilzo opkg ini sqlite3 \
+_SUBDIRS = minilzo isofs isoldr ppp bflash dreameye \
+		bzip2 zip ini opkg sqlite3 vkb \
 		luaTask luaSocket tolua tolua++ \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
 		SDL_net http httpd telnetd mongoose gumbo \

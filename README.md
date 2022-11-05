@@ -35,8 +35,9 @@ cd utils/dc-chain && cp config.mk.testing.sample config.mk
 ./download.sh && ./unpack.sh && make
 cd ../../ && source ./environ.sh
 make && cd ../kos-ports && ./utils/build-all.sh
-cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a
-cd ../../kos/ds/sdk/bin/src && make && make install && cd ../../../
+cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a && cd ../../kos/ds
+cd ./sdk/bin/src && make && make install && cd ../../../
+@cp ../lib/dreamcast/libkallisti_exports.a ./sdk/lib/libkos.a
 ```
 
 ### Core and libraries

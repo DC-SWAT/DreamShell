@@ -1,0 +1,6 @@
+libini/libtool
+libini/Makefile
+libini/include/config.h
+libini/src/Makefile
+libini/include/Makefile
+*.Plo

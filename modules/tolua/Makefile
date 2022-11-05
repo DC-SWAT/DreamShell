@@ -1,6 +1,6 @@
 #
 # tolua module for DreamShell
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2022 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -20,7 +20,7 @@ VER_MAJOR = 5
 VER_MINOR = 1
 VER_MICRO = 4
 
-all: rm-elf
+all: rm-elf install
 
 include ../../sdk/Makefile.loadable
 
