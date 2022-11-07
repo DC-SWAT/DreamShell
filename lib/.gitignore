@@ -1,0 +1,5 @@
+freetype/builds/
+freetype/objs/
+mxml/Makefile
+mxml/mxml.list
+mxml/mxml.pc

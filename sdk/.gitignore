@@ -1,0 +1,14 @@
+*
+!*/
+!*.*
+toolchain/build-*
+toolchain/binutils-*
+toolchain/gcc-*
+toolchain/newlib-*
+toolchain/*.tar.gz
+toolchain/*.tar.bz2
+toolchain/logs
+*.o
+*.a
+build/
+.DS_Store

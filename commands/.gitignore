@@ -1,0 +1,7 @@
+*
+!*/
+!*.*
+!Makefile
+*.o
+*.build
+.DS_Store
