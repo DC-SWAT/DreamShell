@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2023 SWAT
+# Copyright (C) 2004-2022 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -144,7 +144,9 @@ romdisk/logo.kmg.gz: $(RES_DIR)/logo_sq.png
 	gzip -9 logo.kmg
 	mv logo.kmg.gz romdisk/logo.kmg.gz
 
-mkbuild: $(RES_DIR)/lua/startup.lua
+make-build: $(DS_BUILD)/lua/startup.lua
+
+$(DS_BUILD)/lua/startup.lua:
 	@echo Creating build directory...
 	@mkdir -p $(DS_BUILD)
 	@mkdir -p $(DS_BUILD)/apps
@@ -160,7 +162,20 @@ mkbuild: $(RES_DIR)/lua/startup.lua
 	@mkdir -p $(DS_BUILD)/firmware/aica
 	@cp ../kernel/arch/dreamcast/sound/arm/stream.drv $(DS_BUILD)/firmware/aica/kos_stream.drv
 
-$(TARGET): $(TARGET_BIN) mkbuild
+libs: $(LIB_DIR)/libSDL_$(SDL_VER).a
+
+$(LIB_DIR)/libSDL_$(SDL_VER).a:
+	cd $(LIB_DIR) && make
+
+build: $(TARGET)
+	@echo Building modules, commands, applications and firmwares...
+	cd ./modules && make && make install
+	cd ./commands && make && make install
+	cd ./applications && make && make install
+	cd ./firmware/isoldr/loader && make && make install
+#   cd ../firmware/aica && make && make install
+
+$(TARGET): libs $(TARGET_BIN) make-build
 
 $(TARGET).elf: $(OBJS)
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $(TARGET).elf \
@@ -180,7 +195,7 @@ $(TARGET_BIN_CD): $(TARGET_BIN)
 
 cdi: $(TARGET).cdi
 
-$(TARGET).cdi: $(TARGET_BIN_CD) mkbuild
+$(TARGET).cdi: $(TARGET_BIN_CD) make-build
 	@echo Creating ISO...
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)

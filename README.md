@@ -37,28 +37,30 @@ cd ../../ && source ./environ.sh
 make && cd ../kos-ports && ./utils/build-all.sh
 cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a && cd ../../kos/ds
 cd ./sdk/bin/src && make && make install && cd ../../../
-@cp ../lib/dreamcast/libkallisti_exports.a ./sdk/lib/libkos.a
+cp ../lib/dreamcast/libkallisti_exports.a ./sdk/lib/libkos.a
 ```
 
 ### Core and libraries
 ```console
-cd ./lib && make
-cd ../ && make
+make
+```
+
+### Full build (modules etc)
+```console
+make build
 ```
 
 ### Modules, applications and commands
 ```console
-cd ./modules && make && make install
-cd ../commands && make && make install
-cd ../applications && make && make install
-cd ../
+cd ./modules && make && make install && cd ../
+cd ./commands && make && make install && cd ../
+cd ./applications && make && make install && cd ../
 ```
 
 ### Firmwares
 ```console
-cd ./firmware/bootloader && make && make release
-cd ../isoldr/loader && make && make install
-cd ../../../
+cd ./firmware/bootloader && make && make release && cd ../../
+cd ./firmware/isoldr/loader && make && make install && cd ../../../
 ```
 
 ### Run
