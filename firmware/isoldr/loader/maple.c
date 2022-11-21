@@ -217,23 +217,8 @@ static void maple_vmu_block_sync(maple_frame_t *req, maple_frame_t *resp) {
     LOGFF("block=%d len=%d\n", block, len);
 #endif
 }
-#endif
 
 static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
-#ifdef MAPLE_SNIFFER
-    (void)req;
-    switch (cmd) {
-        case MAPLE_RESPONSE_DEVINFO:
-        case MAPLE_COMMAND_ALLINFO:
-            maple_dump_device_info((maple_devinfo_t *)UNCACHED_ADDR((uint32)&resp->data));
-            break;
-        case MAPLE_COMMAND_GETMINFO:
-            maple_dump_memory_info((maple_memory_t *)UNCACHED_ADDR((uint32)&resp->data));
-            break;
-        default:
-            return -1;
-    }
-#else
     if (vmu_fd < 0) {
         return -1;
     }
@@ -262,9 +247,28 @@ static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
     maple_read_frame((uint32 *)resp, &resp_frame);
     maple_dump_frame("EMUL", 0, &resp_frame);
 # endif
-#endif
     return 0;
 }
+
+#else // MAPLE_SNIFFER
+
+static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
+    (void)req;
+    switch (cmd) {
+        case MAPLE_RESPONSE_DEVINFO:
+        case MAPLE_COMMAND_ALLINFO:
+            maple_dump_device_info((maple_devinfo_t *)UNCACHED_ADDR((uint32)&resp->data));
+            break;
+        case MAPLE_COMMAND_GETMINFO:
+            maple_dump_memory_info((maple_memory_t *)UNCACHED_ADDR((uint32)&resp->data));
+            break;
+        default:
+            return -1;
+    }
+    return 0;
+}
+#endif // MAPLE_SNIFFER
+
 
 static void maple_dma_proc() {
     uint32 *data, *recv_data, addr, value;

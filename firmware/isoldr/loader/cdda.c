@@ -61,6 +61,9 @@ static const uint8 logs[] = {
 /* SPU timer for checking playback position (not used) */
 #define AICA_CDDA_TIMER_ARM 0x2894 /* Timer B */
 
+/* AICA memory end for PCM buffer */
+#define AICA_MEMORY_END 0x00A00000
+
 #define G2BUS_FIFO (*(vuint32 *)0xa05f688c)
 
 #define aica_dma_in_progress() AICA_DMA_ADST
@@ -262,12 +265,12 @@ static void setup_pcm_buffer() {
 	}
 
 	cdda->buff[1] = cdda->buff[0] + (cdda->size >> 1);
-	
+
 	/* Setup buffer at end of sound memory */
-	cdda->aica_left[0] = 0x00A00000 - cdda->size;
+	cdda->aica_left[0] = AICA_MEMORY_END - cdda->size;
 	cdda->aica_left[1] = cdda->aica_left[0] + (cdda->size >> 2);
-	
-	cdda->aica_right[0] = 0x00A00000 - (cdda->size >> 1);
+
+	cdda->aica_right[0] = AICA_MEMORY_END - (cdda->size >> 1);
 	cdda->aica_right[1] = cdda->aica_right[0] + (cdda->size >> 2);
 
 	/* Setup end position for sound buffer */
@@ -276,7 +279,7 @@ static void setup_pcm_buffer() {
 	} else {
 		cdda->end_pos = ((cdda->size / cdda->chn) / (cdda->bitsize >> 3)) - (cdda->bitsize >> 3);
 	}
-	
+
 	LOGFF("0x%08lx 0x%08lx %d\n",
 		(uint32)cdda->buff[0], (uint32)cdda->aica_left[0], cdda->size);
 }
@@ -454,7 +457,7 @@ static void aica_check_cdda(void) {
 	}
 }
 
-#if 0
+#if 0 // For debugging
 
 static uint8 aica_get_tmval(void) {
 	uint8 val;
@@ -523,7 +526,7 @@ static void aica_init(void) {
 static void aica_dma_init(void) {
 	
 	uint32 main_addr = ((uint32)cdda->buff[0]) & 0x0FFFFFFF;
-	uint32 sound_addr = 0x00A00000 - cdda->size;
+	uint32 sound_addr = AICA_MEMORY_END - cdda->size;
 	
 	AICA_DMA_G2APRO = 0x4659007F;    // Protection code
 	AICA_DMA_ADEN   = 0;             // Disable wave DMA
@@ -783,7 +786,7 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 		
 		/* Make alignment by sector */
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
-		cdda->offset = ((cdda->offset / 512) + 4) * 512;
+		cdda->offset = ((cdda->offset / 512) + 1) * 512;
 #elif defined(DEV_TYPE_GD)
 		cdda->offset = ((cdda->offset / 2048) + 1) * 2048;
 #endif
