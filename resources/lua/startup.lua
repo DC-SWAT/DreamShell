@@ -105,8 +105,8 @@ local DreamShell = {
 		end);
 
 		self:InstallingApps(path .. "/apps");
-		OpenApp("ISO Loader");
 		self.initialized = true;
+		OpenApp(os.getenv("APP"));
 	end,
 
 	InstallingApps = function(self, path)

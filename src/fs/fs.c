@@ -360,17 +360,9 @@ int SearchRoot(int pass_cnt) {
 		
 		dbglog(DBG_INFO, "Checking for root directory on /%s\n", ent->name);
 		
-		if(!SearchRootCheck(ent->name, "/DS", "/update/version.dat") || !SearchRootCheck(ent->name, "", "/update/version.dat")) {
+		if(!SearchRootCheck(ent->name, "/DS", "/lua/startup.lua") || !SearchRootCheck(ent->name, "", "/lua/startup.lua")) {
 			if(!pass_cnt--) goto success;
 		}
-		
-		/*if(!SearchRootCheck(ent->name, "/DS", "/lua/startup.lua") || !SearchRootCheck(ent->name, "", "/lua/startup.lua")) {
-			if(!pass_cnt--) goto success;
-		} else if(!SearchRootCheck(ent->name, "/DS/apps", NULL) && !SearchRootCheck(ent->name, "/apps", NULL)) {
-			if(!pass_cnt--) goto success;
-		} else if(!SearchRootCheck(ent->name, "/DS/modules", NULL) && !SearchRootCheck(ent->name, "/modules", NULL)) {
-			if(!pass_cnt--) goto success;
-		}*/
 	}
 	
 	dbglog(DBG_ERROR, "Can't find root directory.\n");

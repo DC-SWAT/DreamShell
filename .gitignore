@@ -16,10 +16,14 @@ settings.json
 *.d
 *.opk
 *.klf
+*.raw
+*.wav
+*.iso
+*.gdi
+*.cdi
 .libs
 build/
-DS.cdi
-DS_CORE.BIN
+*DS_CORE.BIN
 romdisk.img
 exports.c
 exports_stubs.c

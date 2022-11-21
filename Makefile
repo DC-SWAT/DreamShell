@@ -14,7 +14,7 @@ TARGET = DS
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
 TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x25 #RC 5
-TARGET_DEBUG = 1
+# TARGET_DEBUG = 1
 # TARGET_EMU = 1
 
 all: rm-elf $(TARGET)
@@ -146,7 +146,7 @@ romdisk/logo.kmg.gz: $(RES_DIR)/logo_sq.png
 
 make-build: $(DS_BUILD)/lua/startup.lua
 
-$(DS_BUILD)/lua/startup.lua:
+$(DS_BUILD)/lua/startup.lua: $(RES_DIR)/lua/startup.lua
 	@echo Creating build directory...
 	@mkdir -p $(DS_BUILD)
 	@mkdir -p $(DS_BUILD)/apps
@@ -200,14 +200,14 @@ $(TARGET).cdi: $(TARGET_BIN_CD) make-build
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
 	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .git -o $(TARGET).iso $(DS_BUILD)
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d > conv_log.txt
 	@-rm -f conv_log.txt
 	@-rm -f $(TARGET).iso
 
-#@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .git -o $(TARGET).iso $(DS_BUILD)
+#@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 
 nulldc: $(TARGET).cdi
 	@echo Running DreamShell...
