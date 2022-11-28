@@ -162,7 +162,7 @@ int InitDS() {
 		/* Getting board ID */
 		tmpb = get_board_id();
 		
-		if(!tmpi && strncasecmp(getenv("PATH"), "/cd", 3)) {
+		if(!tmpi && strncmp(getenv("PATH"), "/cd", 3)) {
 			/* Relax GD drive =) */
 			cdrom_spin_down();
 		}

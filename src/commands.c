@@ -183,7 +183,7 @@ int CallExtCmd(int argc, char *argv[]) {
 
 	while ((ent = fs_readdir(hnd)) != NULL) {
 
-		if(!strncasecmp(ent->name, argv[0], MAX_FN_LEN) && ent->attr != O_DIR) {
+		if(!strncmp(ent->name, argv[0], MAX_FN_LEN) && ent->attr != O_DIR) {
 			snprintf(fn, MAX_FN_LEN, "%s/%s", dir, ent->name);
 			r = CallCmdFile(fn, argc, argv);
 			break;
@@ -448,7 +448,7 @@ static int builtin_ls(int argc, char *argv[]) {
 
 	int lflag = 0;
 
-	if(argc > 1 && !strncasecmp(argv[1], "-l", 2)) {
+	if(argc > 1 && !strncmp(argv[1], "-l", 2)) {
 		lflag = 1;
 	}
 
@@ -729,7 +729,7 @@ static int builtin_romdisk(int argc, char *argv[]) {
 		return CMD_NO_ARG;
 	}
 
-	if (!strncasecmp(argv[1], "-m", 2)) {
+	if (!strncmp(argv[1], "-m", 2)) {
 
 		void * datar = NULL;
 
@@ -752,7 +752,7 @@ static int builtin_romdisk(int argc, char *argv[]) {
 		return CMD_ERROR;
 	}
 
-	if(!strncasecmp(argv[1], "-u", 2)) {
+	if(!strncmp(argv[1], "-u", 2)) {
 		ds_printf("DS_PROCESS: Unmounting %s ...\n", argv[2]);
 
 		if(fs_romdisk_unmount(argv[2]) < 0) {
@@ -1067,17 +1067,17 @@ static int builtin_dc(int argc, char *argv[]) {
 		          "-main    Kernel C-level entry point\n");
 		return CMD_NO_ARG;
 
-	} else if (!strncasecmp(argv[1], "-menu", 5)) {
+	} else if (!strncmp(argv[1], "-menu", 5)) {
 		arch_menu();
-	} else if (!strncasecmp(argv[1], "-exit", 5)) {
+	} else if (!strncmp(argv[1], "-exit", 5)) {
 		arch_exit();
-	} else if (!strncasecmp(argv[1], "-return", 7)) {
+	} else if (!strncmp(argv[1], "-return", 7)) {
 		arch_return();
-	} else if (!strncasecmp(argv[1], "-abort", 6)) {
+	} else if (!strncmp(argv[1], "-abort", 6)) {
 		arch_abort();
-	} else if (!strncasecmp(argv[1], "-reboot", 7)) {
+	} else if (!strncmp(argv[1], "-reboot", 7)) {
 		arch_reboot();
-	} else if (!strncasecmp(argv[1], "-main", 5)) {
+	} else if (!strncmp(argv[1], "-main", 5)) {
 		arch_main();
 	} else {
 		ds_printf("DS_ERROR: flag '%s' is not supported\n", argv[1]);
@@ -1117,10 +1117,10 @@ static int builtin_addr(int argc, char *argv[]) {
 	int irqd, len;
 	uint32 ad = strtoul(argv[2], NULL, 16);
 
-	if(!strncasecmp(argv[1], "-c", 2)) {
+	if(!strncmp(argv[1], "-c", 2)) {
 		ds_printf("DS_INF: Calling to 0x%x ...\n", ad);
 
-		if(!strncasecmp(argv[3], "-s", 2)) {
+		if(!strncmp(argv[3], "-s", 2)) {
 			arch_shutdown();
 			ctaddr(ad);
 			ds_printf("DS_OK: Complete.\n");
@@ -1131,7 +1131,7 @@ static int builtin_addr(int argc, char *argv[]) {
 		return CMD_OK;
 	}
 
-	if(!strncasecmp(argv[1], "-v", 2)) {
+	if(!strncmp(argv[1], "-v", 2)) {
 		if(arch_valid_address(ad)) {
 			ds_printf("DS_INF: 0x%x not valid.\n",ad);
 			return CMD_OK;
@@ -1142,7 +1142,7 @@ static int builtin_addr(int argc, char *argv[]) {
 	}
 
 
-	if(!strncasecmp(argv[1], "-r", 2)) {
+	if(!strncmp(argv[1], "-r", 2)) {
 
 		len = atoi(argv[3]);
 		fd = fs_open(argv[4], O_CREAT | O_WRONLY);
@@ -1160,7 +1160,7 @@ static int builtin_addr(int argc, char *argv[]) {
 	}
 
 
-	if(!strncasecmp(argv[1], "-w", 2)) {
+	if(!strncmp(argv[1], "-w", 2)) {
 
 		fd = fs_open(argv[3], O_RDONLY);
 
@@ -1230,14 +1230,14 @@ static int builtin_screenshot(int argc, char *argv[]) {
 		return CMD_NO_ARG;
 	}
 
-	if(argc > 2 && !strncasecmp(argv[2], "ppm", 3)) {
+	if(argc > 2 && !strncmp(argv[2], "ppm", 3)) {
 
 		if(vid_screen_shot(argv[1]) < 0) {
 			ds_printf("DS_ERROR: Can't save PPM screenshot to %s\n", argv[1]);
 			return CMD_ERROR;
 		}
 
-	} else if(argc > 2 && !strncasecmp(argv[2], "bmp", 3)) {
+	} else if(argc > 2 && !strncmp(argv[2], "bmp", 3)) {
 		
 		if(SDL_SaveBMP(GetScreen(), argv[1]) < 0) {
 			ds_printf("DS_ERROR: Can't save BMP screenshot to %s\n", argv[1]);
@@ -1775,13 +1775,13 @@ int builtin_gzip(int argc, char *argv[]) {
 		realpath(argv[3], dst);
 	}
 
-	if(!strncasecmp("-s", argv[1], 2)) {
+	if(!strncmp("-s", argv[1], 2)) {
 
 		uint32 size = gzip_get_file_size(src);
 		ds_printf("DS_OK: File size is %ld bytes\n", size);
 		return CMD_OK;
 
-	} else if(!strncasecmp("-d", argv[1], 2)) {
+	} else if(!strncmp("-d", argv[1], 2)) {
 
 		ds_printf("DS_PROCESS: Decompressing '%s' ...\n", src);
 		gzFile s = NULL;
@@ -1920,7 +1920,7 @@ static int builtin_speedtest(int argc, char *argv[]) {
 
 	} else {
 
-		if(!strncasecmp(argv[1], "/ram", 4)) {
+		if(!strncmp(argv[1], "/ram", 4)) {
 			size = 0x400000;
 		} else {
 			size = 0x800000;

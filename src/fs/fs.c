@@ -1,7 +1,7 @@
 /** 
  * \file      fs.c
  * \brief     Filesystem
- * \date      2013-2015
+ * \date      2013-2022
  * \author    SWAT
  * \copyright	http://www.dc-swat.ru
  */
@@ -280,7 +280,7 @@ int InitRomdisk() {
 			
 			romdisk_hdr_t *romfs = (romdisk_hdr_t *)tmpb;
 
-			if(strncasecmp(romfs->magic, "-rom1fs-", 8) || strncasecmp(romfs->volume_name, getenv("HOST"), 10)) {
+			if(strncmp(romfs->magic, "-rom1fs-", 8) || strncmp(romfs->volume_name, getenv("HOST"), 10)) {
 				continue;
 			}
 
@@ -289,15 +289,15 @@ int InitRomdisk() {
 			if(!size || size > 0x1F8000) {
 				continue;
 			}
-			
+
 			dbglog(DBG_INFO, "Detected romdisk at 0x%08lx, mounting...\n", (uint32)tmpb);
-			
+
 			if(cnt) {
 				snprintf(path, sizeof(path), "/brd%d", cnt+1);
 			} else {
 				strncpy(path, "/brd", sizeof(path));
 			}
-			
+
 			if(fs_romdisk_mount(path, (const uint8 *)tmpb, 0) < 0) {
 				dbglog(DBG_INFO, "Error mounting romdisk at 0x%08lx\n", (uint32)tmpb);
 			} else {
@@ -310,87 +310,87 @@ int InitRomdisk() {
 
 		tmpb++;
 	}
-	
+
 	return (cnt > -1 ? 0 : -1);
 }
 
 
 
 static int SearchRootCheck(char *device, char *path, char *file) {
-	
+
 	char check[MAX_FN_LEN];
-	
+
 	if(file == NULL) {
 		sprintf(check, "/%s%s", device, path);
 	} else {
 		sprintf(check, "/%s%s/%s", device, path, file);
 	}
-	
+
 	if((file == NULL && DirExists(check)) || (file != NULL && FileExists(check))) {
 		sprintf(check, "/%s%s", device, path);
 		setenv("PATH", check, 1);
 		return 0;
 	}
-	
+
 	return -1;
 }
 
 
 int SearchRoot(int pass_cnt) {
-	
+
 	dirent_t *ent;
 	file_t hnd;
-	
+
 	hnd = fs_open("/", O_RDONLY | O_DIR);
-	
+
 	if(hnd < 0) {
 		dbglog(DBG_ERROR, "Can't open root directory!\n");
 		return -1;
 	}
-	
+
 	while ((ent = fs_readdir(hnd)) != NULL) {
 		
-		if(!strncasecmp(ent->name, "pty", 3) || 
-			!strncasecmp(ent->name, "sock", 4) || 
-			!strncasecmp(ent->name, "vmu", 3) || 
-			!strncasecmp(ent->name, "rd", 2)
-			/* || !strncasecmp(ent->name, "sd", 2)*/) {
+		if(!strncmp(ent->name, "pty", 3) || 
+			!strncmp(ent->name, "sock", 4) || 
+			!strncmp(ent->name, "vmu", 3) || 
+			!strncmp(ent->name, "rd", 2)
+			/* || !strncmp(ent->name, "sd", 2)*/) {
 			continue;
 		}
-		
+
 		dbglog(DBG_INFO, "Checking for root directory on /%s\n", ent->name);
-		
+
 		if(!SearchRootCheck(ent->name, "/DS", "/lua/startup.lua") || !SearchRootCheck(ent->name, "", "/lua/startup.lua")) {
 			if(!pass_cnt--) goto success;
 		}
 	}
-	
+
 	dbglog(DBG_ERROR, "Can't find root directory.\n");
 	setenv("PATH", "/ram", 1);
 	setenv("TEMP", "/ram", 1);
 	fs_close(hnd);
 	return -1;
-	
+
 success:
 	fs_close(hnd);
-	
-	if(strncasecmp(getenv("PATH"), "/pc", 3) && DirExists("/pc")) {
-		
+
+	if(strncmp(getenv("PATH"), "/pc", 3) && DirExists("/pc")) {
+
 		dbglog(DBG_INFO, "Checking for root directory on /pc\n");
 
 		if(SearchRootCheck("pc", "", "/lua/startup.lua")) {
 			SearchRootCheck("pc", "/DS", "/lua/startup.lua");
 		}
 	}
-	
-	if(	!strncasecmp(getenv("PATH"), "/sd", 3) || 
-		!strncasecmp(getenv("PATH"), "/ide", 4) || 
-		!strncasecmp(getenv("PATH"), "/pc", 3)) {
+
+	if(	!strncmp(getenv("PATH"), "/sd", 3) || 
+		!strncmp(getenv("PATH"), "/ide", 4) || 
+		!strncmp(getenv("PATH"), "/pc", 3)) {
 		setenv("TEMP", getenv("PATH"), 1);
 	} else {
 		setenv("TEMP", "/ram", 1);
 	}
-	
+
 	dbglog(DBG_INFO, "Root directory is %s\n", getenv("PATH"));
 //	dbglog(DBG_INFO, "Temp directory is %s\n", getenv("TEMP"));
 	return 0;

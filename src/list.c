@@ -92,7 +92,7 @@ Item_t *listGetItemByName(Item_list_t *lst, const char *name) {
     Item_t *i;
     
     SLIST_FOREACH(i, lst, list) {
-       if(!strcasecmp(name, i->name)) 
+       if(!strcmp(name, i->name)) 
 		   return i;
     } 
     

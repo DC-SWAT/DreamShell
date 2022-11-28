@@ -67,7 +67,7 @@ App_t *GetAppByFileName(const char *fn) {
 
 	SLIST_FOREACH(i, apps, list) {
 		a = (App_t *) i->data;
-		if (!strncasecmp(fn, a->fn, MAX_FN_LEN))
+		if (!strncmp(fn, a->fn, MAX_FN_LEN))
 			return a;
 	}
 

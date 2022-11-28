@@ -280,9 +280,9 @@ int BuildAppBody(App_t *app) {
 			ds_printf("DS_DEBUG: Call to onload event...\n");
 #endif
 
-			if(!strncasecmp(onload, "export:", 7)) {
+			if(!strncmp(onload, "export:", 7)) {
 				CallAppExportFunc(app, onload);
-			} else if(!strncasecmp(onload, "console:", 8)) {
+			} else if(!strncmp(onload, "console:", 8)) {
 				dsystem_buff(onload + 8);
 			} else {
 
@@ -462,7 +462,7 @@ static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
 
 	if(width[strlen(width)-1] == '%') {
 		
-		if(!strncasecmp(width, "100%", 4)) {
+		if(!strncmp(width, "100%", 4)) {
 			
 			*w = parent_w;
 			
@@ -478,7 +478,7 @@ static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
 
 	if(height[strlen(height)-1] == '%') {
 		
-		if(!strncasecmp(height, "100%", 4)) {
+		if(!strncmp(height, "100%", 4)) {
 			
 			*h = parent_h;
 			
@@ -540,18 +540,18 @@ static void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *
 
 static int alignStrToFlag(char *align) {
 
-	if(!strncasecmp(align, "center", 6)) return WIDGET_HORIZ_CENTER;
-	else if(!strncasecmp(align, "right", 5)) return WIDGET_HORIZ_RIGHT;
-	else if(!strncasecmp(align, "left", 4)) return WIDGET_HORIZ_LEFT;
+	if(!strncmp(align, "center", 6)) return WIDGET_HORIZ_CENTER;
+	else if(!strncmp(align, "right", 5)) return WIDGET_HORIZ_RIGHT;
+	else if(!strncmp(align, "left", 4)) return WIDGET_HORIZ_LEFT;
 	else return 0;
 }
 
 
 static int valignStrToFlag(char *valign) {
 
-	if(!strncasecmp(valign, "center", 6)) return WIDGET_VERT_CENTER;
-	else if(!strncasecmp(valign, "top", 3)) return WIDGET_VERT_TOP;
-	else if(!strncasecmp(valign, "bottom", 6)) return WIDGET_VERT_BOTTOM;
+	if(!strncmp(valign, "center", 6)) return WIDGET_VERT_CENTER;
+	else if(!strncmp(valign, "top", 3)) return WIDGET_VERT_TOP;
+	else if(!strncmp(valign, "bottom", 6)) return WIDGET_VERT_BOTTOM;
 	else return 0;
 }
 
@@ -644,7 +644,7 @@ static GUI_Surface *getElementSurfaceTheme(App_t *app, mxml_node_t *node, char *
 		}
 	}
 	
-	if(!strncasecmp(node->value.element.name, "input", 5)) {
+	if(!strncmp(node->value.element.name, "input", 5)) {
 		value = FindXmlAttr("type", node, node->value.element.name);
 	} else {
 		value = node->value.element.name;
@@ -909,7 +909,7 @@ static void parseAppSurfaceLine(App_t *app, mxml_node_t *node, GUI_Surface *surf
 	ds_printf("Line surface: x1=%d y1=%d x2=%d y2=%d color=%08x\n", x1, y1, x2, y2, c);
 #endif
 
-	if(!strncasecmp(aa, "true", 4)) {
+	if(!strncmp(aa, "true", 4)) {
 		GUI_SurfaceLineAA(surface, x1, y1, x2, y2, c);
 	} else if(width > 0) {
 		GUI_SurfaceThickLine(surface, x1, y1, x2, y2, (Uint8)width, c);
@@ -960,9 +960,9 @@ static void parseAppSurfaceTrigon(App_t *app, mxml_node_t *node, GUI_Surface *su
 	ds_printf("Trigon surface: x1=%d y1=%d x2=%d y2=%d x3=%d y3=%d color=%08x\n", x1, y1, x2, y2, x3, y3, c);
 #endif
 
-	if(!strncasecmp(aa, "true", 4)) {
+	if(!strncmp(aa, "true", 4)) {
 		GUI_SurfaceTrigonAA(surface, x1, y1, x2, y2, x3, y3, c);
-	} else if(!strncasecmp(fill, "true", 4)) {
+	} else if(!strncmp(fill, "true", 4)) {
 		GUI_SurfaceTrigonFill(surface, x1, y1, x2, y2, x3, y3, c);
 	} else {
 		GUI_SurfaceTrigon(surface, x1, y1, x2, y2, x3, y3, c);
@@ -998,7 +998,7 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 	char *s = FindXmlAttr("src", node, NULL);
 	char src[MAX_FN_LEN];
 
-	if(s == NULL && strncasecmp(node->value.element.name, "surface", 7) && strncasecmp(node->value.element.name, "theme", 5)) {
+	if(s == NULL && strncmp(node->value.element.name, "surface", 7) && strncmp(node->value.element.name, "theme", 5)) {
 		ds_printf("DS_ERROR: Empty src attribute in %s\n", node->value.element.name);
 		return 0;
 	} else {
@@ -1007,25 +1007,25 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 
 	char *name = FindXmlAttr("name", node, NULL);
 
-	if(!strncasecmp(node->value.element.name, "font", 4)) {
+	if(!strncmp(node->value.element.name, "font", 4)) {
 
 		return parseAppFontRes(app, node, name, src);
 
-	} else if(!strncasecmp(node->value.element.name, "image", 5)) {
+	} else if(!strncmp(node->value.element.name, "image", 5)) {
 
 		return parseAppImageRes(app, node, name, src);
 
-	} else if(!strncasecmp(node->value.element.name, "surface", 7)) {
+	} else if(!strncmp(node->value.element.name, "surface", 7)) {
 
 		return parseAppSurfaceRes(app, node, name);
 
-	} else if(!strncasecmp(node->value.element.name, "script", 6)) {
+	} else if(!strncmp(node->value.element.name, "script", 6)) {
 
 #ifdef APP_LOAD_DEBUG
 		ds_printf("DS_PROCESS: Loading %s %s type %s\n", node->value.element.name, src, FindXmlAttr("type", node, "text/lua"));
 #endif
 
-		if(!strncasecmp(FindXmlAttr("type", node, "text/lua"), "text/lua", 8)) {
+		if(!strncmp(FindXmlAttr("type", node, "text/lua"), "text/lua", 8)) {
 			SetupAppLua(app);
 			if(app->lua != NULL) {
 				LuaDo(LUA_DO_FILE, src, app->lua);
@@ -1035,7 +1035,7 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 			}
 		}
 
-	} else if(!strncasecmp(node->value.element.name, "module", 6)) {
+	} else if(!strncmp(node->value.element.name, "module", 6)) {
 
 #ifdef APP_LOAD_DEBUG
 		ds_printf("DS_PROCESS: Loading %s %s\n", node->value.element.name, src);
@@ -1050,11 +1050,11 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 			listAddItem(app->resources, LIST_ITEM_MODULE, m->lib_get_name(), (void *) m, sizeof(Module_t));
 		}
 
-	} else if(!strncasecmp(node->value.element.name, "file", 4)) {
+	} else if(!strncmp(node->value.element.name, "file", 4)) {
 
 		return parseAppFileRes(app, node, name, src);
 
-	} else if(!strncasecmp(node->value.element.name, "theme", 5)) {
+	} else if(!strncmp(node->value.element.name, "theme", 5)) {
 
 		return parseAppTheme(app, node);
 
@@ -1116,19 +1116,19 @@ static int parseAppSurfaceRes(App_t *app, mxml_node_t *node, char *name) {
 				c = parseAppSurfColor(surface, color);
 			}
 
-			if(!strncasecmp(n->value.element.name, "fill", 4)) {
+			if(!strncmp(n->value.element.name, "fill", 4)) {
 				parseAppSurfaceFill(app, n, surface, c);
-			} else if(!strncasecmp(n->value.element.name, "blit", 4)) {
+			} else if(!strncmp(n->value.element.name, "blit", 4)) {
 				parseAppSurfaceBlit(app, n, surface);
-			} else if(!strncasecmp(n->value.element.name, "rect", 4)) {
+			} else if(!strncmp(n->value.element.name, "rect", 4)) {
 				parseAppSurfaceRect(app, n, surface, c);
-			} else if(!strncasecmp(n->value.element.name, "line", 4)) {
+			} else if(!strncmp(n->value.element.name, "line", 4)) {
 				parseAppSurfaceLine(app, n, surface, c);
-			} else if(!strncasecmp(n->value.element.name, "circle", 6)) {
+			} else if(!strncmp(n->value.element.name, "circle", 6)) {
 				parseAppSurfaceCircle(app, n, surface, c);
-			} else if(!strncasecmp(n->value.element.name, "trigon", 6)) {
+			} else if(!strncmp(n->value.element.name, "trigon", 6)) {
 				parseAppSurfaceTrigon(app, n, surface, c);
-			} else if(!strncasecmp(n->value.element.name, "bezier", 6)) {
+			} else if(!strncmp(n->value.element.name, "bezier", 6)) {
 				parseAppSurfaceBezier(app, n, surface, c);
 			}
 
@@ -1154,7 +1154,7 @@ static int parseAppFontRes(App_t *app, mxml_node_t *node, char *name, char *src)
 	char *type = FindXmlAttr("type", node, "ttf");
 	GUI_Font *f = NULL;
 
-	if(!strncasecmp(type, "bitmap", 6)) {
+	if(!strncmp(type, "bitmap", 6)) {
 		f = GUI_FontLoadBitmap(src);
 	} else if(!strcmp(type, "ttf")) {
 		f = GUI_FontLoadTrueType(src, atoi(FindXmlAttr("size", node, "12")));
@@ -1213,7 +1213,7 @@ static int parseAppFileRes(App_t *app, mxml_node_t *node, char *name, char *src)
 
 	char *ftype = FindXmlAttr("type", node, "basic");
 
-	if(!strncasecmp(ftype, "rwops", 5)) {
+	if(!strncmp(ftype, "rwops", 5)) {
 
 		SDL_RWops *rw = SDL_RWFromFile(src, "rb");
 
@@ -1266,7 +1266,7 @@ static int parseAppTheme(App_t *app, mxml_node_t *node) {
 				name = FindXmlAttr("name", n, NULL);
 
 				if(!name) {
-					if(!strncasecmp(n->value.element.name, "input", 5)) {
+					if(!strncmp(n->value.element.name, "input", 5)) {
 						name = FindXmlAttr("type", n, n->value.element.name);
 					} else {
 						name = n->value.element.name;
@@ -1305,27 +1305,27 @@ static GUI_Widget *parseAppElement(App_t *app, mxml_node_t *node, SDL_Rect *pare
 	
 	name = FindXmlAttr("name", node, NULL);
 
-	if(!strncasecmp(node->value.element.name, "image", 5)) {
+	if(!strncmp(node->value.element.name, "image", 5)) {
 
 		widget = parseAppImageElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "label", 5)) {
+	} else if(!strncmp(node->value.element.name, "label", 5)) {
 
 		widget = parseAppLabelElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "input", 5)) {
+	} else if(!strncmp(node->value.element.name, "input", 5)) {
 
 		char *type = FindXmlAttr("type", node, "unknown");
 
-		if(!strncasecmp(type, "button", 6)) {
+		if(!strncmp(type, "button", 6)) {
 
 			widget = parseAppButtonElement(app, node, name, x, y, w, h);
 
-		} else if(!strncasecmp(type, "checkbox", 8)) {
+		} else if(!strncmp(type, "checkbox", 8)) {
 
 			widget = parseAppToggleButtonElement(app, node, name, x, y, w, h);
 
-		} else if(!strncasecmp(type, "text", 4)) {
+		} else if(!strncmp(type, "text", 4)) {
 
 			widget = parseAppTextEntryElement(app, node, name, x, y, w, h);
 
@@ -1333,31 +1333,31 @@ static GUI_Widget *parseAppElement(App_t *app, mxml_node_t *node, SDL_Rect *pare
 			return NULL;
 		}
 
-	} else if(!strncasecmp(node->value.element.name, "scrollbar", 9)) {
+	} else if(!strncmp(node->value.element.name, "scrollbar", 9)) {
 
 		widget = parseAppScrollBarElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "progressbar", 11)) {
+	} else if(!strncmp(node->value.element.name, "progressbar", 11)) {
 
 		widget = parseAppProgressBarElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "panel", 5)) {
+	} else if(!strncmp(node->value.element.name, "panel", 5)) {
 
 		widget = parseAppPanelElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "listbox", 7)) {
+	} else if(!strncmp(node->value.element.name, "listbox", 7)) {
 
 		widget = (GUI_Widget *) parseAppListBoxElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "cardstack", 9)) {
+	} else if(!strncmp(node->value.element.name, "cardstack", 9)) {
 
 		widget = parseAppCardStackElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "rtf", 3)) {
+	} else if(!strncmp(node->value.element.name, "rtf", 3)) {
 
 		widget = parseAppRTFElement(app, node, name, x, y, w, h);
 
-	} else if(!strncasecmp(node->value.element.name, "filemanager", 11)) {
+	} else if(!strncmp(node->value.element.name, "filemanager", 11)) {
 
 		widget = parseAppFileManagerElement(app, node, name, x, y, w, h);
 		/*
@@ -1404,7 +1404,7 @@ static GUI_Widget *parseAppElement(App_t *app, mxml_node_t *node, SDL_Rect *pare
 	attr = FindXmlAttr("visibility", node, NULL);
 
 	if(attr) {
-		if(!strncasecmp(attr, "false", 5)) {
+		if(!strncmp(attr, "false", 5)) {
 			GUI_WidgetSetFlags(widget, WIDGET_HIDDEN);
 		} else {
 			GUI_WidgetClearFlags(widget, WIDGET_HIDDEN);
@@ -1588,7 +1588,7 @@ static GUI_Callback *CreateAppElementCallback(App_t *app, const char *event, GUI
 
 	GUI_Callback *cb = NULL;
 
-	if(!strncasecmp(event, "export:", 7)) {
+	if(!strncmp(event, "export:", 7)) {
 
 		export_callback_data_t *de = (export_callback_data_t*) malloc(sizeof(export_callback_data_t));
 
@@ -1605,7 +1605,7 @@ static GUI_Callback *CreateAppElementCallback(App_t *app, const char *event, GUI
 			free(de);
 		}
 
-	} else if(!strncasecmp(event, "console:", 8)) {
+	} else if(!strncmp(event, "console:", 8)) {
 
 		cb = GUI_CallbackCreate(cmd_callback_function, NULL, (void*)event+8);
 
@@ -1830,7 +1830,7 @@ static GUI_Widget *parseAppToggleButtonElement(App_t *app, mxml_node_t *node, ch
 	}
 
 
-	if(checked != NULL && strncasecmp(checked, "false", 5) && strncasecmp(checked, "no", 2)) {
+	if(checked != NULL && strncmp(checked, "false", 5) && strncmp(checked, "no", 2)) {
 		GUI_WidgetSetState(button, 1);
 	} else {
 		GUI_WidgetSetState(button, 0);
@@ -2359,7 +2359,7 @@ static void filemanager_lua_func_out(dirent_fm_t *ent) {
 
 static GUI_CallbackFunction *FileManagerCallbackFunc(App_t *app, const char *event, char *wname, int idx) {
 
-	if(!strncasecmp(event, "export:", 7)) {
+	if(!strncmp(event, "export:", 7)) {
 
 		uint32 fa = GetAppExportFuncAddr(event);
 
@@ -2367,7 +2367,7 @@ static GUI_CallbackFunction *FileManagerCallbackFunc(App_t *app, const char *eve
 			return (GUI_CallbackFunction *)(void (*)(void*))fa;
 		}
 
-	} else if(!strncasecmp(event, "console:", 8)) {
+	} else if(!strncmp(event, "console:", 8)) {
 
 		return NULL;
 

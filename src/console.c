@@ -133,7 +133,7 @@ static char *TabFunction(char* command) {
 	
 	SLIST_FOREACH(i, cmds, list) {
 		c = (Cmd_t *) i->data;
-		if(!strncasecmp(c->command, command, strlen(command))) {
+		if(!strncmp(c->command, command, strlen(command))) {
 			strcpy(command, c->command);
 			internal = 1;
 			break;
@@ -152,7 +152,7 @@ static char *TabFunction(char* command) {
 		if(fd != FILEHND_INVALID) {
 			
 			while ((ent = fs_readdir(fd)) != NULL) {
-				if(ent->attr != O_DIR && !strncasecmp(ent->name, command, strlen(command))) {
+				if(ent->attr != O_DIR && !strncmp(ent->name, command, strlen(command))) {
 					strcpy(command, ent->name);
 				}
 			}

@@ -101,7 +101,7 @@ klibrary_t *library_lookup_fn(const char * fn) {
 	old = irq_disable();
 
 	LIST_FOREACH(lib, &library_list, list) {
-		if(!strncasecmp(lib->image.fn, fn, MAX_FN_LEN))
+		if(!strncmp(lib->image.fn, fn, MAX_FN_LEN))
 			break;
 	}
 
