@@ -191,6 +191,7 @@ static void BuildAppList() {
 		
 	while((ent = fs_readdir(fd)) != NULL) {
 		
+		if(ent->name[0] == '.') continue;
 		elen = strlen(ent->name);
 		type = elen > 3 ? ent->name[elen - 3] : 'd';
 		

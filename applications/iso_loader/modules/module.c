@@ -24,12 +24,12 @@ static struct {
 	uint8 boot_sector[2048];
 	int image_type;
 	int sector_size;
-	
+
 	bool have_args;
 	bool used_preset;
-	
+
 	GUI_Widget *pages;
-	
+
 	GUI_Widget *filebrowser;
 	int current_item;
 	int current_item_dir;
@@ -41,9 +41,9 @@ static struct {
 	GUI_Widget *settings;
 	GUI_Widget *games;
 	GUI_Widget *btn_run;
-	
+
 	GUI_Widget *preset;
-	
+
 	GUI_Widget *dma;
 	GUI_Widget *cdda;
 	GUI_Widget *cdda_mode[5];
@@ -53,10 +53,10 @@ static struct {
 	GUI_Widget *fastboot;
 	GUI_Widget *async[10];
 	GUI_Widget *async_label;
-	
+
 	GUI_Widget *device;
 	GUI_Widget *os_chk[4];
-	
+
 	GUI_Widget *options_switch[4];
 	GUI_Widget *boot_mode_chk[3];
 	GUI_Widget *memory_chk[16];
@@ -72,21 +72,21 @@ static struct {
 	GUI_Widget *cover_widget;
 	GUI_Widget *title;
 	GUI_Widget *options_panel;
-	
+
 	GUI_Widget *icosizebtn[5];
 	GUI_Widget *wlnkico;
 	GUI_Surface *slnkico;
 	GUI_Surface *stdico;
-	
+
 	GUI_Widget *linktext;
 	GUI_Widget  *btn_hidetext;
 	GUI_Widget  *save_link_btn;
 	GUI_Widget  *save_link_txt;
 	GUI_Widget  *rotate180;
-	
+
 	GUI_Widget  *wpa[2];
 	GUI_Widget  *wpv[2];
-	
+
 	uint32_t pa[2];
 	uint32_t pv[2];
 
@@ -389,7 +389,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	
 	tmpval = GUI_TextEntryGetText(self.device);
 	
-	if(strncasecmp(tmpval, "auto", 4) != 0)
+	if(strncmp(tmpval, "auto", 4) != 0)
 	{
 		strcat(cmd, " -d ");
 		strcat(cmd, tmpval);
@@ -687,7 +687,7 @@ void isoLoader_toggleDMA(GUI_Widget *widget) {
 	
 	if (GUI_WidgetGetState(widget) && canUseTrueAsyncDMA()) {
 
-		if (!strncasecmp(GUI_LabelGetText(self.async_label), "none", 4)) {
+		if (!strncmp(GUI_LabelGetText(self.async_label), "none", 4)) {
 			GUI_LabelSetText(self.async_label, "true");
 		}
 
@@ -700,7 +700,7 @@ void isoLoader_toggleDMA(GUI_Widget *widget) {
 
 	} else {
 
-		if (!strncasecmp(GUI_LabelGetText(self.async_label), "true", 4)) {
+		if (!strncmp(GUI_LabelGetText(self.async_label), "true", 4)) {
 			GUI_LabelSetText(self.async_label, "none");
 		}
 
@@ -758,7 +758,7 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 		}
 	}
 	
-	if(!strncasecmp(GUI_ObjectGetName((GUI_Object *) widget), "memory-text", 12)) {
+	if(!strncmp(GUI_ObjectGetName((GUI_Object *) widget), "memory-text", 12)) {
 		GUI_WidgetSetState(self.memory_chk[i-1], 1);
 	}
 	
@@ -784,19 +784,6 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 		if(widget != self.boot_mode_chk[i]) {
 			GUI_WidgetSetState(self.boot_mode_chk[i], 0);
 		}
-	}
-	
-	if(widget == self.boot_mode_chk[BOOT_MODE_IPBIN]) {
-		
-		if(GUI_WidgetGetState(self.memory_chk[2])) {
-			GUI_WidgetSetState(self.memory_chk[0], 1);
-			isoLoader_toggleMemory(self.memory_chk[0]);
-		}
-		
-	} else {
-		
-		GUI_WidgetSetState(self.memory_chk[2], 1);
-		isoLoader_toggleMemory(self.memory_chk[2]);
 	}
 }
 
@@ -876,7 +863,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	
 	tmpval = GUI_TextEntryGetText(self.device);
 	
-	if(strncasecmp(tmpval, "auto", 4) != 0) {
+	if(strncmp(tmpval, "auto", 4) != 0) {
 		strncpy(self.isoldr->fs_dev, tmpval, sizeof(self.isoldr->fs_dev));
 	}
 	
@@ -921,7 +908,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 	
-	if(!strncasecmp(self.isoldr->fs_dev, ISOLDR_DEV_DCLOAD, 4) && addr < 0x8c010000) {
+	if(!strncmp(self.isoldr->fs_dev, ISOLDR_DEV_DCLOAD, 4) && addr < 0x8c010000) {
 		addr = ISOLDR_DEFAULT_ADDR_HIGH;
 		ds_printf("DS_WARNING: Using dc-load as file system, forced loader address: 0x%08lx\n", addr);
 	}
@@ -940,7 +927,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 		self.isoldr->patch_value[i] = self.pv[1];
 	}
 	
-	if(!strncasecmp(self.isoldr->fs_dev, ISOLDR_DEV_DCIO, 4)) {
+	if(!strncmp(self.isoldr->fs_dev, ISOLDR_DEV_DCIO, 4)) {
 		isoldr_exec_dcio(self.isoldr, filepath);
 	} else {
 		isoldr_exec(self.isoldr, addr);
@@ -1027,7 +1014,7 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 
 				int len = strlen(dent->name);
 
-				if(len > 4 && !strncasecmp(dent->name + len - 4, ".gdi", 4)) {
+				if(len > 4 && !strncmp(dent->name + len - 4, ".gdi", 4)) {
 //				if(strcasestr(dent->name, ".gdi") != NULL) {
 					memset(filepath, 0, MAX_FN_LEN);
 					snprintf(filepath, MAX_FN_LEN, "%s/%s", ent->name, dent->name);
@@ -1067,8 +1054,6 @@ void isoLoader_ItemContextClick(dirent_fm_t *fm_ent) {
 }
 
 
-
-
 void isoLoader_DefaultPreset() {
 	
 	if(canUseTrueAsyncDMA() && !GUI_WidgetGetState(self.dma)) {
@@ -1076,7 +1061,7 @@ void isoLoader_DefaultPreset() {
 		GUI_WidgetSetState(self.dma, 1);
 		isoLoader_toggleDMA(self.dma);
 
-	} else if(GUI_WidgetGetState(self.dma)) {
+	} else if(!canUseTrueAsyncDMA() && GUI_WidgetGetState(self.dma)) {
 		
 		GUI_WidgetSetState(self.dma, 0);
 		isoLoader_toggleDMA(self.dma);
@@ -1086,28 +1071,31 @@ void isoLoader_DefaultPreset() {
 	}
 
 //	if(self.used_preset == true) {
-		
+
 		GUI_TextEntrySetText(self.device, "auto");
-		
+
 		GUI_WidgetSetState(self.preset, 0);
-		
+
 		GUI_WidgetSetState(self.cdda, 0);
 		isoLoader_toggleCDDA(self.cdda);
 
 		GUI_WidgetSetState(self.irq, 0);
-		
+
 		GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 		isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
-		
+
+		GUI_WidgetSetState(self.memory_chk[0], 1);
+		isoLoader_toggleMemory(self.memory_chk[0]);
+
 		/* 
 		 * If DC booted from sd_loader_with.bios, 
 		 * then we need use truncated IP.BIN mode by default.
 		 */
-		if(!strncasecmp((char*)0x001AF780, "DS_CORE.BIN", 11)) {
+		if(!strncmp((char*)0x001AF780, "DS_CORE.BIN", 11)) {
 			
 			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
 			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]);
-			
+
 		/*
 		 * If DC booted from custom BIOS,
 		 * then we can replace all syscalls by the loader.
@@ -1272,7 +1260,7 @@ int isoLoader_LoadPreset() {
 	uint32 heap = HEAP_MODE_AUTO;
 	char title[32] = "";
 	char device[8] = "";
-	char memory[12] = "0x8c004000";
+	char memory[12] = "0x8c000100";
 	char heap_memory[12] = "";
 	char patchtxt[4][10];
 	int i, len;
@@ -1332,7 +1320,7 @@ int isoLoader_LoadPreset() {
 			name = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 			len = strlen(name);
 
-			if (!strncasecmp(name, heap_memory, sizeof(heap_memory)) || len < 8) {
+			if (!strncmp(name, heap_memory, sizeof(heap_memory)) || len < 8) {
 				GUI_WidgetSetState(self.heap[i], 1);
 				isoLoader_toggleHeap(self.heap[i]);
 				if (len < 8) {
@@ -1368,7 +1356,7 @@ int isoLoader_LoadPreset() {
 		name = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
 		len = strlen(name);
 
-		if (!strncasecmp(name, memory, sizeof(memory)) || len < 8) {
+		if (!strncmp(name, memory, sizeof(memory)) || len < 8) {
 			GUI_WidgetSetState(self.memory_chk[i], 1);
 			isoLoader_toggleMemory(self.memory_chk[i]);
 			if (len < 8) {
@@ -1637,7 +1625,7 @@ void isoLoader_Init(App_t *app) {
 						
 						b = GUI_FileManagerGetItem(self.filebrowser, i);
 						
-						if(!strncasecmp(name, GUI_ObjectGetName((GUI_Object*)b), MAX_FN_LEN)) {
+						if(!strncmp(name, GUI_ObjectGetName((GUI_Object*)b), MAX_FN_LEN)) {
 							GUI_WidgetClicked(b, 1, 1);
 							break;
 						}
