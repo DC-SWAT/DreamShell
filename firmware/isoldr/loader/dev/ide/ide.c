@@ -464,7 +464,7 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
 
     /* Send the SET FEATURES command. */
     OUT8(G1_ATA_COMMAND_REG, ATA_CMD_SET_FEATURES);
-    timer_spin_sleep(1);
+    timer_spin_sleep_bios(1);
 
     /* Wait for command completion. */
     g1_ata_wait_nbsy();
@@ -523,7 +523,7 @@ static s32 g1_dev_scan(void)
 		ide_devices[j].reserved   = 0; // Assuming that no drive here.
 		
 		OUT8(G1_ATA_DEVICE_SELECT, (0xA0 | (j << 4)));
-		timer_spin_sleep(1);
+		timer_spin_sleep_bios(1);
 //		for(d = 0; d < 10; d++)
 //			IN8(G1_ATA_ALTSTATUS);
 		
@@ -533,7 +533,7 @@ static s32 g1_dev_scan(void)
 		OUT8(G1_ATA_LBA_HIGH, 0);
 		
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_IDENTIFY);
-		timer_spin_sleep(1);
+		timer_spin_sleep_bios(1);
 //		for(d = 0; d < 10; d++)
 //			IN8(G1_ATA_ALTSTATUS);
 

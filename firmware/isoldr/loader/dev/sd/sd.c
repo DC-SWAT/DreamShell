@@ -257,7 +257,7 @@ int sd_init(void) {
 		return -1;
 	}
 	
-	timer_spin_sleep(20);
+	timer_spin_sleep_bios(20);
 	SELECT();
 	
 	/* 80 dummy clocks */
@@ -270,7 +270,7 @@ int sd_init(void) {
 #ifdef SD_DEBUG
 		LOGFF("Enter Idle state\n");
 #endif
-		timer_spin_sleep(20);
+		timer_spin_sleep_bios(20);
 		
 		i = 0;
 		

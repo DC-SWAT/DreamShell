@@ -8,7 +8,6 @@
 #include <arch/cache.h>
 #include <ubc.h>
 #include <exception.h>
-#include <asic.h>
 
 isoldr_info_t *IsoInfo;
 uint32 loader_addr = 0;
@@ -28,14 +27,19 @@ int main(int argc, char *argv[]) {
 	OpenLog();
 	printf(NULL);
 
-#if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
+	malloc_init();
+
+	/* Setup BIOS timer */
 	timer_init();
-#endif
+	timer_prime_bios(TMU0);
+	timer_start(TMU0);
 
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 	int emu_all_sc = 0;
 
-	if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW || (is_custom_bios() && is_no_syscalls())) {
+	if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
+		|| (IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW)
+		|| (is_custom_bios() && is_no_syscalls())) {
 		emu_all_sc = 1;
 	}
 
@@ -49,8 +53,6 @@ int main(int argc, char *argv[]) {
 	if(IsoInfo->gdtex > 0) {
 		draw_gdtex((uint8 *)IsoInfo->gdtex);
 	}
-
-	malloc_init();
 
 	LOGF("Magic: %s\n"
 		"LBA: %d (%d)\n"
@@ -91,11 +93,7 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-#ifdef LOG
-	printf("Loading %s %d Kb\n", IsoInfo->exec.file, IsoInfo->exec.size / 1024);
-#else
 	printf("Loading executable...\n");
-#endif
 
 	if(!Load_BootBin()) {
 		goto error;
@@ -107,7 +105,6 @@ int main(int argc, char *argv[]) {
 
 		if(src[1] != 0xD0) {
 
-			LOGF("Detected scrambled homebrew executable\n");
 			printf("Descrambling...\n");
 
 			uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
@@ -139,15 +136,9 @@ int main(int argc, char *argv[]) {
 		LOGF("Found DMA status reg %d times\n", cnt);
 		cnt = patch_memory(0xA05F7414, (uint32)&GDS->streamed);
 		LOGF("Found DMA len reg %d times\n", cnt);
-#ifndef LOG
 		(void)cnt;
-#endif
 	}
 
-	/* Setup BIOS timer */
-	timer_prime_bios(TMU0);
-	timer_start(TMU0);
-	
 #ifdef HAVE_EXPT
 	if(IsoInfo->exec.type == BIN_TYPE_WINCE && IsoInfo->use_irq) {
 		uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
@@ -161,20 +152,10 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	/* Clear IRQ stuff */
-	*ASIC_IRQ9_MASK  = 0;
-	*ASIC_IRQ11_MASK = 0;
-	*ASIC_IRQ13_MASK = 0;
-	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
-	uint8 st = *((volatile uint8 *)0xA05F709C);
-	(void)st;
+	setup_machine_state();
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
-#ifdef LOG
-		printf("Executing at 0x%08lx...\n", UNCACHED_ADDR(IsoInfo->exec.addr));
-#else
 		printf("Executing...\n");
-#endif
 		launch(UNCACHED_ADDR(IsoInfo->exec.addr));
 	}
 
@@ -184,6 +165,6 @@ int main(int argc, char *argv[]) {
 error:
 	printf("Failed!\n");
 	disable_syscalls(emu_all_sc);
-	timer_spin_sleep(30000);
+	timer_spin_sleep_bios(30000);
 	return -1;
 }

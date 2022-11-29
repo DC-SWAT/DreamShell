@@ -102,20 +102,22 @@ static int internal_malloc_init(void) {
 
     } else if(IsoInfo->heap == HEAP_MODE_AUTO) {
 
-        if (loader_addr < CACHED_ADDR(IsoInfo->exec.addr)) {
+        if (loader_addr < APP_ADDR) {
 
             if (loader_addr >= ISOLDR_DEFAULT_ADDR_LOW
-                || (IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_WINCE)
+                || (IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_WINCE && IsoInfo->use_irq == 0)
                 || IsoInfo->boot_mode != BOOT_MODE_DIRECT
             ) {
                 internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
             }
 
-        } else {
-            if (!IsoInfo->emu_cdda && IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+        } else if(loader_addr < RAM_END_ADDR) {
 
-                if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO ||
-                    IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
+            if (IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+
+                if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO
+                    || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
+                    || IsoInfo->emu_cdda
                 ) {
                     internal_malloc_base = (void *)(ISOLDR_DEFAULT_ADDR_LOW + 0x800);
                 } else {

@@ -8,6 +8,18 @@
 #include <limits.h>
 #include <dc/sq.h>
 #include <dcload.h>
+#include <asic.h>
+
+
+void setup_machine_state() {
+
+	/* Clear IRQ stuff */
+	*ASIC_IRQ9_MASK  = 0;
+	*ASIC_IRQ11_MASK = 0;
+	*ASIC_IRQ13_MASK = 0;
+	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
+	(void) *((volatile uint8 *)0xA05F709C);
+}
 
 uint Load_BootBin() {
 	
@@ -95,7 +107,9 @@ void Load_DS() {
 		return;
 	}
 
-	disable_syscalls(loader_addr < ISOLDR_DEFAULT_ADDR_LOW);
+	int all_sc = loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
+		(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW);
+	disable_syscalls(all_sc);
 
 	if (read(fd, (uint8 *)UNCACHED_ADDR(APP_ADDR), total(fd)) > 0) {
 		launch(APP_ADDR);
