@@ -95,7 +95,7 @@ DRESULT disk_read (
 	BYTE drv,		/* Physical drive nmuber (0..) */
 	BYTE *buff,		/* Data buffer to store read data */
 	DWORD sector,	/* Sector address (LBA) */
-	BYTE count		/* Number of sectors to read (1..255) */
+	DWORD count		/* Number of sectors to read */
 )
 {
 	(void)drv;
@@ -114,7 +114,7 @@ DRESULT disk_read_async (
 	BYTE drv,		/* Physical drive nmuber (0..) */
 	BYTE *buff,		/* Data buffer to store read data */
 	DWORD sector,	/* Sector address (LBA) */
-	BYTE count		/* Number of sectors to read (1..255) */
+	DWORD count		/* Number of sectors to read */
 )
 {
 	(void)drv;
@@ -171,7 +171,7 @@ DRESULT disk_write (
 	BYTE drv,			/* Physical drive nmuber (0..) */
 	const BYTE *buff,	/* Data to be written */
 	DWORD sector,		/* Sector address (LBA) */
-	BYTE count			/* Number of sectors to write (1..255) */
+	DWORD count			/* Number of sectors to write */
 )
 {
 

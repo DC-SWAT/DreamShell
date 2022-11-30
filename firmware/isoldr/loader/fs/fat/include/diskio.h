@@ -35,14 +35,14 @@ typedef enum {
 DSTATUS disk_initialize (BYTE);
 DSTATUS disk_status (BYTE);
 void disk_enable_dma(BYTE enable);
-DRESULT disk_read (BYTE, BYTE*, DWORD, BYTE);
+DRESULT disk_read (BYTE, BYTE*, DWORD, DWORD);
 #if	_READONLY == 0
-DRESULT disk_write (BYTE, const BYTE*, DWORD, BYTE);
+DRESULT disk_write (BYTE, const BYTE*, DWORD, DWORD);
 #endif
 DRESULT disk_ioctl (BYTE, BYTE, void*);
 
 DRESULT disk_read_part(/*BYTE, */BYTE*, DWORD, DWORD, DWORD);
-DRESULT disk_read_async (BYTE, BYTE*, DWORD, BYTE);
+DRESULT disk_read_async (BYTE, BYTE*, DWORD, DWORD);
 DRESULT disk_pre_read (BYTE, DWORD, DWORD);
 int disk_poll (BYTE);
 DRESULT disk_abort (BYTE);

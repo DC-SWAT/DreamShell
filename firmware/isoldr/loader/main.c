@@ -87,11 +87,9 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
-#ifndef DEV_TYPE_DCL
 	if (!IsoInfo->use_dma) {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
-#endif
 
 	printf("Loading executable...\n");
 
@@ -161,10 +159,11 @@ int main(int argc, char *argv[]) {
 
 	printf("Executing from IP.BIN...\n");
 	launch((IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC ? 0xac00e000 : 0xac00b800));
-	
+
 error:
 	printf("Failed!\n");
 	disable_syscalls(emu_all_sc);
-	timer_spin_sleep_bios(30000);
+	timer_spin_sleep_bios(3000);
+	Load_DS();
 	return -1;
 }

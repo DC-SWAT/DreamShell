@@ -88,7 +88,7 @@ int fs_init() {
 
 	if(disk_initialize(0) == 0) {
 
-		printf("Mounting FAT filesystem...\n");
+		LOGF("Mounting FAT filesystem...\n");
 
 		if(f_mount(_fat_fs, path, 1) != FR_OK) {
 			return -1;

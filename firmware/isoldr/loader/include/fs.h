@@ -3,6 +3,8 @@
  * File system
  * (c)2011-2022 SWAT <http://www.dc-swat.ru>
  */
+#ifndef __FS_H__
+#define __FS_H__
 
 #if defined(DEV_TYPE_NET)
 
@@ -116,3 +118,5 @@ int pre_read(int fd, unsigned long offset, unsigned int size);
 #	define pre_read_xfer_busy() 0
 #	define pre_read_xfer_size() 0
 #endif
+
+#endif /* __FS_H__ */

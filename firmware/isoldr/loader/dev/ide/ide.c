@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2020 SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2014-2022 SWAT <http://www.dc-swat.ru>
  * Copyright (c) 2017 Megavolt85
  *
  * This file is free software; you can redistribute it and/or modify
@@ -614,6 +614,7 @@ static s32 g1_dev_scan(void)
 				if(!(ide_devices[j].command_sets & (1 << 26)))
 				{
 					ide_devices[j].max_lba = (u64)(data[60]) | ((u64)(data[61]) << 16);
+					ide_devices[j].lba48 = 0;
 				}
 				else
 				{
@@ -621,6 +622,7 @@ static s32 g1_dev_scan(void)
 											((u64)(data[101]) << 16) |
 											((u64)(data[102]) << 32) |
 											((u64)(data[103]) << 48);
+					ide_devices[j].lba48 = 1;
 				}
 
 				g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
@@ -639,8 +641,10 @@ static s32 g1_dev_scan(void)
 				}
 			}
 #elif defined(DEV_TYPE_GD)
-			if (type == IDE_ATAPI)
+			if (type == IDE_ATAPI) {
 				ide_devices[j].cd_info.sec_type = 0x10;
+				ide_devices[j].lba48 = 1;
+			}
 #endif
 		}
 		
@@ -658,7 +662,7 @@ static s32 g1_dev_scan(void)
 			{
 				LOGF("%s %s ATA drive %ld Kb\n",
 					dev_bus_name[i],
-					(ide_devices[i].command_sets & (1 << 26)) ? "LBA48":"LBA28",
+					ide_devices[j].lba48 ? "LBA48":"LBA28",
 					(u64)(ide_devices[i].max_lba >> 1));
 			}
 			else
@@ -723,7 +727,6 @@ static s32 g1_ata_access(struct ide_req *req)
 	u32 len;
 	u64 lba = req->lba;
 	u8 lba_io[6];
-	u8 lba_mode /* 0: CHS, 1:LBA28, 2: LBA48 */;
 	u8 head, err;
 	u16 i, j, cmd;
 	
@@ -747,10 +750,9 @@ static s32 g1_ata_access(struct ide_req *req)
 	while(count)
 	{
 		// (I) Select one from LBA28, LBA48;
-		if (lba >= 0x10000000) // Sure Drive should support LBA in this case, or you are
+		if (dev->lba48) // Sure Drive should support LBA in this case, or you are
 		{					  // giving a wrong LBA.
 			// LBA48:
-			lba_mode  = 2;
 			lba_io[0] = (lba & 0x000000FF) >> 0;
 			lba_io[1] = (lba & 0x0000FF00) >> 8;
 			lba_io[2] = (lba & 0x00FF0000) >> 16;
@@ -762,7 +764,6 @@ static s32 g1_ata_access(struct ide_req *req)
 		else
 		{
 			// LBA28:
-			lba_mode  = 1;
 			lba_io[0] = (lba & 0x00000FF) >> 0;
 			lba_io[1] = (lba & 0x000FF00) >> 8;
 			lba_io[2] = (lba & 0x0FF0000) >> 16;
@@ -774,7 +775,7 @@ static s32 g1_ata_access(struct ide_req *req)
 		
 		OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
 		
-		if (lba_mode == 2) 
+		if (dev->lba48) 
 		{
 			len = (count > 65536) ? 65536 : count;
 			count -= len;
@@ -864,7 +865,7 @@ static s32 g1_ata_access(struct ide_req *req)
 					OUT16(G1_ATA_DATA, ((u16 *)buff)[i*256+j]);
 			}
 			
-			OUT8(G1_ATA_COMMAND_REG, (lba_mode == 2) ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
+			OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 			err = ide_polling(0);
 		}
 #endif

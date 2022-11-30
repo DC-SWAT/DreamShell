@@ -31,8 +31,18 @@
 })
 #endif
 
+static int dma_mode = 0;
+
 int fs_init() {
 	return dcload_init();
+}
+
+void fs_enable_dma(int state) {
+	dma_mode = state;
+}
+
+int fs_dma_enabled() {
+	return dma_mode;
 }
 
 int open(const char *path, int mode) {

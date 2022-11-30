@@ -6,7 +6,7 @@
 / developments under license policy of following terms.
 /
 /  Copyright (C) 2014, ChaN, all right reserved.
-/  Copyright (C) 2014-2016 SWAT <http://www.dc-swat.ru>
+/  Copyright (C) 2014-2022 SWAT <http://www.dc-swat.ru>
 /
 / * The FatFs module is a free software and there is NO WARRANTY.
 / * No restriction on use. You can use, modify and redistribute it for
@@ -1128,6 +1128,35 @@ DWORD clmt_clust (	/* <2:Error, >=2:Cluster number */
 	}
 	return cl + *tbl;	/* Return the cluster number */
 }
+
+static
+DWORD contiguous_sect(
+	FIL* fp		/* Pointer to the file object */
+)
+{
+	DWORD csect, ncl = 0, *tbl;
+	csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));
+
+	if (!fp->cltbl) {
+		return fp->fs->csize - csect;
+	}
+
+	tbl = fp->cltbl + 1;	/* Top of CLMT */
+
+	if (!fp->clust) {
+		return *tbl * fp->fs->csize;
+	}
+
+	for (DWORD i = 0; i < fp->cltbl[0]; ++i) {
+		ncl = *tbl++;			/* Number of cluters in the fragment */
+		if (!ncl) return 0;		/* End of table? (error) */
+		if (fp->clust <= *tbl + ncl) break;
+		tbl++;
+	}
+
+	return ((ncl - (fp->clust - *tbl)) * fp->fs->csize) - csect;
+}
+
 #endif	/* _USE_FASTSEEK */
 
 
@@ -2572,8 +2601,14 @@ FRESULT f_open (
 /*-----------------------------------------------------------------------*/
 #ifdef DEV_TYPE_IDE
 #include <arch/cache.h>
-#include <mmu.h>
 #endif
+
+static int f_fragmented(FIL *fp) {
+	if (!fp->cltbl || fp->cltbl[0] > 4) {
+		return 1;
+	}
+	return 0;
+}
 
 FRESULT f_read (
 	FIL* fp, 		/* Pointer to the file object */
@@ -2584,7 +2619,7 @@ FRESULT f_read (
 {
 	FRESULT res;
 	DWORD clst, sect, remain;
-	UINT rcnt = 0, cc;
+	UINT rcnt = 0, cc, cs;
 	BYTE csect, *rbuff = (BYTE*)buff;
 
 
@@ -2623,13 +2658,26 @@ FRESULT f_read (
 			sect += csect;
 			cc = btr / SS(fp->fs);				/* When remaining bytes >= sector size, */
 			if (cc) {							/* Read maximum contiguous sectors directly */
-				if (csect + cc > fp->fs->csize)	/* Clip at cluster boundary */
+				if (csect + cc > fp->fs->csize) {
+#if _USE_FASTSEEK
+					if (f_fragmented(fp)) {
+						cs = contiguous_sect(fp);
+						if (cc > cs) {
+							cc = cs;
+						}
+					}
+					if (csect + cc > fp->fs->csize) {
+						fp->clust = clmt_clust(fp, fp->fptr + (SS(fp->fs) * cc));
+					}
+#else
+					/* Clip at cluster boundary */
 					cc = fp->fs->csize - csect;
-					
+#endif
+				}
+				rcnt = SS(fp->fs) * cc;			/* Number of bytes transferred */
 #ifdef DEV_TYPE_IDE
 				g1_dma_set_irq_mask((btr - rcnt) == 0);
 #endif
-					
 				if (disk_read(fp->fs->drv, rbuff, sect, cc))
 					ABORT(fp->fs, FR_DISK_ERR);
 #if !_FS_READONLY && _FS_MINIMIZE <= 2			/* Replace one of the read sectors with cached data if it contains a dirty sector */
@@ -2641,7 +2689,6 @@ FRESULT f_read (
 					mem_cpy(rbuff + ((fp->dsect - sect) * SS(fp->fs)), fp->buf, SS(fp->fs));
 #endif
 #endif
-				rcnt = SS(fp->fs) * cc;			/* Number of bytes transferred */
 				continue;
 			}
 #if !_FS_TINY
@@ -2672,13 +2719,13 @@ FRESULT f_read (
 		if (move_window(fp->fs, fp->dsect))		/* Move sector window */
 			ABORT(fp->fs, FR_DISK_ERR);
 		mem_cpy(rbuff, &fp->fs->win[fp->fptr % SS(fp->fs)], rcnt);	/* Pick partial sector */
-		
+
 #ifdef DEV_TYPE_IDE
 		if(fs_dma_enabled()) {
 			dcache_purge_range((uint32)rbuff, rcnt);
 		}
 #endif
-		
+
 #else
 		mem_cpy(rbuff, &fp->buf[fp->fptr % SS(fp->fs)], rcnt);	/* Pick partial sector */
 #endif
@@ -2692,63 +2739,76 @@ FRESULT f_read (
 /* Read File Async                                                       */
 /*-----------------------------------------------------------------------*/
 FRESULT f_poll(FIL* fp, UINT *bp) {
-	
+
 	if (fp->err)
 		LEAVE_FF(fp->fs, (FRESULT)fp->err);
-	
+
 	int rs = fp->cur > 0 ? disk_poll(fp->fs->drv) : 0;
-		
+
 	if (fp->btr <= 0 && !rs) {
 		*bp = fp->cur;
 		return FR_OK;
 	}
 
 	if (!rs) {
-		
+
 		DWORD clst, sect;
-		UINT cc, rcnt;
+		UINT cc, cs, rcnt;
 		BYTE csect;
 
 		if ((fp->fptr % SS(fp->fs)) == 0) {		/* On the sector boundary? */
-		
+
 			csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));	/* Sector offset in the cluster */
-			
+
 			if (!csect) {						/* On the cluster boundary? */
-			
 				if (fp->fptr == 0) {			/* On the top of the file? */
 					clst = fp->sclust;		/* Follow from the origin */
 				} else {						/* Middle or end of the file */
-
+#if _USE_FASTSEEK
 					if (fp->cltbl)
 						clst = clmt_clust(fp, fp->fptr);	/* Get cluster# from the CLMT */
 					else
+#endif
 						clst = get_fat(fp->fs, fp->clust);	/* Follow cluster chain on the FAT */
 				}
-				
+
 				if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
 				if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
 				fp->clust = clst;				/* Update current cluster */
 			}
-			
+
 			sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
-			
-			if (!sect) 
+
+			if (!sect)
 				ABORT(fp->fs, FR_INT_ERR);
-				
+
 			sect += csect;
 			cc = fp->btr / SS(fp->fs);		/* When remaining bytes >= sector size, */
-			
+
 			if (cc) {							/* Read maximum contiguous sectors directly */
-			
-				if (csect + cc > fp->fs->csize)	/* Clip at cluster boundary */
+
+				if (csect + cc > fp->fs->csize) {
+#if _USE_FASTSEEK
+					if (f_fragmented(fp)) {
+						cs = contiguous_sect(fp);
+						if (cc > cs) {
+							cc = cs;
+						}
+					}
+					if (csect + cc > fp->fs->csize) {
+						fp->clust = clmt_clust(fp, fp->fptr + (SS(fp->fs) * cc));
+					}
+#else
+					/* Clip at cluster boundary */
 					cc = fp->fs->csize - csect;
-				
+#endif
+				}
+
 				rcnt = SS(fp->fs) * cc;			/* Number of bytes transferred */
-				
+
 #ifdef DEV_TYPE_IDE
 				g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
 #endif
-					
 				if (disk_read_async(fp->fs->drv, fp->rbuff, sect, cc))
 					ABORT(fp->fs, FR_DISK_ERR);
 
@@ -2757,23 +2817,24 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 
 			fp->dsect = sect;
 		}
-		
+
 		rcnt = SS(fp->fs) - ((UINT)fp->fptr % SS(fp->fs));	/* Get partial sector data from sector buffer */
-		
+
 		if (rcnt > fp->btr) rcnt = fp->btr;
 
 #ifdef DEV_TYPE_IDE
 
 		g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
+		int dma_mode = fs_dma_enabled();
 
-		if (!((uint32)fp->rbuff & 0xf0000000) && mmu_enabled()) {
+		if (dma_mode && dma_mode != FS_DMA_NO_IRQ) {
 
 			if (disk_read_part(/*fp->fs->drv, */fp->rbuff, fp->dsect, fp->fptr % SS(fp->fs), rcnt)) {
 				ABORT(fp->fs, FR_DISK_ERR);
 			}
 
 		} else {
-	
+
 			if (move_window(fp->fs, fp->dsect))		/* Move sector window */
 				ABORT(fp->fs, FR_DISK_ERR);
 			
@@ -2891,19 +2952,17 @@ FRESULT f_pre_read (
 			
 			if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
 			if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
-			fp->clust = clst;// + (btr / fp->fs->csize);				/* Update current cluster */
+			fp->clust = clst;				/* Update current cluster */
 		}
 		
 		sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
-		
-		if(clst > 0)
-			fp->clust += (btr / fp->fs->csize);
-		
+		cc = btr / SS(fp->fs);		/* When remaining bytes >= sector size, */
+		fp->clust += (cc / fp->fs->csize);
+
 		if (!sect) 
 			ABORT(fp->fs, FR_INT_ERR);
-			
+
 		sect += csect;
-		cc = btr / SS(fp->fs);		/* When remaining bytes >= sector size, */
 		fp->dsect = sect;
 //	}
 	

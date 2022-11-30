@@ -587,28 +587,26 @@ static void data_transfer_dma_stream() {
 }
 
 static void data_transfer_pio_stream() {
-	
+
 	gd_state_t *GDS = get_GDS();
-	
+
 	if(!GDS->param[2]) {
 		GDS->status = CMD_STAT_STREAMING;
 		return;
 	}
-	
+
 	GDS->transfered += GDS->param[1];
-	
-#ifndef DEV_TYPE_DCL
+
 	fs_enable_dma(FS_DMA_DISABLED);
-#endif
 	ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
-	
+
 	if(GDS->requested/* || GDS->transfered != GDS->requested*/) {
 		GDS->param[0] = 0;
 		GDS->status = CMD_STAT_STREAMING;
 	} else {
 		GDS->status = CMD_STAT_COMPLETED;
 	}
-	
+
 	if(GDS->callback != 0) {
 		void (*callback)() = (void (*)())(GDS->callback);
 		callback(GDS->callback_param);
