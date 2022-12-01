@@ -1,6 +1,6 @@
 #
 # DreamShell boot loader
-# (c)2011-2020 SWAT
+# (c)2011-2022 SWAT
 #
 
 TARGET = loader
@@ -54,14 +54,14 @@ $(TARGET_CD): $(TARGET).bin
 cdi: $(TARGET_CD)
 	@mkdir -p ./cd
 	@$(DS_SDK)/bin/scramble $(TARGET).bin $(TARGET_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -G res/IP.BIN -joliet -rock -l -o $(TARGET).iso ./cd
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G res/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
-	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d > cdi4dc.out
-	@-rm -f $(TARGET).iso cdi4dc.out
+	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 
-#@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G res/IP.BIN -joliet -rock -l -o $(TARGET).iso ./cd
-#@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi > cdi4dc.out
+# If you have problems with mkisofs try data/data image:
+# $(DS_SDK)/bin/mkisofs -V DreamShell -G res/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
+# @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d >/dev/null
 
 release: all $(TARGET_DUMMY) cdi
 	rm -f $(TARGET_NAME).elf $(TARGET_NAME).bin $(TARGET_NAME).cdi

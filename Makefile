@@ -200,14 +200,15 @@ $(TARGET).cdi: $(TARGET_BIN_CD) make-build
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
 	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
-	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d > conv_log.txt
-	@-rm -f conv_log.txt
+	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 	@-rm -f $(TARGET).iso
 
-#@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
+# If you have problems with mkisofs try data/data image:
+# $(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
+# @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 
 nulldc: $(TARGET).cdi
 	@echo Running DreamShell...
@@ -249,4 +250,5 @@ clean:
 	-rm -f $(TARGET_CLEAN_BIN) $(OBJS) $(SRC_DIR)/exports.c $(SRC_DIR)/exports_gcc.c
 
 rm-elf:
-	-rm -f $(TARGET_CLEAN_BIN) 
+	-rm -f $(TARGET_CLEAN_BIN)
+	-rm -f $(SRC_DIR)/main.o

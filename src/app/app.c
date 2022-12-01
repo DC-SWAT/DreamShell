@@ -7,6 +7,7 @@
  ****************************/
 
 #include "ds.h"
+#include "vmu.h"
 #include <stdlib.h>
 
 static Item_list_t *apps;
