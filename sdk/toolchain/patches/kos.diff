@@ -34,19 +34,18 @@ index a41cd69..1101a71 100644
      mutex_lock(&_g1_ata_mutex);
      /* Make sure to select the GD-ROM drive. */
 diff --git a/kernel/arch/dreamcast/hardware/g1ata.c b/kernel/arch/dreamcast/hardware/g1ata.c
-index 7a55913..2d52b85 100644
+index 7a55913..72d8b1b 100644
 --- a/kernel/arch/dreamcast/hardware/g1ata.c
 +++ b/kernel/arch/dreamcast/hardware/g1ata.c
-@@ -1,7 +1,7 @@
- /* KallistiOS ##version##
+@@ -2,6 +2,7 @@
  
     hardware/g1ata.c
--   Copyright (C) 2013, 2014, 2015 Lawrence Sebald
-+   Copyright (C) 2013, 2014, 2015 Lawrence Sebald, SWAT
+    Copyright (C) 2013, 2014, 2015 Lawrence Sebald
++   Copyright (C) 2015, 2022 SWAT
  */
  
  #include <errno.h>
-@@ -102,6 +102,13 @@ typedef struct ata_devdata {
+@@ -102,6 +103,13 @@ typedef struct ata_devdata {
  #define G1_ATA_DMA_DIRECTION    0xA05F740C      /* Read/Write */
  #define G1_ATA_DMA_ENABLE       0xA05F7414      /* Read/Write */
  #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
@@ -60,7 +59,7 @@ index 7a55913..2d52b85 100644
  
  /* Bitmasks for the STATUS_REG/ALT_STATUS registers. */
  #define G1_ATA_SR_ERR   0x01
-@@ -114,6 +121,7 @@ typedef struct ata_devdata {
+@@ -114,6 +122,7 @@ typedef struct ata_devdata {
  #define G1_ATA_SR_BSY   0x80
  
  /* ATA Commands we might like to send. */
@@ -68,7 +67,7 @@ index 7a55913..2d52b85 100644
  #define ATA_CMD_READ_SECTORS        0x20
  #define ATA_CMD_READ_SECTORS_EXT    0x24
  #define ATA_CMD_READ_DMA_EXT        0x25
-@@ -122,10 +130,17 @@ typedef struct ata_devdata {
+@@ -122,10 +131,17 @@ typedef struct ata_devdata {
  #define ATA_CMD_WRITE_DMA_EXT       0x35
  #define ATA_CMD_READ_DMA            0xC8
  #define ATA_CMD_WRITE_DMA           0xCA
@@ -86,7 +85,7 @@ index 7a55913..2d52b85 100644
  
  /* Subcommands we might care about for the SET FEATURES command. */
  #define ATA_FEATURE_TRANSFER_MODE   0x03
-@@ -139,6 +154,7 @@ typedef struct ata_devdata {
+@@ -139,6 +155,7 @@ typedef struct ata_devdata {
  
  /* Access timing data. */
  #define G1_ACCESS_WDMA_MODE2        0x00001001
@@ -94,7 +93,20 @@ index 7a55913..2d52b85 100644
  
  /* DMA Settings. */
  #define G1_DMA_TO_DEVICE            0
-@@ -266,7 +282,7 @@ static inline int g1_ata_wait_drq(void) {
+@@ -176,9 +193,9 @@ extern mutex_t _g1_ata_mutex;
+ #define g1_ata_wait_drdy() \
+     do {} while(!(IN8(G1_ATA_ALTSTATUS) & G1_ATA_SR_DRDY))
+ 
+-static inline int use_lba28(uint64_t sector, size_t count) {
+-    return ((sector + count) < 0x0FFFFFFF) && (count <= 256);
+-}
++// static inline int use_lba28(uint64_t sector, size_t count) {
++//     return ((sector + count) < 0x0FFFFFFF) && (count <= 256);
++// }
+ 
+ #define CAN_USE_LBA48() ((device.command_sets & (1 << 26)))
+ 
+@@ -266,7 +283,7 @@ static inline int g1_ata_wait_drq(void) {
  static int dma_common(uint8_t cmd, size_t nsects, uint32_t addr, int dir,
                        int block) {
      uint8_t status;
@@ -103,7 +115,7 @@ index 7a55913..2d52b85 100644
      /* Set the thread ID that initiated this DMA. */
      dma_thd = thd_current;
  
-@@ -315,6 +331,9 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -315,6 +332,9 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -113,16 +125,7 @@ index 7a55913..2d52b85 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -361,6 +380,8 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
- 
-                 s = 1;
-             }
-+			
-+//            dcache_pref_range((uint32)buff, 512);
- 
-             /* Wait for data */
-             if(g1_ata_wait_drq()) {
-@@ -373,7 +394,11 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -373,7 +393,11 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
              }
  
              for(j = 0; j < 256; ++j) {
@@ -135,7 +138,7 @@ index 7a55913..2d52b85 100644
              }
          }
      }
-@@ -391,6 +416,8 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -391,6 +415,8 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -144,7 +147,7 @@ index 7a55913..2d52b85 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -437,13 +464,18 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -437,13 +463,18 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
  
                  s = 1;
              }
@@ -164,7 +167,7 @@ index 7a55913..2d52b85 100644
              }
          }
      }
-@@ -462,6 +494,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -462,6 +493,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -174,17 +177,15 @@ index 7a55913..2d52b85 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -534,6 +569,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -534,6 +568,7 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
  
          /* Now, wait for the drive to give us back each sector. */
          for(i = 0; i < nsects; ++i, ++sector) {
-+			
-+//            dcache_alloc_range((uint32)buff, 512);
-+			
++
              /* Wait for data */
              if(g1_ata_wait_drq()) {
                  dbglog(DBG_KDEBUG, "g1_ata_read_lba: error reading sector %d "
-@@ -544,7 +582,11 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -544,7 +579,11 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
              }
  
              for(j = 0; j < 256; ++j) {
@@ -197,7 +198,16 @@ index 7a55913..2d52b85 100644
              }
          }
      }
-@@ -681,6 +723,8 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+@@ -639,7 +678,7 @@ int g1_ata_read_lba_dma(uint64_t sector, size_t count, uint16_t *buf,
+     g1_ata_wait_bsydrq();
+ 
+     /* Which mode are we using: LBA28 or LBA48? */
+-    if(!can_lba48 || use_lba28(sector, count)) {
++    if(!can_lba48/* || use_lba28(sector, count)*/) {
+         g1_ata_select_device(G1_ATA_SLAVE | G1_ATA_LBA_MODE |
+                              ((sector >> 24) & 0x0F));
+ 
+@@ -681,6 +720,8 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
@@ -206,7 +216,7 @@ index 7a55913..2d52b85 100644
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -746,11 +790,15 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+@@ -746,11 +787,15 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
          /* Now, send the drive each sector. */
          for(i = 0; i < nsects; ++i, ++sector) {
              /* Wait for the device to signal it is ready. */
@@ -223,7 +233,16 @@ index 7a55913..2d52b85 100644
              }
          }
      }
-@@ -914,6 +962,55 @@ int g1_ata_flush(void) {
+@@ -847,7 +892,7 @@ int g1_ata_write_lba_dma(uint64_t sector, size_t count, const uint16_t *buf,
+     g1_ata_wait_bsydrq();
+ 
+     /* Which mode are we using: LBA28 or LBA48? */
+-    if(!can_lba48 || use_lba28(sector, count)) {
++    if(!can_lba48/* || use_lba28(sector, count)*/) {
+         g1_ata_select_device(G1_ATA_SLAVE | G1_ATA_LBA_MODE |
+                              ((sector >> 24) & 0x0F));
+ 
+@@ -914,6 +959,55 @@ int g1_ata_flush(void) {
      return 0;
  }
  
@@ -279,7 +298,7 @@ index 7a55913..2d52b85 100644
  static int g1_ata_set_transfer_mode(uint8_t mode) {
      uint8_t status;
  
-@@ -1033,6 +1130,7 @@ static int g1_ata_scan(void) {
+@@ -1033,6 +1127,7 @@ static int g1_ata_scan(void) {
          if(!g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) {
              OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
              OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
