@@ -54,20 +54,26 @@ $(TARGET_CD): $(TARGET).bin
 cdi: $(TARGET_CD)
 	@mkdir -p ./cd
 	@$(DS_SDK)/bin/scramble $(TARGET).bin $(TARGET_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G res/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
+	@-rm -f $(TARGET).iso
 
 # If you have problems with mkisofs try data/data image:
-# $(DS_SDK)/bin/mkisofs -V DreamShell -G res/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
+# $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
 # @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d >/dev/null
 
-release: all $(TARGET_DUMMY) cdi
-	rm -f $(TARGET_NAME).elf $(TARGET_NAME).bin $(TARGET_NAME).cdi
-	mv $(TARGET).elf $(TARGET_NAME).elf
-	mv $(TARGET).bin $(TARGET_NAME).bin
-	mv $(TARGET).cdi $(TARGET_NAME).cdi
+release: all $(TARGET_DUMMY) cdi install
+	@rm -f $(TARGET_NAME).bin $(TARGET_NAME).cdi
+	@cp $(TARGET).bin $(TARGET_NAME).bin
+	@mv $(TARGET).cdi $(TARGET_NAME).cdi
+
+install: $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit_nogdrom.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_nogdrom.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail.bios $(TARGET).bin
 
 $(TARGET_DUMMY):
 	@mkdir -p ./cd

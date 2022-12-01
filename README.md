@@ -50,6 +50,11 @@ make
 make build
 ```
 
+### Release
+```console
+make release
+```
+
 ### Modules, applications and commands
 ```console
 cd ./modules && make && make install && cd ../

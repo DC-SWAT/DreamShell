@@ -11,6 +11,7 @@
 #
 
 TARGET = DS
+TARGET_NAME = DreamShell_v4.0.0_RC5
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
 TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x25 #RC 5
@@ -24,7 +25,6 @@ include sdk/Makefile.cfg
 INC_DIR = ./include
 SRC_DIR = ./src
 LIB_DIR = ./lib
-RES_DIR = ./resources
 
 KOS_LDFLAGS += -L$(LIB_DIR)
 KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs -I$(INC_DIR)/ntfs \
@@ -138,15 +138,15 @@ romdisk.o: romdisk.img
 	$(KOS_BASE)/utils/bin2o/bin2o romdisk.img romdisk romdisk.o
 
 logo: romdisk/logo.kmg.gz
-romdisk/logo.kmg.gz: $(RES_DIR)/logo_sq.png
-	$(KOS_BASE)/utils/kmgenc/kmgenc -v $(RES_DIR)/logo_sq.png
-	mv $(RES_DIR)/logo_sq.kmg logo.kmg
+romdisk/logo.kmg.gz: $(DS_RES)/logo_sq.png
+	$(KOS_BASE)/utils/kmgenc/kmgenc -v $(DS_RES)/logo_sq.png
+	mv $(DS_RES)/logo_sq.kmg logo.kmg
 	gzip -9 logo.kmg
 	mv logo.kmg.gz romdisk/logo.kmg.gz
 
 make-build: $(DS_BUILD)/lua/startup.lua
 
-$(DS_BUILD)/lua/startup.lua: $(RES_DIR)/lua/startup.lua
+$(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua
 	@echo Creating build directory...
 	@mkdir -p $(DS_BUILD)
 	@mkdir -p $(DS_BUILD)/apps
@@ -154,11 +154,11 @@ $(DS_BUILD)/lua/startup.lua: $(RES_DIR)/lua/startup.lua
 	@mkdir -p $(DS_BUILD)/modules
 	@mkdir -p $(DS_BUILD)/screenshot
 	@mkdir -p $(DS_BUILD)/vmu
-	@cp -R $(RES_DIR)/doc $(DS_BUILD)
-	@cp -R $(RES_DIR)/firmware $(DS_BUILD)
-	@cp -R $(RES_DIR)/fonts $(DS_BUILD)
-	@cp -R $(RES_DIR)/gui $(DS_BUILD)
-	@cp -R $(RES_DIR)/lua $(DS_BUILD)
+	@cp -R $(DS_RES)/doc $(DS_BUILD)
+	@cp -R $(DS_RES)/firmware $(DS_BUILD)
+	@cp -R $(DS_RES)/fonts $(DS_BUILD)
+	@cp -R $(DS_RES)/gui $(DS_BUILD)
+	@cp -R $(DS_RES)/lua $(DS_BUILD)
 	@mkdir -p $(DS_BUILD)/firmware/aica
 	@cp ../kernel/arch/dreamcast/sound/arm/stream.drv $(DS_BUILD)/firmware/aica/kos_stream.drv
 
@@ -169,11 +169,26 @@ $(LIB_DIR)/libSDL_$(SDL_VER).a:
 
 build: $(TARGET)
 	@echo Building modules, commands, applications and firmwares...
-	cd ./modules && make && make install
-	cd ./commands && make && make install
-	cd ./applications && make && make install
-	cd ./firmware/isoldr/loader && make && make install
-#   cd ../firmware/aica && make && make install
+	cd $(DS_BASE)/modules && make && make install
+	cd $(DS_BASE)/commands && make && make install
+	cd $(DS_BASE)/applications && make && make install
+	cd $(DS_BASE)/firmware/isoldr/loader && make && make install
+	cd $(DS_BASE)/firmware/bootloader && make && make install
+#   cd $(DS_BASE)/firmware/aica && make && make install
+
+release: build cdi
+	@echo Creating a full release...
+	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
+	@-rm -rf $(DS_BASE)/release
+	@mkdir -p $(DS_BASE)/release/$(TARGET)
+	@cp -R $(DS_BUILD)/* $(DS_BASE)/release/$(TARGET)
+	@cp $(TARGET_BIN) $(DS_BASE)/release/$(TARGET)
+	@cd $(DS_BASE)/firmware/bootloader && make && make release
+	@mv $(DS_BASE)/firmware/bootloader/*.cdi $(DS_BASE)/release
+	@mv $(TARGET).cdi $(DS_BASE)/release/$(TARGET_NAME).cdi
+	@echo Compressing...
+	@cd $(DS_BASE)/release && zip -q -r $(TARGET_NAME).zip * 2> /dev/null
+	@echo Complete!
 
 $(TARGET): libs $(TARGET_BIN) make-build
 
@@ -200,14 +215,18 @@ $(TARGET).cdi: $(TARGET_BIN_CD) make-build
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
 	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
+	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
+	@dd if=/dev/zero of=$(DS_BUILD)/0.0 bs=1024k count=450
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 	@-rm -f $(TARGET).iso
+	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
+	@-rm -f $(DS_BUILD)/0.0
 
 # If you have problems with mkisofs try data/data image:
-# $(DS_SDK)/bin/mkisofs -V DreamShell -G $(RES_DIR)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
+# $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 # @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 
 nulldc: $(TARGET).cdi

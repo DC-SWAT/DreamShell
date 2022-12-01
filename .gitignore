@@ -23,6 +23,7 @@ settings.json
 *.cdi
 .libs
 build/
+release/
 *DS_CORE.BIN
 romdisk.img
 exports.c
