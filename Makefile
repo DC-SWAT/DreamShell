@@ -85,20 +85,6 @@ FATFS_DIR = $(SRC_DIR)/fs/fat
 FATFS = $(FATFS_DIR)/utils.o $(FATFS_DIR)/option/ccsbcs.o \
 		 $(FATFS_DIR)/option/syscall.o $(FATFS_DIR)/ff.o \
 		 $(FATFS_DIR)/dc.o
-
-NTFS_DIR = $(SRC_DIR)/fs/ntfs
-NTFS = $(NTFS_DIR)/attrib.o $(NTFS_DIR)/attrlist.o	\
-		$(NTFS_DIR)/bitmap.o $(NTFS_DIR)/bootsect.o	\
-		$(NTFS_DIR)/collate.o $(NTFS_DIR)/compat.o		\
-		$(NTFS_DIR)/compress.o $(NTFS_DIR)/crypto.o	\
-		$(NTFS_DIR)/debug.o $(NTFS_DIR)/device.o		\
-		$(NTFS_DIR)/device_io.o $(NTFS_DIR)/dir.o		\
-		$(NTFS_DIR)/index.o $(NTFS_DIR)/inode.o		\
-		$(NTFS_DIR)/lcnalloc.o $(NTFS_DIR)/misc.o		\
-		$(NTFS_DIR)/mft.o	$(NTFS_DIR)/mst.o				\
-		$(NTFS_DIR)/runlist.o $(NTFS_DIR)/security.o	\
-		$(NTFS_DIR)/unistr.o $(NTFS_DIR)/version.o		\
-		$(NTFS_DIR)/volume.o #TODO $(NTFS_DIR)/dc_io.o
 	
 UTILS_DIR = $(SRC_DIR)/utils
 UTILS_OBJ = $(SRC_DIR)/utils.o $(UTILS_DIR)/gmtime.o $(UTILS_DIR)/strftime.o \
@@ -114,7 +100,7 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \
 		$(SRC_DIR)/settings.o $(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
 		$(UTILS_OBJ) $(FATFS) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
-		romdisk.o #$(NTFS)
+		romdisk.o
 
 %.op: %.S
 	kos-cc $(CFLAGS) -c $< -o $@
@@ -227,7 +213,7 @@ $(TARGET).cdi: $(TARGET_BIN_CD) make-build
 
 # If you have problems with mkisofs try data/data image:
 # $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
-# @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
+# @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d >/dev/null
 
 nulldc: $(TARGET).cdi
 	@echo Running DreamShell...
