@@ -662,7 +662,7 @@ static s32 g1_dev_scan(void)
 			{
 				LOGF("%s %s ATA drive %ld Kb\n",
 					dev_bus_name[i],
-					ide_devices[j].lba48 ? "LBA48":"LBA28",
+					ide_devices[i].lba48 ? "LBA48":"LBA28",
 					(u64)(ide_devices[i].max_lba >> 1));
 			}
 			else

@@ -70,6 +70,8 @@ static const uint8 logs[] = {
 #define aica_dma_in_progress() AICA_DMA_ADST
 #define aica_dma_wait() do { } while(AICA_DMA_ADST)
 
+#define RAW_SECTOR_SIZE 2352
+
 static cdda_ctx_t _cdda;
 static cdda_ctx_t *cdda = &_cdda;
 
@@ -730,7 +732,7 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 	}
 
 	if(cdda->stat) {
-		stop_clean_cdda();
+		CDDA_Stop();
 	} else if(GDS->cdda_stat == SCD_AUDIO_STATUS_PAUSED && 
 				first == cdda->first && cdda->fd > FILEHND_INVALID) {
 		return CDDA_Release();
@@ -823,25 +825,25 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 		cdda->aica_format = AICA_SM_16BIT;
 		cdda->wav_format = WAVE_FMT_PCM;
 	}
-	
+
 	lseek(cdda->fd, cdda->offset, SEEK_SET);
-	
+
 	cdda->cur_offset = 0;
 	cdda->lba = TOC_LBA(IsoInfo->toc.entry[first - 1]);
-	
+
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
-		
+
 		/* TODO improve it */
 		if(IsoInfo->toc.entry[first] != (uint32)-1) {
-			cdda->track_size = (TOC_LBA(IsoInfo->toc.entry[first]) - cdda->lba - 2) * 2352;
+			cdda->track_size = (TOC_LBA(IsoInfo->toc.entry[first]) - cdda->lba - 2) * RAW_SECTOR_SIZE;
 		} else {
-			cdda->track_size = ((total(cdda->fd) / 2352) - cdda->lba - 2) * 2352;
+			cdda->track_size = ((total(cdda->fd) / RAW_SECTOR_SIZE) - cdda->lba - 2) * RAW_SECTOR_SIZE;
 		}
-		
+
 	} else {
-		cdda->track_size = total(cdda->fd) - cdda->offset;
+		cdda->track_size = total(cdda->fd) - cdda->offset - (cdda->size >> 1);
 	}
-	
+
 	LOGFF("Track is %s, %luHZ, %d bits/sample, %lu bytes total,"
 			  " format %d, LBA %ld\n", cdda->chn == 1 ? "mono" : "stereo", 
 			  cdda->freq, cdda->bitsize, cdda->track_size, cdda->wav_format, cdda->lba);
@@ -874,40 +876,36 @@ end:
 
 
 int CDDA_Play2(uint32 first, uint32 last, uint16 loop) {
-	
-	uint8 first_track = 4, last_track = 4;
-	
-	if(IsoInfo->emu_cdda) {
 
-		for(int i = 3; i < 99; ++i) {
-			
-			if(IsoInfo->toc.entry[i] == first) {
+	uint8 first_track = 4, last_track = 4;
+
+	if(!IsoInfo->emu_cdda) {
+		return CDDA_Play(first_track, last_track, loop);
+	}
+
+	for(int i = 3; i < 99; ++i) {
+
+		if(IsoInfo->toc.entry[i] == first) {
+
+			first_track = last_track = i + 1;
+
+			if(IsoInfo->toc.entry[first_track] != (uint32)-1 && last > IsoInfo->toc.entry[first_track]) {
 				
-				first_track = last_track = i + 1;
-				
-				if(IsoInfo->toc.entry[first_track] != (uint32)-1 && last > IsoInfo->toc.entry[first_track]) {
-					
-					for(i = i + 1; i < 99; ++i) {
-						
-						if(IsoInfo->toc.entry[i] == last) {
-							
-							last_track = i + 1;
-							break;
-							
-						} else if(IsoInfo->toc.entry[i] == (uint32)-1) {
-							break;
-						}
+				for(i = i + 1; i < 99; ++i) {
+
+					if(IsoInfo->toc.entry[i] == last) {
+						last_track = i + 1;
+						break;
+					} else if(IsoInfo->toc.entry[i] == (uint32)-1) {
+						break;
 					}
 				}
-				
-				break;
-				
-			} else if(IsoInfo->toc.entry[i] == (uint32)-1) {
-				break;
 			}
+			break;
+		} else if(IsoInfo->toc.entry[i] == (uint32)-1) {
+			break;
 		}
 	}
-	
 	return CDDA_Play(first_track, last_track, loop);
 }
 
@@ -920,7 +918,7 @@ int CDDA_Seek(uint32 offset) {
 //		int old = GDS->drv_stat;
 //		GDS->drv_stat = CD_STATUS_SEEKING;
 		stop_clean_cdda();
-		lseek(cdda->fd, cdda->offset + ((offset - cdda->lba) * 2352), SEEK_SET);
+		lseek(cdda->fd, cdda->offset + ((offset - cdda->lba) * RAW_SECTOR_SIZE), SEEK_SET);
 		cdda->stat = CDDA_STAT_FILL;
 		aica_setup_cdda(1);
 //		GDS->drv_stat = old;
@@ -937,7 +935,7 @@ int CDDA_Pause(void) {
 	
 	if(cdda->stat) {
 		stop_clean_cdda();
-		cdda->cur_offset = tell(cdda->fd);
+		cdda->cur_offset = tell(cdda->fd) - cdda->size;
 	}
 
 	GDS->drv_stat = CD_STATUS_PAUSED;
@@ -998,112 +996,88 @@ int CDDA_Stop(void) {
 	return COMPLETED;
 }
 
+static void end_playback() {
+	CDDA_Stop();
+	gd_state_t *GDS = get_GDS();
+	GDS->cdda_stat = SCD_AUDIO_STATUS_ENDED;
+	cdda->stat = CDDA_STAT_IDLE;
+}
+
+static void play_next_track() {
+
+	DBGFF(NULL);
+	CDDA_Stop();
+
+	if(cdda->first < cdda->last) {
+
+		CDDA_Play(cdda->first + 1, cdda->last, cdda->loop);
+
+	} else if(cdda->loop) {
+
+		if(cdda->loop != 0x0f) {
+			cdda->loop--;
+		}
+
+		CDDA_Play(cdda->first, cdda->last, cdda->loop);
+
+	} else {
+		end_playback();
+	}
+}
 
 #ifdef _FS_ASYNC
 static void read_callback(size_t size) {
-	
+	DBGFF("%d\n");
 	if(cdda->stat > CDDA_STAT_IDLE) {
 		if((int)size < 0) {
-			stop_clean_cdda();
-			cdda->stat = CDDA_STAT_IDLE;
+			end_playback();
+		} else if(size < cdda->size >> 1) {
+			cdda->stat = CDDA_STAT_FILL;
 		} else {
-			cdda->stat = cdda->next_stat;
+			cdda->stat = CDDA_STAT_PREP;
 		}
 	}
 }
 #endif
 
-static int fill_pcm_buff() {
-	
-	gd_state_t *GDS = get_GDS();
-	
+static void fill_pcm_buff() {
+
 	if(cdda->volume && cdda->cur_offset) {
 		aica_set_volume(0);
 	}
-	
+
 	cdda->cur_offset = tell(cdda->fd) - cdda->offset;
-	
-//	if(cdda->wav_format == WAVE_FMT_YAMAHA_ADPCM_ITU_G723) {
-//		cdda->cur_offset *= 2;
-//	}
-	
-	/* Update LBA for SCD command */
-	GDS->lba = cdda->lba + (cdda->cur_offset / 2352);
 
-	/* If end of track */
 	if(cdda->cur_offset >= cdda->track_size) {
-		
-		if(cdda->first < cdda->last) {
-			
-			CDDA_Stop();
-			CDDA_Play(cdda->first + 1, cdda->last, cdda->loop);
-			
-			if(cdda->fd < 0) {
-				goto file_error;
-			}
-		
-		} else if(cdda->loop) {
-			
-			if(cdda->loop != 0x0f) {
-				cdda->loop--;
-			}
-
-			cdda->cur_offset = 0;
-			lseek(cdda->fd, cdda->offset, SEEK_SET);
-			aica_setup_cdda(1);
-			
-		} else {
-			goto file_error;
-		}
-		
-	} else {
-		aica_check_cdda();
+		play_next_track();
+		return;
 	}
-	
+
 	LOGFF("0x%08lx at %ld\n", (uint32)cdda->buff[PCM_TMP_BUFF], cdda->cur_offset);
 
-	int rc;
-	
-//	if(cdda->wav_format == WAVE_FMT_YAMAHA_ADPCM_ITU_G723 && cdda->chn > 1) {
-//		
-//		/* Reading data for left channel */
-//		rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 2);
-//		cdda->stat = CDDA_STAT_FILR;
-//		
-//	} else {
-		
-		/* Reading data for all channels */
+	/* Reading data for all channels */
 #ifdef _FS_ASYNC
-		cdda->next_stat = CDDA_STAT_PREP;
-		cdda->stat = CDDA_STAT_WAIT;
-		rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1, read_callback);
+	cdda->stat = CDDA_STAT_WAIT;
+	int rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1, read_callback);
 #else
-		rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1);
-		cdda->stat = CDDA_STAT_PREP;
+	int rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1);
+	cdda->stat = CDDA_STAT_PREP;
 #endif
-//	}
 
 	if(rc < 0) {
-		LOGFF("Error in reading data\n");
-		goto file_error;
+		LOGFF("Unable to read data\n");
+		end_playback();
 	}
-	return 0;
-
-file_error:
-	CDDA_Stop();
-	GDS->cdda_stat = SCD_AUDIO_STATUS_ENDED;
-	cdda->stat = CDDA_STAT_IDLE;
-	return -1;
 }
 
 
 void CDDA_MainLoop(void) {
 
-	DBGFF("%d %d\n", IsoInfo->emu_cdda, cdda->stat);
-
 	if(cdda->stat == CDDA_STAT_IDLE || !IsoInfo->emu_cdda) {
 		return;
 	}
+
+	DBGFF("%d %d\n", IsoInfo->emu_cdda, cdda->stat);
 
 #ifdef _FS_ASYNC
 	if(cdda->stat == CDDA_STAT_WAIT) {
@@ -1125,45 +1099,14 @@ void CDDA_MainLoop(void) {
 
 	/* Reading data for left or all channels */
 	if(cdda->stat == CDDA_STAT_FILL) {
+		aica_check_cdda();
 		fill_pcm_buff();
+		/* Update LBA for SCD command */
+		gd_state_t *GDS = get_GDS();
+		GDS->lba = cdda->lba + (cdda->cur_offset / RAW_SECTOR_SIZE);
 		return;
 	}
 
-	/* Reading data for right channel (ITU G723 ADPCM only) */
-//	else if(cdda->stat == CDDA_STAT_FILR) {
-//		
-//		uint32 size = cdda->size >> 2;
-//		long int fp = tell(cdda->fd);
-//		uint32 offset = (cdda->track_size >> 1) + (fp - cdda->offset - size);
-//		
-//		lseek(cdda->fd, offset, SEEK_SET);
-//		
-//		if(!aica_transfer_in_progress()) {
-//			
-//			LOGFF("Read data to 0x%08lx at %ld\n",
-//					(uint32)cdda->buff[PCM_DMA_BUFF], tell(cdda->fd));
-//			
-//			/* If DMA not in progress, then reading data directly to DMA buffer */
-//			read(cdda->fd, cdda->buff[PCM_DMA_BUFF] + size, size);
-//			memcpy(cdda->buff[PCM_DMA_BUFF], cdda->buff[PCM_TMP_BUFF], size);
-//			cdda->stat = CDDA_STAT_SNDL;
-//			
-//		} else {
-//			
-//			LOGFF("Read data to 0x%08lx at %ld\n", 
-//						(uint32)cdda->buff[PCM_TMP_BUFF], tell(cdda->fd));
-//			
-//			/* Reading data to temp buffer */
-//			read(cdda->fd, cdda->buff[PCM_TMP_BUFF] + size, size);
-//			lseek(cdda->fd, fp, SEEK_SET);
-//			cdda->stat = CDDA_STAT_PREP;
-//		}
-//		
-//		lseek(cdda->fd, fp, SEEK_SET);
-//		return;
-//	}
-	
-	
 	/* Split PCM data to left and right channels */
 	if(cdda->stat == CDDA_STAT_PREP) {
 		

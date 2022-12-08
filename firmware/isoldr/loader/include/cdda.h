@@ -11,12 +11,11 @@
 
 enum {
 	CDDA_STAT_IDLE = 0,
-	CDDA_STAT_FILL = 1,
-	CDDA_STAT_FILR = 3,
-	CDDA_STAT_PREP = 4,
-	CDDA_STAT_SNDL = 5,
-	CDDA_STAT_SNDR = 6,
-	CDDA_STAT_WAIT = 7
+	CDDA_STAT_FILL,
+	CDDA_STAT_PREP,
+	CDDA_STAT_SNDL,
+	CDDA_STAT_SNDR,
+	CDDA_STAT_WAIT
 } CDDA_status;
 
 enum {
@@ -52,7 +51,7 @@ typedef struct cdda_ctx {
 	/* End pos for channel */
 	int end_pos;
 	uint32 end_tm;
-	
+
 	/* Check status value for normalize playback */
 	uint32 check_val;
 
@@ -70,7 +69,6 @@ typedef struct cdda_ctx {
 
 	/* CDDA status (internal) */
 	uint8 stat;
-	uint8 next_stat;
 
 	/* CDDA syscall request data */
 	uint8 first;
