@@ -196,6 +196,11 @@ s32 g1_dma_irq_enabled() {
 	return g1_dma_irq_called; // || g1_dma_has_irq_mask();
 }
 
+static void delay_1ms() {
+	// timer_spin_sleep_bios(1);
+	for(int d = 0; d < 10; d++) IN8(G1_ATA_ALTSTATUS);
+}
+
 #ifdef HAVE_EXPT
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
@@ -464,7 +469,7 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
 
     /* Send the SET FEATURES command. */
     OUT8(G1_ATA_COMMAND_REG, ATA_CMD_SET_FEATURES);
-    timer_spin_sleep_bios(1);
+    delay_1ms();
 
     /* Wait for command completion. */
     g1_ata_wait_nbsy();
@@ -521,21 +526,22 @@ static s32 g1_dev_scan(void)
 		err = 0;
 		type = IDE_ATA;
 		ide_devices[j].reserved   = 0; // Assuming that no drive here.
-		
+
+#if defined(DEV_TYPE_IDE)
+		// FIXME: Skip master drive, so do not spin GD-ROM
+		// Must add new driver to DS core before.
+		if (j == 0) continue;
+#endif
 		OUT8(G1_ATA_DEVICE_SELECT, (0xA0 | (j << 4)));
-		timer_spin_sleep_bios(1);
-//		for(d = 0; d < 10; d++)
-//			IN8(G1_ATA_ALTSTATUS);
-		
+		delay_1ms();
+
 		OUT8(G1_ATA_SECTOR_COUNT, 0);
 		OUT8(G1_ATA_LBA_LOW, 0);
 		OUT8(G1_ATA_LBA_MID, 0);
 		OUT8(G1_ATA_LBA_HIGH, 0);
-		
+
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_IDENTIFY);
-		timer_spin_sleep_bios(1);
-//		for(d = 0; d < 10; d++)
-//			IN8(G1_ATA_ALTSTATUS);
+		delay_1ms();
 
 		st = IN8(G1_ATA_STATUS_REG);
 
@@ -587,6 +593,7 @@ static s32 g1_dev_scan(void)
 			type = IDE_SPI;
 			ide_devices[j].wdma_modes = 0x0407;
 			ide_devices[j].cd_info.sec_type = 0x10;
+			ide_devices[j].lba48 = 1;
 			
 			g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
 			g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2));

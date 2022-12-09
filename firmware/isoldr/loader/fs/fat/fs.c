@@ -154,9 +154,9 @@ int open(const char *path, int flags) {
 	dma_mode = 0;
 
 	r = f_open(&file->fp, path, fat_flags);
-	
+
 	if(r != FR_OK) {
-		LOGFF("%s 0x%08lx ERROR %d\n", r);
+		LOGFF("failed to open %s, error %d\n", path, r);
 		dma_mode = old_dma_mode;
 		return FS_ERR_NOFILE;
 	}

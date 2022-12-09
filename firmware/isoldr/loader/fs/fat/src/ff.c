@@ -2601,6 +2601,7 @@ FRESULT f_open (
 /*-----------------------------------------------------------------------*/
 #ifdef DEV_TYPE_IDE
 #include <arch/cache.h>
+#include <mmu.h>
 #endif
 
 static int f_fragmented(FIL *fp) {
@@ -2825,9 +2826,8 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 #ifdef DEV_TYPE_IDE
 
 		g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
-		int dma_mode = fs_dma_enabled();
 
-		if (dma_mode && dma_mode != FS_DMA_NO_IRQ) {
+		if (fs_dma_enabled() == FS_DMA_SHARED && mmu_enabled()) {
 
 			if (disk_read_part(/*fp->fs->drv, */fp->rbuff, fp->dsect, fp->fptr % SS(fp->fs), rcnt)) {
 				ABORT(fp->fs, FR_DISK_ERR);

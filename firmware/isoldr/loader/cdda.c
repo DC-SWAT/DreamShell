@@ -579,25 +579,25 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 }
 
 static void switch_cdda_track(uint8 track) {
-	
+
 	gd_state_t *GDS = get_GDS();
-		
+
 	if(GDS->cdda_track != track) {
-		
+
 		if(!cdda->fn_len) {
 			cdda->fn_len = strlen(IsoInfo->image_file);
 		}
 
 		memcpy(cdda->filename, IsoInfo->image_file, sizeof(IsoInfo->image_file));
-		
+
 		if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 
 			cdda->filename[cdda->fn_len - 3] = 'r';
 			cdda->filename[cdda->fn_len - 2] = 'a';
 			cdda->filename[cdda->fn_len - 1] = 'w';
-			
+
 		} else {
-			
+
 			uint8 *val = (uint8 *)cdda->filename, *tmp = NULL;
 
 			do {
@@ -607,8 +607,8 @@ static void switch_cdda_track(uint8 track) {
 
 			memcpy(tmp, "track04.raw\0", 12);
 			cdda->fn_len = strlen(cdda->filename);
-		} 
-		
+		}
+
 		cdda->filename[cdda->fn_len - 6] = (track / 10) + '0';
 		cdda->filename[cdda->fn_len - 5] = (track % 10) + '0';
 
@@ -617,19 +617,17 @@ static void switch_cdda_track(uint8 track) {
 		if(cdda->fd > FILEHND_INVALID) {
 			close(cdda->fd);
 		}
-		
+
 		cdda->fd = open(cdda->filename, O_RDONLY);
-		
+
 		if(cdda->fd < 0) {
-			
-			cdda->offset = 0;
 
 			cdda->filename[cdda->fn_len - 3] = 'w';
 			cdda->filename[cdda->fn_len - 1] = 'v';
 
 			LOGF("Not found, opening: %s\n", cdda->filename);
 			cdda->fd = open(cdda->filename, O_RDONLY);
-			
+
 			if(cdda->fd < 0) {
 
 				cdda->filename[cdda->fn_len - 3] = 'r';
@@ -638,20 +636,16 @@ static void switch_cdda_track(uint8 track) {
 				cdda->filename[cdda->fn_len + 1] = 'w';
 				cdda->filename[cdda->fn_len + 2] = 'a';
 				cdda->filename[cdda->fn_len + 3] = 'v';
-				
+
 				LOGF("Not found, opening: %s\n", cdda->filename);
 
 				cdda->fd = open(cdda->filename, O_RDONLY);
-
 #ifdef LOG
 				if(cdda->fd < 0) {
 					LOGF("CDDA track not found\n");
 				}
 #endif
 			}
-			
-		} else {
-			cdda->offset = 2520;
 		}
 	}
 }
@@ -724,7 +718,7 @@ int CDDA_Init() {
 
 
 int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
-	
+
 	gd_state_t *GDS = get_GDS();
 
 	if(!IsoInfo->emu_cdda) {
@@ -739,24 +733,23 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 	}
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
-		
+
 		if(IsoInfo->cdda_offset[first - 3] > 0) {
-			cdda->offset = IsoInfo->cdda_offset[first - 3] + 2520;
+			cdda->offset = IsoInfo->cdda_offset[first - 3];
 		} else {
 			goto end;
 		}
-		
 	} else {
-		
+
 		switch_cdda_track(first);
-		
+
 		if(cdda->fd < 0) {
 			goto end;
 		}
 	}
 
 	uint32 len = 0;
-	
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	fs_enable_dma(FS_DMA_DISABLED);
 #endif
@@ -793,13 +786,6 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 		}
 
 		read(cdda->fd, &len, 4);
-		
-		/* Make alignment by sector */
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
-		cdda->offset = ((cdda->offset / 512) + 1) * 512;
-#elif defined(DEV_TYPE_GD)
-		cdda->offset = ((cdda->offset / 2048) + 1) * 2048;
-#endif
 
 		switch(cdda->wav_format) {
 			case WAVE_FMT_PCM:
@@ -816,14 +802,22 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 
 	} else {
 
-		if(cdda->offset > 0)
-			cdda->offset -= 2520;
-			
 		cdda->freq = 44100;
 		cdda->chn = 2;
 		cdda->bitsize = 16;
 		cdda->aica_format = AICA_SM_16BIT;
 		cdda->wav_format = WAVE_FMT_PCM;
+	}
+
+	/* Make alignment by sector */
+	if(cdda->offset > 0) {
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
+		cdda->offset = ((cdda->offset / 512) + 1) * 512;
+#elif defined(DEV_TYPE_GD)
+		cdda->offset = ((cdda->offset / 2048) + 1) * 2048;
+#else
+		(void)cdda->offset;
+#endif
 	}
 
 	lseek(cdda->fd, cdda->offset, SEEK_SET);
@@ -841,7 +835,7 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 		}
 
 	} else {
-		cdda->track_size = total(cdda->fd) - cdda->offset - (cdda->size >> 1);
+		cdda->track_size = total(cdda->fd) - cdda->offset;
 	}
 
 	LOGFF("Track is %s, %luHZ, %d bits/sample, %lu bytes total,"
@@ -1027,7 +1021,7 @@ static void play_next_track() {
 
 #ifdef _FS_ASYNC
 static void read_callback(size_t size) {
-	DBGFF("%d\n");
+	DBGFF("%d\n", size);
 	if(cdda->stat > CDDA_STAT_IDLE) {
 		if((int)size < 0) {
 			end_playback();
