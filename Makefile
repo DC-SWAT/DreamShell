@@ -158,7 +158,7 @@ build: $(TARGET)
 	cd $(DS_BASE)/modules && make && make install
 	cd $(DS_BASE)/commands && make && make install
 	cd $(DS_BASE)/applications && make && make install
-	cd $(DS_BASE)/firmware/isoldr/loader && make && make install
+	cd $(DS_BASE)/firmware/isoldr && make && make install
 	cd $(DS_BASE)/firmware/bootloader && make && make install
 #   cd $(DS_BASE)/firmware/aica && make && make install
 

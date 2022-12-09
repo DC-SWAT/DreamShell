@@ -10,7 +10,7 @@ We are glad if this code will help someone and we will be glad of your support t
 
 ## Build
 
-### Environment
+### Setup environment
 ```console
 sudo apt-get install -y genisoimage squashfs-tools
 sudo apt-get install -y libpng-dev libjpeg-dev liblzo2-dev
@@ -40,19 +40,15 @@ cd ./sdk/bin/src && make && make install && cd ../../../
 cp ../lib/dreamcast/libkallisti_exports.a ./sdk/lib/libkos.a
 ```
 
+### Use environment
+```console
+cd /usr/local/dc/kos/ds
+source ../environ.sh
+```
+
 ### Core and libraries
 ```console
 make
-```
-
-### Full build (modules etc)
-```console
-make build
-```
-
-### Release
-```console
-make release
 ```
 
 ### Modules, applications and commands
@@ -65,10 +61,20 @@ cd ./applications && make && make install && cd ../
 ### Firmwares
 ```console
 cd ./firmware/bootloader && make && make release && cd ../../
-cd ./firmware/isoldr/loader && make && make install && cd ../../../
+cd ./firmware/isoldr && make && make install && cd ../../../
 ```
 
-### Run
+### Full build (modules etc)
+```console
+make build
+```
+
+### Release
+```console
+make release
+```
+
+### Running
 - dc-tool-ip: `make run`
 - dc-tool-serial: `make run-serial`
 - lxdream emulator: `make lxdream`

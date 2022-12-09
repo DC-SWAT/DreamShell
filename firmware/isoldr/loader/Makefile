@@ -1,11 +1,13 @@
 #
 # DreamShell ISO Loader
-# (c) 2009-2016 SWAT
+# (c) 2009-2022 SWAT
 #
 
 include Makefile.cfg
 
-all: cd dcl sd ide #net
+# INSTALL_PATH = /Volumes/CF-128GB/DS/firmware/isoldr
+
+all: clean cd dcl sd ide #net
 
 sd: $(BUILD)/sd.bin
 $(BUILD)/sd.bin:
@@ -44,8 +46,6 @@ test: clean cd
 	-mkdir -p $(INSTALL_PATH)
 	-rm -f $(INSTALL_PATH)/cd.bin
 	cp $(BUILD)/cd.bin $(INSTALL_PATH)/cd.bin
-
-#NSTALL_PATH = ~/Dropbox/Dev/DS/firmware/isoldr
 
 test_ide: clean ide
 	-mkdir -p $(INSTALL_PATH)
