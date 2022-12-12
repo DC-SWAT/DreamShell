@@ -104,8 +104,8 @@ static int internal_malloc_init(void) {
 
         if (loader_addr < APP_ADDR) {
 
-            if (loader_addr >= ISOLDR_DEFAULT_ADDR_LOW
-                || (IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_WINCE && IsoInfo->use_irq == 0)
+            if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda && IsoInfo->exec.type != BIN_TYPE_WINCE)
+                || (IsoInfo->emu_cdda && IsoInfo->use_irq == 0 && IsoInfo->exec.type != BIN_TYPE_WINCE)
                 || IsoInfo->boot_mode != BOOT_MODE_DIRECT
             ) {
                 internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;

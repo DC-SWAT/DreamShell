@@ -412,3 +412,17 @@ unsigned long total(int fd) {
 	CHECK_FD();
 	return file->fp.fsize;
 }
+
+int ioctl(int fd, int cmd, void *data) {
+	CHECK_FD();
+	switch(cmd) {
+		case FS_IOCTL_GET_LBA:
+		{
+			unsigned long sec = clust2sect(file->fp.fs, file->fp.sclust);
+			memcpy(data, &sec, sizeof(sec));
+			return 0;
+		}
+		default:
+			return FS_ERR_PARAM;
+	}
+}

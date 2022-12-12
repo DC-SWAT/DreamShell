@@ -37,13 +37,14 @@ int main(int argc, char *argv[]) {
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 	int emu_all_sc = 0;
 
-	if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
-		|| (IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW)
-		|| (is_custom_bios() && is_no_syscalls())) {
-		emu_all_sc = 1;
+	if (IsoInfo->syscalls == 0) {
+		if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
+			|| (IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW)
+			|| (is_custom_bios() && is_no_syscalls())) {
+			emu_all_sc = 1;
+		}
+		enable_syscalls(emu_all_sc);
 	}
-
-	enable_syscalls(emu_all_sc);
 
 	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[1] != 'S' || IsoInfo->magic[2] != 'I') {
 		LOGF("Magic is incorrect!\n");
@@ -150,6 +151,13 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
+#ifdef HAVE_EXT_SYSCALLS
+	if(IsoInfo->syscalls) {
+		printf("Loading syscalls...\n");
+		Load_Syscalls();
+	}
+#endif
+
 	setup_machine_state();
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
@@ -158,11 +166,20 @@ int main(int argc, char *argv[]) {
 	}
 
 	printf("Executing from IP.BIN...\n");
-	launch((IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC ? 0xac00e000 : 0xac00b800));
+
+	if (IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
+		launch(0xac00e000);
+	} else if (IsoInfo->syscalls) {
+		launch(0xac008300);
+	} else {
+		launch(0xac00b800);
+	}
 
 error:
 	printf("Failed!\n");
-	disable_syscalls(emu_all_sc);
+	if (IsoInfo->syscalls == 0) {
+		disable_syscalls(emu_all_sc);
+	}
 	timer_spin_sleep_bios(3000);
 	Load_DS();
 	return -1;

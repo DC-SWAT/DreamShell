@@ -21,7 +21,6 @@ static int _read_ciso_sectors(uint8 *buff, uint sector, uint cnt);
 #endif
 static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb);
 static int _read_data_sectors2(uint8 *buff, uint32 offset, uint32 size, fs_callback_f *cb);
-static void switch_gdi_data_track(uint32 lba, gd_state_t *GDS);
 
 static void _open_iso() {
 		
@@ -152,7 +151,7 @@ int InitReader() {
 }
 
 
-static void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
+void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 
 	if(lba < IsoInfo->track_lba[0] && GDS->data_track != 1) {
 

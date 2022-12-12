@@ -68,6 +68,7 @@ int printf(const char *fmt, ...);
 uint Load_BootBin();
 uint Load_IPBin();
 void Load_DS();
+void Load_Syscalls();
 
 #ifdef LOG
 

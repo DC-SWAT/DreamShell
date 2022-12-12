@@ -549,20 +549,20 @@ unsigned long total(int fd) {
 	return fh[fd].len;
 }
 
-int ioctl(int fd, int request, void *data) {
-
-	(void)request;
-
+int ioctl(int fd, int cmd, void *data) {
 	/* Check that the fd is valid */
-	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0)
+	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
 		return FS_ERR_PARAM;
-
-	if(!data) {
-		return fh[fd].sec0;
 	}
-
-	memcpy(data, &fh[fd].sec0, sizeof(fh[fd].sec0));
-	return 0;
+	switch(cmd) {
+		case FS_IOCTL_GET_LBA:
+		{
+			memcpy(data, &fh[fd].sec0, sizeof(fh[fd].sec0));
+			return 0;
+		}
+		default:
+			return FS_ERR_PARAM;
+	}
 }
 
 /* Init function */

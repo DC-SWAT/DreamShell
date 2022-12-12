@@ -9,16 +9,39 @@
 #include <dc/sq.h>
 #include <dcload.h>
 #include <asic.h>
+#include <reader.h>
+#include <syscalls.h>
 
 
 void setup_machine_state() {
+
+	const uint32 val = 0xffffffff;
+	const uint32 addr = 0xffd80000;
+	*(volatile uint8 *)(addr + 4) = 0;
+	*(volatile uint8 *)(addr + 0) = 0;
+	*(volatile uint32 *)(addr + 8) = val;
+	*(volatile uint32 *)(addr + 12) = val;
+	*(volatile uint32 *)(addr + 20) = val;
+	*(volatile uint32 *)(addr + 24) = val;
+	*(volatile uint16 *)(addr + 28) = 0;
+	*(volatile uint32 *)(addr + 32) = val;
+	*(volatile uint32 *)(addr + 36) = val;
+	*(volatile uint16 *)(addr + 40) = 0;
+
+	if (IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+		*(volatile uint8 *)(addr + 4) |= 1;
+	}
 
 	/* Clear IRQ stuff */
 	*ASIC_IRQ9_MASK  = 0;
 	*ASIC_IRQ11_MASK = 0;
 	*ASIC_IRQ13_MASK = 0;
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
-	(void) *((volatile uint8 *)0xA05F709C);
+	(void) *((volatile uint8 *)0xa05f709c);
+
+	*((volatile uint32 *)0xa05f6904) = 0xf;
+	*((volatile uint32 *)0xa05f6908) = 0x9fffff;
+	*((volatile uint32 *)0xa05f74a0) = 0x2001;
 }
 
 uint Load_BootBin() {
@@ -54,14 +77,39 @@ uint Load_BootBin() {
 }
 
 
+static void set_region() {
+	char region_str[3][6] = {
+		{"00000"},
+		{"00110"},
+		{"00211"}
+	};
+	uint8 *src = (uint8 *)0xa021a000;
+	uint8 *dst = (uint8 *)0x8c000070;
+	uint8 *reg = (uint8 *)0x8c000020;
+
+	if (*((uint32 *)0xac008030) == 0x2045554a) {
+		*reg = 0;
+		memcpy(dst, src, 5);
+	} else if(*((char *)0x8c008032) == 'E') {
+		*reg = 3;
+		memcpy(dst, region_str[2], 5);
+	} else if(*((char *)0x8c008031) == 'U') {
+		*reg = 2;
+		memcpy(dst, region_str[1], 5);
+	} else {
+		*reg = 1;
+		memcpy(dst, region_str[0], 5);
+	}
+}
+
 uint Load_IPBin() {
-	
+
 	uint32 ipbin_addr = UNCACHED_ADDR(IPBIN_ADDR);
 	uint32 lba = IsoInfo->track_lba[0];
 	uint32 cnt = 16;
 	uint8 *buff = (uint8*)ipbin_addr;
 	uint8 pass = 0;
-	
+
 	if(IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
 		pass = 12;
 	} else if(loader_addr < APP_ADDR && loader_addr > ISOLDR_DEFAULT_ADDR_MIN) {
@@ -73,21 +121,29 @@ uint Load_IPBin() {
 		cnt -= pass;
 		buff += (pass * 2048);
 	}
-	
-	if(ReadSectors(buff, lba, cnt, NULL) == COMPLETED) {
-		
-		if(IsoInfo->boot_mode != BOOT_MODE_IPBIN_TRUNC) {
 
-			*((uint16*)ipbin_addr + 0x10d8) = 0x5113;
-			*((uint16*)ipbin_addr + 0x140a) = 0x000b;
-			*((uint16*)ipbin_addr + 0x140c) = 0x0009;
+	if(ReadSectors(buff, lba, cnt, NULL) == COMPLETED) {
+		if(IsoInfo->boot_mode != BOOT_MODE_IPBIN_TRUNC) {
+			*((uint32 *)ipbin_addr + 0x032c) = 0x8c00e000;
+			*((uint16 *)ipbin_addr + 0x10d8) = 0x5113;
+			*((uint16 *)ipbin_addr + 0x140a) = 0x000b;
+			*((uint16 *)ipbin_addr + 0x140c) = 0x0009;
+			set_region();
 		}
 		return 1;
 	}
-	
 	return 0;
 }
 
+static int get_ds_fd() {
+	char *fn = "/DS/DS_CORE.BIN";
+	int fd = open(fn, O_RDONLY);
+
+	if (fd < 0) {
+		fd = open(fn + 3, O_RDONLY);
+	}
+	return fd;
+}
 
 void Load_DS() {
 	printf("Loading DreamShell...\n");
@@ -96,20 +152,18 @@ void Load_DS() {
 		close(iso_fd);
 	}
 
-	char *fn = "/DS/DS_CORE.BIN";
-	int fd = open(fn, O_RDONLY);
+	int fd = get_ds_fd();
 
-	if (fd < 0) {
-		fd = open(fn + 3, O_RDONLY);
-	}
 	if (fd < 0) {
 		printf("FAILED\n");
 		return;
 	}
 
-	int all_sc = loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
-		(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW);
-	disable_syscalls(all_sc);
+	if (IsoInfo->syscalls == 0) {
+		int all_sc = loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
+			(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW);
+		disable_syscalls(all_sc);
+	}
 
 	if (read(fd, (uint8 *)UNCACHED_ADDR(APP_ADDR), total(fd)) > 0) {
 		launch(APP_ADDR);
@@ -117,6 +171,93 @@ void Load_DS() {
 	close(fd);
 }
 
+#ifdef HAVE_EXT_SYSCALLS
+void Load_Syscalls() {
+
+	uint8_t *dst = (uint8_t *) UNCACHED_ADDR(RAM_START_ADDR);
+	uint8_t *src = (uint8_t *) IsoInfo->syscalls;
+	uint32 lba = 0;
+
+	memcpy(dst, src, 0x4000);
+	memcpy(dst + 0x128C, &IsoInfo->toc, 408);
+
+	if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
+
+		*((uint32 *)(dst + 0x1248)) = 0x80; // GD
+
+		switch_gdi_data_track(150, get_GDS());
+		ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
+		*((uint32 *)(dst + 0x1424)) = lba;
+
+		switch_gdi_data_track(45150, get_GDS());
+		ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
+		*((uint32 *)(dst + 0x1428)) = lba;
+
+		*((uint32 *)(dst + 0xD0)) = *((uint32_t *)(dst + 0x1428));
+
+		int last_track = ((IsoInfo->toc.last >> 16) & 0xff);
+
+		if (last_track != 3) {
+			switch_gdi_data_track(IsoInfo->toc.entry[last_track-1], get_GDS());
+			ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
+			*((uint32 *)(dst + 0x142C)) = lba;
+		}
+
+		char ch_name[sizeof(IsoInfo->image_file)];
+		memcpy(ch_name, IsoInfo->image_file, sizeof(IsoInfo->image_file));
+		memcpy(&ch_name[strlen(IsoInfo->image_file) - 6], "103.iso", 7);
+
+		close(iso_fd);
+		int fd = open(ch_name, O_RDONLY);
+
+		if (fd > FILEHND_INVALID) {
+
+			ioctl(fd, FS_IOCTL_GET_LBA, &lba);
+			*((uint32 *)(dst + 0xD4)) = lba;
+			close(fd);
+
+			memcpy(&ch_name[strlen(IsoInfo->image_file)-6], "203.iso", 7);
+			fd = open(ch_name, O_RDONLY);
+
+			if (fd > FILEHND_INVALID) {
+
+				ioctl(fd, FS_IOCTL_GET_LBA, &lba);
+				*((uint32 *)(dst + 0xD8)) = lba;
+				close(fd);
+
+				memcpy(&ch_name[strlen(IsoInfo->image_file)-6], "303.iso", 7);
+				fd = open(ch_name, O_RDONLY);
+
+				if (fd > FILEHND_INVALID) {
+
+					ioctl(fd, FS_IOCTL_GET_LBA, &lba);
+					*((uint32 *)(dst + 0xDC)) = lba;
+					close(fd);
+				}
+			}
+		}
+
+	} else { // ISO
+		*((uint32 *)(dst + 0x1248)) = 0x20; // CD
+		ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
+		*((uint32 *)(dst + 0x1424)) = lba;
+		*((uint32 *)(dst + 0x1428)) = 0;
+		*((uint32 *)(dst + 0x142C)) = 0;
+	}
+
+	// IGR
+	int fd = get_ds_fd();
+	ioctl(fd, FS_IOCTL_GET_LBA, &lba);
+	*((uint32 *)(dst + 0x1430)) = lba;
+	*((uint32 *)(dst + 0x1434)) = total(fd);
+
+	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+		sys_misc_init();
+	} else {
+		*((uint32 *)0xa05f8040) = 0x00c0c0c0;
+	}
+}
+#endif
 
 void *search_memory(const uint8 *key, uint32 key_size) {
 	

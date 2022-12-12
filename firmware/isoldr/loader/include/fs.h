@@ -79,6 +79,10 @@ enum FS_DMA_STATE {
 	FS_DMA_NO_IRQ   = 3
 };
 
+enum FS_IOCTL_CMD {
+	FS_IOCTL_GET_LBA = 0
+};
+
 int fs_init();
 void fs_shutdown();
 
@@ -94,7 +98,7 @@ int write(int fd, void *buf, unsigned int nbyte);
 long int lseek(int fd, long int offset, int whence);
 long int tell(int fd);
 unsigned long total(int fd);
-int ioctl(int fd, int request, void *data);
+int ioctl(int fd, int cmd, void *data);
 
 /**
  * Async read feature

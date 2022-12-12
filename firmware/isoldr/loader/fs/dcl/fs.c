@@ -89,7 +89,7 @@ int read(int fd, void *ptr, size_t size) {
 
 #if !_FS_READONLY
 
-int write(int fd, const void *ptr, size_t size) {
+int write(int fd, void *ptr, size_t size) {
 	return dclsc(DCLOAD_WRITE, fd, ptr, size);
 }
 
@@ -108,4 +108,18 @@ unsigned long total(int fd) {
 	long ret = dclsc(DCLOAD_LSEEK, fd, 0, SEEK_END);
 	dclsc(DCLOAD_LSEEK, fd, cur, SEEK_SET);
 	return (unsigned long)ret;
+}
+
+int ioctl(int fd, int cmd, void *data) {
+	(void)fd;
+	switch(cmd) {
+		case FS_IOCTL_GET_LBA:
+		{
+			unsigned long sec = 0;
+			memcpy(data, &sec, sizeof(sec));
+			return 0;
+		}
+		default:
+			return FS_ERR_PARAM;
+	}
 }

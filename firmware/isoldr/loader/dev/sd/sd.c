@@ -90,7 +90,7 @@ uint8 sd_crc7(const uint8 *data, int size, uint8 crc) {
     return crc & (0x7f << 1);
 }
 
-#if !defined(DISCARD_CRC16) || _FS_READONLY == 1
+#if _FS_READONLY == 0 || !defined(DISCARD_CRC16)
 uint16 sd_crc16(const uint8 *data, int size, uint16 start) {
     uint16 rv = start, tmp;
 

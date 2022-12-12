@@ -330,7 +330,10 @@ int ff_del_syncobj (_SYNC_t sobj);				/* Delete a sync object */
 /* Fast seek feature */
 #define CREATE_LINKMAP	0xFFFFFFFF
 
-
+DWORD clust2sect (	/* !=0: Sector number, 0: Failed - invalid cluster# */
+	FATFS* fs,		/* File system object */
+	DWORD clst		/* Cluster# to be converted */
+);
 
 /*--------------------------------*/
 /* Multi-byte word access macros  */
