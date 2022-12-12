@@ -29,7 +29,6 @@
 #define SCSPTR2	SCIFREG16(0xffe80020)
 #define SCLSR2	SCIFREG16(0xffe80024)
 
-#define BAUDRATE	500000
 /* Initialize the SCIF port; baud_rate must be at least 9600 and
    no more than 57600. 115200 does NOT work for most PCs. */
 // recv trigger to 1 byte
@@ -48,7 +47,8 @@ int scif_init()
 	SCSMR2 = 0;
 	
 	/* If baudrate unset, set baudrate, N = P0/(32*B)-1 */
-	SCBRR2 = (uint8)(50000000 / (32 * BAUDRATE)) - 1;
+//	if (SCBRR2 == 0xff)
+		SCBRR2 = (uint8)(50000000 / (32 * 115200)) - 1;
 
 	/* Wait a bit for it to stabilize */
 	for (i=0; i<10000; i++)

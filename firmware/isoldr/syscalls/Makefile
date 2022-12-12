@@ -6,7 +6,7 @@
 
 TARGET = 0x8c000000
 
-SYSCALLOBJS = syscalls.o flash_font_sys.o syscallsc.o log.o
+SYSCALLOBJS = syscalls.o flash_font_sys.o syscallsc.o
 SYSCALLBIN = syscalls
 
 TARGETPREFIX	= sh-elf
@@ -21,6 +21,8 @@ TARGETCFLAGS	= -ml -m4-single-only -ffunction-sections -fdata-sections -ffreesta
 					-Wall -std=c11 -Wextra -Werror
 
 # TARGETCFLAGS += -DLOG
+# SYSCALLOBJS += log.o memcpy.o
+
 TARGETCFLAGS += -I./include
 LIBS = -lgcc
 
@@ -31,6 +33,8 @@ INSTALL_PATH = ../../../build/firmware/isoldr
 %.o: %.c
 	$(TARGETCC) $(TARGETCFLAGS) -Os $(INCLUDE) -c $< -o $@
 %.o: %.s
+	$(TARGETCC) $(TARGETCFLAGS) $(INCLUDE) -o $@ -c $<
+%.o: %.S
 	$(TARGETCC) $(TARGETCFLAGS) $(INCLUDE) -o $@ -c $<
 
 all: clean $(SYSCALLBIN).bin
