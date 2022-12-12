@@ -298,9 +298,12 @@
 								</input>
 							</panel>
 
-							<panel height="25" width="33%">
-								<input name="fastboot-checkbox" type="checkbox">
+							<panel height="25" width="100%">
+								<input name="fastboot-checkbox" type="checkbox" width="33%">
 									<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="100%" x="23%" />
+								</input>
+								<input name="low-checkbox" type="checkbox" width="33%">
+									<label align="left" color="#000000" font="arial" height="20" text="Low-level" width="100%" x="23%" />
 								</input>
 							</panel>
 
