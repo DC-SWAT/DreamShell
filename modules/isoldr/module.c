@@ -299,39 +299,7 @@ static int get_device_info(isoldr_info_t *info, const char *iso_file) {
 		return -1;
 	}
 
-
-	switch(info->fs_dev[0]) {
-		case 's':
-		case 'i': {
-			char *p = strchr(iso_file + 1, '/');
-			int sz = strlen(iso_file) - strlen(p);
-			char mp[8];
-			strncpy(mp, iso_file, strlen(iso_file) - strlen(p));
-			mp[sz] = '\0';
-
-			if(fs_fat_is_mounted(mp)) {
-				strncpy(info->fs_type, ISOLDR_FS_FAT, 3);
-				info->fs_type[3] = '\0';
-			} else {
-				strncpy(info->fs_type, ISOLDR_FS_EXT2, 4);
-				info->fs_type[4] = '\0';
-			}
-			break;
-		}
-		case 'c':
-			strncpy(info->fs_type, ISOLDR_FS_ISO9660, 7);
-			info->fs_type[7] = '\0';
-			break;
-		case 'p':
-			strncpy(info->fs_type, ISOLDR_FS_DCLOAD, 7);
-			info->fs_type[7] = '\0';
-			break;
-		default:
-			strncpy(info->fs_type, "unknown", 7);
-			info->fs_type[7] = '\0';
-			break;
-	}
-
+	info->fs_type[0] = '\0';
 	return 0;
 }
 
@@ -424,31 +392,47 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 	return 0;
 }
 
+static void set_loader_type(isoldr_info_t *info) {
+	if (info->emu_vmu != 0 || info->syscalls) {
+		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
+		info->fs_type[4] = '\0';
+	} else if (info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0 || info->syscalls != 0) {
+		strncpy(info->fs_type, ISOLDR_TYPE_EXTENDED, 3);
+		info->fs_type[3] = '\0';
+	} else {
+		info->fs_type[0] = '\0';
+	}
+}
 
 void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
-	file_t fd = FILEHND_INVALID;
-	size_t len = 0;
 	char fn[MAX_FN_LEN];
-	uint8 *loader = NULL;
 
-	if(info->fs_type[0] == 'e' || info->fs_type[0] == 'r') {
+	if (strcmp(info->fs_dev, ISOLDR_DEV_DCLOAD) == 0
+		|| strcmp(info->fs_dev, ISOLDR_DEV_GDROM) == 0
+		|| strcmp(info->fs_dev, ISOLDR_DEV_SDCARD) == 0
+		|| strcmp(info->fs_dev, ISOLDR_DEV_G1ATA) == 0
+	) {
+		set_loader_type(info);
+	}
+
+	if(info->fs_type[0] != '\0') {
 		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/%s_%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev, info->fs_type);
 	} else {
 		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev);
 	}
 
-	fd = fs_open(fn, O_RDONLY);
+	file_t fd = fs_open(fn, O_RDONLY);
 
 	if(fd == FILEHND_INVALID) {
 		ds_printf("DS_ERROR: Can't open file: %s\n", fn);
 		return;
 	}
 
-	len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
+	size_t len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
 
 	ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, len);
-	loader = (uint8 *) malloc(len < 0x10000 ? 0x10000 : len);
+	uint8 *loader = (uint8 *) malloc(len < 0x10000 ? 0x10000 : len);
 
 	if(loader == NULL) {
 		fs_close(fd);
@@ -457,7 +441,6 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 	}
 
 	memset_sh4(loader, 0, len < 0x10000 ? 0x10000 : len);
-	memcpy_sh4(loader, info, sizeof(*info));
 
 	if(fs_read(fd, loader + ISOLDR_PARAMS_SIZE, len) != (len - ISOLDR_PARAMS_SIZE)) {
 		fs_close(fd);
@@ -467,6 +450,32 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
 	fs_close(fd);
 
+	if (info->syscalls == 1) {
+
+		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/syscalls.bin", getenv("PATH"), lib_get_name());
+		fd = fs_open(fn, O_RDONLY);
+
+		if (fd < 0) {
+			info->syscalls = 0;
+		} else {
+			size_t sc_len = fs_total(fd);
+			ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, sc_len);
+			uint8 *buff = (uint8 *)malloc(sc_len < 0x4000 ? 0x4000 : sc_len);
+			memset_sh4(buff, 0, sc_len < 0x4000 ? 0x4000 : sc_len);
+
+			if (fs_read(fd, buff, sc_len) != sc_len) {
+				ds_printf("DS_ERROR: Can't load %s\n", fn);
+				free(buff);
+				info->syscalls = 0;
+			} else {
+				dcache_flush_range((uint32)buff, sc_len);
+				info->syscalls = (uint32)buff;
+				addr = ISOLDR_DEFAULT_ADDR;
+			}
+			fs_close(fd);
+		}
+	}
+
 	if(addr != ISOLDR_DEFAULT_ADDR) {
 		if(patch_loader_addr(loader + ISOLDR_PARAMS_SIZE, len - ISOLDR_PARAMS_SIZE, addr)) {
 			free(loader);
@@ -474,7 +483,9 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		}
 	}
 
-//	free(info);
+	memcpy_sh4(loader, info, sizeof(*info));
+
+	// free(info);
 	ds_printf("DS_PROCESS: Executing at 0x%08lx...\n", addr);
 	ShutdownVideoThread();
 	expt_shutdown();
@@ -543,7 +554,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          " -i, --verbose    -Show additional info\n",
 		          " -a, --dma        -Use DMA transfer if available\n"
 		          " -q, --irq        -Use IRQ hooking\n"
-		          " -c, --cdda       -Emulate CDDA audio (cddamode=1 by default)\n");
+		          " -c, --cdda       -Emulate CDDA audio (cddamode=1 by default)\n"
+				  " -l, --low        -Use low-level syscalls emulation (disabled by default).\n");
 		ds_printf("Arguments: \n"
 		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
 		          " -d, --device     -Loader device (sd/ide/cd/dcl/dcio), default auto\n"
@@ -592,6 +604,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
+	uint32 low_level = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -607,13 +620,14 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"async",     'e', NULL, CFG_ULONG, (void *) &emu_async,   0},
 		{"cdda",      'c', NULL, CFG_BOOL,  (void *) &emu_cdda,    0},
 		{"cddamode",  'g', NULL, CFG_ULONG, (void *) &cdda_mode,   0},
-		{"heap",      'h', NULL, CFG_ULONG, (void *) &heap,   0},
+		{"heap",      'h', NULL, CFG_ULONG, (void *) &heap,        0},
 		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
 		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
 		{"fast",      's', NULL, CFG_BOOL,  (void *) &fast_boot,   0},
 		{"irq",       'q', NULL, CFG_BOOL,  (void *) &use_irq,     0},
 		{"vmu",       'v', NULL, CFG_ULONG, (void *) &emu_vmu,     0},
+		{"low",       'l', NULL, CFG_BOOL,  (void *) &low_level,   0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -632,11 +646,11 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		if(boot_mode != BOOT_MODE_DIRECT) {
 			lex = ISOLDR_DEFAULT_ADDR_HIGH;
 		} else {
-			lex = ISOLDR_DEFAULT_ADDR_LOW;
+			lex = ISOLDR_DEFAULT_ADDR_MIN;
 		}
 	}
 
-	info = isoldr_get_info(file, fast_boot ? 0 : 1);
+	info = isoldr_get_info(file, fast_boot);
 
 	if(info == NULL) {
 		return CMD_ERROR;
@@ -683,6 +697,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->heap      = heap;
 	info->use_irq   = use_irq;
 	info->emu_vmu   = emu_vmu;
+	info->syscalls  = low_level;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
@@ -701,12 +716,12 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 		ds_printf("Params size: %d\n", sizeof(isoldr_info_t));
 
-		ds_printf("\n--- Executable info ---\n "
-		          "Name: %s\n "
-		          "OS: %d\n "
-		          "Size: %d Kb\n "
-		          "LBA: %d\n "
-		          "Address: 0x%08lx\n "
+		ds_printf("\n--- Executable info ---\n"
+		          "Name: %s\n"
+		          "OS: %d\n"
+		          "Size: %d Kb\n"
+		          "LBA: %d\n"
+		          "Address: 0x%08lx\n"
 		          "Boot mode: %d\n",
 		          info->exec.file,
 		          info->exec.type,
@@ -715,10 +730,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          info->exec.addr,
 		          info->boot_mode);
 
-		ds_printf("--- ISO info ---\n "
-		          "File: %s (%s)\n "
-		          "Format: %d\n "
-		          "LBA: %d (%d)\n "
+		ds_printf("--- ISO info ---\n"
+		          "File: %s (%s)\n"
+		          "Format: %d\n"
+		          "LBA: %d (%d)\n"
 		          "Sector size: %d\n",
 		          info->image_file,
 		          info->image_second,
@@ -727,24 +742,29 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          info->track_lba[1],
 		          info->sector_size);
 
-		ds_printf("--- Loader info ---\n "
-		          "Device: %s\n "
-		          "Filesystem: %s (partition %d)\n "
-		          "Address: 0x%08lx\n "
-		          "DMA: %d\n "
-		          "Heap: %lx\n "
-		          "Emu async: %d\n "
-		          "Emu CDDA: %d\n "
-		          "Emu VMU: %d\n\n",
+		ds_printf("--- Loader info ---\n"
+		          "Device: %s\n"
+		          "Type: %s\n"
+				  "Partition: %d\n"
+		          "Address: 0x%08lx\n"
+		          "DMA: %d\n"
+		          "IRQ: %d\n"
+		          "Heap: %lx\n",
 		          info->fs_dev,
-		          info->fs_type,
+		          info->fs_dev[0] != '\0' ? info->fs_type : "normal",
 		          info->fs_part,
 		          lex,
 		          info->use_dma,
-		          info->heap,
+		          info->use_irq,
+		          info->heap);
+		ds_printf("Emu async: %d\n"
+		          "Emu CDDA: %d\n"
+		          "Emu VMU: %d\n"
+		          "Syscalls: %lx\n\n",
 		          info->emu_async,
 		          info->emu_cdda,
-		          info->emu_vmu);
+		          info->emu_vmu,
+		          info->syscalls);
 	}
 
 	if(!strncasecmp(info->fs_dev, ISOLDR_DEV_DCIO, 4)) {

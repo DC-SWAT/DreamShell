@@ -50,13 +50,11 @@
 
 
 /**
- * Supported file systems
+ * Supported types
  */
-#define ISOLDR_FS_FAT     "fat"
-#define ISOLDR_FS_EXT2    "ext2"    /* EXT2 doesn't supported yet, just define for now */
-#define ISOLDR_FS_RAW     "raw"     /* It's a mapped CD image to unused partition on SD or IDE device */
-#define ISOLDR_FS_ISO9660 "iso9660"
-#define ISOLDR_FS_DCLOAD  "dc-load"
+#define ISOLDR_TYPE_DEFAULT  ""
+#define ISOLDR_TYPE_EXTENDED "ext"
+#define ISOLDR_TYPE_FULL     "full"
 
 
 /**
@@ -126,7 +124,7 @@ typedef struct isoldr_info {
 	char image_second[12];              /* Second data track file for the multitrack GDI image */
 
 	char fs_dev[8];                     /* Device name, see supported devices */
-	char fs_type[8];                    /* File system type (fat, ext2, raw), only for SD and IDE devices */
+	char fs_type[8];                    /* Extend device name */
 	uint32 fs_part;                     /* Partition on device (0-3), only for SD and IDE devices */
 
 	CISO_header_t ciso;                 /* CISO header for CSO/ZSO images */
@@ -149,8 +147,9 @@ typedef struct isoldr_info {
 	uint32 heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
 	uint32 use_irq;                     /* Use IRQ hooking */
 	uint32 emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
+	uint32 syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
 
-	uint32 cdda_offset[47];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[46];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 
