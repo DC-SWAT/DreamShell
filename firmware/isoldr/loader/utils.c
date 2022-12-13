@@ -16,7 +16,7 @@
 void setup_machine_state() {
 
 	const uint32 val = 0xffffffff;
-	const uint32 addr = 0xffd80000;
+	uint32 addr = 0xffd80000;
 	*(volatile uint8 *)(addr + 4) = 0;
 	*(volatile uint8 *)(addr + 0) = 0;
 	*(volatile uint32 *)(addr + 8) = val;
@@ -32,6 +32,21 @@ void setup_machine_state() {
 		*(volatile uint8 *)(addr + 4) |= 1;
 	}
 
+	addr = 0xFF000000;
+	*(volatile uint32 *)(addr) = 0;
+	*(volatile uint32 *)(addr + 4) = 0;
+	*(volatile uint32 *)(addr + 8) = 0;
+	*(volatile uint32 *)(addr + 12) = 0;
+	*(volatile uint32 *)(addr + 16) = 0;
+	*(volatile uint32 *)(addr + 28) = 0;
+	*(volatile uint32 *)(addr + 32) = 0;
+	*(volatile uint32 *)(addr + 36) = 32;
+	*(volatile uint32 *)(addr + 40) = 0x3a0;
+	*(volatile uint32 *)(addr + 44) = 0;
+	*(volatile uint32 *)(addr + 52) = 0;
+	*(volatile uint32 *)(addr + 56) = 0;
+	*(volatile uint32 *)(addr + 60) = 0;
+
 	/* Clear IRQ stuff */
 	*ASIC_IRQ9_MASK  = 0;
 	*ASIC_IRQ11_MASK = 0;
@@ -42,6 +57,10 @@ void setup_machine_state() {
 	*((volatile uint32 *)0xa05f6904) = 0xf;
 	*((volatile uint32 *)0xa05f6908) = 0x9fffff;
 	*((volatile uint32 *)0xa05f74a0) = 0x2001;
+	// *(volatile uint32 *)(0xa05f78bc) = 0x46597f00;
+	// *(volatile uint32 *)(0xa05f6910) = 8;
+	// *(volatile uint32 *)(0xa05f6c04) = 0x0cff0000;
+	// *(volatile uint32 *)(0xa05f6c8c) = 0x61557f00;
 }
 
 uint Load_BootBin() {
@@ -193,12 +212,10 @@ void Load_Syscalls() {
 		ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
 		*((uint32 *)(dst + 0x1428)) = lba;
 
-		*((uint32 *)(dst + 0xD0)) = *((uint32_t *)(dst + 0x1428));
+		*((uint32 *)(dst + 0xD0)) = *((uint32 *)(dst + 0x1428));
 
-		int last_track = ((IsoInfo->toc.last >> 16) & 0xff);
-
-		if (last_track != 3) {
-			switch_gdi_data_track(IsoInfo->toc.entry[last_track-1], get_GDS());
+		if (IsoInfo->track_lba[0] != IsoInfo->track_lba[1]) {
+			switch_gdi_data_track(IsoInfo->track_lba[1], get_GDS());
 			ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
 			*((uint32 *)(dst + 0x142C)) = lba;
 		}
@@ -260,19 +277,18 @@ void Load_Syscalls() {
 #endif
 
 void *search_memory(const uint8 *key, uint32 key_size) {
-	
+
 	uint32 start_loc = CACHED_ADDR(IsoInfo->exec.addr);
 	uint32 end_loc = start_loc + IsoInfo->exec.size;
-	
+
 	for(uint8 *cur_loc = (uint8 *)start_loc; (uint32)cur_loc <= end_loc; cur_loc++) {
 
 		if(*cur_loc == key[0]) {
-
-			if(!memcmp((const uint8 *)cur_loc, key, key_size))
+			if(!memcmp((const uint8 *)cur_loc, key, key_size)) {
 				return (void *)cur_loc;
+			}
 		}
 	}
-	
 	return NULL;
 }
 

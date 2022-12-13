@@ -14,6 +14,10 @@
 #include <arch/timer.h>
 #include <arch/gdb.h>
 
+#ifdef DEV_TYPE_SD
+#include <spi.h>
+#endif
+
 
 /**
  * Current GD channel state
@@ -987,7 +991,10 @@ void gdcInitSystem(void) {
 
 	OpenLog();
 	LOGFF(NULL);
-	malloc_init();
+
+	if (IsoInfo->heap == HEAP_MODE_INGAME) {
+		malloc_init();
+	}
 
 #ifdef HAVE_EXPT
 
@@ -1036,7 +1043,15 @@ void gdcInitSystem(void) {
 	
 #endif /* HAVE_EXPT */
 
-	InitReader();
+	if (IsoInfo->heap == HEAP_MODE_INGAME) {
+		InitReader();
+	}
+#ifdef DEV_TYPE_SD
+	else {
+		spi_init();
+	}
+#endif
+
 	reset_GDS(get_GDS());
 
 #ifdef HAVE_CDDA
@@ -1214,8 +1229,8 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 
 	gd_state_t *GDS = get_GDS();
 
-	LOGFF("%d %s r=%ld t=%ld s=%ld\n", gd_chn, stat_name[GDS->status + 1],
-			GDS->requested, GDS->transfered, GDS->dma_status);
+	LOGFF("%d %s r=%ld t=%ld s=%d d=%ld\n", gd_chn, stat_name[GDS->status + 1],
+			GDS->requested, GDS->transfered, GDS->streamed, GDS->dma_status);
 
 	if(gd_chn != GDS->req_count) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
@@ -1465,11 +1480,12 @@ void enable_syscalls(int all) {
 	gdc_syscall_disable();
 	gdc_syscall_enable();
 
+	menu_syscall_save();
+	menu_syscall_disable();
+	menu_syscall_enable();
+
 	if (!all) {
 		printf("Syscalls emulation: gdc, menu\n");
-		menu_syscall_save();
-		menu_syscall_disable();
-		menu_syscall_enable();
 		return;
 	}
 
@@ -1485,10 +1501,6 @@ void enable_syscalls(int all) {
 	sys_syscall_save();
 	sys_syscall_disable();
 	sys_syscall_enable();
-
-	menu_syscall_save();
-	menu_syscall_disable();
-	menu_syscall_enable();
 }
 
 void disable_syscalls(int all) {

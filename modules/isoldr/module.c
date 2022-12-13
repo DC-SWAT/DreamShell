@@ -429,10 +429,11 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		return;
 	}
 
+	size_t sc_len = 0;
 	size_t len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
 
 	ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, len);
-	uint8 *loader = (uint8 *) malloc(len < 0x10000 ? 0x10000 : len);
+	uint8 *loader = (uint8 *) malloc(len < 0x20000 ? 0x20000 : len);
 
 	if(loader == NULL) {
 		fs_close(fd);
@@ -440,7 +441,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		return;
 	}
 
-	memset_sh4(loader, 0, len < 0x10000 ? 0x10000 : len);
+	memset_sh4(loader, 0, len < 0x20000 ? 0x20000 : len);
 
 	if(fs_read(fd, loader + ISOLDR_PARAMS_SIZE, len) != (len - ISOLDR_PARAMS_SIZE)) {
 		fs_close(fd);
@@ -458,19 +459,22 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		if (fd < 0) {
 			info->syscalls = 0;
 		} else {
-			size_t sc_len = fs_total(fd);
+			sc_len = fs_total(fd);
 			ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, sc_len);
-			uint8 *buff = (uint8 *)malloc(sc_len < 0x4000 ? 0x4000 : sc_len);
-			memset_sh4(buff, 0, sc_len < 0x4000 ? 0x4000 : sc_len);
+			uint8 *buff = loader + len + 0x1000; // Keep some for a loader heap
 
 			if (fs_read(fd, buff, sc_len) != sc_len) {
 				ds_printf("DS_ERROR: Can't load %s\n", fn);
-				free(buff);
 				info->syscalls = 0;
 			} else {
 				dcache_flush_range((uint32)buff, sc_len);
 				info->syscalls = (uint32)buff;
 				addr = ISOLDR_DEFAULT_ADDR;
+				if (sc_len < 0x4000) {
+					sc_len = 0x5000;
+				} else {
+					sc_len += 0x1000;
+				}
 			}
 			fs_close(fd);
 		}
@@ -491,7 +495,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 	expt_shutdown();
 	g1_ata_shutdown();
 
-	isoldr_exec_at(loader, len, addr, ISOLDR_PARAMS_SIZE);
+	isoldr_exec_at(loader, len + sc_len, addr, ISOLDR_PARAMS_SIZE);
 }
 
 
