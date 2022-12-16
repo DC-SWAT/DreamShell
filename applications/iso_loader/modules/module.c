@@ -964,22 +964,48 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 	if(!fm_ent) {
 		return;
 	}
-
 	dirent_t *ent = &fm_ent->ent;
+
 	if(ent->attr == O_DIR && self.current_item_dir != fm_ent->index) {
 
 		char filepath[MAX_FN_LEN];
-		const char *dir = GUI_FileManagerGetPath(self.filebrowser);
+		memset(filepath, 0, MAX_FN_LEN);
+		snprintf(filepath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
 
-		if(checkGDI(filepath, dir, ent->name, "disk") ||
-			checkGDI(filepath, dir, ent->name, "disc") ||
-			checkGDI(filepath, dir, ent->name, "disc_optimized")) {
+		file_t fd = fs_open(filepath, O_RDONLY | O_DIR);
 
-			selectFile(filepath, fm_ent->index);
-			self.current_item_dir = fm_ent->index;
-			return;
+		if(fd != FILEHND_INVALID) {
+
+			int total_count = 0;
+			int dir_count = 0;
+			dirent_t *dent;
+
+			while ((dent = fs_readdir(fd)) != NULL) {
+
+				if(++total_count > 100) {
+					break;
+				}
+				if(dent->name[0] == '.') {
+					continue;
+				}
+				if(dent->attr == O_DIR && ++dir_count > 1) {
+					break;
+				}
+				int len = strlen(dent->name);
+
+				if(len > 4 && strncasecmp(dent->name + len - 4, ".gdi", 4) == 0) {
+					fs_close(fd);
+
+					memset(filepath, 0, MAX_FN_LEN);
+					snprintf(filepath, MAX_FN_LEN, "%s/%s", ent->name, dent->name);
+					selectFile(filepath, fm_ent->index);
+
+					self.current_item_dir = fm_ent->index;
+					return;
+				}
+			}
+			fs_close(fd);
 		}
-
 		changeDir(ent);
 
 	} else if(self.current_item == fm_ent->index) {
@@ -1260,7 +1286,7 @@ int isoLoader_LoadPreset() {
 	}
 
 	GUI_WidgetSetState(self.cdda, emu_cdda ? 1 : 0);
-	GUI_WidgetSetState(self.cdda_mode[emu_cdda], 1);
+	isoLoader_toggleCDDA(self.cdda_mode[emu_cdda]);
 	GUI_WidgetSetState(self.fastboot, fastboot);
 	GUI_WidgetSetState(self.irq, use_irq);
 	GUI_WidgetSetState(self.low, low);
