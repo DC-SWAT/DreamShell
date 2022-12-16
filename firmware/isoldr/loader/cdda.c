@@ -251,12 +251,10 @@ static void setup_pcm_buffer() {
 		case 16:
 		default:
 			cdda->size = 0x8000;
-#ifdef HAVE_EXPT
-			if(IsoInfo->use_irq && exception_inited()) {
+			if(exception_inited()) {
 				cdda->size = 0x4000;
 				cdda->end_tm = 36176 / cdda->chn;
 			}
-#endif
 			break;
 	}
 
@@ -728,7 +726,7 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 	if(cdda->stat) {
 		CDDA_Stop();
 	} else if(GDS->cdda_stat == SCD_AUDIO_STATUS_PAUSED && 
-				first == cdda->first && cdda->fd > FILEHND_INVALID) {
+				first == cdda->first_track && cdda->fd > FILEHND_INVALID) {
 		return CDDA_Release();
 	}
 
@@ -827,13 +825,11 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
 
-		/* TODO improve it */
 		if(IsoInfo->toc.entry[first] != (uint32)-1) {
 			cdda->track_size = (TOC_LBA(IsoInfo->toc.entry[first]) - cdda->lba - 2) * RAW_SECTOR_SIZE;
 		} else {
-			cdda->track_size = ((total(cdda->fd) / RAW_SECTOR_SIZE) - cdda->lba - 2) * RAW_SECTOR_SIZE;
+			cdda->track_size = (((total(cdda->fd) - cdda->offset) / RAW_SECTOR_SIZE) - cdda->lba - 2) * RAW_SECTOR_SIZE;
 		}
-
 	} else {
 		cdda->track_size = total(cdda->fd) - cdda->offset;
 	}
@@ -856,8 +852,10 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 #	endif
 #endif /* _FS_ASYNC */
 	
-	cdda->first = first;
-	cdda->last = last;
+	cdda->first_track = first;
+	cdda->first_lba = 0;
+	cdda->last_track = last;
+	cdda->last_lba = 0;
 	cdda->loop = loop;
 	cdda->stat = CDDA_STAT_FILL;
 	
@@ -869,55 +867,56 @@ end:
 }
 
 
-int CDDA_Play2(uint32 first, uint32 last, uint16 loop) {
+int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint16 loop) {
 
-	uint8 first_track = 4, last_track = 4;
-
-	if(!IsoInfo->emu_cdda) {
-		return CDDA_Play(first_track, last_track, loop);
-	}
+	uint8 track = 0;
 
 	for(int i = 3; i < 99; ++i) {
-
-		if(IsoInfo->toc.entry[i] == first) {
-
-			first_track = last_track = i + 1;
-
-			if(IsoInfo->toc.entry[first_track] != (uint32)-1 && last > IsoInfo->toc.entry[first_track]) {
-				
-				for(i = i + 1; i < 99; ++i) {
-
-					if(IsoInfo->toc.entry[i] == last) {
-						last_track = i + 1;
-						break;
-					} else if(IsoInfo->toc.entry[i] == (uint32)-1) {
-						break;
-					}
-				}
-			}
+		if(IsoInfo->toc.entry[i] == (uint32)-1) {
 			break;
-		} else if(IsoInfo->toc.entry[i] == (uint32)-1) {
+		} else if(TOC_LBA(IsoInfo->toc.entry[i]) == first_lba) {
+			track = i + 1;
+			break;
+		} else if(TOC_LBA(IsoInfo->toc.entry[i]) > first_lba) {
+			track = i;
 			break;
 		}
 	}
-	return CDDA_Play(first_track, last_track, loop);
+
+	CDDA_Play(track, track, loop);
+
+	if (cdda->fd >= 0) {
+
+		cdda->first_lba = first_lba;
+		cdda->last_lba = last_lba;
+
+		gd_state_t *GDS = get_GDS();
+		GDS->lba = first_lba;
+
+		uint32 offset = cdda->offset + ((first_lba - cdda->lba) * RAW_SECTOR_SIZE);
+
+		/* Make alignment by sector */
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
+		offset = ((offset / 512) + 1) * 512;
+#elif defined(DEV_TYPE_GD)
+		offset = ((offset / 2048) + 1) * 2048;
+#endif
+		lseek(cdda->fd, offset, SEEK_SET);
+	}
+	return COMPLETED;
 }
 
 
 int CDDA_Seek(uint32 offset) {
-	
+
 	gd_state_t *GDS = get_GDS();
-	
+
 	if(IsoInfo->emu_cdda && cdda->fd > -1) {
-//		int old = GDS->drv_stat;
-//		GDS->drv_stat = CD_STATUS_SEEKING;
 		stop_clean_cdda();
 		lseek(cdda->fd, cdda->offset + ((offset - cdda->lba) * RAW_SECTOR_SIZE), SEEK_SET);
 		cdda->stat = CDDA_STAT_FILL;
 		aica_setup_cdda(1);
-//		GDS->drv_stat = old;
 	}
-	
 	GDS->lba = offset;
 	return COMPLETED;
 }
@@ -983,7 +982,7 @@ int CDDA_Stop(void) {
 		free(cdda->alloc_buff);
 		cdda->alloc_buff = NULL;
 	}
-	
+
 	GDS->cdda_track = 0;
 	GDS->drv_stat = CD_STATUS_STANDBY;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
@@ -991,31 +990,31 @@ int CDDA_Stop(void) {
 }
 
 static void end_playback() {
-	CDDA_Stop();
+	stop_clean_cdda();
 	gd_state_t *GDS = get_GDS();
+	GDS->drv_stat = CD_STATUS_PAUSED;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_ENDED;
-	cdda->stat = CDDA_STAT_IDLE;
 }
 
 static void play_next_track() {
 
 	DBGFF(NULL);
-	CDDA_Stop();
+	end_playback();
 
-	if(cdda->first < cdda->last) {
+	if(cdda->first_track < cdda->last_track) {
 
-		CDDA_Play(cdda->first + 1, cdda->last, cdda->loop);
+		CDDA_Play(cdda->first_track + 1, cdda->last_track, cdda->loop);
 
-	} else if(cdda->loop) {
+	} else if(cdda->loop > 0) {
 
 		if(cdda->loop != 0x0f) {
 			cdda->loop--;
 		}
-
-		CDDA_Play(cdda->first, cdda->last, cdda->loop);
-
-	} else {
-		end_playback();
+		if(cdda->first_lba == 0) {
+			CDDA_Play(cdda->first_track, cdda->last_track, cdda->loop);
+		} else {
+			CDDA_Play2(cdda->first_lba, cdda->last_lba, cdda->loop);
+		}
 	}
 }
 
@@ -1042,6 +1041,15 @@ static void fill_pcm_buff() {
 
 	cdda->cur_offset = tell(cdda->fd) - cdda->offset;
 
+	if(cdda->last_lba > 0) {
+
+		uint32 offset = (cdda->cur_offset / RAW_SECTOR_SIZE) + cdda->lba + 1;
+
+		if (offset >= cdda->last_lba) {
+			play_next_track();
+			return;
+		}
+	}
 	if(cdda->cur_offset >= cdda->track_size) {
 		play_next_track();
 		return;
@@ -1077,9 +1085,7 @@ void CDDA_MainLoop(void) {
 	if(cdda->stat == CDDA_STAT_WAIT) {
 
 		/* Polling async data transfer */
-# ifdef HAVE_EXPT
-		if(!IsoInfo->use_irq || !exception_inited())
-# endif
+		if(!exception_inited())
 		{
 			if(poll(cdda->fd) < 0) {
 				/* Retry on error */
