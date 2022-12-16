@@ -12,6 +12,12 @@
 #include <reader.h>
 #include <syscalls.h>
 
+#ifndef HAVE_EXPT
+// Just for decreasing ifdef's with HAVE_EXPT
+int exception_inited(void) {
+	return 0;
+}
+#endif
 
 void setup_machine_state() {
 

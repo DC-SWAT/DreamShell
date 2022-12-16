@@ -90,6 +90,8 @@ int main(int argc, char *argv[]) {
 
 	if (!IsoInfo->use_dma) {
 		fs_enable_dma(FS_DMA_DISABLED);
+	} else if(IsoInfo->exec.type == BIN_TYPE_WINCE && !IsoInfo->use_irq) {
+		fs_enable_dma(FS_DMA_NO_IRQ);
 	}
 
 	printf("Loading executable...\n");
@@ -127,15 +129,6 @@ int main(int argc, char *argv[]) {
 
 		/* Patch GDC driver entry */
 		gdc_syscall_patch();
-
-		/* Patch G1 DMA regs in binary */
-		gd_state_t *GDS = get_GDS();
-		int cnt = patch_memory(0xA05F7418, (uint32)&GDS->dma_status);
-
-		LOGF("Found DMA status reg %d times\n", cnt);
-		cnt = patch_memory(0xA05F7414, (uint32)&GDS->streamed);
-		LOGF("Found DMA len reg %d times\n", cnt);
-		(void)cnt;
 	}
 
 #ifdef HAVE_EXPT

@@ -400,11 +400,7 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 
 	} else if (dma_mode == FS_DMA_NO_IRQ) {
 
-		if (g1_dma_has_irq_mask()) {
-			g1_dma_irq_hide(1);
-		} else {
-			return;
-		}
+		return;
 
 	} else if (dma_mode == FS_DMA_SHARED) {
 
@@ -1025,6 +1021,8 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	req.lba = block;
 	req.async = wait_dma ? 0 : 1;
 
+	g1_dma_part_avail = 0;
+
 	return g1_ata_access(&req);
 }
 
@@ -1095,10 +1093,6 @@ s32 g1_ata_poll(void) {
 		return rv > 0 ? rv : 32;
 	}
 
-	if (g1_dma_part_avail) {
-		return 0;
-	}
-
 	/* Ack device IRQ. */
 	u8 st = IN8(G1_ATA_STATUS_REG);
 
@@ -1110,7 +1104,10 @@ s32 g1_ata_poll(void) {
 		return -1;
 	}
 
-	OUT8(G1_ATA_DMA_ENABLE, 0);
+	if (!g1_dma_part_avail) {
+		OUT8(G1_ATA_DMA_ENABLE, 0);
+	}
+
 	return 0;
 }
 
@@ -1991,6 +1988,7 @@ s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive)
 	req.cmd = G1_READ_DMA;
 	req.lba = sector;
 	req.async = 0;
+	g1_dma_part_avail = 0;
 	
 	if ((((u32) buffer) & 0x1f))
 	{
@@ -2016,6 +2014,7 @@ s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u
 	req.cmd = dma ? G1_READ_DMA : G1_READ_PIO;
 	req.lba = sector;
 	req.async = async;
+	g1_dma_part_avail = 0;
 	
 	if (dma && (((u32) buffer) & 0x1f)) {
 		req.cmd = G1_READ_PIO;
