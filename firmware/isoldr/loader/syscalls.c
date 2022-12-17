@@ -381,7 +381,7 @@ static void data_transfer_cb(size_t size) {
 # endif
 
 	GDS->transfered = size;
-	GDS->status = (size > 0 ? CMD_STAT_COMPLETED : CMD_STAT_FAILED);
+	GDS->status = CMD_STAT_COMPLETED;
 
 	DBGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
 

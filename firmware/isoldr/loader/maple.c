@@ -419,6 +419,10 @@ int maple_init_vmu(int num) {
         filename[len - 7] = '0' + (num / 100);
     }
 
+    if (vmu_fd != FILEHND_INVALID) {
+        close(vmu_fd);
+    }
+
     vmu_fd = open(filename, flags);
 
     if (vmu_fd < 0) {

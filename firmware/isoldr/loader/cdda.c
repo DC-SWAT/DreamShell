@@ -670,6 +670,21 @@ static void stop_clean_cdda() {
 	aica_stop_cdda();
 }
 
+
+static uint32 sector_align(uint32 offset) {
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
+	if (offset % 512) {
+		offset = ((offset / 512) + 1) * 512;
+	}
+#elif defined(DEV_TYPE_GD)
+	if (offset % 2048) {
+		offset = ((offset / 2048) + 1) * 2048;
+	}
+#endif
+	return offset;
+}
+
+
 #if defined(HAVE_EXPT) && !defined(NO_ASIC_LT)
 static asic_handler_f old_vsync_handler;
 static void *vsync_handler(void *passer, register_stack *stack, void *current_vector) {
@@ -684,7 +699,13 @@ static void *vsync_handler(void *passer, register_stack *stack, void *current_ve
 #endif
 
 int CDDA_Init() {
+	static int inited = 0;
 
+	if (inited) {
+		return 0;
+	}
+
+	inited = 1;
 	memset(cdda, 0, sizeof(cdda_ctx_t));
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
@@ -723,11 +744,8 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 		goto end;
 	}
 
-	if(cdda->stat) {
+	if(cdda->stat || (first != cdda->first_track && cdda->fd > FILEHND_INVALID)) {
 		CDDA_Stop();
-	} else if(GDS->cdda_stat == SCD_AUDIO_STATUS_PAUSED && 
-				first == cdda->first_track && cdda->fd > FILEHND_INVALID) {
-		return CDDA_Release();
 	}
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
@@ -809,13 +827,7 @@ int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
 
 	/* Make alignment by sector */
 	if(cdda->offset > 0) {
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
-		cdda->offset = ((cdda->offset / 512) + 1) * 512;
-#elif defined(DEV_TYPE_GD)
-		cdda->offset = ((cdda->offset / 2048) + 1) * 2048;
-#else
-		(void)cdda->offset;
-#endif
+		cdda->offset = sector_align(cdda->offset);
 	}
 
 	lseek(cdda->fd, cdda->offset, SEEK_SET);
@@ -885,7 +897,7 @@ int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint16 loop) {
 
 	CDDA_Play(track, track, loop);
 
-	if (cdda->fd >= 0) {
+	if(cdda->fd != FILEHND_INVALID) {
 
 		cdda->first_lba = first_lba;
 		cdda->last_lba = last_lba;
@@ -894,14 +906,8 @@ int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint16 loop) {
 		GDS->lba = first_lba;
 
 		uint32 offset = cdda->offset + ((first_lba - cdda->lba) * RAW_SECTOR_SIZE);
+		lseek(cdda->fd, sector_align(offset), SEEK_SET);
 
-		/* Make alignment by sector */
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
-		offset = ((offset / 512) + 1) * 512;
-#elif defined(DEV_TYPE_GD)
-		offset = ((offset / 2048) + 1) * 2048;
-#endif
-		lseek(cdda->fd, offset, SEEK_SET);
 	}
 	return COMPLETED;
 }
@@ -913,7 +919,8 @@ int CDDA_Seek(uint32 offset) {
 
 	if(IsoInfo->emu_cdda && cdda->fd > -1) {
 		stop_clean_cdda();
-		lseek(cdda->fd, cdda->offset + ((offset - cdda->lba) * RAW_SECTOR_SIZE), SEEK_SET);
+		uint32 value = cdda->offset + ((offset - cdda->lba) * RAW_SECTOR_SIZE);
+		lseek(cdda->fd, sector_align(value), SEEK_SET);
 		cdda->stat = CDDA_STAT_FILL;
 		aica_setup_cdda(1);
 	}
@@ -969,16 +976,15 @@ int CDDA_Stop(void) {
 	gd_state_t *GDS = get_GDS();
 	
 	if(cdda->stat) {
-		
 		stop_clean_cdda();
-		
-		if(cdda->fd > FILEHND_INVALID && IsoInfo->image_type != ISOFS_IMAGE_TYPE_CDI) {
-			close(cdda->fd);
-			cdda->fd = FILEHND_INVALID;
-		}
 	}
 
-	if (cdda->alloc_buff) {
+	if(cdda->fd > FILEHND_INVALID && IsoInfo->image_type != ISOFS_IMAGE_TYPE_CDI) {
+		close(cdda->fd);
+		cdda->fd = FILEHND_INVALID;
+	}
+
+	if(cdda->alloc_buff) {
 		free(cdda->alloc_buff);
 		cdda->alloc_buff = NULL;
 	}
@@ -990,6 +996,7 @@ int CDDA_Stop(void) {
 }
 
 static void end_playback() {
+	LOGFF(NULL);
 	stop_clean_cdda();
 	gd_state_t *GDS = get_GDS();
 	GDS->drv_stat = CD_STATUS_PAUSED;
@@ -998,16 +1005,16 @@ static void end_playback() {
 
 static void play_next_track() {
 
-	DBGFF(NULL);
 	end_playback();
+	LOGFF(NULL);
 
 	if(cdda->first_track < cdda->last_track) {
 
 		CDDA_Play(cdda->first_track + 1, cdda->last_track, cdda->loop);
 
-	} else if(cdda->loop > 0) {
+	} else if(cdda->loop != 0) {
 
-		if(cdda->loop != 0x0f) {
+		if(cdda->loop != 0xffff) {
 			cdda->loop--;
 		}
 		if(cdda->first_lba == 0) {
@@ -1043,9 +1050,9 @@ static void fill_pcm_buff() {
 
 	if(cdda->last_lba > 0) {
 
-		uint32 offset = (cdda->cur_offset / RAW_SECTOR_SIZE) + cdda->lba + 1;
+		uint32 offset = (cdda->cur_offset / RAW_SECTOR_SIZE) + cdda->lba;
 
-		if (offset >= cdda->last_lba) {
+		if (offset > cdda->last_lba) {
 			play_next_track();
 			return;
 		}
