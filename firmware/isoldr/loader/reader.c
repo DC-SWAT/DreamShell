@@ -285,24 +285,23 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 
 int PreReadSectors(int sec, int num) {
 
-//	LOGF("%s: %d from %d\n", __func__, num, sec);
+	DBGFF("%d from %d\n", num, sec);
 
 	gd_state_t *GDS = get_GDS();
 	GDS->lba = sec + num;
-	size_t offset, len = num * IsoInfo->sector_size;
-	uint lba = IsoInfo->track_lba[0];
+
+	uint32 lba = IsoInfo->track_lba[0];
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 		switch_gdi_data_track(sec, GDS);
 		lba = ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
 	}
 
-	offset = (sec - lba) * IsoInfo->sector_size;
+	lseek(iso_fd, (sec - lba) * IsoInfo->sector_size, SEEK_SET);
 
-	if(pre_read(iso_fd, offset, len) < 0) {
+	if(pre_read(iso_fd, num * IsoInfo->sector_size) < 0) {
 		return FAILED;
 	}
-
 	return COMPLETED;
 }
 

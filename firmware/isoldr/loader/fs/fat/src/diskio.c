@@ -130,15 +130,14 @@ DRESULT disk_read_async (
 
 #ifdef DEV_TYPE_IDE
 DRESULT disk_read_part (
-//	BYTE drv,		/* Physical drive nmuber (0..) */
+	BYTE drv,		/* Physical drive nmuber (0..) */
 	BYTE *buff,		/* Data buffer to store read data */
 	DWORD sector,	/* Sector address (LBA) */
-	DWORD offset,	/* Offset */
 	DWORD bytes		/* Bytes to read */
 )
 {
-//	(void)drv;
-	return g1_ata_read_lba_dma_part((uint64_t)sector, offset, bytes, buff) ? RES_ERROR : RES_OK;
+	(void)drv;
+	return g1_ata_read_lba_dma_part((uint64_t)sector, bytes, buff) ? RES_ERROR : RES_OK;
 }
 #endif
 
@@ -273,6 +272,7 @@ DRESULT disk_abort (
 #endif
 
 #ifdef DEV_TYPE_IDE
-	return g1_ata_abort();
+	g1_ata_abort();
+	return 0;
 #endif
 }

@@ -41,7 +41,7 @@ DRESULT disk_write (BYTE, const BYTE*, DWORD, DWORD);
 #endif
 DRESULT disk_ioctl (BYTE, BYTE, void*);
 
-DRESULT disk_read_part(/*BYTE, */BYTE*, DWORD, DWORD, DWORD);
+DRESULT disk_read_part(BYTE, BYTE*, DWORD, DWORD);
 DRESULT disk_read_async (BYTE, BYTE*, DWORD, DWORD);
 DRESULT disk_pre_read (BYTE, DWORD, DWORD);
 int disk_poll (BYTE);

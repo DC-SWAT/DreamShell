@@ -492,29 +492,15 @@ int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
 	return 0;
 }
 
-// FIXME
-//static int pre_read_fd = 0;
-//
-//int pre_read(int fd, unsigned long offset, unsigned int size) {
-//
-//	if (pre_read_sectors(fh[fd].sec0 + (offset >> 11), size >> 11, 0) < 0) {
-//		return FS_ERR_SYSERR;
-//	}
-//
-//	fh[fd].async = 1;
-//	pre_read_fd = fd;
-//	return 0;
-//}
 
-//int pre_read_status(int fd) {
-//}
+int pre_read(int fd, unsigned int size) {
+	if (cdrom_pre_read_sectors(fh[fd].sec0 + (fh[fd].loc >> 11), size >> 11, 0) < 0) {
+		return FS_ERR_SYSERR;
+	}
+	fh[fd].async = 1;
+	return 0;
+}
 
-//int pre_read_xfer_start(uint32_t addr, size_t bytes) {
-//}
-
-//int pre_read_xfer_size() {
-//	return g1_dma_transfered();
-//}
 
 long int lseek(int fd, long int offset, int whence) {
 

@@ -2810,8 +2810,9 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 #ifdef DEV_TYPE_IDE
 				g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
 #endif
-				if (disk_read_async(fp->fs->drv, fp->rbuff, sect, cc))
+				if (disk_read_async(fp->fs->drv, fp->rbuff, sect, cc)) {
 					ABORT(fp->fs, FR_DISK_ERR);
+				}
 
 				goto _continue;
 			}
@@ -2827,9 +2828,9 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 
 		g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
 
-		if (fs_dma_enabled() == FS_DMA_SHARED && mmu_enabled()) {
+		if (mmu_enabled()) {
 
-			if (disk_read_part(/*fp->fs->drv, */fp->rbuff, fp->dsect, fp->fptr % SS(fp->fs), rcnt)) {
+			if (disk_read_part(fp->fs->drv, fp->rbuff, fp->dsect, rcnt)) {
 				ABORT(fp->fs, FR_DISK_ERR);
 			}
 
@@ -2911,65 +2912,41 @@ FRESULT f_read_async (
 
 FRESULT f_pre_read (
 	FIL* fp, 	/* Pointer to the file object */
-	DWORD ofs,	/* File offset */
 	DWORD btr	/* Number of bytes to pre-read */
 )
 {
 	FRESULT res;
-	DWORD clst = 0, sect, csect, cc;
+	DWORD sect;
 
 	res = validate(fp);							/* Check validity */
 	if (res != FR_OK) 
 		LEAVE_FF(fp->fs, res);
-		
+
 	if (fp->err)								   /* Check error */
 		LEAVE_FF(fp->fs, (FRESULT)fp->err);
-		
+
 	if (!(fp->flag & FA_READ)) 					/* Check access mode */
 		LEAVE_FF(fp->fs, FR_DENIED);
-		
-	fp->fptr = ofs;
-	
+
 #ifdef DEV_TYPE_IDE
 	g1_dma_set_irq_mask(1);
 #endif
-	
-//	if ((fp->fptr % SS(fp->fs)) == 0) {		/* On the sector boundary? */
-	
-		csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));	/* Sector offset in the cluster */
-		
-		if (!csect) {						/* On the cluster boundary? */
-		
-			if (fp->fptr == 0) {			/* On the top of the file? */
-				clst = fp->sclust;		/* Follow from the origin */
-			} else {						/* Middle or end of the file */
 
-				if (fp->cltbl)
-					clst = clmt_clust(fp, fp->fptr);	/* Get cluster# from the CLMT */
-				else
-					clst = get_fat(fp->fs, fp->clust);	/* Follow cluster chain on the FAT */
-			}
-			
-			if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
-			if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
-			fp->clust = clst;				/* Update current cluster */
-		}
-		
-		sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
-		cc = btr / SS(fp->fs);		/* When remaining bytes >= sector size, */
-		fp->clust += (cc / fp->fs->csize);
+	sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
 
-		if (!sect) 
-			ABORT(fp->fs, FR_INT_ERR);
+	if (!sect)
+		ABORT(fp->fs, FR_INT_ERR);
 
-		sect += csect;
-		fp->dsect = sect;
-//	}
-	
+	sect += (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));
+	fp->dsect = sect;
+
 	/* Start the pre-reading */
-	if (disk_pre_read(fp->fs->drv, sect, cc))
+	if (disk_pre_read(fp->fs->drv, sect, btr / SS(fp->fs))) {
 		ABORT(fp->fs, FR_DISK_ERR);
-	
+	}
+
+	fp->fptr += btr;
+	fp->clust = clmt_clust(fp, fp->fptr);
 	LEAVE_FF(fp->fs, res);
 }
 

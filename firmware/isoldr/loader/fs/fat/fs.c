@@ -261,10 +261,10 @@ int read(int fd, void *ptr, unsigned int size) {
 	return br;
 }
 
-int pre_read(int fd, unsigned long offset, unsigned int size) {
+int pre_read(int fd, unsigned int size) {
 
 	CHECK_FD();
-	FRESULT rc = f_pre_read(&file->fp, offset, size);
+	FRESULT rc = f_pre_read(&file->fp, size);
 
 	if(rc != FR_OK) {
 		LOGFF("ERROR, fd %d code %d\n", fd, rc);
