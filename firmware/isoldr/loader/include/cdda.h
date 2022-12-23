@@ -68,12 +68,12 @@ typedef struct cdda_ctx {
 	uint32 volume;
 
 	/* CDDA status (internal) */
-	uint8 stat;
+	uint32 stat;
 
 	/* CDDA syscall request data */
-	uint16 loop;
-	uint8 first_track;
-	uint8 last_track;
+	uint32 loop;
+	uint32 first_track;
+	uint32 last_track;
 	uint32 first_lba;
 	uint32 last_lba;
 
@@ -89,10 +89,10 @@ cdda_ctx_t *get_CDDA(void);
 int CDDA_Init(void);
 void CDDA_MainLoop(void);
 
-int CDDA_Play(uint8 first, uint8 last, uint16 loop);
-int CDDA_Play2(uint32 first, uint32 last, uint16 loop);
+int CDDA_Play(uint32 first, uint32 last, uint32 loop);
+int CDDA_Play2(uint32 first, uint32 last, uint32 loop);
 int CDDA_Pause(void);
-int CDDA_Release(void);
+int CDDA_Release(uint32 loop);
 int CDDA_Stop(void);
 int CDDA_Seek(uint32 offset);
 

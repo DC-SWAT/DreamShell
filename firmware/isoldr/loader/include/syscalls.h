@@ -51,7 +51,6 @@
 #define CMD_STAT_ABORTED     3
 #define CMD_STAT_WAITING     4
 #define CMD_STAT_ERROR       5
-#define CMD_STAT_STREAMING   3 // FIXME
 
 #define CMD_ERR_OK           0
 #define CMD_ERR_HW_ERR       2
@@ -101,7 +100,8 @@ typedef struct gd_state {
 	int status;
 	int err;
 	// int err2;
-	int dma_status;
+	int ata_status;
+	int cmd_abort;
 	
 	uint32 requested;
 	uint32 transfered;

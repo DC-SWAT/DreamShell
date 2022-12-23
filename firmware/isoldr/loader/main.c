@@ -90,8 +90,6 @@ int main(int argc, char *argv[]) {
 
 	if (!IsoInfo->use_dma) {
 		fs_enable_dma(FS_DMA_DISABLED);
-	} else if(IsoInfo->exec.type == BIN_TYPE_WINCE && !IsoInfo->use_irq) {
-		fs_enable_dma(FS_DMA_NO_IRQ);
 	}
 
 	printf("Loading executable...\n");
@@ -163,7 +161,8 @@ int main(int argc, char *argv[]) {
 	if (IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
 		launch(0xac00e000);
 	} else if (IsoInfo->syscalls) {
-		launch(0xac008300);
+		// FIXME launch(0xac008300);
+		launch(0xac00e000);
 	} else {
 		launch(0xac00b800);
 	}

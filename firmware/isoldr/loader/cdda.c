@@ -736,7 +736,7 @@ int CDDA_Init() {
 }
 
 
-int CDDA_Play(uint8 first, uint8 last, uint16 loop) {
+int CDDA_Play(uint32 first, uint32 last, uint32 loop) {
 
 	gd_state_t *GDS = get_GDS();
 
@@ -879,7 +879,7 @@ end:
 }
 
 
-int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint16 loop) {
+int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint32 loop) {
 
 	uint8 track = 0;
 
@@ -944,7 +944,7 @@ int CDDA_Pause(void) {
 }
 
 
-int CDDA_Release(void) {
+int CDDA_Release(uint32 loop) {
 
 	gd_state_t *GDS = get_GDS();
 	
@@ -965,6 +965,7 @@ int CDDA_Release(void) {
 #endif /* _FS_ASYNC */
 	}
 
+	cdda->loop = loop;
 	GDS->drv_stat = CD_STATUS_PLAYING;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
 	return COMPLETED;
