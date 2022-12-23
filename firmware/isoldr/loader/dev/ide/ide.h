@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2020 SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2014-2022 SWAT <http://www.dc-swat.ru>
  * Copyright (c) 2017 Megavolt85
  *
  * This file is free software; you can redistribute it and/or modify
@@ -92,6 +92,17 @@ void g1_dma_abort(void);
 s32 g1_dma_in_progress(void);
 u32 g1_dma_transfered(void);
 
+void g1_pio_reset(size_t total_bytes);
+void g1_pio_xfer(u32 addr, size_t bytes);
+void g1_pio_abort(void);
+s32 g1_pio_in_progress(void);
+u32 g1_pio_transfered(void);
+
+void g1_ata_xfer(u32 addr, size_t bytes);
+void g1_ata_abort(void);
+s32 g1_ata_in_progress(void);
+u32 g1_ata_transfered(void);
+
 void cdrom_spin_down(u8 drive);
 s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive);
 s32 cdrom_read_toc(CDROM_TOC *toc_buffer, u8 session, u8 drive);
@@ -106,6 +117,7 @@ s32 cdrom_cdda_resume();
 s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive);
 s32 cdrom_read_sectors_ex(void *buffer, u32 sector, u32 cnt, u8 async, u8 dma, u8 drive);
 s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t bytes, u8 drive);
+s32 cdrom_pre_read_sectors(u32 sector, size_t bytes, u8 drive);
 s32 cdrom_chk_disc_change(u8 drive);
 u8 cdrom_get_dev_type(u8 drive);
 
@@ -115,14 +127,13 @@ u8 cdrom_get_dev_type(u8 drive);
     on the G1 ATA bus using LBA mode (either 28 or 48 bits, as appropriate).
 
     \param  sector          The sector reading.
-    \param  offset          The number of bytes to skip.
     \param  bytes           The number of bytes to read.
     \param  buf             Storage for the read-in disk sectors. This should be
                             at least 32-byte aligned.
     \return                 0 on success. < 0 on failure, setting errno as
                             appropriate.
 */
-s32 g1_ata_read_lba_dma_part(u64 sector, size_t offset, size_t bytes, u8 *buf);
+s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf);
 
 
 /** \brief  Pre-read disk sector part with Linear Block Addressing (LBA).
@@ -201,10 +212,10 @@ u64 g1_ata_max_lba(void);
 s32 g1_ata_flush(void);
 
 
-/** \brief  Abort the ATA device.
+/** \brief  Ack IRQ of the ATA device.
  * 
  */
-s32 g1_ata_abort(void);
+s32 g1_ata_ack_irq(void);
 
 __END_DECLS
 

@@ -10,6 +10,7 @@
 #include <main.h>
 #include <exception.h>
 #include <asic.h>
+#include <mmu.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
 
@@ -151,11 +152,15 @@ typedef struct ide_req {
 #endif
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
-static s16 g1_dma_part_avail = 0,
-			g1_dma_irq_count = 0;
-static s8 g1_dma_irq_visible = 1,
-			g1_dma_irq_called = 0,
-			g1_dma_irq_idx_game = 0;
+static u32 g1_dma_part_avail = 0;
+static u32 g1_dma_irq_visible = 1;
+static u32 g1_dma_irq_called = 0;
+static s32 g1_dma_irq_idx_game = 0;
+
+static u32 g1_pio_total = 0;
+static u32 g1_pio_avail = 0;
+static u32 g1_pio_trans = 0;
+static u32 g1_pio_cdrom = 0;
 
 #ifdef HAVE_EXPT
 static s8 g1_dma_irq_idx_internal = 0;
@@ -242,25 +247,16 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		DBGF("ASIC_EXT_GD_CMD: 0x%08lx %d\n", statusExt, g1_dma_irq_visible);
 
 		if (!(status & ASIC_NRM_GD_DMA)) {
-
-			/* Ack device IRQ. */
-			u8 state = IN8(G1_ATA_STATUS_REG);
-
-			if (state & ATA_SR_ERR) {
-				LOGF("ATA status has error, state %x\n", state);
-			}
+			g1_ata_ack_irq();
 		}
 	}
-
 	if (status & ASIC_NRM_GD_DMA) {
-
 		/* Processing filesystem */
 		poll_all();
 
-		if (g1_dma_irq_visible && ++g1_dma_irq_count < 5) {
+		if (g1_dma_irq_visible) {
 			return current_vector;
 		}
-
 		/* Ack DMA IRQ. */
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
 	}
@@ -303,8 +299,6 @@ void g1_dma_abort(void) {
 }
 
 void g1_dma_start(u32 addr, size_t bytes) {
-
-	g1_dma_irq_count = 0;
 
 	/* Set the DMA parameters up. */
 	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
@@ -385,7 +379,11 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 
 	s32 dma_mode = fs_dma_enabled();
 
-	if (dma_mode == FS_DMA_DISABLED) {
+	if (mmu_enabled()) {
+
+		return;
+
+	} if (dma_mode == FS_DMA_DISABLED) {
 
 		return;
 
@@ -666,7 +664,7 @@ static s32 g1_dev_scan(void)
 				LOGF("%s %s ATA drive %ld Kb\n",
 					dev_bus_name[i],
 					ide_devices[i].lba48 ? "LBA48":"LBA28",
-					(u64)(ide_devices[i].max_lba >> 1));
+					(u32)(ide_devices[i].max_lba >> 1));
 			}
 			else
 			{
@@ -684,41 +682,6 @@ static s32 g1_dev_scan(void)
 #endif /* DEV_TYPE_EMU */
 }
 
-static s32 ide_polling(u8 advanced_check) 
-{
-	u8 i;
-	// (I) Delay 400 nanosecond for BSY to be set:
-	// -------------------------------------------------
-	for(i = 0; i < 4; i++)
-		IN8(G1_ATA_ALTSTATUS); // Reading the Alternate Status port wastes 100ns; loop four times.
-	
-	// (II) Wait for BSY to be cleared:
-	// -------------------------------------------------
-	g1_ata_wait_nbsy();
- 
-	if (advanced_check) 
-	{
-		u8 state = IN8(G1_ATA_STATUS_REG); // Read Status Register.
-		
-		// (III) Check For Errors:
-		// -------------------------------------------------
-		if (state & ATA_SR_ERR)
-			return -2; // Error.
-		
-		// (IV) Check If Device fault:
-		// -------------------------------------------------
-		if (state & ATA_SR_DF)
-			return -1; // Device Fault.
- 
-		// (V) Check DRQ:
-		// -------------------------------------------------
-		// BSY = 0; DF = 0; ERR = 0 so we should check for DRQ now.
-		if ((state & ATA_SR_DRQ) == 0)
-			return -3; // DRQ should be set
-	}
-	
-	return 0; // No Error.
-}
 
 #ifdef DEV_TYPE_IDE
 
@@ -730,9 +693,9 @@ static s32 g1_ata_access(struct ide_req *req)
 	u32 len;
 	u64 lba = req->lba;
 	u8 lba_io[6];
-	u8 head, err;
-	u16 i, j, cmd;
-	
+	u8 head;
+	u16 cmd;
+
 	if ((req->cmd & 2))
 	{
 		if ((u32)buff & 0x1f)
@@ -748,6 +711,7 @@ static s32 g1_ata_access(struct ide_req *req)
 		cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO;
 	}
 	
+	// LOGFF("STATUS=%lx\n", IN8(G1_ATA_ALTSTATUS));
 	g1_ata_wait_bsydrq();
 	
 	while(count)
@@ -832,44 +796,32 @@ static s32 g1_ata_access(struct ide_req *req)
 			 /* Enable G1 DMA. */
 			OUT8(G1_ATA_DMA_ENABLE, 1);
 		}
-		
-		g1_ata_wait_bsydrq();
-		
+
+		g1_ata_wait_nbsy();
+        g1_ata_wait_drdy();
+
 		OUT8(G1_ATA_COMMAND_REG, cmd);
-		
+
 		if (req->cmd == G1_READ_PIO)
 		{
-			for (i = 0; i < len; i++)
-			{
-				if ((err = ide_polling(1)))
-				{
-					return err; // Polling, set error and exit if there is.
-				}
-				
-				for (j = 0; j < 256; j++)
-				{
-					((u16 *)buff)[i*256+j] = IN16(G1_ATA_DATA);
-				}
-			}
+			g1_pio_reset(len * 512);
+			g1_pio_xfer((u32)buff, len * 512);
 		}
 #if _FS_READONLY == 0
 		else if (req->cmd == G1_WRITE_PIO)
 		{
-			for (i = 0; i < len; i++)
+			for (u32 i = 0; i < len; i++)
 			{
 				dcache_pref_range(((u32*)buff)[i*256], 512);
+				g1_ata_wait_nbsy();
 				
-				if ((err = ide_polling(1)))
-				{
-					return err; // Polling, set error and exit if there is.
-				}
-				
-				for (j = 0; j < 256; j++)
+				for (u32 j = 0; j < 256; j++)
 					OUT16(G1_ATA_DATA, ((u16 *)buff)[i*256+j]);
 			}
 			
 			OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
-			err = ide_polling(0);
+			g1_ata_wait_bsydrq();
+			g1_ata_ack_irq();
 		}
 #endif
 		else
@@ -878,7 +830,6 @@ static s32 g1_ata_access(struct ide_req *req)
 			OUT8(G1_ATA_DMA_STATUS, 1);
 			
 			if (req->async) {
-				// FIXME: Check count
 				return 0;
 			}
 
@@ -886,10 +837,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			g1_ata_wait_dma();
 			OUT8(G1_ATA_DMA_ENABLE, 0);
 
-			/* Ack device IRQ. */
-			u8 state = IN8(G1_ATA_STATUS_REG);
-
-			if (state & ATA_SR_ERR || state & ATA_SR_DF) {
+			if (g1_ata_ack_irq() < 0) {
 				return -1;
 			}
 
@@ -1007,7 +955,7 @@ void g1_get_partition(void)
 
 s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	
-	DBGFF("%ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
+	LOGF("G1_ATA_READ: %ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
 			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
 
 	const u8 drive = 1; // TODO
@@ -1049,67 +997,102 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 
 #endif
 
-s32 g1_ata_read_lba_dma_part(u64 sector, size_t offset, size_t bytes, u8 *buf) {
+s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 
-	if(offset && g1_dma_part_avail > 0) {
+	LOGF("G1_ATA_PART: b=%d a=%d", bytes, g1_dma_part_avail);
 
+	if (g1_dma_part_avail > 0) {
+		LOGF(" continue\n");
 		g1_dma_part_avail -= bytes;
 		g1_dma_start((u32)buf, bytes);
 		return 0;
 	}
-
-	g1_dma_part_avail = 512 - bytes;
+	if (bytes > 512) {
+		g1_dma_part_avail = 512 - (bytes % 512);
+	} else {
+		g1_dma_part_avail = 512 - bytes;
+	}
 
 	const u8 drive = 1; // TODO
 	struct ide_req req;
 
 	req.buff = buf;
-	req.count = 1;
+	req.count = (bytes / 512) + 1;
 	req.bytes = bytes;
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = G1_READ_DMA;
 	req.lba = sector;
 	req.async = 1;
 
+	LOGF(" read c=%d a=%d\n", req.count, g1_dma_part_avail);
 	return g1_ata_access(&req);
 }
 
 s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
-	// TODO
-	(void)sector;
-	(void)count;
+
+	const u8 drive = 1; // TODO
+	struct ide_device *dev = &ide_devices[drive & 1];
+	u8 lba_io[6];
+	u8 head;
+
+	LOGF("G1_ATA_PRE_READ: s=%ld c=%ld\n", (uint32)sector, count);
+
+	// LBA48 only
+	lba_io[0] = (sector & 0x000000FF) >> 0;
+	lba_io[1] = (sector & 0x0000FF00) >> 8;
+	lba_io[2] = (sector & 0x00FF0000) >> 16;
+	lba_io[3] = (sector & 0xFF000000) >> 24;
+	lba_io[4] = 0;
+	lba_io[5] = 0;
+	head      = 0;
+
+	g1_ata_wait_bsydrq();
+	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
+
+	OUT8(G1_ATA_CTL, 0x80);
+	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
+	OUT8(G1_ATA_LBA_LOW, lba_io[3]);
+	OUT8(G1_ATA_LBA_MID, lba_io[4]);
+	OUT8(G1_ATA_LBA_HIGH, lba_io[5]);
+
+	OUT8(G1_ATA_CTL, 0);
+	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count & 0xff));
+	OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
+	OUT8(G1_ATA_LBA_MID,  lba_io[1]);
+	OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
+
+	g1_ata_wait_bsydrq();
+
+	if (fs_dma_enabled()) {
+		g1_dma_part_avail = 0;
+		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_DMA_EXT);
+	} else {
+		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_WRITE_PIO_EXT);
+		g1_pio_reset(count * 512);
+	}
 	return 0;
 }
 
 s32 g1_ata_poll(void) {
-
+	int rv = 0;
 #ifdef HAVE_EXPT
 	if(!exception_inside_int() && g1_dma_in_progress()) {
 #else
 	if(g1_dma_in_progress()) {
 #endif
-		int rv = g1_dma_transfered();
+		rv = g1_dma_transfered();
 		DBGFF("%d\n", rv);
-		return rv > 0 ? rv : 32;
+		return rv > 0 ? rv : 2;
 	}
-
-	/* Ack device IRQ. */
-	u8 st = IN8(G1_ATA_STATUS_REG);
-
-	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
-		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
-				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
-				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
-				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
-		return -1;
+	if (!mmu_enabled()/* || !g1_dma_irq_visible*/) {
+		rv = g1_ata_ack_irq();
 	}
-
 	if (!g1_dma_part_avail) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
 	}
-
-	return 0;
+	return rv;
 }
+
 
 #if _USE_MKFS && !_FS_READONLY
 u64 g1_ata_max_lba(void) {
@@ -1125,12 +1108,116 @@ s32 g1_ata_flush(void) {
 	return 0;
 }
 
-s32 g1_ata_abort(void) {
-	g1_dma_abort();
-	return 0;
+#endif /* DEV_TYPE_IDE */
+
+void g1_pio_reset(size_t total_bytes) {
+	OUT8(G1_ATA_CTL, 2);
+	g1_pio_total = total_bytes;
+	g1_pio_avail = g1_pio_total;
+	g1_pio_trans = 0;
+	g1_pio_cdrom = 0;
 }
 
-#endif /* DEV_TYPE_IDE */
+void g1_pio_xfer(u32 addr, size_t bytes) {
+	u16 *buff = (u16 *)addr;
+	const u32 sec_size = 512;
+	u32 words_count = bytes >> 1;
+
+	g1_pio_trans = 0;
+
+	for(u32 w = 0; w < words_count; ++w) {
+
+		if (((g1_pio_total - g1_pio_avail) % sec_size) == 0) {
+			if (g1_ata_wait_drq()) {
+				LOGFF("Error, status=%02x\n", IN8(G1_ATA_ALTSTATUS));
+				OUT8(G1_ATA_CTL, 0);
+				break;
+			}
+		}
+
+		buff[w] = IN16(G1_ATA_DATA);
+		g1_pio_avail -= 2;
+
+		if (g1_pio_avail == 0) {
+			break;
+		}
+	}
+
+	g1_pio_trans = bytes;
+
+	if (g1_pio_avail == 0) {
+		g1_ata_ack_irq();
+		OUT8(G1_ATA_CTL, 0);
+	}
+}
+
+void g1_pio_abort(void) {
+	g1_pio_reset(0);
+	g1_ata_ack_irq();
+	OUT8(G1_ATA_CTL, 0);
+}
+
+s32 g1_pio_in_progress(void) {
+	return (g1_pio_trans == 0)
+		|| (g1_pio_trans != 0 && (g1_pio_total - g1_pio_avail) != 0);
+}
+
+u32 g1_pio_transfered(void) {
+	return g1_pio_trans;
+}
+
+
+void g1_ata_xfer(u32 addr, size_t bytes) {
+	if (fs_dma_enabled()) {
+		g1_dma_start(addr, bytes);
+	} else {
+		g1_pio_xfer(addr, bytes);
+	}
+}
+
+s32 g1_ata_in_progress(void) {
+	if (fs_dma_enabled()) {
+		return g1_dma_in_progress();
+	} else {
+		return g1_pio_in_progress();
+	}
+}
+
+u32 g1_ata_transfered(void) {
+	if (fs_dma_enabled()) {
+		return g1_dma_transfered();
+	} else {
+		return g1_pio_transfered();
+	}
+}
+
+void g1_ata_abort(void) {
+	g1_dma_abort();
+	g1_pio_abort();
+
+	OUT8(G1_ATA_DEVICE_SELECT, 0x10);
+	OUT8(G1_ATA_FEATURES, 0);
+
+	g1_ata_wait_nbsy();
+	OUT8(G1_ATA_COMMAND_REG, 0);
+
+	g1_ata_wait_bsydrq();
+	g1_ata_ack_irq();
+}
+
+s32 g1_ata_ack_irq(void) {
+	/* Ack device IRQ. */
+	u8 st = IN8(G1_ATA_STATUS_REG);
+
+	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
+		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
+				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
+				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+		return -1;
+	}
+	return 0;
+}
 
 
 s32 g1_bus_init(void)
@@ -1151,6 +1238,43 @@ s32 g1_bus_init(void)
 
 
 #ifdef DEV_TYPE_GD
+
+static s32 ide_polling(u8 advanced_check) 
+{
+	u8 i;
+	// (I) Delay 400 nanosecond for BSY to be set:
+	// -------------------------------------------------
+	for(i = 0; i < 4; i++)
+		IN8(G1_ATA_ALTSTATUS); // Reading the Alternate Status port wastes 100ns; loop four times.
+	
+	// (II) Wait for BSY to be cleared:
+	// -------------------------------------------------
+	g1_ata_wait_nbsy();
+ 
+	if (advanced_check) 
+	{
+		u8 state = IN8(G1_ATA_STATUS_REG); // Read Status Register.
+		
+		// (III) Check For Errors:
+		// -------------------------------------------------
+		if (state & ATA_SR_ERR)
+			return -2; // Error.
+		
+		// (IV) Check If Device fault:
+		// -------------------------------------------------
+		if (state & ATA_SR_DF)
+			return -1; // Device Fault.
+ 
+		// (V) Check DRQ:
+		// -------------------------------------------------
+		// BSY = 0; DF = 0; ERR = 0 so we should check for DRQ now.
+		if ((state & ATA_SR_DRQ) == 0)
+			return -3; // DRQ should be set
+	}
+	
+	return 0; // No Error.
+}
+
 static void send_packet_command(u8 *cmd_buff, u8 drive)
 {
 	s32 i;
@@ -2052,6 +2176,11 @@ s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t byte
 	
 	g1_dma_set_irq_mask(1);
 	return g1_packet_read(&req);
+}
+
+s32 cdrom_pre_read_sectors(u32 sector, size_t bytes, u8 drive) {
+	// TODO
+	return 0;
 }
 
 u8 cdrom_get_dev_type(u8 drive)
