@@ -798,7 +798,7 @@ static s32 g1_ata_access(struct ide_req *req)
 		}
 
 		g1_ata_wait_nbsy();
-        g1_ata_wait_drdy();
+		g1_ata_wait_drdy();
 
 		OUT8(G1_ATA_COMMAND_REG, cmd);
 
@@ -1067,7 +1067,7 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 		g1_dma_part_avail = 0;
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_DMA_EXT);
 	} else {
-		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_WRITE_PIO_EXT);
+		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_PIO_EXT);
 		g1_pio_reset(count * 512);
 	}
 	return 0;
@@ -2180,6 +2180,9 @@ s32 cdrom_read_sectors_part(void *buffer, u32 sector, size_t offset, size_t byte
 
 s32 cdrom_pre_read_sectors(u32 sector, size_t bytes, u8 drive) {
 	// TODO
+	(void)sector;
+	(void)bytes;
+	(void)drive;
 	return 0;
 }
 

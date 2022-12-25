@@ -87,6 +87,12 @@ int read(int fd, void *ptr, size_t size) {
 	return dclsc(DCLOAD_READ, fd, ptr, size);
 }
 
+int pre_read(int fd, unsigned int size) {
+	(void)fd;
+	(void)size;
+	return 0;
+}
+
 #if !_FS_READONLY
 
 int write(int fd, void *ptr, size_t size) {

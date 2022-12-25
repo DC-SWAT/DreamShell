@@ -124,7 +124,7 @@ int pre_read(int fd, unsigned int size);
 #	define pre_read_xfer_busy() 0
 #	define pre_read_xfer_size() 0
 #	define pre_read_xfer_end() do { } while(0)
-#	define pre_read_xfer_abort do { } while(0)
+#	define pre_read_xfer_abort() do { } while(0)
 #endif
 
 #endif /* __FS_H__ */
