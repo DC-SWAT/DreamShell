@@ -41,8 +41,6 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
 	GDS->cdda_track = 0;
-	GDS->err = CMD_ERR_OK;
-	// GDS->err2 = 0;
 	GDS->disc_change = 0;
 	GDS->disc_num = 0;
 
@@ -371,51 +369,20 @@ static void get_ver_str() {
 #ifdef _FS_ASYNC
 
 static void data_transfer_cb(size_t size) {
-
 	gd_state_t *GDS = get_GDS();
-
-# ifdef DEV_TYPE_SD
-	if(size > 0) {
-		dcache_purge_range(GDS->param[2], size);
-	}
-# endif
-
-	GDS->transfered = size;
-	GDS->status = CMD_STAT_COMPLETED;
-
-	DBGFF("%s %d\n", stat_name[GDS->status + 1], GDS->transfered);
-
-	GDS->drv_stat = CD_STATUS_PAUSED;
 	GDS->ata_status = 0;
-
-	pre_read_xfer_end();
+	(void)size;
 }
-
-static void data_stream_cb(size_t size) {
-
-	gd_state_t *GDS = get_GDS();
-
-	GDS->transfered += size;
-	GDS->streamed = size;
-	GDS->ata_status = 0;
-
-	if(!GDS->requested) {
-		pre_read_xfer_end();
-		GDS->status = CMD_STAT_ABORTED;
-	}
-	LOGFF("s=%d t=%d r=%d\n", size, GDS->transfered, GDS->requested);
-}
-
 
 void data_transfer_true_async() {
 
 	gd_state_t *GDS = get_GDS();
-	int ps;
 
 #if defined(DEV_TYPE_SD)
 	fs_enable_dma(IsoInfo->emu_async);
 #elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	fs_enable_dma(FS_DMA_SHARED);
+	uint32 check_count = 0;
 #endif
 
 	GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_transfer_cb);
@@ -428,11 +395,13 @@ void data_transfer_true_async() {
 
 	while(GDS->ata_status) {
 
+		gdcExitToGame();
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if (!exception_inited() || !g1_dma_in_progress())
+		if(!exception_inited() || (!pre_read_xfer_busy() && check_count++ > 1))
 #endif
 		{
-			ps = poll(iso_fd);
+			int ps = poll(iso_fd);
 
 			if (ps < 0) {
 				GDS->ata_status = 0;
@@ -443,9 +412,21 @@ void data_transfer_true_async() {
 				GDS->transfered = ps;
 			}
 		}
-		DBGFF("%d\n", GDS->transfered);
-		gdcExitToGame();
 	}
+
+	pre_read_xfer_end();
+
+	size_t size = GDS->param[1] * GDS->gdc.sec_size;
+	GDS->transfered = size;
+	GDS->status = CMD_STAT_COMPLETED;
+	GDS->drv_stat = CD_STATUS_PAUSED;
+
+# ifdef DEV_TYPE_SD
+	if(size > 0) {
+		dcache_purge_range(GDS->param[2], size);
+	}
+# endif
+
 }
 #endif /* _FS_ASYNC */
 
@@ -455,7 +436,7 @@ void data_transfer_emu_async() {
 	gd_state_t *GDS = get_GDS();
 	uint sc, sc_size;
 
-	while(GDS->param[1] > 0) {
+	while(GDS->param[1] > 0 && GDS->cmd_abort == 0) {
 
 		if(GDS->param[1] <= (uint32)IsoInfo->emu_async) {
 			sc = GDS->param[1];
@@ -573,18 +554,26 @@ static void data_transfer_dma_stream() {
 
 	gd_state_t *GDS = get_GDS();
 
+	fs_enable_dma(FS_DMA_SHARED);
+	GDS->ata_status = 2;
+	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
+
 	if(GDS->status == CMD_STAT_PROCESSING) {
+		GDS->status = CMD_STAT_WAITING;
+	}
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		fs_enable_dma(FS_DMA_SHARED);
-#elif defined(DEV_TYPE_SD)
-		fs_enable_dma(IsoInfo->emu_async);
-#endif
-		GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
+	GDS->ata_status = 1;
 
-		if(GDS->status == CMD_STAT_COMPLETED) {
-			GDS->status = CMD_STAT_WAITING;
+	while(GDS->ata_status) {
+
+		if(GDS->requested == 0 || GDS->cmd_abort != 0) {
+			GDS->ata_status = 0;
+			GDS->status = CMD_STAT_ABORTED;
+			pre_read_xfer_end();
+			break;
 		}
+		GDS->transfered = pre_read_xfer_size();
+		gdcExitToGame();
 	}
 }
 
@@ -592,18 +581,17 @@ static void data_transfer_pio_stream() {
 
 	gd_state_t *GDS = get_GDS();
 
+	fs_enable_dma(FS_DMA_DISABLED);
+	GDS->ata_status = 2;
+	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
+
 	if(GDS->status == CMD_STAT_PROCESSING) {
-
-		fs_enable_dma(FS_DMA_DISABLED);
-		GDS->ata_status = 1;
-		GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
-
-		if(GDS->status == CMD_STAT_COMPLETED) {
-			GDS->status = CMD_STAT_WAITING;
-		}
+		GDS->status = CMD_STAT_WAITING;
 	}
 
-	while(GDS->status == CMD_STAT_WAITING) {
+	GDS->ata_status = 1;
+
+	while(GDS->ata_status) {
 
 		if(GDS->param[2] != 0) {
 
@@ -617,9 +605,11 @@ static void data_transfer_pio_stream() {
 				void (*callback)() = (void (*)())(GDS->callback);
 				callback(GDS->callback_param);
 			}
-			if(GDS->requested == 0) {
+			if(GDS->requested == 0 || GDS->cmd_abort != 0) {
+				GDS->ata_status = 0;
 				GDS->status = CMD_STAT_ABORTED;
 				pre_read_xfer_end();
+				break;
 			}
 		} else {
 			gdcExitToGame();
@@ -651,9 +641,8 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		GDS->cmd = cmd;
 		GDS->status = CMD_STAT_PROCESSING;
 		GDS->transfered = 0;
-		GDS->err = CMD_ERR_OK;
-		// GDS->err2 = 0;
 		GDS->ata_status = 0;
+		GDS->cmd_abort = 0;
 		gd_chn = GDS->req_count;
 		
 		LOGFF("%d %s %d", cmd, (cmd_name[cmd] ? cmd_name[cmd] : "UNKNOWN"), gd_chn);
@@ -676,7 +665,6 @@ int gdcReqCmd(int cmd, uint32 *param) {
 			}
 #endif
 			GDS->drv_stat = CD_STATUS_PLAYING;
-			GDS->streamed = 0;
 
 			if(cmd != CMD_PIOREAD && cmd != CMD_DMAREAD) {
 				GDS->requested = GDS->param[1] * GDS->gdc.sec_size;
@@ -855,40 +843,18 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 
 		case CMD_STAT_ABORTED:
 
-			if (GDS->err != CMD_ERR_OK) {
-				status[0] = GDS->err;
-				status[1] = 0; //GDS->err2;
-				rv = CMD_STAT_FAILED;
-				break;
-			} else {
-				status[2] = GDS->transfered;
-				status[3] = GDS->ata_status;
-				GDS->status = CMD_STAT_IDLE;
-				rv = CMD_STAT_COMPLETED;
-			}
+			status[2] = GDS->transfered;
+			status[3] = GDS->ata_status;
+			GDS->ata_status = 0;
+			GDS->status = CMD_STAT_IDLE;
+			rv = CMD_STAT_COMPLETED;
 			break;
 
 		case CMD_STAT_WAITING:
-			if(GDS->err != CMD_ERR_OK) {
-				status[0] = GDS->err;
-				status[1] = 0; //GDS->err2;
-				status[2] = GDS->transfered;
-				status[3] = GDS->ata_status;
-				rv = CMD_STAT_FAILED;
-			} else {
-				rv = CMD_STAT_ABORTED;
-#ifdef _FS_ASYNC
-				if(!pre_read_xfer_busy() && GDS->ata_status) {
-					data_stream_cb(GDS->streamed);
-					if(GDS->status == CMD_STAT_ABORTED) {
-						GDS->status = CMD_STAT_IDLE;
-						rv = CMD_STAT_COMPLETED;
-					}
-				}
-#endif
-				status[2] = GDS->transfered;
-				status[3] = GDS->ata_status;
-			}
+
+			rv = CMD_STAT_ABORTED;
+			status[2] = GDS->transfered;
+			status[3] = GDS->ata_status;
 			break;
 
 		case CMD_STAT_FAILED:
@@ -1095,15 +1061,12 @@ int gdcReadAbort(int gd_chn) {
 	}
 
 #ifdef _FS_ASYNC
-	if(GDS->ata_status) {
-		abort_async(iso_fd);
-		pre_read_xfer_abort();
-		do {} while(pre_read_xfer_busy());
-		GDS->ata_status = 0;
-		GDS->streamed = 0;
-		GDS->transfered = 0;
-		GDS->requested = 0;
-	}
+	abort_async(iso_fd);
+	pre_read_xfer_abort();
+	do {} while(pre_read_xfer_busy());
+	GDS->ata_status = 0;
+	GDS->transfered = 0;
+	GDS->requested = 0;
 #endif
 
 	switch(GDS->cmd) {
@@ -1162,28 +1125,7 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	}
 
 	GDS->requested -= dmabuf[1];
-	int offset = GDS->transfered ? 0 : GDS->param[0];
-
-#ifdef _FS_ASYNC
-
-	if(GDS->true_async) {
-		GDS->ata_status = 1;
-		// GDS->streamed = 2;
-		// ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], data_stream_cb);
-		GDS->streamed = dmabuf[1];
-		pre_read_xfer_start(dmabuf[0], dmabuf[1]);
-		return 0;
-	}
-
-#endif /*_FS_ASYNC */
-
-	GDS->streamed = dmabuf[1];
-	GDS->transfered += dmabuf[1];
-	ReadSectors((uint8 *)dmabuf[0], offset, dmabuf[1], NULL);
-
-	if(!GDS->requested) {
-		GDS->status = CMD_STAT_ABORTED;
-	}
+	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 	return 0;
 }
 
@@ -1195,8 +1137,8 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 
 	gd_state_t *GDS = get_GDS();
 
-	LOGFF("%d %s r=%ld t=%ld s=%d a=%ld\n", gd_chn, stat_name[GDS->status + 1],
-			GDS->requested, GDS->transfered, GDS->streamed, GDS->ata_status);
+	LOGFF("%d %s r=%ld t=%ld a=%ld\n", gd_chn, stat_name[GDS->status + 1],
+			GDS->requested, GDS->transfered, GDS->ata_status);
 
 	if(gd_chn != GDS->req_count) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
@@ -1208,17 +1150,10 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 		return -1;
 	}
 
-#ifdef _FS_ASYNC
-
 	if(pre_read_xfer_busy()) {
 		*size = pre_read_xfer_size();
 		return 1;
 	}
-	if(GDS->ata_status) {
-		data_stream_cb(GDS->streamed);
-	}
-
-#endif /* _FS_ASYNC */
 
 	*size = GDS->requested;
 	return 0;

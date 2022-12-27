@@ -302,7 +302,7 @@ int PreReadSectors(int sec, int num) {
 	if(pre_read(iso_fd, num * IsoInfo->sector_size) < 0) {
 		return FAILED;
 	}
-	return COMPLETED;
+	return PROCESSING;
 }
 
 

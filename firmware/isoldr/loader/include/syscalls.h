@@ -98,26 +98,23 @@ typedef struct gd_state {
 	int req_count;
 	int cmd;
 	int status;
-	int err;
-	// int err2;
 	int ata_status;
 	int cmd_abort;
-	
+
 	uint32 requested;
 	uint32 transfered;
-	uint32 streamed;
-	
+
 	uint32 callback;
 	uint32 callback_param;
-	
+
 	uint32 param[GDC_PARAMS_COUNT];
 	uint32 true_async;
-	
+
 	/* Current values */
 	uint32 cdda_track;
 	uint32 data_track;
 	uint32 lba;
-	
+
 	int cdda_stat;
 	int drv_stat;
 	int drv_media;
