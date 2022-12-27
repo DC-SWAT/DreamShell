@@ -83,7 +83,6 @@ s32 g1_bus_init(void);
 void g1_dma_set_irq_mask(s32 last_transfer);
 s32 g1_dma_has_irq_mask();
 s32 g1_dma_init_irq(void);
-s32 g1_dma_irq_enabled(void);
 void g1_dma_irq_hide(s32 all);
 void g1_dma_irq_restore(void);
 
