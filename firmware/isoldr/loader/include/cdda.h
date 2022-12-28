@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback
- * (c)2014-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2022 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _CDDA_H
@@ -49,7 +49,7 @@ typedef struct cdda_ctx {
 	uint32 freq;
 
 	/* End pos for channel */
-	int end_pos;
+	uint32 end_pos;
 	uint32 end_tm;
 
 	/* Check status value for normalize playback */

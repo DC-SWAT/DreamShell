@@ -20,7 +20,6 @@ static int _open_ciso();
 static int _read_ciso_sectors(uint8 *buff, uint sector, uint cnt);
 #endif
 static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb);
-static int _read_data_sectors2(uint8 *buff, uint32 offset, uint32 size, fs_callback_f *cb);
 
 static void _open_iso() {
 		
@@ -222,39 +221,17 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 				}
 			}
 
-			if(GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_DMAREAD_STREAM_EX ||
-				GDS->cmd == CMD_PIOREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM_EX) {
-
-				size_t offset = sec ? (lba * IsoInfo->sector_size) : 0;
-				rv = _read_data_sectors2(buf, offset, num, cb);
-				DBGFF("Stream reading, offset=%d size=%d\n", offset, num);
-
-			} else {
-				rv = _read_data_sectors(buf, lba, num, cb);
-			}
+			rv = _read_data_sectors(buf, lba, num, cb);
 			break;
 		}
 		case ISOFS_IMAGE_TYPE_ISO:
 		default:
 		{
-			size_t offset;
-			size_t len;
-
-			if(!sec) {
-				offset = 0;
-			} else {
-				offset = (sec - IsoInfo->track_lba[0]) * IsoInfo->sector_size;
-			}
-
-			if(GDS->cmd == CMD_DMAREAD_STREAM || GDS->cmd == CMD_DMAREAD_STREAM_EX ||
-				GDS->cmd == CMD_PIOREAD_STREAM || GDS->cmd == CMD_PIOREAD_STREAM_EX) {
-				len = num;
-			} else {
-				len = num * IsoInfo->sector_size;
-			}
+			size_t offset = (sec - IsoInfo->track_lba[0]) * IsoInfo->sector_size;
+			size_t len = num * IsoInfo->sector_size;
 
 			lseek(iso_fd, offset, SEEK_SET);
-			
+
 			if(cb != NULL) {
 #ifdef _FS_ASYNC
 				if(read_async(iso_fd, buf, len, cb) < 0) {
@@ -267,18 +244,15 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 #endif /* _FS_ASYNC */
 
 			} else {
-
 				if(read(iso_fd, buf, len) < 0) {
 					rv = FAILED;
 				} else {
 					rv = COMPLETED;
 				}
 			}
-
 			break;
 		}
 	}
-
 	return rv;
 }
 
@@ -400,33 +374,6 @@ static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f 
 #else
 	return _read_sector_by_sector(buff, cnt, sec_size);
 #endif
-}
-
-
-static int _read_data_sectors2(uint8 *buff, uint32 offset, uint32 size, fs_callback_f *cb) {
-
-	DBGFF("%ld %ld\n", offset, size);
-
-	if(offset > 0) {
-		lseek(iso_fd, offset, SEEK_SET);
-	}
-
-	if(cb) {
-#ifdef _FS_ASYNC
-		if(read_async(iso_fd, buff, size, cb) < 0) {
-			return FAILED;
-		}
-		return PROCESSING;
-#else
-		if(read(iso_fd, buff, size) < 0) {
-			return FAILED;
-		}
-		cb(size);
-#endif
-	} else if(read(iso_fd, buff, size) < 0) {
-		return FAILED;
-	}
-	return COMPLETED;
 }
 
 

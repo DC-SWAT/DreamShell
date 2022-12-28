@@ -11,6 +11,7 @@
 
 isoldr_info_t *IsoInfo;
 uint32 loader_addr = 0;
+uint32 loader_end = 0;
 
 int main(int argc, char *argv[]) {
 
@@ -23,6 +24,7 @@ int main(int argc, char *argv[]) {
 
 	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
 	loader_addr = (uint32)IsoInfo;
+	loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
 
 	OpenLog();
 	printf(NULL);
@@ -106,25 +108,26 @@ int main(int argc, char *argv[]) {
 
 			printf("Descrambling...\n");
 
-			uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
-			uint8 *dest = (uint8*)(exec_addr + (IsoInfo->exec.size * 3));
+			uint32 exec_addr = UNCACHED_ADDR(IsoInfo->exec.addr);
+			uint8 *dest = (uint8 *)(exec_addr + (IsoInfo->exec.size * 3));
 
 			descramble(src, dest, IsoInfo->exec.size);
 			memcpy(src, dest, IsoInfo->exec.size);
 		}
 	}
 
-	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
-
+	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT
+		|| (loader_end < IPBIN_ADDR && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq))
+		|| (loader_addr > APP_ADDR)
+	) {
 		printf("Loading IP.BIN...\n");
 
-		if(!Load_IPBin()) {
+		if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT)) {
 			goto error;
 		}
 	}
 
 	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
-
 		/* Patch GDC driver entry */
 		gdc_syscall_patch();
 	}
@@ -157,15 +160,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	printf("Executing from IP.BIN...\n");
-
-	if (IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
-		launch(0xac00e000);
-	} else if (IsoInfo->syscalls) {
-		// FIXME launch(0xac008300);
-		launch(0xac00e000);
-	} else {
-		launch(0xac00b800);
-	}
+	launch(0xac00e000);
 
 error:
 	printf("Failed!\n");
@@ -173,6 +168,7 @@ error:
 		disable_syscalls(emu_all_sc);
 	}
 	timer_spin_sleep_bios(3000);
-	Load_DS();
+	*(vuint32 *)0xA05F6890 = 0x7611;
+	// Load_DS();
 	return -1;
 }

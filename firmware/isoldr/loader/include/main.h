@@ -43,6 +43,7 @@
 extern isoldr_info_t *IsoInfo;
 extern uint32 loader_size;
 extern uint32 loader_addr;
+extern uint32 loader_end;
 extern void boot_stub(void *, uint32) __attribute__((noreturn));
 void setup_machine_state();
 

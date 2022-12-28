@@ -17,6 +17,9 @@
 int exception_inited(void) {
 	return 0;
 }
+int exception_inside_int(void) {
+	return 0;
+}
 #endif
 
 void setup_machine_state() {
@@ -127,32 +130,29 @@ static void set_region() {
 	}
 }
 
-uint Load_IPBin() {
+uint Load_IPBin(int header_only) {
 
 	uint32 ipbin_addr = UNCACHED_ADDR(IPBIN_ADDR);
 	uint32 lba = IsoInfo->track_lba[0];
 	uint32 cnt = 16;
 	uint8 *buff = (uint8*)ipbin_addr;
-	uint8 pass = 0;
 
-	if(IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
-		pass = 12;
-	} else if(loader_addr < APP_ADDR && loader_addr > ISOLDR_DEFAULT_ADDR_MIN) {
-		pass = 7;
-	}
-
-	if(pass) {
-		lba += pass;
-		cnt -= pass;
-		buff += (pass * 2048);
+	if(header_only) {
+		cnt = 1;
+	} else if(IsoInfo->boot_mode == BOOT_MODE_IPBIN_TRUNC) {
+		lba += 12;
+		cnt -= 12;
+		buff += (12 * 2048);
 	}
 
 	if(ReadSectors(buff, lba, cnt, NULL) == COMPLETED) {
-		if(IsoInfo->boot_mode != BOOT_MODE_IPBIN_TRUNC) {
+		if(IsoInfo->boot_mode != BOOT_MODE_IPBIN_TRUNC && header_only == 0) {
 			*((uint32 *)ipbin_addr + 0x032c) = 0x8c00e000;
 			*((uint16 *)ipbin_addr + 0x10d8) = 0x5113;
 			*((uint16 *)ipbin_addr + 0x140a) = 0x000b;
 			*((uint16 *)ipbin_addr + 0x140c) = 0x0009;
+			set_region();
+		} else if(header_only) {
 			set_region();
 		}
 		return 1;
@@ -336,42 +336,6 @@ void apply_patch_list() {
 	}
 }
 
-
-/* copies n bytes from src to dest, dest must be 32-byte aligned */
-void *sq_cpy(void *dest, const void *src, int n) {
-	unsigned int *d = (unsigned int *)(void *)
-					  (0xe0000000 | (((unsigned long)dest) & 0x03ffffe0));
-	const unsigned int *s = src;
-
-	/* Set store queue memory area as desired */
-	QACR0 = ((((unsigned int)dest) >> 26) << 2) & 0x1c;
-	QACR1 = ((((unsigned int)dest) >> 26) << 2) & 0x1c;
-
-	/* fill/write queues as many times necessary */
-	n >>= 5;
-
-	while(n--) {
-		__asm__("pref @%0" : : "r"(s + 8));  /* prefetch 32 bytes for next loop */
-		d[0] = *(s++);
-		d[1] = *(s++);
-		d[2] = *(s++);
-		d[3] = *(s++);
-		d[4] = *(s++);
-		d[5] = *(s++);
-		d[6] = *(s++);
-		d[7] = *(s++);
-		__asm__("pref @%0" : : "r"(d));
-		d += 8;
-	}
-
-	/* Wait for both store queues to complete */
-	d = (unsigned int *)0xe0000000;
-	d[0] = d[8] = 0;
-
-	return dest;
-}
-
-
 int printf(const char *fmt, ...) {
 
 	if(IsoInfo != NULL && IsoInfo->fast_boot) {
@@ -511,24 +475,6 @@ int check_digit (char c) {
 	}
 	return 0;
 }
-
-/*
-int hex_to_int(char c) {
-	
-	if(c>='0' && c <='9') {
-		return c-'0';
-	}
-	
-	if(c>='a' && c <='f') {
-		return 10+(c-'a');
-	}
-	
-	if(c>='A' && c <='F') {
-		return 10+(c-'A');
-	}
-	
-	return -1;
-}*/
 
 static char log_buff[128];
 

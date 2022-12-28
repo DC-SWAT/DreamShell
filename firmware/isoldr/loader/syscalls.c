@@ -1249,12 +1249,8 @@ void gdcDummy(int gd_chn, int *arg2) {
  * Menu syscall
  */
 int menu_syscall(int func) {
-
 	LOGFF("%d\n", func);
-
-	if (func != 2 && IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
-		Load_DS();
-	}
+	(void)func;
 	return 0;
 }
 

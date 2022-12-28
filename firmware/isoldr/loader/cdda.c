@@ -1015,9 +1015,8 @@ static void play_next_track() {
 
 	} else if(cdda->loop != 0) {
 
-		if(cdda->loop != 0xffff) {
-			cdda->loop--;
-		}
+		cdda->loop--;
+
 		if(cdda->first_lba == 0) {
 			CDDA_Play(cdda->first_track, cdda->last_track, cdda->loop);
 		} else {
@@ -1063,7 +1062,7 @@ static void fill_pcm_buff() {
 		return;
 	}
 
-	LOGFF("0x%08lx at %ld\n", (uint32)cdda->buff[PCM_TMP_BUFF], cdda->cur_offset);
+	DBGFF("0x%08lx at %ld\n", (uint32)cdda->buff[PCM_TMP_BUFF], cdda->cur_offset);
 
 	/* Reading data for all channels */
 #ifdef _FS_ASYNC
@@ -1083,7 +1082,7 @@ static void fill_pcm_buff() {
 
 void CDDA_MainLoop(void) {
 
-	if(cdda->stat == CDDA_STAT_IDLE || !IsoInfo->emu_cdda) {
+	if(cdda->stat == CDDA_STAT_IDLE) {
 		return;
 	}
 
