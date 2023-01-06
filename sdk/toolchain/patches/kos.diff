@@ -1,38 +1,3 @@
-diff --git a/kernel/arch/dreamcast/hardware/cdrom.c b/kernel/arch/dreamcast/hardware/cdrom.c
-index a41cd69..1101a71 100644
---- a/kernel/arch/dreamcast/hardware/cdrom.c
-+++ b/kernel/arch/dreamcast/hardware/cdrom.c
-@@ -445,14 +445,23 @@ int cdrom_init() {
-     uint32 p;
-     volatile uint32 *react = (uint32 *)0xa05f74e4,
-                      *bios = (uint32 *)0xa0000000;
--
--    /* Reactivate drive: send the BIOS size and then read each
-+	
-+	/* Reactivate drive: send the BIOS size and then read each
-        word across the bus so the controller can verify it. */
--    *react = 0x1fffff;
--
--    for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) {
--        (void)bios[p];
--    }
-+	if((*(uint16 *)0xa0000000) == 0xe6ff) {
-+		
-+		*react = 0x3ff;
-+		for(p = 0; p < 0x400 / sizeof(bios[0]); p++) {
-+			(void)bios[p];
-+		}
-+		
-+	} else {
-+		
-+		*react = 0x1fffff;
-+		for(p = 0; p < 0x200000 / sizeof(bios[0]); p++) {
-+			(void)bios[p];
-+		}
-+	}
- 
-     mutex_lock(&_g1_ata_mutex);
-     /* Make sure to select the GD-ROM drive. */
 diff --git a/kernel/arch/dreamcast/hardware/g1ata.c b/kernel/arch/dreamcast/hardware/g1ata.c
 index 7a55913..72d8b1b 100644
 --- a/kernel/arch/dreamcast/hardware/g1ata.c
@@ -307,10 +272,10 @@ index 7a55913..72d8b1b 100644
          else {
              device.wdma_modes = 0;
 diff --git a/kernel/arch/dreamcast/include/arch/arch.h b/kernel/arch/dreamcast/include/arch/arch.h
-index 2e53d22..19b7150 100644
+index 62e29df..50e3eff 100644
 --- a/kernel/arch/dreamcast/include/arch/arch.h
 +++ b/kernel/arch/dreamcast/include/arch/arch.h
-@@ -52,7 +52,7 @@ __BEGIN_DECLS
+@@ -58,7 +58,7 @@ extern uint32 _arch_mem_top;
  #define DEFAULT_PIXEL_MODE  PM_RGB565
  
  /** \brief  Default serial bitrate. */
