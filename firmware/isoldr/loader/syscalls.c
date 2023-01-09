@@ -108,7 +108,7 @@ static const char stat_name[8][12] = {
  * Params count for commands 
  */
 static uint8 cmdp[] = {	4, 4, 2, 2, 3, 3, 0,
-						1, 0, 0, 0, 1, 2, 4,
+						0, 0, 0, 0, 1, 2, 4,
 						1, 4, 2, 0, 3, 3, 4,
 						2, 3, 3, 1 };
 
@@ -393,7 +393,7 @@ void data_transfer_true_async() {
 		return;
 	}
 
-	while(GDS->ata_status) {
+	while(GDS->ata_status && GDS->cmd_abort == 0) {
 
 		gdcExitToGame();
 
@@ -421,11 +421,11 @@ void data_transfer_true_async() {
 	GDS->status = CMD_STAT_COMPLETED;
 	GDS->drv_stat = CD_STATUS_PAUSED;
 
-# ifdef DEV_TYPE_SD
+#ifdef DEV_TYPE_SD
 	if(size > 0) {
 		dcache_purge_range(GDS->param[2], size);
 	}
-# endif
+#endif
 
 }
 #endif /* _FS_ASYNC */
@@ -742,7 +742,7 @@ void gdcMainLoop(void) {
 					GDS->status = CDDA_Play2(GDS->param[0], GDS->param[1], GDS->param[2]);
 					break;
 				case CMD_RELEASE:
-					GDS->status = CDDA_Release(GDS->param[0]);
+					GDS->status = CDDA_Release();
 					break;
 				case CMD_PAUSE:
 					GDS->status = CDDA_Pause();
@@ -1061,12 +1061,14 @@ int gdcReadAbort(int gd_chn) {
 	}
 
 #ifdef _FS_ASYNC
-	abort_async(iso_fd);
-	pre_read_xfer_abort();
-	do {} while(pre_read_xfer_busy());
-	GDS->ata_status = 0;
-	GDS->transfered = 0;
-	GDS->requested = 0;
+	if(GDS->ata_status) {
+		abort_async(iso_fd);
+		// pre_read_xfer_abort();
+		do {} while(pre_read_xfer_busy());
+		GDS->ata_status = 0;
+		GDS->transfered = 0;
+		GDS->requested = 0;
+	}
 #endif
 
 	switch(GDS->cmd) {

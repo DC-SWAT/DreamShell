@@ -949,7 +949,7 @@ int CDDA_Pause(void) {
 }
 
 
-int CDDA_Release(uint32 loop) {
+int CDDA_Release() {
 
 	gd_state_t *GDS = get_GDS();
 
@@ -970,7 +970,6 @@ int CDDA_Release(uint32 loop) {
 #endif /* _FS_ASYNC */
 	}
 
-	cdda->loop = loop;
 	GDS->drv_stat = CD_STATUS_PLAYING;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
 	return COMPLETED;
@@ -1113,9 +1112,10 @@ void CDDA_MainLoop(void) {
 
 #ifdef _FS_ASYNC
 	if(cdda->stat == CDDA_STAT_WAIT) {
-
 		/* Polling async data transfer */
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if(!exception_inited())
+#endif
 		{
 			if(poll(cdda->fd) < 0) {
 				/* Retry on error */

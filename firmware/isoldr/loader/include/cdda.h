@@ -92,7 +92,7 @@ void CDDA_MainLoop(void);
 int CDDA_Play(uint32 first, uint32 last, uint32 loop);
 int CDDA_Play2(uint32 first, uint32 last, uint32 loop);
 int CDDA_Pause(void);
-int CDDA_Release(uint32 loop);
+int CDDA_Release();
 int CDDA_Stop(void);
 int CDDA_Seek(uint32 offset);
 
