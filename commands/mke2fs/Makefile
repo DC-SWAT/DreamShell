@@ -13,7 +13,7 @@ all: rm-elf
 
 include ../../sdk/Makefile.loadable
 
-KOS_CFLAGS += -I$(KOS_BASE)/addons/libkosext2fs -Werror -W -std=gnu99
+KOS_CFLAGS += -I$(KOS_BASE)/addons/libkosext2fs -W -std=gnu99
 
 rm-elf:
 	-rm -f $(TARGET)
