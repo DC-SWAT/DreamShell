@@ -22,9 +22,9 @@ all: rm-elf $(TARGET)
 
 include sdk/Makefile.cfg
 
-INC_DIR = ./include
-SRC_DIR = ./src
-LIB_DIR = ./lib
+INC_DIR = $(KOS_BASE)/ds/include
+SRC_DIR = $(KOS_BASE)/ds/src
+LIB_DIR = $(KOS_BASE)/ds/lib
 
 KOS_LDFLAGS += -L$(LIB_DIR)
 KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs -I$(INC_DIR)/ntfs \
