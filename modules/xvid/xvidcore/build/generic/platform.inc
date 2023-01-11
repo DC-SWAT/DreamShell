@@ -29,10 +29,10 @@ OBJECT_EXTENSION=o
 # Compiler
 # ============================================================================
 
-CC=/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
+CC=$(KOS_CC)
 SPECIFIC_CFLAGS= 
 ALTIVEC_CFLAGS=
-CFLAGS=-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections  -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -I/usr/local/dc/kos/kos/../kos-ports/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -I/usr/local/dc/kos/kos/ds/include
+CFLAGS=-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections  -I$(KOS_BASE)/include -I$(KOS_BASE)/kernel/arch/dreamcast/include -I$(KOS_BASE)/addons/include -I$(KOS_BASE)/../kos-ports/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -I$(KOS_BASE)/ds/include
 
 # ============================================================================
 # Assembler
