@@ -13,6 +13,7 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 1
 VER_MINOR = 3
 VER_MICRO = 0
+VER_BUILD = 0
 
 KOS_LIB_PATHS += -L./liboggvorbis/liboggvorbisplay/lib \
 				-L./liboggvorbis/liboggvorbis/libogg/build \

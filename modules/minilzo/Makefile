@@ -12,6 +12,7 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 2
 VER_MINOR = 0
 VER_MICRO = 9
+VER_BUILD = 0
 
 KOS_CFLAGS += -I../../include/minilzo
 
