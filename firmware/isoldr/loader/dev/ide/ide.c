@@ -213,16 +213,8 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	(void)stack;
 
 	if ((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
-		LOGF("ASIC_ERR_G1DMA: 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
+		LOGFF("ERROR 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
 		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
-	}
-
-	if (statusExt & ASIC_EXT_GD_CMD) {
-		DBGF("ASIC_EXT_GD_CMD: 0x%08lx %d\n", statusExt, g1_dma_irq_visible);
-
-		if (!g1_dma_irq_visible) {
-			g1_ata_ack_irq();
-		}
 	}
 
 	uint32 g1_dma_irq_idx = (g1_dma_irq_visible ? g1_dma_irq_idx_game : g1_dma_irq_idx_internal);
@@ -233,27 +225,33 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	) {
 		return current_vector;
 	}
-	
+
 #ifdef DEBUG
-	LOGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
+	DBGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
 	      *REG_INTEVT, status, statusExt, statusErr, g1_dma_irq_visible);
 //	dump_regs(stack);
 #else
-	LOGFF("%08lx 0x%08lx %d 0x%08lx\n", *REG_INTEVT, status, g1_dma_irq_visible, (uint32)r15());
+	// LOGFF("%08lx 0x%08lx 0x%02lx %d 0x%08lx\n",
+	// 	*REG_INTEVT, status, statusExt, g1_dma_irq_visible, (uint32)r15());
 #endif
 
-
+	if (statusExt & ASIC_EXT_GD_CMD) {
+		if (g1_dma_irq_visible == 0) {
+			g1_ata_ack_irq();
+		}
+	}
 	if (status & ASIC_NRM_GD_DMA) {
 		/* Processing filesystem */
 		poll_all();
 
-		if (g1_dma_irq_visible) {
-			return current_vector;
+		if (g1_dma_irq_visible == 0) {
+			/* Ack DMA IRQ. */
+			ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
 		}
-		/* Ack DMA IRQ. */
-		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
 	}
-
+	if (g1_dma_irq_visible) {
+		return current_vector;
+	}
 	return my_exception_finish;
 }
 
@@ -283,8 +281,8 @@ s32 g1_dma_init_irq() {
 #endif
 
 void g1_dma_abort(void) {
+	OUT8(G1_ATA_DMA_ENABLE, 0);
 	if (g1_dma_in_progress()) {
-		OUT8(G1_ATA_DMA_ENABLE, 0);
 		g1_ata_wait_dma();
 		g1_ata_wait_bsydrq();
 	}

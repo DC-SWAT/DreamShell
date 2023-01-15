@@ -118,7 +118,7 @@ static void aica_dma_irq_disable() {
 		*ASIC_IRQ13_MASK &= ~ASIC_NRM_AICA_DMA;
 
 	} else {
-		cdda->irq_index = 0;
+		cdda->irq_index = (uint32)-1;
 	}
 }
 
@@ -254,6 +254,10 @@ static void setup_pcm_buffer() {
 			if(exception_inited()) {
 				cdda->size = 0x4000;
 				cdda->end_tm = 36176 / cdda->chn;
+#ifdef LOG
+				cdda->size >>= 1;
+				cdda->end_tm >>= 1;
+#endif
 			}
 			break;
 	}
@@ -267,10 +271,12 @@ static void setup_pcm_buffer() {
 		cdda->alloc_buff = malloc(cdda->size + 32);
 	}
 
-	if (cdda->alloc_buff) {
-		cdda->buff[0] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
+	if (cdda->alloc_buff == NULL) {
+		LOGFF("Failed malloc");
+		return;
 	}
 
+	cdda->buff[0] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
 	cdda->buff[1] = cdda->buff[0] + (cdda->size >> 1);
 
 	/* Setup buffer at end of sound memory */
@@ -682,8 +688,24 @@ static uint32 sector_align(uint32 offset) {
 }
 
 
-#if defined(HAVE_EXPT) && !defined(NO_ASIC_LT)
+#ifdef HAVE_EXPT
+
+void *aica_dma_handler(void *passer, register_stack *stack, void *current_vector) {
+
+	(void)passer;
+	(void)stack;
+
+	if (cdda->irq_index == 0) {
+		return current_vector;
+	}
+
+	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
+	return my_exception_finish;
+}
+
+# ifndef NO_ASIC_LT
 static asic_handler_f old_vsync_handler;
+static asic_handler_f old_dma_handler;
 static void *vsync_handler(void *passer, register_stack *stack, void *current_vector) {
 
 	if(old_vsync_handler) {
@@ -693,6 +715,15 @@ static void *vsync_handler(void *passer, register_stack *stack, void *current_ve
 	CDDA_MainLoop();
 	return current_vector;
 }
+static void *dma_handler(void *passer, register_stack *stack, void *current_vector) {
+
+	if(old_dma_handler) {
+		current_vector = old_dma_handler(passer, stack, current_vector);
+	}
+
+	return aica_dma_handler(passer, stack, current_vector);
+}
+# endif
 #endif
 
 int CDDA_Init() {
@@ -719,14 +750,21 @@ int CDDA_Init() {
 #endif
 
 #if defined(HAVE_EXPT) && !defined(NO_ASIC_LT)
-	asic_lookup_table_entry a_entry;
-	memset(&a_entry, 0, sizeof(a_entry));
-	
-	a_entry.irq = EXP_CODE_ALL;
-	a_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_VSYNC;
-	a_entry.handler = vsync_handler;
+	asic_lookup_table_entry vsync_entry, dma_entry;
 
-	return asic_add_handler(&a_entry, &old_vsync_handler, 0);
+	memset(&vsync_entry, 0, sizeof(vsync_entry));
+	memset(&dma_entry, 0, sizeof(dma_entry));
+
+	dma_entry.irq = EXP_CODE_ALL;
+	dma_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
+	dma_entry.handler = dma_handler;
+	asic_add_handler(&dma_entry, NULL, 0);
+
+	vsync_entry.irq = EXP_CODE_ALL;
+	vsync_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_VSYNC;
+	vsync_entry.handler = vsync_handler;
+
+	return asic_add_handler(&vsync_entry, &old_vsync_handler, 0);
 #else
 	return 0;
 #endif
@@ -1084,7 +1122,7 @@ static void fill_pcm_buff() {
 		return;
 	}
 
-	DBGFF("0x%08lx at %ld\n", (uint32)cdda->buff[PCM_TMP_BUFF], cdda->cur_offset);
+	DBGFF("%ld %ld\n", cdda->cur_offset, cdda->track_size - cdda->cur_offset);
 
 	/* Reading data for all channels */
 #ifdef _FS_ASYNC
@@ -1114,7 +1152,7 @@ void CDDA_MainLoop(void) {
 	if(cdda->stat == CDDA_STAT_WAIT) {
 		/* Polling async data transfer */
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(!exception_inited())
+		if(!exception_inited() || !pre_read_xfer_busy())
 #endif
 		{
 			if(poll(cdda->fd) < 0) {
@@ -1139,9 +1177,9 @@ void CDDA_MainLoop(void) {
 
 	/* Split PCM data to left and right channels */
 	if(cdda->stat == CDDA_STAT_PREP) {
-		
+
 		aica_check_cdda();
-		
+	
 		if(!aica_transfer_in_progress()) {
 
 			if(cdda->irq_index) {

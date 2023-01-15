@@ -13,6 +13,7 @@
 #ifdef NO_ASIC_LT
 void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
 void* maple_dma_handler(void *passer, register_stack *stack, void *current_vector);
+void* aica_dma_handler(void *passer, register_stack *stack, void *current_vector);
 #endif
 
 static asic_lookup_table   asic_table;
@@ -59,6 +60,9 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	if (code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 
 # ifdef HAVE_CDDA
+		if(status & ASIC_NRM_AICA_DMA && code == EXP_CODE_INT11) {
+			back_vector = aica_dma_handler(NULL, stack, back_vector);
+		}
 		CDDA_MainLoop();
 # endif
 		if (status & ASIC_NRM_VSYNC) {
