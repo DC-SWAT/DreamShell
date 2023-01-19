@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2022 SWAT
+# Copyright (C) 2004-2023 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -22,12 +22,12 @@ all: rm-elf $(TARGET)
 
 include sdk/Makefile.cfg
 
-INC_DIR = $(KOS_BASE)/ds/include
-SRC_DIR = $(KOS_BASE)/ds/src
-LIB_DIR = $(KOS_BASE)/ds/lib
+INC_DIR = $(DS_BASE)/include
+SRC_DIR = $(DS_BASE)/src
+LIB_DIR = $(DS_BASE)/lib
 
 KOS_LDFLAGS += -L$(LIB_DIR)
-KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs -I$(INC_DIR)/ntfs \
+KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
 			-DHAVE_SDLIMAGE $(TRAGET_VERSION)
 
 ifdef TARGET_DEBUG
