@@ -1011,8 +1011,6 @@ int ffplay(const char *filename, const char *force_format) {
 	pVideoCodecCtx = findDecoder(pFormatCtx, AVMEDIA_TYPE_VIDEO, &videoStream);
 	pAudioCodecCtx = findDecoder(pFormatCtx, AVMEDIA_TYPE_AUDIO, &audioStream);
 	
-	//LockInput();
-	
 	if(pVideoCodecCtx) {
 		
 		//LockVideo();
@@ -1252,8 +1250,7 @@ exit_free:
 		InitVideoThread();
 		//UnlockVideo();
 	}
-	
-	//UnlockInput();
+
 	ProcessVideoEventsUpdate(NULL);
 	return 0;
 }

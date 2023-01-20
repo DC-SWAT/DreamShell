@@ -77,6 +77,15 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 		}
 
 		ds_printf("DS_OK: Link established, rate is %d bps\n", conn_rate);
+
+		char ip_str[64];
+		memset(ip_str, 0, sizeof(ip_str));
+		snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d",
+			net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
+			net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
+		setenv("NET_IPV4", ip_str, 1);
+
+		ds_printf("Network IPv4 address: %s\n", ip_str);
 		return CMD_OK;
 	}
 
@@ -85,8 +94,8 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 
 		if(modem_is_connected() || modem_is_connecting()) {
 			modem_shutdown();
+			setenv("NET_IPV4", "0.0.0.0", 1);
 		}
-
 		ds_printf("DS_OK: Complete!\n");
 		return CMD_OK;
 	}

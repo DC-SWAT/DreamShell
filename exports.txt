@@ -8,7 +8,6 @@ setjmp
 #
 SetVersion
 GetVersion
-GetVersionString
 GetVersionBuildTypeString
 InitDS
 ShutdownDS
@@ -94,11 +93,6 @@ GetEventByName
 ProcessInputEvents
 ProcessVideoEventsRender
 ProcessVideoEventsUpdate
-#
-LockInput
-UnlockInput
-InputIsLocked
-InputMustLock
 #
 CallCmd
 CallExtCmd
@@ -224,9 +218,6 @@ png_to_img
 #
 InitGUI
 ShutdownGUI
-LockGUI
-UnlockGUI
-GUI_IsLocked
 #GUI_Object2Trash
 #GUI_ClearTrash
 #
@@ -255,7 +246,6 @@ getFilePath
 getcwd
 realpath
 mkpath
-ds_sleep
 #
 GetSettings
 SetSettings

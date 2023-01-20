@@ -283,11 +283,6 @@ void UnlockVideo();
 int VideoIsLocked();
 int VideoMustLock();
 
-void LockInput();
-void UnlockInput();
-int InputIsLocked();
-int InputMustLock();
-
 void InitVideoHardware();
 int InitVideo(int w, int h, int bpp);
 void ShutdownVideo();

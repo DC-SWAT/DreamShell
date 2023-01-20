@@ -2,8 +2,8 @@
  * DreamShell ##version##   *
  * gui.c                    *
  * DreamShell GUI           *
- * Created by SWAT          *
- ****************************/ 
+ * (c)2006-2023 SWAT        *
+ ****************************/
 
 #include "ds.h"
 #include "gui.h"
@@ -30,23 +30,6 @@ static mutex_t gui_mutex = MUTEX_INITIALIZER;
 static TrashItem_list_t *trash_list;
 static Event_t *gui_input_event;
 static Event_t *gui_video_event;
-
-
-int GUI_IsLocked() {
-	return mutex_is_locked(&gui_mutex);
-}
-
-int LockGUI() { 
-    return mutex_lock(&gui_mutex);
-}
-
-int UnlockGUI() {
-	return mutex_unlock(&gui_mutex);
-}
-
-int GUI_MustLock() {
-	return VideoMustLock();
-}
 
 
 static void GUI_DrawHandler(void *ds_event, void *param, int action) {
@@ -102,10 +85,10 @@ static void screenshot_callback(void)
 	}
 	
 	char *arg[3] = {"screenshot", path, "png"};
-	
-	LockGUI();
+
+	LockVideo();
 	CallCmd(3, arg);
-	UnlockGUI();
+	UnlockVideo();
 }
 
 static void GUI_EventHandler(void *ds_event, void *param, int action) {
@@ -180,10 +163,7 @@ int InitGUI() {
         return 0;
         
     } else {
-        
-        LockGUI();
         GUI_SetScreen(gui);
-        UnlockGUI();
     }
 
     UnlockVideo();
@@ -218,7 +198,7 @@ void GUI_ClearTrash() {
 
 
 void ShutdownGUI() {
-	
+
     GUI_ClearTrash();
     free(trash_list);
 
@@ -226,9 +206,7 @@ void ShutdownGUI() {
     RemoveEvent(gui_video_event);
 
     LockVideo();
-    LockGUI();
     GUI_ObjectDecRef((GUI_Object *) GUI_GetScreen());
-    UnlockGUI();
     UnlockVideo();
 
     mutex_destroy(&gui_mutex);
@@ -303,8 +281,6 @@ void DrawMouseCursor(MouseCursor_t *c/*, SDL_Event *event*/) {
 	int x = 0;//c->x;//event->motion.x;
 	int y = 0;//c->y;//event->motion.y;
 
-	// LockGUI();
-
 	SDL_GetMouseState(&x, &y);
     	
     if(c && (c->draw || (old_x != x || old_y != y))) {
@@ -341,10 +317,8 @@ void DrawMouseCursor(MouseCursor_t *c/*, SDL_Event *event*/) {
 			SDL_BlitSurface(c->bg, &c->src, scr, &c->dst);
 		}
     }
-    
-	//LockGUI();
+
 	GUI_ScreenDoUpdate(GUI_GetScreen(), 0);
-	//UnlockGUI();
     
     if(c && c->draw) {
 
@@ -357,7 +331,6 @@ void DrawMouseCursor(MouseCursor_t *c/*, SDL_Event *event*/) {
 		c->draw = 0;
     }
 
-    // UnlockGUI();
 }
 
 
@@ -382,13 +355,7 @@ void WaitDrawActiveMouseCursor() {
 }
 
 void UpdateActiveMouseCursor() {
-	//ds_printf("UpdateMouseCursor\n");
-//	if(VideoMustLock()) LockVideo();
-	//LockGUI();
 	cur_mouse->draw = 1;
-	//WaitDrawActiveMouseCursor();
-	//UnlockGUI();
-//	if(VideoMustLock()) UnlockVideo();
 }
 
 

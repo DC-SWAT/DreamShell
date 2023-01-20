@@ -1,7 +1,7 @@
 /** 
  * \file    utils.h
  * \brief   DreamShell utils
- * \date    2004-2016
+ * \date    2004-2023
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -45,9 +45,6 @@ int CopyFile(const char *src_fn, const char *dest_fn, int verbose);
 int CopyDirectory(const char *src_path, const char *dest_path, int verbose);
 
 void arch_shutdown();
-
-/* Use thd_sleep, SDL_Delay or timer_spin_sleep instead it */
-void ds_sleep(int ms) __attribute__((deprecated)); 
 
 int flashrom_get_region_only();
 int is_hacked_bios();

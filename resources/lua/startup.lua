@@ -84,6 +84,7 @@ local DreamShell = {
 		print("Date: " .. os.date() .. "\n");
 		print("Base path: " .. path .. "\n");
 		print("User: " .. os.getenv("USER") .. "\n");
+		print("Network IP: " .. os.getenv("NET_IPV4") .. "\n");
 
 		local emu = os.getenv("EMU");
 

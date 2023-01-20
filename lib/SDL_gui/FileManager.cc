@@ -13,8 +13,6 @@ void UnlockVideo();
 int VideoMustLock();
 void UpdateActiveMouseCursor();
 void ScreenWaitUpdate();
-void LockInput();
-void UnlockInput();
 int InputMustLock();
 void SDL_DC_EmulateMouse(SDL_bool value);
 
@@ -581,9 +579,7 @@ void GUI_FileManager::Update(int force) {
 	}
 	
 	if(rescan)  {
-//		if(InputMustLock()) LockInput();
 		Scan();
-//		if(InputMustLock()) UnlockInput();
 	}
 
 	for (i=0; i<n_widgets; i++)

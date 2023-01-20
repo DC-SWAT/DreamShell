@@ -2,10 +2,9 @@
  * DreamShell ##version##    *
  * commands.c                *
  * DreamShell CMD            *
- * Created by SWAT           *
+ * (c)2004-2023 SWAT         *
  * http://www.dc-swat.ru     *
  ****************************/
-
 
 
 #include "ds.h"
@@ -2005,20 +2004,21 @@ static int builtin_net(int argc, char *argv[]) {
 	CMD_DEFAULT_ARGS_PARSER(options);
 
 	if(initnet) {
-		
+
 		ip.ipl = 0;
-		
+
 		if(ip_str) {
-//			sscanf(ip_str, "%c.%c.%c.%c", &ip.ipb[3], &ip.ipb[2], &ip.ipb[1], &ip.ipb[0]);
 			sscanf(ip_str, "%d.%d.%d.%d", &ipi[3], &ipi[2], &ipi[1], &ipi[0]);
 			ip.ipb[0] = (uint8)ipi[0] & 0xff;
 			ip.ipb[1] = (uint8)ipi[1] & 0xff;
 			ip.ipb[2] = (uint8)ipi[2] & 0xff;
 			ip.ipb[3] = (uint8)ipi[3] & 0xff;
 			ds_printf("DS_PROCESS: Initializing network with IP %s\n", ip_str);
+		} else {
+			ds_printf("DS_PROCESS: Initializing network\n");
 		}
-		
-		if(net_init(ip.ipl) < 0) {
+
+		if(InitNet(ip.ipl) < 0) {
 			ds_printf("DS_ERROR: Can't initialize network\n");
 			return CMD_ERROR;
 		}
@@ -2026,10 +2026,9 @@ static int builtin_net(int argc, char *argv[]) {
 	}
 
 	if(shutnet) {
-		net_shutdown();
+		ShutdownNet();
 		return CMD_OK;
 	}
-
 	return CMD_NO_ARG;
 }
 
@@ -2058,26 +2057,6 @@ static int builtin_callfunc(int argc, char *argv[]) {
 	ds_printf("DS_%s: %s at 0x%08lx\n", (r ? "OK" : "ERROR"), argv[1], func_addr);
 	return r ? CMD_OK : CMD_ERROR;
 }
-
-
-//static int builtin_gettoc(int argc, char *argv[]) {
-//
-//	CDROM_TOC toc;
-//	memset(&toc, 0, sizeof(CDROM_TOC));
-//
-//	cdrom_read_toc(&toc, 0);
-//
-//	printf("T0: 0x%08lx 0x%08lx | 0x%08lx 0x%08lx 0x%08lx 0x%08lx\n",
-//				toc.first, toc.last, toc.entry[0], toc.entry[1], toc.entry[2], toc.entry[3]);
-//
-//
-//	cdrom_read_toc(&toc, 1);
-//
-//	printf("T1: 0x%08lx 0x%08lx | 0x%08lx 0x%08lx 0x%08lx 0x%08lx\n",
-//				toc.first, toc.last, toc.entry[0], toc.entry[1], toc.entry[2], toc.entry[3]);
-//
-//	return CMD_OK;
-//}
 
 
 /* Setup all our builtins */
@@ -2122,7 +2101,6 @@ int InitCmd() {
 		AddCmd("console",   "Console manager", (CmdHandler *) builtin_console);
 		AddCmd("speedtest", "Testing r/w speed of device", (CmdHandler *) builtin_speedtest);
 		AddCmd("callfunc",  "Call any exported function", (CmdHandler *) builtin_callfunc);
-//		AddCmd("gettoc",    "Get GD-ROM TOC", (CmdHandler *) builtin_gettoc);
 		//ds_printf("Command list initialised.\n");
 		return 1;
 	}

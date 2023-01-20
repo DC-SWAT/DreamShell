@@ -1,7 +1,7 @@
 /** 
  * \file    gui.h
  * \brief   DreamShell GUI
- * \date    2006-2014
+ * \date    2006-2023
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -51,9 +51,6 @@ void VirtKeyboardToggle();
 /* Main GUI */
 int InitGUI();
 void ShutdownGUI();
-int LockGUI();
-int UnlockGUI();
-int GUI_IsLocked();
 int GUI_Object2Trash(GUI_Object *object);
 void GUI_ClearTrash();
 

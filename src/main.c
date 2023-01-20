@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * main.c                   *
  * DreamShell main          *
- * Created by SWAT          *
+ * (c)2004-2023 SWAT        *
  * http://www.dc-swat.ru    *
  ***************************/
 
@@ -11,13 +11,17 @@
 #include "vmu.h"
 
 extern uint8 romdisk[];
-KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT/* | INIT_NET | INIT_MALLOCSTATS | INIT_NO_DCLOAD*/);
+KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
 KOS_INIT_ROMDISK(romdisk);
 
 static uint32 ver_int = 0;
 static const char *build_str[4] = {"Alpha", "Beta", "RC", "Release"};
-static mutex_t input_mutex = MUTEX_INITIALIZER;
+
+static uint32 net_inited = 0;
+
 void gdb_init();
+uint32 _fs_dclsocket_get_ip(void);
+
 
 uint32 GetVersion() {
 	return ver_int;
@@ -56,10 +60,6 @@ void SetVersion(uint32 ver) {
 	setenv("VERSION", ver_str, 1);
 }
 
-char *GetVersionString() {
-	return getenv("VERSION");
-}
-
 const char *GetVersionBuildTypeString(int type) {
 	return build_str[type];
 }
@@ -69,6 +69,66 @@ static uint8 *get_board_id() {
 	uint32 *scv = (uint32 *)&sc;
 	*scv = *((uint32 *)0x8c0000b0);
 	return sc(0, 0, 0, 3);
+}
+
+
+int InitNet(uint32 ipl) {
+
+	if(net_inited) {
+		return 0;
+	}
+
+	union {
+		uint32 ipl;
+		uint8 ipb[4];
+	} ip;
+	ip.ipl = ipl;
+
+	/* Check if the dcload-ip console is up, and if so, disable it,
+		otherwise we'll crash when we attempt to bring up the BBA */
+	if(dcload_type == DCLOAD_TYPE_IP) {
+		/* Grab the IP address from dcload before we disable dbgio... */
+		ip.ipl = _fs_dclsocket_get_ip();
+		dbglog(DBG_INFO, "dc-load says our IP is %d.%d.%d.%d\n", ip.ipb[3],
+				ip.ipb[2], ip.ipb[1], ip.ipb[0]);
+		dbgio_disable();
+	}
+
+	int rv = net_init(ip.ipl);     /* Enable networking (and drivers) */
+
+	if(rv < 0) {
+		dbgio_enable();
+		return -1;
+	}
+	if(dcload_type == DCLOAD_TYPE_IP) {
+		fs_dclsocket_init_console();
+
+		if(!fs_dclsocket_init()) {
+			dbgio_dev_select("fs_dclsocket");
+			dbgio_enable();
+			dbglog(DBG_INFO, "fs_dclsocket console support enabled\n");
+		}
+	}
+
+	char ip_str[64];
+	memset(ip_str, 0, sizeof(ip_str));
+	snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d",
+		net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
+		net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
+	setenv("NET_IPV4", ip_str, 1);
+
+    dbglog(DBG_INFO, "Network IPv4 address: %s\n", ip_str);
+	net_inited = 1;
+	return rv;
+}
+
+void ShutdownNet() {
+	if(dcload_type == DCLOAD_TYPE_IP) {
+		dbgio_set_dev_ds();
+	}
+	net_shutdown();
+	net_inited = 0;
+	setenv("NET_IPV4", "0.0.0.0", 1);
 }
 
 int InitDS() {
@@ -88,6 +148,7 @@ int InitDS() {
 	setenv("OS", getenv("HOST"), 1);
 	setenv("USER", getenv("HOST"), 1);
 	setenv("ARCH", hardware_sys_mode(&tmpi) == HW_TYPE_SET5 ? "Set5.xx" : "Dreamcast", 1);
+	setenv("NET_IPV4", "0.0.0.0", 1);
 
 #ifdef DS_EMU
 	emu = 1;
@@ -101,13 +162,6 @@ int InitDS() {
 
 	setenv("SDL_DEBUG", "0", 1);
 	setenv("SDL_VIDEODRIVER", "dcvideo", 1);
-	
-	//setenv("SDL_VIDEO_YUV_DIRECT", "1", 1);
-	//setenv("SDL_VIDEO_YUV_HWACCEL", "1", 1);
-
-//#if !defined(EMU) && defined(DEBUG)
-//	gdb_init();
-//#endif
 
 	vmu_draw_string(getenv("HOST"));
 	dbglog(DBG_INFO, "Initializing DreamShell Core...\n");
@@ -117,8 +171,10 @@ int InitDS() {
 	dbglog_set_level(DBG_KDEBUG);
 #endif
 
+//	gdb_init();
 	expt_init();
 	SetConsoleDebug(1);
+	InitNet(0);
 
 	if(!emu) {
 		
@@ -255,7 +311,7 @@ void ShutdownDS() {
 	char fn[MAX_FN_LEN];
 	snprintf(fn, MAX_FN_LEN, "%s/lua/shutdown.lua", getenv("PATH"));
 	LuaDo(LUA_DO_FILE, fn, GetLuaState());
-	
+
 	ShutdownCmd();
 	ShutdownVideoThread();
 	ShutdownApps();
@@ -263,25 +319,9 @@ void ShutdownDS() {
 	ShutdownModules();
 	ShutdownEvents();
 	ShutdownLua();
-	
+	ShutdownNet();
+
 	expt_shutdown();
-}
-
-void LockInput() { 
-	mutex_lock(&input_mutex);
-}
-
-void UnlockInput() {
-	mutex_unlock(&input_mutex);
-}
-
-int InputIsLocked() {
-	return mutex_is_locked(&input_mutex);
-}
-
-int InputMustLock() {
-	kthread_t *ct = thd_get_current();
-	return ct->tid != 1;
 }
 
 
@@ -296,8 +336,6 @@ int main(int argc, char **argv) {
 	}
 
 	while(1) {
-
-		LockInput();
 
 		while(SDL_PollEvent(&event)) {
 
@@ -318,11 +356,8 @@ int main(int argc, char **argv) {
 		GUI_ClearTrash();
 
 		if(event.type == SDL_QUIT) {
-			UnlockInput();
 			break;
 		}
-
-		UnlockInput();
 	}
 
 	ShutdownDS();

@@ -292,11 +292,6 @@ int CopyDirectory(const char *src_path, const char *dest_path, int verbose) {
 }
 
 
-void ds_sleep(int ms) {
-     thd_sleep(ms);
-}
-
-
 int PeriphExists(const char *name) {
 	int p, u;
 	maple_device_t *dev;

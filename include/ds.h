@@ -1,7 +1,7 @@
 /** 
  * \file    ds.h
  * \brief   DreamShell core header
- * \date    2004-2014
+ * \date    2004-2023
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -35,11 +35,6 @@ uint32 GetVersion();
 void SetVersion(uint32 ver);
 
 /**
- * Same as getenv("VERSION")
- */
-char *GetVersionString() __attribute__((deprecated));
-
-/**
  * Get the build type as string (Alpha, Beta, RC and Release)
  */
 const char *GetVersionBuildTypeString(int type);
@@ -51,12 +46,9 @@ int InitDS();
 void ShutdownDS();
 
 /**
- * Main(input) thread locking
+ * Initialize and shutdown DreamShell network
  */
-void LockInput();
-void UnlockInput();
-int InputIsLocked();
-int InputMustLock();
-
+int InitNet(uint32 ipl);
+void ShutdownNet();
 
 #endif /* _DS_CORE_H */
