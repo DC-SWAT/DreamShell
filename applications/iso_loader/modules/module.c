@@ -2,7 +2,7 @@
 
    module.c - ISO Loader app module
    Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2022 SWAT
+   Copyright (C) 2011-2023 SWAT
 
 */
 
@@ -14,6 +14,8 @@
 #include <kos/md5.h>
 
 DEFAULT_MODULE_EXPORTS(app_iso_loader);
+
+#define SCREENSHOT_HOTKEY (CONT_START | CONT_A | CONT_B)
 
 static struct {
 
@@ -37,9 +39,11 @@ static struct {
 	GUI_Surface *item_focus;
 	GUI_Surface *item_selected;
 
+	GUI_Widget *extensions;
 	GUI_Widget *link;
 	GUI_Widget *settings;
 	GUI_Widget *games;
+
 	GUI_Widget *btn_run;
 
 	GUI_Widget *preset;
@@ -54,6 +58,9 @@ static struct {
 	GUI_Widget *fastboot;
 	GUI_Widget *async[10];
 	GUI_Widget *async_label;
+	GUI_Widget *vmu;
+	GUI_Widget *vmu_number;
+	GUI_Widget *screenshot;
 
 	GUI_Widget *device;
 	GUI_Widget *os_chk[4];
@@ -108,84 +115,85 @@ static int canUseTrueAsyncDMA(void) {
 			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
-void isoLoader_Rotate_Image(GUI_Widget *widget) 
-{
+void isoLoader_Rotate_Image(GUI_Widget *widget) {
 	(void)widget;
 	setico(GUI_SurfaceGetWidth(self.slnkico), 1);
 }
 
+void isoLoader_ShowPage(GUI_Widget *widget) {
+
+	GUI_WidgetSetEnabled(self.link, 1);
+	GUI_WidgetSetEnabled(self.extensions, 1);
+	GUI_WidgetSetEnabled(self.settings, 1);
+	GUI_WidgetSetEnabled(self.games, 1);
+
+	if (widget == self.games) {
+		GUI_CardStackShowIndex(self.pages, 0);
+		GUI_WidgetSetEnabled(self.games, 0);
+	} else if(widget == self.settings) {
+		GUI_CardStackShowIndex(self.pages, 1);
+		GUI_WidgetSetEnabled(self.settings, 0);
+	} else if(widget == self.extensions) {
+		GUI_CardStackShowIndex(self.pages, 2);
+		GUI_WidgetSetEnabled(self.extensions, 0);
+	} else if(widget == self.link) {
+		GUI_CardStackShowIndex(self.pages, 3);
+		GUI_WidgetSetEnabled(self.link, 0);
+	}
+}
+
 void isoLoader_ShowSettings(GUI_Widget *widget) {
-	
-	(void)widget;
-	
 	ScreenFadeOut();
 	thd_sleep(200);
-	
-	GUI_CardStackShowIndex(self.pages,  1);
-	GUI_WidgetSetEnabled(self.games,    1);
-	
-	if(self.filename[0]) 
-		GUI_WidgetSetEnabled(self.link, 1);
-	
-	GUI_WidgetSetEnabled(self.settings, 0);
-	
+	isoLoader_ShowPage(widget);
+	ScreenFadeIn();
+}
+
+void isoLoader_ShowExtensions(GUI_Widget *widget) {
+	ScreenFadeOut();
+	thd_sleep(200);
+	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
 
 void isoLoader_ShowGames(GUI_Widget *widget) {
-	
-	(void)widget;
-	
 	ScreenFadeOut();
 	thd_sleep(200);
-	
-	GUI_CardStackShowIndex(self.pages,  0);
-	GUI_WidgetSetEnabled(self.settings, 1);
-	GUI_WidgetSetEnabled(self.games,    0);
-	GUI_WidgetSetEnabled(self.link,     0);
-	
 	isoLoader_SavePreset();
+	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
 
-static void chk_save_file(void)
-{
+static void check_link_file(void) {
 	char save_file[MAX_FN_LEN];
-	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/scripts/%s.dsc", getenv("PATH"), GUI_TextEntryGetText(self.linktext));
-	
-	if(FileExists(save_file))
-	{
+	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/scripts/%s.dsc",
+		getenv("PATH"), GUI_TextEntryGetText(self.linktext));
+
+	if(FileExists(save_file)) {
 		GUI_LabelSetText(self.save_link_txt, "rewrite shortcut");
-	}
-	else
-	{
+	} else {
 		GUI_LabelSetText(self.save_link_txt, "create shortcut");
 	}
-	
+
 	GUI_WidgetMarkChanged(self.save_link_btn);
 }
 
 void isoLoader_ShowLink(GUI_Widget *widget) {
-	
-	(void)widget;
-	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
-	
+
 	ScreenFadeOut();
 	thd_sleep(200);
-	
-	GUI_CardStackShowIndex(self.pages,  2);
-	GUI_WidgetSetEnabled(self.settings, 1);
-	GUI_WidgetSetEnabled(self.link,     0);
-	
+
 	GUI_WidgetSetState(self.rotate180, 0);
 	GUI_WidgetSetState(self.btn_hidetext, 0);
 	isoLoader_toggleIconSize(self.icosizebtn[0]);
+
 	setico(48, 1);
+	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	ipbin->title[sizeof(ipbin->title)-1] = '\0';
 	GUI_TextEntrySetText(self.linktext, trim_spaces2(ipbin->title));
-	
-	chk_save_file();
-	
+	check_link_file();
+
+	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
 
@@ -237,35 +245,34 @@ static void get_md5_hash(const char *mountpoint) {
 
 /* Try to get cover image from ISO */
 static void showCover() {
-	
+
 	GUI_Surface *s;
 	char path[MAX_FN_LEN];
 	char noext[128];
 	ipbin_meta_t *ipbin;
 	char use_cover = 0;
-	
+
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
-	
+
 	snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
-	
-	if (FileExists(path))
+
+	if (FileExists(path)) {
 		use_cover = 1;
-	else
-	{
+	} else {
 		snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
-		if (FileExists(path))
+		if (FileExists(path)) {
 			use_cover = 1;
+		}
 	}
 
 	/* Check for jpeg cover */
 	if(use_cover) {
-		
-		LockVideo();
+
 		s = GUI_SurfaceLoad(path);
-		
+
 		snprintf(path, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
-		
+
 		if(!fs_iso_mount("/isocover", path)) {
 			
 			get_md5_hash("/isocover");
@@ -274,11 +281,10 @@ static void showCover() {
 			ipbin = (ipbin_meta_t *)self.boot_sector;
 			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
 		}
-		
-		UnlockVideo();
+
 		GUI_LabelSetText(self.title, noext);
 		vmu_draw_string(noext);
-		
+
 		if(s != NULL) {
 			GUI_PanelSetBackground(self.cover_widget, s);
 			GUI_ObjectDecRef((GUI_Object *) s);
@@ -288,7 +294,6 @@ static void showCover() {
 	} else {
 
 		snprintf(path, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
-		LockVideo();
 
 		/* Try to mount ISO and get 0GDTEXT.PVR */
 		if(!fs_iso_mount("/isocover", path)) {
@@ -302,7 +307,6 @@ static void showCover() {
 				
 				s = GUI_SurfaceLoad("/isocover/0GDTEX.PVR");
 				fs_iso_unmount("/isocover");
-				UnlockVideo();
 				
 				GUI_LabelSetText(self.title, noext);
 				
@@ -316,13 +320,11 @@ static void showCover() {
 				
 			} else {
 				fs_iso_unmount("/isocover");
-				UnlockVideo();
 				GUI_LabelSetText(self.title, noext);
 				goto check_default;
 			}
 			
 		} else {
-			UnlockVideo();
 			goto check_default;
 		}
 	}
@@ -480,8 +482,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
 			if (i <= HEAP_MODE_INGAME) {
 				char mode[12];
-				sprintf(mode, "%d", i);
-				strcat(cmd, " -h ");
+				sprintf(mode, "-h %d", i);
 				strcat(cmd, mode);
 				break;
 			} else {
@@ -499,6 +500,18 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		}
 	}
 
+	if(GUI_WidgetGetState(self.vmu)) {
+		char number[12];
+		sprintf(number, "-v %d", atoi(GUI_TextEntryGetText(self.vmu_number)));
+		strcat(cmd, number);
+	}
+
+	if(GUI_WidgetGetState(self.screenshot)) {
+		char hotkey[24];
+		sprintf(hotkey, "-k 0x%lx", (uint32)SCREENSHOT_HOTKEY);
+		strcat(cmd, hotkey);
+	}
+
 	fprintf(fd, "%s\n", cmd);
 	fprintf(fd, "console --show\n");
 	fclose(fd);
@@ -506,7 +519,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/images/%s.png", env, GUI_TextEntryGetText(self.linktext));
 	GUI_SurfaceSavePNG(self.slnkico, save_file);
 
-	isoLoader_ShowSettings(NULL);
+	isoLoader_ShowGames(self.settings);
 }
 
 static void setico(int size, int force)
@@ -591,7 +604,7 @@ void isoLoader_toggleLinkName(GUI_Widget *widget)
 	
 	GUI_WidgetSetState(self.btn_hidetext, state);
 	
-	chk_save_file();	
+	check_link_file();	
 }
 
 void isoLoader_toggleHideName(GUI_Widget *widget)
@@ -611,7 +624,7 @@ void isoLoader_toggleHideName(GUI_Widget *widget)
 		GUI_TextEntrySetText(self.linktext, text);
 	}
 	
-	chk_save_file();
+	check_link_file();
 }
 
 void isoLoader_toggleOptions(GUI_Widget *widget) 
@@ -782,6 +795,11 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 	}
 }
 
+void isoLoader_toggleExtension(GUI_Widget *widget) {
+	if (GUI_WidgetGetState(widget)) {
+		GUI_WidgetSetState(self.irq, 1);
+	}
+}
 
 void isoLoader_Run(GUI_Widget *widget) {
 
@@ -913,6 +931,14 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 
+	if(GUI_WidgetGetState(self.vmu)) {
+		self.isoldr->emu_vmu = atoi(GUI_TextEntryGetText(self.vmu_number));
+	}
+
+	if(GUI_WidgetGetState(self.screenshot)) {
+		self.isoldr->scr_hotkey = SCREENSHOT_HOTKEY;
+	}
+
 	if(!strncmp(self.isoldr->fs_dev, ISOLDR_DEV_DCIO, 4)) {
 		isoldr_exec_dcio(self.isoldr, filepath);
 	} else {
@@ -947,6 +973,12 @@ static void selectFile(char *name, int index) {
 	highliteDevice();
 	showCover();
 	isoLoader_LoadPreset();
+
+	if (GUI_WidgetGetFlags(self.settings) & WIDGET_DISABLED) {
+		GUI_WidgetSetEnabled(self.settings, 1);
+		GUI_WidgetSetEnabled(self.link, 1);
+		GUI_WidgetSetEnabled(self.extensions, 1);
+	}
 }
 
 
@@ -1058,6 +1090,9 @@ void isoLoader_DefaultPreset() {
 		GUI_WidgetSetState(self.irq, 0);
 		GUI_WidgetSetState(self.low, 0);
 
+		GUI_WidgetSetState(self.vmu, 0);
+		GUI_WidgetSetState(self.screenshot, 0);
+
 		GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 		isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 
@@ -1118,12 +1153,9 @@ int isoLoader_SavePreset() {
 
 	filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
 
-	LockVideo();
-
 	fd = fs_open(filename, O_CREAT | O_TRUNC | O_WRONLY);
 
 	if(fd == FILEHND_INVALID) {
-		UnlockVideo();
 		return -1;
 	}
 
@@ -1190,25 +1222,31 @@ int isoLoader_SavePreset() {
 			break;
 		}
 	}
-	
+
 	trim_spaces(ipbin->title, text, sizeof(ipbin->title));
-	
 	memset(result, 0, sizeof(result));
-	
+
+	int vmu_num = 0;
+
+	if (GUI_WidgetGetState(self.vmu)) {
+		vmu_num = atoi(GUI_TextEntryGetText(self.vmu_number));
+	}
+
 	snprintf(result, sizeof(result),
 			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %d\n"
 			"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
+			"vmu = %d\nscrhotkey = %lx\n"
 			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
 			text, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
 			cdda_mode, GUI_WidgetGetState(self.irq), GUI_WidgetGetState(self.low), heap,
 			GUI_WidgetGetState(self.fastboot), type, mode, memory,
+			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
 	fs_write(fd, result, /*sizeof*/strlen(result));
 	fs_close(fd);
 	self.used_preset = true;
-	
-	UnlockVideo();
+
 	return 0;
 }
 
@@ -1227,7 +1265,7 @@ int isoLoader_LoadPreset() {
 	}
 
 	int use_dma = 0, emu_async = 16, emu_cdda = 0, use_irq = 0;
-	int fastboot = 0, low = 0;
+	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
 	uint32 heap = HEAP_MODE_AUTO;
@@ -1247,6 +1285,8 @@ int isoLoader_LoadPreset() {
 		{ "cdda",     CONF_INT,   (void *) &emu_cdda   },
 		{ "irq",      CONF_INT,   (void *) &use_irq    },
 		{ "low",      CONF_INT,   (void *) &low        },
+		{ "vmu",      CONF_INT,   (void *) &emu_vmu    },
+		{ "scrhotkey",CONF_INT,   (void *) &scr_hotkey },
 		{ "heap",     CONF_STR,   (void *) &heap_memory},
 		{ "memory",   CONF_STR,   (void *) memory      },
 		{ "async",    CONF_INT,   (void *) &emu_async  },
@@ -1289,7 +1329,14 @@ int isoLoader_LoadPreset() {
 	isoLoader_toggleCDDA(self.cdda_mode[emu_cdda]);
 	GUI_WidgetSetState(self.fastboot, fastboot);
 	GUI_WidgetSetState(self.irq, use_irq);
-	GUI_WidgetSetState(self.low, low);
+	GUI_WidgetSetState(self.vmu, emu_vmu ? 1 : 0);
+	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
+
+	if (emu_vmu) {
+		char num[8];
+		sprintf(num, "%03d", emu_vmu);
+		GUI_TextEntrySetText(self.vmu_number, num);
+	}
 
 	heap = strtoul(heap_memory, NULL, 16);
 
@@ -1417,7 +1464,8 @@ void isoLoader_Init(App_t *app) {
 		self.settings = APP_GET_WIDGET("settings");
 		self.games    = APP_GET_WIDGET("games");
 		self.link     = APP_GET_WIDGET("link");
-		
+		self.extensions = APP_GET_WIDGET("extensions");
+
 		self.filebrowser  = APP_GET_WIDGET("file_browser");
 		self.cover_widget = APP_GET_WIDGET("cover_image");
 		self.title        = APP_GET_WIDGET("game_title");
@@ -1429,6 +1477,10 @@ void isoLoader_Init(App_t *app) {
 		self.irq           = APP_GET_WIDGET("irq-checkbox");
 		self.low           = APP_GET_WIDGET("low-checkbox");
 		self.fastboot      = APP_GET_WIDGET("fastboot-checkbox");
+
+		self.vmu           = APP_GET_WIDGET("vmu-checkbox");
+		self.vmu_number    = APP_GET_WIDGET("vmu-number");
+		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
 		
 		self.options_panel	  = APP_GET_WIDGET("options-panel");
 		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
@@ -1520,9 +1572,6 @@ void isoLoader_Init(App_t *app) {
 
 		self.memory_text = APP_GET_WIDGET("boot-memory-text");
 		self.heap_memory_text = APP_GET_WIDGET("heap-memory-text");
-
-		/* Disabling scrollbar on filemanager */
-		GUI_FileManagerRemoveScrollbar(self.filebrowser);
 
 		if(!is_custom_bios()/*DirExists("/cd")*/) {
 			
@@ -1650,7 +1699,6 @@ void isoLoader_ResizeUI()
 	SDL_Rect cover_bg_rect = GUI_WidgetGetArea(cover_bg);
 	SDL_Rect title_rect = GUI_WidgetGetArea(title_panel);
 
-	const int scroll_bar_width = 20; // TODO: hardcoded value
 	const int gap = 19;
 
 	int filemanager_bg_width = screen_width - cover_bg_rect.w - gap * 3;
@@ -1683,7 +1731,7 @@ void isoLoader_ResizeUI()
 	GUI_WidgetSetPosition(title_panel, title_rect.x + delta_x, title_rect.y);
 	GUI_WidgetSetSize(filemanager_bg, filemanager_bg_width, filemanager_bg_height);
 	GUI_FileManagerResize(self.filebrowser, 
-						  filemanager_bg_width - grayRect.x * 2 + scroll_bar_width, 
+						  filemanager_bg_width - grayRect.x * 2, 
 						  filemanager_bg_height - grayRect.y * 2);
 }
 

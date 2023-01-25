@@ -3,6 +3,7 @@ isoLoader_Init
 isoLoader_Shutdown
 isoLoader_Exit
 isoLoader_ShowSettings
+isoLoader_ShowExtensions
 isoLoader_ShowGames
 isoLoader_Run
 isoLoader_ItemClick
@@ -25,3 +26,4 @@ isoLoader_toggleHideName
 isoLoader_MakeShortcut
 isoLoader_toggleLinkName
 isoLoader_Rotate_Image
+isoLoader_toggleExtension
