@@ -1,16 +1,17 @@
 #
 # DreamShell ISO Loader
-# (c) 2009-2022 SWAT
+# (c) 2009-2023 SWAT
 #
 
 include Makefile.cfg
 
 DEFS = ENABLE_CISO=1
 DEFS_EXTENDED = ENABLE_CDDA=1 ENABLE_IRQ=1
-DEFS_FULL = $(DEFS) $(DEFS_EXTENDED) ENABLE_MAPLE=1 ENABLE_WRITE=1 ENABLE_ESC=1
+DEFS_FULL = $(DEFS) $(DEFS_EXTENDED) \
+			ENABLE_MAPLE=1 ENABLE_WRITE=1 ENABLE_ESC=1 ENABLE_SCR=1
 
-TARGETS = cd_full cd_ext cd dcl_full dcl_ext dcl sd_full sd_ext sd ide_full ide_ext ide
-# TARGETS += net_full net_ext net
+TARGETS = cd_full cd_ext cd sd_full sd_ext sd ide_full ide_ext ide
+# TARGETS += dcl_full dcl_ext dcl net_full net_ext net
 
 all: clean $(TARGETS)
 
@@ -93,7 +94,7 @@ install:
 	-mkdir -p $(INSTALL_PATH)
 	cp -R $(BUILD)/*.bin $(INSTALL_PATH)
 	
-test: clean cd
+test_cd: clean cd
 	-mkdir -p $(INSTALL_PATH)
 	-rm -f $(INSTALL_PATH)/cd.bin
 	cp $(BUILD)/cd.bin $(INSTALL_PATH)/cd.bin

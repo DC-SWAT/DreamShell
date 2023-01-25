@@ -53,8 +53,9 @@ void setup_machine_state();
 	fboot(addr)
 
 void video_init();
+void video_screenshot();
 void draw_gdtex(uint8 *src);
-void video_screen_shot();
+void set_file_number(char *filename, int num);
 
 void descramble(uint8 *source, uint8 *dest, uint32 size);
 

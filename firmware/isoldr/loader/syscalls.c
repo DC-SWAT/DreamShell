@@ -611,10 +611,22 @@ static void data_transfer_pio_stream() {
 				pre_read_xfer_end();
 				break;
 			}
-		} else {
-			gdcExitToGame();
 		}
+		gdcExitToGame();
 	}
+}
+
+static int is_transfer_cmd(int cmd) {
+	if(cmd == CMD_PIOREAD
+		|| cmd == CMD_DMAREAD
+		|| cmd == CMD_DMAREAD_STREAM
+		|| cmd == CMD_DMAREAD_STREAM_EX
+		|| cmd == CMD_PIOREAD_STREAM
+		|| cmd == CMD_PIOREAD_STREAM_EX
+	) {
+		return 1;
+	}
+	return 0;
 }
 
 /**
@@ -654,9 +666,7 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		
 		LOGF("\n");
 
-		if(cmd == CMD_PIOREAD || cmd == CMD_DMAREAD ||
-			cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX ||
-			cmd == CMD_PIOREAD_STREAM || cmd == CMD_PIOREAD_STREAM_EX) {
+		if(is_transfer_cmd(GDS->cmd)) {
 			
 #ifdef HAVE_CDDA
 			/* Stop CDDA playback if it's used */
@@ -694,6 +704,12 @@ void gdcMainLoop(void) {
 #endif
 			apply_patch_list();
 		}
+
+#ifdef HAVE_SCREENSHOT
+		if(IsoInfo->scr_hotkey) {
+			video_screenshot();
+		}
+#endif
 
 		if(GDS->status == CMD_STAT_PROCESSING) {
 

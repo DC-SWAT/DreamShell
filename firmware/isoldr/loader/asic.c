@@ -60,7 +60,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	if (code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 
 # ifdef HAVE_CDDA
-		if(status & ASIC_NRM_AICA_DMA && code == EXP_CODE_INT11) {
+		if(status & ASIC_NRM_AICA_DMA) {
 			back_vector = aica_dma_handler(NULL, stack, back_vector);
 		}
 		CDDA_MainLoop();
@@ -69,8 +69,8 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 			apply_patch_list();
 		}
 
-# if defined(HAVE_MAPLE) && defined(MAPLE_SNIFFER)
-		if(status & ASIC_NRM_MAPLE_DMA && code == EXP_CODE_INT11) {
+# if defined(HAVE_MAPLE)
+		if(status & ASIC_NRM_MAPLE_DMA) {
 			back_vector = maple_dma_handler(NULL, stack, back_vector);
 		}
 # endif

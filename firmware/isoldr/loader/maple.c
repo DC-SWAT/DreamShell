@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Maple device emulation
- * (c)2022 SWAT <http://www.dc-swat.ru>
+ * (c)2022-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -9,6 +9,7 @@
 #include <exception.h>
 #include <ubc.h>
 #include <dc/maple.h>
+#include <dc/controller.h>
 
 #define MAPLE_REG(x) (*(vuint32 *)(x))
 #define MAPLE_BASE 0xa05f6c00
@@ -218,12 +219,44 @@ static void maple_vmu_block_sync(maple_frame_t *req, maple_frame_t *resp) {
 #endif
 }
 
+static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
+    uint32 *resp_params = (uint32 *)&resp->data;
+    static uint32 prev_buttons = 0;
+    (void)req;
+
+    if (resp_params[0] != MAPLE_FUNC_CONTROLLER
+        || resp->cmd != MAPLE_RESPONSE_DATATRF) {
+        return;
+    }
+
+    cont_cond_t *cond = (cont_cond_t *)&resp_params[1];
+
+    if (cond->buttons == 0xffff) {
+        prev_buttons = 0;
+        return;
+    }
+
+    uint32 buttons = (~cond->buttons & 0xffff);
+    LOGFF("but=0x%04lx joyx=%d joyy=%d\n", buttons, cond->joyx, cond->joyy);
+
+#ifdef HAVE_SCREENSHOT
+    if (IsoInfo->scr_hotkey
+        && buttons == IsoInfo->scr_hotkey
+        && buttons != prev_buttons
+    ) {
+        video_screenshot();
+    }
+#endif
+
+    prev_buttons = buttons;
+}
+
 static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
     if (vmu_fd < 0) {
         return -1;
     }
     switch (cmd) {
-        case MAPLE_RESPONSE_DEVINFO:
+        case MAPLE_COMMAND_DEVINFO:
         case MAPLE_COMMAND_ALLINFO:
             maple_vmu_device_info(req, resp);
             break;
@@ -238,6 +271,9 @@ static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
             break;
         case MAPLE_COMMAND_BSYNC:
             maple_vmu_block_sync(req, resp);
+            break;
+        case MAPLE_COMMAND_GETCOND:
+            maple_controller(req, resp);
             break;
         default:
             return -1;
@@ -255,7 +291,7 @@ static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
 static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
     (void)req;
     switch (cmd) {
-        case MAPLE_RESPONSE_DEVINFO:
+        case MAPLE_COMMAND_DEVINFO:
         case MAPLE_COMMAND_ALLINFO:
             maple_dump_device_info((maple_devinfo_t *)UNCACHED_ADDR((uint32)&resp->data));
             break;
@@ -320,11 +356,16 @@ static void maple_dma_proc() {
             }
 #endif
             /* Filter out conditional messages */
-            if ((cmd == MAPLE_COMMAND_GETCOND || cmd == MAPLE_COMMAND_SETCOND)
+            if (cmd == MAPLE_COMMAND_SETCOND) {
+                continue;
+            }
+
+            if (cmd == MAPLE_COMMAND_GETCOND
 #ifdef LOG
                 && maple_dma_count > 2 && maple_dma_count % 20
 #endif
             ) {
+                maple_controller(&req_frame, resp_frame_ptr);
                 continue;
             }
 
@@ -368,9 +409,6 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
     }
 #endif
 
-#ifndef MAPLE_SNIFFER
-    do {} while(MAPLE_REG(MAPLE_DMA_STATUS) & 1);
-#endif
     maple_dma_proc();
     return current_vector;
 }
@@ -386,10 +424,6 @@ int maple_init_irq() {
     a_entry.handler = maple_dma_handler;
 
     return asic_add_handler(&a_entry, &old_maple_dma_handler, 0);
-#elif !defined(MAPLE_SNIFFER)
-    ubc_init();
-    ubc_configure_channel(UBC_CHANNEL_A, MAPLE_DMA_STATUS, UBC_BBR_OPERAND | UBC_BBR_WRITE);
-    return 0;
 #else
     return 0;
 #endif
@@ -405,19 +439,8 @@ int maple_init_vmu(int num) {
     int flags = O_RDONLY | O_PIO;
 # endif
 
-    char *filename = "/vmu/vmudump001.vmd";
-    int len = strlen(filename);
-
-    if (num < 10) {
-        filename[len - 5] = '0' + num;
-    } else if(num < 100) {
-        filename[len - 5] = '0' + (num % 10);
-        filename[len - 6] = '0' + (num / 10);
-    } else if(num < 1000) {
-        filename[len - 5] = '0' + (num % 10);
-        filename[len - 6] = '0' + (num % 100);
-        filename[len - 7] = '0' + (num / 100);
-    }
+    char *filename = "/DS/vmu/dump001.vmd";
+    set_file_number(filename, num);
 
     if (vmu_fd != FILEHND_INVALID) {
         close(vmu_fd);
@@ -426,8 +449,11 @@ int maple_init_vmu(int num) {
     vmu_fd = open(filename, flags);
 
     if (vmu_fd < 0) {
-        LOGFF("can't find VMU dump: %d\n", num);
-        return -1;
+        vmu_fd = open(filename + 3, flags);
+        if (vmu_fd < 0) {
+            LOGFF("can't find VMU dump: %d\n", num);
+            return -1;
+        }
     }
 
     lseek(vmu_fd, (255 * 512) + 70, SEEK_SET);

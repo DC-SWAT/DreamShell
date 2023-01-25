@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 		IsoInfo->sector_size,
 		IsoInfo->image_type
 	);
-				
+
 	LOGF("Boot: %s at %d size %d addr %08lx type %d mode %d\n",
 		IsoInfo->exec.file,
 		IsoInfo->exec.lba,

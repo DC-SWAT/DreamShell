@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Exception handling
- * (c)2014-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2023 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -106,7 +106,7 @@ int exception_init(uint32 vbr_addr) {
 		*change_stack_instr = 0x0009; // nop
 	}
 
-#if defined(HAVE_GDB) || defined(HAVE_MAPLE)
+#if defined(HAVE_GDB)
 	/* General exception hack for VBR. */
 	memcpy(
 		VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler),
@@ -195,7 +195,7 @@ void *exception_handler(register_stack *stack) {
 	/* Increase our counters and set the proper back_vectors. */
 	switch (stack->exception_type)
 	{
-#if defined(HAVE_GDB) || defined(HAVE_MAPLE)
+#if defined(HAVE_GDB)
 		case EXP_TYPE_GEN :
 		{
 			//exp_table.general_exception_count++;

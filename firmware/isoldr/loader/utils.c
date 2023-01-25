@@ -11,6 +11,7 @@
 #include <asic.h>
 #include <reader.h>
 #include <syscalls.h>
+#include <exception.h>
 
 #ifndef HAVE_EXPT
 // Just for decreasing ifdef's with HAVE_EXPT
@@ -389,7 +390,7 @@ void vid_waitvbl() {
 }
 
 void draw_gdtex(uint8 *src) {
-	
+
 	int xPos = 640 - 280;
 	int yPos = 480 - 280;
 	int r, g, b, a, pos;
@@ -403,57 +404,144 @@ void draw_gdtex(uint8 *src) {
 			g = src[1];
 			b = src[2];
 			a = src[3];
-		   
+
 			if(a) {
-				
 				r >>= 3;
 				g >>= 2;
 				b >>= 3;
-				
+
 				if(a < 255) {
-					int p = vram[pos];	
+					uint16 p = vram[pos];
 					r = ((r * a) + (((p & 0xf800) >> 11) * (255 - a))) >> 8;
 					g = ((g * a) + (((p & 0x07e0) >> 5) * (255 - a))) >> 8;
 					b = ((b * a) + (( p & 0x001f) * (255 - a))) >> 8;	
 				}
-				
 				vram[pos] = (r << 11) | (g << 5) | b;
 			}
-			
 		   src += 4;
 		}
 	}
 }
 
-#if !_FS_READONLY
-void video_screen_shot() {
-	
-	file_t fd;
-	uint16 pixel;
-	uint16 cur = 0;
-	uint16 *vram = (uint16*)(VIDEO_VRAM_START);
-	uint8 buffer[258];
-	
-	fd = open("screenshot.ppm", O_WRONLY);
-	
-	if(fd < 0) 
-		return;
-	
-	write(fd, "P6\n#DreamShell ISO Loader\n640 480\n255\n", 38);
+void set_file_number(char *filename, int num) {
+    int len = strlen(filename);
 
-	for(int i = 0; i < 0x4B000; i++) {
-		pixel = vram[i];
-		buffer[cur++ * 3] = (((pixel >> 11) & 0x1f) << 3);
-		buffer[cur++ * 3] = (((pixel >>  5) & 0x3f) << 2);
-		buffer[cur++ * 3] = (((pixel >>  0) & 0x1f) << 3);
-		
-		if(cur * 3 >= sizeof(buffer)) {
-			write(fd, buffer, sizeof(buffer));
-			cur = 0;
+    if (num < 10) {
+        filename[len - 5] = '0' + num;
+    } else if(num < 100) {
+        filename[len - 5] = '0' + (num % 10);
+        filename[len - 6] = '0' + (num / 10);
+    } else if(num < 1000) {
+        filename[len - 5] = '0' + (num % 10);
+        filename[len - 6] = '0' + ((num % 100) / 10);
+        filename[len - 7] = '0' + (num / 100);
+    }
+}
+
+#ifdef HAVE_SCREENSHOT
+void video_screenshot() {
+
+	static int num = 0;
+	static uint32 req = 0;
+
+	if (exception_inside_int()) {
+		req = 1;
+		return;
+	} else if(req == 0) {
+		return;
+	} else {
+		req = 0;
+	}
+
+	char *filename = "/DS/screenshot/game_scr_001.ppm";
+	const char *header = "# DreamShell ISO Loader\n640 480\n255\n";
+	const size_t header_len = strlen(header);
+
+	const size_t fs_sector_size = 512;
+	const size_t buffer_size = fs_sector_size * 3;
+	uint8 *buffer = (uint8 *)malloc(buffer_size);
+	uint8 *pbuffer = buffer;
+	uint32 try_cnt = 30;
+
+	if (buffer == NULL) {
+		LOGFF("Can't allocate memory\n");
+		return;
+	}
+
+	set_file_number(filename, ++num);
+	file_t fd = open(filename, O_WRONLY | O_PIO);
+
+	while (fd < 0) {
+		if (--try_cnt == 0) {
+			break;
+		} else if(fd == FS_ERR_NO_PATH) {
+
+			fd = open(filename + 3, O_WRONLY | O_PIO);
+
+			if(fd == FS_ERR_NO_PATH) {
+				break;
+			}
+		} else if (fd == FS_ERR_EXISTS) {
+
+			num += 10;
+			set_file_number(filename, num);
+			fd = open(filename, O_WRONLY | O_PIO);
+		}
+	}
+	if (fd < 0) {
+		LOGFF("Can't create file: %s\n", filename);
+		return;
+	}
+
+	memset(buffer, '#', buffer_size);
+	buffer[0] = 'P';
+	buffer[1] = '6';
+	buffer[2] = '\n';
+	memcpy(buffer + (fs_sector_size - header_len), header, header_len);
+
+	for (uint32 i = 64; i < (fs_sector_size - header_len); ++i) {
+		if (i % 64 == 0) {
+			buffer[i] = '\n';
 		}
 	}
 
+	write(fd, buffer, fs_sector_size);
+
+	uint16 pixel;
+	uint16 *vram = (uint16 *)(VIDEO_VRAM_START);
+	/* TODO
+	uint32 display_cfg = *(vuint32 *)0xa05f8044;
+	uint32 display_size = *(vuint32 *)0xa05f805c;
+	uint32 pixel_mode = (display_cfg >> 2) & 0xf;
+	uint32 height = ((display_size >> 10) & 0x3ff) + 1;
+	uint32 width = 640;
+	if(height == 240) {
+		width = 320;
+	}
+	LOGFF("%s %dx%d %d\n", filename, width, height, pixel_mode);
+	*/
+	LOGF("%s\n", filename);
+
+	for(uint32 i = 0; i < 0x4B000; ++i) {
+
+		pixel = vram[i];
+		pbuffer[0] = (((pixel & 0xf800) >> 11) << 3);
+		pbuffer[1] = (((pixel & 0x07e0) >> 5) << 2);
+		pbuffer[2] = (((pixel & 0x001f) >> 0) << 3);
+		pbuffer += 3;
+
+		if(pbuffer >= (buffer + buffer_size)) {
+			write(fd, buffer, buffer_size);
+			pbuffer = buffer;
+		}
+	}
+
+	if ((pbuffer - buffer) > 0) {
+		write(fd, buffer, pbuffer - buffer);
+	}
+
 	close(fd);
+	free(buffer);
 }
 #endif
 
@@ -484,6 +572,7 @@ static int open_log_file() {
 	int fd = open(LOG_FILE, O_WRONLY | O_APPEND);
 	if (fd > FS_ERR_SYSERR) {
 		write(fd, "--- Start log ---\n", 18);
+		ioctl(fd, FS_IOCTL_SYNC, NULL);
 	}
 	return fd;
 }
@@ -515,6 +604,7 @@ static int PutLog(char *buff) {
 	}
 	if(log_fd > FS_ERR_SYSERR) {
 		write(log_fd, buff, len);
+		ioctl(fd, FS_IOCTL_SYNC, NULL);
 	}
 #endif
 

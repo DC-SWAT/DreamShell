@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * SH4 UBC
- * (c)2013-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2013-2023 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -20,13 +20,7 @@ static void *ubc_handler(register_stack *stack, void *current_vector) {
 		ubc_clear_break(UBC_CHANNEL_B);
 		// LOGF("UBC: A\n");
 		// dump_regs(stack);
-#ifdef HAVE_MAPLE
-        if(IsoInfo->emu_vmu) {
-            maple_dma_handler(NULL, stack, current_vector);
-        }
-#else
         (void)stack;
-#endif
 	}
 
 	if(ubc_is_channel_break(UBC_CHANNEL_B)) {
