@@ -1,7 +1,7 @@
 /** 
  * \file    isoldr.h
  * \brief   DreamShell ISO loader
- * \date    2009-2022
+ * \date    2009-2023
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -148,8 +148,9 @@ typedef struct isoldr_info {
 	uint32 use_irq;                     /* Use IRQ hooking */
 	uint32 emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
 	uint32 syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
+	uint32 scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
 
-	uint32 cdda_offset[46];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[45];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

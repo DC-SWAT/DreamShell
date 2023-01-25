@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    DreamShell ISO Loader module
-   Copyright (C)2009-2020 SWAT
+   Copyright (C)2009-2023 SWAT
 
 */
 
@@ -308,8 +308,6 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 
 	isoldr_info_t *info = NULL;
 
-	LockVideo();
-
 	if(!FileExists(file)) {
 		goto error;
 	}
@@ -343,11 +341,9 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	info->magic[11] = '\0';
 	info->exec.addr = 0xac010000;
 
-	UnlockVideo();
 	return info;
 
 error:
-	UnlockVideo();
 
 	if(info)
 		free(info);
@@ -393,10 +389,10 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 }
 
 static void set_loader_type(isoldr_info_t *info) {
-	if (info->emu_vmu != 0 || info->syscalls) {
+	if (info->emu_vmu != 0 || info->syscalls != 0 || info->scr_hotkey != 0) {
 		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
 		info->fs_type[4] = '\0';
-	} else if (info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0 || info->syscalls != 0) {
+	} else if (info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0) {
 		strncpy(info->fs_type, ISOLDR_TYPE_EXTENDED, 3);
 		info->fs_type[3] = '\0';
 	} else {
@@ -608,7 +604,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
-	uint32 low_level = 0;
+	uint32 low_level = 0, scr_hotkey = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -632,6 +628,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"irq",       'q', NULL, CFG_BOOL,  (void *) &use_irq,     0},
 		{"vmu",       'v', NULL, CFG_ULONG, (void *) &emu_vmu,     0},
 		{"low",       'l', NULL, CFG_BOOL,  (void *) &low_level,   0},
+		{"scrhot",    'k', NULL, CFG_ULONG, (void *) &scr_hotkey,  0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -702,6 +699,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->use_irq   = use_irq;
 	info->emu_vmu   = emu_vmu;
 	info->syscalls  = low_level;
+	info->scr_hotkey = scr_hotkey;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
