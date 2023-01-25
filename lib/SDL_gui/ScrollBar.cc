@@ -2,20 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-
-extern "C"
-{
-
-void LockVideo();
-void UnlockVideo();
-int VideoMustLock();
-void ScreenChanged();
-
-int ds_printf(const char *fmt, ...); 
-
-
-}
-
 #include "SDL_gui.h"
 
 GUI_ScrollBar::GUI_ScrollBar(const char *aname, int x, int y, int w, int h)
@@ -128,9 +114,7 @@ int GUI_ScrollBar::Event(const SDL_Event *event, int xoffset, int yoffset)
 				if (position_y > area.h - knob->GetHeight()) position_y = area.h - knob->GetHeight();
 				MarkChanged();
 				if (moved_callback) {
-					//LockVideo();
 					moved_callback->Call(this);
-					//UnlockVideo();
 				}
 				return 1;
 			}
@@ -198,18 +182,14 @@ int GUI_ScrollBar::GetVerticalPosition(void)
 
 void GUI_ScrollBar::SetHorizontalPosition(int value)
 {
-	if(VideoMustLock()) LockVideo();
 	position_x = value;
 	MarkChanged();
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_ScrollBar::SetVerticalPosition(int value)
 {
-	if(VideoMustLock()) LockVideo();
 	position_y = value;
 	MarkChanged();
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_ScrollBar::SetMovedCallback(GUI_Callback *callback)

@@ -6,16 +6,7 @@
 
 extern "C"
 {
-
-void LockVideo();
-void UnlockVideo();
-int VideoMustLock();
-void ScreenChanged();
 void UpdateActiveMouseCursor();
-
-int ds_printf(const char *fmt, ...); 
-
-
 }
 
 static int Inside(int x, int y, SDL_Rect *r)
@@ -117,16 +108,12 @@ void GUI_Drawable::WriteFlags(int andmask, int ormask)
 
 void GUI_Drawable::SetFlags(int mask)
 {
-	// if((mask == WIDGET_INSIDE || mask == WIDGET_PRESSED) && VideoMustLock()) LockVideo();
 	WriteFlags(-1, mask);
-	// if((mask == WIDGET_INSIDE || mask == WIDGET_PRESSED) && VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Drawable::ClearFlags(int mask)
 {
-	// if((mask == WIDGET_INSIDE || mask == WIDGET_PRESSED) && VideoMustLock()) LockVideo();
 	WriteFlags(~mask, 0);
-	// if((mask == WIDGET_INSIDE || mask == WIDGET_PRESSED) && VideoMustLock()) UnlockVideo();
 }
 
 int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
@@ -182,8 +169,6 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 		case SDL_MOUSEMOTION:
 		{		
 
-			//if(VideoMustLock()) LockVideo();
-
 			int x = event->motion.x - xoffset;
 			int y = event->motion.y - yoffset;
 			if (focus == 0 || focus == this)
@@ -191,10 +176,8 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 				if ((flags & WIDGET_DISABLED) == 0/* && (flags & WIDGET_HIDDEN) == 0*/ && Inside(x, y, &area)) {
 					
 					if(!focused) {
-						if(VideoMustLock()) LockVideo();
 						SetFlags(WIDGET_INSIDE);
 						UpdateActiveMouseCursor();
-						if(VideoMustLock()) UnlockVideo();
 						Highlighted(x, y);
 						focused = 1;
 					}
@@ -204,19 +187,14 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 					if((flags & WIDGET_DISABLED) == 0) {
 						
 						if(focused) {
-							if(VideoMustLock()) LockVideo();
 							ClearFlags(WIDGET_INSIDE);
 							UpdateActiveMouseCursor();
-							if(VideoMustLock()) UnlockVideo();
 							unHighlighted(x, y);
 							focused = 0;
 						}
 					}
 				}
 			}
-
-			//if(VideoMustLock()) UnlockVideo();
-			// UpdateActiveMouseCursor();
 			break;
 		}
 	}
@@ -253,19 +231,11 @@ int GUI_Drawable::GetWType(void) {
 
 void GUI_Drawable::DoUpdate(int force)
 {
-	
 	if (flags & WIDGET_CHANGED) {
 		force = 1;
-		// if(VideoMustLock()) LockVideo();
 	}
-	
 	Update(force);
-	
 	flags &= ~WIDGET_CHANGED;
-
-	// if(force && VideoMustLock()) {
-	// 	UnlockVideo();
-	// }
 }
 
 /* mark as changed so it will be drawn in the next update */
@@ -371,9 +341,6 @@ void GUI_Drawable::Keep(GUI_Widget **target, GUI_Widget *source)
 {
 	if (*target != source)
 	{
-		
-//		if(VideoMustLock()) LockVideo();
-		
 		if (source)
 			source->IncRef();
 		if (*target)
@@ -386,8 +353,6 @@ void GUI_Drawable::Keep(GUI_Widget **target, GUI_Widget *source)
 			
 		(*target) = source;
 		MarkChanged();
-		
-//		if(VideoMustLock()) UnlockVideo();
 	}
 }
 
@@ -398,20 +363,16 @@ SDL_Rect GUI_Drawable::GetArea()
 
 void GUI_Drawable::SetPosition(int x, int y)
 {
-	// if(VideoMustLock()) LockVideo();
 	area.x = x;
 	area.y = y;
 	MarkChanged();
-	// if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Drawable::SetSize(int w, int h)
 {
-	// if(VideoMustLock()) LockVideo();
 	area.w = w;
 	area.h = h;
 	MarkChanged();
-	// if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Drawable::SetStatusCallback(GUI_Callback *callback)

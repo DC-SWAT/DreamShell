@@ -5,15 +5,6 @@
 #include "SDL_gui.h"
 
 
-extern "C"
-{
-
-#include "gui.h"
-
-int ds_printf(const char *fmt, ...);
-
-}
-
 GUI_Widget::GUI_Widget(const char *aname, int x, int y, int w, int h)
 : GUI_Drawable(aname, x, y, w, h)
 {
@@ -43,9 +34,6 @@ void GUI_Widget::SetTransparent(int flag)
 
 void GUI_Widget::SetEnabled(int flag)
 {
-	
-	//ds_printf("GUI_Widget::SetEnabled: %s %d\n", GetName(), flag); 
-	
 	if (flag)
 		ClearFlags(WIDGET_DISABLED);
 	else
@@ -86,16 +74,11 @@ void GUI_Widget::Update(int force)
 	
 	if (force)
 	{
-		//LockVideo();
-		//ds_printf("Erase: %s\n", GUI_ObjectGetName((GUI_Object*)parent));
 		if (flags & WIDGET_TRANSPARENT)
 			parent->Erase(&area);
 		SDL_Rect r = area;
 		r.x = r.y = 0;
-		//ds_printf("DrawWidget: %s\n", GUI_ObjectGetName((GUI_Object*)parent));
 		DrawWidget(&r);
-		//UnlockVideo();
-		// UpdateActiveMouseCursor();
 	}
 }
 
@@ -105,7 +88,6 @@ void GUI_Widget::Draw(GUI_Surface *image, const SDL_Rect *sr, const SDL_Rect *dr
 	if (parent)
 	{
 		SDL_Rect dest = Adjust(dr);
-		//ds_printf("Draw: %s\n", GUI_ObjectGetName((GUI_Object*)parent));
 		parent->Draw(image, sr, &dest);
 	}
 }
@@ -127,7 +109,6 @@ void GUI_Widget::Erase(const SDL_Rect *dr)
 		if (flags & WIDGET_TRANSPARENT)
 			parent->Erase(&dest);
 		DrawWidget(&dest);
-		// UpdateActiveMouseCursor();
 	}
 }
 
@@ -141,23 +122,17 @@ extern "C"
 
 void GUI_WidgetUpdate(GUI_Widget *widget, int force)
 {
-	//LockVideo();
 	widget->DoUpdate(force);
-	//UnlockVideo();
 }
 
 void GUI_WidgetDraw(GUI_Widget *widget, GUI_Surface *image, const SDL_Rect *sr, const SDL_Rect *dr)
 {
-	//LockVideo();
 	widget->Draw(image, sr, dr);
-	//UnlockVideo();
 }
 
 void GUI_WidgetErase(GUI_Widget *widget, const SDL_Rect *dr)
 {
-	//LockVideo();
 	widget->Erase(dr);
-	//UnlockVideo();
 }
 
 void GUI_WidgetFill(GUI_Widget *widget, const SDL_Rect *dr, SDL_Color c)

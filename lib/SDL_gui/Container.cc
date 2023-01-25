@@ -4,15 +4,6 @@
 
 #include "SDL_gui.h"
 
-extern "C"
-{
-void LockVideo();
-void UnlockVideo();
-int VideoMustLock();
-void ScreenChanged();
-int ds_printf(const char *fmt, ...); 
-}
-
 #define WIDGET_LIST_SIZE 16
 #define WIDGET_LIST_INCR 16
 
@@ -67,8 +58,6 @@ void GUI_Container::AddWidget(GUI_Widget *widget)
 {
 	if (!widget || ContainsWidget(widget))
 		return;
-		
-	if(VideoMustLock()) LockVideo();
 
 	// IncRef early, to prevent reparenting from freeing the child
 	widget->IncRef();
@@ -160,8 +149,6 @@ void GUI_Container::AddWidget(GUI_Widget *widget)
 	
 	widgets[n_widgets++] = widget;
 	UpdateLayout();
-	
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Container::RemoveWidget(GUI_Widget *widget)
@@ -173,8 +160,6 @@ void GUI_Container::RemoveWidget(GUI_Widget *widget)
 	if(widget->GetParent() != this) {
 		return;
 	}
-
-	if(VideoMustLock()) LockVideo();
 	
 	widget->SetParent(0);
 		
@@ -187,15 +172,11 @@ void GUI_Container::RemoveWidget(GUI_Widget *widget)
 	}
 	n_widgets = j;
 	UpdateLayout();
-	
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Container::RemoveAllWidgets()
 {
 	int i;
-
-	if(VideoMustLock()) LockVideo();
 		
 	for (i = 0; i < n_widgets; i++)
 	{
@@ -205,8 +186,6 @@ void GUI_Container::RemoveAllWidgets()
 	
 	n_widgets = 0;
 	UpdateLayout();
-	
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Container::UpdateLayout(void)
@@ -315,18 +294,14 @@ void GUI_Container::SetBackgroundColor(SDL_Color c)
 
 void GUI_Container::SetXOffset(int value)
 {
-	if(VideoMustLock()) LockVideo();
 	x_offset = value;
 	MarkChanged();
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Container::SetYOffset(int value)
 {
-	if(VideoMustLock()) LockVideo();
 	y_offset = value;
 	MarkChanged();
-	if(VideoMustLock()) UnlockVideo();
 }
 
 int GUI_Container::GetXOffset()
@@ -341,10 +316,6 @@ int GUI_Container::GetYOffset()
 
 void GUI_Container::SetEnabled(int flag)
 {
-	//ds_printf("GUI_Container::SetEnabled: %s %d\n", GetName(), flag); 
-
-	if(VideoMustLock()) LockVideo();
-
 	int i;
 	for (i = 0; i < n_widgets; i++)
 		widgets[i]->SetEnabled(flag);
@@ -353,10 +324,8 @@ void GUI_Container::SetEnabled(int flag)
 		ClearFlags(WIDGET_DISABLED);
 	else
 		SetFlags(WIDGET_DISABLED);
-		
-	MarkChanged();
 
-	if(VideoMustLock()) UnlockVideo();
+	MarkChanged();
 }
 
 extern "C"

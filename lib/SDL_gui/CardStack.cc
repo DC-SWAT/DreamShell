@@ -6,16 +6,7 @@
 
  extern "C"
  {
-
-	void LockVideo();
-	void UnlockVideo();
-	int VideoMustLock();
-	void ScreenChanged();
 	void UpdateActiveMouseCursor();
-
-	int ds_printf(const char *fmt, ...); 
-
-
  }
 
 GUI_CardStack::GUI_CardStack(const char *aname, int x, int y, int w, int h)
@@ -42,16 +33,7 @@ void GUI_CardStack::Update(int force)
 		SDL_Rect r = area;
 		r.x = x_offset;
 		r.y = y_offset;
-		
-//		if(VideoMustLock()) {
-//			ds_printf("Lock %s %s\n", __func__);
-//			LockVideo();
-//			Erase(&r);
-//			ds_printf("Unlock %s %s\n", __func__);
-//			UnlockVideo();
-//		} else {
-			Erase(&r);
-//		}
+		Erase(&r);
 	}
 
 	if (n_widgets)
@@ -79,14 +61,10 @@ void GUI_CardStack::Next()
 {
 	if (n_widgets)
 	{
-		// if(VideoMustLock()) LockVideo();
-
 		if (++visible_index >= n_widgets)
 			visible_index = 0;
 		
 		MarkChanged();
-
-		// if(VideoMustLock()) UnlockVideo();
 	}
 }
 
@@ -94,14 +72,10 @@ void GUI_CardStack::Prev()
 {
 	if (n_widgets)
 	{
-		// if(VideoMustLock()) LockVideo();
-
 		if (--visible_index < 0)
 			visible_index = n_widgets-1;
 
 		MarkChanged();
-
-		// if(VideoMustLock()) UnlockVideo();
 	}
 }
 
@@ -110,13 +84,9 @@ void GUI_CardStack::ShowIndex(int index)
 	if (n_widgets)
 	{
 		if (index >= 0 && index < n_widgets) {
-			// if(VideoMustLock()) LockVideo();
-
 			visible_index = index;
 			MarkChanged();
 			UpdateActiveMouseCursor();
-
-			// if(VideoMustLock()) UnlockVideo();
 		}
 	}
 }
@@ -128,14 +98,9 @@ void GUI_CardStack::Show(const char *aname)
 	for (i=0; i<n_widgets; i++)
 		if (widgets[i]->CheckName(aname) == 0)
 		{	
-
-			// if(VideoMustLock()) LockVideo();
-
 			visible_index = i;
 			MarkChanged();
 			UpdateActiveMouseCursor();
-
-			// if(VideoMustLock()) UnlockVideo();
 			break;
 		}
 }
@@ -152,7 +117,6 @@ int GUI_CardStack::IsVisibleWidget(GUI_Widget *widget) {
 	int i;
 	for (i=0; i < n_widgets; i++)
 		if (widgets[i] == widget && i == visible_index) {
-			//ds_printf("VISIBLE: %s\n", widget->GetName());
 			return 1;
 		}
 			

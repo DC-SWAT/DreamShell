@@ -4,16 +4,6 @@
 
 #include "SDL_gui.h"
 
-extern "C"
-{
-void LockVideo();
-void UnlockVideo();
-int VideoMustLock();
-void ScreenChanged();
-int ds_printf(const char *fmt, ...); 
-}
-
-
 //
 // A label which favors memory consumption over speed.
 //
@@ -55,14 +45,10 @@ void GUI_Label::SetTextColor(int r, int g, int b)
 
 void GUI_Label::SetText(const char *s)
 {
-	if(VideoMustLock()) LockVideo();
-	
 	delete [] text;
 	text = new char[strlen(s)+1];
 	strcpy(text, s);
 	MarkChanged();
-	
-	if(VideoMustLock()) UnlockVideo();
 }
 
 char *GUI_Label::GetText()

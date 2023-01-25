@@ -8,14 +8,9 @@ extern "C"
 {
 #include <kos.h>
 int ds_printf(const char *fmt, ...); 
-void LockVideo();
-void UnlockVideo();
-int VideoMustLock();
 void UpdateActiveMouseCursor();
 void ScreenWaitUpdate();
-int InputMustLock();
 void SDL_DC_EmulateMouse(SDL_bool value);
-
 }
 
 
@@ -25,7 +20,6 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	strncpy(cur_path, path != NULL ? path : "/", MAX_FN_LEN);
 	rescan = 1;
 	joy_sel = 0;
-	//use_browse = browse;
 	
 	item_area.w = w - 20; 
 	item_area.h = 20; 
@@ -53,7 +47,6 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	item_label_clr.b = 0;
 	
 	Build();
-//	Scan();
 }
 
 GUI_FileManager::~GUI_FileManager() {
@@ -94,7 +87,6 @@ void GUI_FileManager::Build() {
 		scrollbar->SetMovedCallback(cb);
 		cb->DecRef();
 		AddWidget(scrollbar);
-//		scrollbar->DecRef();
 	}
 
 	button_up = new GUI_Button("button_up", item_area.w, 0, 20, 20);
@@ -104,7 +96,6 @@ void GUI_FileManager::Build() {
 		button_up->SetClick(cb);
 		cb->DecRef();
 		AddWidget(button_up);
-//		button_up->DecRef();
 	}
 	
 	button_down = new GUI_Button("button_down", item_area.w, area.h - 20, 20, 20);
@@ -114,7 +105,6 @@ void GUI_FileManager::Build() {
 		button_down->SetClick(cb);
 		cb->DecRef();
 		AddWidget(button_down);
-//		button_down->DecRef();
 	}
 }
 
@@ -151,6 +141,17 @@ void GUI_FileManager::AdjustScrollbar(GUI_Object * sender) {
 	int scroll_pos = scrollbar->GetVerticalPosition();
 	int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
 	panel->SetYOffset(scroll_pos * ((cont_height / scroll_height) + 1));
+
+	if (scroll_pos <= 0) {
+		button_up->SetEnabled(0);
+	} else {
+		button_up->SetEnabled(1);
+	}
+	if (scroll_pos >= scroll_height) {
+		button_down->SetEnabled(0);
+	} else {
+		button_down->SetEnabled(1);
+	}
 }
 
 void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
@@ -199,9 +200,6 @@ void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 
 void GUI_FileManager::SetPath(const char *path) {
 	strncpy(cur_path, path, MAX_FN_LEN);
-//	ds_printf("GUI_FileManager::SetPath: %s\n", cur_path);
-//	rescan = 1;
-//	Scan();
 	MarkChanged();
 }
 
@@ -215,9 +213,6 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 	file_t fd;
 	
 	if(name/* && size < 0*/) {
-		
-		if(VideoMustLock()) LockVideo();
-
 		if(size == -2) {
 
 			b = strrchr(cur_path, '/');
@@ -231,14 +226,10 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 				else
 					cur_path[1] = '\0';
 
-//				rescan = 1;
-//				Scan();
 				MarkChanged();
-//				ds_printf("strlen: %d %d\n", strlen(b), s);
 			}
-			
 		} else {
-			
+
 			memset(path, 0, MAX_FN_LEN);
 
 			if(strlen(cur_path) > 1) {
@@ -250,24 +241,15 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 			s = strlen(cur_path) + strlen(name) + 1;
 			path[s > MAX_FN_LEN-1 ? MAX_FN_LEN-1 : s] = '\0';
 
-//			ds_printf("%s: %s %s %s\n", __func__, name, path, cur_path);
-
 			fd = fs_open(path, O_RDONLY | O_DIR);
 
 			if(fd != FILEHND_INVALID) {
 				fs_close(fd);
 				strncpy(cur_path, path, MAX_FN_LEN);
-//				rescan = 1;
-//				Scan();
 				MarkChanged();
 			} else {
 				ds_printf("GUI_FileManager: Can't open dir: %s\n", path);
 			}
-		}
-		
-		if(VideoMustLock()) {
-			UnlockVideo();
-			ScreenWaitUpdate();
 		}
 	}
 }
@@ -304,19 +286,21 @@ void GUI_FileManager::Scan()
 	
 	panel->RemoveAllWidgets();
 	panel->SetYOffset(0);
-	
+
 	if(strlen(cur_path) > 1) 
 	{
 		const char b[] = {0x2E, 0x2E, 0};
 		AddItem(b, -2, 0, O_DIR);
 	}
-	
+
 	while ((ent = fs_readdir(f)) != NULL) 
 	{
-		if(strncasecmp(ent->name, ".", MAX_FN_LEN) && strncasecmp(ent->name, "..", MAX_FN_LEN) && 
-			strncasecmp(ent->name, "RECYCLER", MAX_FN_LEN) && 
-			strncasecmp(ent->name, "$RECYCLE.BIN", MAX_FN_LEN) && 
-			strncasecmp(ent->name, "System Volume Information", MAX_FN_LEN)) 
+		if(strncmp(ent->name, ".", MAX_FN_LEN) &&
+			strncmp(ent->name, "..", MAX_FN_LEN) &&
+			strncmp(ent->name, "RECYCLER", MAX_FN_LEN) &&
+			strncmp(ent->name, "$RECYCLE.BIN", MAX_FN_LEN) &&
+			strncasecmp(ent->name, "System Volume Information", MAX_FN_LEN) &&
+			strncasecmp(ent->name, ".DS_Store", MAX_FN_LEN))
 		{
 			if (n)
 				sorts = (dirent_t *) realloc((void *) sorts, (sizeof(dirent_t)*(n+1)));
@@ -325,9 +309,9 @@ void GUI_FileManager::Scan()
 			n++;
 		}
 	}
-	
+
 	qsort((void *) sorts, n, sizeof(dirent_t), (int (*)(const void*, const void*)) alpha_sort);
-	
+
 	for (int i = 0; i < n; i++)
 	{
 		if (sorts[i].attr)
@@ -335,7 +319,7 @@ void GUI_FileManager::Scan()
 			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
 		}
 	}
-	
+
 	for (int i = 0; i < n; i++)
 	{
 		if (!sorts[i].attr)
@@ -343,14 +327,13 @@ void GUI_FileManager::Scan()
 			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
 		}
 	}
-	
+
 	free(sorts);
 	fs_close(f);
 	rescan = 0;
 }
 
 void GUI_FileManager::ReScan() {
-//	rescan = 1;
 	MarkChanged();
 }
 
@@ -370,8 +353,6 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 	bt->SetHighlightImage(item_highlight);
 	bt->SetPressedImage(item_pressed);
 	bt->SetDisabledImage(item_disabled);
-	
-//	ds_printf("GUI_FileManager::AddItem: %s %d\n", name, size);
 
 	if(item_click || item_context_click || item_mouseover || item_mouseout) {
 		
@@ -466,7 +447,6 @@ void GUI_FileManager::SetItemLabel(GUI_Font *font, int r, int g, int b)	{
 	item_label_clr.r = r;
 	item_label_clr.g = g;
 	item_label_clr.b = b;
-//	rescan = 1;
 	MarkChanged();
 }
 
@@ -481,7 +461,6 @@ void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highligh
 	GUI_ObjectKeep((GUI_Object **) &item_highlight, highlight);
 	GUI_ObjectKeep((GUI_Object **) &item_pressed, pressed);
 	GUI_ObjectKeep((GUI_Object **) &item_disabled, disabled);	
-//	rescan = 1;
 	MarkChanged();
 }
 
@@ -490,7 +469,6 @@ void GUI_FileManager::SetItemSize(const SDL_Rect *item_r) {
 	item_area.h = item_r->h;
 	item_area.x = item_r->x;
 	item_area.y = item_r->y;
-//	rescan = 1;
 	MarkChanged();
 }
 
@@ -675,7 +653,6 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 						
 						scrollbar->SetVerticalPosition(sp);
 						AdjustScrollbar(NULL);
-						ScreenWaitUpdate();
 					}
 					break;
 				default:
@@ -686,10 +663,7 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		case SDL_JOYHATMOTION:
 		
 			if(flags & WIDGET_PRESSED) {
-				
-				if(VideoMustLock()) LockVideo();
-				
-//				ds_printf("JHAT: %02X\n", event->jhat.value);
+
 				SDL_Event evt;
 				int cnt = panel->GetWidgetCount() - 1;
 				int inc = 1;
@@ -730,22 +704,16 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 				calc_item_offset(w, &evt.motion.x, &evt.motion.y);
 				SDL_PushEvent(&evt);
 				SDL_WarpMouse(evt.motion.x, evt.motion.y);
-				
-				if(VideoMustLock()) UnlockVideo();
 			}
 			
 		default:
 			break;
 	}
-	
-//	if(rescan) Scan();
 		
 	for (i = 0; i < n_widgets; i++) {
 		if (widgets[i]->Event(event, xoffset, yoffset))
 			return 1;
 	}
-
-//	UpdateActiveMouseCursor();
 
 	return GUI_Drawable::Event(event, xoffset, yoffset);
 }

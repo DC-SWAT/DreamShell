@@ -8,11 +8,7 @@
 #include "SDL_gui.h"
 
 extern "C" {
-	void LockVideo();
-	void UnlockVideo();
-	int VideoMustLock();
 	void ScreenChanged();
-	int ds_printf(const char *fmt, ...); 
 }
 
 #define MAX_UPDATES 200
@@ -33,13 +29,8 @@ void GUI_RealScreen::FlushUpdates(void)
 {
 	if (n_updates)
 	{
-
-		// ds_printf("FlushUpdates: %d\n", n_updates);
-		// if(VideoMustLock()) LockVideo();
-		// screen_surface->UpdateRects(n_updates, updates);
 		n_updates = 0;
 		ScreenChanged();
-		// if(VideoMustLock()) UnlockVideo();
 	}
 }
 
@@ -88,7 +79,6 @@ void GUI_RealScreen::UpdateRect(const SDL_Rect *r)
 		FlushUpdates();
 #else
 	n_updates++;
-	//ds_printf("Update: %d (%d %d %dx%d)\n", n_updates, r->x, r->y, r->w, r->h);
 #endif
 }
 

@@ -4,11 +4,6 @@
 
 #include "SDL_gui.h"
 
-extern "C" {
-	void LockVideo();
-	void UnlockVideo();
-}
-
 //////////////////////////////////////////////////////////////////////////////
 
 static SDL_Rect ConvertRect(const GUI_Rect &r)
@@ -36,16 +31,12 @@ GUI_SDLScreen::~GUI_SDLScreen(void)
 
 void GUI_SDLScreen::UpdateAll(void)
 {
-//	LockVideo();
 	SDL_UpdateRect(surface, 0, 0, area.w, area.h);
-//	UnlockVideo();
 }
 
 void GUI_SDLScreen::Update(const GUI_Rect &r)
 {
-//	LockVideo();
 	SDL_UpdateRect(surface, r.x, r.y, r.w, r.h);
-//	UnlockVideo();
 }
 
 void GUI_SDLScreen::DrawImage(const GUI_Surface *image, const GUI_Rect &src_r, const GUI_Rect &dst_r)
@@ -57,10 +48,8 @@ void GUI_SDLScreen::FillRect(const GUI_Rect &r, const GUI_Color &c)
 {
 	Uint32 sdl_c = MapColor(surface, c);
 	SDL_Rect sdl_r = ConvertRect(r);
-	
-//	LockVideo();
+
 	SDL_FillRect(surface, &sdl_r, sdl_c);
-//	UnlockVideo();
 }
 
 void GUI_SDLScreen::DrawRect(const GUI_Rect &r, const GUI_Color &c)

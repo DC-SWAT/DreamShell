@@ -6,14 +6,8 @@
 
 extern "C" 
 {
-	int ds_printf(const char *fmt, ...); 
 	int GUI_Object2Trash(GUI_Object *object);
-	void LockVideo();
-	void UnlockVideo();
-	int VideoMustLock();
-	void ScreenChanged();
 }
-
 
 GUI_Object::GUI_Object(const char *aname)
 {
@@ -42,11 +36,7 @@ int GUI_Object::DecRef(void)
 {
 	if (--refcount <= 0)
 	{
-//		ds_printf("Deleting gui object: %s at 0x%08lx\n", name, (uint32)this);
-		//if(VideoMustLock()) LockVideo();
 		delete this;
-		//if(VideoMustLock()) UnlockVideo();
-//		UnlockVideo();
 		return 1;
 	}
 	return 0;
@@ -131,13 +121,9 @@ int GUI_ObjectKeep(GUI_Object **target, GUI_Object *source)
 {
 	if (source != *target)
 	{
-		//if(VideoMustLock()) LockVideo();
-		
 		GUI_ObjectIncRef(source);
 		GUI_ObjectDecRef(*target);
 		(*target) = source;
-		
-		//if(VideoMustLock()) UnlockVideo();
 		return 1;
 	}
 	return 0;

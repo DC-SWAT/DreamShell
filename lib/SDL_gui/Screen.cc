@@ -14,7 +14,6 @@ extern "C" {
 	void LockVideo();
 	void UnlockVideo();
 	int VideoMustLock();
-	void ScreenChanged();
 	void UpdateActiveMouseCursor();
 	int ds_printf(const char *fmt, ...);
 }
@@ -295,9 +294,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 			{
 				
 				if (contents) {
-					
-					if(VideoMustLock()) LockVideo();
-				
+
 					switch(event->jhat.value) {
 						case 0x0E: //UP
 						case 0x0B: //DOWN
@@ -354,8 +351,6 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 
 							break;
 					}
-					
-					if(VideoMustLock()) UnlockVideo();
 				}
 				break;
 			}
@@ -377,8 +372,6 @@ void GUI_Screen::RemoveWidget(GUI_Widget *widget)
 void GUI_Screen::SetContents(GUI_Widget *widget)
 {
 
-	if(VideoMustLock()) LockVideo();
-
 	Keep(&contents, widget);
 
 	joysel_size = 0;
@@ -389,10 +382,8 @@ void GUI_Screen::SetContents(GUI_Widget *widget)
 	for(i = 0; i < joysel_size; i++) {
 		joysel[i] = NULL;
 	}
-	
+
 	MarkChanged();
-	
-	if(VideoMustLock()) UnlockVideo();
 }
 
 void GUI_Screen::SetBackground(GUI_Surface *image)
@@ -461,14 +452,6 @@ extern "C"
 
 GUI_Screen *GUI_ScreenCreate(int w, int h, int d, int f)
 {
-	//d = SDL_VideoModeOK(w, h, d, f);
-	//if (d == 0)
-		//return NULL;
-
-	//SDL_Surface *temp = SDL_SetVideoMode(w, h, d, f);
-	//if (temp == NULL)
-		//return NULL;
-
 	return new GUI_RealScreen("screen", GetScreen());
 }
 
@@ -520,10 +503,8 @@ void GUI_ScreenUpdate(GUI_Screen *screen, int force)
 }
 
 void GUI_ScreenDoUpdate(GUI_Screen *screen, int force) {
-	//LockVideo();
 	if(screen)
-		screen->DoUpdate(force); 
-	//UnlockVideo();
+		screen->DoUpdate(force);
 }
 
 
