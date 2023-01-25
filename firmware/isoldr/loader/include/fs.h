@@ -38,6 +38,8 @@
 #define FS_ERR_NUMFILES -5    /* Max number of open files exceeded     */
 #define FS_ERR_NODISK   -6    /* No disc/card present                  */
 #define FS_ERR_DISKCHG  -7    /* Disc has been replaced with a new one */
+#define FS_ERR_EXISTS   -8    /* File already exists                   */
+#define FS_ERR_NO_PATH  -9    /* No path                               */
 
 
 /** \brief  File descriptor type */
@@ -80,7 +82,8 @@ enum FS_DMA_STATE {
 };
 
 enum FS_IOCTL_CMD {
-	FS_IOCTL_GET_LBA = 0
+	FS_IOCTL_GET_LBA = 0,
+	FS_IOCTL_SYNC = 1
 };
 
 int fs_init();

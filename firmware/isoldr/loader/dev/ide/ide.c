@@ -677,6 +677,7 @@ static s32 g1_ata_access(struct ide_req *req)
 	u8 lba_io[6];
 	u8 head;
 	u16 cmd;
+	const u32 sector_size = 512;
 
 	if ((req->cmd & 2))
 	{
@@ -759,22 +760,22 @@ static s32 g1_ata_access(struct ide_req *req)
 			if (req->cmd == G1_READ_DMA) {
 				 /* Invalidate the dcache over the range of the data. */
 				if((u32)buff & 0xF0000000) {
-					dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * 512));
+					dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * sector_size));
 				}
 			}
 #if _FS_READONLY == 0
 			else {
 				/* Flush the dcache over the range of the data. */
-				dcache_flush_range((u32) buff, len * 512);
+				dcache_flush_range((u32) buff, len * sector_size);
 			}
 #endif
-			
+
 			/* Set the DMA parameters up. */
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
 			OUT32(G1_ATA_DMA_ADDRESS, ((u32) buff & 0x0FFFFFFF));
-			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * 512));
+			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * sector_size));
 			OUT8(G1_ATA_DMA_DIRECTION, (req->cmd == G1_READ_DMA));
-			
+
 			 /* Enable G1 DMA. */
 			OUT8(G1_ATA_DMA_ENABLE, 1);
 		}
@@ -786,24 +787,27 @@ static s32 g1_ata_access(struct ide_req *req)
 
 		if (req->cmd == G1_READ_PIO)
 		{
-			g1_pio_reset(len * 512);
-			g1_pio_xfer((u32)buff, len * 512);
+			g1_pio_reset(len * sector_size);
+			g1_pio_xfer((u32)buff, len * sector_size);
 		}
 #if _FS_READONLY == 0
 		else if (req->cmd == G1_WRITE_PIO)
 		{
+			OUT8(G1_ATA_CTL, 2);
 			for (u32 i = 0; i < len; i++)
 			{
-				dcache_pref_range(((u32*)buff)[i*256], 512);
+				// dcache_pref_range((u32)buff, sector_size);
 				g1_ata_wait_nbsy();
-				
-				for (u32 j = 0; j < 256; j++)
-					OUT16(G1_ATA_DATA, ((u16 *)buff)[i*256+j]);
+				for (u32 j = 0; j < sector_size >> 1; ++j) {
+					OUT16(G1_ATA_DATA, (u16)(buff[0] | buff[1] << 8));
+					buff += 2;
+				}
+				// dcache_purge_range(((u32)buff) - sector_size, sector_size);
 			}
-			
 			OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 			g1_ata_wait_bsydrq();
 			g1_ata_ack_irq();
+			OUT8(G1_ATA_CTL, 0);
 		}
 #endif
 		else
@@ -937,7 +941,7 @@ void g1_get_partition(void)
 
 s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	
-	LOGF("G1_ATA_READ: %ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
+	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
 			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
 
 	const u8 drive = 1; // TODO
@@ -949,7 +953,7 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = fs_dma_enabled() ? G1_READ_DMA : G1_READ_PIO;
 	req.lba = block;
-	req.async = wait_dma ? 0 : 1;
+	req.async = (wait_dma || req.cmd == G1_READ_PIO) ? 0 : 1;
 
 	g1_dma_part_avail = 0;
 
@@ -960,7 +964,7 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 
 s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 
-	DBGFF("%ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
+	DBGF("G1_ATA_WRITE: %ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
 			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
 
 	const u8 drive = 1; // TODO
@@ -972,7 +976,7 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = fs_dma_enabled() ? G1_WRITE_DMA : G1_WRITE_PIO;
 	req.lba = block;
-	req.async = wait_dma ? 0 : 1;
+	req.async = (wait_dma || req.cmd == G1_WRITE_PIO) ? 0 : 1;
 
 	return g1_ata_access(&req);
 }
@@ -1102,7 +1106,10 @@ void g1_pio_reset(size_t total_bytes) {
 }
 
 void g1_pio_xfer(u32 addr, size_t bytes) {
-	u16 *buff = (u16 *)addr;
+	u8 *buff_c = (u8 *)addr;
+	u16 *buff_s = (u16 *)addr;
+	u16 word;
+	const u8 *pword = (u8 *)&word;
 	const u32 sec_size = 512;
 	u32 words_count = bytes >> 1;
 
@@ -1118,7 +1125,15 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 			}
 		}
 
-		buff[w] = IN16(G1_ATA_DATA);
+		if ((addr & 1) == 0) {
+			buff_s[w] = IN16(G1_ATA_DATA);
+		} else {
+			word = IN16(G1_ATA_DATA);
+			buff_c[0] = pword[0];
+			buff_c[1] = pword[1];
+			buff_c += 2;
+		}
+
 		g1_pio_avail -= 2;
 
 		if (g1_pio_avail == 0) {

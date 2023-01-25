@@ -104,7 +104,7 @@ int fs_init() {
 
 void fs_enable_dma(int state) {
 
-#ifdef LOG
+#ifdef DBG
 	if(dma_mode != state)
 		LOGFF("%d\n", state);
 #endif
@@ -138,7 +138,7 @@ int open(const char *path, int flags) {
 		case O_RDONLY:
 			fat_flags = (FA_OPEN_EXISTING | FA_READ);
 			break;
-#if !_FS_READONLY
+#if _FS_READONLY == 0
 		case O_WRONLY:
 			fat_flags = FA_WRITE | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
 			break;
@@ -158,6 +158,11 @@ int open(const char *path, int flags) {
 	if(r != FR_OK) {
 		LOGFF("failed to open %s, error %d\n", path, r);
 		dma_mode = old_dma_mode;
+		if (r == FR_EXIST) {
+			return FS_ERR_EXISTS;
+		} else if(r == FR_NO_PATH) {
+			return FS_ERR_NO_PATH;
+		}
 		return FS_ERR_NOFILE;
 	}
 
@@ -364,17 +369,24 @@ void poll_all() {
 	}
 }
 
-#if !_FS_READONLY
+#if _FS_READONLY == 0
 
 int write(int fd, void *ptr, unsigned int size) {
 
 	uint bw;
 	CHECK_FD();
 
+	int old_dma_mode = dma_mode;
+	if(file->dma_mode > -1) {
+		dma_mode = file->dma_mode;
+	}
+
 	if(f_write(&file->fp, ptr, size, &bw) == FR_OK) {
-		f_sync(&file->fp);
+		dma_mode = old_dma_mode;
 		return bw;
 	}
+
+	dma_mode = old_dma_mode;
 	return FS_ERR_SYSERR;
 }
 
@@ -422,7 +434,13 @@ int ioctl(int fd, int cmd, void *data) {
 			memcpy(data, &sec, sizeof(sec));
 			return 0;
 		}
+		case FS_IOCTL_SYNC:
+			if (f_sync(&file->fp) == FR_OK) {
+				return 0;
+			}
+			break;
 		default:
 			return FS_ERR_PARAM;
 	}
+	return FS_ERR_SYSERR;
 }
