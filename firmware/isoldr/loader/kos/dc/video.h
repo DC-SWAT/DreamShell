@@ -2,6 +2,7 @@
 
     dc/video.h
     Copyright (C) 2001 Anders Clerwall (scav)
+    Copyright (C) 2023 SWAT
 
 */
 
@@ -45,9 +46,11 @@ __BEGIN_DECLS
 
     @{
 */
-#define PM_RGB555   0       /**< \brief RGB555 pixel mode (15-bit) */
-#define PM_RGB565   1       /**< \brief RGB565 pixel mode (16-bit) */
-#define PM_RGB888   3       /**< \brief RGB888 pixel mode (24-bit) */
+#define PM_RGB555   0      /**< \brief RGB555 pixel mode (15-bit) */
+#define PM_RGB565   1      /**< \brief RGB565 pixel mode (16-bit) */
+#define PM_RGB888P  2      /**< \brief RGB888 packet pixel mode (24-bit) */
+#define PM_RGB0888  3      /**< \brief RGB888 pixel mode (32-bit) */
+#define PM_RGB888 PM_RGB0888 /**< \brief Backward compatibility */
 /** @} */
 
 /** \brief  Generic display modes */

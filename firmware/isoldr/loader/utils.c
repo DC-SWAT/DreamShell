@@ -460,6 +460,7 @@ void video_screenshot() {
 	const size_t fs_sector_size = 512;
 	const size_t buffer_size = fs_sector_size * 3;
 	uint8 *buffer = (uint8 *)malloc(buffer_size);
+	uint8 *buffer_end = buffer + buffer_size;
 	uint8 *pbuffer = buffer;
 	uint32 try_cnt = 30;
 
@@ -507,30 +508,55 @@ void video_screenshot() {
 
 	write(fd, buffer, fs_sector_size);
 
-	uint16 pixel;
-	uint16 *vram = (uint16 *)(VIDEO_VRAM_START);
-	/* TODO
-	uint32 display_cfg = *(vuint32 *)0xa05f8044;
-	uint32 display_size = *(vuint32 *)0xa05f805c;
-	uint32 pixel_mode = (display_cfg >> 2) & 0xf;
-	uint32 height = ((display_size >> 10) & 0x3ff) + 1;
+	uint32 pixel;
+	uint32 *vraml = (uint32 *)(VIDEO_VRAM_START);
+	uint16 *vrams = (uint16 *)(vraml);
+	uint8 *vramb = (uint8 *)(vraml);
+	const uint32 display_cfg = *(vuint32 *)0xa05f8044;
+	const uint32 pixel_mode = (display_cfg >> 2) & 0x0f;
+	const uint32 display_size = *(vuint32 *)0xa05f805c;
 	uint32 width = 640;
-	if(height == 240) {
+	uint32 height = ((display_size >> 10) & 0x3ff) + 1;
+	if(height <= 240) {
 		width = 320;
+		height = 240;
+	} else {
+		height = 480;
 	}
+	const uint32 pix_num = width * height;
 	LOGFF("%s %dx%d %d\n", filename, width, height, pixel_mode);
-	*/
-	LOGF("%s\n", filename);
 
-	for(uint32 i = 0; i < 0x4B000; ++i) {
+	for(uint32 i = 0; i < pix_num; ++i) {
 
-		pixel = vram[i];
-		pbuffer[0] = (((pixel & 0xf800) >> 11) << 3);
-		pbuffer[1] = (((pixel & 0x07e0) >> 5) << 2);
-		pbuffer[2] = (((pixel & 0x001f) >> 0) << 3);
+		switch(pixel_mode) {
+			case PM_RGB888P:
+				pbuffer[0] = vramb[i * 3 + 2];
+				pbuffer[1] = vramb[i * 3 + 1];
+				pbuffer[2] = vramb[i * 3];
+				break;
+			case PM_RGB0888:
+				pixel = vraml[i];
+				pbuffer[0] = ((pixel >> 16) & 0xff);
+				pbuffer[1] = ((pixel >> 8) & 0xff);
+				pbuffer[2] = (pixel & 0xff);
+				break;
+			case PM_RGB555:
+				pixel = vrams[i];
+				pbuffer[0] = (((pixel >> 10) & 0x1f) << 3);
+				pbuffer[1] = (((pixel >> 5) & 0x1f) << 3);
+				pbuffer[2] = ((pixel & 0x1f) << 3);
+				break;
+			case PM_RGB565:
+			default:
+				pixel = vrams[i];
+				pbuffer[0] = (((pixel >> 11) & 0x1f) << 3);
+				pbuffer[1] = (((pixel >> 5) & 0x3f) << 2);
+				pbuffer[2] = ((pixel & 0x1f) << 3);
+				break;
+		}
 		pbuffer += 3;
 
-		if(pbuffer >= (buffer + buffer_size)) {
+		if(pbuffer >= buffer_end) {
 			write(fd, buffer, buffer_size);
 			pbuffer = buffer;
 		}
