@@ -365,8 +365,7 @@ void UnlockVideo() {
 }
 
 
-/* Utility function to fill out the initial poly contexts */
-static void plx_fill_contexts(plx_texture_t * txr) {
+void plx_fill_contexts(plx_texture_t * txr) {
 	pvr_poly_cxt_txr(&txr->cxt_opaque, PVR_LIST_OP_POLY, txr->fmt, txr->w, txr->h,
 		txr->ptr, screen_filter);
 	pvr_poly_cxt_txr(&txr->cxt_trans, PVR_LIST_TR_POLY, txr->fmt, txr->w, txr->h,
@@ -529,13 +528,6 @@ void SDL_DS_SetWindow(int width, int height) {
 }
 
 
-static inline void plx_vert_ifpm3(int flags, float x, float y, float z, uint32 color, float u, float v) {       
-	plx_mat_tfip_3d(x, y, z);
-	plx_vert_ifp(flags, x, y, z, color, u, v);
-	//printf("%f %f %f\n",x,y,z);
-}
-
-
 void SDL_DS_Blit_Textured() {
 	
 	if(!first_fade && screen_opacity < 0.9f && plx_fnt) {
@@ -590,17 +582,6 @@ void SDL_DS_Blit_Textured() {
 	plx_mat3d_rotate(sdl_dc_rot_z, 0.0f, 0.0f, 1.0f);
 	plx_mat3d_translate(0, 0, 0);
 	
-	// FIXME: I don't know how it's works
-//	if(screen_filter > PVR_FILTER_BILINEAR) {
-//		if(screen_filter == PVR_FILTER_TRILINEAR1) {
-//			screen_filter = PVR_FILTER_TRILINEAR2;
-//			plx_txr_setfilter(plx_screen_texture, screen_filter);
-//		} else {
-//			screen_filter = PVR_FILTER_TRILINEAR1;
-//			plx_txr_setfilter(plx_screen_texture, screen_filter);
-//		}
-//	}
-	
 	plx_cxt_texture(plx_screen_texture);
 	//plx_cxt_culling(PLX_CULL_NONE);
 	plx_cxt_send(PLX_LIST_TR_POLY);
@@ -618,7 +599,6 @@ static void *VideoThread(void *ptr) {
 
 	while(video_inited) {
 
-		LockVideo();
 
 		/*
 		plx_mat3d_identity();
@@ -629,6 +609,7 @@ static void *VideoThread(void *ptr) {
 		pvr_wait_ready();
 		pvr_scene_begin();
 
+		LockVideo();
 		if(draw_screen) {
 
 			ScreenFadeStep();
@@ -638,9 +619,10 @@ static void *VideoThread(void *ptr) {
 		} else {
 			ProcessVideoEventsRender();
 		}
-		
-		pvr_scene_finish();
 		UnlockVideo();
+
+		pvr_list_finish();
+		pvr_scene_finish();
 	}
 
 	//dbglog(DBG_DEBUG, "Exiting from video thread\n");

@@ -589,6 +589,9 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      0 = disabled (default)\n"
 		          "                      1 = number for VMU dump /vmu/vmudump001.vmd\n"
 		          "                    999 = max number\n");
+		ds_printf(" -k, --scrhot     -Screenshots from video frame buffer\n"
+		          "                      0 = disabled (default)\n"
+		          "                   XXXX = bit mask for pad buttons to me pressed\n");
 		ds_printf("     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"

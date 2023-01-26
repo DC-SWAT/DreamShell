@@ -295,16 +295,14 @@ void GUI_FileManager::Scan()
 
 	while ((ent = fs_readdir(f)) != NULL) 
 	{
-		if(strncmp(ent->name, ".", MAX_FN_LEN) &&
-			strncmp(ent->name, "..", MAX_FN_LEN) &&
-			strncmp(ent->name, "RECYCLER", MAX_FN_LEN) &&
-			strncmp(ent->name, "$RECYCLE.BIN", MAX_FN_LEN) &&
-			strncasecmp(ent->name, "System Volume Information", MAX_FN_LEN) &&
-			strncasecmp(ent->name, ".DS_Store", MAX_FN_LEN))
-		{
-			if (n)
+		if(ent->name[0] != '.' &&
+			strncasecmp(ent->name, "RECYCLER", MAX_FN_LEN) &&
+			strncasecmp(ent->name, "$RECYCLE.BIN", MAX_FN_LEN) &&
+			strncasecmp(ent->name, "System Volume Information", MAX_FN_LEN)
+		) {
+			if (n) {
 				sorts = (dirent_t *) realloc((void *) sorts, (sizeof(dirent_t)*(n+1)));
-			
+			}
 			memcpy(&sorts[n], ent, sizeof(dirent_t));
 			n++;
 		}

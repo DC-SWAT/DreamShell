@@ -18,8 +18,6 @@
 #include "SDL/SDL_rotozoom.h"
 #include "SDL/SDL_console.h"
 #include "SDL/DT_drawtext.h"
-#include "gui.h"
-#include "list.h"
 
 #include "plx/font.h"
 #include "plx/sprite.h"
@@ -27,6 +25,9 @@
 #include "plx/dr.h"
 #include "plx/context.h"
 #include "plx/texture.h"
+
+#include "gui.h"
+#include "list.h"
 
 // Pixel packing macro
 #define PACK_PIXEL(r, g, b) ( ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3) )
@@ -92,5 +93,12 @@ int pvr_to_img(const char *filename, kos_img_t *rv);
 /* Load zlib compressed KMG to a KOS Platform Independent Image */
 int gzip_kmg_to_img(const char * filename, kos_img_t *rv);
 
+/* Utility function to fill out the initial poly contexts */
+void plx_fill_contexts(plx_texture_t * txr);
+
+static inline void plx_vert_ifpm3(int flags, float x, float y, float z, uint32 color, float u, float v) {       
+	plx_mat_tfip_3d(x, y, z);
+	plx_vert_ifp(flags, x, y, z, color, u, v);
+}
 
 #endif

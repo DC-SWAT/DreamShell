@@ -1162,10 +1162,10 @@ int VMU_Manager_Dump(GUI_Widget *widget)
 			GUI_ProgressBarSetPosition(self.progressbar, progress);
 			GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
 			
-			sprintf(dst, "%s/vmudump001.vmd", GUI_FileManagerGetPath(self.filebrowser2));
+			sprintf(dst, "%s/dump001.vmd", GUI_FileManagerGetPath(self.filebrowser2));
 			for(i=2;i<999;i++){
 				if(!FileExists(dst)) break;
-				sprintf(dst, "%s/vmudump%03d.vmd", GUI_FileManagerGetPath(self.filebrowser2), i);
+				sprintf(dst, "%s/dump%03d.vmd", GUI_FileManagerGetPath(self.filebrowser2), i);
 			}
 			
 #ifdef VMDEBUG

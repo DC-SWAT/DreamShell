@@ -117,7 +117,7 @@ int InitNet(uint32 ipl) {
 		net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
 	setenv("NET_IPV4", ip_str, 1);
 
-    dbglog(DBG_INFO, "Network IPv4 address: %s\n", ip_str);
+	dbglog(DBG_INFO, "Network IPv4 address: %s\n", ip_str);
 	net_inited = 1;
 	return rv;
 }
