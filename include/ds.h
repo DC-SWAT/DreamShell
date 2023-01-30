@@ -45,10 +45,4 @@ const char *GetVersionBuildTypeString(int type);
 int InitDS();
 void ShutdownDS();
 
-/**
- * Initialize and shutdown DreamShell network
- */
-int InitNet(uint32 ipl);
-void ShutdownNet();
-
 #endif /* _DS_CORE_H */

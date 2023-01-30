@@ -9,6 +9,7 @@
 #include "ds.h"
 #include "fs.h"
 #include "vmu.h"
+#include "network/net.h"
 
 extern uint8 romdisk[];
 KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
@@ -177,17 +178,19 @@ int InitDS() {
 	InitNet(0);
 
 	if(!emu) {
-		
+
 		tmpi = 1;
-		
+
 		if(!InitIDE()) {
 			tmpi = 0;
 		}
-		
+
 		if(!InitSDCard()) {
 			tmpi = 0;
+		} else {
+			scif_init();
 		}
-		
+
 		if(tmpi && is_custom_bios()) {
 			InitRomdisk();
 		}

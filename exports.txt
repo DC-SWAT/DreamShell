@@ -1433,6 +1433,8 @@ ungetc
 vfprintf
 vprintf
 vsnprintf
+asprintf
+vasprintf
 dbglog
 dbglog_set_level
 #
@@ -1495,6 +1497,7 @@ strspn
 strstr
 strcasestr
 strtok
+strtok_r
 strxfrm
 strtol
 strtoll
@@ -1712,6 +1715,7 @@ sendto
 shutdown
 socket
 close
+getsockname
 getsockopt
 setsockopt
 poll
@@ -1721,6 +1725,7 @@ freeaddrinfo
 getaddrinfo
 gethostbyname
 gethostbyname2
+in6addr_any
 #
 htonl
 ntohl

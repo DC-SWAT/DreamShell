@@ -10,6 +10,7 @@
 #include "ds.h"
 #include "cmd_elf.h"
 #include "zlib/zlib.h"
+#include "network/net.h"
 
 static Item_list_t *cmds;
 
