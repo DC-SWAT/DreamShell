@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 
+#include <ds.h>
 
 void lftpd_log_internal(const char* level, const char* format, ...) {
 	char buffer[256];
@@ -14,5 +15,5 @@ void lftpd_log_internal(const char* level, const char* format, ...) {
 	if (err >= sizeof(buffer)) {
 		return;
 	}
-	printf("%s %s\n", level, buffer);
+	ds_printf("DS_%s: %s\n", level, buffer);
 }

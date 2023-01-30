@@ -8,7 +8,9 @@
 --
 
 ShowConsole();
-Sleep(1000);
-OpenModule(os.getenv("PATH") .. "/modules/ppp.klf");
-print("Dialing...\n");
-os.execute("ppp -i");
+Sleep(500);
+print("To get back GUI press: Start, A, Start\n");
+if OpenModule(os.getenv("PATH") .. "/modules/ppp.klf") then
+    print("Dialing...\n");
+    os.execute("ppp -i");
+end

@@ -13,6 +13,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <kos/net.h>
 
 #include "lftpd.h"
 
@@ -28,6 +29,8 @@
 // https://tools.ietf.org/html/rfc5797
 // https://tools.ietf.org/html/rfc2428#section-3 EPSV
 // https://en.wikipedia.org/wiki/List_of_FTP_commands
+
+#define FILE_BUFFER_SIZE 8 * 1024
 
 typedef struct {
 	char *command;
@@ -117,73 +120,65 @@ static int send_response(int socket, int code, bool include_code,
 static int send_list(int socket, const char* path) {
 	// https://files.stairways.com/other/ftp-list-specs-info.txt
 	// http://cr.yp.to/ftp/list/binls.html
-	static const char* directory_format = "drw-rw-rw- 1 owner group %13llu Jan 01  1970 %s";
-	static const char* file_format = "-rw-rw-rw- 1 owner group %13llu Jan 01  1970 %s";
+	static const char* directory_format = "drw-rw-rw- 21 user dreamshell %lu Jan 01 1970 %s";
+	static const char* file_format = "-rw-rw-rw- 1 user dreamshell %lu Jan 01 1970 %s";
 
-	DIR* dp = opendir(path);
-	if (dp == NULL) {
+	file_t fd = fs_open(path, O_RDONLY | O_DIR);
+
+	if (fd < 0) {
 		return -1;
 	}
 
-	struct dirent *entry;
-	while ((entry = readdir(dp))) {
-		char* file_path = lftpd_io_canonicalize_path(path, entry->d_name);
-		struct stat st;
-		if (stat(file_path, &st) == 0) {
-			unsigned long long size = st.st_size;
-			if (S_ISDIR(st.st_mode)) {
-				send_multiline_response_line(socket, directory_format, size, entry->d_name);
-			}
-			else if (S_ISREG(st.st_mode)) {
-				send_multiline_response_line(socket, file_format, size, entry->d_name);
-			}
+	dirent_t *entry;
+	while ((entry = fs_readdir(fd))) {
+		if (entry->attr == O_DIR) {
+			send_multiline_response_line(socket, directory_format, 0, entry->name);
+		} else {
+			send_multiline_response_line(socket, file_format, entry->size, entry->name);
 		}
-		free(file_path);
 	}
 
-	closedir(dp);
-
+	fs_close(fd);
 	return 0;
 }
 
 static int send_nlst(int socket, const char* path) {
-	DIR* dp = opendir(path);
-	if (dp == NULL) {
+
+	file_t fd = fs_open(path, O_RDONLY | O_DIR);
+
+	if (fd < 0) {
 		return -1;
 	}
 
-	struct dirent *entry;
-	while ((entry = readdir(dp))) {
-		char* file_path = lftpd_io_canonicalize_path(path, entry->d_name);
-		struct stat st;
-		if (stat(file_path, &st) == 0) {
-			if (S_ISREG(st.st_mode)) {
-				send_multiline_response_line(socket, entry->d_name);
-			}
-		}
-		free(file_path);
+	dirent_t *entry;
+	while ((entry = fs_readdir(fd))) {
+		send_multiline_response_line(socket, entry->name);
 	}
 
-	closedir(dp);
-
+	fs_close(fd);
 	return 0;
 }
 
 static int send_file(int socket, const char* path) {
-	FILE* file = fopen(path, "rb");
-	if (file == NULL) {
+
+	file_t fd = fs_open(path, O_RDONLY);
+
+	if (fd < 0) {
 		lftpd_log_error("failed to open file for read");
 		return -1;
 	}
-	unsigned char buffer[1024];
+
+	uint8_t *buffer = (uint8_t *)malloc(FILE_BUFFER_SIZE);
 	int read_len;
-	while ((read_len = fread(buffer, 1, 1024, file)) > 0) {
-		unsigned char* p = buffer;
-		while (read_len) {
+
+	while ((read_len = fs_read(fd, buffer, FILE_BUFFER_SIZE)) > 0) {
+		uint8_t *p = buffer;
+		while (read_len > 0) {
 			int write_len = write(socket, p, read_len);
 			if (write_len < 0) {
 				lftpd_log_error("write error");
-				fclose(file);
+				fs_close(fd);
+				free(buffer);
 				return -1;
 			}
 			p += write_len;
@@ -191,33 +186,33 @@ static int send_file(int socket, const char* path) {
 		}
 	}
 
-	fclose(file);
-
+	fs_close(fd);
+	free(buffer);
 	return 0;
 }
 
 static int receive_file(int socket, const char* path) {
-	FILE* file = fopen(path, "wb");
-	if (file == NULL) {
-		lftpd_log_error("failed to open file for write");
+
+	file_t fd = fs_open(path, O_WRONLY | O_TRUNC);
+
+	if (fd < 0) {
+		lftpd_log_error("failed to open file for read");
 		return -1;
 	}
 
-	unsigned char buffer[1024];
-	int err;
-	while ((err = read(socket, buffer, 1024)) > 0) {
-		if (fwrite(buffer, err, 1, file) != 1) {
-			err = -1;
-			break;
+	uint8_t *buffer = (uint8_t *)malloc(FILE_BUFFER_SIZE);
+	int read_len;
+
+	while ((read_len = read(socket, buffer, FILE_BUFFER_SIZE)) > 0) {
+		if (fs_write(fd, buffer, read_len) < 0) {
+			fs_close(fd);
+			free(buffer);
+			return -1;
 		}
 	}
 
-	fclose(file);
-
-	if (err < 0) {
-		return err;
-	}
-
+	fs_close(fd);
+	free(buffer);
 	return 0;
 }
 
@@ -227,22 +222,15 @@ static int cmd_cwd(lftpd_client_t* client, const char* arg) {
 	}
 
 	char* path = lftpd_io_canonicalize_path(client->directory, arg);
+	file_t fd = fs_open(path, O_RDONLY | O_DIR);
 
-	// make sure the path exists
-	struct stat st;
-	if (stat(path, &st) != 0) {
+	if (fd < 0) {
 		send_simple_response(client->socket, 550, STATUS_550);
 		free(path);
 		return -1;
 	}
 
-	// make sure the path is a directory
-	if (!S_ISDIR(st.st_mode)) {
-		send_simple_response(client->socket, 550, STATUS_550);
-		free(path);
-		return -1;
-	}
-
+	fs_close(fd);
 	free(client->directory);
 	client->directory = path;
 	send_simple_response(client->socket, 250, STATUS_250);
@@ -257,22 +245,12 @@ static int cmd_dele(lftpd_client_t* client, const char* arg) {
 
 	char* path = lftpd_io_canonicalize_path(client->directory, arg);
 
-	// make sure the path exists
-	struct stat st;
-	if (stat(path, &st) != 0) {
+	if (fs_unlink(path) < 0) {
 		send_simple_response(client->socket, 550, STATUS_550);
 		free(path);
 		return -1;
 	}
 
-	// make sure the path is a file
-	if (!S_ISREG(st.st_mode)) {
-		send_simple_response(client->socket, 550, STATUS_550);
-		free(path);
-		return -1;
-	}
-
-	remove(path);
 	free(path);
 	send_simple_response(client->socket, 250, STATUS_250);
 
@@ -380,26 +358,13 @@ static int cmd_pasv(lftpd_client_t* client, const char* arg) {
 	// get the port from the new socket, which is random
 	int port = lftpd_inet_get_socket_port(listener_socket);
 
-	// get our IP by reading our side of the client's control channel
-	// socket connection
-	struct sockaddr_in client_addr;
-	socklen_t client_addr_len = sizeof(struct sockaddr_in);
-	int err = getsockname(client->socket, (struct sockaddr*) &client_addr, &client_addr_len);
-	if (err != 0) {
-		lftpd_log_error("error getting client IP info");
-		send_simple_response(client->socket, 425, STATUS_425);
-		close(listener_socket);
-		return -1;
-	}
-
-	// format the response
-	in_addr_t ip = htonl(client_addr.sin_addr.s_addr);
 	send_simple_response(client->socket, 227, STATUS_227,
-			(ip >> 24) & 0xff,
-			(ip >> 16) & 0xff,
-			(ip >> 8) & 0xff,
-			(ip >> 0) & 0xff,
-			(port >> 8) & 0xff, (port >> 0) & 0xff);
+		net_default_dev->ip_addr[0],
+		net_default_dev->ip_addr[1],
+		net_default_dev->ip_addr[2],
+		net_default_dev->ip_addr[3],
+		(port >> 8) & 0xff,
+		(port & 0xff));
 
 	// wait for the connection to the data port
 	lftpd_log_debug("waiting for data port connection on port %d...", port);
@@ -459,12 +424,13 @@ static int cmd_size(lftpd_client_t* client, const char* arg) {
 
 	char* path = lftpd_io_canonicalize_path(client->directory, arg);
 	lftpd_log_debug("size %s", path);
-	struct stat st;
-	if (stat(path, &st) == 0) {
-		send_simple_response(client->socket, 213, "%llu", st.st_size);
-	}
-	else {
+
+	int fd = fs_open(path, O_RDONLY);
+	if (fd < 0) {
 		send_simple_response(client->socket, 550, STATUS_550);
+	} else {
+		send_simple_response(client->socket, 213, "%lu", fs_total(fd));
+		fs_close(fd);
 	}
 	free(path);
 	return 0;
@@ -588,18 +554,13 @@ int lftpd_start(const char* directory, int port, lftpd_t* lftpd) {
 		return -1;
 	}
 
-	struct sockaddr_in6 server_addr;
-	socklen_t server_addr_len = sizeof(struct sockaddr_in6);
-	int err = getsockname(lftpd->server_socket, (struct sockaddr*) &server_addr, &server_addr_len);
-	if (err != 0) {
-		lftpd_log_error("error getting server IP info");
-	}
-	else {
-		char ip[INET6_ADDRSTRLEN];
-		inet_ntop(AF_INET6, &server_addr.sin6_addr, ip, INET6_ADDRSTRLEN);
-		int port = lftpd_inet_get_socket_port(lftpd->server_socket);
-		lftpd_log_info("listening on [%s]:%d...", ip, port);
-	}
+	lftpd_log_info("listening on %d.%d.%d.%d:%d...",
+		net_default_dev->ip_addr[0],
+		net_default_dev->ip_addr[1],
+		net_default_dev->ip_addr[2],
+		net_default_dev->ip_addr[3],
+		port
+	);
 
 	while (true) {
 		lftpd_log_info("waiting for connection...");
@@ -610,19 +571,7 @@ int lftpd_start(const char* directory, int port, lftpd_t* lftpd) {
 			break;
 		}
 
-		struct sockaddr_in6 client_addr;
-		socklen_t client_addr_len = sizeof(struct sockaddr_in6);
-		int err = getpeername(client_socket, (struct sockaddr*) &client_addr, &client_addr_len);
-		if (err != 0) {
-			lftpd_log_error("error getting client IP info");
-			lftpd_log_info("connection received...");
-		}
-		else {
-			char ip[INET6_ADDRSTRLEN];
-			inet_ntop(AF_INET6, &client_addr.sin6_addr, ip, INET6_ADDRSTRLEN);
-			int port = lftpd_inet_get_socket_port(client_socket);
-			lftpd_log_info("connection received from [%s]:%d...", ip, port);
-		}
+		lftpd_log_info("connection received.");
 
 		lftpd_client_t client = {
 				.directory = strdup(directory),
@@ -647,11 +596,3 @@ int lftpd_stop(lftpd_t* lftpd) {
 	}
 	return 0;
 }
-
-int main( int argc, char *argv[] ) {
-	char* cwd = getcwd(NULL, 0);
-	lftpd_t lftpd;
-	lftpd_start(cwd, 2121, &lftpd);
-	free(cwd);
-}
-

@@ -14,3 +14,6 @@
  * 5. The segments are then joined with / and the result is returned.
  */
 char* lftpd_io_canonicalize_path(const char* base, const char* name);
+
+int asprintf(char **strp, const char *fmt, ...);
+int vasprintf(char **strp, const char *fmt, va_list ap);  
