@@ -237,7 +237,7 @@ static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
     }
 
     uint32 buttons = (~cond->buttons & 0xffff);
-    LOGFF("but=0x%04lx joyx=%d joyy=%d\n", buttons, cond->joyx, cond->joyy);
+    // LOGFF("but=0x%04lx joyx=%d joyy=%d\n", buttons, cond->joyx, cond->joyy);
 
 #ifdef HAVE_SCREENSHOT
     if (IsoInfo->scr_hotkey
@@ -409,7 +409,15 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
     }
 #endif
 
-    maple_dma_proc();
+    uint32 code = *REG_INTEVT;
+
+    if (((*ASIC_IRQ11_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT11)
+        || ((*ASIC_IRQ9_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT9)
+        || ((*ASIC_IRQ13_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT13)
+    ) {
+        maple_dma_proc();
+    }
+
     return current_vector;
 }
 

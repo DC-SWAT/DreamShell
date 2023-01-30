@@ -683,7 +683,7 @@ static s32 g1_ata_access(struct ide_req *req)
 	{
 		if ((u32)buff & 0x1f)
 		{
-			LOGFF("Unaligned output address\n");
+			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n");
 			return -1;
 		}
 		
@@ -691,6 +691,12 @@ static s32 g1_ata_access(struct ide_req *req)
 	}
 	else
 	{
+		if ((u32)buff & 0x01)
+		{
+			LOGFF("Unaligned output address: 0x%08lx (2 byte)\n");
+			return -1;
+		}
+
 		cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO;
 	}
 	
@@ -1106,10 +1112,7 @@ void g1_pio_reset(size_t total_bytes) {
 }
 
 void g1_pio_xfer(u32 addr, size_t bytes) {
-	u8 *buff_c = (u8 *)addr;
-	u16 *buff_s = (u16 *)addr;
-	u16 word;
-	const u8 *pword = (u8 *)&word;
+	u16 *buff = (u16 *)addr;
 	const u32 sec_size = 512;
 	u32 words_count = bytes >> 1;
 
@@ -1125,15 +1128,7 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 			}
 		}
 
-		if ((addr & 1) == 0) {
-			buff_s[w] = IN16(G1_ATA_DATA);
-		} else {
-			word = IN16(G1_ATA_DATA);
-			buff_c[0] = pword[0];
-			buff_c[1] = pword[1];
-			buff_c += 2;
-		}
-
+		buff[w] = IN16(G1_ATA_DATA);
 		g1_pio_avail -= 2;
 
 		if (g1_pio_avail == 0) {
@@ -1867,7 +1862,7 @@ static s32 g1_packet_read(struct ide_req *req)
 	{
 		if ((u32)buff & 0x1f)
 		{
-			LOGFF("Unaligned output address\n");
+			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n");
 			err = -1;
 			goto exit_packet_read;
 		}
@@ -1882,6 +1877,14 @@ static s32 g1_packet_read(struct ide_req *req)
 	}
 	else
 	{
+
+		if ((u32)buff & 0x01)
+		{
+			LOGFF("Unaligned output address: 0x%08lx (2 byte)\n");
+			err = -1;
+			goto exit_packet_read;
+		}
+
 		/* Посылаем устройству командный пакет */
 	
 		if(send_packet_data_command((data_len << 1), cmd_buff, req->dev->drive, (req->cmd >> 1)) < 0) 

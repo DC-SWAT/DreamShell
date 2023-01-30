@@ -708,9 +708,11 @@ void gdcMainLoop(void) {
 #ifdef HAVE_SCREENSHOT
 		if(IsoInfo->scr_hotkey
 			&& (GDS->status == CMD_STAT_IDLE || GDS->cmd == CMD_GETSCD)
-			&& pre_read_xfer_busy() == 0
 		) {
+			int old = irq_disable();
+			do {} while (pre_read_xfer_busy() != 0);
 			video_screenshot();
+			irq_restore(old);
 		}
 #endif
 

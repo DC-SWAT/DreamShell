@@ -699,8 +699,17 @@ void *aica_dma_handler(void *passer, register_stack *stack, void *current_vector
 		return current_vector;
 	}
 
-	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
-	return my_exception_finish;
+	uint32 code = *REG_INTEVT;
+
+	if (cdda->irq_index && (
+		(code == EXP_CODE_INT11 && cdda->irq_index == 11)
+		|| (code == EXP_CODE_INT9 && cdda->irq_index == 9)
+		|| (code == EXP_CODE_INT13 && cdda->irq_index == 13)
+	)) {
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
+		return my_exception_finish;
+	}
+	return current_vector;
 }
 
 # ifndef NO_ASIC_LT
