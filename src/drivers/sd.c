@@ -149,31 +149,27 @@ static uint8 send_cmd (
 	cb[5] = sd_crc7(cb, 5, 0);
 	/* Send command packet */
 
-	int old = irq_disable();
 	spi_send_byte(cmd);		/* Command */
 	spi_send_byte(cb[1]);		/* Argument[31..24] */
 	spi_send_byte(cb[2]);		/* Argument[23..16] */
 	spi_send_byte(cb[3]);		/* Argument[15..8] */
 	spi_send_byte(cb[4]);		/* Argument[7..0] */
-	spi_send_byte(cb[5]);           // CRC7
+	spi_send_byte(cb[5]);		/* CRC7 */
 
 	/* Receive command response */
 	if (cmd == CMD12) 
 		(void)spi_rec_byte();		/* Skip a stuff byte when stop reading */
 
 	n = 20;						/* Wait for a valid response in timeout of 10 attempts */
-	
+
 	do {
-		
 		res = spi_rec_byte();
-		
 	} while ((res & 0x80) && --n);
 	
 #ifdef SD_DEBUG
 	dbglog(DBG_DEBUG, "%s: CMD 0x%02x response 0x%02x\n", __func__, cmd, res);
 #endif
-	
-	irq_restore(old);
+
 	return res;			/* Return with the response value */
 }
 
@@ -384,21 +380,14 @@ static int read_data (
 #endif
 		return -1;	/* If not valid data token, return with error */
 	}
-	
-//	dcache_alloc_range((uint32)buff, len);
-	
-	old = irq_disable();
-	
+
 	spi_rec_data(buff, len);
+
 	crc = (uint16)spi_rec_byte() << 8;
 	crc |= (uint16)spi_rec_byte();
-	
-	irq_restore(old);
-	
+
 	crc2 = net_crc16ccitt(buff, len, 0);
-	
-//	dcache_purge_range((uint32)buff, len);
-	
+
 	if(crc != crc2) {
 		errno = EIO;
 		return -1;
@@ -483,20 +472,16 @@ static int write_data (
 		return -1;
 
 	spi_send_byte(token);	 /* Xmit data token */
-	
+
 	if (token != 0xFD) {	/* Is data token */
-	
+
 		dcache_pref_range((uint32)buff, 512);
 		crc = net_crc16ccitt(buff, 512, 0);
-		
-		old = irq_disable();
-		
+
 		spi_send_data(buff, 512);
 		spi_send_byte((uint8)(crc >> 8));
 		spi_send_byte((uint8)crc);
-		
-		irq_restore(old);
-		
+
 		resp = spi_rec_byte();				/* Reсeive data response */
 		
 		if ((resp & 0x1F) != 0x05) {		/* If not accepted, return with error */
@@ -507,7 +492,6 @@ static int write_data (
 			return -1;
 		}
 	}
-	
 	return 0;
 }
 

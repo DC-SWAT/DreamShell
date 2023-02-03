@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2022 SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2014-2023 SWAT <http://www.dc-swat.ru>
  * Copyright (c) 2017 Megavolt85
  *
  * This file is free software; you can redistribute it and/or modify
@@ -683,7 +683,7 @@ static s32 g1_ata_access(struct ide_req *req)
 	{
 		if ((u32)buff & 0x1f)
 		{
-			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n");
+			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n", (u32)buff);
 			return -1;
 		}
 		
@@ -693,7 +693,7 @@ static s32 g1_ata_access(struct ide_req *req)
 	{
 		if ((u32)buff & 0x01)
 		{
-			LOGFF("Unaligned output address: 0x%08lx (2 byte)\n");
+			LOGFF("Unaligned output address: 0x%08lx (2 byte)\n", (u32)buff);
 			return -1;
 		}
 
@@ -802,9 +802,11 @@ static s32 g1_ata_access(struct ide_req *req)
 			OUT8(G1_ATA_CTL, 2);
 			for (u32 i = 0; i < len; i++)
 			{
-				// dcache_pref_range((u32)buff, sector_size);
+				dcache_pref_range((u32)buff, sector_size);
 				g1_ata_wait_nbsy();
-				for (u32 j = 0; j < sector_size >> 1; ++j) {
+
+				for (u32 j = 0; j < sector_size >> 1; ++j)
+				{
 					OUT16(G1_ATA_DATA, (u16)(buff[0] | buff[1] << 8));
 					buff += 2;
 				}
@@ -1862,7 +1864,7 @@ static s32 g1_packet_read(struct ide_req *req)
 	{
 		if ((u32)buff & 0x1f)
 		{
-			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n");
+			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n", (u32)buff);
 			err = -1;
 			goto exit_packet_read;
 		}
@@ -1880,7 +1882,7 @@ static s32 g1_packet_read(struct ide_req *req)
 
 		if ((u32)buff & 0x01)
 		{
-			LOGFF("Unaligned output address: 0x%08lx (2 byte)\n");
+			LOGFF("Unaligned output address: 0x%08lx (2 byte)\n", (u32)buff);
 			err = -1;
 			goto exit_packet_read;
 		}
@@ -2116,12 +2118,12 @@ s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive)
 	
 	if ((((u32) buffer) & 0x1f))
 	{
-		LOGFF("Unaligned output address used PIO READ\n");
+		LOGFF("PIO\n");
 		req.cmd = G1_READ_PIO;
 	}
 	else
 	{
-		LOGFF("used DMA READ\n");
+		LOGFF("DMA\n");
 	}
 	
 	return g1_packet_read(&req);

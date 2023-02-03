@@ -39,7 +39,7 @@ static int 		spi_delay	= 	SPI_DEFAULT_DELAY;
 
 static void spi_custom_delay(void);
 //static void spi_max_speed_delay(void);
-#define spi_max_speed_delay() __asm__("nop\n\tnop\n\tnop\n\tnop\n\tnop")
+#define spi_max_speed_delay() /*__asm__("nop\n\tnop\n\tnop\n\tnop\n\tnop")*/
 
 
 #define RX_BIT() (reg_read_16(SCSPTR2) & SCSPTR2_SPB2DT)

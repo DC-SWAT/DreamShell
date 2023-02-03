@@ -26,7 +26,7 @@
 #define MSB     	0x80
 static uint16 	pwork		=	0;
 
-#define spi_max_speed_delay() __asm__("nop\n\tnop\n\tnop\n\tnop\n\tnop")
+#define spi_max_speed_delay() /*__asm__("nop\n\tnop\n\tnop\n\tnop\n\tnop")*/
 
 #define RX_BIT() 	(uint8)(reg_read_16(SCSPTR2) & SCSPTR2_SPB2DT)
 #define TX_BIT()	_pwork = b & MSB ? (_pwork | SCSPTR2_SPB2DT) : (_pwork & ~SCSPTR2_SPB2DT); reg_write_16(SCSPTR2, _pwork)

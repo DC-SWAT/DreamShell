@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2011-2016 SWAT <http://www.dc-swat.ru>
+ * Copyright (c) 2011-2023 SWAT <http://www.dc-swat.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -161,13 +161,12 @@ static uint8 send_cmd (
 	cb[5] = sd_crc7(cb, 5, 0);
 	/* Send command packet */
 
-//	int old = irq_disable();
 	spi_send_byte(cmd);		/* Command */
 	spi_send_byte(cb[1]);		/* Argument[31..24] */
 	spi_send_byte(cb[2]);		/* Argument[23..16] */
 	spi_send_byte(cb[3]);		/* Argument[15..8] */
 	spi_send_byte(cb[4]);		/* Argument[7..0] */
-	spi_send_byte(cb[5]);           // CRC7
+	spi_send_byte(cb[5]);		/* CRC7 */
 
 	/* Receive command response */
 	if (cmd == CMD12) 
@@ -176,16 +175,13 @@ static uint8 send_cmd (
 	n = 20;						/* Wait for a valid response in timeout of 10 attempts */
 	
 	do {
-		
 		res = spi_rec_byte();
-		
 	} while ((res & 0x80) && --n);
 	
 #ifdef SD_DEBUG
 	LOGFF("CMD 0x%02x response 0x%02x\n", cmd, res);
 #endif
-	
-//	irq_restore(old);
+
 	return res;			/* Return with the response value */
 }
 
@@ -432,17 +428,14 @@ static int read_data (
 		return -1;	/* If not valid data token, return with error */
 	}
 
-//	dcache_alloc_range((uint32)buff, len);
-//	int old = irq_disable();
 	spi_rec_data(buff, len);
 	
 #ifndef DISCARD_CRC16
 	crc = (uint16)spi_rec_byte() << 8;
 	crc |= (uint16)spi_rec_byte();
-	
-//	irq_restore(old);
+
 	crc2 = sd_crc16(buff, len, 0);
-	
+
 	if(crc != crc2) {
 		//errno = EIO;
 		return -1;
@@ -450,9 +443,8 @@ static int read_data (
 #else
 	(void)spi_rec_byte();	
 	(void)spi_rec_byte();
-//	irq_restore(old);
 #endif
-	
+
 	return 0; /* Return with success */
 }
 
