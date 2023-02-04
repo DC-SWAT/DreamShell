@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback
- * (c)2014-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _CDDA_H
@@ -9,19 +9,19 @@
 
 #include <arch/types.h>
 
-enum {
+typedef enum CDDA_status {
 	CDDA_STAT_IDLE = 0,
 	CDDA_STAT_FILL,
 	CDDA_STAT_PREP,
 	CDDA_STAT_SNDL,
 	CDDA_STAT_SNDR,
 	CDDA_STAT_WAIT
-} CDDA_status;
+} CDDA_status_t;
 
-enum {
+typedef enum PCM_buff {
 	PCM_TMP_BUFF = 0,
 	PCM_DMA_BUFF = 1
-} PCM_buff;
+} PCM_buff_t;
 
 
 typedef struct cdda_ctx {
@@ -61,8 +61,8 @@ typedef struct cdda_ctx {
 	/* SH4 timer for checking playback position */
 	uint32 timer;
 
-	/* IRQ index for AICA DMA */
-	uint32 irq_index;
+	/* Exception code for AICA DMA IRQ */
+	uint32 irq_code;
 
 	/* Volume for both channels */
 	uint32 volume;

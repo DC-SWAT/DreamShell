@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback emulation
- * (c)2014-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2023 SWAT <http://www.dc-swat.ru>
  */
 
 //#define DEBUG 1
@@ -104,37 +104,45 @@ static void g2_fifo_wait() {
 static void aica_dma_irq_disable() {
 	if (*ASIC_IRQ9_MASK & ASIC_NRM_AICA_DMA) {
 
-		cdda->irq_index = 9;
-		*ASIC_IRQ9_MASK &= ~ASIC_NRM_AICA_DMA;
+		cdda->irq_code = EXP_CODE_INT9;
 
+		if(!exception_inited()) {
+			*ASIC_IRQ9_MASK &= ~ASIC_NRM_AICA_DMA;
+		}
 	} else if (*ASIC_IRQ11_MASK & ASIC_NRM_AICA_DMA) {
 
-		cdda->irq_index = 11;
-		*ASIC_IRQ11_MASK &= ~ASIC_NRM_AICA_DMA;
+		cdda->irq_code = EXP_CODE_INT11;
 
+		if(!exception_inited()) {
+			*ASIC_IRQ11_MASK &= ~ASIC_NRM_AICA_DMA;
+		}
 	} else if (*ASIC_IRQ13_MASK & ASIC_NRM_AICA_DMA) {
 
-		cdda->irq_index = 13;
-		*ASIC_IRQ13_MASK &= ~ASIC_NRM_AICA_DMA;
+		cdda->irq_code = EXP_CODE_INT13;
 
+		if(!exception_inited()) {
+			*ASIC_IRQ13_MASK &= ~ASIC_NRM_AICA_DMA;
+		}
 	} else {
-		cdda->irq_index = (uint32)-1;
+		cdda->irq_code = (uint32)-1;
 	}
 }
 
 static void aica_dma_irq_restore() {
 
-	if (cdda->irq_index == 0) {
+	if (cdda->irq_code == 0) {
 		return;
-	} else if (cdda->irq_index == 9) {
-		*ASIC_IRQ9_MASK |= ASIC_NRM_AICA_DMA;
-	} else if (cdda->irq_index == 11) {
-		*ASIC_IRQ11_MASK |= ASIC_NRM_AICA_DMA;
-	} else if (cdda->irq_index == 13) {
-		*ASIC_IRQ13_MASK |= ASIC_NRM_AICA_DMA;
+	} else if(!exception_inited()) {
+		if (cdda->irq_code == EXP_CODE_INT9) {
+			*ASIC_IRQ9_MASK |= ASIC_NRM_AICA_DMA;
+		} else if (cdda->irq_code == EXP_CODE_INT11) {
+			*ASIC_IRQ11_MASK |= ASIC_NRM_AICA_DMA;
+		} else if (cdda->irq_code == EXP_CODE_INT13) {
+			*ASIC_IRQ13_MASK |= ASIC_NRM_AICA_DMA;
+		}
 	}
 
-	cdda->irq_index = 0;
+	cdda->irq_code = 0;
 }
 
 static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
@@ -170,7 +178,6 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 	g2_fifo_wait();
 	
 	while(size--) {
-//		g2_fifo_wait();
 		/* prefetch 32 bytes for next loop */
 		__asm__("pref @%0" : : "r"(s + 8));
 		d[0] = s[0];
@@ -347,6 +354,24 @@ static void aica_stop_cdda(void) {
 
 	/* Wait transfer done */
 	aica_transfer_wait();
+}
+
+static void stop_clean_cdda() {
+
+	DBGFF(NULL);
+	aica_set_volume(255);
+
+#ifdef _FS_ASYNC
+	while(cdda->stat == CDDA_STAT_WAIT) {
+		if (poll(cdda->fd) < 0) {
+			break;
+		}
+	}
+#endif
+
+	cdda->stat = CDDA_STAT_IDLE;
+	aica_transfer_wait();
+	aica_stop_cdda();
 }
 
 static void aica_setup_cdda(int clean) {
@@ -655,25 +680,6 @@ static void switch_cdda_track(uint8 track) {
 }
 
 
-static void stop_clean_cdda() {
-
-	DBGFF(NULL);
-	aica_set_volume(255);
-
-#ifdef _FS_ASYNC
-	while(cdda->stat == CDDA_STAT_WAIT) {
-		if (poll(cdda->fd) < 0) {
-			break;
-		}
-	}
-#endif
-
-	cdda->stat = CDDA_STAT_IDLE;
-	aica_transfer_wait();
-	aica_stop_cdda();
-}
-
-
 static uint32 sector_align(uint32 offset) {
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_SD)
 	if (offset % 512) {
@@ -695,35 +701,41 @@ void *aica_dma_handler(void *passer, register_stack *stack, void *current_vector
 	(void)passer;
 	(void)stack;
 
-	if (cdda->irq_index == 0) {
+	if (cdda->irq_code == 0) {
+		CDDA_MainLoop();
 		return current_vector;
 	}
 
-	uint32 code = *REG_INTEVT;
-
-	if (cdda->irq_index && (
-		(code == EXP_CODE_INT11 && cdda->irq_index == 11)
-		|| (code == EXP_CODE_INT9 && cdda->irq_index == 9)
-		|| (code == EXP_CODE_INT13 && cdda->irq_index == 13)
-	)) {
+	if (cdda->irq_code == *REG_INTEVT || (cdda->irq_code == (uint32)-1)) {
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
+		aica_dma_irq_restore();
+		CDDA_MainLoop();
 		return my_exception_finish;
 	}
 	return current_vector;
 }
 
+void *aica_vsync_handler(void *passer, register_stack *stack, void *current_vector) {
+
+	(void)passer;
+	(void)stack;
+
+	CDDA_MainLoop();
+	return current_vector;
+}
+
 # ifndef NO_ASIC_LT
 static asic_handler_f old_vsync_handler;
-static asic_handler_f old_dma_handler;
 static void *vsync_handler(void *passer, register_stack *stack, void *current_vector) {
 
 	if(old_vsync_handler) {
 		current_vector = old_vsync_handler(passer, stack, current_vector);
 	}
 
-	CDDA_MainLoop();
-	return current_vector;
+	return aica_vsync_handler(passer, stack, current_vector);
 }
+
+static asic_handler_f old_dma_handler;
 static void *dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
 	if(old_dma_handler) {
@@ -767,6 +779,7 @@ int CDDA_Init() {
 	dma_entry.irq = EXP_CODE_ALL;
 	dma_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
 	dma_entry.handler = dma_handler;
+
 	asic_add_handler(&dma_entry, NULL, 0);
 
 	vsync_entry.irq = EXP_CODE_ALL;
@@ -1169,13 +1182,13 @@ void CDDA_MainLoop(void) {
 				cdda->stat = CDDA_STAT_FILL;
 			}
 		}
-		aica_check_cdda();
 		return;
 	}
 #endif
 
 	/* Reading data for left or all channels */
 	if(cdda->stat == CDDA_STAT_FILL) {
+		aica_dma_irq_restore();
 		aica_check_cdda();
 		fill_pcm_buff();
 		/* Update LBA for SCD command */
@@ -1185,24 +1198,14 @@ void CDDA_MainLoop(void) {
 	}
 
 	/* Split PCM data to left and right channels */
-	if(cdda->stat == CDDA_STAT_PREP) {
-
-		aica_check_cdda();
-	
-		if(!aica_transfer_in_progress()) {
-
-			if(cdda->irq_index) {
-				aica_dma_irq_restore();
-			}
-
-			aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
-			cdda->stat = CDDA_STAT_SNDL;
-		}
+	if(cdda->stat == CDDA_STAT_PREP && !aica_transfer_in_progress()) {
+		aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
+		cdda->stat = CDDA_STAT_SNDL;
 	}
-	
+
 	/* Send data to AICA */
 	if(cdda->stat == CDDA_STAT_SNDL) {
-		
+
 		uint32 tm = timer_count(cdda->timer);
 		uint32 ta = cdda->end_tm >> 1;
 //		gd_state_t *GDS = get_GDS();
@@ -1226,9 +1229,6 @@ void CDDA_MainLoop(void) {
 
 				if(cdda->chn > 1) {
 					aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
-#ifdef DEV_TYPE_SD
-					fill_pcm_buff();
-#endif
 					cdda->stat = CDDA_STAT_SNDR;
 				} else {
 					aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->cur_buff ? cdda->aica_right[0] : cdda->aica_left[0], cdda->size >> 1);
@@ -1238,24 +1238,14 @@ void CDDA_MainLoop(void) {
 			}
 		}
 	}
-	
+
 	/* If transfer of left channel is done, start for right channel */
 	else if(cdda->stat == CDDA_STAT_SNDR && !aica_transfer_in_progress()) {
 
 		uint32 size = cdda->size >> 2;
-
 		aica_transfer(cdda->buff[PCM_DMA_BUFF] + size, cdda->aica_right[cdda->cur_buff], size);
 		cdda->cur_buff = cdda->cur_buff ? 0 : 1;
-		
-#ifdef DEV_TYPE_SD
-		if(cdda->stat == CDDA_STAT_WAIT) {
-			poll(cdda->fd);
-		} else {
-			cdda->stat = CDDA_STAT_FILL;
-		}
-#else
 		cdda->stat = CDDA_STAT_FILL;
-#endif
 	}
 }
 

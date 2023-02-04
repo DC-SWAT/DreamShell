@@ -14,6 +14,7 @@
 void* g1_dma_handler(void *passer, register_stack *stack, void *current_vector);
 void* maple_dma_handler(void *passer, register_stack *stack, void *current_vector);
 void* aica_dma_handler(void *passer, register_stack *stack, void *current_vector);
+void *aica_vsync_handler(void *passer, register_stack *stack, void *current_vector);
 #endif
 
 static asic_lookup_table   asic_table;
@@ -62,8 +63,9 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 # ifdef HAVE_CDDA
 		if(status & ASIC_NRM_AICA_DMA) {
 			back_vector = aica_dma_handler(NULL, stack, back_vector);
+		} else /*if (status & ASIC_NRM_VSYNC)*/ {
+			back_vector = aica_vsync_handler(NULL, stack, back_vector);
 		}
-		CDDA_MainLoop();
 # endif
 		if (status & ASIC_NRM_VSYNC) {
 			apply_patch_list();
