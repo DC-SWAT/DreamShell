@@ -1,6 +1,6 @@
 #
 # ISO Loader app module for DreamShell
-# Copyright (C) 2011-2022 SWAT
+# Copyright (C) 2011-2023 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -8,9 +8,7 @@ APP_NAME = iso_loader
 TARGET_NAME = app_$(APP_NAME)
 OBJS = module.o utils.o
 DBG_LIBS = -lds -lisofs -lisoldr
-GCC_LIB = -lgcc
 EXPORTS_FILE = exports.txt
-KOS_CFLAGS += $(KOS_CSTD)
 
 VER_MAJOR = 0
 VER_MINOR = 8

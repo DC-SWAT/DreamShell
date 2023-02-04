@@ -28,7 +28,6 @@ static struct {
 	int sector_size;
 
 	bool have_args;
-	bool used_preset;
 
 	GUI_Widget *pages;
 
@@ -482,7 +481,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
 			if (i <= HEAP_MODE_INGAME) {
 				char mode[12];
-				sprintf(mode, "-h %d", i);
+				sprintf(mode, " -h %d", i);
 				strcat(cmd, mode);
 				break;
 			} else {
@@ -966,7 +965,7 @@ static void selectFile(char *name, int index) {
 		GUI_ButtonSetHighlightImage(w, self.item_focus);
 		GUI_ButtonSetPressedImage(w, self.item_focus);
 	}
-	
+
 	UpdateActiveMouseCursor();
 	self.current_item = index;
 	strncpy(self.filename, name, MAX_FN_LEN);
@@ -1078,58 +1077,88 @@ void isoLoader_DefaultPreset() {
 		isoLoader_toggleAsync(self.async[8]);
 	}
 
-//	if(self.used_preset == true) {
+	GUI_TextEntrySetText(self.device, "auto");
 
-		GUI_TextEntrySetText(self.device, "auto");
+	GUI_WidgetSetState(self.preset, 0);
 
-		GUI_WidgetSetState(self.preset, 0);
+	GUI_WidgetSetState(self.cdda, 0);
+	isoLoader_toggleCDDA(self.cdda);
 
-		GUI_WidgetSetState(self.cdda, 0);
-		isoLoader_toggleCDDA(self.cdda);
+	GUI_WidgetSetState(self.irq, 0);
+	GUI_WidgetSetState(self.low, 0);
 
-		GUI_WidgetSetState(self.irq, 0);
-		GUI_WidgetSetState(self.low, 0);
+	GUI_WidgetSetState(self.vmu, 0);
+	GUI_WidgetSetState(self.screenshot, 0);
 
-		GUI_WidgetSetState(self.vmu, 0);
-		GUI_WidgetSetState(self.screenshot, 0);
+	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
+	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 
-		GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
-		isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
+	GUI_WidgetSetState(self.memory_chk[0], 1);
+	isoLoader_toggleMemory(self.memory_chk[0]);
 
-		GUI_WidgetSetState(self.memory_chk[0], 1);
-		isoLoader_toggleMemory(self.memory_chk[0]);
-
-		/* 
-		 * If DC booted from sd_loader_with.bios, 
-		 * then we need use truncated IP.BIN mode by default.
-		 */
-		if(!strncmp((char*)0x001AF780, "DS_CORE.BIN", 11)) {
-			
-			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
-			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]);
-
-		/*
-		 * If DC booted from custom BIOS,
-		 * then we can replace all syscalls by the loader.
-		 * IP.BIN boot mode will switch memory to 0x8c000100 and
-		 * in turn, the loader will enable emulation of all syscalls.
-		 */
-		} else if(is_custom_bios() && is_no_syscalls()) {
-			
-			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 1);
-			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN]);
-
-		/*
-		 * If DC booted from stock BIOS, 
-		 * then use Direct mode by default.
-		 */
-		} else {
-			GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
-			isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
-		}
+	/*
+	 * If DC booted from sd_loader_with.bios,
+	 * then we need use truncated IP.BIN mode by default.
+	 */
+	if(!strncmp((char*)0x001AF780, "DS_CORE.BIN", 11)) {
 		
-		self.used_preset = false;
-//	}
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
+		isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]);
+
+	/*
+	 * If DC booted from custom BIOS,
+	 * then we can replace all syscalls by the loader.
+	 * IP.BIN boot mode will switch memory to 0x8c000100 and
+	 * in turn, the loader will enable emulation of all syscalls.
+	 */
+	} else if(is_custom_bios() && is_no_syscalls()) {
+
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 1);
+		isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN]);
+
+	/*
+	 * If DC booted from stock BIOS, 
+	 * then use Direct mode by default.
+	 */
+	} else {
+		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
+		isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
+	}
+
+	/*
+	 * Enable CDDA if present on IDE/GD
+	 */
+	if (self.filename[0] && canUseTrueAsyncDMA()) {
+
+		int have_cdda = 0;
+		char filepath[MAX_FN_LEN];
+		char path[MAX_FN_LEN];
+		int fn_len = strlen(strchr(self.filename, '/'));
+
+		memset(filepath, 0, sizeof(path));
+		memset(path, 0, sizeof(path));
+		strncpy(path, self.filename, strlen(self.filename) - fn_len);
+
+		snprintf(filepath, MAX_FN_LEN, "%s/%s/track05.raw",
+			GUI_FileManagerGetPath(self.filebrowser), path);
+
+		if (FileExists(filepath)) {
+			have_cdda = 1;
+		} else {
+			int len = strlen(filepath);
+			filepath[len - 3] = 'w';
+			filepath[len - 1] = 'v';
+
+			if (FileExists(filepath)) {
+				have_cdda = 1;
+			}
+		}
+		if (have_cdda) {
+			GUI_WidgetSetState(self.irq, 1);
+			GUI_WidgetSetState(self.cdda, 1);
+			isoLoader_toggleCDDA(self.cdda);
+		}
+	}
 }
 
 int isoLoader_SavePreset() {
@@ -1245,7 +1274,6 @@ int isoLoader_SavePreset() {
 
 	fs_write(fd, result, /*sizeof*/strlen(result));
 	fs_close(fd);
-	self.used_preset = true;
 
 	return 0;
 }
@@ -1407,7 +1435,6 @@ int isoLoader_LoadPreset() {
 		}
 	}
 
-	self.used_preset = true;
 	return 0;
 }
 
@@ -1430,7 +1457,6 @@ void isoLoader_Init(App_t *app) {
 		self.current_dev = -1;
 		self.current_item = -1;
 		self.current_item_dir = -1;
-		self.used_preset = true;
 		self.sector_size = 2048;
 
 		self.btn_dev[APP_DEVICE_CD]  = APP_GET_WIDGET("btn_cd");
