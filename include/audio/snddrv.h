@@ -36,7 +36,7 @@
 #define SEEK_LEN 16384*48
 
 /* SNDDRV (C) AICA Audio Driver */
-struct snddrv {
+static struct snddrv {
        int rate;
        int channels;
        int pcm_bytes;
@@ -52,7 +52,7 @@ struct snddrv {
         snddrv.rate = snddrv.channels = snddrv.drv_status = \
         snddrv.dec_status = snddrv.buf_status = 0; }
         
-struct snddrv_song_info {
+static struct snddrv_song_info {
      char *artist[128];
      char * title[128];
      char * track[128];

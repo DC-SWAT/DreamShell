@@ -8,11 +8,11 @@ OBJS = framing.o bitwise.o
 KOS_INCS += -I. -I../include -DLITTLE_ENDIAN=1
 CFLAGS += -O2
 
-all: libogg.a
-libogg.a: $(OBJS)
-	$(KOS_AR) rcs libogg.a $(OBJS)
+all: libogg-local.a
+libogg-local.a: $(OBJS)
+	$(KOS_AR) rcs libogg-local.a $(OBJS)
 	cp $(OBJS) ../build
-	cp libogg.a ../build
+	cp libogg-local.a ../build
 
 clean:
 	-rm -f $(OBJS) *.a

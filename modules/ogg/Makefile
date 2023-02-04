@@ -1,13 +1,13 @@
 #
 # oggvorbis module for DreamShell
-# Copyright (C) 2011-2022 SWAT
+# Copyright (C) 2011-2023 SWAT
 # http://www.dc-swat.ru
 #
 
 TARGET_NAME = oggvorbis
 OBJS = module.o
 DBG_LIBS = -lds
-LIBS = -loggvorbisplay -logg -lvorbis
+LIBS = -loggvorbisplay -logg-local -lvorbis-local
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1

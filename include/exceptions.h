@@ -84,7 +84,7 @@ void expt_print_place(char *file, int line, const char *func);
 /**
  * Throw exception.
  */
-#define EXPT_GUARD_THROW *(int *)1 = 0xdeadbeef
+#define EXPT_GUARD_THROW *(int *)(0xdeadbeef) = 0xdeadbeef
 
 /**
  * Get exceptions stack from current thread.

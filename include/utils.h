@@ -59,7 +59,7 @@ void dbgio_set_dev_fb();
 void dbgio_set_dev_sd();
 
 
-char *realpath(const char *path, char resolved[PATH_MAX]);
+char *realpath(const char *path, char *resolved);
 int makeabspath_wd(char *buff, char *path, char *dir, size_t size);
 const char *relativeFilePath(const char *rel, const char *file);
 int relativeFilePath_wb(char *buff, const char *rel, const char *file);
