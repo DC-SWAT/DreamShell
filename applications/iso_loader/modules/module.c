@@ -501,13 +501,13 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 
 	if(GUI_WidgetGetState(self.vmu)) {
 		char number[12];
-		sprintf(number, "-v %d", atoi(GUI_TextEntryGetText(self.vmu_number)));
+		sprintf(number, " -v %d", atoi(GUI_TextEntryGetText(self.vmu_number)));
 		strcat(cmd, number);
 	}
 
 	if(GUI_WidgetGetState(self.screenshot)) {
 		char hotkey[24];
-		sprintf(hotkey, "-k 0x%lx", (uint32)SCREENSHOT_HOTKEY);
+		sprintf(hotkey, " -k 0x%lx", (uint32)SCREENSHOT_HOTKEY);
 		strcat(cmd, hotkey);
 	}
 
@@ -938,11 +938,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 		self.isoldr->scr_hotkey = SCREENSHOT_HOTKEY;
 	}
 
-	if(!strncmp(self.isoldr->fs_dev, ISOLDR_DEV_DCIO, 4)) {
-		isoldr_exec_dcio(self.isoldr, filepath);
-	} else {
-		isoldr_exec(self.isoldr, addr);
-	}
+	isoldr_exec(self.isoldr, addr);
 
 	/* If we there, then something wrong... */
 	ShowConsole();
@@ -1139,7 +1135,7 @@ void isoLoader_DefaultPreset() {
 		memset(path, 0, sizeof(path));
 		strncpy(path, self.filename, strlen(self.filename) - fn_len);
 
-		snprintf(filepath, MAX_FN_LEN, "%s/%s/track05.raw",
+		snprintf(filepath, MAX_FN_LEN, "%s/%s/track06.raw",
 			GUI_FileManagerGetPath(self.filebrowser), path);
 
 		if (FileExists(filepath)) {

@@ -8,8 +8,6 @@
 #include "ds.h"
 #include "isoldr.h"
 #include "fs.h"
-#include "drivers/g1_ide.h"
-//#include <kos/md5.h>
 
 static uint8 kos_hdr[8] = {0x2D, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x2B, 0xD0};
 static uint8 ron_hdr[8] = {0x1B, 0xD0, 0x1A, 0xD1, 0x1B, 0x20, 0x2B, 0x40};
@@ -279,16 +277,8 @@ static int get_device_info(isoldr_info_t *info, const char *iso_file) {
 
 	} else if(!strncasecmp(iso_file, "/ide", 4)) {
 
-		if(g1_ata_is_dcio() > 0 && !is_custom_bios()) {
-
-			strncpy(info->fs_dev, ISOLDR_DEV_DCIO, 4);
-			info->fs_dev[4] = '\0';
-
-		} else {
-
-			strncpy(info->fs_dev, ISOLDR_DEV_G1ATA, 3);
-			info->fs_dev[3] = '\0';
-		}
+		strncpy(info->fs_dev, ISOLDR_DEV_G1ATA, 3);
+		info->fs_dev[3] = '\0';
 
 		if(iso_file[4] != '/') {
 			info->fs_part = (iso_file[4] - '0');
@@ -495,55 +485,6 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 }
 
 
-void isoldr_exec_dcio(isoldr_info_t *info, const char *file) {
-
-	// TODO ?
-	(void)info;
-
-	uint32 lba = 0;
-	file_t fd;
-	uint16 buf[256];
-	char *path = (char*)buf;
-
-	fd = fs_open(file, O_RDONLY);
-
-	if(fd == FILEHND_INVALID) {
-		return;
-	}
-
-	if(fs_ioctl(fd, FATFS_IOCTL_GET_FD_LBA, &lba) < 0) {
-		fs_close(fd);
-		ds_printf("DS_ERROR: Can't get file LBA: %d\n", errno);
-		return;
-	}
-
-	fs_close(fd);
-
-	if(!lba) {
-		ds_printf("DS_ERROR: Can't get file LBA: %s\n", file);
-		return;
-	}
-
-	ds_printf("DS_PROCESS: Sending data to DCIO board...\n");
-
-	memset_sh4(buf, 0, sizeof(buf));
-	buf[0] = lba & 0xffff;
-	buf[1] = (lba >> 16) & 0xffff;
-
-	path += 4;
-	strncpy(path, file, MAX_FN_LEN);
-
-	if(g1_ata_write_lba(g1_ata_max_lba() - 1, 1, buf) < 0) {
-		ds_printf("DS_ERROR: Can't send LBA to DCIO: %d\n", errno);
-		return;
-	}
-
-	ShutdownVideoThread();
-	expt_shutdown();
-	arch_reboot();
-}
-
-
 int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	if(argc < 2) {
@@ -558,7 +499,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 				  " -l, --low        -Use low-level syscalls emulation (disabled by default).\n");
 		ds_printf("Arguments: \n"
 		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
-		          " -d, --device     -Loader device (sd/ide/cd/dcl/dcio), default auto\n"
+		          " -d, --device     -Loader device (sd/ide/cd/dcl), default auto\n"
 		          " -p, --fspart     -Device partition (0-3), default auto\n"
 		          " -t, --fstype     -Device filesystem (fat, ext2, raw), default auto\n");
 		ds_printf(" -x, --lmem       -Any valid address for the loader (default auto)\n"
@@ -772,11 +713,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          info->syscalls);
 	}
 
-	if(!strncasecmp(info->fs_dev, ISOLDR_DEV_DCIO, 4)) {
-		isoldr_exec_dcio(info, file);
-	} else {
-		isoldr_exec(info, lex);
-	}
+	isoldr_exec(info, lex);
 
 	return CMD_ERROR;
 }

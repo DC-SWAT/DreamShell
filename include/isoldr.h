@@ -46,7 +46,6 @@
 #define ISOLDR_DEV_SDCARD "sd"
 #define ISOLDR_DEV_G1ATA  "ide"
 #define ISOLDR_DEV_DCLOAD "dcl"
-#define ISOLDR_DEV_DCIO   "dcio"
 
 
 /**
@@ -164,11 +163,5 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex);
  * Execute loader for specified device at any valid memory address
  */
 void isoldr_exec(isoldr_info_t *info, uint32 addr);
-
-/**
- * Send the data to DCIO board and reboot DC
- */
-void isoldr_exec_dcio(isoldr_info_t *info, const char *file);
-
 
 #endif /* ifndef _DS_ISOLDR_H_*/

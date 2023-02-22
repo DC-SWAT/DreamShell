@@ -1,3 +1,2 @@
 isoldr_get_info
 isoldr_exec
-isoldr_exec_dcio
