@@ -179,7 +179,7 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 	
 	while(size--) {
 		/* prefetch 32 bytes for next loop */
-		__asm__("pref @%0" : : "r"(s + 8));
+		dcache_pref_block(s + 8);
 		d[0] = s[0];
 		d[1] = s[1];
 		d[2] = s[2];
@@ -188,7 +188,7 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 		d[5] = s[5];
 		d[6] = s[6];
 		d[7] = s[7];
-		__asm__("pref @%0" : : "r"(d));
+		dcache_pref_block(d);
 		d += 8;
 		s += 8;
 	}

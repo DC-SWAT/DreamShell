@@ -740,8 +740,7 @@ static s32 g1_ata_access(struct ide_req *req)
 				cmd = (req->cmd & 1) ? ATA_CMD_WRITE_DMA_EXT : ATA_CMD_READ_DMA_EXT;
 			else
 				cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO_EXT : ATA_CMD_READ_PIO_EXT;
-			
-			OUT8(G1_ATA_CTL, 0x80);
+
 			OUT8(G1_ATA_SECTOR_COUNT, (u8)(len >> 8));
 			OUT8(G1_ATA_LBA_LOW, lba_io[3]);
 			OUT8(G1_ATA_LBA_MID, lba_io[4]);
@@ -752,8 +751,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			len = (count > 256) ? 256 : count;
 			count -= len;
 		}
-		
-		OUT8(G1_ATA_CTL, 0);
+
 		OUT8(G1_ATA_SECTOR_COUNT, (u8)(len & 0xff));
 		OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
 		OUT8(G1_ATA_LBA_MID,  lba_io[1]);
@@ -1043,13 +1041,11 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	g1_ata_wait_bsydrq();
 	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
 
-	OUT8(G1_ATA_CTL, 0x80);
 	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
 	OUT8(G1_ATA_LBA_LOW, lba_io[3]);
 	OUT8(G1_ATA_LBA_MID, lba_io[4]);
 	OUT8(G1_ATA_LBA_HIGH, lba_io[5]);
 
-	OUT8(G1_ATA_CTL, 0);
 	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count & 0xff));
 	OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
 	OUT8(G1_ATA_LBA_MID,  lba_io[1]);
@@ -1729,11 +1725,11 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 			"BUSY", "PAUSE", "STANDBY", "PLAY", "SEEK",
 			"SCAN", "OPEN", "NO DISC", "RETRY","ERROR"
 		};
-		const s8 *disc_type[] = {
+		const s8 *disc_type_name[] = {
 			"CD-DA", "CD-ROM", "CD-ROM XA", "CD-I",
 			NULL, NULL, NULL, NULL, "GD-ROM"
 		};
-		DBGF("Status: %s, disc type: %s\n", status_name[stat], disc_type[type]);
+		DBGF("Status: %s, disc type: %s\n", status_name[stat], disc_type_name[type]);
 #endif
 		if (status)
 			*status = stat;

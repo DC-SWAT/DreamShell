@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C) 2014-2016 SWAT <http://www.dc-swat.ru>
+!   Copyright (C) 2014-2023 SWAT <http://www.dc-swat.ru>
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -20,7 +20,6 @@
 	.globl _dcache_flush_range
 	.globl _dcache_purge_range
 	.globl _dcache_pref_range
-	.globl _dcache_alloc_range
 
 ! r4 is starting address
 ! r5 is count
@@ -64,7 +63,7 @@ flush_loop:
 	mov	r4,r7		! v & 0xfffffc00
 	and	r3,r7
 
-	add	#32,r4		! += L1_CACHE_BYTES
+	add	#32,r4		! += CPU_CACHE_BLOCK_SIZE
 	cmp/hs	r4,r5
 	bt/s	flush_loop
 	mov.l	r7,@r6		! *addr = data	
@@ -105,12 +104,14 @@ _dcache_inval_range:
 	add	r4,r5
 	mov.l	l1align,r0
 	and	r0,r4
+
 dinval_loop:
 	! Invalidate the O cache
-	ocbi	@r4		! r4
+	ocbi	@r4
 	cmp/hs	r4,r5
 	bt/s	dinval_loop
-	add	#32,r4		! += L1_CACHE_BYTES
+	add	#32,r4		! += CPU_CACHE_BLOCK_SIZE
+
 	rts
 	nop
 
@@ -125,15 +126,18 @@ _dcache_flush_range:
 	add	r4,r5
 	mov.l	l1align,r0
 	and	r0,r4
+
 dflush_loop:
 	! Write back the O cache
 	ocbwb	@r4
 	cmp/hs	r4,r5
 	bt/s	dflush_loop
-	add	#32,r4		! += L1_CACHE_BYTES
+	add	#32,r4		! += CPU_CACHE_BLOCK_SIZE
+
 	rts
 	nop
-	
+
+
 ! This routine just goes through and forces a write-back and invalidate
 ! on the specified data range.
 ! r4 is starting address
@@ -143,17 +147,18 @@ _dcache_purge_range:
 	add	r4,r5
 	mov.l	l1align,r0
 	and	r0,r4
+
 dpurge_loop:
 	! Write back and invalidate the O cache
 	ocbp	@r4
 	cmp/hs	r4,r5
 	bt/s	dpurge_loop
-	add	#32,r4		! += L1_CACHE_BYTES
+	add	#32,r4		! += CPU_CACHE_BLOCK_SIZE
+
 	rts
 	nop
 
-! This routine just prefetch to operand cache the
-! specified data range. 
+! This routine prefetch to operand cache the specified data range. 
 ! r4 is starting address
 ! r5 is count
 _dcache_pref_range:
@@ -161,34 +166,19 @@ _dcache_pref_range:
 	add	r4,r5
 	mov.l	l1align,r0
 	and	r0,r4
+	mov	r4,r6
+
 dpref_loop:
 	! Prefetch to the O cache
-	pref @r4
+	pref	@r4
 	cmp/hs	r4,r5
 	bt/s	dpref_loop
-	add	#32,r4		! += L1_CACHE_BYTES
+	add	#32,r4		! += CPU_CACHE_BLOCK_SIZE
+
 	rts
-	nop
-	
-! This routine just allocate operand cache for the
-! specified data range. 
-! r4 is starting address
-! r5 is count
-_dcache_alloc_range:
-	! Get ending address from count and align start address
-	add	r4,r5
-	mov.l	l1align,r0
-	and	r0,r4
-	mov #0,r0
-dalloc_loop:
-	! Allocate the O cache
-	movca.l r0, @r4
-	cmp/hs	r4,r5
-	bt/s	dalloc_loop
-	add	#32,r4		! += L1_CACHE_BYTES
-	rts
-	nop
+	mov	r6,r0
+
 
 	.align	2
 l1align:
-	.long	~31		! ~(L1_CACHE_BYTES-1)
+	.long	~31		! ~(CPU_CACHE_BLOCK_SIZE-1)

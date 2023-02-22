@@ -1,8 +1,8 @@
 /* KallistiOS ##version##
 
    arch/dreamcast/include/cache.h
-   (c)2001 Dan Potter
-   (c)2014-2016 SWAT
+   Copyright (C) 2001 Dan Potter
+   Copyright (C) 2014, 2016, 2023 Ruslan Rostovtsev
 
 */
 
@@ -13,7 +13,8 @@
     Dreamcast, including functions to flush, invalidate, purge, prefetch and
     allocate the caches.
 
-    \author Dan Potter, SWAT
+    \author Dan Potter
+    \author Ruslan Rostovtsev
 */
 
 #ifndef __ARCH_CACHE_H
@@ -23,6 +24,13 @@
 __BEGIN_DECLS
 
 #include <arch/types.h>
+
+/** \brief  SH4 cache block size.
+
+    The physical address will be aligned to this size in all
+    functions except dcache_alloc_write.
+*/
+#define CPU_CACHE_BLOCK_SIZE 32
 
 /** \brief  Flush the instruction cache.
 
@@ -51,7 +59,7 @@ void dcache_inval_range(uint32 start, uint32 count);
     cache in the process (meaning the blocks will still be in the cache, just
     not marked as dirty after this has completed). If you wish to invalidate the
     cache as well, call dcache_inval_range() after calling this function or
-    use dcache_purge_range() instead of dcache_flush_range()
+    use dcache_purge_range() instead of dcache_flush_range().
 
     \param  start           The physical address to begin flushing at.
     \param  count           The number of bytes to flush.
@@ -68,19 +76,33 @@ void dcache_flush_range(uint32 start, uint32 count);
 */
 void dcache_purge_range(uint32 start, uint32 count);
 
-/** \brief  Prefetch to the data/operand cache.
+/** \brief  Prefetch memory to the data/operand cache.
+
+    This function prefetch a range of the data/operand cache.
 
     \param  start           The physical address to begin prefetching at.
     \param  count           The number of bytes to prefetch.
+    \return                 The physical address aligned to cache block size.
 */
-void dcache_pref_range(uint32 start, uint32 count);
+void *dcache_pref_range(uint32 start, uint32 count);
 
-/** \brief  Allocate the data/operand cache.
+/** \brief  Prefetch one block to the data/operand cache.
 
-    \param  start           The physical address to begin allocating at.
-    \param  count           The number of bytes to allocate.
+    This function prefetch a range of the data/operand cache.
+
+    \param  src             The buffer to prefetch.
+    \return                 The buffer aligned to cache block size.
 */
-void dcache_alloc_range(uint32 start, uint32 count);
+static __always_inline void *dcache_pref_block(const void *src) {
+    uint32 __cache_aligned = ((uint32)src) & ~(CPU_CACHE_BLOCK_SIZE - 1);
+    __asm__ __volatile__("pref @%[ptr]\n"
+                         :
+                         : [ptr] "r" (__cache_aligned)
+                         :
+    );
+
+    return (void *)__cache_aligned;
+}
 
 __END_DECLS
 

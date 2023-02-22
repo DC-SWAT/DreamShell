@@ -112,13 +112,19 @@ static maple_memory_t memory_info = {
 
 static void maple_vmu_device_info(maple_frame_t *req, maple_frame_t *resp) {
     maple_devinfo_t *di = (maple_devinfo_t *)&resp->data;
+    uint32 *req_params = (uint32 *)req->data;
 
-    resp->cmd = MAPLE_RESPONSE_DATATRF;
+    if (req_params[0] != MAPLE_FUNC_MEMCARD) {
+        return;
+    }
+
+    resp->cmd = MAPLE_RESPONSE_DEVINFO;
     resp->datalen = sizeof(maple_devinfo_t) / 4;
     resp->from = req->to;
     resp->to = req->from;
 
     if (req->cmd == MAPLE_COMMAND_ALLINFO) {
+        resp->cmd = MAPLE_RESPONSE_ALLINFO;
         resp->datalen += 20;
         memset(di + sizeof(maple_devinfo_t), 0, 20 * 4);
     }
