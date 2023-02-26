@@ -1,6 +1,5 @@
 .DS_Store
 .codelite
-settings.json
 *.o
 *.a
 *.elf

@@ -1,0 +1,12 @@
+{
+    "C_Cpp.default.includePath": [
+        "/usr/local/dc/kos/kos/include/",
+        "/usr/local/dc/kos/kos/kernel/arch/dreamcast/include/",
+        "/usr/local/dc/kos/kos/addons/include/",
+        "/usr/local/dc/kos/kos-ports/include/",
+        "/opt/toolchains/dc/sh-elf/sh-elf/include/",
+        "/usr/local/dc/kos/kos/ds/include/",
+        "/usr/local/dc/kos/kos/ds/firmware/isoldr/loader/include"
+    ],
+    "C_Cpp.default.compilerPath": "kos-cc"
+}
