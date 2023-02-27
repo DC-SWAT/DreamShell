@@ -112,11 +112,6 @@ static maple_memory_t memory_info = {
 
 static void maple_vmu_device_info(maple_frame_t *req, maple_frame_t *resp) {
     maple_devinfo_t *di = (maple_devinfo_t *)&resp->data;
-    uint32 *req_params = (uint32 *)req->data;
-
-    if (req_params[0] != MAPLE_FUNC_MEMCARD) {
-        return;
-    }
 
     resp->cmd = MAPLE_RESPONSE_DEVINFO;
     resp->datalen = sizeof(maple_devinfo_t) / 4;
@@ -181,8 +176,8 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     resp->to = req->from;
     resp->datalen = 0;
 
+    // Maybe it's LCD or Buzzer data
     if (req_params[0] != MAPLE_FUNC_MEMCARD) {
-        LOGF("maple_vmu_draw_lcd\n");
         return;
     }
 
@@ -258,7 +253,7 @@ static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
 }
 
 static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
-    if (vmu_fd < 0) {
+    if (vmu_fd == FILEHND_INVALID) {
         return -1;
     }
     switch (cmd) {
@@ -314,92 +309,74 @@ static int maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
 
 static void maple_dma_proc() {
     uint32 *data, *recv_data, addr, value;
-    uint8 trans_count, frame_count;
-    uint8 len, last, port, cmd, print_xfer;
+    uint32 trans_count;
+    uint8 len, last = 0, port, cmd, pattern;
     maple_frame_t req_frame;
     maple_frame_t resp_frame;
     maple_frame_t *resp_frame_ptr;
-    static uint32 maple_dma_count = 0;
 
     addr = MAPLE_REG(MAPLE_DMA_ADDR);
     data = (uint32 *)UNCACHED_ADDR(addr);
-    maple_dma_count++;
 
-    // LOGF("--- START MAPLE DMA: %ld at 0x%08lx ---\n", maple_dma_count, addr);
-
-    for (trans_count = 0; trans_count < 8; ++trans_count) {
+    for (trans_count = 0; trans_count < 24 && !last; ++trans_count) {
 
         /* First word: message length and destination port */
         value = *data++;
         len = value & 0xff;
-        port = (value >> 16) & 0xff;
-        last = (value >> 31) & 0x0f;
+        pattern = (value >> 8) & 0xff;
+        port = (value >> 16) & 0x0f;
+        last = (value >> 31) & 0x01;
 
         /* Second word: receive buffer physical address */
-        addr = *data++;
+        addr = *data;
 
-        if (!len || !(addr & PHYS_ADDR(RAM_START_ADDR)) || port > 0x04) {
-            break;
+        LOGF("MAPLE_XFER: %d value=0x%08lx pattern=0x%02x len=%d port=%d addr=0x%08lx last=%d\n",
+            trans_count, value, pattern, len, port, (pattern ? 0 : addr), last);
+
+        if (pattern) {
+            continue;
+        } else if (port) {
+            data += len + 2;
+            continue;
         }
+
+        maple_read_frame(data + 1, &req_frame);
+        cmd = req_frame.cmd;
+        data += len + 2;
 
         recv_data = (uint32 *)UNCACHED_ADDR(addr);
-        print_xfer = 1;
-
-        for (frame_count = 0; frame_count < 8 && len > 0; ++frame_count) {
-
-            maple_read_frame(data, &req_frame);
-            cmd = req_frame.cmd;
-            len -= req_frame.datalen;
-            data += req_frame.datalen + 1;
-
-            maple_read_frame(recv_data, &resp_frame);
-            resp_frame_ptr = (maple_frame_t *)recv_data;
-            recv_data += resp_frame.datalen + 1;
+        resp_frame_ptr = (maple_frame_t *)recv_data;
+        maple_read_frame(recv_data, &resp_frame);
 
 #ifndef MAPLE_SNIFFER
-            if ((resp_frame.from & 0x20) && vmu_fd > FILEHND_INVALID) {
-                resp_frame_ptr->from |= 0x01;
-            }
+        if ((resp_frame.from & 0x20) && vmu_fd != FILEHND_INVALID) {
+            resp_frame_ptr->from |= 0x01;
+        }
 #endif
-            /* Filter out conditional messages */
-            if (cmd == MAPLE_COMMAND_SETCOND) {
-                continue;
-            }
 
-            if (cmd == MAPLE_COMMAND_GETCOND
-#ifdef LOG
-                && maple_dma_count > 2 && maple_dma_count % 20
-#endif
-            ) {
-                maple_controller(&req_frame, resp_frame_ptr);
-                continue;
-            }
+        if (cmd == MAPLE_COMMAND_GETCOND) {
+            maple_controller(&req_frame, resp_frame_ptr);
+            continue;
+        }
 
-            if (print_xfer) {
-                print_xfer = 0;
-                LOGF("MAPLE_XFER: %d val=0x%08lx len=%d port=%d addr=0x%08lx last=%d\n",
-                    trans_count, value, len + req_frame.datalen, port, addr, last);
-            }
+        if (cmd >= MAPLE_COMMAND_SETCOND || req_frame.to != 0x01) {
+            continue;
+        }
 
-            maple_dump_frame("SEND", frame_count, &req_frame);
-            maple_dump_frame("RECV", frame_count, &resp_frame);
+        maple_dump_frame("SEND", trans_count, &req_frame);
+        maple_dump_frame("RECV", trans_count, &resp_frame);
 
 #if defined(MAPLE_SNIFFER) || !defined(LOG)
-            maple_cmd_proc(cmd, &req_frame, resp_frame_ptr);
+        maple_cmd_proc(cmd, &req_frame, resp_frame_ptr);
 #else
-            if (maple_cmd_proc(cmd, &req_frame, resp_frame_ptr) < 0) {
-                if ((resp_frame.from & 0x20) && vmu_fd > FILEHND_INVALID) {
-                    maple_read_frame((uint32 *)resp_frame_ptr, &resp_frame);
-                    maple_dump_frame("EMUL", frame_count, &resp_frame);
-                }
+        if (maple_cmd_proc(cmd, &req_frame, resp_frame_ptr) < 0) {
+            if ((resp_frame.from & 0x20) && vmu_fd != FILEHND_INVALID) {
+                maple_read_frame((uint32 *)resp_frame_ptr, resp_frame_ptr);
+                maple_dump_frame("EMUL", trans_count, resp_frame_ptr);
             }
+        }
 #endif
-        }
-        if (last) {
-            break;
-        }
     }
-    // LOGF("--- END MAPLE DMA ---\n");
 }
 
 
