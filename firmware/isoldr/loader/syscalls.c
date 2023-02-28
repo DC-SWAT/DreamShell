@@ -896,12 +896,21 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
  * Get status of the drive syscall
  */
 int gdcGetDrvStat(uint32 *status) {
-	
+
+#ifdef HAVE_CDDA
+	if (IsoInfo->exec.type == BIN_TYPE_KOS
+		&& IsoInfo->emu_cdda
+		&& !exception_inited()
+	) {
+		CDDA_MainLoop();
+	}
+#endif
+
 	if(lock_gdsys()) {
 		DBGFF("already locked\n");
 		return CMD_STAT_WAITING;
 	}
-	
+
  	DBGF("%s\r", __func__);
 	gd_state_t *GDS = get_GDS();
 
@@ -929,7 +938,7 @@ int gdcGetDrvStat(uint32 *status) {
 			return 1;
 		}
 	}
-	
+
 	status[0] = GDS->drv_stat;
 	status[1] = GDS->drv_media;
 	unlock_gdsys();
@@ -976,7 +985,9 @@ void gdcInitSystem(void) {
 	OpenLog();
 	LOGFF(NULL);
 
-	if (IsoInfo->heap == HEAP_MODE_INGAME) {
+	if (IsoInfo->heap == HEAP_MODE_INGAME
+		|| IsoInfo->heap == HEAP_MODE_MAPLE
+	) {
 		malloc_init();
 	}
 
@@ -1027,7 +1038,9 @@ void gdcInitSystem(void) {
 	
 #endif /* HAVE_EXPT */
 
-	if (IsoInfo->heap == HEAP_MODE_INGAME) {
+	if (IsoInfo->heap == HEAP_MODE_INGAME
+		|| IsoInfo->heap == HEAP_MODE_MAPLE
+	) {
 		InitReader();
 	}
 #ifdef DEV_TYPE_SD
@@ -1332,11 +1345,8 @@ int flashrom_read(int offset, void *buffer, int bytes) {
 	uint8 *src = (uint8 *)(0xa0200000 + offset);
 
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	// FIXME: lock G1 bus
-//	lock_gdsys_wait();
-	do {} while(g1_dma_in_progress());
+	do {} while(pre_read_xfer_busy());
 	safe_memcpy(buffer, src, bytes);
-//	unlock_gdsys();
 #else
 	safe_memcpy(buffer, src, bytes);
 #endif

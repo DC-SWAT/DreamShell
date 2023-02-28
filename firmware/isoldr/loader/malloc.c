@@ -1,10 +1,11 @@
 /**
  * DreamShell ISO Loader
  * Memory allocation
- * (c)2022 SWAT <http://www.dc-swat.ru>
+ * (c)2022-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
+#include <maple.h>
 
 enum malloc_types {
     MALLOC_TYPE_INTERNAL = 0,
@@ -90,6 +91,65 @@ typedef struct chunk *Chunk;
 static void *internal_malloc_base = NULL;
 static void *internal_malloc_pos = NULL;
 
+static void internal_malloc_init_auto() {
+    if (loader_addr < APP_ADDR && IsoInfo->exec.type != BIN_TYPE_WINCE) {
+
+        if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda)
+            || (IsoInfo->emu_cdda && IsoInfo->use_irq == 0)
+            || IsoInfo->boot_mode != BOOT_MODE_DIRECT
+        ) {
+            internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
+        } else if (loader_end < IPBIN_ADDR
+            && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq)
+        ) {
+            internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
+        }
+    } else if (loader_addr > APP_ADDR) {
+
+        if (IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+
+            if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO
+                || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
+                || IsoInfo->emu_cdda
+            ) {
+                internal_malloc_base = (void *)(ISOLDR_DEFAULT_ADDR_LOW + 0x800);
+            } else {
+                internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
+            }
+        }
+
+    } else if (IsoInfo->exec.type == BIN_TYPE_WINCE) {
+
+        if (loader_end < IPBIN_ADDR) {
+            internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
+        }
+    }
+}
+
+static void internal_malloc_init_maple() {
+    if (init_count > 1) {
+
+        uint32 addr = MAPLE_REG(MAPLE_DMA_ADDR);
+        internal_malloc_base = (void *)CACHED_ADDR(addr);
+
+        if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO
+            || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
+            || IsoInfo->emu_cdda
+        ) {
+            internal_malloc_base += 0x1000;
+        } else {
+            if (IsoInfo->exec.type == BIN_TYPE_KOS) {
+                internal_malloc_base += 0x3000;
+            } else {
+                internal_malloc_base += 0x5000;
+            }
+        }
+    } else {
+        // Temporary place before executing
+        internal_malloc_init_auto();
+    }
+}
+
 static int internal_malloc_init(void) {
 
     internal_malloc_base = (void *)ALIGN32_ADDR(loader_end);
@@ -101,40 +161,19 @@ static int internal_malloc_init(void) {
 
     } else if (IsoInfo->heap == HEAP_MODE_AUTO) {
 
-        if (loader_addr < APP_ADDR && IsoInfo->exec.type != BIN_TYPE_WINCE) {
+        internal_malloc_init_auto();
 
-            if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda)
-                || (IsoInfo->emu_cdda && IsoInfo->use_irq == 0)
-                || IsoInfo->boot_mode != BOOT_MODE_DIRECT
-            ) {
-                internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
-            } else if (loader_end < IPBIN_ADDR
-                && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq)
-            ) {
-                internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
-            }
-        } else if (loader_addr > APP_ADDR) {
-
-            if (IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
-
-                if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO
-                    || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
-                    || IsoInfo->emu_cdda
-                ) {
-                    internal_malloc_base = (void *)(ISOLDR_DEFAULT_ADDR_LOW + 0x800);
-                } else {
-                    internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
-                }
-            }
-        } else if (IsoInfo->exec.type == BIN_TYPE_WINCE) {
-
-            if (loader_end < IPBIN_ADDR) {
-                internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
-            }
-        }
     } else if (IsoInfo->heap == HEAP_MODE_INGAME) {
-        // Temporary place before executing
-        internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
+
+        /**
+         * Temporary place before executing
+         * or if KATANA malloc init failed.
+         */
+        internal_malloc_init_auto();
+
+    } else if(IsoInfo->heap == HEAP_MODE_MAPLE) {
+
+        internal_malloc_init_maple();
     }
 
     internal_malloc_pos = internal_malloc_base + word_align(sizeof(struct chunk));
@@ -264,7 +303,12 @@ void *internal_realloc(void *ptr, size_t size) {
 }
 
 int malloc_init(void) {
-    if (IsoInfo->heap == HEAP_MODE_INGAME && IsoInfo->exec.type == BIN_TYPE_KATANA && init_count++) {
+    init_count++;
+
+    if (IsoInfo->heap == HEAP_MODE_INGAME &&
+        IsoInfo->exec.type == BIN_TYPE_KATANA
+        && init_count > 1
+    ) {
         if (katana_malloc_init() < 0) {
             return internal_malloc_init();
         }

@@ -417,6 +417,9 @@
 									<input height="25" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="100%">
 										<label align="left" color="#000000" font="arial" height="20" text="Ingame heap (KANATA only)" x="25" />
 									</input>
+									<input height="25" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="100%">
+										<label align="left" color="#000000" font="arial" height="20" text="Maple DMA buffer" x="25" />
+									</input>
 									<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
 									</input>
@@ -431,12 +434,6 @@
 									</input>
 									<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
-									</input>
-									<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-										<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
-									</input>
-									<input height="22" name="0x8cfa0000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-										<label align="left" color="#000000" font="arial" height="20" text="0x8cfa0000" x="19%" />
 									</input>
 									<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />

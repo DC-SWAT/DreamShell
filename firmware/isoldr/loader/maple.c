@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * Maple device emulation
+ * Maple sniffing and VMU emulation
  * (c)2022-2023 SWAT <http://www.dc-swat.ru>
  */
 
@@ -8,6 +8,7 @@
 #include <asic.h>
 #include <exception.h>
 #include <ubc.h>
+#include <maple.h>
 #include <dc/maple.h>
 #include <dc/controller.h>
 
@@ -24,11 +25,6 @@
 #  define MAPLE_LOG 1
 # endif
 #endif
-
-#define MAPLE_REG(x) (*(vuint32 *)(x))
-#define MAPLE_BASE 0xa05f6c00
-#define MAPLE_DMA_ADDR (MAPLE_BASE + 0x04)
-#define MAPLE_DMA_STATUS (MAPLE_BASE + 0x18)
 
 typedef struct {
     uint32 function;
@@ -338,6 +334,7 @@ static void maple_dma_proc() {
 
         /* First word: transfer parameters */
         value = *data++;
+
         len = value & 0xff;
         pattern = (value >> 8) & 0xff;
         port = (value >> 16) & 0x0f;

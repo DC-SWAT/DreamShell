@@ -479,7 +479,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
 		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
-			if (i <= HEAP_MODE_INGAME) {
+			if (i <= HEAP_MODE_MAPLE) {
 				char mode[12];
 				sprintf(mode, " -h %d", i);
 				strcat(cmd, mode);
@@ -851,7 +851,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
 		if(GUI_WidgetGetState(self.heap[i])) {
-			if (i <= HEAP_MODE_INGAME) {
+			if (i <= HEAP_MODE_MAPLE) {
 				self.isoldr->heap = i;
 			} else {
 				tmpval = GUI_ObjectGetName((GUI_Object *)self.heap[i]);
@@ -1207,7 +1207,7 @@ int isoLoader_SavePreset() {
 
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
 		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
-			if (i <= HEAP_MODE_INGAME) {
+			if (i <= HEAP_MODE_MAPLE) {
 				heap = i;
 			} else {
 				char *tmpval = (char* )GUI_ObjectGetName((GUI_Object *)self.heap[i]);
@@ -1364,11 +1364,11 @@ int isoLoader_LoadPreset() {
 
 	heap = strtoul(heap_memory, NULL, 16);
 
-	if (heap <= HEAP_MODE_INGAME) {
+	if (heap <= HEAP_MODE_MAPLE) {
 		GUI_WidgetSetState(self.heap[heap], 1);
 		isoLoader_toggleHeap(self.heap[heap]);
 	} else {
-		for (int i = HEAP_MODE_INGAME; i < sizeof(self.heap) >> 2; i++) {
+		for (int i = HEAP_MODE_MAPLE; i < sizeof(self.heap) >> 2; i++) {
 			if (!self.heap[i]) {
 				break;
 			}

@@ -499,7 +499,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 				  " -l, --low        -Use low-level syscalls emulation (disabled by default).\n");
 		ds_printf("Arguments: \n"
 		          " -e, --async      -Emulate async reading, 0=none default, >0=sectors per frame\n"
-		          " -d, --device     -Loader device (sd/ide/cd/dcl), default auto\n"
+		          " -d, --device     -Loader device (sd/ide/cd), default auto\n"
 		          " -p, --fspart     -Device partition (0-3), default auto\n"
 		          " -t, --fstype     -Device filesystem (fat, ext2, raw), default auto\n");
 		ds_printf(" -x, --lmem       -Any valid address for the loader (default auto)\n"
@@ -519,6 +519,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      0 = auto address selection (default)\n"
 		          "                      1 = behind the loader\n"
 		          "                      2 = ingame memory allocation (KATANA only)\n"
+		          "                      3 = maple DMA buffer (keep some for devices)\n"
 		          "             0x8cXXXXXX = address (specify valid address)\n");
 		ds_printf(" -g, --cddamode   -CDDA emulation mode\n"
 		          "                      0 = Disabled (default)\n"
