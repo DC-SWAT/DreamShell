@@ -164,6 +164,12 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
     resp->from = req->to;
     resp->to = req->from;
 
+    if (pre_read_xfer_busy()) {
+        resp->cmd = MAPLE_RESPONSE_AGAIN;
+        resp->datalen = 0;
+        return;
+    }
+
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
     uint8 *buff = (uint8 *)&resp_params[2];
 
@@ -193,6 +199,10 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
 
     // Maybe it's LCD or Buzzer data
     if (req_params[0] != MAPLE_FUNC_MEMCARD) {
+        return;
+    }
+    if (pre_read_xfer_busy()) {
+        resp->cmd = MAPLE_RESPONSE_AGAIN;
         return;
     }
 
@@ -227,7 +237,14 @@ static void maple_vmu_block_sync(maple_frame_t *req, maple_frame_t *resp) {
     resp->from = req->to;
     resp->to = req->from;
     resp->datalen = 0;
+
+    if (pre_read_xfer_busy()) {
+        resp->cmd = MAPLE_RESPONSE_AGAIN;
+        return;
+    }
+
     ioctl(vmu_fd, FS_IOCTL_SYNC, NULL);
+
 #ifdef LOG
     uint32 *req_params = (uint32 *)req->data;
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;

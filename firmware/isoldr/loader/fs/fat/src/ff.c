@@ -794,30 +794,30 @@ FRESULT move_window (
 )
 {
 	if (sector != fs->winsect) {	/* Changed current window */
-#if !_FS_READONLY
-		if (sync_window(fs) != FR_OK)
-			return FR_DISK_ERR;
-#endif
 
 #ifdef DEV_TYPE_IDE
 		int old_dma = fs_dma_enabled();
-		fs_enable_dma(0);
+		fs_enable_dma(FS_DMA_DISABLED);
 #endif
 
-		if (disk_read(fs->drv, fs->win, sector, 1)) {
+#if !_FS_READONLY
+		if (sync_window(fs) != FR_OK) {
 #ifdef DEV_TYPE_IDE
 			fs_enable_dma(old_dma);
 #endif
 			return FR_DISK_ERR;
 		}
-		
+#endif
+		int rs = disk_read(fs->drv, fs->win, sector, 1);
+
 #ifdef DEV_TYPE_IDE
 		fs_enable_dma(old_dma);
 #endif
-
+		if (rs) {
+			return FR_DISK_ERR;
+		}
 		fs->winsect = sector;
 	}
-
 	return FR_OK;
 }
 
@@ -834,6 +834,10 @@ FRESULT sync_fs (	/* FR_OK: successful, FR_DISK_ERR: failed */
 {
 	FRESULT res;
 
+#ifdef DEV_TYPE_IDE
+	int old_dma = fs_dma_enabled();
+	fs_enable_dma(FS_DMA_DISABLED);
+#endif
 
 	res = sync_window(fs);
 	if (res == FR_OK) {
@@ -856,6 +860,9 @@ FRESULT sync_fs (	/* FR_OK: successful, FR_DISK_ERR: failed */
 			res = FR_DISK_ERR;
 	}
 
+#ifdef DEV_TYPE_IDE
+	fs_enable_dma(old_dma);
+#endif
 	return res;
 }
 #endif

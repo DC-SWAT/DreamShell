@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Utils
- * (c)2011-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -203,6 +203,7 @@ void Load_Syscalls() {
 	uint8_t *dst = (uint8_t *) UNCACHED_ADDR(RAM_START_ADDR);
 	uint8_t *src = (uint8_t *) IsoInfo->syscalls;
 	uint32 lba = 0;
+	int fd;
 
 	memcpy(dst, src, 0x4000);
 	memcpy(dst + 0x128C, &IsoInfo->toc, 408);
@@ -232,7 +233,7 @@ void Load_Syscalls() {
 		memcpy(&ch_name[strlen(IsoInfo->image_file) - 6], "103.iso", 7);
 
 		close(iso_fd);
-		int fd = open(ch_name, O_RDONLY);
+		fd = open(ch_name, O_RDONLY);
 
 		if (fd > FILEHND_INVALID) {
 
@@ -270,10 +271,11 @@ void Load_Syscalls() {
 	}
 
 	// IGR
-	int fd = get_ds_fd();
+	fd = get_ds_fd();
 	ioctl(fd, FS_IOCTL_GET_LBA, &lba);
 	*((uint32 *)(dst + 0x1430)) = lba;
 	*((uint32 *)(dst + 0x1434)) = total(fd);
+	close(fd);
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		sys_misc_init();

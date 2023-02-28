@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * FAT file system
- * (c)2011-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -150,14 +150,14 @@ int open(const char *path, int flags) {
 			return FS_ERR_PARAM;
 	}
 
-	int old_dma_mode = dma_mode;
-	dma_mode = 0;
+	int old_dma_mode = fs_dma_enabled();
+	fs_enable_dma(FS_DMA_DISABLED);
 
 	r = f_open(&file->fp, path, fat_flags);
 
 	if(r != FR_OK) {
 		LOGFF("failed to open %s, error %d\n", path, r);
-		dma_mode = old_dma_mode;
+		fs_enable_dma(old_dma_mode);
 		if (r == FR_EXIST) {
 			return FS_ERR_EXISTS;
 		} else if(r == FR_NO_PATH) {
@@ -202,7 +202,8 @@ int open(const char *path, int flags) {
 	}
 #endif /* _USE_FASTSEEK */
 
-	dma_mode = old_dma_mode;
+	fs_enable_dma(old_dma_mode);
+
 	if(flags & O_PIO) {
 		file->dma_mode = FS_DMA_DISABLED;
 	} else {
@@ -249,14 +250,16 @@ int read(int fd, void *ptr, unsigned int size) {
 		abort_async(fd);
 	}
 
-	int old_dma_mode = dma_mode;
+	int old_dma_mode = fs_dma_enabled();
+
 	if(file->dma_mode > -1) {
-		dma_mode = file->dma_mode;
+		fs_enable_dma(file->dma_mode);
 	}
+
 	uint br;
 	FRESULT rs = f_read(&file->fp, ptr, size, &br);
 
-	dma_mode = old_dma_mode;
+	fs_enable_dma(old_dma_mode);
 
 	if(rs != FR_OK) {
 		LOGFF("ERROR %d\n", rs);
@@ -373,21 +376,25 @@ void poll_all() {
 
 int write(int fd, void *ptr, unsigned int size) {
 
-	uint bw;
 	CHECK_FD();
 
-	int old_dma_mode = dma_mode;
+	int old_dma_mode = fs_dma_enabled();
+
 	if(file->dma_mode > -1) {
-		dma_mode = file->dma_mode;
+		fs_enable_dma(file->dma_mode);
 	}
 
-	if(f_write(&file->fp, ptr, size, &bw) == FR_OK) {
-		dma_mode = old_dma_mode;
-		return bw;
+	uint bw;
+	FRESULT rs = f_write(&file->fp, ptr, size, &bw);
+
+	fs_enable_dma(old_dma_mode);
+
+	if(rs != FR_OK) {
+		LOGFF("ERROR %d\n", rs);
+		return FS_ERR_SYSERR;
 	}
 
-	dma_mode = old_dma_mode;
-	return FS_ERR_SYSERR;
+	return bw;
 }
 
 #endif

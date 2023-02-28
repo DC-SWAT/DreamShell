@@ -946,9 +946,6 @@ void g1_get_partition(void)
 #endif
 
 s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
-	
-	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
-			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
 
 	const u8 drive = 1; // TODO
 	struct ide_req req;
@@ -963,15 +960,16 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 
 	g1_dma_part_avail = 0;
 
+	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
+		req.cmd == G1_WRITE_DMA ? "DMA" : "PIO", fs_dma_enabled(),
+		req.async ? "ASYNC" : "BLOCKED");
+
 	return g1_ata_access(&req);
 }
 
 #if _FS_READONLY == 0
 
 s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
-
-	DBGF("G1_ATA_WRITE: %ld %d 0x%08lx %s %s\n", (uint32)block, count, (uint32)buf,
-			fs_dma_enabled() ? "DMA" : "PIO", wait_dma ? "BLOCKED" : "ASYNC");
 
 	const u8 drive = 1; // TODO
 	struct ide_req req;
@@ -983,6 +981,10 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 	req.cmd = fs_dma_enabled() ? G1_WRITE_DMA : G1_WRITE_PIO;
 	req.lba = block;
 	req.async = (wait_dma || req.cmd == G1_WRITE_PIO) ? 0 : 1;
+
+	DBGF("G1_ATA_WRITE: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
+		req.cmd == G1_WRITE_DMA ? "DMA" : "PIO", fs_dma_enabled(),
+		req.async ? "ASYNC" : "BLOCKED");
 
 	return g1_ata_access(&req);
 }
