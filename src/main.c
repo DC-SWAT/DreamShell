@@ -108,17 +108,20 @@ int InitNet(uint32 ipl) {
 			dbgio_dev_select("fs_dclsocket");
 			dbgio_enable();
 			dbglog(DBG_INFO, "fs_dclsocket console support enabled\n");
+		} else {
+			dbgio_enable();
 		}
 	}
+	if (net_default_dev != NULL) {
+		char ip_str[64];
+		memset(ip_str, 0, sizeof(ip_str));
+		snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d",
+			net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
+			net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
+		setenv("NET_IPV4", ip_str, 1);
 
-	char ip_str[64];
-	memset(ip_str, 0, sizeof(ip_str));
-	snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d",
-		net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
-		net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
-	setenv("NET_IPV4", ip_str, 1);
-
-	dbglog(DBG_INFO, "Network IPv4 address: %s\n", ip_str);
+		dbglog(DBG_INFO, "Network IPv4 address: %s\n", ip_str);
+	}
 	net_inited = 1;
 	return rv;
 }
@@ -172,10 +175,15 @@ int InitDS() {
 	dbglog_set_level(DBG_KDEBUG);
 #endif
 
-//	gdb_init();
+#if defined(DS_DEBUG) && DS_DEBUG == 2
+	gdb_init();
+#endif
+
+#ifdef USE_DS_EXCEPTIONS
 	expt_init();
+#endif
+
 	SetConsoleDebug(1);
-	InitNet(0);
 
 	if(!emu) {
 

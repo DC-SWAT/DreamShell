@@ -35,21 +35,12 @@ static struct {
 	int code;
 	const char *name;
 } exceptions_code[] = {
+	{EXC_DATA_ADDRESS_READ, "EXC_DATA_ADDRESS_READ"},   // 0x00e0	/* Data address (read) */
+	{EXC_DATA_ADDRESS_WRITE,"EXC_DATA_ADDRESS_WRITE"},  // 0x0100	/* Data address (write) */
 	{EXC_USER_BREAK_PRE,    "EXC_USER_BREAK_PRE"},      // 0x01e0	/* User break before instruction */
-	{EXC_INSTR_ADDRESS,     "EXC_INSTR_ADDRESS"},       // 0x00e0	/* Instruction address */
-	{EXC_ITLB_MISS,         "EXC_ITLB_MISS"},           // 0x00a0	/* Instruction TLB miss */
-	{EXC_ITLB_PV,           "EXC_ITLB_PV"},             // 0x00a0	/* Instruction TLB protection violation */
 	{EXC_ILLEGAL_INSTR,     "EXC_ILLEGAL_INSTR"},       // 0x0180	/* Illegal instruction */
 	{EXC_GENERAL_FPU,       "EXC_GENERAL_FPU"},         // 0x0800	/* General FPU exception */
 	{EXC_SLOT_FPU,          "EXC_SLOT_FPU"},            // 0x0820	/* Slot FPU exception */
-	{EXC_DATA_ADDRESS_READ, "EXC_DATA_ADDRESS_READ"},   // 0x00e0	/* Data address (read) */
-	{EXC_DATA_ADDRESS_WRITE,"EXC_DATA_ADDRESS_WRITE"},  // 0x0100	/* Data address (write) */
-	{EXC_DTLB_MISS_READ,    "EXC_DTLB_MISS_READ"},      // 0x0040	/* Data TLB miss (read) */
-	{EXC_DTLB_MISS_WRITE,   "EXC_DTLB_MISS_WRITE"},     // 0x0060	/* Data TLB miss (write) */
-	{EXC_DTLB_PV_READ,      "EXC_DTLB_PV_READ"},        // 0x00a0	/* Data TLB P.V. (read) */
-	{EXC_DTLB_PV_WRITE,     "EXC_DTLB_PV_WRITE"},       // 0x00c0	/* Data TLB P.V. (write) */
-	{EXC_FPU,               "EXC_FPU"},                 // 0x0120	/* FPU exception */
-	{EXC_INITIAL_PAGE_WRITE,"EXC_INITIAL_PAGE_WRITE"},  // 0x0120	/* Initial page write exception */
 	{0, NULL}
 };
 

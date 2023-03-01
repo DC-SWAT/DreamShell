@@ -11,10 +11,11 @@
 #include <kos/thread.h>
 #include "setjmp.h"
 
+#if !defined(DS_DEBUG) || DS_DEBUG < 2
+# define USE_DS_EXCEPTIONS 1
+#endif
 
-#define USE_DS_EXCEPTIONS          1
 #define EXPT_GUARD_STACK_SIZE      16
-
 #define EXPT_GUARD_ST_DYNAMIC     -1
 #define EXPT_GUARD_ST_STATIC_FREE  0
 
