@@ -176,14 +176,15 @@ Module_t *OpenModule(const char *fn) {
 	char *file = strrchr(full_path, '/');
 	char *mname = file + 1;
 	char *ext = strrchr(file, '.') + 1;
-	
+
+	memset(name, 0, sizeof(name));
 	strncpy(name, mname, ext - mname - 1);
     
 #ifdef MODULE_DEBUG
 	ds_printf("DS_PROCESS: Opening module '%s' type '%s' from '%s'\n", name, ext, full_path);
 #endif
 
-    if(name != NULL && (m = library_lookup(name)) != NULL) {
+    if(name[0] && (m = library_lookup(name)) != NULL) {
 #ifdef MODULE_DEBUG
 		ds_printf("DS: Module '%s' already opened\n", m->lib_get_name());
 #endif

@@ -62,7 +62,7 @@ extern "C" {
 		TTF_Font *font;
 
 		index = FontFamilyToIndex(family);
-		if (!FontList[index])
+		if (!FontList[index][0])
 			index = 0;
 
 		font = TTF_OpenFont(FontList[index], size);
@@ -151,6 +151,7 @@ GUI_RTF::GUI_RTF(const char *aname, SDL_RWops *src, int freesrc, const char *def
 : GUI_Widget(aname, x, y, w, h)
 {
 
+	memset(&FontList[0][0], 0, sizeof(FontList));
 	SetupFonts(default_font);
 	ctx = RTF_CreateContext(&font);
 	

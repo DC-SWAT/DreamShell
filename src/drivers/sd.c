@@ -364,7 +364,7 @@ static int read_data (
 )
 {
 	uint8 token;
-	int i, old;
+	int i;
 	
 	uint16 crc, crc2;
 	i = 0;
@@ -466,7 +466,6 @@ static int write_data (
 {
 	uint8 resp;
 	uint16 crc;
-	int old;
 
 	if (wait_ready() != 0xFF) 
 		return -1;

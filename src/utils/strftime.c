@@ -177,7 +177,7 @@ static char *_fmt(const char *format, const struct tm *t, char *pt, const char *
 
           tm = *t;
           mkt = mktime(&tm);
-          sprintf(buf, "%lu", mkt);
+          sprintf(buf, "%llu", mkt);
           pt = _add(buf, pt, ptlim);
           continue;
         }

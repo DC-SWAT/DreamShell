@@ -133,13 +133,13 @@ int LoadSettings() {
 	if(sets->version != GetVersion()) {
 		dbglog(DBG_DEBUG, "%s: Settings file version is different from current version\n", __func__);
 	}
-	
+
 	size = sizeof(current_set);
 	memcpy(&current_set, pkg.data, pkg.data_len > size ? size : pkg.data_len);
-	
+	free(data);
+
 	return 1;
 }
-
 
 int SaveSettings() {
 	
