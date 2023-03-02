@@ -1,7 +1,7 @@
 /** 
  * \file      fs.c
  * \brief     Filesystem
- * \date      2013-2022
+ * \date      2013-2023
  * \author    SWAT
  * \copyright	http://www.dc-swat.ru
  */
@@ -155,38 +155,33 @@ int InitSDCard() {
 
 
 int InitIDE() {
-	
+
 	dbglog(DBG_INFO, "Checking for G1 ATA devices...\n");
 	uint8 partition_type;
 	int part = 0, fat_part = 0;
 	char path[8];
-	uint64 ide_block_count = 0;
 	uint8 buf[512];
-	int use_dma = 1;
-	
+	 /* FIXME: G1 DMA has conflicts with other stuff like G2 DMA and so on */
+	int use_dma = 0;
+
 	if(g1_ata_init()) {
-		//dbglog(DBG_INFO, "G1 ATA device not found.\n");
 		return -1;
 	}
-	
-//	dbglog(DBG_INFO, "G1 ATA device initialized\n");
-	
+
 	/* Read the MBR from the disk */
-	if(g1_ata_max_lba() > 0) {
+	if(g1_ata_lba_mode()) {
 		if(g1_ata_read_lba(0, 1, (uint16_t *)buf) < 0) {
 			dbglog(DBG_ERROR, "Can't read MBR from IDE by LBA\n");
 			return -1;
 		}
 	} else {
-		
 		use_dma = 0;
-		
 		if(g1_ata_read_chs(0, 0, 1, 1, (uint16_t *)buf) < 0) {
 			dbglog(DBG_ERROR, "Can't read MBR from IDE by CHS\n");
 			return -1;
 		}
 	}
-	
+
 	for(part = 0; part < MAX_PARTITIONS; part++) {
 		
 		if(!check_partition(buf, part) && !g1_ata_blockdev_for_partition(part, use_dma, &g1_dev[part], &partition_type)) {
@@ -198,54 +193,44 @@ int InitIDE() {
 				sprintf(path, "/ide%d", part);
 				path[strlen(path)] = '\0';
 			}
-			
+
 			/* Check to see if the MBR says that we have a EXT2 or FAT partition. */
 			if(is_ext2_partition(partition_type)) {
-				
+
 				dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
-				
+
 				if(fs_ext2_init()) {
 					dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
 					g1_dev[part].shutdown(&g1_dev[part]);
 				} else {
-					
+
 					/* Only PIO for EXT2 */
 					g1_dev[part].shutdown(&g1_dev[part]);
 					if(g1_ata_blockdev_for_partition(part, 0, &g1_dev[part], &partition_type)) {
 						continue;
 					}
-					
+
 					dbglog(DBG_INFO, "Mounting filesystem...\n");
 					if(fs_ext2_mount(path, &g1_dev[part], FS_EXT2_MOUNT_READWRITE)) {
 						dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
 					}
 				}
-				
+
 			}  else if((fat_part = is_fat_partition(partition_type))) {
-			
+
 				dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
-				
-				if(!ide_block_count) {
-					ide_block_count = g1_ata_max_lba();
+
+				/* Need full disk block device for FAT */
+				g1_dev[part].shutdown(&g1_dev[part]);
+				if(g1_ata_blockdev_for_device(use_dma, &g1_dev[part])) {
+					continue;
 				}
-				
-				ata_devdata_t *ddata = (ata_devdata_t *)g1_dev[part].dev_data;
-				
-				if(ide_block_count > 0) {
-					ddata->block_count = ide_block_count;
-					ddata->end_block = ide_block_count - 1;
-				} else {
-					ddata->block_count += ddata->start_block;
-					ddata->end_block += ddata->start_block;
-				}
-				
-				ddata->start_block = 0;
-				
+
 				if(fs_fat_init()) {
 					dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
 					g1_dev[part].shutdown(&g1_dev[part]);
 				} else {
-				
+
 					dbglog(DBG_INFO, "Mounting filesystem...\n");
 
 					if(fs_fat_mount(path, &g1_dev[part], use_dma, part)) {
@@ -253,14 +238,13 @@ int InitIDE() {
 						g1_dev[part].shutdown(&g1_dev[part]);
 					}
 				}
-				
+
 			} else {
 				dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
 				g1_dev[part].shutdown(&g1_dev[part]);
 			}
 		}
 	}
-
 	return 0;
 }
 
@@ -395,78 +379,3 @@ success:
 //	dbglog(DBG_INFO, "Temp directory is %s\n", getenv("TEMP"));
 	return 0;
 }
-
-
-#if 0 // TODO
-
-static void *blkdev_open(vfs_handler_t * vfs, const char *fn, int flags) {
-	return -1;
-}
-
-static int blkdev_close(void *hnd) {
-	return -1;
-}
-
-static ssize_t blkdev_read(void *hnd, void *buffer, size_t size) {
-	return -1;
-}
-
-static ssize_t blkdev_write(void * hnd, const void *buffer, size_t cnt) {
-	return -1;
-}
-
-static off_t blkdev_tell(void * hnd) {
-	return 0;
-}
-
-static off_t blkdev_seek(void * hnd, off_t offset, int whence) {
-	return 0;
-}
-
-static size_t blkdev_total(void * hnd) {
-	return 0;
-}
-
-static int blkdev_complete(void * hnd, ssize_t * rv) {
-	return -1; 
-}
-
-
-static vfs_handler_t vh = {
-    /* Name Handler */
-    {
-        { 0 },                  /* name */
-        0,                      /* in-kernel */
-        0x00010000,             /* Version 1.0 */
-        NMMGR_FLAGS_NEEDSFREE,  /* We malloc each VFS struct */
-        NMMGR_TYPE_VFS,         /* VFS handler */
-        NMMGR_LIST_INIT         /* list */
-    },
-    0, NULL,               /* no cacheing, privdata */
-    blkdev_open,           /* open */
-    blkdev_close,          /* close */
-    blkdev_read,           /* read */
-    blkdev_write,          /* write */
-    blkdev_seek,           /* seek */
-    blkdev_tell,           /* tell */
-    blkdev_total,          /* total */
-    NULL,                  /* readdir */
-    NULL,                  /* ioctl */
-    NULL,                  /* rename */
-    NULL,                  /* unlink */
-    NULL,                  /* mmap */
-    blkdev_complete,       /* complete */
-    NULL,                  /* stat */
-    NULL,                  /* mkdir */
-    NULL,                  /* rmdir */
-    NULL,                  /* fcntl */
-    NULL,                  /* poll */
-    NULL,                  /* link */
-    NULL,                  /* symlink */
-    NULL,                  /* seek64 */
-    NULL,                  /* tell64 */
-    NULL,                  /* total64 */
-    NULL                   /* readlink */
-};
-
-#endif
