@@ -120,8 +120,8 @@ static int send_response(int socket, int code, bool include_code,
 static int send_list(int socket, const char* path) {
 	// https://files.stairways.com/other/ftp-list-specs-info.txt
 	// http://cr.yp.to/ftp/list/binls.html
-	static const char* directory_format = "drw-rw-rw- 21 user dreamshell %lu Jan 01 1970 %s";
-	static const char* file_format = "-rw-rw-rw- 1 user dreamshell %lu Jan 01 1970 %s";
+	static const char* directory_format = "drw-rw-rw- 1 dream shell %lu Nov 27 1998 %s";
+	static const char* file_format = "-rw-rw-rw- 1 dream shell %lu Nov 27 1998 %s";
 
 	file_t fd = fs_open(path, O_RDONLY | O_DIR);
 
