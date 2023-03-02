@@ -1,56 +1,96 @@
+diff --git a/kernel/arch/dreamcast/exports-naomi.txt b/kernel/arch/dreamcast/exports-naomi.txt
+index 314e221..8170e64 100644
+--- a/kernel/arch/dreamcast/exports-naomi.txt
++++ b/kernel/arch/dreamcast/exports-naomi.txt
+@@ -11,6 +11,24 @@ asic_evt_disable_all
+ asic_evt_disable
+ asic_evt_enable
+ 
++# G1 Bus
++g1_dma_in_progress
++g1_ata_mutex_lock
++g1_ata_mutex_unlock
++g1_ata_select_device
++g1_ata_read_chs
++g1_ata_write_chs
++g1_ata_read_lba
++g1_ata_read_lba_dma
++g1_ata_write_lba
++g1_ata_write_lba_dma
++g1_ata_flush
++g1_ata_lba_mode
++g1_ata_blockdev_for_partition
++g1_ata_blockdev_for_device
++g1_ata_init
++g1_ata_shutdown
++
+ # G2 Bus
+ g2_read_8
+ g2_write_8
+diff --git a/kernel/arch/dreamcast/exports-pristine.txt b/kernel/arch/dreamcast/exports-pristine.txt
+index 97ca357..e8bae54 100644
+--- a/kernel/arch/dreamcast/exports-pristine.txt
++++ b/kernel/arch/dreamcast/exports-pristine.txt
+@@ -11,6 +11,24 @@ asic_evt_disable_all
+ asic_evt_disable
+ asic_evt_enable
+ 
++# G1 Bus
++g1_dma_in_progress
++g1_ata_mutex_lock
++g1_ata_mutex_unlock
++g1_ata_select_device
++g1_ata_read_chs
++g1_ata_write_chs
++g1_ata_read_lba
++g1_ata_read_lba_dma
++g1_ata_write_lba
++g1_ata_write_lba_dma
++g1_ata_flush
++g1_ata_lba_mode
++g1_ata_blockdev_for_partition
++g1_ata_blockdev_for_device
++g1_ata_init
++g1_ata_shutdown
++
+ # G2 Bus
+ g2_read_8
+ g2_write_8
 diff --git a/kernel/arch/dreamcast/hardware/g1ata.c b/kernel/arch/dreamcast/hardware/g1ata.c
-index 7a55913..72d8b1b 100644
+index 7a55913..f2d1567 100644
 --- a/kernel/arch/dreamcast/hardware/g1ata.c
 +++ b/kernel/arch/dreamcast/hardware/g1ata.c
 @@ -2,6 +2,7 @@
  
     hardware/g1ata.c
     Copyright (C) 2013, 2014, 2015 Lawrence Sebald
-+   Copyright (C) 2015, 2022 SWAT
++   Copyright (C) 2015, 2023 Ruslan Rostovtsev
  */
  
  #include <errno.h>
-@@ -102,6 +103,13 @@ typedef struct ata_devdata {
- #define G1_ATA_DMA_DIRECTION    0xA05F740C      /* Read/Write */
- #define G1_ATA_DMA_ENABLE       0xA05F7414      /* Read/Write */
- #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
-+#define G1_ATA_DMA_PRO          0xA05F74B8      /* Write-only */
-+#define G1_ATA_DMA_PRO_SYSMEM   0x8843407F
-+
+@@ -94,6 +95,10 @@ typedef struct ata_devdata {
+ #define G1_ATA_STATUS_REG       0xA05F709C      /* Read */
+ #define G1_ATA_COMMAND_REG      0xA05F709C      /* Write */
+ 
 +/* PIO-related registers. */
 +#define G1_ATA_PIO_RACCESS_WAIT 0xA05F7490      /* Write-only */
 +#define G1_ATA_PIO_WACCESS_WAIT 0xA05F7494      /* Write-only */
-+#define G1_ATA_PIO_IORDY_CTRL   0xA05F74B4      /* Write-only */
++
+ /* DMA-related registers. */
+ #define G1_ATA_DMA_RACCESS_WAIT 0xA05F74A0      /* Write-only */
+ #define G1_ATA_DMA_WACCESS_WAIT 0xA05F74A4      /* Write-only */
+@@ -102,6 +107,10 @@ typedef struct ata_devdata {
+ #define G1_ATA_DMA_DIRECTION    0xA05F740C      /* Read/Write */
+ #define G1_ATA_DMA_ENABLE       0xA05F7414      /* Read/Write */
+ #define G1_ATA_DMA_STATUS       0xA05F7418      /* Read/Write */
++#define G1_ATA_DMA_PROTECTION   0xA05F74B8      /* Write-only */
++
++/* System memory protection unlock value. */
++#define G1_DMA_UNLOCK_SYSMEM    0x8843407F
  
  /* Bitmasks for the STATUS_REG/ALT_STATUS registers. */
  #define G1_ATA_SR_ERR   0x01
-@@ -114,6 +122,7 @@ typedef struct ata_devdata {
- #define G1_ATA_SR_BSY   0x80
- 
- /* ATA Commands we might like to send. */
-+#define ATA_CMD_RECALIBRATE         0x10
- #define ATA_CMD_READ_SECTORS        0x20
- #define ATA_CMD_READ_SECTORS_EXT    0x24
- #define ATA_CMD_READ_DMA_EXT        0x25
-@@ -122,10 +131,17 @@ typedef struct ata_devdata {
- #define ATA_CMD_WRITE_DMA_EXT       0x35
- #define ATA_CMD_READ_DMA            0xC8
- #define ATA_CMD_WRITE_DMA           0xCA
-+#define ATA_CMD_SPINDOWN            0xE0
-+#define ATA_CMD_SPINUP              0xE1
-+#define ATA_CMD_STANDBY_5SU         0xE2
-+#define ATA_CMD_IDLE_5SU            0xE3
-+#define ATA_CMD_SLEEP               0xE6
- #define ATA_CMD_FLUSH_CACHE         0xE7
- #define ATA_CMD_FLUSH_CACHE_EXT     0xEA
- #define ATA_CMD_IDENTIFY            0xEC
- #define ATA_CMD_SET_FEATURES        0xEF
-+#define ATA_CMD_STANDBY_01SU        0xF2
-+#define ATA_CMD_IDLE_01SU           0xF3
- 
- /* Subcommands we might care about for the SET FEATURES command. */
- #define ATA_FEATURE_TRANSFER_MODE   0x03
-@@ -139,6 +155,7 @@ typedef struct ata_devdata {
+@@ -139,6 +148,7 @@ typedef struct ata_devdata {
  
  /* Access timing data. */
  #define G1_ACCESS_WDMA_MODE2        0x00001001
@@ -58,450 +98,408 @@ index 7a55913..72d8b1b 100644
  
  /* DMA Settings. */
  #define G1_DMA_TO_DEVICE            0
-@@ -176,9 +193,9 @@ extern mutex_t _g1_ata_mutex;
- #define g1_ata_wait_drdy() \
-     do {} while(!(IN8(G1_ATA_ALTSTATUS) & G1_ATA_SR_DRDY))
+@@ -311,10 +321,12 @@ static int dma_common(uint8_t cmd, size_t nsects, uint32_t addr, int dir,
+ }
  
--static inline int use_lba28(uint64_t sector, size_t count) {
--    return ((sector + count) < 0x0FFFFFFF) && (count <= 256);
--}
-+// static inline int use_lba28(uint64_t sector, size_t count) {
-+//     return ((sector + count) < 0x0FFFFFFF) && (count <= 256);
-+// }
- 
- #define CAN_USE_LBA48() ((device.command_sets & (1 << 26)))
- 
-@@ -266,7 +283,7 @@ static inline int g1_ata_wait_drq(void) {
- static int dma_common(uint8_t cmd, size_t nsects, uint32_t addr, int dir,
-                       int block) {
-     uint8_t status;
--
-+	
-     /* Set the thread ID that initiated this DMA. */
-     dma_thd = thd_current;
- 
-@@ -315,6 +332,9 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+-                    uint16_t *buf) {
++                    void *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
-+    uint16_t data;
-+    uint8_t *pdata = (uint8_t *)&data;
-+    uint8_t *buff = (uint8_t*)buf;
++    uint16_t word;
++    uint8_t *ptr = (uint8_t *)buf;
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -373,7 +393,11 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -373,7 +385,10 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
              }
  
              for(j = 0; j < 256; ++j) {
 -                *buf++ = IN16(G1_ATA_DATA);
-+//                *buf++ = IN16(G1_ATA_DATA);
-+                data = IN16(G1_ATA_DATA);
-+                buff[0] = pdata[0];
-+                buff[1] = pdata[1];
-+                buff += 2;
++                word = IN16(G1_ATA_DATA);
++                ptr[0] = word;
++                ptr[1] = word >> 8;
++                ptr += 2;
              }
          }
      }
-@@ -391,6 +415,8 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+@@ -387,10 +402,12 @@ out:
+ }
+ 
+ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+-                     const uint16_t *buf) {
++                     const void *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
-+    uint8_t *buff = (uint8_t*)buf;
-+    uint16_t data;
++    uint16_t word;
++    uint8_t *ptr = (uint8_t *)buf;
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -437,13 +463,18 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
- 
-                 s = 1;
-             }
-+			
-+            dcache_pref_range((uint32)buff, 512);
- 
-             /* Wait for the device to signal it is ready. */
-             g1_ata_wait_nbsy();
+@@ -443,7 +460,9 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
  
              /* Send the data! */
              for(j = 0; j < 256; ++j) {
 -                OUT16(G1_ATA_DATA, *buf++);
-+//                OUT16(G1_ATA_DATA, *buf++);
-+                data = buff[0] | buff[1] << 8;
-+                OUT16(G1_ATA_DATA, data);
-+                buff += 2;
++                word = ptr[0] | (ptr[1] << 8);
++                OUT16(G1_ATA_DATA, word);
++                ptr += 2;
              }
          }
      }
-@@ -462,6 +493,9 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -458,10 +477,12 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+     return rv;
+ }
+ 
+-int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
++int g1_ata_read_lba(uint64_t sector, size_t count, void *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
-+    uint16_t data;
-+    uint8_t *pdata = (uint8_t *)&data;
-+    uint8_t *buff = (uint8_t*)buf;
++    uint16_t word;
++    uint8_t *ptr = (uint8_t *)buf;
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -534,6 +568,7 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
- 
-         /* Now, wait for the drive to give us back each sector. */
-         for(i = 0; i < nsects; ++i, ++sector) {
-+
-             /* Wait for data */
-             if(g1_ata_wait_drq()) {
-                 dbglog(DBG_KDEBUG, "g1_ata_read_lba: error reading sector %d "
-@@ -544,7 +579,11 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
+@@ -544,7 +565,10 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf) {
              }
  
              for(j = 0; j < 256; ++j) {
 -                *buf++ = IN16(G1_ATA_DATA);
-+//                *buf++ = IN16(G1_ATA_DATA);
-+                data = IN16(G1_ATA_DATA);
-+                buff[0] = pdata[0];
-+                buff[1] = pdata[1];
-+                buff += 2;
++                word = IN16(G1_ATA_DATA);
++                ptr[0] = word;
++                ptr[1] = word >> 8;
++                ptr += 2;
              }
          }
      }
-@@ -639,7 +678,7 @@ int g1_ata_read_lba_dma(uint64_t sector, size_t count, uint16_t *buf,
-     g1_ata_wait_bsydrq();
+@@ -557,7 +581,7 @@ out:
+     return rv;
+ }
  
-     /* Which mode are we using: LBA28 or LBA48? */
--    if(!can_lba48 || use_lba28(sector, count)) {
-+    if(!can_lba48/* || use_lba28(sector, count)*/) {
-         g1_ata_select_device(G1_ATA_SLAVE | G1_ATA_LBA_MODE |
-                              ((sector >> 24) & 0x0F));
+-int g1_ata_read_lba_dma(uint64_t sector, size_t count, uint16_t *buf,
++int g1_ata_read_lba_dma(uint64_t sector, size_t count, void *buf,
+                         int block) {
+     int rv = 0;
+     uint32_t addr;
+@@ -677,10 +701,12 @@ int g1_ata_read_lba_dma(uint64_t sector, size_t count, uint16_t *buf,
+     return rv;
+ }
  
-@@ -681,6 +720,8 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+-int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
++int g1_ata_write_lba(uint64_t sector, size_t count, const void *buf) {
      int rv = 0;
      unsigned int i, j;
      uint8_t nsects = (uint8_t)count;
-+    uint8_t *buff = (uint8_t*)buf;
-+    uint16_t data;
++    uint16_t word;
++    uint8_t *ptr = (uint8_t *)buf;
  
      /* Make sure that we've been initialized and there's a disk attached. */
      if(!devices) {
-@@ -746,11 +787,15 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
-         /* Now, send the drive each sector. */
-         for(i = 0; i < nsects; ++i, ++sector) {
-             /* Wait for the device to signal it is ready. */
-+            dcache_pref_range((uint32)buff, 512);
-             g1_ata_wait_nbsy();
+@@ -750,7 +776,9 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
  
              /* Send the data! */
              for(j = 0; j < 256; ++j) {
 -                OUT16(G1_ATA_DATA, *buf++);
-+//                OUT16(G1_ATA_DATA, *buf++);
-+                data = buff[0] | buff[1] << 8;
-+                OUT16(G1_ATA_DATA, data);
-+                buff += 2;
++                word = ptr[0] | (ptr[1] << 8);
++                OUT16(G1_ATA_DATA, word);
++                ptr += 2;
              }
          }
      }
-@@ -847,7 +892,7 @@ int g1_ata_write_lba_dma(uint64_t sector, size_t count, const uint16_t *buf,
-     g1_ata_wait_bsydrq();
+@@ -765,7 +793,7 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf) {
+     return rv;
+ }
  
-     /* Which mode are we using: LBA28 or LBA48? */
--    if(!can_lba48 || use_lba28(sector, count)) {
-+    if(!can_lba48/* || use_lba28(sector, count)*/) {
-         g1_ata_select_device(G1_ATA_SLAVE | G1_ATA_LBA_MODE |
-                              ((sector >> 24) & 0x0F));
- 
-@@ -914,6 +959,55 @@ int g1_ata_flush(void) {
+-int g1_ata_write_lba_dma(uint64_t sector, size_t count, const uint16_t *buf,
++int g1_ata_write_lba_dma(uint64_t sector, size_t count, const void *buf,
+                          int block) {
+     int rv = 0;
+     uint32_t addr;
+@@ -914,6 +942,20 @@ int g1_ata_flush(void) {
      return 0;
  }
  
-+
-+int g1_ata_standby(void) {
-+
++int g1_ata_lba_mode(void) {
 +    /* Make sure that we've been initialized and there's a disk attached. */
 +    if(!devices) {
 +        errno = ENXIO;
 +        return -1;
 +    }
-+
-+    /* Lock the mutex. */
-+    if(g1_ata_mutex_lock())
-+        return -1;
-+
-+    /* Select the slave device. */
-+    g1_ata_select_device(G1_ATA_SLAVE | G1_ATA_LBA_MODE);
-+    timer_spin_sleep(1);
-+	
-+    OUT8(G1_ATA_COMMAND_REG, ATA_CMD_STANDBY_5SU);
-+    timer_spin_sleep(1);
-+    g1_ata_wait_bsydrq();
-+    g1_ata_mutex_unlock();
-+
-+    return 0;
-+}
-+
-+uint64_t g1_ata_max_lba(void) {
-+
-+    /* Make sure that we've been initialized and there's a disk attached. */
-+    if(!devices) {
-+        errno = ENXIO;
-+        return (uint64_t)-1;
++    if(!(device.capabilities & (1 << 9))) {
++        return 0; // CHS
++    } else if(!(device.command_sets & (1 << 26))) {
++        return 28; // LBA28
 +    }
-+	
-+    if(device.max_lba)
-+		return device.max_lba;
-+    else
-+		return (device.cylinders * device.heads * device.sectors);
-+}
-+
-+int g1_ata_is_dcio(void) {
-+	
-+    if(!devices) {
-+        errno = ENXIO;
-+        return -1;
-+    }
-+	
-+    return (device.capabilities & (1 << 2));
++    return 48; // LBA48
 +}
 +
  static int g1_ata_set_transfer_mode(uint8_t mode) {
      uint8_t status;
  
-@@ -1033,6 +1127,7 @@ static int g1_ata_scan(void) {
+@@ -1025,7 +1067,10 @@ static int g1_ata_scan(void) {
+     rv = 1;
+ 
+     /* Set our transfer modes. */
+-    g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
++    if(!g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT)) {
++        OUT32(G1_ATA_PIO_RACCESS_WAIT, G1_ACCESS_PIO_DEFAULT);
++        OUT32(G1_ATA_PIO_WACCESS_WAIT, G1_ACCESS_PIO_DEFAULT);
++    }
+ 
+     /* Do we support Multiword DMA mode 2? If so, enable it. Otherwise, we won't
+        even bother doing DMA at all. */
+@@ -1033,6 +1078,7 @@ static int g1_ata_scan(void) {
          if(!g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2))) {
              OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
              OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
-+            OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
++            OUT32(G1_ATA_DMA_PROTECTION, G1_DMA_UNLOCK_SYSMEM);
          }
          else {
              device.wdma_modes = 0;
-diff --git a/kernel/arch/dreamcast/include/arch/arch.h b/kernel/arch/dreamcast/include/arch/arch.h
-index 62e29df..50e3eff 100644
---- a/kernel/arch/dreamcast/include/arch/arch.h
-+++ b/kernel/arch/dreamcast/include/arch/arch.h
-@@ -58,7 +58,7 @@ extern uint32 _arch_mem_top;
- #define DEFAULT_PIXEL_MODE  PM_RGB565
+@@ -1087,8 +1133,7 @@ static int atab_read_blocks_dma(kos_blockdev_t *d, uint64_t block, size_t count,
+         return -1;
+     }
  
- /** \brief  Default serial bitrate. */
--#define DEFAULT_SERIAL_BAUD 57600
-+#define DEFAULT_SERIAL_BAUD 115200
+-    return g1_ata_read_lba_dma(block + data->start_block, count,
+-                               (uint16_t *)buf, 1);
++    return g1_ata_read_lba_dma(block + data->start_block, count, buf, 1);
+ }
  
- /** \brief  Default serial FIFO behavior. */
- #define DEFAULT_SERIAL_FIFO 1
-diff --git a/kernel/arch/dreamcast/include/arch/cache.h b/kernel/arch/dreamcast/include/arch/cache.h
-index 1c648aa..107e7f7 100644
---- a/kernel/arch/dreamcast/include/arch/cache.h
-+++ b/kernel/arch/dreamcast/include/arch/cache.h
+ static int atab_write_blocks(kos_blockdev_t *d, uint64_t block, size_t count,
+@@ -1100,8 +1145,7 @@ static int atab_write_blocks(kos_blockdev_t *d, uint64_t block, size_t count,
+         return -1;
+     }
+ 
+-    return g1_ata_write_lba(block + data->start_block, count,
+-                            (const uint16_t *)buf);
++    return g1_ata_write_lba(block + data->start_block, count, buf);
+ }
+ 
+ static int atab_write_blocks_dma(kos_blockdev_t *d, uint64_t block,
+@@ -1113,8 +1157,7 @@ static int atab_write_blocks_dma(kos_blockdev_t *d, uint64_t block,
+         return -1;
+     }
+ 
+-    return g1_ata_write_lba_dma(block + data->start_block, count,
+-                                (const uint16_t *)buf, 1);
++    return g1_ata_write_lba_dma(block + data->start_block, count, buf, 1);
+ }
+ 
+ static int atab_read_blocks_chs(kos_blockdev_t *d, uint64_t block, size_t count,
+@@ -1134,7 +1177,7 @@ static int atab_read_blocks_chs(kos_blockdev_t *d, uint64_t block, size_t count,
+     h = (uint8_t)((block / device.sectors) % device.heads);
+     s = (uint8_t)((block % device.sectors) + 1);
+ 
+-    return g1_ata_read_chs(c, h, s, count, (uint16_t *)buf);
++    return g1_ata_read_chs(c, h, s, count, buf);
+ }
+ 
+ static int atab_write_blocks_chs(kos_blockdev_t *d, uint64_t block,
+@@ -1154,7 +1197,7 @@ static int atab_write_blocks_chs(kos_blockdev_t *d, uint64_t block,
+     h = (uint8_t)((block / device.sectors) % device.heads);
+     s = (uint8_t)((block % device.sectors) + 1);
+ 
+-    return g1_ata_write_chs(c, h, s, count, (const uint16_t *)buf);
++    return g1_ata_write_chs(c, h, s, count, buf);
+ }
+ 
+ static uint64_t atab_count_blocks(kos_blockdev_t *d) {
+@@ -1284,6 +1327,49 @@ int g1_ata_blockdev_for_partition(int partition, int dma, kos_blockdev_t *rv,
+     return 0;
+ }
+ 
++int g1_ata_blockdev_for_device(int dma, kos_blockdev_t *rv) {
++    ata_devdata_t *ddata;
++
++    if(!initted) {
++        errno = ENXIO;
++        return -1;
++    }
++
++    if(!rv) {
++        errno = EFAULT;
++        return -1;
++    }
++
++    /* Allocate the device data */
++    if(!(ddata = (ata_devdata_t *)malloc(sizeof(ata_devdata_t)))) {
++        errno = ENOMEM;
++        return -1;
++    }
++
++    /* Copy in the template block device and fill it in */
++    if(device.max_lba) {
++        if(dma && device.wdma_modes)
++            memcpy(rv, &ata_blockdev_dma, sizeof(kos_blockdev_t));
++        else
++            memcpy(rv, &ata_blockdev, sizeof(kos_blockdev_t));
++    }
++    else {
++        memcpy(rv, &ata_blockdev_chs, sizeof(kos_blockdev_t));
++    }
++
++    if(device.max_lba) {
++        ddata->end_block = device.max_lba;
++    }
++    else {
++        ddata->end_block = (device.cylinders * device.heads * device.sectors);
++    }
++    ddata->start_block = 0;
++    ddata->block_count = ddata->end_block + 1;
++    rv->dev_data = ddata;
++
++    return 0;
++}
++
+ int g1_ata_init(void) {
+     if(initted)
+         return 0;
+@@ -1298,11 +1384,11 @@ int g1_ata_init(void) {
+ 
+     /* Hook all the DMA related events. */
+     asic_evt_set_handler(ASIC_EVT_GD_DMA, g1_dma_irq_hnd);
+-    asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQ_DEFAULT);
++    asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQB);
+     asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, g1_dma_irq_hnd);
+-    asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQ_DEFAULT);
++    asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQB);
+     asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, g1_dma_irq_hnd);
+-    asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQ_DEFAULT);
++    asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQB);
+ 
+     initted = 1;
+ 
+@@ -1323,10 +1409,10 @@ void g1_ata_shutdown(void) {
+     memset(&device, 0, sizeof(device));
+ 
+     /* Unhook the events and disable the IRQs. */
+-    asic_evt_disable(ASIC_EVT_GD_DMA, ASIC_IRQ_DEFAULT);
++    asic_evt_disable(ASIC_EVT_GD_DMA, ASIC_IRQB);
+     asic_evt_set_handler(ASIC_EVT_GD_DMA, NULL);
+-    asic_evt_disable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQ_DEFAULT);
++    asic_evt_disable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQB);
+     asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, NULL);
+-    asic_evt_disable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQ_DEFAULT);
++    asic_evt_disable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQB);
+     asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, NULL);
+ }
+diff --git a/kernel/arch/dreamcast/include/dc/g1ata.h b/kernel/arch/dreamcast/include/dc/g1ata.h
+index 36776cd..4a75cac 100644
+--- a/kernel/arch/dreamcast/include/dc/g1ata.h
++++ b/kernel/arch/dreamcast/include/dc/g1ata.h
 @@ -2,6 +2,7 @@
  
-    arch/dreamcast/include/cache.h
-    (c)2001 Dan Potter
-+   (c)2014 SWAT
- 
+    dc/g1ata.h
+    Copyright (C) 2013, 2014 Lawrence Sebald
++   Copyright (C) 2023 Ruslan Rostovtsev
  */
  
-@@ -9,9 +10,10 @@
-     \brief  Cache management functionality.
+ /** \file   dc/g1ata.h
+@@ -26,6 +27,7 @@
+             bus, so be careful. ;)
  
-     This file contains definitions for functions that manage the cache in the
--    Dreamcast, including functions to flush and invalidate the caches.
-+    Dreamcast, including functions to flush, invalidate, purge, prefetch and
-+    allocate the caches.
- 
--    \author Dan Potter
-+    \author Dan Potter, SWAT
+     \author Lawrence Sebald
++    \author Ruslan Rostovtsev
  */
  
- #ifndef __ARCH_CACHE_H
-@@ -48,14 +50,38 @@ void dcache_inval_range(uint32 start, uint32 count);
-     back on all of the data in the specified range. This does not invalidate the
-     cache in the process (meaning the blocks will still be in the cache, just
-     not marked as dirty after this has completed). If you wish to invalidate the
--    cache as well, call dcache_inval_range() after calling this function.
-+    cache as well, call dcache_inval_range() after calling this function or
-+    use dcache_purge_range() instead of dcache_flush_range()
- 
-     \param  start           The physical address to begin flushing at.
-     \param  count           The number of bytes to flush.
+ #ifndef __DC_G1ATA_H
+@@ -175,7 +177,7 @@ uint8_t g1_ata_select_device(uint8_t dev);
+                         range of the disk
  */
- void dcache_flush_range(uint32 start, uint32 count);
+ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+-                    uint16_t *buf);
++                    void *buf);
  
-+/** \brief  Purge the data/operand cache.
+ /** \brief  Write one or more disk sectors with Cylinder-Head-Sector addressing.
+ 
+@@ -206,7 +208,7 @@ int g1_ata_read_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+                         range of the disk
+ */
+ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+-                     const uint16_t *buf);
++                     const void *buf);
+ 
+ /** \brief  Read one or more disk sectors with Linear Block Addressing (LBA).
+ 
+@@ -233,7 +235,7 @@ int g1_ata_write_chs(uint16_t c, uint8_t h, uint8_t s, size_t count,
+                         range of the disk \n
+     \em     ENOTSUP - LBA mode not supported by the device
+ */
+-int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf);
++int g1_ata_read_lba(uint64_t sector, size_t count, void *buf);
+ 
+ /** \brief  DMA read disk sectors with Linear Block Addressing (LBA).
+ 
+@@ -267,7 +269,7 @@ int g1_ata_read_lba(uint64_t sector, size_t count, uint16_t *buf);
+     \em     ENOTSUP - LBA mode not supported by the device \n
+     \em     EPERM - device does not support DMA
+ */
+-int g1_ata_read_lba_dma(uint64_t sector, size_t count, uint16_t *buf,
++int g1_ata_read_lba_dma(uint64_t sector, size_t count, void *buf,
+                         int block);
+ 
+ /** \brief  Write one or more disk sectors with Linear Block Addressing (LBA).
+@@ -294,7 +296,7 @@ int g1_ata_read_lba_dma(uint64_t sector, size_t count, uint16_t *buf,
+                         range of the disk \n
+     \em     ENOTSUP - LBA mode not supported by the device
+ */
+-int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf);
++int g1_ata_write_lba(uint64_t sector, size_t count, const void *buf);
+ 
+ /** \brief  DMA Write disk sectors with Linear Block Addressing (LBA).
+ 
+@@ -327,7 +329,7 @@ int g1_ata_write_lba(uint64_t sector, size_t count, const uint16_t *buf);
+     \em     ENOTSUP - LBA mode not supported by the device \n
+     \em     EPERM - device does not support DMA
+ */
+-int g1_ata_write_lba_dma(uint64_t sector, size_t count, const uint16_t *buf,
++int g1_ata_write_lba_dma(uint64_t sector, size_t count, const void *buf,
+                          int block);
+ 
+ /** \brief  Flush the write cache on the attached disk.
+@@ -346,6 +348,15 @@ int g1_ata_write_lba_dma(uint64_t sector, size_t count, const uint16_t *buf,
+ */
+ int g1_ata_flush(void);
+ 
++/** \brief  Get LBA mode of the attached disk.
 +
-+    This function flushes a range of the data/operand cache, forcing a write-
-+    back and invalidate on all of the data in the specified range.
++    \return                 -1 on error, 0 - CHS, 28 - LBA28, 48 - LBA48
 +
-+    \param  start           The physical address to begin purging at.
-+    \param  count           The number of bytes to purge.
++    \par    Error Conditions:
++    \em     ENXIO - ATA support not initialized or no device attached
 +*/
-+void dcache_purge_range(uint32 start, uint32 count);
++int g1_ata_lba_mode(void);
 +
-+/** \brief  Prefetch to the data/operand cache.
+ /** \brief  Get a block device for a given partition on the slave ATA device.
+ 
+     This function creates a block device descriptor for the given partition on
+@@ -375,6 +386,23 @@ int g1_ata_flush(void);
+ int g1_ata_blockdev_for_partition(int partition, int dma, kos_blockdev_t *rv,
+                                   uint8_t *partition_type);
+ 
++/** \brief  Get a block device for the attached ATA device.
 +
-+    \param  start           The physical address to begin prefetching at.
-+    \param  count           The number of bytes to prefetch.
++    This function creates a block device descriptor for the attached ATA device.
++
++    \param  dma             Set to 1 to use DMA for reads/writes on the device,
++                            if available.
++    \param  rv              Used to return the block device. Must be non-NULL.
++    \retval 0               On success.
++    \retval -1              On error, errno will be set as appropriate.
++
++    \par    Error Conditions:
++    \em     ENXIO - ATA support not initialized or no device attached \n
++    \em     EFAULT - rv was NULL \n
++    \em     ENOMEM - out of memory
 +*/
-+void dcache_pref_range(uint32 start, uint32 count);
++int g1_ata_blockdev_for_device(int dma, kos_blockdev_t *rv);
 +
-+/** \brief  Allocate the data/operand cache.
-+
-+    \param  start           The physical address to begin allocating at.
-+    \param  count           The number of bytes to allocate.
-+*/
-+void dcache_alloc_range(uint32 start, uint32 count);
-+
- __END_DECLS
+ /** \brief  Initialize G1 ATA support.
  
- #endif  /* __ARCH_CACHE_H */
--
-diff --git a/kernel/arch/dreamcast/kernel/cache.s b/kernel/arch/dreamcast/kernel/cache.s
-index 5c7020f..94e7145 100644
---- a/kernel/arch/dreamcast/kernel/cache.s
-+++ b/kernel/arch/dreamcast/kernel/cache.s
-@@ -4,11 +4,17 @@
- ! Routine to flush parts of cache.. thanks to the Linux-SH guys
- ! for the algorithm. The original version of this routine was
- ! taken from sh-stub.c.
-+!
-+! Optimized and extended by SWAT <http://www.dc-swat.ru>
-+!
- 
- 	.text
- 	.globl _icache_flush_range
- 	.globl _dcache_inval_range
- 	.globl _dcache_flush_range
-+	.globl _dcache_purge_range
-+	.globl _dcache_pref_range
-+	.globl _dcache_alloc_range
- 
- ! r4 is starting address
- ! r5 is count
-@@ -93,30 +99,12 @@ _dcache_inval_range:
- 	add	r4,r5
- 	mov.l	l1align,r0
- 	and	r0,r4
--
- dinval_loop:
- 	! Invalidate the O cache
- 	ocbi	@r4		! r4
--	
--	mov	#0x10,r0	! r4 | 0x1000
--	shll8	r0
--	or	r4,r0
--	ocbi	@r0
--	
--	mov	#0x20,r0	! r4 | 0x2000
--	shll8	r0
--	or	r4,r0
--	ocbi	@r0
--	
--	mov	#0x30,r0	! r4 | 0x3000
--	shll8	r0
--	or	r4,r0
--	ocbi	@r0
--	
- 	cmp/hs	r4,r5
- 	bt/s	dinval_loop
- 	add	#32,r4		! += L1_CACHE_BYTES
--
- 	rts
- 	nop
- 
-@@ -131,34 +119,69 @@ _dcache_flush_range:
- 	add	r4,r5
- 	mov.l	l1align,r0
- 	and	r0,r4
--
- dflush_loop:
- 	! Write back the O cache
- 	ocbwb	@r4
--
--	mov	#0x10,r0	! r4 | 0x1000
--	shll8	r0
--	or	r4,r0
--	ocbwb	@r0
--	
--	mov	#0x20,r0	! r4 | 0x2000
--	shll8	r0
--	or	r4,r0
--	ocbwb	@r0
--	
--	mov	#0x30,r0	! r4 | 0x3000
--	shll8	r0
--	or	r4,r0
--	ocbwb	@r0
--	
- 	cmp/hs	r4,r5
- 	bt/s	dflush_loop
- 	add	#32,r4		! += L1_CACHE_BYTES
--
-+	rts
-+	nop
-+	
-+! This routine just goes through and forces a write-back and invalidate
-+! on the specified data range.
-+! r4 is starting address
-+! r5 is count
-+_dcache_purge_range:
-+	! Get ending address from count and align start address
-+	add	r4,r5
-+	mov.l	l1align,r0
-+	and	r0,r4
-+dpurge_loop:
-+	! Write back and invalidate the O cache
-+	ocbp	@r4
-+	cmp/hs	r4,r5
-+	bt/s	dpurge_loop
-+	add	#32,r4		! += L1_CACHE_BYTES
- 	rts
- 	nop
- 
--
-+! This routine just prefetch to operand cache the
-+! specified data range. 
-+! r4 is starting address
-+! r5 is count
-+_dcache_pref_range:
-+	! Get ending address from count and align start address
-+	add	r4,r5
-+	mov.l	l1align,r0
-+	and	r0,r4
-+dpref_loop:
-+	! Prefetch to the O cache
-+	pref @r4
-+	cmp/hs	r4,r5
-+	bt/s	dpref_loop
-+	add	#32,r4		! += L1_CACHE_BYTES
-+	rts
-+	nop
-+	
-+! This routine just allocate operand cache for the
-+! specified data range. 
-+! r4 is starting address
-+! r5 is count
-+_dcache_alloc_range:
-+	! Get ending address from count and align start address
-+	add	r4,r5
-+	mov.l	l1align,r0
-+	and	r0,r4
-+	mov #0,r0
-+dalloc_loop:
-+	! Allocate the O cache
-+	movca.l r0, @r4
-+	cmp/hs	r4,r5
-+	bt/s	dalloc_loop
-+	add	#32,r4		! += L1_CACHE_BYTES
-+	rts
-+	nop
- 
- 	.align	2
- l1align:
-diff --git a/kernel/fs/elf.c b/kernel/fs/elf.c
-index 643c5a1..9a566cd 100644
---- a/kernel/fs/elf.c
-+++ b/kernel/fs/elf.c
-@@ -78,7 +78,7 @@ int elf_load(const char * fn, klibrary_t * shell, elf_prog_t * out) {
-     sz = fs_total(fd);
-     DBG(("Loading ELF file of size %d\n", sz));
- 
--    img = malloc(sz);
-+    img = memalign(32, sz);
- 
-     if(img == NULL) {
-         dbglog(DBG_ERROR, "elf_load: can't allocate %d bytes for ELF load\n", sz);
+     This function initializes the rest of this subsystem and completes a scan of
+diff --git a/kernel/arch/dreamcast/sound/arm/stream.drv b/kernel/arch/dreamcast/sound/arm/stream.drv
+index ab87097..c280548 100755
+Binary files a/kernel/arch/dreamcast/sound/arm/stream.drv and b/kernel/arch/dreamcast/sound/arm/stream.drv differ

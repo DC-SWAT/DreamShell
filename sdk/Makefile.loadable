@@ -1,6 +1,6 @@
 #
 # DreamShell SDK Makefile.loadable
-# Copyright (C) 2009-2014 SWAT
+# Copyright (C) 2009-2023 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -37,7 +37,7 @@ VER_MICRO=0
 endif
 
 ifndef VER_BUILD
-VER_BUILD=$(shell cat ${TARGET_NAME}.build)
+VER_BUILD=$(shell cat ${TARGET_NAME}.build || 1)
 endif
 
 KOS_CFLAGS += -DVER_MAJOR=$(VER_MAJOR)	\
@@ -83,9 +83,9 @@ endif
 endif
 
 ifndef DBG_LIBS
-DBG_LIBS = -lds -lkos
+DBG_LIBS = -lds -lkallisti_exports
 else
-DBG_LIBS += -lkos
+DBG_LIBS += -lkallisti_exports
 endif
 
 

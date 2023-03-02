@@ -44,7 +44,6 @@ cd /usr/local/dc/kos/kos
 source ./environ.sh
 make && cd ../kos-ports && ./utils/build-all.sh
 cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a libvorbis.a && cd ../../kos/ds
-cp ../lib/dreamcast/libkallisti_exports.a ./sdk/lib/libkos.a
 cd ./sdk/bin/src && make && make install && cd ../../../
 ln -nsf `which tolua` ds/sdk/bin/tolua
 ln -nsf `which mkisofs` ds/sdk/bin/mkisofs
