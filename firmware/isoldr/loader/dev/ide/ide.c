@@ -215,6 +215,8 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	if ((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
 		LOGFF("ERROR 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
 		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
+		poll_all();
+		return my_exception_finish;
 	}
 
 	uint32 g1_dma_irq_idx = (g1_dma_irq_visible ? g1_dma_irq_idx_game : g1_dma_irq_idx_internal);
@@ -422,11 +424,11 @@ s32 g1_dma_has_irq_mask() {
 /* This one is an inline function since it needs to return something... */
 static inline s32 g1_ata_wait_drq(void) 
 {
-    u8 val = IN8(G1_ATA_STATUS_REG);
+    u8 val = IN8(G1_ATA_ALTSTATUS);
 
     while(!(val & ATA_SR_DRQ) && !(val & (ATA_SR_ERR | ATA_SR_DF))) 
     {
-        val = IN8(G1_ATA_STATUS_REG);
+        val = IN8(G1_ATA_ALTSTATUS);
     }
 
     return (val & (ATA_SR_ERR | ATA_SR_DF)) ? -1 : 0;
@@ -1105,7 +1107,12 @@ s32 g1_ata_flush(void) {
 #endif /* DEV_TYPE_IDE */
 
 void g1_pio_reset(size_t total_bytes) {
-	OUT8(G1_ATA_CTL, 2);
+	if (total_bytes) {
+		OUT8(G1_ATA_CTL, 2);
+	} else {
+		OUT8(G1_ATA_CTL, 0);
+	}
+
 	g1_pio_total = total_bytes;
 	g1_pio_avail = g1_pio_total;
 	g1_pio_trans = 0;
@@ -1123,7 +1130,6 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 		if (((g1_pio_total - g1_pio_avail) % sec_size) == 0) {
 			if (g1_ata_wait_drq()) {
 				LOGFF("Error, status=%02x\n", IN8(G1_ATA_ALTSTATUS));
-				OUT8(G1_ATA_CTL, 0);
 				break;
 			}
 		}
@@ -1147,7 +1153,6 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 void g1_pio_abort(void) {
 	g1_pio_reset(0);
 	g1_ata_ack_irq();
-	OUT8(G1_ATA_CTL, 0);
 }
 
 s32 g1_pio_in_progress(void) {
