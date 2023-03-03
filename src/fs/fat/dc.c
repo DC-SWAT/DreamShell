@@ -12,6 +12,7 @@
 #include "fatfs/integer.h"
 
 // #define FATFS_DEBUG 1
+// #define FATFS_DMA 1
 
 #define MAX_FAT_MOUNTS        _VOLUMES
 #define MAX_FAT_FILES         16
@@ -25,10 +26,14 @@ typedef struct fatfs_mnt {
 
 	DSTATUS dev_stat;
 	BYTE dev_id;
-	BYTE dma;
 	BYTE used;
-	const TCHAR dev_path[16];
+
+	TCHAR dev_path[16];
+
+#ifdef FATFS_DMA
+	BYTE dma;
 	uint8 *dmabuf;
+#endif
 
 } fatfs_mnt_t;
 
@@ -53,8 +58,6 @@ static int initted = 0;
 
 static fatfs_t fh[MAX_FAT_FILES] __attribute__((aligned(32)));
 static fatfs_mnt_t fat_mnt[MAX_FAT_MOUNTS];
-
-static uint8 dmabuf[128 * 512] __attribute__((aligned(32)));
 
 
 #if _MULTI_PARTITION	/* Volume - Partition resolution table */
@@ -907,9 +910,11 @@ DRESULT disk_read (
 	FAT_GET_MOUNT;
 	uint8 *dest = buff;
 
-	if(mnt->dma/* && ((uint32)buff & 0x1F) && count <= mnt->fs->csize*/) {
+#ifdef FATFS_DMA
+	if(mnt->dma && ((uint32)buff & 0x1F) && count <= mnt->fs->csize) {
 		dest = mnt->dmabuf;
 	}
+#endif
 
 	DBG((DBG_DEBUG, "FATFS: %s[%d] %ld %d 0x%08lx 0x%08lx\n", 
 		__func__, pdrv, sector, (int)count, (uint32)buff, (uint32)dest));
@@ -941,10 +946,12 @@ DRESULT disk_write (
 	uint8 *src = (uint8 *)buff;
 	int rc;
 
-	if(mnt->dma/* && ((uint32)buff & 0x1F) && count <= mnt->fs->csize*/) {
+#ifdef FATFS_DMA
+	if(mnt->dma && ((uint32)buff & 0x1F) && count <= mnt->fs->csize) {
 		memcpy_sh4(mnt->dmabuf, buff, count << mnt->dev->l_block_size);
 		src = mnt->dmabuf;
 	}
+#endif
 
 	DBG((DBG_DEBUG, "FATFS: %s[%d] %ld %d 0x%08lx 0x%08lx\n", 
 		__func__, pdrv, sector, (int)count, (uint32)buff, (uint32)src));
@@ -1074,7 +1081,6 @@ int fs_fat_mount(const char *mp, kos_blockdev_t *dev, int dma, int partition) {
 	}
 
 	mnt->dev = dev;
-	mnt->dma = dma;
 	VolToPart[mnt->dev_id].pd = mnt->dev_id;
 	VolToPart[mnt->dev_id].pt = partition + 1;
 
@@ -1094,11 +1100,24 @@ int fs_fat_mount(const char *mp, kos_blockdev_t *dev, int dma, int partition) {
 		goto error;
 	}
 
-	// uint8 tmp_dma[512] __attribute__((aligned(32)));
-	mnt->dmabuf = &dmabuf[0];
+#ifdef FATFS_DMA
+	mnt->dma = dma;
+	if (mnt->dma) {
+		uint8 tmp_dma[512] __attribute__((aligned(32)));
+		mnt->dmabuf = &tmp_dma[0];
+	}
+#else
+	if(dma) {
+		dbglog(DBG_WARNING, "FATFS: DMA is disabled, force PIO mode.\n");
+	}
+#endif
+
 	snprintf((TCHAR*)mnt->dev_path, sizeof(mnt->dev_path), "%d:", mnt->dev_id);
 	rc = f_mount(mnt->fs, mnt->dev_path, 1);
-	// mnt->dmabuf = NULL;
+
+#ifdef FATFS_DMA
+	mnt->dmabuf = NULL;
+#endif
 
 	if(rc != FR_OK) {
 		fatfs_set_errno(rc);
@@ -1109,16 +1128,17 @@ int fs_fat_mount(const char *mp, kos_blockdev_t *dev, int dma, int partition) {
 		goto error;
 	}
 
-	// FIXME: Crash on memaling
-	// if(mnt->dma) {
-	// 	DBG((DBG_DEBUG, "FATFS: Allocating %d bytes for DMA buffer\n", mnt->fs->csize * _MAX_SS));
-	// 	if(!(mnt->dmabuf = (uint8 *)memalign(32, mnt->fs->csize * _MAX_SS))) {
-	// 		dbglog(DBG_ERROR, "FATFS: Out of memory for DMA buffer\n");
-	// 	} else {
-	// 		DBG((DBG_DEBUG, "FATFS: Allocated %d bytes for DMA buffer at %p\n",
-	// 			mnt->fs->csize * _MAX_SS, mnt->dmabuf));
-	// 	}
-	// }
+#ifdef FATFS_DMA
+	if(mnt->dma) {
+		DBG((DBG_DEBUG, "FATFS: Allocating %d bytes for DMA buffer\n", mnt->fs->csize * _MAX_SS));
+		if(!(mnt->dmabuf = (uint8 *)memalign(32, mnt->fs->csize * _MAX_SS))) {
+			dbglog(DBG_ERROR, "FATFS: Out of memory for DMA buffer\n");
+		} else {
+			DBG((DBG_DEBUG, "FATFS: Allocated %d bytes for DMA buffer at %p\n",
+				mnt->fs->csize * _MAX_SS, mnt->dmabuf));
+		}
+	}
+#endif
 
 	FATFS *fs;
 	DWORD fre_clust, fre_sect, tot_sect;
@@ -1157,9 +1177,11 @@ error:
 		if(mnt->dev) {
 			mnt->dev = NULL;
 		}
+#ifdef FATFS_DMA
 		if(mnt->dmabuf) {
-			// free(mnt->dmabuf);
+			free(mnt->dmabuf);
 		}
+#endif
 		memset_sh4(mnt, 0, sizeof(fatfs_mnt_t));
 	}
 	if(dev) {
@@ -1200,9 +1222,11 @@ int fs_fat_unmount(const char *mp) {
 				mnt->dev->shutdown(mnt->dev);
 				mnt->dev = NULL;
 			}
+#ifdef FATFS_DMA
 			if(mnt->dmabuf) {
-				// free(mnt->dmabuf);
+				free(mnt->dmabuf);
 			}
+#endif
 		}
 	} else {
 		errno = ENOENT;
@@ -1244,9 +1268,6 @@ int fs_fat_init(void) {
 	/* Reset fd's */
 	memset_sh4(fh, 0, sizeof(fh));
 
-	/* Clean DMA buffer */
-	memset_sh4(dmabuf, 0, sizeof(dmabuf));
-
 	/* Init thread mutex */
 	mutex_init(&fat_mutex, MUTEX_TYPE_NORMAL);
 
@@ -1280,10 +1301,11 @@ int fs_fat_shutdown(void) {
 				mnt->dev->shutdown(mnt->dev);
 				mnt->dev = NULL;
 			}
-
+#ifdef FATFS_DMA
 			if(mnt->dmabuf) {
-				// free(mnt->dmabuf);
+				free(mnt->dmabuf);
 			}
+#endif
 		}
     }
 

@@ -5,6 +5,7 @@
 / following conditions.
 /
 / Copyright (C) 2015, ChaN, all right reserved.
+/ Copyright (C) 2022-2023 SWAT <http://www.dc-swat.ru>
 /
 / 1. Redistributions of source code must retain the above copyright notice,
 /    this condition and the following disclaimer.
@@ -1027,6 +1028,35 @@ DWORD clmt_clust (	/* <2:Error, >=2:Cluster number */
 	}
 	return cl + *tbl;	/* Return the cluster number */
 }
+
+static
+DWORD contiguous_sect(
+	FIL* fp		/* Pointer to the file object */
+)
+{
+	DWORD csect, ncl = 0, *tbl;
+	csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));
+
+	if (!fp->cltbl) {
+		return fp->fs->csize - csect;
+	}
+
+	tbl = fp->cltbl + 1;	/* Top of CLMT */
+
+	if (!fp->clust) {
+		return *tbl * fp->fs->csize;
+	}
+
+	for (DWORD i = 0; i < fp->cltbl[0]; ++i) {
+		ncl = *tbl++;			/* Number of cluters in the fragment */
+		if (!ncl) return 0;		/* End of table? (error) */
+		if (fp->clust <= *tbl + ncl) break;
+		tbl++;
+	}
+
+	return ((ncl - (fp->clust - *tbl)) * fp->fs->csize) - csect;
+}
+
 #endif	/* _USE_FASTSEEK */
 
 
@@ -2447,7 +2477,7 @@ FRESULT f_open (
 #endif
 		}
 		/* Create or Open a file */
-		if (mode & (FA_CREATE_ALWAYS | FA_OPEN_ALWAYS | FA_CREATE_NEW)) {
+		if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW)) {
 			if (res != FR_OK) {					/* No file, create new */
 				if (res == FR_NO_FILE)			/* There is no file to open, create a new entry */
 #if _FS_LOCK
@@ -2542,6 +2572,12 @@ FRESULT f_open (
 /*-----------------------------------------------------------------------*/
 /* Read File                                                             */
 /*-----------------------------------------------------------------------*/
+static int f_fragmented(FIL *fp) {
+	if (!fp->cltbl || fp->cltbl[0] > 4) {
+		return 1;
+	}
+	return 0;
+}
 
 FRESULT f_read (
 	FIL* fp, 		/* Pointer to the file object */
@@ -2552,7 +2588,7 @@ FRESULT f_read (
 {
 	FRESULT res;
 	DWORD clst, sect, remain;
-	UINT rcnt, cc;
+	UINT rcnt = 0, cc, cs;
 	BYTE csect, *rbuff = (BYTE*)buff;
 
 
@@ -2591,8 +2627,22 @@ FRESULT f_read (
 			sect += csect;
 			cc = btr / SS(fp->fs);				/* When remaining bytes >= sector size, */
 			if (cc) {							/* Read maximum contiguous sectors directly */
-				if (csect + cc > fp->fs->csize)	/* Clip at cluster boundary */
+				if (csect + cc > fp->fs->csize) {
+#if _USE_FASTSEEK
+					if (f_fragmented(fp)) {
+						cs = contiguous_sect(fp);
+						if (cc > cs) {
+							cc = cs;
+						}
+					}
+					if (csect + cc > fp->fs->csize) {
+						fp->clust = clmt_clust(fp, fp->fptr + (SS(fp->fs) * cc));
+					}
+#else
+					/* Clip at cluster boundary */
 					cc = fp->fs->csize - csect;
+#endif
+				}
 				if (disk_read(fp->fs->drv, rbuff, sect, cc) != RES_OK)
 					ABORT(fp->fs, FR_DISK_ERR);
 #if !_FS_READONLY && _FS_MINIMIZE <= 2			/* Replace one of the read sectors with cached data if it contains a dirty sector */

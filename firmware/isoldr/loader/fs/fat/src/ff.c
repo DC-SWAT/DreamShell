@@ -6,7 +6,7 @@
 / developments under license policy of following terms.
 /
 /  Copyright (C) 2014, ChaN, all right reserved.
-/  Copyright (C) 2014-2022 SWAT <http://www.dc-swat.ru>
+/  Copyright (C) 2014-2023 SWAT <http://www.dc-swat.ru>
 /
 / * The FatFs module is a free software and there is NO WARRANTY.
 / * No restriction on use. You can use, modify and redistribute it for
@@ -2509,7 +2509,7 @@ FRESULT f_open (
 #endif
 		}
 		/* Create or Open a file */
-		if (mode & (FA_CREATE_ALWAYS | FA_OPEN_ALWAYS | FA_CREATE_NEW)) {
+		if (mode & (FA_CREATE_ALWAYS | FA_CREATE_NEW)) {
 			DWORD dw, cl;
 
 			if (res != FR_OK) {					/* No file, create new */
