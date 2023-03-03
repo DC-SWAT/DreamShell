@@ -251,6 +251,7 @@ static void showCover() {
 	ipbin_meta_t *ipbin;
 	char use_cover = 0;
 
+	memset(noext, 0, sizeof(noext));
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
@@ -282,7 +283,6 @@ static void showCover() {
 		}
 
 		GUI_LabelSetText(self.title, noext);
-		vmu_draw_string(noext);
 
 		if(s != NULL) {
 			GUI_PanelSetBackground(self.cover_widget, s);
@@ -296,19 +296,18 @@ static void showCover() {
 
 		/* Try to mount ISO and get 0GDTEXT.PVR */
 		if(!fs_iso_mount("/isocover", path)) {
-			
+
 			get_md5_hash("/isocover");
 			ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
-			vmu_draw_string(noext);
-			
+
 			if(FileExists("/isocover/0GDTEX.PVR")) {
-				
+
 				s = GUI_SurfaceLoad("/isocover/0GDTEX.PVR");
 				fs_iso_unmount("/isocover");
-				
+
 				GUI_LabelSetText(self.title, noext);
-				
+
 				if(s != NULL) {
 					GUI_PanelSetBackground(self.cover_widget, s);
 					GUI_ObjectDecRef((GUI_Object *) s);
@@ -316,18 +315,18 @@ static void showCover() {
 				} else {
 					goto check_default;
 				}
-				
+
 			} else {
 				fs_iso_unmount("/isocover");
 				GUI_LabelSetText(self.title, noext);
 				goto check_default;
 			}
-			
+
 		} else {
 			goto check_default;
 		}
 	}
-	
+	vmu_draw_string(noext);
 	return;
 	
 check_default:
@@ -335,6 +334,7 @@ check_default:
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
 	}
+	vmu_draw_string(noext);
 }
 
 void isoLoader_MakeShortcut(GUI_Widget *widget) 
@@ -1092,60 +1092,41 @@ void isoLoader_DefaultPreset() {
 	GUI_WidgetSetState(self.memory_chk[0], 1);
 	isoLoader_toggleMemory(self.memory_chk[0]);
 
-	/*
-	 * If DC booted from sd_loader_with.bios,
-	 * then we need use truncated IP.BIN mode by default.
-	 */
-	if(!strncmp((char*)0x001AF780, "DS_CORE.BIN", 11)) {
-		
-		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
-		isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]);
-
-	/*
-	 * If DC booted from custom BIOS,
-	 * then we can replace all syscalls by the loader.
-	 * IP.BIN boot mode will switch memory to 0x8c000100 and
-	 * in turn, the loader will enable emulation of all syscalls.
-	 */
-	} else if(is_custom_bios() && is_no_syscalls()) {
-
-		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 1);
-		isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_IPBIN]);
-
-	/*
-	 * If DC booted from stock BIOS, 
-	 * then use Direct mode by default.
-	 */
-	} else {
-		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
-		isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
-	}
+	GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
+	isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
 
 	/*
 	 * Enable CDDA if present on IDE/GD
 	 */
-	if (self.filename[0] && canUseTrueAsyncDMA()) {
+	if (self.filename[0] != 0 && canUseTrueAsyncDMA()) {
 
 		int have_cdda = 0;
 		char filepath[MAX_FN_LEN];
 		char path[MAX_FN_LEN];
-		int fn_len = strlen(strchr(self.filename, '/'));
+		int len = 0;
+		const int min_size = 5 * 1024 * 1024;
 
-		memset(filepath, 0, sizeof(path));
+		if (self.image_type == ISOFS_IMAGE_TYPE_GDI) {
+			len = strlen(strchr(self.filename, '/'));
+		} else {
+			len = strlen(self.filename);
+		}
+
+		memset(filepath, 0, sizeof(filepath));
 		memset(path, 0, sizeof(path));
-		strncpy(path, self.filename, strlen(self.filename) - fn_len);
+		strncpy(path, self.filename, strlen(self.filename) - len);
 
-		snprintf(filepath, MAX_FN_LEN, "%s/%s/track06.raw",
+		snprintf(filepath, MAX_FN_LEN, "%s/%s/track05.raw",
 			GUI_FileManagerGetPath(self.filebrowser), path);
 
-		if (FileExists(filepath)) {
+		if (FileSize(filepath) > min_size) {
 			have_cdda = 1;
 		} else {
 			int len = strlen(filepath);
 			filepath[len - 3] = 'w';
 			filepath[len - 1] = 'v';
 
-			if (FileExists(filepath)) {
+			if (FileSize(filepath) > min_size) {
 				have_cdda = 1;
 			}
 		}
