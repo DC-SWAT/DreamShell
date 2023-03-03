@@ -4,7 +4,7 @@
    Copyright (C)2000,2001,2003 Dan Potter
    Copyright (C)2001 Andrew Kieschnick
    Copyright (C)2002 Bero
-   Copyright (C)2011-2020 SWAT
+   Copyright (C)2011-2023 SWAT
 */
 
 #include <ds.h>
@@ -215,7 +215,7 @@ static int read_data(uint32 sector, uint32 count, void *data, isofs_t *ifs) {
 		case ISOFS_IMAGE_TYPE_ISO:
 		default:
 			fs_seek(ifs->fd, (((sector + 150) - ifs->session_base) * 2048), SEEK_SET);
-			return fs_read(ifs->fd, data, 2048 * count);
+			return read_sectors_data(ifs->fd, count, 2048, data);
 	}
 }
 
@@ -246,7 +246,7 @@ static int isofile_find_lba(isofs_t *ifs) {
 		return 150;
 
 #ifdef DEBUG
-	ds_printf("DS_ISOFS: PVD is at %d", sec);
+	ds_printf("DS_ISOFS: PVD is at %d\n", sec);
 #endif
 
 	if (isofile_read(ifs->fd, (sec << 11) + 0x9c, 0x22, buf1) < 0)
@@ -263,13 +263,13 @@ static int isofile_find_lba(isofs_t *ifs) {
 		return 150;
 
 #ifdef DEBUG
-	ds_printf("DS_ISOFS: Root directory is at %d", sec);
+	ds_printf("DS_ISOFS: Root directory is at %d\n", sec);
 #endif
 
 	sec = ((((((buf1[5]<<8)|buf1[4])<<8)|buf1[3])<<8)|buf1[2])+150-sec;
 	
 #ifdef DEBUG
-	ds_printf("DS_ISOFS: Session offset is %d", sec);
+	ds_printf("DS_ISOFS: Session offset is %d\n", sec);
 #endif
 
 //	ifs->session_base = sec;
@@ -1197,14 +1197,9 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			
 		case ISOFS_IOCTL_GET_BOOT_SECTOR_DATA:
 		{
-			
-			int c = bdread(fh[fd].ifs->session_base - 150, fh[fd].ifs);
-			
-			if(c < 0) {
+			if(read_data(fh[fd].ifs->session_base - 150, 1, data, fh[fd].ifs) < 0) {
 				return -1;
 			}
-			
-			memcpy_sh4(data, fh[fd].ifs->dcache[c]->data, 2048);
 			break;
 		}
 		case ISOFS_IOCTL_GET_CDDA_OFFSET:
@@ -1577,6 +1572,9 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 	nmmgr_handler_add(&ifs->vfs->nmmgr); // TODO check for errors
 
 	mutex_unlock(&fh_mutex);
+#ifdef DEBUG
+	ds_printf("DS_ISOFS: Mounted %s\n", mountpoint);
+#endif
 	return 0;
 }
 
@@ -1627,7 +1625,9 @@ int fs_iso_unmount(const char *mountpoint) {
 			
 			SLIST_REMOVE(&virt_iso_list, n, isofs, list); 
 			free(n);
-			
+#ifdef DEBUG
+			ds_printf("DS_ISOFS: Unmounted %s\n", mountpoint);
+#endif
 			mutex_unlock(&fh_mutex);
 			return 0;
 		}

@@ -18,7 +18,7 @@ static const uint8 TRACK_START_MARKER[20] = {
     0x00,0x00,0x01,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF,
     0x00,0x00,0x01,0x00,0x00,0x00,0xFF,0xFF,0xFF,0xFF
 };
-static const uint8 EXT_MARKER[9] = {0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+// static const uint8 EXT_MARKER[9] = {0x00,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
 
 struct CDI_track_data {
 
@@ -46,7 +46,7 @@ static int check_cdi_image(file_t fd, CDI_trailer_t *trail) {
 
     if(trail->header_offset >= len || trail->header_offset == 0) {
 #ifdef DEBUG
-        dbglog(DBG_DEBUG, "%s: Invalid CDI image: %d >= %d, version: %08lx\n", 
+        dbglog(DBG_DEBUG, "%s: Invalid CDI image: %ld >= %ld, version: %08lx\n", 
                     __func__, trail->header_offset, len, trail->version);
 #endif
         return -1;
@@ -89,7 +89,7 @@ CDI_header_t *cdi_open(file_t fd) {
     memcpy_sh4(&hdr->trail, &trail, sizeof(CDI_trailer_t));
     
 #ifdef DEBUG
-    dbglog(DBG_DEBUG, "%s: Seek to header at %d\n", __func__, 
+    dbglog(DBG_DEBUG, "%s: Seek to header at %ld\n", __func__, 
         (hdr->trail.version == CDI_V35_ID ? 
         fs_total(fd) - hdr->trail.header_offset : hdr->trail.header_offset)
     );
@@ -200,7 +200,7 @@ CDI_header_t *cdi_open(file_t fd) {
             offset = posn + hdr->sessions[i]->tracks[j]->pregap_length * sector_size;
             
 #ifdef DEBUG
-            dbglog(DBG_DEBUG, "%s: Session: %d, track: %d, lba: %d, length: %d, mode: %d, secsize: %d, offset: %d\n", 
+            dbglog(DBG_DEBUG, "%s: Session: %d, track: %d, lba: %ld, length: %ld, mode: %ld, secsize: %ld, offset: %ld\n", 
                         __func__, i + 1, j + 1, 
                         hdr->sessions[i]->tracks[j]->start_lba, 
                         hdr->sessions[i]->tracks[j]->length, 
@@ -368,7 +368,7 @@ int cdi_read_sectors(CDI_header_t *hdr, file_t fd, uint8 *buff, uint32 start, ui
 	}
 	
 #ifdef DEBUG
-	dbglog(DBG_DEBUG, "%s: %ld %ld at %ld mode %ld\n", __func__, start, count, offset, sector_size);
+	dbglog(DBG_DEBUG, "%s: %ld %ld at %ld mode %d\n", __func__, start, count, offset, sector_size);
 #endif
 
 	fs_seek(fd, offset, SEEK_SET);

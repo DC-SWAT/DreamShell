@@ -63,9 +63,9 @@ CISO_header_t *ciso_open(file_t fd) {
 	
 #ifdef DEBUG
 	dbglog(DBG_DEBUG, "Magic: %c%c%c%c\n", hdr->magic[0], hdr->magic[1], hdr->magic[2], hdr->magic[3]);
-	dbglog(DBG_DEBUG, "Hdr size: %u\n", hdr->header_size);
-	dbglog(DBG_DEBUG, "Total bytes: %u\n", hdr->total_bytes);
-	dbglog(DBG_DEBUG, "Block size: %u\n", hdr->block_size);
+	dbglog(DBG_DEBUG, "Hdr size: %lu\n", hdr->header_size);
+	dbglog(DBG_DEBUG, "Total bytes: %llu\n", hdr->total_bytes);
+	dbglog(DBG_DEBUG, "Block size: %lu\n", hdr->block_size);
 	dbglog(DBG_DEBUG, "Version: %02x\n", hdr->ver);
 	dbglog(DBG_DEBUG, "Align: %d\n", 1 << hdr->align);
 #endif
@@ -103,7 +103,7 @@ int ciso_close(CISO_header_t *hdr) {
 int ciso_get_blocks(CISO_header_t *hdr, file_t fd, uint *blocks, uint32 sector, uint32 cnt) {
 	
 #ifdef DEBUG
-	dbglog(DBG_DEBUG, "%s: fd=%d seek=%u\n", __func__, fd, sizeof(CISO_header_t) + (sector * sizeof(uint)));
+	dbglog(DBG_DEBUG, "%s: fd=%d seek=%lu\n", __func__, fd, sizeof(CISO_header_t) + (sector * sizeof(uint)));
 #endif
 
 	int r = 0;
@@ -142,7 +142,7 @@ static int ciso_read_sector(CISO_header_t *hdr, file_t fd, uint8 *buff, uint8 *b
 	len = getPosition(blocks[1], hdr->align) - start;
 	
 #ifdef DEBUG
-	dbglog(DBG_DEBUG, "%s: fd=%d start=%ld len=%d\n", __func__, fd, start, len);
+	dbglog(DBG_DEBUG, "%s: fd=%d start=%d len=%d\n", __func__, fd, start, len);
 #endif
 	
 	fs_seek(fd, start, SEEK_SET);
