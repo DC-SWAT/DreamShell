@@ -414,8 +414,6 @@ void data_transfer_true_async() {
 		}
 	}
 
-	pre_read_xfer_end();
-
 	size_t size = GDS->param[1] * GDS->gdc.sec_size;
 	GDS->transfered = size;
 	GDS->status = CMD_STAT_COMPLETED;
@@ -474,7 +472,6 @@ void data_transfer_emu_async() {
 			GDS->status = CMD_STAT_COMPLETED;
 			GDS->drv_stat = CD_STATUS_PAUSED;
 			GDS->ata_status = 0;
-			// pre_read_xfer_end();
 			return;
 		}
 
@@ -569,7 +566,7 @@ static void data_transfer_dma_stream() {
 		if(GDS->requested == 0 || GDS->cmd_abort != 0) {
 			GDS->ata_status = 0;
 			GDS->status = CMD_STAT_ABORTED;
-			pre_read_xfer_end();
+			pre_read_xfer_abort();
 			break;
 		}
 		GDS->transfered = pre_read_xfer_size();
@@ -1328,7 +1325,11 @@ int flashrom_info(int part, uint32 *info) {
 
 
 static void safe_memcpy(void* dst, const void* src, size_t cnt) {
-	
+
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	do {} while(pre_read_xfer_busy());
+#endif
+
 	uint8 *d = (uint8*)dst;
 	const uint8 *s = (const uint8*)src;
 
@@ -1344,14 +1345,7 @@ int flashrom_read(int offset, void *buffer, int bytes) {
 
 	uint8 *src = (uint8 *)(0xa0200000 + offset);
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	do {} while(pre_read_xfer_busy());
 	safe_memcpy(buffer, src, bytes);
-#else
-	safe_memcpy(buffer, src, bytes);
-#endif
-
-	dcache_purge_range((uint32)buffer, bytes);
 	return 0;
 }
 
@@ -1379,7 +1373,7 @@ int flashrom_delete(int offset) {
 int sys_misc_init(void) {
 	
 	LOGFF(NULL);
-	
+
 	safe_memcpy((uint8 *)0x8c000068, (uint8 *)0xa021a056, 8);
 	safe_memcpy((uint8 *)0x8c000070, (uint8 *)0xa021a000, 5);
 	dcache_purge_range(0x8c000060, 32);
@@ -1392,7 +1386,7 @@ int sys_unknown(void) {
 }
 
 int sys_icon(int icon, uint8 *dest) {
-	
+
 	LOGFF("%d 0x%08lx\n", icon, dest);
 	safe_memcpy(dest, (uint8 *)(0xa021a480 + (icon * 704)), 704);
 	return 704;
