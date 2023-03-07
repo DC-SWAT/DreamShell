@@ -17,6 +17,7 @@ TARGET_BIN_CD = 1$(TARGET_BIN)
 TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x25 #RC 5
 # TARGET_DEBUG = 1 # or 2 for GDB
 # TARGET_EMU = 1
+# TARGET_PROF = 1
 
 all: rm-elf $(TARGET)
 
@@ -102,6 +103,11 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(UTILS_OBJ) $(FATFS) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o
 
+ifdef TARGET_PROF
+	OBJS += $(SRC_DIR)/profiler.o
+	KOS_CFLAGS += -DDS_PROF=$(TARGET_PROF)
+endif
+
 %.op: %.S
 	kos-cc $(CFLAGS) -c $< -o $@
 
@@ -174,7 +180,8 @@ release: build cdi
 	@mv $(TARGET).cdi $(DS_BASE)/release/$(TARGET_NAME).cdi
 	@echo Compressing...
 	@cd $(DS_BASE)/release && zip -q -r $(TARGET_NAME).zip * 2> /dev/null
-	@echo Complete!
+	@echo 
+	@echo "\033[42m Complete $(DS_BASE)/release \033[0m"
 
 $(TARGET): libs $(TARGET_BIN) make-build
 
@@ -244,10 +251,16 @@ lxdream: $(TARGET).cdi
 lxdelf: $(TARGET).elf
 	lxdream -u -p -e $(TARGET).elf
 
-lxdgdb:
+lxdgdb: $(TARGET).cdi
 	lxdream -g 2000 -n $(TARGET).cdi &
 	sleep 2
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"
+
+gprof:
+	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/gmon.out > gprof.out
+	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET).png
+	@-rm -rf gprof.out
+	@echo "\033[42m Profiling data saved to $(TARGET).png \033[0m"
 
 TARGET_CLEAN_BIN = 1$(TARGET)_CORE.BIN $(TARGET)_CORE.BIN $(TARGET).elf $(TARGET).cdi
 

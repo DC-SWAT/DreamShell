@@ -9,6 +9,7 @@
 #include "ds.h"
 #include "fs.h"
 #include "vmu.h"
+#include "profiler.h"
 #include "network/net.h"
 
 extern uint8 romdisk[];
@@ -74,6 +75,10 @@ static uint8 *get_board_id() {
 
 
 int InitNet(uint32 ipl) {
+
+#if defined(DS_DEBUG)
+	net_inited = 1;
+#endif
 
 	if(net_inited) {
 		return 0;
@@ -216,36 +221,42 @@ int InitDS() {
 	setenv("LUA_CPATH", getenv("PATH"), 1);
 	setenv("PWD", fs_getwd(), 1);
 	setenv("APP", (settings->app[0] != 0 ? settings->app : "Main"), 1);
-	
+
+#ifdef DS_PROF
+	if(dcload_type == DCLOAD_TYPE_IP) {
+		profiler_init("/pc/gmon.out");
+	} else {
+		sprintf(fn, "%s/gmon.out", getenv("PATH"));
+		profiler_init(fn);
+	}
+	profiler_start();
+#endif
+
 	/* If used custom BIOS and syscalls is not installed, setting up it */
 	if(is_custom_bios() && is_no_syscalls()) {
-//		if(!setup_syscalls()) {
-//			tmpb = get_board_id();
-//		} else {
-			tmpb = (uint8 *)0x8c000068;
-//		}
+		tmpb = (uint8 *)0x8c000068;
 	} else {
-		
+
 		/* Getting board ID */
 		tmpb = get_board_id();
-		
+
 		if(!tmpi && strncmp(getenv("PATH"), "/cd", 3)) {
 			/* Relax GD drive =) */
 			cdrom_spin_down();
 		}
 	}
-	
-	memset(fn, 0, MAX_FN_LEN);
-	
+
+	memset(fn, 0, sizeof(fn));
+
 	for(tmpi = 0; tmpi < 8; tmpi++) {
 		sprintf(bf, "%02X", tmpb[tmpi]);
 		strcat(fn, bf);
 	}
-	
+
 	setenv("BOARD_ID", fn, 1);
 	IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 	InitEvents();
-	
+
 	/* Initializing video */
 	if(!InitVideo(settings->video.tex_width, settings->video.tex_height, settings->video.bpp)) {
 		dbglog(DBG_ERROR, "Can't init video: %dx%dx\n", settings->video.tex_width, settings->video.tex_height);
@@ -319,9 +330,17 @@ int InitDS() {
 }
 
 void ShutdownDS() {
+
+	dbglog(DBG_INFO, "Shutting down DreamShell Core...\n");
+
 	char fn[MAX_FN_LEN];
 	snprintf(fn, MAX_FN_LEN, "%s/lua/shutdown.lua", getenv("PATH"));
 	LuaDo(LUA_DO_FILE, fn, GetLuaState());
+
+#ifdef DS_PROF
+	profiler_stop();
+	profiler_clean_up();
+#endif
 
 	ShutdownCmd();
 	ShutdownVideoThread();

@@ -363,11 +363,9 @@ void gdplay_play(GUI_Widget *widget)
 	
 	kill_gdrom_thd = 1;
 	thd_join(check_gdrom_thd, NULL);
-	
-	ShutdownVideoThread();
-	expt_shutdown();
-	g1_ata_shutdown();
-	
+
+	ShutdownDS();
+
 #if __GNUC__ < 4
     arch_dtors();
 #else

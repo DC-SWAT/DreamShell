@@ -477,9 +477,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
 	// free(info);
 	ds_printf("DS_PROCESS: Executing at 0x%08lx...\n", addr);
-	ShutdownVideoThread();
-	expt_shutdown();
-	g1_ata_shutdown();
+	ShutdownDS();
 
 	isoldr_exec_at(loader, len + sc_len, addr, ISOLDR_PARAMS_SIZE);
 }
