@@ -224,10 +224,9 @@ int InitDS() {
 
 #ifdef DS_PROF
 	if(dcload_type == DCLOAD_TYPE_IP) {
-		profiler_init("/pc/gmon.out");
+		profiler_init("/pc");
 	} else {
-		sprintf(fn, "%s/gmon.out", getenv("PATH"));
-		profiler_init(fn);
+		profiler_init(getenv("PATH"));
 	}
 	profiler_start();
 #endif
@@ -352,6 +351,7 @@ void ShutdownDS() {
 	ShutdownNet();
 
 	expt_shutdown();
+	g1_ata_shutdown();
 }
 
 

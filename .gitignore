@@ -29,3 +29,4 @@ exports.c
 exports_stubs.c
 exports_gcc.c
 exports_gcc_stubs.c
+DS-*.png

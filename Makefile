@@ -257,10 +257,12 @@ lxdgdb: $(TARGET).cdi
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"
 
 gprof:
-	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/gmon.out > gprof.out
-	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET).png
+	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/kernel_gmon.out > gprof.out
+	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET)-kernel.png
+	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/video_gmon.out > gprof.out
+	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET)-video.png
 	@-rm -rf gprof.out
-	@echo "\033[42m Profiling data saved to $(TARGET).png \033[0m"
+	@echo "\033[42m Profiling data saved to $(TARGET)-*.png \033[0m"
 
 TARGET_CLEAN_BIN = 1$(TARGET)_CORE.BIN $(TARGET)_CORE.BIN $(TARGET).elf $(TARGET).cdi
 

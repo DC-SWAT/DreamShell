@@ -1,3 +1,10 @@
+/* DreamShell ##version##
+
+   profiler.c
+   Copyright (C) 2020 Luke Benstead
+   Copyright (C) 2023 Ruslan Rostovtsev
+*/
+
 #include <stdbool.h>
 #include <assert.h>
 #include <stdint.h>
@@ -9,10 +16,13 @@
 #include <kos/thread.h>
 #include <dc/fs_dcload.h>
 
-static char OUTPUT_FILENAME[128];
+static char KERNEL_OUTPUT_FILENAME[128];
+static char VIDEO_OUTPUT_FILENAME[128];
 static kthread_t* THREAD;
 static volatile bool PROFILER_RUNNING = false;
 static volatile bool PROFILER_RECORDING = false;
+static tid_t KERNEL_TID = 0;
+static tid_t VIDEO_TID = 0;
 
 #define BASE_ADDRESS 0x8c010000
 #define BUCKET_SIZE 10000
@@ -26,6 +36,7 @@ typedef struct Arc {
     uint32_t pc;
     uint32_t pr; // Caller return address
     uint32_t count;
+    tid_t tid;
     struct Arc* next;
 } Arc;
 
@@ -39,17 +50,15 @@ static Arc ARCS[BUCKET_SIZE];
 const static size_t MAX_ARC_COUNT = BUFFER_SIZE / sizeof(Arc);
 static size_t ARC_COUNT = 0;
 
-static bool WRITE_TO_STDOUT = false;
-
-static bool write_samples(const char* path);
-static bool write_samples_to_stdout();
+static bool write_samples(tid_t tid, const char* path);
 static void clear_samples();
 
-static Arc* new_arc(uint32_t PC, uint32_t PR) {
+static Arc* new_arc(tid_t tid, uint32_t PC, uint32_t PR) {
     Arc* s = (Arc*) malloc(sizeof(Arc));
     s->count = 1;
     s->pc = PC;
     s->pr = PR;
+    s->tid = tid;
     s->next = NULL;
 
     ++ARC_COUNT;
@@ -57,7 +66,7 @@ static Arc* new_arc(uint32_t PC, uint32_t PR) {
     return s;
 }
 
-static void record_thread(uint32_t PC, uint32_t PR) {
+static void record_thread(tid_t tid, uint32_t PC, uint32_t PR) {
     uint32_t bucket = HASH_PAIR(PC, PR) % BUCKET_SIZE;
 
     Arc* s = &ARCS[bucket];
@@ -69,7 +78,7 @@ static void record_thread(uint32_t PC, uint32_t PR) {
             if(s->next) {
                 s = s->next;
             } else {
-                s->next = new_arc(PC, PR);
+                s->next = new_arc(tid, PC, PR);
                 return; // We're done
             }
         }
@@ -80,6 +89,7 @@ static void record_thread(uint32_t PC, uint32_t PR) {
         s->count = 1;
         s->pc = PC;
         s->pr = PR;
+        s->tid = tid;
         s->next = NULL;
         ++ARC_COUNT;
     }
@@ -88,9 +98,16 @@ static void record_thread(uint32_t PC, uint32_t PR) {
 static int thd_each_cb(kthread_t* thd, void* data) {
     (void) data;
 
-
-    /* Only record the main thread (for now) */
-    if(strcmp(thd->label, "[kernel]") != 0) {
+    // FIXME: Process all threads without TID's.
+    if(VIDEO_TID == 0 || KERNEL_TID == 0) {
+        if(strcmp(thd->label, "[video]") == 0) {
+            VIDEO_TID = thd->tid;
+        } else if(strcmp(thd->label, "[kernel]") == 0) {
+            KERNEL_TID = thd->tid;
+        } else {
+            return 0;
+        }
+    } else if(thd->tid != KERNEL_TID && thd->tid != VIDEO_TID) {
         return 0;
     }
 
@@ -101,7 +118,7 @@ static int thd_each_cb(kthread_t* thd, void* data) {
      * in time across threads */
     uint32_t PC = thd->context.pc;
     uint32_t PR = thd->context.pr;
-    record_thread(PC, PR);
+    record_thread(thd->tid, PC, PR);
     return 0;
 }
 
@@ -111,15 +128,17 @@ static void record_samples() {
 
     size_t initial = ARC_COUNT;
 
-    /* Note: This is a function added to kallistios-nitro that's
-     * not yet available upstream */
     thd_each(&thd_each_cb, NULL);
 
     if(ARC_COUNT >= MAX_ARC_COUNT) {
         /* TIME TO FLUSH! */
-        if(!write_samples(OUTPUT_FILENAME)) {
+        if(!write_samples(KERNEL_TID, KERNEL_OUTPUT_FILENAME)) {
             dbglog(DBG_ERROR, "Error writing samples\n");
         }
+        if(!write_samples(VIDEO_TID, VIDEO_OUTPUT_FILENAME)) {
+            dbglog(DBG_ERROR, "Error writing samples\n");
+        }
+        clear_samples();
     }
 
     /* We log when the number of PCs recorded hits a certain increment */
@@ -162,7 +181,6 @@ static bool init_sample_file(const char* path) {
 
     FILE* out = fopen(path, "w");
     if(!out) {
-        WRITE_TO_STDOUT = true;
         return false;
     }
 
@@ -182,17 +200,12 @@ static bool init_sample_file(const char* path) {
 #define ROUNDDOWN(x,y) (((x)/(y))*(y))
 #define ROUNDUP(x,y) ((((x)+(y)-1)/(y))*(y))
 
-static bool write_samples(const char* path) {
+static bool write_samples(tid_t tid, const char* path) {
     /* Appends the samples to the output file in gmon format
      *
      * We iterate the data twice, first generating arcs, then generating
      * basic block counts. While we do that though we calculate the data
      * for the histogram so we don't need a third iteration */
-
-    if(WRITE_TO_STDOUT) {
-        write_samples_to_stdout();
-        return true;
-    }
 
     extern char _etext;
 
@@ -218,18 +231,17 @@ static bool write_samples(const char* path) {
     // Seek to the end of the file
     fseek(out, 0, SEEK_END);
 
-    dbglog(DBG_INFO, "-- Writing %d arcs\n", ARC_COUNT);
-
     uint8_t tag = 1;
-
-#ifndef NDEBUG
     size_t written = 0;
-#endif
 
     /* Write arcs */
     Arc* root = ARCS;
-    for(int i = 0; i < BUCKET_SIZE; ++i) {        
+    for(int i = 0; i < BUCKET_SIZE; ++i) {
         if(root->pc) {
+            if(root->tid != tid) {
+                root++;
+                continue;
+            }
             GmonArc arc;
             arc.from_pc = root->pr;
             arc.self_pc = root->pc;
@@ -239,13 +251,15 @@ static bool write_samples(const char* path) {
             fwrite(&tag, sizeof(tag), 1, out);
             fwrite(&arc, sizeof(GmonArc), 1, out);
 
-#ifndef NDEBUG
             ++written;
-#endif
 
             /* If there's a next pointer, traverse the list */
             Arc* s = root->next;
             while(s) {
+                if(s->tid != tid) {
+                    s = s->next;
+                    continue;
+                }
                 arc.from_pc = s->pr;
                 arc.self_pc = s->pc;
                 arc.count = s->count;
@@ -254,10 +268,7 @@ static bool write_samples(const char* path) {
                 fwrite(&tag, sizeof(tag), 1, out);
                 fwrite(&arc, sizeof(GmonArc), 1, out);
 
-#ifndef NDEBUG
                 ++written;
-#endif
-
                 s = s->next;
             }
         }
@@ -270,23 +281,24 @@ static bool write_samples(const char* path) {
 
     root = ARCS;
     for(int i = 0; i < BUCKET_SIZE; ++i) {
-        if(root->pc) {
-            dbglog(DBG_INFO, "Incrementing %ld for %x. ", (root->pc - lowest_address) / bin_size, (unsigned int) root->pc);
+        if(root->pc && root->tid == tid) {
+            // dbglog(DBG_INFO, "Incrementing %ld for %x. ", (root->pc - lowest_address) / bin_size, (unsigned int) root->pc);
             bins[(root->pc - lowest_address) / bin_size]++;
-            dbglog(DBG_INFO, "Now: %d\n", (int) bins[(root->pc - lowest_address) / bin_size]);
+            // dbglog(DBG_INFO, "Now: %d\n", (int) bins[(root->pc - lowest_address) / bin_size]);
 
             /* If there's a next pointer, traverse the list */
             Arc* s = root->next;
             while(s) {
                 assert(s->pc);
-                bins[(s->pc - lowest_address) / bin_size]++;
+                if(s->tid == tid) {
+                    bins[(s->pc - lowest_address) / bin_size]++;
+                }
                 s = s->next;
             }
         }
 
         root++;
     }
-
 
     /* Write histogram now that we have all the information we need */
     GmonHistHeader hist_header;
@@ -305,33 +317,7 @@ static bool write_samples(const char* path) {
     fclose(out);
     free(bins);
 
-    /* We should have written all the recorded samples */
-    assert(written == ARC_COUNT);
-
-    clear_samples();
-
-    return true;
-}
-
-static bool write_samples_to_stdout() {
-    /* Write samples to stdout as a CSV file
-     * for processing */
-
-    dbglog(DBG_INFO, "--------------\n");
-    dbglog(DBG_INFO, "\"PC\", \"PR\", \"COUNT\"\n");
-
-    Arc* root = ARCS;
-    for(int i = 0; i < BUCKET_SIZE; ++i) {
-        Arc* s = root;
-        while(s->next) {
-            dbglog(DBG_INFO, "\"%x\", \"%x\", \"%d\"\n", (unsigned int) s->pc, (unsigned int) s->pr, (unsigned int) s->count);
-            s = s->next;
-        }
-
-        root++;
-    }
-
-    dbglog(DBG_INFO, "--------------\n");
+    dbglog(DBG_INFO, "-- Written %d arcs to %s\n", written, path);
 
     return true;
 }
@@ -353,13 +339,21 @@ static void* run(void* args) {
 }
 
 void profiler_init(const char* output) {
-    /* Store the filename */
-    strncpy(OUTPUT_FILENAME, output, sizeof(OUTPUT_FILENAME));
+    /* Store the filenames */
+    sprintf(KERNEL_OUTPUT_FILENAME, "%s/kernel_gmon.out", output);
+    sprintf(VIDEO_OUTPUT_FILENAME, "%s/video_gmon.out", output);
 
     /* Initialize the file */
-    dbglog(DBG_INFO, "Creating samples file...\n");
-    if(!init_sample_file(OUTPUT_FILENAME)) {
-        dbglog(DBG_INFO, "Read-only filesytem. Writing samples to stdout\n");
+    dbglog(DBG_INFO, "Creating profiler samples file for kernel thread...\n");
+    if(!init_sample_file(KERNEL_OUTPUT_FILENAME)) {
+        dbglog(DBG_ERROR, "Can't create %s\n", KERNEL_OUTPUT_FILENAME);
+        return;
+    }
+
+    dbglog(DBG_INFO, "Creating profiler samples file for video thread...\n");
+    if(!init_sample_file(VIDEO_OUTPUT_FILENAME)) {
+        dbglog(DBG_ERROR, "Can't create %s\n", VIDEO_OUTPUT_FILENAME);
+        return;
     }
 
     dbglog(DBG_INFO, "Creating profiler thread...\n");
@@ -372,7 +366,7 @@ void profiler_init(const char* output) {
     /* Lower priority is... er, higher */
     thd_set_prio(THREAD, PRIO_DEFAULT / 2);
 
-    dbglog(DBG_INFO, "Thread started.\n");
+    dbglog(DBG_INFO, "Profiler thread started.\n");
 }
 
 void profiler_start() {
@@ -419,11 +413,18 @@ bool profiler_stop() {
     dbglog(DBG_INFO, "Stopping profiling...\n");
 
     PROFILER_RECORDING = false;
-    if(!write_samples(OUTPUT_FILENAME)) {
-        dbglog(DBG_ERROR, "ERROR WRITING SAMPLES (RO filesystem?)! Outputting to stdout\n");
+
+    if(!write_samples(KERNEL_TID, KERNEL_OUTPUT_FILENAME)) {
+        dbglog(DBG_ERROR, "ERROR WRITING SAMPLES (RO filesystem?)!\n");
         return false;
     }
 
+    if(!write_samples(VIDEO_TID, VIDEO_OUTPUT_FILENAME)) {
+        dbglog(DBG_ERROR, "ERROR WRITING SAMPLES (RO filesystem?)!\n");
+        return false;
+    }
+
+    clear_samples();
     return true;
 }
 
