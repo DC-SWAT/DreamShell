@@ -440,6 +440,34 @@ void set_file_number(char *filename, int num) {
     }
 }
 
+static char *replace_filename(char *filepath, char *filename) {
+	uint8 *val = (uint8 *)filepath, *tmp = NULL;
+	int len = strlen(filepath);
+
+	do {
+		tmp = tmp ? val + 1 : val;
+		val = memchr(tmp, '/', len);
+	} while(val != NULL);
+
+	len = strlen(filename);
+	memcpy(tmp, filename, len);
+	tmp[len] = '\0';
+
+	return filepath;
+}
+
+char *relative_filename(char *filename) {
+	char *result = malloc(sizeof(IsoInfo->image_file));
+
+    if (result == NULL) {
+        LOGFF("malloc failed\n");
+        return NULL;
+    }
+
+    memcpy(result, IsoInfo->image_file, sizeof(IsoInfo->image_file));
+    return replace_filename(result, filename);
+}
+
 #ifdef HAVE_SCREENSHOT
 void video_screenshot() {
 

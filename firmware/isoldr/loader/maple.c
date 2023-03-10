@@ -449,7 +449,7 @@ int maple_init_vmu(int num) {
     int flags = O_RDONLY | O_PIO;
 # endif
 
-    char *filename = "/DS/vmu/dump001.vmd";
+    char *filename = relative_filename("vmu001.vmd");
     set_file_number(filename, num);
 
     if (vmu_fd > FILEHND_INVALID) {
@@ -457,12 +457,19 @@ int maple_init_vmu(int num) {
     }
 
     vmu_fd = open(filename, flags);
+    free(filename);
 
     if (vmu_fd < 0) {
-        vmu_fd = open(filename + 3, flags);
+
+        filename = "/DS/vmu/vmu001.vmd";
+        set_file_number(filename, num);
+
         if (vmu_fd < 0) {
-            LOGFF("can't find VMU dump: %d\n", num);
-            return -1;
+            vmu_fd = open(filename + 3, flags);
+            if (vmu_fd < 0) {
+                LOGFF("can't find VMU dump: %d\n", num);
+                return -1;
+            }
         }
     }
 

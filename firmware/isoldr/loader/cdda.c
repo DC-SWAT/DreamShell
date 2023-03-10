@@ -613,33 +613,11 @@ static void switch_cdda_track(uint8 track) {
 
 	if(GDS->cdda_track != track) {
 
-		if(!cdda->fn_len) {
-			cdda->fn_len = strlen(IsoInfo->image_file);
-		}
-
-		memcpy(cdda->filename, IsoInfo->image_file, sizeof(IsoInfo->image_file));
-
-		if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
-
-			cdda->filename[cdda->fn_len - 3] = 'r';
-			cdda->filename[cdda->fn_len - 2] = 'a';
-			cdda->filename[cdda->fn_len - 1] = 'w';
-
-		} else {
-
-			uint8 *val = (uint8 *)cdda->filename, *tmp = NULL;
-
-			do {
-				tmp = tmp ? val + 1 : val;
-				val = memchr(tmp, '/', cdda->fn_len);
-			} while(val != NULL);
-
-			memcpy(tmp, "track04.raw\0", 12);
-			cdda->fn_len = strlen(cdda->filename);
-		}
-
 		cdda->filename[cdda->fn_len - 6] = (track / 10) + '0';
 		cdda->filename[cdda->fn_len - 5] = (track % 10) + '0';
+		cdda->filename[cdda->fn_len - 3] = 'r';
+		cdda->filename[cdda->fn_len - 1] = 'w';
+		cdda->filename[cdda->fn_len - 0] = '\0';
 
 		LOGF("Opening track%02d: %s\n", track, cdda->filename);
 
@@ -661,7 +639,7 @@ static void switch_cdda_track(uint8 track) {
 
 				cdda->filename[cdda->fn_len - 3] = 'r';
 				cdda->filename[cdda->fn_len - 1] = 'w';
-				cdda->filename[cdda->fn_len] = '.';
+				cdda->filename[cdda->fn_len - 0] = '.';
 				cdda->filename[cdda->fn_len + 1] = 'w';
 				cdda->filename[cdda->fn_len + 2] = 'a';
 				cdda->filename[cdda->fn_len + 3] = 'v';
@@ -760,7 +738,8 @@ int CDDA_Init() {
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
 		cdda->fd = iso_fd;
 	} else {
-		cdda->filename = (char *)malloc(sizeof(IsoInfo->image_file));
+		cdda->filename = relative_filename("track04.raw");
+		cdda->fn_len = strlen(cdda->filename);
 		cdda->fd = FILEHND_INVALID;
 	}
 
