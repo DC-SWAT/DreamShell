@@ -2815,7 +2815,25 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 				rcnt = SS(fp->fs) * cc;			/* Number of bytes transferred */
 
 #ifdef DEV_TYPE_IDE
+/*
+				UINT part = fp->btr - rcnt;
+				UINT mmu = mmu_enabled();
+				if (mmu && part < SS(fp->fs)) {
+					rcnt += part;
+				}
+*/
 				g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
+/*
+				if (mmu
+					&& fs_dma_enabled() == FS_DMA_SHARED
+					&& part
+					&& fp->btr == rcnt
+				) {
+					if (disk_read_part(fp->fs->drv, fp->rbuff, sect, rcnt)) {
+						ABORT(fp->fs, FR_DISK_ERR);
+					}
+				} else
+*/
 #endif
 				if (disk_read_async(fp->fs->drv, fp->rbuff, sect, cc)) {
 					ABORT(fp->fs, FR_DISK_ERR);
@@ -2834,7 +2852,7 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 #ifdef DEV_TYPE_IDE
 
 		g1_dma_set_irq_mask( ((fp->btr - rcnt) == 0) );
-
+/*
 		if (mmu_enabled()) {
 
 			if (disk_read_part(fp->fs->drv, fp->rbuff, fp->dsect, rcnt)) {
@@ -2842,13 +2860,13 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 			}
 
 		} else {
-
+*/
 			if (move_window(fp->fs, fp->dsect))		/* Move sector window */
 				ABORT(fp->fs, FR_DISK_ERR);
 			
 			mem_cpy(fp->rbuff, &fp->fs->win[fp->fptr % SS(fp->fs)], rcnt);	/* Pick partial sector */
 			dcache_purge_range((uint32)fp->rbuff, rcnt);
-		}
+		// }
 #else
 		if (move_window(fp->fs, fp->dsect))		/* Move sector window */
 			ABORT(fp->fs, FR_DISK_ERR);

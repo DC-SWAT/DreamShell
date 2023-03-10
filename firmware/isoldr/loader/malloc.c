@@ -97,6 +97,8 @@ static void internal_malloc_init_auto() {
         if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda)
             || (IsoInfo->emu_cdda && IsoInfo->use_irq == 0)
             || IsoInfo->boot_mode != BOOT_MODE_DIRECT
+            || (loader_end > (IPBIN_ADDR + 0x2000)
+                && (IsoInfo->emu_cdda || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO))
         ) {
             internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
         } else if (loader_end < IPBIN_ADDR
@@ -106,17 +108,7 @@ static void internal_malloc_init_auto() {
         }
     } else if (loader_addr > APP_ADDR) {
 
-        if (IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
-
-            if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO
-                || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
-                || IsoInfo->emu_cdda
-            ) {
-                internal_malloc_base = (void *)(ISOLDR_DEFAULT_ADDR_LOW + 0x800);
-            } else {
-                internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
-            }
-        }
+        internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_MIN + 0x1000;
 
     } else if (IsoInfo->exec.type == BIN_TYPE_WINCE) {
 
@@ -132,8 +124,7 @@ static void internal_malloc_init_maple() {
         uint32 addr = MAPLE_REG(MAPLE_DMA_ADDR);
         internal_malloc_base = (void *)CACHED_ADDR(addr);
 
-        if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_CSO
-            || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
+        if (IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO
             || IsoInfo->emu_cdda
         ) {
             internal_malloc_base += 0x1000;
@@ -337,7 +328,9 @@ void *malloc(uint32 size) {
         void *ptr = katana_malloc(size);
         if (ptr == NULL) {
             LOGFF("KATANA failed, trying internal\n");
-            internal_malloc_init();
+            if (internal_malloc_pos == NULL) {
+                internal_malloc_init();
+            }
             return internal_malloc(size);
         }
         return ptr;

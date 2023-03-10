@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
 
 	if (IsoInfo->syscalls == 0) {
 		if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
-			|| (IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW)
+			|| (malloc_heap_pos() < ISOLDR_DEFAULT_ADDR_LOW)
 			|| (is_custom_bios() && is_no_syscalls())) {
 			emu_all_sc = 1;
 		}
