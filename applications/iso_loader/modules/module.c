@@ -59,6 +59,7 @@ static struct {
 	GUI_Widget *async_label;
 	GUI_Widget *vmu;
 	GUI_Widget *vmu_number;
+	GUI_Widget *vmu_create;
 	GUI_Widget *screenshot;
 
 	GUI_Widget *device;
@@ -112,6 +113,26 @@ static int canUseTrueAsyncDMA(void) {
 	return (self.sector_size == 2048 && 
 			(self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
 			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
+}
+
+static char *relativeFilename(char *filename) {
+	static char filepath[MAX_FN_LEN];
+	char path[MAX_FN_LEN];
+	int len;
+
+	if (self.image_type == ISOFS_IMAGE_TYPE_GDI) {
+		len = strlen(strchr(self.filename, '/'));
+	} else {
+		len = strlen(self.filename);
+	}
+
+	memset(filepath, 0, sizeof(filepath));
+	memset(path, 0, sizeof(path));
+	strncpy(path, self.filename, strlen(self.filename) - len);
+
+	snprintf(filepath, MAX_FN_LEN, "%s/%s/%s",
+		GUI_FileManagerGetPath(self.filebrowser), path, filename);
+	return filepath;
 }
 
 void isoLoader_Rotate_Image(GUI_Widget *widget) {
@@ -797,6 +818,9 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 void isoLoader_toggleExtension(GUI_Widget *widget) {
 	if (GUI_WidgetGetState(widget)) {
 		GUI_WidgetSetState(self.irq, 1);
+		if (widget == self.vmu_create) {
+			GUI_WidgetSetState(self.vmu, 1);
+		}
 	}
 }
 
@@ -932,6 +956,17 @@ void isoLoader_Run(GUI_Widget *widget) {
 
 	if(GUI_WidgetGetState(self.vmu)) {
 		self.isoldr->emu_vmu = atoi(GUI_TextEntryGetText(self.vmu_number));
+	}
+
+	if(GUI_WidgetGetState(self.vmu_create)) {
+
+		snprintf(filepath, sizeof(filepath),
+				"%s/apps/%s/resources/empty_vmu.vmd",
+				getenv("PATH"), lib_get_name() + 4);
+
+		char fn[32];
+		snprintf(fn, sizeof(fn), "vmu%03ld.vmd", self.isoldr->emu_vmu);
+		CopyFile(filepath, relativeFilename(fn), 0);
 	}
 
 	if(GUI_WidgetGetState(self.screenshot)) {
@@ -1483,6 +1518,7 @@ void isoLoader_Init(App_t *app) {
 
 		self.vmu           = APP_GET_WIDGET("vmu-checkbox");
 		self.vmu_number    = APP_GET_WIDGET("vmu-number");
+		self.vmu_create    = APP_GET_WIDGET("vmu-create-checkbox");
 		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
 		
 		self.options_panel	  = APP_GET_WIDGET("options-panel");

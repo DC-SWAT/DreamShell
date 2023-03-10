@@ -1,6 +1,6 @@
 #
 # ISO Loader App for DreamShell
-# Copyright (C) 2011-2016 SWAT
+# Copyright (C) 2011-2023 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -27,4 +27,4 @@ install: app.xml $(DEPS)
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)
 	cp -R presets $(APP_DIR)
-
+	cp -R resources $(APP_DIR)
