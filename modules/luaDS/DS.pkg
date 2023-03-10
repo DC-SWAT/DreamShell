@@ -216,15 +216,10 @@ Cmd_t *GetCmdByName(const char *name);
 
 int ToggleConsole();
 int ConsoleIsVisible();
-int CreateConsolePTY();
-int DestroyConsolePTY();
 
 int SearchRoot(int pass_cnt);
 void vmu_draw_string(const char *str);
 int flashrom_get_region_only();
-int is_hacked_bios();
-int is_custom_bios();
-int is_no_syscalls();
 
 int FileSize(const char *fn);
 int FileExists(const char *fn);

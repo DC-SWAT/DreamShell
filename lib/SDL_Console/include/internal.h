@@ -23,8 +23,9 @@
 #ifndef _internal_h_
 #define _internal_h_
 
+#include <ds.h>
 
-#define PRINT_ERROR(X) fprintf(stderr, "ERROR in %s:%s(): %s\n", __FILE__, __FUNCTION__, X)
+#define PRINT_ERROR ds_printf("DS_ERROR: %s\n", X)
 
 Uint32	DT_GetPixel(SDL_Surface *surface, int x, int y);
 void	DT_PutPixel(SDL_Surface *surface, int x, int y, Uint32 pixel);

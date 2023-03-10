@@ -99,9 +99,6 @@ int dsystem_buff(const char *buff);
 int InitConsole(const char *font, const char *background, int lines, int x, int y, int w, int h, int alpha);
 void ShutdownConsole();
 
-int CreateConsolePTY();
-int DestroyConsolePTY();
-
 void DrawConsole();
 int ToggleConsole();
 void ShowConsole();

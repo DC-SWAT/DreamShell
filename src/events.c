@@ -118,7 +118,15 @@ int RemoveEvent(Event_t *e) {
 
 
 int SetEventState(Event_t *e, uint16 state) {
+	if(e->type == EVENT_TYPE_VIDEO) {
+		LockVideo();
+	}
+
 	e->state = state;
+
+	if(e->type == EVENT_TYPE_VIDEO) {
+		UnlockVideo();
+	}
 	return state;
 }
 

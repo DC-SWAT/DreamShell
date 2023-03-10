@@ -115,8 +115,6 @@ dsystem_buff
 #
 InitConsole
 ShutdownConsole
-CreateConsolePTY
-DestroyConsolePTY
 ToggleConsole
 ShowConsole
 HideConsole

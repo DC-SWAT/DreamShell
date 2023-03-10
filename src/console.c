@@ -17,14 +17,12 @@ static ConsoleInformation *DSConsole = NULL;
 static Event_t *con_input_event;
 static Event_t *con_video_event;
 static int console_debug = 0;
-static file_t con_pty_m = FILEHND_INVALID;
 
 
 void SetConsoleDebug(int mode) {
      console_debug = mode;
 }
 
-// TODO improve speed
 int ds_printf(const char *fmt, ...) {
 
     char buff[512];
@@ -39,19 +37,17 @@ int ds_printf(const char *fmt, ...) {
 	if(console_debug) {
 		dbglog(DBG_DEBUG, buff);
 	}
-	
-	if(con_pty_m != FILEHND_INVALID) {
-		fs_write(con_pty_m, buff, strlen(buff));
-	}
 
 	if(DSConsole != NULL) {
 
 		ptemp = buff;
-		
-		if(ConsoleIsVisible()) LockVideo();
-		
+
+		if(ConsoleIsVisible()) {
+			SetEventState(con_video_event, EVENT_STATE_SLEEP);
+		}
+
 		while((b = strsep(&ptemp, "\n")) != NULL) {
-			
+
 			while(strlen(b) > DSConsole->VChars) {
 				CON_NewLineConsole(DSConsole);
 				strncpy(DSConsole->ConsoleLines[0], b, DSConsole->VChars);
@@ -60,25 +56,22 @@ int ds_printf(const char *fmt, ...) {
 			}
 
 			cr = b + strlen(b) - 1;
-			
+
 			if(*cr != '\r') {
 				CON_NewLineConsole(DSConsole);
-			} else {
-				*cr = '\0';
 			}
-			
+
 			strncpy(DSConsole->ConsoleLines[0], b, DSConsole->VChars);
 			DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
 		}
-		
+
 		if(ConsoleIsVisible()) {
-			UnlockVideo();
 			CON_UpdateConsole(DSConsole);
+			SetEventState(con_video_event, EVENT_STATE_ACTIVE);
 		}
 	}
 	return i;
 }
-
 
 
 static void *CommandThread(void *command) {
@@ -170,7 +163,6 @@ static void ConsoleDrawHandler(void *ds_event, void *param, int action) {
 	switch(action) {
 		case EVENT_ACTION_RENDER:
 			CON_DrawConsole(DSConsole);
-//			ScreenChanged();
 			break;
 		case EVENT_ACTION_UPDATE:
 			CON_UpdateConsole(DSConsole);
@@ -276,35 +268,6 @@ void ShutdownConsole() {
 	RemoveEvent(con_input_event);
 	RemoveEvent(con_video_event);
 	CON_Destroy(DSConsole);
-	DestroyConsolePTY();
-}
-
-
-int CreateConsolePTY() {
-	
-	if(con_pty_m != FILEHND_INVALID) {
-		return 1;
-	}
-	
-	int rv = 0;
-	//con_pty_m = fs_open("/pty/ma00", O_WRONLY);
-	file_t con_pty_s;
-	rv = fs_pty_create(NULL, 0, &con_pty_m, &con_pty_s);
-	
-	if(!rv) {
-		fs_close(con_pty_s);
-	}
-	
-	return rv ? 0 : 1;
-}
-
-int DestroyConsolePTY() {
-	if(con_pty_m != FILEHND_INVALID) {
-		fs_close(con_pty_m);
-		con_pty_m = FILEHND_INVALID;
-		return 1;
-	}
-	return 0;
 }
 
 
@@ -325,38 +288,33 @@ int ToggleConsole() {
 }
 
 void ShowConsole() {
-	
+
 	if(!ConsoleIsVisible()) {
-		
-		if(VideoMustLock()) LockVideo();
-		SetGuiState(EVENT_STATE_SLEEP);
-		SetEventState(con_video_event, EVENT_STATE_ACTIVE);
-		SDL_DC_EmulateMouse(SDL_FALSE);
-		if(VideoMustLock()) UnlockVideo();
-		
+
 		CON_Show(DSConsole);
 		CON_Topmost(DSConsole);
-		
-		while(DSConsole->Visible != CON_OPEN) thd_sleep(50);
+		CON_UpdateConsole(DSConsole);
+
+		SDL_DC_EmulateMouse(SDL_FALSE);
+		SetGuiState(EVENT_STATE_SLEEP);
+		SetEventState(con_video_event, EVENT_STATE_ACTIVE);
 	}
 }
 
 void HideConsole() {
-	
+
 	if(ConsoleIsVisible()) {
-		
+
 		ScreenFadeOut();
 		CON_Hide(DSConsole);
 		CON_Topmost(NULL);
+
+		while(DSConsole->Visible != CON_CLOSED) thd_sleep(100);
+
 		SDL_DC_EmulateMouse(SDL_TRUE);
-		
-		while(DSConsole->Visible != CON_CLOSED) thd_sleep(50);
-		
-		if(VideoMustLock()) LockVideo();
 		SetEventState(con_video_event, EVENT_STATE_SLEEP);
 		SetGuiState(EVENT_STATE_ACTIVE);
-		if(VideoMustLock()) UnlockVideo();
-		
+
 		ProcessVideoEventsUpdate(NULL);
 		ScreenFadeIn();
 	}

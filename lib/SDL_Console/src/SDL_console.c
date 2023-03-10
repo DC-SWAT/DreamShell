@@ -55,7 +55,7 @@ SDL_Event* CON_Events(SDL_Event *event) {
 		return event;
 
 	if(event->type == SDL_KEYDOWN) {
-		
+
 		if(event->key.keysym.mod & KMOD_CTRL) {
 			/* CTRL pressed */
 			switch(event->key.keysym.sym) {
@@ -169,10 +169,7 @@ SDL_Event* CON_Events(SDL_Event *event) {
 				}
 			}
 		}
-		
-		LockVideo();
 		Topmost->WasUnicode = 1;
-		UnlockVideo();
 		return NULL;
 	}
 	return event;
@@ -281,9 +278,6 @@ void CON_UpdateConsole(ConsoleInformation *console) {
 
 	Screenlines = (console->ConsoleSurface->h / console->FontHeight) - 2;
 
-//	if(VideoMustLock()) 
-		LockVideo();
-//	dbglog(DBG_INFO, "%s\n", __func__);
 	console->WasUnicode = 1;
 	SDL_FillRect(console->ConsoleSurface, NULL, SDL_MapRGBA(console->ConsoleSurface->format, 0, 0, 0, console->ConsoleAlpha));
 
@@ -319,9 +313,6 @@ void CON_UpdateConsole(ConsoleInformation *console) {
 		else
 			DT_DrawText(console->ConsoleLines[console->ConsoleScrollBack + loop], console->ConsoleSurface, console->FontNumber, CON_CHAR_BORDER, (Screenlines - loop - 1) * console->FontHeight);
 	}
-
-//	if(VideoMustLock()) 
-		UnlockVideo();
 
 //	if(console->OutputScreen->flags & SDL_OPENGLBLIT)
 //		SDL_SetColorKey(CurrentFont->FontSurface, 0, 0);
@@ -520,8 +511,8 @@ ConsoleInformation *CON_Init(const char *FontName, SDL_Surface *DisplayScreen, i
 void CON_Show(ConsoleInformation *console) {
 	if(console) {
 		console->Visible = CON_OPENING;
-		CON_UpdateConsole(console);
 
+		// FIXME: Flag WasUnicode used for updating
 		//console->WasUnicode = SDL_EnableUNICODE(-1);
 		//SDL_EnableUNICODE(1);
 	}
@@ -735,9 +726,8 @@ void CON_Out(ConsoleInformation *console, const char *str, ...) {
 		CON_NewLineConsole(console);
 		strncpy(console->ConsoleLines[0], ptemp, console->VChars);
 		console->ConsoleLines[0][console->VChars] = '\0';
-		//LockVideo();
+
 		CON_UpdateConsole(console);
-		//UnlockVideo();
 	}
 
 	/* And print to stdout */
