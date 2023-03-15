@@ -7,17 +7,12 @@
 
 #include "SDL_gui.h"
 
-#define MAX_UPDATES 200
-
 extern "C" {
 	SDL_Surface *GetScreen();
 	void LockVideo();
 	void UnlockVideo();
 	int VideoMustLock();
-	void UpdateActiveMouseCursor();
-	int ds_printf(const char *fmt, ...);
 }
-
 
 
 GUI_Screen::GUI_Screen(const char *aname, SDL_Surface *surface)

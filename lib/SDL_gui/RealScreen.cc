@@ -9,6 +9,7 @@
 
 extern "C" {
 	void ScreenChanged();
+	void UpdateActiveMouseCursor();
 }
 
 #define MAX_UPDATES 200
@@ -31,6 +32,7 @@ void GUI_RealScreen::FlushUpdates(void)
 	{
 		n_updates = 0;
 		ScreenChanged();
+		UpdateActiveMouseCursor();
 	}
 }
 
