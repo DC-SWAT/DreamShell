@@ -729,7 +729,6 @@ class GUI_FileManager : public GUI_Container
 {
 protected:
 		int rescan;
-		int joy_sel;
 		char cur_path[MAX_FN_LEN];
 		GUI_Rect item_area;
 		GUI_Surface *item_normal;
@@ -746,7 +745,6 @@ protected:
 		GUI_ScrollBar *scrollbar;
 		GUI_Button *button_up;
 		GUI_Button *button_down;
-		void calc_item_offset(GUI_Widget *widget, Uint16 *x, Uint16 *y);
 		void AdjustScrollbar(GUI_Object * sender);
 		void ScrollbarButtonEvent(GUI_Object * sender);
 		void Build();

@@ -6,20 +6,14 @@
 
 extern "C"
 {
-#include <kos.h>
-int ds_printf(const char *fmt, ...); 
-void UpdateActiveMouseCursor();
-void ScreenWaitUpdate();
 void SDL_DC_EmulateMouse(SDL_bool value);
 }
-
 
 GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int y, int w, int h)
 : GUI_Container(aname, x, y, w, h) {
 	
 	strncpy(cur_path, path != NULL ? path : "/", MAX_FN_LEN);
 	rescan = 1;
-	joy_sel = 0;
 	
 	item_area.w = w - 20; 
 	item_area.h = 20; 
@@ -113,21 +107,23 @@ void GUI_FileManager::Resize(int w, int h)
 {
 	area.w = w;
 	area.h = h;
-	item_area.w = w - 20;
-	
+	item_area.w = w - scrollbar->GetWidth();
+
 	if(panel)
 		panel->SetSize(item_area.w, area.h);
-		
+
 	if(button_up)
 		button_up->SetPosition(item_area.w, 0);
-		
+
 	if(button_down)
-		button_down->SetPosition(item_area.w, area.h - 20);
-	
-	if(scrollbar)
-		scrollbar->SetHeight(area.h - 40);
-		
-	MarkChanged();
+		button_down->SetPosition(item_area.w, area.h - button_down->GetHeight());
+
+	if(scrollbar) {
+		scrollbar->SetPosition(item_area.w, button_up->GetHeight());
+		scrollbar->SetHeight(area.h - (button_up->GetHeight() + button_down->GetHeight()));
+	}
+
+	ReScan();
 }
 
 
@@ -169,7 +165,7 @@ void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 	
 	if(sender == button_up) {
 		
-		scroll_pos -= scroll_height / 10;
+		scroll_pos -= scroll_height / panel->GetWidgetCount();
 		
 		if(button_down->GetFlags() & WIDGET_DISABLED) {
 			button_down->SetEnabled(1);
@@ -182,7 +178,7 @@ void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 		
 	} else if(sender == button_down) {
 		
-		scroll_pos += scroll_height / 10;
+		scroll_pos += scroll_height / panel->GetWidgetCount();
 		if(button_up->GetFlags() & WIDGET_DISABLED) {
 			button_up->SetEnabled(1);
 		}
@@ -200,7 +196,7 @@ void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 
 void GUI_FileManager::SetPath(const char *path) {
 	strncpy(cur_path, path, MAX_FN_LEN);
-	MarkChanged();
+	ReScan();
 }
 
 const char *GUI_FileManager::GetPath() {
@@ -213,7 +209,7 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 	file_t fd;
 	
 	if(name/* && size < 0*/) {
-		if(size == -2) {
+		if(size == -2 && name[0] == '.' && name[1] == '.') {
 
 			b = strrchr(cur_path, '/');
 
@@ -226,7 +222,7 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 				else
 					cur_path[1] = '\0';
 
-				MarkChanged();
+				ReScan();
 			}
 		} else {
 
@@ -246,9 +242,9 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 			if(fd != FILEHND_INVALID) {
 				fs_close(fd);
 				strncpy(cur_path, path, MAX_FN_LEN);
-				MarkChanged();
+				ReScan();
 			} else {
-				ds_printf("GUI_FileManager: Can't open dir: %s\n", path);
+				printf("GUI_FileManager: Can't open dir: %s\n", path);
 			}
 		}
 	}
@@ -280,7 +276,8 @@ void GUI_FileManager::Scan()
 	
 	if(f == FILEHND_INVALID) 
 	{
-		ds_printf("GUI_FileManager: Can't open dir: %s\n", cur_path);
+		printf("GUI_FileManager: Can't open dir: %s\n", cur_path);
+		free(sorts);
 		return;
 	}
 	
@@ -289,8 +286,7 @@ void GUI_FileManager::Scan()
 
 	if(strlen(cur_path) > 1) 
 	{
-		const char b[] = {0x2E, 0x2E, 0};
-		AddItem(b, -2, 0, O_DIR);
+		AddItem("..", -2, 0, O_DIR);
 	}
 
 	while ((ent = fs_readdir(f)) != NULL) 
@@ -332,6 +328,7 @@ void GUI_FileManager::Scan()
 }
 
 void GUI_FileManager::ReScan() {
+	rescan = 1;
 	MarkChanged();
 }
 
@@ -445,7 +442,7 @@ void GUI_FileManager::SetItemLabel(GUI_Font *font, int r, int g, int b)	{
 	item_label_clr.r = r;
 	item_label_clr.g = g;
 	item_label_clr.b = b;
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled) {
@@ -459,7 +456,7 @@ void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highligh
 	GUI_ObjectKeep((GUI_Object **) &item_highlight, highlight);
 	GUI_ObjectKeep((GUI_Object **) &item_pressed, pressed);
 	GUI_ObjectKeep((GUI_Object **) &item_disabled, disabled);	
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetItemSize(const SDL_Rect *item_r) {
@@ -467,27 +464,27 @@ void GUI_FileManager::SetItemSize(const SDL_Rect *item_r) {
 	item_area.h = item_r->h;
 	item_area.x = item_r->x;
 	item_area.y = item_r->y;
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetItemClick(GUI_CallbackFunction *func) {
 	item_click = func;
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetItemContextClick(GUI_CallbackFunction *func) {
 	item_context_click = func;
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetItemMouseover(GUI_CallbackFunction *func) {
 	item_mouseover = func;
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetItemMouseout(GUI_CallbackFunction *func) {
 	item_mouseout = func;
-	MarkChanged();
+	ReScan();
 }
 
 void GUI_FileManager::SetScrollbar(GUI_Surface *knob, GUI_Surface *background) {
@@ -551,45 +548,22 @@ void GUI_FileManager::Update(int force) {
 		r.x = x_offset;
 		r.y = y_offset;
 		Erase(&r);
-		rescan = 1;
 	}
-	
+
 	if(rescan)  {
-		Scan();
-	}
+		panel->RemoveAllWidgets();
+		panel->SetYOffset(0);
 
-	for (i=0; i<n_widgets; i++)
-		widgets[i]->DoUpdate(force);
-		
-	if(force || rescan) {
-		UpdateActiveMouseCursor();
-	}
-}
-
-
-void GUI_FileManager::calc_item_offset(GUI_Widget *widget, Uint16 *x, Uint16 *y) {
-	GUI_Drawable *w = NULL;
-	SDL_Rect warea;
-	int type = 0;
-
-	warea = widget->GetArea();
-	*x = warea.x + (warea.w / 2);
-	*y = warea.y + (warea.h / 2);
-
-	w = widget->GetParent();
-	
-	while(w) {
-		warea = w->GetArea();
-		type = w->GetWType();
-		
-		if(type == WIDGET_TYPE_CONTAINER) {
-			*x += warea.x - ((GUI_Container*)w)->GetXOffset();
-			*y += warea.y - ((GUI_Container*)w)->GetYOffset();
-		} else {
-			*x += warea.x;
-			*y += warea.y;
+		for (i = 0; i < n_widgets; i++) {
+			widgets[i]->DoUpdate(force);
 		}
-		w = w->GetParent();
+
+		Scan();
+
+	} else {
+		for (i = 0; i < n_widgets; i++) {
+			widgets[i]->DoUpdate(force);
+		}
 	}
 }
 
@@ -607,7 +581,8 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		case SDL_JOYBUTTONDOWN:
 		
 			switch(event->jbutton.button) {
-				case 6:
+				case 5: // Y
+				case 6: // X
 					SetFlags(WIDGET_PRESSED);
 					SDL_DC_EmulateMouse(SDL_FALSE);
 					GUI_GetScreen()->SetJoySelectState(0);
@@ -616,41 +591,42 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 					break;
 			}
 			break;
-			
+
 		case SDL_JOYBUTTONUP:
-		
+
 			switch(event->jbutton.button) {
-				case 6:
+				case 5: // Y
+				case 6: // X
 					ClearFlags(WIDGET_PRESSED);
 					thd_sleep(150);
 					SDL_DC_EmulateMouse(SDL_TRUE);
 					GUI_GetScreen()->SetJoySelectState(1);
-					UpdateActiveMouseCursor();
-					
+					MarkChanged();
 					break;
 				default:
 					break;
 			}
 			break;
-			
+
 		case SDL_JOYAXISMOTION:
-		
+
 			switch(event->jaxis.axis) {
-				case 1:
+				case 1: // Analog joystick
 					if(flags & WIDGET_PRESSED) {
-						
+
 						int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
 						int sp = (scroll_height / 2) + ((event->jaxis.value / (256 / 100)) * (scroll_height / 100));
-						int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
-						
-						if(sp > cont_height) 
-							sp = cont_height;
-							
-						if(sp < 0) 
+
+						if(sp > scroll_height) {
+							sp = scroll_height;
+						}
+						if(sp < 0) {
 							sp = 0;
-						
-						scrollbar->SetVerticalPosition(sp);
-						AdjustScrollbar(NULL);
+						}
+						if (abs(scrollbar->GetVerticalPosition() - sp) > 2) {
+							scrollbar->SetVerticalPosition(sp);
+							AdjustScrollbar(NULL);
+						}
 					}
 					break;
 				default:
@@ -662,52 +638,40 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		
 			if(flags & WIDGET_PRESSED) {
 
-				SDL_Event evt;
-				int cnt = panel->GetWidgetCount() - 1;
-				int inc = 1;
-				
+				int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+				int sp = scrollbar->GetVerticalPosition();
+				int step = (scroll_height / panel->GetWidgetCount()) * 2;
+
 				switch(event->jhat.value) {
 					case 0x0E: // UP
-						if(joy_sel > 0)
-							joy_sel--;
-						inc = -1;
+						sp -= step;
 						break;
-					case 0x0B: //DOWN
-						if(joy_sel < cnt)
-							joy_sel++;
+					case 0x0B: // DOWN
+						sp += step;
 						break;
-					case 0x07: //LEFT
-						joy_sel = 0;
+					case 0x07: // LEFT
+						sp -= step * ((panel->GetHeight() / item_area.h) - 1);
 						break;
-					case 0x0D: //RIGHT
-						joy_sel = cnt;
-						inc = -1;
+					case 0x0D: // RIGHT
+						sp += step * ((panel->GetHeight() / item_area.h) - 1);
 						break;
 					default:
 						break;
 				}
-				
-				GUI_Widget *w = panel->GetWidget(joy_sel);
-				
-				while(joy_sel > 0 && joy_sel < cnt) {
-					
-					if(panel->IsVisibleWidget(w))
-						break;
-					
-					joy_sel += inc;
-					w = panel->GetWidget(joy_sel);
+				if(sp > scroll_height) {
+					sp = scroll_height;
 				}
-				
-				evt.type = SDL_MOUSEMOTION;
-				calc_item_offset(w, &evt.motion.x, &evt.motion.y);
-				SDL_PushEvent(&evt);
-				SDL_WarpMouse(evt.motion.x, evt.motion.y);
+				if(sp < 0) {
+					sp = 0;
+				}
+				scrollbar->SetVerticalPosition(sp);
+				AdjustScrollbar(NULL);
 			}
 			
 		default:
 			break;
 	}
-		
+
 	for (i = 0; i < n_widgets; i++) {
 		if (widgets[i]->Event(event, xoffset, yoffset))
 			return 1;
