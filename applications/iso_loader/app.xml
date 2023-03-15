@@ -203,7 +203,7 @@
 				<panel height="50" width="256" x="56%" y="8" name="title_panel">
 					<label align="center" color="#3278A0" font="m23" height="50" width="256" name="game_title" text="Select a game" />
 				</panel>
-				<panel height="269" width="269" x="56%" y="58" name="cover_bg">
+				<panel height="269" width="269" x="56%" y="55" name="cover_bg">
 					<panel background="overlay_bg">
 						<panel height="256" width="256" x="6" y="6">
 							<panel background="cover" name="cover_image">
@@ -213,26 +213,21 @@
 					</panel>
 				</panel>
 
-				<panel height="40" width="56%" x="5%" y="330">
-					<panel height="20" width="47%">
-						<label align="left" color="#FFFFFF" font="arial" text="A - browse/select/run" />
+				<panel height="40" width="60%" x="4%" y="330">
+					<panel height="20" width="50%">
+						<label align="left" color="#FFFFFF" font="arial" text="A: browse/select/run" />
 					</panel>
-					<panel height="20" width="47%">
-						<label align="left" color="#FFFFFF" font="arial" text="B - browse GDI directory" />
+					<panel height="20" width="50%">
+						<label align="left" color="#FFFFFF" font="arial" text="B: browse/settings" />
 					</panel>
-					<panel height="20" width="47%">
-						<label align="left" color="#FFFFFF" font="arial" text="X + Analog - scrolling" />
+					<panel height="20" width="50%">
+						<label align="left" color="#FFFFFF" font="arial" text="X/Y+Analog/D-Pad: scroll" />
 					</panel>
-					<panel height="20" width="53%">
-						<label align="left" color="#FFFFFF" font="arial" text="Analog/D-Pad - move cursor" />
+					<panel height="20" width="50%">
+						<label align="left" color="#FFFFFF" font="arial" text="Analog/D-Pad: cursor" />
 					</panel>
 				</panel>
 
-				<input disabled="iRunDisabled" height="30" highlight="iRunHigh" inactive="true" name="run_iso" normal="iRunNorm" onclick="export:isoLoader_Run()" pressed="iRunNorm" type="button" width="13%" x="70%" y="335" />
-
-				<panel height="20" width="8%" x="89%" y="340">
-					<label color="#FFFFFF" font="arial" name="version" text="v0.0.0" />
-				</panel>
 			</panel>
 
 			<panel background="settings_bg" height="380">
@@ -517,20 +512,20 @@
 
 					<label align="left" color="#3078A0" font="m23" height="40" text="Extensions:" width="45%" x="13%" y="5" />
 
-					<panel height="30" width="84%" x="13%" y="45">
+					<panel height="30" width="86%" x="13%" y="45">
 						<input height="25" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Screenshots (START + A + B)" x="9%" />
 						</input>
 					</panel>
-					<panel height="65" width="84%" x="13%" y="75">
+					<panel height="65" width="86%" x="13%" y="75">
 						<input height="25" name="vmu-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="VMU emulation" x="9%" />
 						</input>
 						<input font="arial" fontcolor="#000000" height="18" name="vmu-number" size="30" type="text" value="001" width="50%" />
 					</panel>
-					<panel height="30" width="84%" x="13%" y="135">
+					<panel height="30" width="86%" x="13%" y="135">
 						<input height="25" name="vmu-create-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
-							<label align="left" color="#000000" font="arial" height="20" text="Create VMU in game directory" x="9%" />
+							<label align="left" color="#000000" font="arial" height="20" text="Create new VMU in game directory" x="9%" />
 						</input>
 					</panel>
 				</panel>
@@ -544,7 +539,7 @@
 					</panel>
 				</panel>
 
-				<panel height="370" width="55%" x="56%" y="10">
+				<panel height="370" width="44%" x="56%" y="10">
 					<panel height="340" width="80%" y="15">
 
 						<label y="0" align="left" color="#000000" font="arial" height="25" text="Icon size:" width="100%" />
@@ -589,5 +584,13 @@
 
 			</panel>
 		</cardstack>
+
+		<panel width="30%" x="70%" y="435" height="30" background="#31799F" name="run-panel">
+			<input type="button" width="82" height="30" disabled="iRunDisabled" highlight="iRunHigh" inactive="true" name="run_iso" normal="iRunNorm" onclick="export:isoLoader_Run()" pressed="iRunNorm" />
+
+			<panel height="20" width="60" x="110" y="5">
+				<label color="#FFFFFF" aling="left" font="arial" name="version" text="v0.0.0" />
+			</panel>
+		</panel>
 	</body>
 </app>

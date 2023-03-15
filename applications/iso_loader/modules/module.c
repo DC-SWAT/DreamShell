@@ -44,6 +44,7 @@ static struct {
 	GUI_Widget *games;
 
 	GUI_Widget *btn_run;
+	GUI_Widget *run_pane;
 
 	GUI_Widget *preset;
 
@@ -120,7 +121,7 @@ static char *relativeFilename(char *filename) {
 	char path[MAX_FN_LEN];
 	int len;
 
-	if (self.image_type == ISOFS_IMAGE_TYPE_GDI) {
+	if (strchr(self.filename, '/')) {
 		len = strlen(strchr(self.filename, '/'));
 	} else {
 		len = strlen(self.filename);
@@ -160,6 +161,8 @@ void isoLoader_ShowPage(GUI_Widget *widget) {
 		GUI_CardStackShowIndex(self.pages, 3);
 		GUI_WidgetSetEnabled(self.link, 0);
 	}
+
+	GUI_WidgetMarkChanged(self.run_pane);
 }
 
 void isoLoader_ShowSettings(GUI_Widget *widget) {
@@ -547,29 +550,34 @@ static void setico(int size, int force)
 	GUI_Surface *image, *s;
 	int cursize = GUI_SurfaceGetWidth(self.slnkico);
 	
-	if(size == cursize && !force) 
-	{
+	if(size == cursize && !force) {
 		return;
 	}
 	
-	if(self.current_cover == self.default_cover)
+	if(self.current_cover == self.default_cover) {
 		s = self.stdico;
-	else
+	} else {
 		s = self.current_cover;
+	}
 	
 	SDL_Surface *sdls = GUI_SurfaceGet(s);
 	
-	if(GUI_WidgetGetState(self.rotate180))
+	if(GUI_WidgetGetState(self.rotate180)) {
 		sdls = rotateSurface90Degrees(sdls, 2);
-	
+	}
+
 	double scaling = (double) size / (double) GUI_SurfaceGetWidth(s);
-	
+
 	image = GUI_SurfaceFrom("ico-surface", zoomSurface(sdls, scaling, scaling, 1));
-	
 	GUI_PictureSetImage(self.wlnkico, image);
-	if(self.slnkico) free(self.slnkico);
+
+	if(self.slnkico) {
+		GUI_ObjectDecRef((GUI_Object *) self.slnkico);
+	}
 	self.slnkico = image;
+
 	GUI_WidgetMarkChanged(self.pages);
+	GUI_WidgetMarkChanged(self.run_pane);
 }
 
 void isoLoader_toggleIconSize(GUI_Widget *widget)
@@ -658,6 +666,7 @@ void isoLoader_toggleOptions(GUI_Widget *widget)
 			GUI_WidgetSetState(widget, 1);
 		}
 	}
+	GUI_WidgetMarkChanged(self.run_pane);
 }
 
 void isoLoader_togglePatchAddr(GUI_Widget *widget)
@@ -839,6 +848,10 @@ void isoLoader_Run(GUI_Widget *widget) {
 	ScreenFadeOut();
 	thd_sleep(400);
 
+	if(GUI_CardStackGetIndex(self.pages) != 0) {
+		isoLoader_SavePreset();
+	}
+
 	self.isoldr = isoldr_get_info(filepath, 0);
 
 	if(self.isoldr == NULL) {
@@ -997,7 +1010,6 @@ static void selectFile(char *name, int index) {
 		GUI_ButtonSetPressedImage(w, self.item_focus);
 	}
 
-	UpdateActiveMouseCursor();
 	self.current_item = index;
 	strncpy(self.filename, name, MAX_FN_LEN);
 	highliteDevice();
@@ -1082,15 +1094,19 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 
 
 void isoLoader_ItemContextClick(dirent_fm_t *fm_ent) {
-	
-	dirent_t *ent = &fm_ent->ent;
-	
-	if(ent->attr == O_DIR) {
-		changeDir(ent);
-		return;
+
+	if (self.current_item != fm_ent->index) {
+
+		dirent_t *ent = &fm_ent->ent;
+
+		if(ent->attr == O_DIR) {
+			changeDir(ent);
+		} else {
+			isoLoader_ItemClick(fm_ent);
+		}
+	} else {
+		isoLoader_ShowSettings(self.settings);
 	}
-	
-	isoLoader_ItemClick(fm_ent);
 }
 
 
@@ -1141,7 +1157,7 @@ void isoLoader_DefaultPreset() {
 		int len = 0;
 		const int min_size = 5 * 1024 * 1024;
 
-		if (self.image_type == ISOFS_IMAGE_TYPE_GDI) {
+		if (strchr(self.filename, '/')) {
 			len = strlen(strchr(self.filename, '/'));
 		} else {
 			len = strlen(self.filename);
@@ -1284,7 +1300,7 @@ int isoLoader_SavePreset() {
 			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
-	fs_write(fd, result, /*sizeof*/strlen(result));
+	fs_write(fd, result, strlen(result));
 	fs_close(fd);
 
 	return 0;
@@ -1451,11 +1467,6 @@ int isoLoader_LoadPreset() {
 }
 
 
-//static void isoLoader_InputEvent(void *ds_event, void *param, int action) {
-//	SDL_Event *event = (SDL_Event *) param;
-//}
-
-
 void isoLoader_Init(App_t *app) {
 
 	GUI_Widget *w, *b;
@@ -1475,7 +1486,6 @@ void isoLoader_Init(App_t *app) {
 		self.btn_dev[APP_DEVICE_SD]  = APP_GET_WIDGET("btn_sd");
 		self.btn_dev[APP_DEVICE_IDE] = APP_GET_WIDGET("btn_hdd");
 		self.btn_dev[APP_DEVICE_PC]  = APP_GET_WIDGET("btn_pc");
-//		self.btn_dev[APP_DEVICE_NET] = APP_GET_WIDGET("btn_net");
 
 		self.item_norm     = APP_GET_SURFACE("item-normal");
 		self.item_focus    = APP_GET_SURFACE("item-focus");
@@ -1492,9 +1502,6 @@ void isoLoader_Init(App_t *app) {
 		
 		self.btn_dev_norm[APP_DEVICE_PC]  = APP_GET_SURFACE("btn_pc_norm");
 		self.btn_dev_over[APP_DEVICE_PC]  = APP_GET_SURFACE("btn_pc_over");
-		
-//		self.btn_dev_norm[APP_DEVICE_NET] = APP_GET_SURFACE("btn_net_norm");
-//		self.btn_dev_over[APP_DEVICE_NET] = APP_GET_SURFACE("btn_net_over");
 
 		self.default_cover = self.current_cover = APP_GET_SURFACE("cover");
 
@@ -1508,6 +1515,7 @@ void isoLoader_Init(App_t *app) {
 		self.cover_widget = APP_GET_WIDGET("cover_image");
 		self.title        = APP_GET_WIDGET("game_title");
 		self.btn_run      = APP_GET_WIDGET("run_iso");
+		self.run_pane     = APP_GET_WIDGET("run-panel");
 		
 		self.preset        = APP_GET_WIDGET("preset-checkbox");
 		self.dma           = APP_GET_WIDGET("dma-checkbox");
@@ -1659,18 +1667,6 @@ void isoLoader_Init(App_t *app) {
 			
 			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_PC], 1);
 		}
-		
-//		if(DirExists("/???")) {
-//			
-//			cb = GUI_CallbackCreate((GUI_CallbackFunction *)isoLoader_SwitchVolume, NULL, "/???");
-//
-//			if(cb) {
-//				GUI_ButtonSetClick(self.btn_dev[APP_DEVICE_NET], cb);
-//				GUI_ObjectDecRef((GUI_Object *) cb);
-//			}
-//			
-//			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_NET], 1);
-//		}
 
 		/* Checking for arguments from a executor */
 		if(app->args != NULL) {
@@ -1681,26 +1677,6 @@ void isoLoader_Init(App_t *app) {
 				
 				GUI_FileManagerSetPath(self.filebrowser, name);
 				free(name);
-				/* FIXME
-				name = strrchr(app->args, '/');
-				
-				if(name) {
-
-					GUI_FileManagerUpdate(self.filebrowser, 1);
-					name++;
-					w = GUI_FileManagerGetItemPanel(self.filebrowser);
-					int count = GUI_ContainerGetCount(w);
-					
-					for(int i = 0; i < count; i++) {
-						
-						b = GUI_FileManagerGetItem(self.filebrowser, i);
-						
-						if(!strncmp(name, GUI_ObjectGetName((GUI_Object*)b), MAX_FN_LEN)) {
-							GUI_WidgetClicked(b, 1, 1);
-							break;
-						}
-					}
-				}*/
 			}
 			
 			self.have_args = true;
