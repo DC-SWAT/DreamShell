@@ -141,33 +141,67 @@ void ShutdownNet() {
 }
 
 int InitDS() {
-	
+
 	char fn[MAX_FN_LEN], bf[32];
-	int tmpi = 0, emu = 0;
+	int tmpi = 0;
 	uint8 *tmpb = NULL;
 	Settings_t *settings;
-	
+#ifdef DS_EMU
+	int emu = 1;
+#else
+	int emu = 0;
+#endif
+
 	SetVersion(0);
+
+#if defined(DS_DEBUG) && DS_DEBUG == 2
+	gdb_init();
+#elif defined(USE_DS_EXCEPTIONS)
+	expt_init();
+#endif
+
+#ifdef DS_DEBUG
+	uint64 t_start = timer_ms_gettime64();
+	dbglog_set_level(DBG_KDEBUG);
+#endif
+
+	if(!emu) {
+
+		if(InitSDCard()) {
+			scif_init();
+		}
+
+		InitIDE();
+
+		if(is_custom_bios()) {
+			InitRomdisk();
+		}
+	} else {
+		setenv("EMU", "Unknown", 1);
+	}
+
+	SearchRoot(0);
 	settings = GetSettings();
 
 	InitVideoHardware();
 	ShowLogo();
-	
+
+	if(settings->root[0] != 0 && DirExists(settings->root)) {
+		setenv("PATH", settings->root, 1);
+		if(	!strncmp(getenv("PATH"), "/sd", 3) || 
+			!strncmp(getenv("PATH"), "/ide", 4) || 
+			!strncmp(getenv("PATH"), "/pc", 3)) {
+			setenv("TEMP", getenv("PATH"), 1);
+		} else {
+			setenv("TEMP", "/ram", 1);
+		}
+	}
 	setenv("HOST", "DreamShell", 1);
 	setenv("OS", getenv("HOST"), 1);
 	setenv("USER", getenv("HOST"), 1);
 	setenv("ARCH", hardware_sys_mode(&tmpi) == HW_TYPE_SET5 ? "Set5.xx" : "Dreamcast", 1);
+
 	setenv("NET_IPV4", "0.0.0.0", 1);
-
-#ifdef DS_EMU
-	emu = 1;
-#else
-	emu = 0;
-#endif
-
-	if(emu) {
-		setenv("EMU", "Unknown", 1); // TODO Emu name
-	}
 
 	setenv("SDL_DEBUG", "0", 1);
 	setenv("SDL_VIDEODRIVER", "dcvideo", 1);
@@ -175,45 +209,7 @@ int InitDS() {
 	vmu_draw_string(getenv("HOST"));
 	dbglog(DBG_INFO, "Initializing DreamShell Core...\n");
 
-#ifdef DS_DEBUG
-	uint64 t_start = timer_ms_gettime64();
-	dbglog_set_level(DBG_KDEBUG);
-#endif
-
-#if defined(DS_DEBUG) && DS_DEBUG == 2
-	gdb_init();
-#endif
-
-#ifdef USE_DS_EXCEPTIONS
-	expt_init();
-#endif
-
 	SetConsoleDebug(1);
-
-	if(!emu) {
-
-		tmpi = 1;
-
-		if(!InitIDE()) {
-			tmpi = 0;
-		}
-
-		if(!InitSDCard()) {
-			tmpi = 0;
-		} else {
-			scif_init();
-		}
-
-		if(tmpi && is_custom_bios()) {
-			InitRomdisk();
-		}
-	}
-
-	if(settings->root[0] != 0 && DirExists(settings->root)) {
-		setenv("PATH", settings->root, 1);
-	} else {
-		SearchRoot(0);
-	}
 
 	setenv("HOME", getenv("PATH"), 1);
 	setenv("$PATH", getenv("PATH"), 1);
@@ -221,15 +217,6 @@ int InitDS() {
 	setenv("LUA_CPATH", getenv("PATH"), 1);
 	setenv("PWD", fs_getwd(), 1);
 	setenv("APP", (settings->app[0] != 0 ? settings->app : "Main"), 1);
-
-#ifdef DS_PROF
-	if(dcload_type == DCLOAD_TYPE_IP) {
-		profiler_init("/pc");
-	} else {
-		profiler_init(getenv("PATH"));
-	}
-	profiler_start();
-#endif
 
 	/* If used custom BIOS and syscalls is not installed, setting up it */
 	if(is_custom_bios() && is_no_syscalls()) {
@@ -239,7 +226,7 @@ int InitDS() {
 		/* Getting board ID */
 		tmpb = get_board_id();
 
-		if(!tmpi && strncmp(getenv("PATH"), "/cd", 3)) {
+		if(strncmp(getenv("PATH"), "/cd", 3)) {
 			/* Relax GD drive =) */
 			cdrom_spin_down();
 		}
@@ -301,10 +288,10 @@ int InitDS() {
 #endif
 
 	if(settings->startup[0] == '/') {
-		
+
 		snprintf(fn, MAX_FN_LEN, "%s%s", getenv("PATH"), settings->startup);
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
-		
+
 	} else if(settings->startup[0] == '#') {
 
 		dsystem_buff(settings->startup);
@@ -314,32 +301,38 @@ int InitDS() {
 		LuaDo(LUA_DO_STRING, settings->startup, GetLuaState());
 
 	} else {
-		
 		snprintf(fn, MAX_FN_LEN, "%s/lua/startup.lua", getenv("PATH"));
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
 	}
-	
+
 #ifdef DS_DEBUG
 	t_end = timer_ms_gettime64();
 	dbglog(DBG_INFO, "Startup time: %ld ms\n", (uint32)(t_end - t_start));
 #endif
-	
+
 	HideLogo();
+
+#ifdef DS_PROF
+	if(dcload_type == DCLOAD_TYPE_IP) {
+		profiler_init("/pc");
+	} else {
+		profiler_init(getenv("PATH"));
+	}
+	profiler_start();
+#endif
 	return 0;
 }
 
 void ShutdownDS() {
-
+#ifdef DS_PROF
+	profiler_stop();
+	profiler_clean_up();
+#endif
 	dbglog(DBG_INFO, "Shutting down DreamShell Core...\n");
 
 	char fn[MAX_FN_LEN];
 	snprintf(fn, MAX_FN_LEN, "%s/lua/shutdown.lua", getenv("PATH"));
 	LuaDo(LUA_DO_FILE, fn, GetLuaState());
-
-#ifdef DS_PROF
-	profiler_stop();
-	profiler_clean_up();
-#endif
 
 	ShutdownCmd();
 	ShutdownVideoThread();

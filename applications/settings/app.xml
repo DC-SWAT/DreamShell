@@ -77,7 +77,7 @@
 				</panel>
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60" onclick="export:SaveSettings()" align="center">
-						<label font="m23" color="#ffffff" text="Save to VMU" />
+						<label font="m23" color="#ffffff" text="Save to VMU or Root" />
 					</input>
 				</panel>
 				<panel height="70" width="50%">

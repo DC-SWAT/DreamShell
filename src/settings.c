@@ -8,7 +8,8 @@
 
 #include <ds.h>
 
-static const char settings_file[] = "/vmu/a1/DS_CORE4.CFG";
+static const char vmu_file[] = "/vmu/a1/DS_CORE4.CFG";
+static const char raw_file[] = "DS_CORE.CFG";
 static Settings_t current_set;
 static int loaded = 0;
 
@@ -54,84 +55,87 @@ const static unsigned char DS_data[32*32/2]= {
 
 
 Settings_t *GetSettings() {
-	
-	if(!loaded && !LoadSettings()) {
+
+	if(!loaded) {
+		LoadSettings();
+	}
+	if(!loaded) {
 		ResetSettings();
 	}
-	
 	return &current_set;
 }
 
 
 void SetSettings(Settings_t *settings) {
-	
+
 	if(settings != (Settings_t *)&current_set) {
 		memcpy(&current_set, settings, sizeof(current_set));
 	}
-	
+
 	loaded = 1;
 }
 
 
 void ResetSettings() {
-	
+
 	Settings_t *cur = &current_set;
 	VideoSettings_t *vid = &current_set.video;
 	memset(&current_set, 0, sizeof(current_set));
-	
+
 	vid->bpp = 16;
-	
+
 	vid->tex_width = 1024;
 	vid->tex_height = 512;
 	vid->tex_filter = -1;
 
 	vid->virt_width = 640;
 	vid->virt_height = 480;
-	
+
 	strncpy(cur->app, "Main", 4);
 	cur->app[4] = '\0';
-	
+
 	strncpy(cur->startup, "/lua/startup.lua", 16);
 	cur->startup[16] = '\0';
-	
+
 	cur->version = GetVersion();
-	
+
 	loaded = 1;
 }
 
-int LoadSettings() {
-	
-	Settings_t *sets;
+static int LoadSettingsVMU() {
+
 	uint8 *data;
 	vmu_pkg_t pkg;
 	size_t size;
 	file_t fd;
-	
-	fd = fs_open(settings_file, O_RDONLY);
+	int res;
 
-	if(fd == FILEHND_INVALID) 
+	fd = fs_open(vmu_file, O_RDONLY);
+
+	if(fd == FILEHND_INVALID) {
 		return 0;
-	
+	}
+
 	size = fs_total(fd);
 	data = calloc(1, size);
-	
+
 	if(!data) {
 		fs_close(fd);
 		return 0;
 	}
-	
+
 	memset(&pkg, 0, sizeof(pkg));
-	fs_read(fd, data, size);
-	
-	if(vmu_pkg_parse(data, &pkg) < 0) {
+	res = fs_read(fd, data, size);
+	fs_close(fd);
+
+	if (res <= 0) {
 		free(data);
 		return 0;
 	}
-	
-	sets = (Settings_t *)pkg.data;
-	
-	if(sets->version != GetVersion()) {
-		dbglog(DBG_DEBUG, "%s: Settings file version is different from current version\n", __func__);
+
+	if(vmu_pkg_parse(data, &pkg) < 0) {
+		free(data);
+		return 0;
 	}
 
 	size = sizeof(current_set);
@@ -141,28 +145,59 @@ int LoadSettings() {
 	return 1;
 }
 
-int SaveSettings() {
-	
-	if(!loaded) {
+static int LoadSettingsFile(const char *filename) {
+
+	Settings_t sets;
+	file_t fd;
+	ssize_t res;
+
+	fd = fs_open(filename, O_RDONLY);
+
+	if(fd == FILEHND_INVALID) {
 		return 0;
 	}
-	
+
+	res = fs_read(fd, &sets, sizeof(Settings_t));
+	fs_close(fd);
+
+	if (res <= 0) {
+		return 0;
+	}
+
+	memcpy(&current_set, &sets, sizeof(Settings_t));
+	return 1;
+}
+
+int LoadSettings() {
+	char fn[MAX_FN_LEN];
+	loaded = LoadSettingsVMU();
+
+	if (!loaded) {
+		snprintf(fn, MAX_FN_LEN, "%s/%s", getenv("PATH"), raw_file);
+		loaded = LoadSettingsFile(fn);
+	}
+
+	if(loaded && current_set.version != GetVersion()) {
+		dbglog(DBG_DEBUG, "%s: Settings file version is different from current version\n", __func__);
+	}
+	return loaded;
+}
+
+
+static int SaveSettingsVMU() {
+
 	uint8 *pkg_out;
 	vmu_pkg_t pkg;
 	int pkg_size;
 	file_t fd;
-	
-	fd = fs_open(settings_file, O_CREAT | O_TRUNC | O_WRONLY);
+
+	fd = fs_open(vmu_file, O_WRONLY | O_TRUNC);
 
 	if(fd == FILEHND_INVALID) {
-		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, settings_file);
+		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, vmu_file);
 		return 0;
 	}
-	
-	if(current_set.version != GetVersion()) {
-		current_set.version = GetVersion();
-	}
-	
+
 	memset(&pkg, 0, sizeof(pkg));
 
 	strcpy(pkg.desc_short, "DreamShell Settings");
@@ -178,7 +213,7 @@ int SaveSettings() {
 	pkg.data = (void *)&current_set;
 
 	vmu_pkg_build(&pkg, &pkg_out, &pkg_size);
-	
+
 	if(!pkg_out || pkg_size <= 0) {
 		dbglog(DBG_DEBUG, "%s: vmu_pkg_build failed\n", __func__);
 		return 0;
@@ -191,3 +226,32 @@ int SaveSettings() {
 	return 1;
 }
 
+static int SaveSettingsFile(const char *filename) {
+
+	file_t fd;
+	ssize_t res;
+
+	fd = fs_open(filename, O_WRONLY | O_TRUNC);
+
+	if(fd == FILEHND_INVALID) {
+		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, filename);
+		return 0;
+	}
+
+	res = fs_write(fd, &current_set, sizeof(current_set));
+	fs_close(fd);
+
+	return (res <= 0 ? 0 : 1);
+}
+
+int SaveSettings() {
+
+	char fn[MAX_FN_LEN];
+
+	if(current_set.version != GetVersion()) {
+		current_set.version = GetVersion();
+	}
+
+	snprintf(fn, MAX_FN_LEN, "%s/%s", getenv("PATH"), raw_file);
+	return SaveSettingsVMU() || SaveSettingsFile(fn);
+}
