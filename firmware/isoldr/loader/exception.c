@@ -26,7 +26,7 @@ int exception_inited(void) {
 static int exception_vbr_ok(void) {
 	
 	uint32 int_changed;
-#ifdef HAVE_GDB
+#ifdef HAVE_UBC
 	uint32 gen_changed;
 #endif
 //	uint32 cache_changed;
@@ -37,7 +37,7 @@ static int exception_vbr_ok(void) {
 		interrupt_sub_handler,
 		interrupt_sub_handler_end - interrupt_sub_handler
 	);
-#ifdef HAVE_GDB
+#ifdef HAVE_UBC
 	gen_changed = memcmp(
 		VBR_GEN (vbr_buffer) - (general_sub_handler_base - general_sub_handler),
 		general_sub_handler,
@@ -54,7 +54,7 @@ static int exception_vbr_ok(void) {
     /* After enough exceptions, allow the initialization. */
     return !(
 		int_changed
-#ifdef HAVE_GDB
+#ifdef HAVE_UBC
 		|| gen_changed
 #endif
 		/* || cache_changed*/
@@ -106,7 +106,7 @@ int exception_init(uint32 vbr_addr) {
 		*change_stack_instr = 0x0009; // nop
 	}
 
-#if defined(HAVE_GDB)
+#ifdef HAVE_UBC
 	/* General exception hack for VBR. */
 	memcpy(
 		VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler),
@@ -195,7 +195,7 @@ void *exception_handler(register_stack *stack) {
 	/* Increase our counters and set the proper back_vectors. */
 	switch (stack->exception_type)
 	{
-#if defined(HAVE_GDB)
+#ifdef HAVE_UBC
 		case EXP_TYPE_GEN :
 		{
 			//exp_table.general_exception_count++;

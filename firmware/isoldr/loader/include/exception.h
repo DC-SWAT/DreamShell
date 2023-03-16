@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Exception handling
- * (c)2014-2020 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2023 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -11,14 +11,15 @@
 #include <main.h>
 #include <exception-lowlevel.h>
 
-#ifdef HAVE_GDB
+#if defined(HAVE_GDB)
 #	define EXP_TABLE_SIZE 8
-#else
+#elif defined(HAVE_UBC)
 #	define EXP_TABLE_SIZE 2
+#else
+#	define EXP_TABLE_SIZE 1
 #endif
 
 typedef void *(* exception_handler_f) (register_stack *, void *);
-
 
 typedef struct {
 	
@@ -27,7 +28,6 @@ typedef struct {
     exception_handler_f handler;
 	
 } exception_table_entry;
-
 
 typedef struct {
 	

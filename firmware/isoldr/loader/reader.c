@@ -345,9 +345,9 @@ static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f 
 		fs_enable_dma(FS_DMA_HIDDEN);
 	}
 
-	if(mmu_enabled()) {
-		return _read_sector_by_sector(buff, cnt, sec_size, old_dma);
-	}
+	// if(mmu_enabled()) {
+	// 	return _read_sector_by_sector(buff, cnt, sec_size, old_dma);
+	// }
 #endif
 
 	while(cnt > 2) {

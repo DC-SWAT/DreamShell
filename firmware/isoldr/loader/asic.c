@@ -50,9 +50,9 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 
 	if ((status & ASIC_NRM_GD_DMA) ||
 		(statusExt & ASIC_EXT_GD_CMD) ||
-		(statusErr & ASIC_ERR_G1DMA_ILLEGAL) ||
-		(statusErr & ASIC_ERR_G1DMA_OVERRUN) ||
-		(statusErr & ASIC_ERR_G1DMA_ROM_FLASH)
+		(statusErr & (ASIC_ERR_G1DMA_ILLEGAL
+					| ASIC_ERR_G1DMA_OVERRUN
+					| ASIC_ERR_G1DMA_ROM_FLASH))
 	) {
 		back_vector = g1_dma_handler(NULL, stack, current_vector);
 	}
@@ -74,6 +74,10 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 # if defined(HAVE_MAPLE)
 		if(status & ASIC_NRM_MAPLE_DMA) {
 			back_vector = maple_dma_handler(NULL, stack, back_vector);
+
+			if (back_vector == NULL) {
+				back_vector = current_vector;
+			}
 		}
 # endif
 	}

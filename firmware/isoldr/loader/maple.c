@@ -167,6 +167,7 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
     if (pre_read_xfer_busy()) {
         resp->cmd = MAPLE_RESPONSE_AGAIN;
         resp->datalen = 0;
+        LOGF("      BREAD: device busy\n");
         return;
     }
 
@@ -203,6 +204,7 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     }
     if (pre_read_xfer_busy()) {
         resp->cmd = MAPLE_RESPONSE_AGAIN;
+        LOGF("      BWRITE: device busy\n");
         return;
     }
 
@@ -240,6 +242,7 @@ static void maple_vmu_block_sync(maple_frame_t *req, maple_frame_t *resp) {
 
     if (pre_read_xfer_busy()) {
         resp->cmd = MAPLE_RESPONSE_AGAIN;
+        LOGF("      BSYNC: device busy\n");
         return;
     }
 
@@ -325,17 +328,16 @@ static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
     switch (cmd) {
         case MAPLE_COMMAND_DEVINFO:
         case MAPLE_COMMAND_ALLINFO:
-            maple_dump_device_info((maple_devinfo_t *)UNCACHED_ADDR((uint32)&resp->data));
+            maple_dump_device_info((maple_devinfo_t *)NONCACHED_ADDR((uint32)&resp->data));
             break;
         case MAPLE_COMMAND_GETMINFO:
-            maple_dump_memory_info((maple_memory_t *)UNCACHED_ADDR((uint32)&resp->data));
+            maple_dump_memory_info((maple_memory_t *)NONCACHED_ADDR((uint32)&resp->data));
             break;
         default:
             break;
     }
 }
 #endif // MAPLE_SNIFFER
-
 
 static void maple_dma_proc() {
     uint32 *data, *recv_data, addr, value;
@@ -345,7 +347,8 @@ static void maple_dma_proc() {
     maple_frame_t *resp_frame_ptr;
 
     addr = MAPLE_REG(MAPLE_DMA_ADDR);
-    data = (uint32 *)UNCACHED_ADDR(addr);
+
+    data = (uint32 *)NONCACHED_ADDR(addr);
 
     for (trans_count = 0; trans_count < 24 && !last; ++trans_count) {
 
@@ -360,6 +363,7 @@ static void maple_dma_proc() {
         /* Second word: receive buffer physical address */
         addr = *data;
 
+        /* Skip lightgun mode and NOP frame */
         if (pattern) {
             continue;
         }
@@ -374,7 +378,7 @@ static void maple_dma_proc() {
         maple_read_frame(data + 1, &req_frame);
         data += len + 2;
 
-        recv_data = (uint32 *)UNCACHED_ADDR(addr);
+        recv_data = (uint32 *)NONCACHED_ADDR(addr);
         resp_frame_ptr = (maple_frame_t *)recv_data;
 
 #ifdef MAPLE_LOG
@@ -406,11 +410,26 @@ void *maple_dma_handler(void *passer, register_stack *stack, void *current_vecto
 #else
 static asic_handler_f old_maple_dma_handler = NULL;
 static void *maple_dma_handler(void *passer, register_stack *stack, void *current_vector) {
-    if (old_maple_dma_handler) {
+    if (old_maple_dma_handler && passer != current_vector) {
         current_vector = old_maple_dma_handler(passer, stack, current_vector);
     }
 #endif
 
+#ifdef HAVE_UBC
+    static uint32 requested = 0;
+
+    if (passer == current_vector) {
+
+        // Handle UBC break on Maple register
+        requested = 1;
+        return current_vector;
+
+    } else if(requested) {
+        maple_dma_proc();
+        requested = 0;
+        return NULL;
+    }
+#else
     uint32 code = *REG_INTEVT;
 
     if (((*ASIC_IRQ11_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT11)
@@ -418,14 +437,22 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
         || ((*ASIC_IRQ13_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT13)
     ) {
         maple_dma_proc();
+        return NULL;
     }
+#endif
 
     return current_vector;
 }
 
 
 int maple_init_irq() {
-#if defined(MAPLE_SNIFFER) && !defined(NO_ASIC_LT)
+
+#ifdef HAVE_UBC
+    ubc_init();
+    ubc_configure_channel(UBC_CHANNEL_A, MAPLE_DMA_STATUS, UBC_BBR_OPERAND | UBC_BBR_WRITE);
+#endif
+
+#ifndef NO_ASIC_LT
     asic_lookup_table_entry a_entry;
     memset(&a_entry, 0, sizeof(a_entry));
     

@@ -102,13 +102,13 @@ int main(int argc, char *argv[]) {
 
 	if(IsoInfo->exec.type == BIN_TYPE_KOS) {
 
-		uint8 *src = (uint8 *)UNCACHED_ADDR(IsoInfo->exec.addr);
+		uint8 *src = (uint8 *)NONCACHED_ADDR(IsoInfo->exec.addr);
 
 		if(src[1] != 0xD0) {
 
 			printf("Descrambling...\n");
 
-			uint32 exec_addr = UNCACHED_ADDR(IsoInfo->exec.addr);
+			uint32 exec_addr = NONCACHED_ADDR(IsoInfo->exec.addr);
 			uint8 *dest = (uint8 *)(exec_addr + (IsoInfo->exec.size * 3));
 
 			descramble(src, dest, IsoInfo->exec.size);
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_EXPT
 	if(IsoInfo->exec.type == BIN_TYPE_WINCE && IsoInfo->use_irq) {
 		uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
-		uint8 wince_version = *((uint8 *)UNCACHED_ADDR(IsoInfo->exec.addr + 0x0c));
+		uint8 wince_version = *((uint8 *)NONCACHED_ADDR(IsoInfo->exec.addr + 0x0c));
 		/* Check WinCE version and hack VBR before executing */
 		if(wince_version == 0xe0) {
 			exception_init(exec_addr + 0x2110);
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
-		launch(UNCACHED_ADDR(IsoInfo->exec.addr));
+		launch(NONCACHED_ADDR(IsoInfo->exec.addr));
 	}
 
 	printf("Executing from IP.BIN...\n");

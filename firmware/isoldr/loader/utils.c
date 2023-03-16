@@ -79,7 +79,7 @@ uint Load_BootBin() {
 	uint32 bs = 0xfff000; /* FIXME: switch stack pointer for use all memory */
 	uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
 	const uint32 sec_size = 2048;
-	uint8 *buff = (uint8*)(UNCACHED_ADDR(IsoInfo->exec.addr));
+	uint8 *buff = (uint8*)(NONCACHED_ADDR(IsoInfo->exec.addr));
 
 	if(IsoInfo->exec.size < bs) {
 		bs = IsoInfo->exec.size;
@@ -133,7 +133,7 @@ static void set_region() {
 
 uint Load_IPBin(int header_only) {
 
-	uint32 ipbin_addr = UNCACHED_ADDR(IPBIN_ADDR);
+	uint32 ipbin_addr = NONCACHED_ADDR(IPBIN_ADDR);
 	uint32 lba = IsoInfo->track_lba[0];
 	uint32 cnt = 16;
 	uint8 *buff = (uint8*)ipbin_addr;
@@ -191,7 +191,7 @@ void Load_DS() {
 		disable_syscalls(all_sc);
 	}
 
-	if (read(fd, (uint8 *)UNCACHED_ADDR(APP_ADDR), total(fd)) > 0) {
+	if (read(fd, (uint8 *)NONCACHED_ADDR(APP_ADDR), total(fd)) > 0) {
 		launch(APP_ADDR);
 	}
 	close(fd);
@@ -200,7 +200,7 @@ void Load_DS() {
 #ifdef HAVE_EXT_SYSCALLS
 void Load_Syscalls() {
 
-	uint8_t *dst = (uint8_t *) UNCACHED_ADDR(RAM_START_ADDR);
+	uint8_t *dst = (uint8_t *) NONCACHED_ADDR(RAM_START_ADDR);
 	uint8_t *src = (uint8_t *) IsoInfo->syscalls;
 	uint32 lba = 0;
 	int fd;
@@ -304,7 +304,7 @@ void *search_memory(const uint8 *key, uint32 key_size) {
 
 int patch_memory(const uint32 key, const uint32 val) {
 
-	uint32 exec_addr = UNCACHED_ADDR(IsoInfo->exec.addr);
+	uint32 exec_addr = NONCACHED_ADDR(IsoInfo->exec.addr);
 	uint32 end_loc = exec_addr + IsoInfo->exec.size;
 	uint8 *k = (uint8 *)&key;
 	uint8 *v = (uint8 *)&val;

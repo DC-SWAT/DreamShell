@@ -20,7 +20,13 @@ static void *ubc_handler(register_stack *stack, void *current_vector) {
 		ubc_clear_break(UBC_CHANNEL_B);
 		// LOGF("UBC: A\n");
 		// dump_regs(stack);
+#ifdef HAVE_MAPLE
+        if(IsoInfo->emu_vmu) {
+            maple_dma_handler(current_vector, stack, current_vector);
+        }
+#else
         (void)stack;
+#endif
 	}
 
 	if(ubc_is_channel_break(UBC_CHANNEL_B)) {

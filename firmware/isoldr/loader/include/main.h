@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _ISO_LOADER_H
@@ -31,10 +31,10 @@
 
 #define PHYS_ADDR(addr) ((addr) & 0x0fffffff)
 #define CACHED_ADDR(addr) (PHYS_ADDR(addr) | 0x80000000)
-#define UNCACHED_ADDR(addr) (PHYS_ADDR(addr) | 0xa0000000)
+#define NONCACHED_ADDR(addr) (PHYS_ADDR(addr) | 0xa0000000)
 #define ALIGN32_ADDR(addr) (((addr) + 0x1f) & ~0x1f)
 
-#define SYD_DDS_FLAG_ADDR UNCACHED_ADDR(IPBIN_ADDR + 0xfc))
+#define SYD_DDS_FLAG_ADDR NONCACHED_ADDR(IPBIN_ADDR + 0xfc))
 #define SYD_DDS_FLAG_CLEAR 0x20
 
 #define is_custom_bios() (*(uint16 *)0x00100018 != 0x4e46)
@@ -49,7 +49,7 @@ void setup_machine_state();
 
 #define launch(addr) \
 	void (*fboot)(uint32) __attribute__((noreturn));     \
-	fboot = (void *)(UNCACHED_ADDR((uint32)&boot_stub)); \
+	fboot = (void *)(NONCACHED_ADDR((uint32)&boot_stub)); \
 	fboot(addr)
 
 void video_init();
