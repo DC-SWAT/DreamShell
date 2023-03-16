@@ -81,25 +81,25 @@ typedef struct ide_device
 s32 g1_bus_init(void);
 
 void g1_dma_set_irq_mask(s32 last_transfer);
-s32 g1_dma_has_irq_mask();
+u32 g1_dma_has_irq_mask();
 s32 g1_dma_init_irq(void);
 void g1_dma_irq_hide(s32 all);
 void g1_dma_irq_restore(void);
 
 void g1_dma_start(u32 addr, size_t bytes);
 void g1_dma_abort(void);
-s32 g1_dma_in_progress(void);
+u32 g1_dma_in_progress(void);
 u32 g1_dma_transfered(void);
 
 void g1_pio_reset(size_t total_bytes);
 void g1_pio_xfer(u32 addr, size_t bytes);
 void g1_pio_abort(void);
-s32 g1_pio_in_progress(void);
+u32 g1_pio_in_progress(void);
 u32 g1_pio_transfered(void);
 
 void g1_ata_xfer(u32 addr, size_t bytes);
 void g1_ata_abort(void);
-s32 g1_ata_in_progress(void);
+u32 g1_ata_in_progress(void);
 u32 g1_ata_transfered(void);
 
 void cdrom_spin_down(u8 drive);

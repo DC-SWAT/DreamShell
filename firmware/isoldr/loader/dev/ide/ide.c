@@ -152,16 +152,17 @@ typedef struct ide_req {
 #endif
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
+static u32 device_count = 0;
 static u32 g1_dma_part_avail = 0;
 static u32 g1_dma_irq_visible = 1;
-static s32 g1_dma_irq_idx_game = 0;
+static u32 g1_dma_irq_code_game = 0;
 
 static u32 g1_pio_total = 0;
 static u32 g1_pio_avail = 0;
 static u32 g1_pio_trans = 0;
 
 #ifdef HAVE_EXPT
-static s8 g1_dma_irq_idx_internal = 0;
+static u32 g1_dma_irq_code_internal = 0;
 #endif
 
 
@@ -187,7 +188,7 @@ u16 swap16(u16 n) {
 }
 
 /* Is a G1 DMA in progress? */
-s32 g1_dma_in_progress(void) {
+u32 g1_dma_in_progress(void) {
     return IN32(G1_ATA_DMA_STATUS);
 }
 
@@ -204,44 +205,42 @@ static void delay_1ms() {
 
 void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
-	uint32 code = *REG_INTEVT;
-	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
-	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
+	const uint32 code = *REG_INTEVT;
+	const uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+	const uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
+	const uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
+	const uint32 errFlags = (ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN | ASIC_ERR_G1DMA_ROM_FLASH);
 
 	(void)passer;
 	(void)stack;
 
-	if ((statusErr & ASIC_ERR_G1DMA_ILLEGAL) || (statusErr & ASIC_ERR_G1DMA_OVERRUN) || (statusErr & ASIC_ERR_G1DMA_ROM_FLASH)) {
-		LOGFF("ERROR 0x%08lx %d\n", statusErr, g1_dma_irq_visible);
-		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = ASIC_ERR_G1DMA_ROM_FLASH | ASIC_ERR_G1DMA_ILLEGAL | ASIC_ERR_G1DMA_OVERRUN;
+	if (statusErr & errFlags) {
+		LOGFF("G1_ERROR_IRQ: 0x%03lx 0x%08lx %d\n", code, statusErr, g1_dma_irq_visible);
+		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
 		poll_all();
 		return my_exception_finish;
 	}
 
-	uint32 g1_dma_irq_idx = (g1_dma_irq_visible ? g1_dma_irq_idx_game : g1_dma_irq_idx_internal);
-
-	if ((g1_dma_irq_idx == 13 && code != EXP_CODE_INT13) ||
-		(g1_dma_irq_idx == 11 && code != EXP_CODE_INT11) || 
-		(g1_dma_irq_idx == 9 && code != EXP_CODE_INT9)
-	) {
-		return current_vector;
-	}
-
-#ifdef DEBUG
-	DBGFF("IRQ: %08lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx, VISIBLE: %d\n",
-	      *REG_INTEVT, status, statusExt, statusErr, g1_dma_irq_visible);
-//	dump_regs(stack);
-#else
-	// LOGFF("%08lx 0x%08lx 0x%02lx %d 0x%08lx\n",
-	// 	*REG_INTEVT, status, statusExt, g1_dma_irq_visible, (uint32)r15());
-#endif
+	const uint32 g1_dma_irq_code = (g1_dma_irq_visible ? g1_dma_irq_code_game : g1_dma_irq_code_internal);
 
 	if (statusExt & ASIC_EXT_GD_CMD) {
+		LOGF("G1_CMD_IRQ: 0x%03lx 0x%08lx %d\n", code, statusExt, g1_dma_irq_visible);
 		if (g1_dma_irq_visible == 0) {
 			g1_ata_ack_irq();
 		}
 	}
+
+	if (g1_dma_irq_code && g1_dma_irq_code != code) {
+		return current_vector;
+	}
+
+#ifdef LOG
+	if (g1_dma_irq_code == 0) {
+		LOGFF("WARNING: IRQ code is not set!");
+	}
+	LOGF("G1_DMA_IRQ: 0x%03lx 0x%08lx %d\n", code, status, g1_dma_irq_visible);
+#endif
+
 	if (status & ASIC_NRM_GD_DMA) {
 		/* Processing filesystem */
 		poll_all();
@@ -260,8 +259,8 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 s32 g1_dma_init_irq() {
 
-	g1_dma_irq_idx_game = 0;
-	g1_dma_irq_idx_internal = 0;
+	g1_dma_irq_code_game = 0;
+	g1_dma_irq_code_internal = 0;
 	g1_dma_irq_visible = 1;
 
 #ifdef NO_ASIC_LT
@@ -305,37 +304,19 @@ void g1_dma_start(u32 addr, size_t bytes) {
 void g1_dma_irq_hide(s32 all) {
 
 	g1_dma_irq_visible = 0;
-
-	if (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) {
-
-		g1_dma_irq_idx_game = 9;
-		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
-
-	} else if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) {
-
-		g1_dma_irq_idx_game = 11;
-		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
-
-	} else if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) {
-
-		g1_dma_irq_idx_game = 13;
-		*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
-
-	} else {
-		g1_dma_irq_idx_game = 0;
-	}
+	g1_dma_irq_code_game = g1_dma_has_irq_mask();
 
 #ifdef HAVE_EXPT
 	if (!all && exception_inited()) {
-		if (g1_dma_irq_idx_game == 9) {
+		if (g1_dma_irq_code_game == EXP_CODE_INT9) {
 			*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
-			g1_dma_irq_idx_internal = 11;
+			g1_dma_irq_code_internal = EXP_CODE_INT11;
 		} else {
 			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
-			g1_dma_irq_idx_internal = 9;
+			g1_dma_irq_code_internal = EXP_CODE_INT9;
 		}
 	} else {
-		g1_dma_irq_idx_internal = 0;
+		g1_dma_irq_code_internal = 0;
 	}
 #else
 	(void)all;
@@ -345,23 +326,23 @@ void g1_dma_irq_hide(s32 all) {
 void g1_dma_irq_restore(void) {
 
 #ifdef HAVE_EXPT
-	if (g1_dma_irq_idx_internal == 9) {
+	if (g1_dma_irq_code_internal == EXP_CODE_INT9) {
 		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
-	} else if(g1_dma_irq_idx_internal == 11) {
+	} else if(g1_dma_irq_code_internal == EXP_CODE_INT11) {
 		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
 	}
-	// g1_dma_irq_idx_internal = 0;
+	g1_dma_irq_code_internal = 0;
 #endif
 
-	if(g1_dma_irq_idx_game == 9) {
+	if(g1_dma_irq_code_game == EXP_CODE_INT9) {
 		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
-	} else if(g1_dma_irq_idx_game == 11) {
+	} else if(g1_dma_irq_code_game == EXP_CODE_INT11) {
 		*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
-	} else if(g1_dma_irq_idx_game == 13) {
+	} else if(g1_dma_irq_code_game == EXP_CODE_INT13) {
 		*ASIC_IRQ13_MASK |= ASIC_NRM_GD_DMA;
 	}
 
-	// g1_dma_irq_idx_game = 0;
+	g1_dma_irq_code_game = 0;
 	g1_dma_irq_visible = 1;
 }
 
@@ -390,22 +371,22 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 		} else if (!last_transfer && g1_dma_irq_visible) {
 			g1_dma_irq_hide(0);
 		} else {
-			if(!g1_dma_irq_idx_game) {
-				g1_dma_irq_idx_game = g1_dma_has_irq_mask();
+			if(!g1_dma_irq_code_game) {
+				g1_dma_irq_code_game = g1_dma_has_irq_mask();
 			}
 			return;
 		}
 	}
 
 #ifdef LOG
-	LOGFF("%d %d %d (mode=%d last=%d game=%d int=%d)\n",
-		(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? 9 : 0, 
-		(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? 11 : 0, 
-		(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? 13 : 0,
+	LOGFF("%d %d %d (mode=%d last=%d game=%d int=%03lx)\n",
+		(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT9 : 0, 
+		(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT11 : 0, 
+		(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT13 : 0,
 		dma_mode, last_transfer,
-		g1_dma_irq_idx_game,
+		g1_dma_irq_code_game,
 # ifdef HAVE_EXPT
-		g1_dma_irq_idx_internal
+		g1_dma_irq_code_internal
 # else
 		0
 # endif
@@ -413,10 +394,10 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 #endif
 }
 
-s32 g1_dma_has_irq_mask() {
-	if (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) return 9; 
-	if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) return 11; 
-	if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) return 13;
+u32 g1_dma_has_irq_mask() {
+	if (*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) return EXP_CODE_INT9; 
+	if (*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) return EXP_CODE_INT11; 
+	if (*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) return EXP_CODE_INT13;
 	return 0;
 }
 
@@ -470,9 +451,8 @@ static const s8 *dev_proto_name[] = {"ATAPI", "SPI"};
 
 static s32 g1_dev_scan(void)
 {
-	memset(&ide_devices[0], 0, sizeof(ide_devices));
-
 #ifdef DEV_TYPE_EMU
+	memset(&ide_devices[0], 0, sizeof(ide_devices));
 	ide_devices[0].wdma_modes = 0x0407;
 	ide_devices[0].cd_info.sec_type = 0x10;
 	ide_devices[0].reserved     = 1;
@@ -487,9 +467,19 @@ static s32 g1_dev_scan(void)
 #else
 
 	s32 i;
-	u8 j, st, err, type, count = 0;
+	u8 j, st, err, type;
 	int d = 0;
-	u16 *data = (u16 *) malloc(512);
+	u16 *data;
+
+#if defined(DEV_TYPE_IDE)
+	// Do not init twice.
+	if(device_count) {
+		return device_count;
+	}
+#endif
+
+	memset(&ide_devices[0], 0, sizeof(ide_devices));
+	data = (u16 *) malloc(512);
 
 	if (!data) {
 		LOGFF("Memory failed");
@@ -635,7 +625,7 @@ static s32 g1_dev_scan(void)
 		ide_devices[j].reserved     = 1;
 		ide_devices[j].type         = type;
 		ide_devices[j].drive        = j;
-		count++;
+		device_count++;
 	}
 
 #ifdef LOG
@@ -661,7 +651,7 @@ static s32 g1_dev_scan(void)
 	}
 #endif
 	free(data);
-	return count;
+	return device_count;
 #endif /* DEV_TYPE_EMU */
 }
 
@@ -961,8 +951,8 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 
 	g1_dma_part_avail = 0;
 
-	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
-		req.cmd == G1_WRITE_DMA ? "DMA" : "PIO", fs_dma_enabled(),
+	LOGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
+		req.cmd == G1_READ_DMA ? "DMA" : "PIO", fs_dma_enabled(),
 		req.async ? "ASYNC" : "BLOCKED");
 
 	return g1_ata_access(&req);
@@ -1076,9 +1066,7 @@ s32 g1_ata_poll(void) {
 		return rv > 0 ? rv : 32;
 	}
 
-	if(!g1_dma_irq_visible) {
-		rv = g1_ata_ack_irq();
-	}
+	rv = g1_ata_ack_irq();
 
 	if(!g1_dma_part_avail) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
@@ -1152,7 +1140,7 @@ void g1_pio_abort(void) {
 	g1_ata_ack_irq();
 }
 
-s32 g1_pio_in_progress(void) {
+u32 g1_pio_in_progress(void) {
 	return g1_pio_trans;
 }
 
@@ -1169,7 +1157,7 @@ void g1_ata_xfer(u32 addr, size_t bytes) {
 	}
 }
 
-s32 g1_ata_in_progress(void) {
+u32 g1_ata_in_progress(void) {
 	if (fs_dma_enabled()) {
 		return g1_dma_in_progress();
 	} else {
