@@ -553,25 +553,43 @@ static void data_transfer_dma_stream() {
 
 	fs_enable_dma(FS_DMA_SHARED);
 	GDS->ata_status = 2;
+	GDS->drv_stat = CD_STATUS_PLAYING;
+
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
 	if(GDS->status == CMD_STAT_PROCESSING) {
 		GDS->status = CMD_STAT_WAITING;
+	} else {
+		GDS->ata_status = 0;
+		return;
 	}
+
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	do {
+		gdcExitToGame();
+		if ((ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT] & ASIC_EXT_GD_CMD)) {
+			break;
+		}
+	} while(GDS->cmd_abort == 0);
+	g1_ata_ack_irq();
+#endif
 
 	GDS->ata_status = 1;
 
 	while(GDS->ata_status) {
 
-		if(GDS->requested == 0 || GDS->cmd_abort != 0) {
+		GDS->transfered = pre_read_xfer_size();
+
+		if((!GDS->requested && !pre_read_xfer_busy()) || GDS->cmd_abort) {
 			GDS->ata_status = 0;
 			GDS->status = CMD_STAT_ABORTED;
 			pre_read_xfer_abort();
 			break;
 		}
-		GDS->transfered = pre_read_xfer_size();
 		gdcExitToGame();
 	}
+
+	GDS->drv_stat = CD_STATUS_PAUSED;
 }
 
 static void data_transfer_pio_stream() {
@@ -580,10 +598,15 @@ static void data_transfer_pio_stream() {
 
 	fs_enable_dma(FS_DMA_DISABLED);
 	GDS->ata_status = 2;
+	GDS->drv_stat = CD_STATUS_PLAYING;
+
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
 	if(GDS->status == CMD_STAT_PROCESSING) {
 		GDS->status = CMD_STAT_WAITING;
+	} else {
+		GDS->ata_status = 0;
+		return;
 	}
 
 	GDS->ata_status = 1;
@@ -595,22 +618,29 @@ static void data_transfer_pio_stream() {
 			pre_read_xfer_start(GDS->param[2], GDS->param[1]);
 
 			GDS->transfered += GDS->param[1];
-			GDS->requested -= GDS->param[1];
 			GDS->param[2] = 0;
+
+			if (GDS->requested == 0) {
+				GDS->cmd_abort = 1;
+			}
 
 			if(GDS->callback != 0) {
 				void (*callback)() = (void (*)())(GDS->callback);
 				callback(GDS->callback_param);
 			}
-			if(GDS->requested == 0 || GDS->cmd_abort != 0) {
-				GDS->ata_status = 0;
-				GDS->status = CMD_STAT_ABORTED;
-				pre_read_xfer_end();
-				break;
-			}
 		}
+
+		if(GDS->cmd_abort != 0) {
+			GDS->ata_status = 0;
+			GDS->status = CMD_STAT_ABORTED;
+			pre_read_xfer_end();
+			break;
+		}
+
 		gdcExitToGame();
 	}
+
+	GDS->drv_stat = CD_STATUS_PAUSED;
 }
 
 static int is_transfer_cmd(int cmd) {
@@ -1121,7 +1151,6 @@ int gdcReadAbort(int gd_chn) {
 				case CMD_STAT_PROCESSING:
 				case CMD_STAT_ABORTED:
 				case CMD_STAT_WAITING:
-					GDS->status = CMD_STAT_IDLE;
 					GDS->cmd_abort = 1;
 					return 0;
 				default:
@@ -1243,8 +1272,22 @@ int gdcReqPioTrans(int gd_chn, int *piobuf) {
 
 	GDS->param[2] = piobuf[0];
 	GDS->param[1] = piobuf[1];
+	GDS->requested -= GDS->param[1];
 
-	GDS->drv_stat = CD_STATUS_PLAYING;
+	// FIXME
+	if (GDS->requested == 0) {
+		pre_read_xfer_start(GDS->param[2], GDS->param[1]);
+
+		GDS->transfered += GDS->param[1];
+		GDS->param[2] = 0;
+		GDS->cmd_abort = 1;
+
+		if(GDS->callback != 0) {
+			void (*callback)() = (void (*)())(GDS->callback);
+			callback(GDS->callback_param);
+		}
+	}
+
 	return 0;
 }
 

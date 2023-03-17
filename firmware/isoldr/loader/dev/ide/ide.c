@@ -215,7 +215,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	(void)stack;
 
 	if (statusErr & errFlags) {
-		LOGFF("G1_ERROR_IRQ: 0x%03lx 0x%08lx %d\n", code, statusErr, g1_dma_irq_visible);
+		DBGFF("G1_ERROR_IRQ: 0x%03lx 0x%08lx %d\n", code, statusErr, g1_dma_irq_visible);
 		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
 		poll_all();
 		return my_exception_finish;
@@ -224,7 +224,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	const uint32 g1_dma_irq_code = (g1_dma_irq_visible ? g1_dma_irq_code_game : g1_dma_irq_code_internal);
 
 	if (statusExt & ASIC_EXT_GD_CMD) {
-		LOGF("G1_CMD_IRQ: 0x%03lx 0x%08lx %d\n", code, statusExt, g1_dma_irq_visible);
+		DBGF("G1_CMD_IRQ: 0x%03lx 0x%08lx %d\n", code, statusExt, g1_dma_irq_visible);
 		if (g1_dma_irq_visible == 0) {
 			g1_ata_ack_irq();
 		}
@@ -234,7 +234,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		return current_vector;
 	}
 
-#ifdef LOG
+#ifdef DEBUG
 	if (g1_dma_irq_code == 0) {
 		LOGFF("WARNING: IRQ code is not set!");
 	}
@@ -791,7 +791,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			OUT8(G1_ATA_CTL, 2);
 			for (u32 i = 0; i < len; i++)
 			{
-				dcache_pref_range((u32)buff, sector_size);
+				// dcache_pref_range((u32)buff, sector_size);
 				g1_ata_wait_nbsy();
 
 				for (u32 j = 0; j < sector_size >> 1; ++j)
@@ -951,7 +951,7 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 
 	g1_dma_part_avail = 0;
 
-	LOGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
+	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
 		req.cmd == G1_READ_DMA ? "DMA" : "PIO", fs_dma_enabled(),
 		req.async ? "ASYNC" : "BLOCKED");
 
@@ -1020,7 +1020,7 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	u8 lba_io[6];
 	u8 head;
 
-	LOGF("G1_ATA_PRE_READ: s=%ld c=%ld\n", (uint32)sector, count);
+	DBGF("G1_ATA_PRE_READ: s=%ld c=%ld\n", (uint32)sector, count);
 	g1_dma_abort();
 
 	// LBA48 only
