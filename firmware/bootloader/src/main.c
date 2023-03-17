@@ -1,7 +1,7 @@
 /**
  * DreamShell boot loader
  * Main
- * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #include "main.h"
@@ -51,7 +51,7 @@ int flashrom_get_region_only() {
 	
 	int start, size;
 	uint8 region[6] = { 0 };
-	region[2] = *(uint8*)0x0021A002;
+	region[2] = *(uint8 *)0xa021a002;
 
 	/* Find the partition */
 	if(flashrom_info(FLASHROM_PT_SYSTEM, &start, &size) < 0) {

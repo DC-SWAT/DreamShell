@@ -217,7 +217,6 @@ Cmd_t *GetCmdByName(const char *name);
 int ToggleConsole();
 int ConsoleIsVisible();
 
-int SearchRoot(int pass_cnt);
 void vmu_draw_string(const char *str);
 int flashrom_get_region_only();
 

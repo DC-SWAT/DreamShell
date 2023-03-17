@@ -1,11 +1,12 @@
 /**
  * DreamShell boot loader
  * Menu
- * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2023 SWAT <http://www.dc-swat.ru>
  */
 
 
 #include "main.h"
+#include "fs.h"
 
 static pvr_ptr_t txr_font;
 static float alpha, curs_alpha;
@@ -17,7 +18,7 @@ static volatile int load_process = 0;
 static int load_in_thread = 0;
 static volatile int binary_ready = 0;
 static uint32 binary_size = 0;
-static uint8 *binary_buff = NULL; //(uint8 *)0x8ce00000
+static uint8 *binary_buff = NULL;
 
 typedef struct menu_item {
 	char name[MAX_FN_LEN];
@@ -34,7 +35,6 @@ static int selected = 0;
 static char message[MAX_FN_LEN];
 
 //static char cur_path[MAX_FN_LEN];
-//static int use_browsing = 0;
 //static void clear_menu();
 
 static int must_lock_video() {
@@ -67,10 +67,8 @@ int show_message(const char *fmt, ...) {
 	va_start(args, fmt);
 	i = vsnprintf(message, MAX_FN_LEN, fmt, args);
 	va_end(args);
-	
-//	if(!start_pressed)
-//		dbglog(DBG_INFO, "%s\n", message);
-		
+
+
 	return i;
 }
 
@@ -102,8 +100,6 @@ static void draw_char(float x1, float y1, float z1, float a, float r,
 
 	if (c == ' ')
 		return;
-
-	//assert( c > ' ' && c < 127 );
 	
 	if(c > ' ' && c < 127) {
 	
@@ -215,75 +211,74 @@ static int search_root_check(char *device, char *path, char *file) {
 
 
 static int search_root() {
-	
+
 	dirent_t *ent;
 	file_t hnd;
 	menu_item_t *item;
 	char name[MAX_FN_LEN];
 	int i;
-	
+
 	hnd = fs_open("/", O_RDONLY | O_DIR);
-	
+
 	if(hnd == FILEHND_INVALID) {
 		dbglog(DBG_ERROR, "Can't open root directory!\n");
 		return -1;
 	}
-	
+
 	while ((ent = fs_readdir(hnd)) != NULL) {
-		
-		if(ent->name[0] == 0 || !strncasecmp(ent->name, "pty", 3) || !strncasecmp(ent->name, "ram", 3) ||
-			!strncasecmp(ent->name, "sock", 4) || !strncasecmp(ent->name, "vmu", 3)) {
+
+		if(!RootDeviceIsSupported(ent->name)) {
 			continue;
 		}
-		
+
 		item = calloc(1, sizeof(menu_item_t));
-		
+
 		if(!item) {
 			break;
 		}
-			
+
 		item->next = items;
 		items = item;
-		
+
 		for(i = 0; i < strlen(ent->name); i++) {
 			name[i] = toupper((int)ent->name[i]);
 		}
-		
+
 		name[i] = '\0';
 		snprintf(item->name, MAX_FN_LEN, "Boot from %s", name);
 		item->mode = 0;
 		items_cnt++;
-		
+
 		dbglog(DBG_INFO, "Checking for root directory on /%s\n", ent->name);
-		
+
 		if(!search_root_check(ent->name, "/DS", "/DS_CORE.BIN")) {
-				
+
 			snprintf(item->path, MAX_FN_LEN, "/%s/DS/DS_CORE.BIN", ent->name);
-			
+
 		} else if(!search_root_check(ent->name, "", "/DS_CORE.BIN")) {
-						
+
 			snprintf(item->path, MAX_FN_LEN, "/%s/DS_CORE.BIN", ent->name);
-			
+
 		} else if(!search_root_check(ent->name, "", "/1DS_CORE.BIN")) {
-						
+
 			snprintf(item->path, MAX_FN_LEN, "/%s/1DS_CORE.BIN", ent->name);
 			item->is_scrambled = 1;
-			
+
 		} else if(!search_root_check(ent->name, "/DS", "/ZDS_CORE.BIN")) {
-				
+
 			snprintf(item->path, MAX_FN_LEN, "/%s/DS/ZDS_CORE.BIN", ent->name);
 			item->is_gz = 1;
-			
+
 		} else if(!search_root_check(ent->name, "", "/ZDS_CORE.BIN")) {
-						
+
 			snprintf(item->path, MAX_FN_LEN, "/%s/ZDS_CORE.BIN", ent->name);
 			item->is_gz = 1;
-			
+
 		} else {
 			item->path[0] = 0;
 		}
 	}
-	
+
 	fs_close(hnd);
 	return 0;
 }
@@ -469,8 +464,6 @@ void *loading_thd(void *param) {
 			
 				while((i = gzread(fdz, pbuff, 16384)) > 0) {
 					update_progress((float)count / ((float)binary_size / 100.0f));
-//					dbglog(DBG_INFO, "Loaded and uncompressed %d to %p\n", i, pbuff);
-//					thd_sleep(10);
 					pbuff += i;
 					count += i;
 				}
@@ -640,10 +633,10 @@ static void check_input() {
 				loading_core(0);
 			}
 			if(state->buttons & CONT_Y) {
-				loading_core(1);//arch_exit();
+				loading_core(1);
 			}
 			if(state->buttons & CONT_X) {
-				loading_core(1);//arch_menu();
+				loading_core(1);
 			}
 			frames = 0;
 			last_btns = state->buttons;

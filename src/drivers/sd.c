@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014 by SWAT <swat@211.ru>
+ * Copyright (c) 2014, 2023 by SWAT <swat@211.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -259,7 +259,6 @@ int sdc_init(void) {
 		dbglog(DBG_DEBUG, "%s: Enter Idle state\n", __func__);
 #endif
 		timer_spin_sleep(20);
-//		thd_sleep(100);
 		
 		i = 0;
 		
@@ -331,7 +330,6 @@ int sdc_init(void) {
 	(void)spi_slow_sr_byte(0xff); /* Idle (Release DO) */
 
 	if (ty) { /* Initialization succeded */
-//		sdc_print_ident();
 		initted = 1;
 		return 0;
 	}
@@ -445,10 +443,6 @@ int sdc_read_blocks(uint32 block, size_t count, uint8 *buf) {
 		(void)spi_rec_byte();			/* Idle (Release DO) */
 		if (cnt == 0) break;
 	}
-	
-//#ifdef SD_DEBUG
-//	dbglog(DBG_DEBUG, "%s: retry = %d (MAX=%d) cnt = %d\n", __func__, retry, MAX_RETRY, cnt);
-//#endif
 
 	if((retry >= MAX_RETRY || cnt > 0)) {
 		errno = EIO;
@@ -547,11 +541,7 @@ int sdc_write_blocks(uint32 block, size_t count, const uint8 *buf) {
 		(void)spi_rec_byte();			/* Idle (Release DO) */
 		if (cnt == 0) break;
 	}
-	
-//#ifdef SD_DEBUG
-//	dbglog(DBG_DEBUG, "%s: retry = %d (MAX=%d) cnt = %d\n", __func__, retry, MAX_RETRY, cnt);
-//#endif
-	
+
 	if((retry >= MAX_RETRY || cnt > 0)) {
 		errno = EIO;
 		return -1;
@@ -562,18 +552,18 @@ int sdc_write_blocks(uint32 block, size_t count, const uint8 *buf) {
 
 
 uint64 sdc_get_size(void) {
-	
+
 	uint8 csd[16];
 	int exponent;
 	uint64 rv = 0;
-	
+
 	if(!initted) {
 		errno = ENXIO;
 		return (uint64)-1;
 	}
-	
+
 	SELECT();
-	
+
 	if(send_cmd(CMD9, 0)) {
 		rv = (uint64)-1;
 		errno = EIO;
@@ -666,7 +656,6 @@ int sdc_print_ident(void) {
 	dbglog(DBG_DEBUG, "Product serial number    : %" PRIu32 "\n", SD_MMC_CID_GET_PSN(cid));
 	dbglog(DBG_DEBUG, "Manufacturing date       : %" PRIu8 "\n",  SD_MMC_CID_GET_MDT(cid));
 	dbglog(DBG_DEBUG, "7-bit CRC checksum       : %" PRIu8 "\n",  SD_MMC_CID_GET_CRC7(cid));
-
 
 out:
 	DESELECT();
@@ -798,3 +787,28 @@ int sdc_blockdev_for_partition(int partition, kos_blockdev_t *rv,
     return 0;
 }
 
+int sdc_blockdev_for_device(kos_blockdev_t *rv) {
+    sd_devdata_t *ddata;
+
+    if(!initted) {
+        errno = ENXIO;
+        return -1;
+    }
+
+    if(!rv) {
+        errno = EFAULT;
+        return -1;
+    }
+
+    /* Allocate the device data */
+    if(!(ddata = (sd_devdata_t *)malloc(sizeof(sd_devdata_t)))) {
+        errno = ENOMEM;
+        return -1;
+    }
+
+    ddata->start_block = 0;
+    ddata->block_count = (sdc_get_size() / 512);
+    rv->dev_data = ddata;
+
+    return 0;
+}

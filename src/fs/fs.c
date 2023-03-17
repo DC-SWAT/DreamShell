@@ -60,96 +60,96 @@ static int check_partition(uint8 *buf, int partition) {
 
 
 int InitSDCard() {
-	
+
 	dbglog(DBG_INFO, "Checking for SD card...\n");
 	uint8 partition_type;
 	int part = 0, fat_part = 0;
 	char path[8];
-	uint32 sd_block_count = 0;
-	uint64 sd_capacity = 0;
 	uint8 buf[512];
-	
+	kos_blockdev_t *dev;
+
 	if(sdc_init()) {
 		dbglog(DBG_INFO, "SD card not found.\n");
 		return -1;
 	}
-	
-	sd_capacity = sdc_get_size();
-	sd_block_count = (uint32)(sd_capacity / 512);
-	
-	dbglog(DBG_INFO, "SD card initialized, capacity %" PRIu32 " MB\n", (uint32)(sd_capacity / 1024 / 1024));
-	
+
+	dbglog(DBG_INFO, "SD card initialized, capacity %" PRIu32 " MB\n",
+		(uint32)(sdc_get_size() / 1024 / 1024));
+
 //	if(sdc_print_ident()) {
 //		dbglog(DBG_INFO, "SD card read CID error\n");
 //		return -1;
 //	}
-	
+
 	if(sdc_read_blocks(0, 1, buf)) {
 		dbglog(DBG_ERROR, "Can't read MBR from SD card\n");
 		return -1;
 	}
-	
+
 	for(part = 0; part < MAX_PARTITIONS; part++) {
-		
-		if(!check_partition(buf, part) && !sdc_blockdev_for_partition(part, &sd_dev[part], &partition_type)) {
-			
+
+		dev = &sd_dev[part];
+
+		if(!check_partition(buf, part) && !sdc_blockdev_for_partition(part, dev, &partition_type)) {
+
 			if(!part) {
 				strcpy(path, "/sd");
 				path[3] = '\0';
 			} else {
 				sprintf(path, "sd%d", part);
-				path[strlen(path)] = '\0';
 			}
-			
+
 			/* Check to see if the MBR says that we have a Linux partition. */
 			if(is_ext2_partition(partition_type)) {
-				
+
 				dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
-				
+
 				if(fs_ext2_init()) {
+
 					dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
-					sd_dev[part].shutdown(&sd_dev[part]);
+					sd_dev[part].shutdown(dev);
+
 				} else {
+
 					dbglog(DBG_INFO, "Mounting filesystem...\n");
 
-					if(fs_ext2_mount(path, &sd_dev[part], FS_EXT2_MOUNT_READWRITE)) {
+					if(fs_ext2_mount(path, dev, FS_EXT2_MOUNT_READWRITE)) {
 						dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
-						sd_dev[part].shutdown(&sd_dev[part]);
+						sd_dev[part].shutdown(dev);
 					}
 				}
-				
+
 			} else if((fat_part = is_fat_partition(partition_type))) {
-			
+
 				dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
-				
-				sd_devdata_t *ddata = (sd_devdata_t *)sd_dev[part].dev_data;
-//				ddata->block_count += ddata->start_block;
-				ddata->block_count = sd_block_count;
-				ddata->start_block = 0;
-				
+
 				if(fs_fat_init()) {
+
 					dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
-					sd_dev[part].shutdown(&sd_dev[part]);
+					sd_dev[part].shutdown(dev);
+
 				} else {
-				
+
+					/* Need full disk block device for FAT */
+					sd_dev[part].shutdown(dev);
+					if(sdc_blockdev_for_device(dev)) {
+						continue;
+					}
+
 					dbglog(DBG_INFO, "Mounting filesystem...\n");
 
-					if(fs_fat_mount(path, &sd_dev[part], 0, part)) {
+					if(fs_fat_mount(path, dev, 0, part)) {
 						dbglog(DBG_INFO, "Could not mount device as fatfs.\n");
-						sd_dev[part].shutdown(&sd_dev[part]);
+						sd_dev[part].shutdown(dev);
 					}
 				}
-				
+
 			} else {
 				dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
-				sd_dev[part].shutdown(&sd_dev[part]);
+				sd_dev[part].shutdown(dev);
 			}
-			
-		} else {
-//			dbglog(DBG_ERROR, "Could not make blockdev for partition %d, error: %d\n", part, errno);
 		}
 	}
-
 	return 0;
 }
 
@@ -163,6 +163,7 @@ int InitIDE() {
 	uint8 buf[512];
 	 /* FIXME: G1 DMA has conflicts with other stuff like G2 DMA and so on */
 	int use_dma = 0;
+	kos_blockdev_t *dev;
 
 	if(g1_ata_init()) {
 		return -1;
@@ -183,9 +184,11 @@ int InitIDE() {
 	}
 
 	for(part = 0; part < MAX_PARTITIONS; part++) {
-		
-		if(!check_partition(buf, part) && !g1_ata_blockdev_for_partition(part, use_dma, &g1_dev[part], &partition_type)) {
-			
+
+		dev = &g1_dev[part];
+
+		if(!check_partition(buf, part) && !g1_ata_blockdev_for_partition(part, use_dma, dev, &partition_type)) {
+
 			if(!part) {
 				strcpy(path, "/ide");
 				path[4] = '\0';
@@ -200,19 +203,25 @@ int InitIDE() {
 				dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
 
 				if(fs_ext2_init()) {
+
 					dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
-					g1_dev[part].shutdown(&g1_dev[part]);
+					g1_dev[part].shutdown(dev);
+
 				} else {
 
-					/* Only PIO for EXT2 */
-					g1_dev[part].shutdown(&g1_dev[part]);
-					if(g1_ata_blockdev_for_partition(part, 0, &g1_dev[part], &partition_type)) {
-						continue;
+					if (use_dma) {
+						/* Only PIO for EXT2 */
+						g1_dev[part].shutdown(dev);
+						if(g1_ata_blockdev_for_partition(part, 0, dev, &partition_type)) {
+							continue;
+						}
 					}
 
 					dbglog(DBG_INFO, "Mounting filesystem...\n");
-					if(fs_ext2_mount(path, &g1_dev[part], FS_EXT2_MOUNT_READWRITE)) {
+
+					if(fs_ext2_mount(path, dev, FS_EXT2_MOUNT_READWRITE)) {
 						dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
+						g1_dev[part].shutdown(dev);
 					}
 				}
 
@@ -220,28 +229,30 @@ int InitIDE() {
 
 				dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
 
-				/* Need full disk block device for FAT */
-				g1_dev[part].shutdown(&g1_dev[part]);
-				if(g1_ata_blockdev_for_device(use_dma, &g1_dev[part])) {
-					continue;
-				}
-
 				if(fs_fat_init()) {
+
 					dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
-					g1_dev[part].shutdown(&g1_dev[part]);
+					g1_dev[part].shutdown(dev);
+
 				} else {
+
+					/* Need full disk block device for FAT */
+					g1_dev[part].shutdown(dev);
+					if(g1_ata_blockdev_for_device(use_dma, dev)) {
+						continue;
+					}
 
 					dbglog(DBG_INFO, "Mounting filesystem...\n");
 
-					if(fs_fat_mount(path, &g1_dev[part], use_dma, part)) {
+					if(fs_fat_mount(path, dev, use_dma, part)) {
 						dbglog(DBG_INFO, "Could not mount device as fatfs.\n");
-						g1_dev[part].shutdown(&g1_dev[part]);
+						g1_dev[part].shutdown(dev);
 					}
 				}
 
 			} else {
 				dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
-				g1_dev[part].shutdown(&g1_dev[part]);
+				g1_dev[part].shutdown(dev);
 			}
 		}
 	}
@@ -299,6 +310,16 @@ int InitRomdisk() {
 }
 
 
+int RootDeviceIsSupported(const char *name) {
+	if(!strncmp(name, "sd", 2) ||
+		!strncmp(name, "ide", 3) ||
+		!strncmp(name, "cd", 2) ||
+		!strncmp(name, "pc", 2) ||
+		!strncmp(name, "brd", 3)) {
+		return 1;
+	}
+	return 0;
+}
 
 static int SearchRootCheck(char *device, char *path, char *file) {
 
@@ -313,17 +334,18 @@ static int SearchRootCheck(char *device, char *path, char *file) {
 	if((file == NULL && DirExists(check)) || (file != NULL && FileExists(check))) {
 		sprintf(check, "/%s%s", device, path);
 		setenv("PATH", check, 1);
-		return 0;
+		return 1;
 	}
 
-	return -1;
+	return 0;
 }
 
 
-int SearchRoot(int pass_cnt) {
+int SearchRoot() {
 
 	dirent_t *ent;
 	file_t hnd;
+	int detected = 0;
 
 	hnd = fs_open("/", O_RDONLY | O_DIR);
 
@@ -333,36 +355,34 @@ int SearchRoot(int pass_cnt) {
 	}
 
 	while ((ent = fs_readdir(hnd)) != NULL) {
-		
-		if(!strncmp(ent->name, "pty", 3) || 
-			!strncmp(ent->name, "sock", 4) || 
-			!strncmp(ent->name, "vmu", 3) || 
-			!strncmp(ent->name, "rd", 2)
-			/* || !strncmp(ent->name, "sd", 2)*/) {
+
+		if(!RootDeviceIsSupported(ent->name)) {
 			continue;
 		}
 
 		dbglog(DBG_INFO, "Checking for root directory on /%s\n", ent->name);
 
-		if(!SearchRootCheck(ent->name, "/DS", "/lua/startup.lua") || !SearchRootCheck(ent->name, "", "/lua/startup.lua")) {
-			if(!pass_cnt--) goto success;
+		if(SearchRootCheck(ent->name, "/DS", "/lua/startup.lua") ||
+			SearchRootCheck(ent->name, "", "/lua/startup.lua")) {
+			detected = 1;
+			break;
 		}
 	}
 
-	dbglog(DBG_ERROR, "Can't find root directory.\n");
-	setenv("PATH", "/ram", 1);
-	setenv("TEMP", "/ram", 1);
 	fs_close(hnd);
-	return -1;
 
-success:
-	fs_close(hnd);
+	if (!detected) {
+		dbglog(DBG_ERROR, "Can't find root directory.\n");
+		setenv("PATH", "/ram", 1);
+		setenv("TEMP", "/ram", 1);
+		return -1;
+	}
 
 	if(strncmp(getenv("PATH"), "/pc", 3) && DirExists("/pc")) {
 
 		dbglog(DBG_INFO, "Checking for root directory on /pc\n");
 
-		if(SearchRootCheck("pc", "", "/lua/startup.lua")) {
+		if(!SearchRootCheck("pc", "", "/lua/startup.lua")) {
 			SearchRootCheck("pc", "/DS", "/lua/startup.lua");
 		}
 	}

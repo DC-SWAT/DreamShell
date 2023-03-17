@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    drivers/sd.h
-   Copyright (C) 2014 SWAT
+   Copyright (C) 2014, 2023 SWAT
 */
 
 #ifndef _SD_H
@@ -26,7 +26,7 @@ __BEGIN_DECLS
     This function initializes the SD card for first use. This includes all steps
     of the basic initialization sequence for SPI mode, as documented in the SD
     card spec and at http://elm-chan.org/docs/mmc/mmc_e.html . This also will
-    call scif_sd_init() for you, so you don't have to worry about that ahead of
+    call spi_init() for you, so you don't have to worry about that ahead of
     time.
 
     \retval 0               On success.
@@ -143,6 +143,8 @@ int sdc_print_ident(void);
 */
 int sdc_blockdev_for_partition(int partition, kos_blockdev_t *rv,
                               uint8 *partition_type);
+
+int sdc_blockdev_for_device(kos_blockdev_t *rv);
 
 __END_DECLS
 

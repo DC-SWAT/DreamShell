@@ -19,6 +19,7 @@ InitSDCard
 InitIDE
 InitRomdisk
 SearchRoot
+RootDeviceIsSupported
 snd_init_firmware
 vmu_draw_string
 vmu_draw_string_xy
@@ -1852,6 +1853,7 @@ sdc_write_blocks
 sdc_get_size
 sdc_print_ident
 sdc_blockdev_for_partition
+sdc_blockdev_for_device
 #
 # Ext2 Filesystem
 fs_ext2_init

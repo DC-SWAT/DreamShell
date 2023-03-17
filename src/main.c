@@ -166,13 +166,11 @@ int InitDS() {
 #endif
 
 	if(!emu) {
+		InitIDE();
 
 		if(InitSDCard()) {
 			scif_init();
 		}
-
-		InitIDE();
-
 		if(is_custom_bios()) {
 			InitRomdisk();
 		}
@@ -180,7 +178,7 @@ int InitDS() {
 		setenv("EMU", "Unknown", 1);
 	}
 
-	SearchRoot(0);
+	SearchRoot();
 	settings = GetSettings();
 
 	InitVideoHardware();

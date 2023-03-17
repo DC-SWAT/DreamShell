@@ -1,7 +1,7 @@
 /** 
  * \file    fs.h
  * \brief   DreamShell filesystem
- * \date    2007-2014
+ * \date    2007-2023
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -32,10 +32,14 @@ int InitRomdisk();
 
 /**
  * Search DreamShell root directory on all usable devices
- * pass_cnt is a number of passed devices
  */
-int SearchRoot(int pass_cnt);
+int SearchRoot();
 
+/**
+ * Check for usable devices
+ * 1 on success, 0 on fail
+ */
+int RootDeviceIsSupported(const char *name);
 
 /**
  * FAT filesystem API
