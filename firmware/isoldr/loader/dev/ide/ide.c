@@ -1718,7 +1718,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 				
 				default:
 					if (status)
-						*status = CD_STATUS_NO_DISC;
+						*status = CD_STATUS_NODISC;
 					return ERR_NO_DISC;
 					break;
 			}
@@ -1743,7 +1743,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 		}
 		
 		if (status)
-			*status = CD_STATUS_NO_DISC;
+			*status = CD_STATUS_NODISC;
 		
 		return ERR_NO_DISC;
 	}
@@ -1765,7 +1765,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 						LOGFF("NO DISC\n");
 						
 						if (status)
-							*status = CD_STATUS_NO_DISC;
+							*status = CD_STATUS_NODISC;
 						
 						return ERR_NO_DISC;
 						break;
@@ -1800,7 +1800,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 				case 6:
 					LOGFF("NO DISC");
 					if (status)
-						*status = CD_STATUS_NO_DISC;
+						*status = CD_STATUS_NODISC;
 					return ERR_NO_DISC;
 					break;
 				
@@ -1825,7 +1825,7 @@ s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive)
 
 		switch (stat)
 		{
-			case CD_STATUS_NO_DISC:
+			case CD_STATUS_NODISC:
 				return ERR_NO_DISC;
 				break;
 		}

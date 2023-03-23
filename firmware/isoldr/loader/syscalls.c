@@ -448,9 +448,7 @@ void data_transfer_true_async() {
 	GDS->drv_stat = CD_STATUS_PAUSED;
 
 #ifdef DEV_TYPE_SD
-	if(size > 0) {
-		dcache_purge_range(GDS->param[2], size);
-	}
+	dcache_purge_range(GDS->param[2], GDS->transfered);
 #endif
 }
 #endif /* _FS_ASYNC */

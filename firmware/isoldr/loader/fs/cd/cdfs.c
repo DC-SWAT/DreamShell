@@ -416,8 +416,8 @@ void poll_all(int err) {
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
 		if(fh[i].sec0 > 0 && fh[i].async > 0) {
 			if (err) {
-				fs_callback_f *cb = file->poll_cb;
-				file->poll_cb = NULL;
+				fs_callback_f *cb = fh[i].poll_cb;
+				fh[i].poll_cb = NULL;
 				cb(err);
 			} else {
 				poll(i);
