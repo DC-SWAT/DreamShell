@@ -120,12 +120,14 @@ int pre_read(int fd, unsigned int size);
 #	define pre_read_xfer_start  g1_ata_xfer
 #	define pre_read_xfer_busy   g1_ata_in_progress
 #	define pre_read_xfer_size   g1_ata_transfered
+#	define pre_read_xfer_done   g1_ata_has_irq
 #	define pre_read_xfer_end    g1_ata_ack_irq
 #	define pre_read_xfer_abort  g1_ata_abort
 #else
 #	define pre_read_xfer_start(addr, bytes) do { } while(0)
 #	define pre_read_xfer_busy() 0
-#	define pre_read_xfer_size() 0
+#	define pre_read_xfer_size() 1
+#	define pre_read_xfer_done() 1
 #	define pre_read_xfer_end() do { } while(0)
 #	define pre_read_xfer_abort() do { } while(0)
 #endif

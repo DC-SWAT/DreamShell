@@ -8,6 +8,7 @@
 #include <arch/cache.h>
 #include <ubc.h>
 #include <exception.h>
+#include <maple.h>
 
 isoldr_info_t *IsoInfo;
 uint32 loader_addr = 0;
@@ -149,6 +150,16 @@ int main(int argc, char *argv[]) {
 	if(IsoInfo->syscalls) {
 		printf("Loading syscalls...\n");
 		Load_Syscalls();
+	}
+#endif
+#ifdef HAVE_CDDA
+	if(IsoInfo->emu_cdda) {
+		CDDA_Init();
+	}
+#endif
+#ifdef HAVE_MAPLE
+	if(IsoInfo->emu_vmu) {
+		maple_init_vmu(IsoInfo->emu_vmu);
 	}
 #endif
 

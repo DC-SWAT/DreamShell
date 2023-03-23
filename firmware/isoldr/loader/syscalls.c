@@ -365,12 +365,27 @@ static void get_ver_str() {
 	GDS->status = CMD_STAT_COMPLETED;
 }
 
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+static void g1_ata_data_wait(gd_state_t *GDS) {
+	GDS->ata_status = CMD_WAIT_DRQ_0;
+	uint32 count = 0;
+
+	do {
+		gdcExitToGame();
+		if (pre_read_xfer_done() || count++ > 10) {
+			break;
+		}
+	} while(GDS->cmd_abort == 0);
+
+	GDS->ata_status = CMD_WAIT_IRQ;
+	GDS->status = CMD_STAT_STREAMING;
+	pre_read_xfer_end();
+}
+#endif
 
 #ifdef _FS_ASYNC
 
 static void data_transfer_cb(size_t size) {
-	gd_state_t *GDS = get_GDS();
-	GDS->ata_status = 0;
 	(void)size;
 }
 
@@ -382,41 +397,54 @@ void data_transfer_true_async() {
 	fs_enable_dma(IsoInfo->emu_async);
 #elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	fs_enable_dma(FS_DMA_SHARED);
-	uint32 check_count = 0;
+#endif
+
+#if 0//defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	// Simulate packet command interrupt.
+	uint32 lba = 0;
+	ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
+	g1_ata_raise_interrupt(lba);
+	g1_ata_data_wait(GDS);
 #endif
 
 	GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_transfer_cb);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		LOGFF("ERROR, status %d\n", GDS->status);
-		GDS->ata_status = 0;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
 		return;
 	}
 
-	while(GDS->ata_status && GDS->cmd_abort == 0) {
+	while(1) {
 
 		gdcExitToGame();
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(!exception_inited() || (!pre_read_xfer_busy() && check_count++ > 1))
-#endif
-		{
-			int ps = poll(iso_fd);
+		int ps = poll(iso_fd);
 
-			if (ps < 0) {
-				GDS->ata_status = 0;
-				GDS->status = CMD_STAT_FAILED;
-				LOGFF("ERROR, code %d\n", ps);
-				break;
-			} else if(ps > 0) {
-				GDS->transfered = ps;
-			}
+		if (ps < 0) {
+			GDS->cmd_abort = 1;
+			break;
+		} else if(ps > 1) {
+			GDS->transfered = ps;
+		} else if(ps == 0 && pre_read_xfer_done()) {
+			break;
 		}
 	}
 
-	size_t size = GDS->param[1] * GDS->gdc.sec_size;
-	GDS->transfered = size;
-	GDS->status = CMD_STAT_COMPLETED;
+	gdcExitToGame();
+
+	pre_read_xfer_end();
+	GDS->requested = 0;
+	GDS->ata_status = CMD_WAIT_INTERNAL;
+
+	if (GDS->cmd_abort) {
+		abort_async(iso_fd);
+		GDS->transfered = 0;
+		GDS->status = CMD_STAT_IDLE;
+	} else {
+		GDS->transfered = GDS->param[1] * GDS->gdc.sec_size;
+		GDS->status = CMD_STAT_COMPLETED;
+	}
 	GDS->drv_stat = CD_STATUS_PAUSED;
 
 #ifdef DEV_TYPE_SD
@@ -424,7 +452,6 @@ void data_transfer_true_async() {
 		dcache_purge_range(GDS->param[2], size);
 	}
 #endif
-
 }
 #endif /* _FS_ASYNC */
 
@@ -470,8 +497,8 @@ void data_transfer_emu_async() {
 
 		if(GDS->param[1] <= 0) {
 			GDS->status = CMD_STAT_COMPLETED;
+			GDS->requested -= GDS->transfered;
 			GDS->drv_stat = CD_STATUS_PAUSED;
-			GDS->ata_status = 0;
 			return;
 		}
 
@@ -491,7 +518,7 @@ void data_transfer() {
 
 	gd_state_t *GDS = get_GDS();
 
-	GDS->ata_status = 1;
+	GDS->ata_status = CMD_WAIT_IRQ;
 
 #ifdef _FS_ASYNC
 	/* Use true async DMA transfer (or pseudo async for SD) */
@@ -527,7 +554,8 @@ void data_transfer() {
 
 		GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
 		GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
-		GDS->ata_status = 0;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
+		GDS->requested -= GDS->transfered;
 
 		if(GDS->cmd != CMD_PIOREAD
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
@@ -546,47 +574,55 @@ void data_transfer() {
 	data_transfer_emu_async();
 }
 
-
 static void data_transfer_dma_stream() {
 
 	gd_state_t *GDS = get_GDS();
 
 	fs_enable_dma(FS_DMA_SHARED);
-	GDS->ata_status = 2;
-	GDS->drv_stat = CD_STATUS_PLAYING;
 
+#if 0//defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	// Simulate packet command interrupt.
+	uint32 lba = 0;
+	ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
+	g1_ata_raise_interrupt(lba);
+	g1_ata_data_wait(GDS);
+#endif
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
-	if(GDS->status == CMD_STAT_PROCESSING) {
-		GDS->status = CMD_STAT_WAITING;
-	} else {
-		GDS->ata_status = 0;
+	if(GDS->status != CMD_STAT_PROCESSING) {
+		GDS->ata_status = CMD_WAIT_INTERNAL;
+		GDS->drv_stat = CD_STATUS_PAUSED;
 		return;
 	}
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	do {
+	GDS->status = CMD_STAT_STREAMING;
+
+	while(1) {
+
 		gdcExitToGame();
-		if ((ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT] & ASIC_EXT_GD_CMD)) {
-			break;
+
+		if (pre_read_xfer_busy()) {
+			GDS->transfered = pre_read_xfer_size();
 		}
-	} while(GDS->cmd_abort == 0);
-	g1_ata_ack_irq();
-#endif
 
-	GDS->ata_status = 1;
+		if(pre_read_xfer_done()) {
 
-	while(GDS->ata_status) {
+			pre_read_xfer_end();
+			GDS->transfered = pre_read_xfer_size();
+			GDS->ata_status = CMD_WAIT_INTERNAL;
 
-		GDS->transfered = pre_read_xfer_size();
+			if(GDS->requested == 0) {
+				GDS->status = CMD_STAT_COMPLETED;
+				break;
+			}
+		}
 
-		if((!GDS->requested && !pre_read_xfer_busy()) || GDS->cmd_abort) {
-			GDS->ata_status = 0;
-			GDS->status = CMD_STAT_ABORTED;
+		if(GDS->cmd_abort) {
+			GDS->ata_status = CMD_WAIT_INTERNAL;
+			GDS->status = CMD_STAT_IDLE;
 			pre_read_xfer_abort();
 			break;
 		}
-		gdcExitToGame();
 	}
 
 	GDS->drv_stat = CD_STATUS_PAUSED;
@@ -597,32 +633,27 @@ static void data_transfer_pio_stream() {
 	gd_state_t *GDS = get_GDS();
 
 	fs_enable_dma(FS_DMA_DISABLED);
-	GDS->ata_status = 2;
-	GDS->drv_stat = CD_STATUS_PLAYING;
-
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
-	if(GDS->status == CMD_STAT_PROCESSING) {
-		GDS->status = CMD_STAT_WAITING;
-	} else {
-		GDS->ata_status = 0;
+	if(GDS->status != CMD_STAT_PROCESSING) {
+		GDS->drv_stat = CD_STATUS_PAUSED;
 		return;
 	}
 
-	GDS->ata_status = 1;
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	g1_ata_data_wait(GDS);
+#endif
 
-	while(GDS->ata_status) {
+	while(1) {
 
 		if(GDS->param[2] != 0) {
 
 			pre_read_xfer_start(GDS->param[2], GDS->param[1]);
 
+			GDS->ata_status = CMD_WAIT_IRQ;
 			GDS->transfered += GDS->param[1];
+			GDS->requested -= GDS->param[1];
 			GDS->param[2] = 0;
-
-			if (GDS->requested == 0) {
-				GDS->cmd_abort = 1;
-			}
 
 			if(GDS->callback != 0) {
 				void (*callback)() = (void (*)())(GDS->callback);
@@ -630,13 +661,25 @@ static void data_transfer_pio_stream() {
 			}
 		}
 
-		if(GDS->cmd_abort != 0) {
-			GDS->ata_status = 0;
-			GDS->status = CMD_STAT_ABORTED;
+		if(pre_read_xfer_done()) {
+
 			pre_read_xfer_end();
-			break;
+
+			if(GDS->requested == 0) {
+				GDS->ata_status = CMD_WAIT_INTERNAL;
+				GDS->status = CMD_STAT_COMPLETED;
+				break;
+			} else {
+				GDS->ata_status = CMD_WAIT_DRQ_0;
+			}
 		}
 
+		if(GDS->cmd_abort) {
+			GDS->ata_status = CMD_WAIT_INTERNAL;
+			GDS->status = CMD_STAT_IDLE;
+			pre_read_xfer_abort();
+			break;
+		}
 		gdcExitToGame();
 	}
 
@@ -662,12 +705,13 @@ static int is_transfer_cmd(int cmd) {
 int gdcReqCmd(int cmd, uint32 *param) {
 
 	int gd_chn = GDC_CHN_ERROR;
-	
+	OpenLog();
+
 	if(cmd > CMD_MAX || lock_gdsys()) {
-		DBGFF("already locked\n");
+		LOGFF("Busy\n");
 		return gd_chn;
 	}
-	
+
 	gd_state_t *GDS = get_GDS();
 		
 	if(GDS->status == CMD_STAT_IDLE) {
@@ -680,7 +724,7 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		GDS->cmd = cmd;
 		GDS->status = CMD_STAT_PROCESSING;
 		GDS->transfered = 0;
-		GDS->ata_status = 0;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
 		GDS->cmd_abort = 0;
 		gd_chn = GDS->req_count;
 		
@@ -701,11 +745,12 @@ int gdcReqCmd(int cmd, uint32 *param) {
 				CDDA_Stop();
 			}
 #endif
-			GDS->drv_stat = CD_STATUS_PLAYING;
+			GDS->requested = GDS->param[1] * GDS->gdc.sec_size;
 
 			if(cmd != CMD_PIOREAD && cmd != CMD_DMAREAD) {
-				GDS->requested = GDS->param[1] * GDS->gdc.sec_size;
 				GDS->drv_stat = CD_STATUS_PAUSED;
+			} else {
+				GDS->drv_stat = CD_STATUS_PLAYING;
 			}
 		}
 	}
@@ -748,21 +793,13 @@ void gdcMainLoop(void) {
 			switch (GDS->cmd) {
 				case CMD_PIOREAD:
 				case CMD_DMAREAD:
-					if(GDS->param[3]) {
-						GDS->status = CMD_STAT_COMPLETED;
-					} else {
-						data_transfer();
-					}
+					data_transfer();
 					break;
 				case CMD_DMAREAD_STREAM:
-					data_transfer_dma_stream();
-					break;
 				case CMD_DMAREAD_STREAM_EX:
 					data_transfer_dma_stream();
 					break;
 				case CMD_PIOREAD_STREAM:
-					data_transfer_pio_stream();
-					break;
 				case CMD_PIOREAD_STREAM_EX:
 					data_transfer_pio_stream();
 					break;
@@ -846,8 +883,8 @@ void gdcMainLoop(void) {
 int gdcGetCmdStat(int gd_chn, uint32 *status) {
 
 	if(lock_gdsys()) {
-		DBGF("%s: already locked\n", __func__);
-		return CMD_STAT_WAITING;
+		LOGFF("%s: Busy\n");
+		return CMD_STAT_BUSY;
 	}
 
 	int rv = CMD_STAT_IDLE;
@@ -867,7 +904,7 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 	} else if(gd_chn != GDS->req_count) {
 
 		LOGFF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
-		status[0] = CMD_STAT_ERROR;
+		status[0] = CMD_ERR_ILLEGALREQUEST;
 		rv = CMD_STAT_FAILED;
 		unlock_gdsys();
 		return rv;
@@ -883,29 +920,23 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 
 		case CMD_STAT_COMPLETED:
 
+			GDS->ata_status = CMD_WAIT_INTERNAL;
+			GDS->status = CMD_STAT_IDLE;
+
 			status[2] = GDS->transfered;
 			status[3] = GDS->ata_status;
-			GDS->status = CMD_STAT_IDLE;
 			rv = CMD_STAT_COMPLETED;
 			break;
 
-		case CMD_STAT_ABORTED:
+		case CMD_STAT_STREAMING:
 
 			status[2] = GDS->transfered;
 			status[3] = GDS->ata_status;
-			GDS->ata_status = 0;
-			GDS->status = CMD_STAT_IDLE;
-			rv = CMD_STAT_COMPLETED;
-			break;
-
-		case CMD_STAT_WAITING:
-
-			rv = CMD_STAT_ABORTED;
-			status[2] = GDS->transfered;
-			status[3] = GDS->ata_status;
+			rv = CMD_STAT_STREAMING;
 			break;
 
 		case CMD_STAT_FAILED:
+			status[0] = CMD_ERR_HARDWARE;
 			rv = CMD_STAT_FAILED;
 			break;
 
@@ -934,11 +965,11 @@ int gdcGetDrvStat(uint32 *status) {
 #endif
 
 	if(lock_gdsys()) {
-		DBGFF("already locked\n");
-		return CMD_STAT_WAITING;
+		DBGFF("Busy\n");
+		return CMD_STAT_BUSY;
 	}
 
- 	DBGF("%s\r", __func__);
+ 	DBGFF(NULL);
 	gd_state_t *GDS = get_GDS();
 
 	if (GDS->disc_change) {
@@ -979,7 +1010,7 @@ int gdcGetDrvStat(uint32 *status) {
 int gdcChangeDataType(int *param) {
 
 	if(lock_gdsys()) {
-		return CMD_STAT_WAITING;
+		return CMD_STAT_BUSY;
 	}
 	
 	gd_state_t *GDS = get_GDS();
@@ -1011,12 +1042,6 @@ void gdcInitSystem(void) {
 
 	OpenLog();
 	LOGFF(NULL);
-
-	if (IsoInfo->heap == HEAP_MODE_INGAME
-		|| IsoInfo->heap == HEAP_MODE_MAPLE
-	) {
-		malloc_init();
-	}
 
 #ifdef HAVE_EXPT
 
@@ -1068,7 +1093,18 @@ void gdcInitSystem(void) {
 	if (IsoInfo->heap == HEAP_MODE_INGAME
 		|| IsoInfo->heap == HEAP_MODE_MAPLE
 	) {
+		malloc_init();
 		InitReader();
+#ifdef HAVE_CDDA
+		if(IsoInfo->emu_cdda) {
+			CDDA_Init();
+		}
+#endif
+#ifdef HAVE_MAPLE
+		if(IsoInfo->emu_vmu) {
+			maple_init_vmu(IsoInfo->emu_vmu);
+		}
+#endif
 	}
 #ifdef DEV_TYPE_SD
 	else {
@@ -1077,19 +1113,6 @@ void gdcInitSystem(void) {
 #endif
 
 	reset_GDS(get_GDS());
-
-#ifdef HAVE_CDDA
-	if(IsoInfo->emu_cdda) {
-		CDDA_Init();
-	}
-#endif
-
-#ifdef HAVE_MAPLE
-	if(IsoInfo->emu_vmu) {
-		maple_init_vmu(IsoInfo->emu_vmu);
-	}
-#endif
-
 	gdcMainLoop();
 }
 
@@ -1121,17 +1144,6 @@ int gdcReadAbort(int gd_chn) {
 		return -1;
 	}
 
-#ifdef _FS_ASYNC
-	if(GDS->ata_status) {
-		abort_async(iso_fd);
-		// pre_read_xfer_abort();
-		do {} while(pre_read_xfer_busy());
-		GDS->ata_status = 0;
-		GDS->transfered = 0;
-		GDS->requested = 0;
-	}
-#endif
-
 	switch(GDS->cmd) {
 		case CMD_PIOREAD:
 		case CMD_DMAREAD:
@@ -1149,8 +1161,8 @@ int gdcReadAbort(int gd_chn) {
 		case CMD_PIOREAD_STREAM_EX:
 			switch(GDS->status) {
 				case CMD_STAT_PROCESSING:
-				case CMD_STAT_ABORTED:
-				case CMD_STAT_WAITING:
+				case CMD_STAT_STREAMING:
+				case CMD_STAT_BUSY:
 					GDS->cmd_abort = 1;
 					return 0;
 				default:
@@ -1175,14 +1187,15 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 
 	gd_state_t *GDS = get_GDS();
 
-	LOGFF("%d %08lx %d (%d) %d\n", gd_chn, (uint32)dmabuf[0], dmabuf[1], GDS->requested, GDS->ata_status);
+	LOGFF("%d %08lx %d %d %d\n", gd_chn, (uint32)dmabuf[0], dmabuf[1], GDS->requested, GDS->ata_status);
 
 	if(gd_chn != GDS->req_count) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
 		return -1;
 	}
-	if(GDS->status != CMD_STAT_WAITING || GDS->requested < (uint32)dmabuf[1]) {
-		LOGF("ERROR: cmd status = %d, remain = %d, request = %d\n", GDS->status, GDS->requested, dmabuf[1]);
+	if(GDS->status != CMD_STAT_STREAMING || GDS->requested < (uint32)dmabuf[1]) {
+		LOGF("ERROR: status = %d, remain = %d, request = %d\n",
+			GDS->status, GDS->requested, dmabuf[1]);
 		return -1;
 	}
 
@@ -1199,16 +1212,17 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 
 	gd_state_t *GDS = get_GDS();
 
-	LOGFF("%d %s r=%ld t=%ld a=%ld\n", gd_chn, stat_name[GDS->status + 1],
-			GDS->requested, GDS->transfered, GDS->ata_status);
+	LOGFF("%d %ld %ld %d %d\n", gd_chn, GDS->requested,
+		pre_read_xfer_size(), GDS->ata_status,
+		pre_read_xfer_busy());
 
 	if(gd_chn != GDS->req_count) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
 		return -1;
 	}
-	
-	if(GDS->status != CMD_STAT_WAITING) {
-		LOGF("ERROR: Incorrect status: %s\n", stat_name[GDS->status + 1]);
+
+	if(GDS->status != CMD_STAT_STREAMING) {
+		LOGF("ERROR: status = %d\n", GDS->status);
 		return -1;
 	}
 
@@ -1243,14 +1257,8 @@ void gdcSetPioCallback(uint32 func, uint32 param) {
 	
 	LOGFF("0x%08lx %ld\n", func, param);
 	gd_state_t *GDS = get_GDS();
-
-	if(func != 0) {
-		GDS->callback = func;
-		GDS->callback_param = param;
-	} else {
-		GDS->callback = 0;
-		GDS->callback_param = 0;
-	}
+	GDS->callback = func;
+	GDS->callback_param = param;
 }
 
 
@@ -1265,28 +1273,14 @@ int gdcReqPioTrans(int gd_chn, int *piobuf) {
 		return -1;
 	}
 	
-	if(GDS->status != CMD_STAT_WAITING || GDS->requested < (uint32)piobuf[1]) {
-		LOGF("ERROR: cmd status = %d, remain = %d, request = %d\n", GDS->status, GDS->requested, piobuf[1]);
+	if(GDS->status != CMD_STAT_STREAMING || GDS->requested < (uint32)piobuf[1]) {
+		LOGF("ERROR: status = %d, remain = %d, request = %d\n",
+			GDS->status, GDS->requested, piobuf[1]);
 		return -1;
 	}
 
 	GDS->param[2] = piobuf[0];
 	GDS->param[1] = piobuf[1];
-	GDS->requested -= GDS->param[1];
-
-	// FIXME
-	if (GDS->requested == 0) {
-		pre_read_xfer_start(GDS->param[2], GDS->param[1]);
-
-		GDS->transfered += GDS->param[1];
-		GDS->param[2] = 0;
-		GDS->cmd_abort = 1;
-
-		if(GDS->callback != 0) {
-			void (*callback)() = (void (*)())(GDS->callback);
-			callback(GDS->callback_param);
-		}
-	}
 
 	return 0;
 }
@@ -1301,6 +1295,16 @@ int gdcCheckPioTrans(int gd_chn, int *size) {
 	if(gd_chn != GDS->req_count) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
 		return -1;
+	}
+
+	if(GDS->status != CMD_STAT_STREAMING) {
+		LOGF("ERROR: status = %d\n", GDS->status);
+		return -1;
+	}
+
+	if (GDS->param[2]) {
+		*size = GDS->transfered;
+		return 1;
 	}
 
 	*size = GDS->requested;
