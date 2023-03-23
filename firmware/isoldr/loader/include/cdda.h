@@ -15,7 +15,8 @@ typedef enum CDDA_status {
 	CDDA_STAT_PREP,
 	CDDA_STAT_SNDL,
 	CDDA_STAT_SNDR,
-	CDDA_STAT_WAIT
+	CDDA_STAT_WAIT,
+	CDDA_STAT_END
 } CDDA_status_t;
 
 typedef enum PCM_buff {
@@ -83,6 +84,9 @@ typedef struct cdda_ctx {
 void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
 void pcm8_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
+
+int lock_cdda(void);
+void unlock_cdda(void);
 
 cdda_ctx_t *get_CDDA(void);
 

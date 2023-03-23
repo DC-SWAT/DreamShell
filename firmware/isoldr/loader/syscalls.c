@@ -769,11 +769,12 @@ void gdcMainLoop(void) {
 		DBGFF(NULL);
 
 		if(!exception_inited()) {
-#ifdef HAVE_CDDA
-			CDDA_MainLoop();
-#endif
 			apply_patch_list();
 		}
+
+#ifdef HAVE_CDDA
+		CDDA_MainLoop();
+#endif
 
 #ifdef HAVE_SCREENSHOT
 		if(IsoInfo->scr_hotkey
@@ -954,10 +955,7 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 int gdcGetDrvStat(uint32 *status) {
 
 #ifdef HAVE_CDDA
-	if (IsoInfo->exec.type == BIN_TYPE_KOS
-		&& IsoInfo->emu_cdda
-		&& !exception_inited()
-	) {
+	if (IsoInfo->emu_cdda) {
 		CDDA_MainLoop();
 	}
 #endif

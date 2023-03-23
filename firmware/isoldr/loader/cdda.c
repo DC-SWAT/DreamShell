@@ -685,10 +685,23 @@ void *aica_dma_handler(void *passer, register_stack *stack, void *current_vector
 	}
 
 	if (cdda->irq_code == *REG_INTEVT || (cdda->irq_code == (uint32)-1)) {
+
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_AICA_DMA;
 		aica_dma_irq_restore();
 		CDDA_MainLoop();
-		return my_exception_finish;
+
+		uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] & ~ASIC_NRM_AICA_DMA;
+
+		if (cdda->irq_code == EXP_CODE_INT9) {
+			st = ((*ASIC_IRQ9_MASK) & st);
+		} else if(cdda->irq_code == EXP_CODE_INT11) {
+			st = ((*ASIC_IRQ11_MASK) & st);
+		} else if(cdda->irq_code == EXP_CODE_INT13) {
+			st = ((*ASIC_IRQ13_MASK) & st);
+		}
+		if (st == 0) {
+			return my_exception_finish;
+		}
 	}
 	return current_vector;
 }
@@ -726,13 +739,8 @@ static void *dma_handler(void *passer, register_stack *stack, void *current_vect
 #endif
 
 int CDDA_Init() {
-	static int inited = 0;
 
-	if (inited) {
-		return 0;
-	}
-
-	inited = 1;
+	unlock_cdda();
 	memset(cdda, 0, sizeof(cdda_ctx_t));
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
@@ -1050,7 +1058,15 @@ static void end_playback() {
 
 static void play_next_track() {
 
-	end_playback();
+	if (cdda->stat != CDDA_STAT_END) {
+		end_playback();
+	}
+
+	if (exception_inside_int() && mmu_enabled()) {
+		cdda->stat = CDDA_STAT_END;
+		return;
+	}
+
 	LOGFF(NULL);
 
 	if(cdda->first_track < cdda->last_track) {
@@ -1090,8 +1106,9 @@ static void play_next_track() {
 static void read_callback(size_t size) {
 	DBGFF("%d\n", size);
 	if(cdda->stat > CDDA_STAT_IDLE) {
-		if((int)size < 0) {
-			end_playback();
+		if(size == (size_t)-1) {
+			aica_setup_cdda(0);
+			cdda->stat = CDDA_STAT_FILL;
 		} else if(size < cdda->size >> 1) {
 			cdda->stat = CDDA_STAT_FILL;
 		} else {
@@ -1125,12 +1142,23 @@ static void fill_pcm_buff() {
 
 	DBGFF("%ld %ld\n", cdda->cur_offset, cdda->track_size - cdda->cur_offset);
 
-	/* Reading data for all channels */
+	/* Reading data for all channels to work buffer.
+		Using physical address to prevent cache invalidation
+		becuase it's already done at PCM splitting.
+	*/
+	uint8 *buff;
+
+	if (cdda->cur_offset) {
+		buff = (uint8 *)PHYS_ADDR((uint32)cdda->buff[PCM_TMP_BUFF]);
+	} else {
+		buff = cdda->buff[PCM_TMP_BUFF];
+	}
+
 #ifdef _FS_ASYNC
 	cdda->stat = CDDA_STAT_WAIT;
-	int rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1, read_callback);
+	int rc = read_async(cdda->fd, buff, cdda->size >> 1, read_callback);
 #else
-	int rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1);
+	int rc = read(cdda->fd, buff, cdda->size >> 1);
 	cdda->stat = CDDA_STAT_PREP;
 #endif
 
@@ -1140,14 +1168,22 @@ static void fill_pcm_buff() {
 	}
 }
 
-
 void CDDA_MainLoop(void) {
 
+	if(lock_cdda()) {
+		return;
+	}
+
 	if(cdda->stat == CDDA_STAT_IDLE) {
+		unlock_cdda();
 		return;
 	}
 
 	DBGFF("%d %d\n", IsoInfo->emu_cdda, cdda->stat);
+
+	if(cdda->stat == CDDA_STAT_END && !exception_inside_int()) {
+		play_next_track();
+	}
 
 #ifdef _FS_ASYNC
 	if(cdda->stat == CDDA_STAT_WAIT) {
@@ -1159,8 +1195,10 @@ void CDDA_MainLoop(void) {
 			if(poll(cdda->fd) < 0) {
 				/* Retry on error */
 				cdda->stat = CDDA_STAT_FILL;
+				aica_setup_cdda(0);
 			}
 		}
+		unlock_cdda();
 		return;
 	}
 #endif
@@ -1173,6 +1211,7 @@ void CDDA_MainLoop(void) {
 		/* Update LBA for SCD command */
 		gd_state_t *GDS = get_GDS();
 		GDS->lba = cdda->lba + (cdda->cur_offset / RAW_SECTOR_SIZE);
+		unlock_cdda();
 		return;
 	}
 
@@ -1226,6 +1265,8 @@ void CDDA_MainLoop(void) {
 		cdda->cur_buff = cdda->cur_buff ? 0 : 1;
 		cdda->stat = CDDA_STAT_FILL;
 	}
+
+	unlock_cdda();
 }
 
 #ifdef DEBUG

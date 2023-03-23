@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C) 2014-2016 SWAT <http://www.dc-swat.ru>
+!   Copyright (C) 2014-2023 SWAT <http://www.dc-swat.ru>
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -18,6 +18,9 @@
 .globl _pcm16_split
 .globl _pcm8_split
 .globl _adpcm_split
+
+.globl _lock_cdda
+.globl _unlock_cdda
 .align 2
 
 !
@@ -149,7 +152,25 @@ _adpcm_split:
 	mov.l @r15+, r10
 	rts
 	nop
+
+_lock_cdda:
+	mova    lock_cdda, r0
+	tas.b   @r0
+	bt      lock_cdda_success
+	rts
+	mov     #1, r0
+lock_cdda_success:
+	rts
+	mov     #0, r0
 	
+_unlock_cdda:
+	mova    lock_cdda, r0
+	mov     #0, r2
+	rts
+	mov.l   r2, @r0
+
 .align 4
 .shift5r:
 	.long 0xfffffffb
+lock_cdda:
+	.long 0
