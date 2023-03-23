@@ -10,7 +10,7 @@
 #include <arch/types.h>
 #include <dc/cdrom.h>
 
-/** \defgroup gdc_cmd_codes CD-ROM syscall command codes
+/** \defgroup cd_cmd_codes CD-ROM syscall command codes
 	@{
 */
 #define CMD_CHECK_LICENSE       2  /**< \brief  */
@@ -43,24 +43,66 @@
 #define CMD_MAX                47  /**< \brief  */
 /** @} */
 
-/* Сommand status */
+/** \defgroup cd_cmd_status      CD-ROM Command Status responses
+
+    These are the raw values the status syscall returns.
+    @{
+*/
 #define CMD_STAT_FAILED     -1
 #define CMD_STAT_IDLE        0
 #define CMD_STAT_PROCESSING  1
 #define CMD_STAT_COMPLETED   2
-#define CMD_STAT_ABORTED     3
-#define CMD_STAT_WAITING     4
-#define CMD_STAT_ERROR       5
+#define CMD_STAT_STREAMING   3
+#define CMD_STAT_BUSY        4
+#define CMD_STAT_UNK1        5
+#define CMD_STAT_UNK2        6
+/** @} */
 
-#define CMD_ERR_OK           0
-#define CMD_ERR_HW_ERR       2
-#define CMD_ERR_INVALID_CMD  5
-#define CMD_ERR_NOT_INITED   6
-#define CMD_ERR_GDSYS_LOCKED 32
+/** \defgroup cd_cmd_error      CD-ROM command errors
+    @{
+*/
+#define CMD_ERR_NOERR          0x00
+#define CMD_ERR_RECOVERED      0x01
+#define CMD_ERR_NOTREADY       0x02
+#define CMD_ERR_MEDIUM         0x03
+#define CMD_ERR_HARDWARE       0x04
+#define CMD_ERR_ILLEGALREQUEST 0x05
+#define CMD_ERR_UNITATTENTION  0x06
+#define CMD_ERR_DATAPROTECT    0x07
+#define CMD_ERR_ABORTED        0x0B
+#define CMD_ERR_NOREADABLE     0x10
+#define CMD_ERR_G1SEMAPHORE    0x20
+/** @} */
 
-/* Additional status values */
-#define CD_STATUS_RETRY     8
-#define CD_STATUS_ERROR     9
+
+/** \defgroup cd_cmd_wait      CD-ROM command wait types
+    @{
+*/
+#define CMD_WAIT_INTERNAL   0x00
+#define CMD_WAIT_IRQ        0x01
+#define CMD_WAIT_DRQ_0      0x02
+#define CMD_WAIT_DRQ_1      0x03
+#define CMD_WAIT_BUSY       0x04
+/** @} */
+
+/** \defgroup cd_status_values      CD-ROM status values
+
+    These are the values that can be returned as the status parameter from the
+    cdrom_get_status() function.
+    @{
+*/
+#define CD_STATUS_CANTREAD -1
+#define CD_STATUS_BUSY     0x00
+#define CD_STATUS_PAUSED   0x01
+#define CD_STATUS_STANDBY  0x02
+#define CD_STATUS_PLAYING  0x03
+#define CD_STATUS_SEEK     0x04
+#define CD_STATUS_SCAN     0x05
+#define CD_STATUS_OPEN     0x06
+#define CD_STATUS_NODISC   0x07
+#define CD_STATUS_RETRY    0x08
+#define CD_STATUS_ERROR    0x09
+/** @} */
 
 /* Values for CMD_GETSCD command */
 #define SCD_REQ_ALL_SUBCODE      0x0

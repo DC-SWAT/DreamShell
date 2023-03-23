@@ -97,14 +97,14 @@ __BEGIN_DECLS
     cdrom_get_status() function.
     @{
 */
-#define CD_STATUS_BUSY      0   /**< \brief Drive is busy */
-#define CD_STATUS_PAUSED    1   /**< \brief Disc is paused */
-#define CD_STATUS_STANDBY   2   /**< \brief Drive is in standby */
-#define CD_STATUS_PLAYING   3   /**< \brief Drive is currently playing */
-#define CD_STATUS_SEEKING   4   /**< \brief Drive is currently seeking */
-#define CD_STATUS_SCANNING  5   /**< \brief Drive is scanning */
-#define CD_STATUS_OPEN      6   /**< \brief Disc tray is open */
-#define CD_STATUS_NO_DISC   7   /**< \brief No disc inserted */
+// #define CD_STATUS_BUSY      0   /**< \brief Drive is busy */
+// #define CD_STATUS_PAUSED    1   /**< \brief Disc is paused */
+// #define CD_STATUS_STANDBY   2   /**< \brief Drive is in standby */
+// #define CD_STATUS_PLAYING   3   /**< \brief Drive is currently playing */
+// #define CD_STATUS_SEEKING   4   /**< \brief Drive is currently seeking */
+// #define CD_STATUS_SCANNING  5   /**< \brief Drive is scanning */
+// #define CD_STATUS_OPEN      6   /**< \brief Disc tray is open */
+// #define CD_STATUS_NO_DISC   7   /**< \brief No disc inserted */
 /** @} */
 
 /** \defgroup cd_disc_types         CD-ROM drive disc types
