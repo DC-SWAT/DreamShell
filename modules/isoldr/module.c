@@ -454,8 +454,14 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 				info->syscalls = 0;
 			} else {
 				dcache_flush_range((uint32)buff, sc_len);
-				info->syscalls = (uint32)buff;
 				addr = ISOLDR_DEFAULT_ADDR;
+
+				info->syscalls = (uint32)buff;
+				info->heap = HEAP_MODE_BEHIND;
+				info->emu_cdda = 0;
+				info->emu_vmu = 0;
+				info->use_irq = 0;
+
 				if (sc_len < 0x4000) {
 					sc_len = 0x5000;
 				} else {
