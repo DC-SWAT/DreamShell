@@ -101,6 +101,7 @@ void g1_ata_xfer(u32 addr, size_t bytes);
 void g1_ata_abort(void);
 u32 g1_ata_in_progress(void);
 u32 g1_ata_transfered(void);
+void g1_ata_raise_interrupt(u64 sector);
 
 void cdrom_spin_down(u8 drive);
 s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive);
@@ -215,6 +216,11 @@ s32 g1_ata_flush(void);
  * 
  */
 s32 g1_ata_ack_irq(void);
+
+/** \brief  Check for IRQ of the ATA device.
+ * 
+ */
+s32 g1_ata_has_irq(void);
 
 __END_DECLS
 

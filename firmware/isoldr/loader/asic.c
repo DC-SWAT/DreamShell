@@ -42,11 +42,11 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 
 	(void)stack;
 	void *back_vector = current_vector;
-	uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
+	const uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 
 # if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
-	uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
+	const uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
+	const uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
 
 	if ((status & ASIC_NRM_GD_DMA) ||
 		(statusExt & ASIC_EXT_GD_CMD) ||
@@ -74,10 +74,6 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 # if defined(HAVE_MAPLE)
 		if(status & ASIC_NRM_MAPLE_DMA) {
 			back_vector = maple_dma_handler(NULL, stack, back_vector);
-
-			if (back_vector == NULL) {
-				back_vector = current_vector;
-			}
 		}
 # endif
 	}

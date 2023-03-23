@@ -419,15 +419,11 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
     static uint32 requested = 0;
 
     if (passer == current_vector) {
-
         // Handle UBC break on Maple register
         requested = 1;
-        return current_vector;
-
     } else if(requested) {
         maple_dma_proc();
         requested = 0;
-        return NULL;
     }
 #else
     uint32 code = *REG_INTEVT;
@@ -437,10 +433,8 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
         || ((*ASIC_IRQ13_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT13)
     ) {
         maple_dma_proc();
-        return NULL;
     }
 #endif
-
     return current_vector;
 }
 

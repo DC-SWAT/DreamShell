@@ -197,8 +197,7 @@ u32 g1_dma_transfered(void) {
 }
 
 static void delay_1ms() {
-	// timer_spin_sleep_bios(1);
-	for(int d = 0; d < 10; d++) IN8(G1_ATA_ALTSTATUS);
+	timer_spin_sleep_bios(1);
 }
 
 #ifdef HAVE_EXPT
@@ -213,47 +212,48 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 	(void)passer;
 	(void)stack;
+	(void)code;
 
-	if (statusErr & errFlags) {
-		DBGFF("G1_ERROR_IRQ: 0x%03lx 0x%08lx %d\n", code, statusErr, g1_dma_irq_visible);
-		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
-		poll_all();
-		return my_exception_finish;
-	}
+	DBGF("G1_IRQ: %03lx %08lx %08lx %08lx\n",
+		code, status, statusExt, statusErr);
 
-	const uint32 g1_dma_irq_code = (g1_dma_irq_visible ? g1_dma_irq_code_game : g1_dma_irq_code_internal);
-
-	if (statusExt & ASIC_EXT_GD_CMD) {
-		DBGF("G1_CMD_IRQ: 0x%03lx 0x%08lx %d\n", code, statusExt, g1_dma_irq_visible);
-		if (g1_dma_irq_visible == 0) {
-			g1_ata_ack_irq();
-		}
-	}
-
-	if (g1_dma_irq_code && g1_dma_irq_code != code) {
-		return current_vector;
-	}
-
-#ifdef DEBUG
-	if (g1_dma_irq_code == 0) {
-		LOGFF("WARNING: IRQ code is not set!");
-	}
-	LOGF("G1_DMA_IRQ: 0x%03lx 0x%08lx %d\n", code, status, g1_dma_irq_visible);
-#endif
-
-	if (status & ASIC_NRM_GD_DMA) {
-		/* Processing filesystem */
-		poll_all();
-
-		if (g1_dma_irq_visible == 0) {
-			/* Ack DMA IRQ. */
-			ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-		}
-	}
 	if (g1_dma_irq_visible) {
 		return current_vector;
 	}
-	return my_exception_finish;
+
+	if (statusExt & ASIC_EXT_GD_CMD) {
+		DBGF("G1_ATA_IRQ: %03lx %08lx\n", code, statusExt);
+		g1_ata_ack_irq();
+	}
+	if (status & ASIC_NRM_GD_DMA) {
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+	}
+	if ((statusErr & errFlags)) {
+		LOGFF("G1_ERROR_IRQ: %03lx %08lx\n", code, statusErr);
+		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
+		poll_all(-1);
+		return current_vector;
+	}
+
+	if (status & ASIC_NRM_GD_DMA) {
+		/* Ack DMA IRQ. */
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+
+		/* Processing filesystem */
+		poll_all(0);
+
+		uint32 st = status & ~ASIC_NRM_GD_DMA;
+
+		if (g1_dma_irq_code_internal == EXP_CODE_INT9) {
+			st = ((*ASIC_IRQ9_MASK) & st);
+		} else if(g1_dma_irq_code_internal == EXP_CODE_INT11) {
+			st = ((*ASIC_IRQ11_MASK) & st);
+		}
+		if (st == 0) {
+			return my_exception_finish;
+		}
+	}
+	return current_vector;
 }
 
 
@@ -296,8 +296,9 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	OUT32(G1_ATA_DMA_LENGTH, bytes);
 	OUT8(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
 	
-	 /* Enable G1 DMA. */
+	/* Enable G1 DMA. */
 	OUT8(G1_ATA_DMA_ENABLE, 1);
+	/* Start the DMA transfer. */
 	OUT8(G1_ATA_DMA_STATUS, 1);
 }
 
@@ -305,6 +306,7 @@ void g1_dma_irq_hide(s32 all) {
 
 	g1_dma_irq_visible = 0;
 	g1_dma_irq_code_game = g1_dma_has_irq_mask();
+	OUT8(G1_ATA_CTL, 2);
 
 #ifdef HAVE_EXPT
 	if (!all && exception_inited()) {
@@ -331,7 +333,7 @@ void g1_dma_irq_restore(void) {
 	} else if(g1_dma_irq_code_internal == EXP_CODE_INT11) {
 		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
 	}
-	g1_dma_irq_code_internal = 0;
+	// g1_dma_irq_code_internal = 0;
 #endif
 
 	if(g1_dma_irq_code_game == EXP_CODE_INT9) {
@@ -342,8 +344,9 @@ void g1_dma_irq_restore(void) {
 		*ASIC_IRQ13_MASK |= ASIC_NRM_GD_DMA;
 	}
 
-	g1_dma_irq_code_game = 0;
+	// g1_dma_irq_code_game = 0;
 	g1_dma_irq_visible = 1;
+	OUT8(G1_ATA_CTL, 0);
 }
 
 
@@ -353,15 +356,15 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 
 	if (dma_mode == FS_DMA_DISABLED) {
 
-		return;
+		if (!g1_dma_irq_visible) {
+			g1_dma_irq_restore();
+		}
 
 	} else if (dma_mode == FS_DMA_HIDDEN) {
 
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		if (g1_dma_irq_visible) {
 			g1_dma_irq_hide(0);
-		} else {
-			return;
 		}
 
 	} else if (dma_mode == FS_DMA_SHARED) {
@@ -370,16 +373,13 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 			g1_dma_irq_restore();
 		} else if (!last_transfer && g1_dma_irq_visible) {
 			g1_dma_irq_hide(0);
-		} else {
-			if(!g1_dma_irq_code_game) {
-				g1_dma_irq_code_game = g1_dma_has_irq_mask();
-			}
-			return;
+		} else if(!g1_dma_irq_code_game) {
+			g1_dma_irq_code_game = g1_dma_has_irq_mask();
 		}
 	}
 
-#ifdef LOG
-	LOGFF("%d %d %d (mode=%d last=%d game=%d int=%03lx)\n",
+#ifdef DEBUG
+	LOGFF("%03lx %03lx %03lx (mode=%d last=%d game=%03lx int=%03lx)\n",
 		(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT9 : 0, 
 		(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT11 : 0, 
 		(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT13 : 0,
@@ -691,7 +691,11 @@ static s32 g1_ata_access(struct ide_req *req)
 		cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO;
 	}
 	
-	// LOGFF("STATUS=%lx\n", IN8(G1_ATA_ALTSTATUS));
+#ifdef LOG
+	if (IN8(G1_ATA_ALTSTATUS) & ATA_SR_DRQ) {
+		LOGF("G1_ATA_STATUS=0x%lx\n", IN8(G1_ATA_ALTSTATUS));
+	}
+#endif
 	g1_ata_wait_bsydrq();
 	
 	while(count)
@@ -782,8 +786,27 @@ static s32 g1_ata_access(struct ide_req *req)
 
 		if (req->cmd == G1_READ_PIO)
 		{
+			OUT8(G1_ATA_CTL, 2);
 			g1_pio_reset(len * sector_size);
-			g1_pio_xfer((u32)buff, len * sector_size);
+			// g1_pio_xfer((u32)buff, len * sector_size);
+			g1_pio_trans = 1;
+
+			for (u32 i = 0; i < len; ++i){
+				if (g1_ata_wait_drq()) {
+					LOGFF("Error, status=%02x\n", IN8(G1_ATA_ALTSTATUS));
+					break;
+				}
+				for (u32 w = 0; w < (sector_size >> 1); ++w) {
+					u16 word = IN16(G1_ATA_DATA);
+					buff[0] = word;
+                	buff[1] = word >> 8;
+					buff += 2;
+				}
+			}
+			g1_ata_ack_irq();
+			g1_ata_wait_bsydrq();
+			g1_pio_reset(0);
+			OUT8(G1_ATA_CTL, 0);
 		}
 #if _FS_READONLY == 0
 		else if (req->cmd == G1_WRITE_PIO)
@@ -811,7 +834,7 @@ static s32 g1_ata_access(struct ide_req *req)
 		{
 			/* Start the DMA transfer. */
 			OUT8(G1_ATA_DMA_STATUS, 1);
-			
+
 			if (req->async) {
 				return 0;
 			}
@@ -1018,10 +1041,12 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	const u8 drive = 1; // TODO
 	struct ide_device *dev = &ide_devices[drive & 1];
 	u8 lba_io[6];
-	u8 head;
 
 	DBGF("G1_ATA_PRE_READ: s=%ld c=%ld\n", (uint32)sector, count);
-	g1_dma_abort();
+
+	if (fs_dma_enabled()) {
+		g1_dma_abort();
+	}
 
 	// LBA48 only
 	lba_io[0] = (sector & 0x000000FF) >> 0;
@@ -1030,10 +1055,15 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	lba_io[3] = (sector & 0xFF000000) >> 24;
 	lba_io[4] = 0;
 	lba_io[5] = 0;
-	head      = 0;
+
+#ifdef LOG
+	if (IN8(G1_ATA_ALTSTATUS) & ATA_SR_DRQ) {
+		LOGF("G1_ATA_STATUS=0x%lx\n", IN8(G1_ATA_ALTSTATUS));
+	}
+#endif
 
 	g1_ata_wait_bsydrq();
-	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
+	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4)));
 
 	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
 	OUT8(G1_ATA_LBA_LOW, lba_io[3]);
@@ -1057,16 +1087,66 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	return 0;
 }
 
+void g1_ata_raise_interrupt(u64 sector) {
+
+	const size_t count = 1;
+	const u8 drive = 1; // TODO
+	struct ide_device *dev = &ide_devices[drive & 1];
+	u8 lba_io[6];
+	u8 status = 0;
+
+	LOGF("G1_ATA_IRQ_RAISE: %ld 0x%lx\n", sector, IN8(G1_ATA_ALTSTATUS));
+
+	// LBA48 only
+	lba_io[0] = (sector & 0x000000FF) >> 0;
+	lba_io[1] = (sector & 0x0000FF00) >> 8;
+	lba_io[2] = (sector & 0x00FF0000) >> 16;
+	lba_io[3] = (sector & 0xFF000000) >> 24;
+	lba_io[4] = 0;
+	lba_io[5] = 0;
+
+	g1_ata_wait_bsydrq();
+	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4)));
+
+	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
+	OUT8(G1_ATA_LBA_LOW, lba_io[3]);
+	OUT8(G1_ATA_LBA_MID, lba_io[4]);
+	OUT8(G1_ATA_LBA_HIGH, lba_io[5]);
+
+	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count & 0xff));
+	OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
+	OUT8(G1_ATA_LBA_MID,  lba_io[1]);
+	OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
+
+	g1_ata_wait_bsydrq();
+
+	OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_PIO_EXT);
+	// OUT8(G1_ATA_CTL, 2);
+
+	do {
+		status = IN8(G1_ATA_ALTSTATUS);
+	} while(!(status & ATA_SR_DRQ));
+
+	// g1_ata_ack_irq();
+	// OUT8(G1_ATA_CTL, 0);
+
+	for (u32 w = 0; w < 256; ++w) {
+		u16 d = IN16(G1_ATA_DATA);
+		d++;
+	}
+}
+
 s32 g1_ata_poll(void) {
 	int rv = 0;
 
 	if(!exception_inside_int() && g1_dma_in_progress()) {
 		rv = g1_dma_transfered();
-		DBGFF("%d\n", rv);
-		return rv > 0 ? rv : 32;
+		return rv > 0 ? rv : 1;
 	}
 
-	rv = g1_ata_ack_irq();
+	if (g1_dma_irq_visible == 0) {
+		rv = g1_ata_ack_irq();
+	}
 
 	if(!g1_dma_part_avail) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
@@ -1091,13 +1171,15 @@ s32 g1_ata_flush(void) {
 
 #endif /* DEV_TYPE_IDE */
 
-void g1_pio_reset(size_t total_bytes) {
-	if (total_bytes) {
-		OUT8(G1_ATA_CTL, 2);
-	} else {
-		OUT8(G1_ATA_CTL, 0);
-	}
 
+/**
+ * GD ATAPI PIO IRQ: First one for packed command and then two for every sector ready/end (2048 bytes).
+ * IDE ATA PIO IRQ: Two for every sector ready/end (512 bytes).
+ * 
+ * Need to keep one extra interrupt to simulate packet command
+ * and filter other extra interrupts due to sector size difference.
+ */
+void g1_pio_reset(size_t total_bytes) {
 	g1_pio_total = total_bytes;
 	g1_pio_avail = g1_pio_total;
 	g1_pio_trans = 0;
@@ -1105,14 +1187,24 @@ void g1_pio_reset(size_t total_bytes) {
 
 void g1_pio_xfer(u32 addr, size_t bytes) {
 	u16 *buff = (u16 *)addr;
-	const u32 sec_size = 512;
 	u32 words_count = bytes >> 1;
+	const u32 ide_sec_size = 512;
+	const u32 gd_sec_size = 2048;
 
 	g1_pio_trans = 1;
 
 	for(u32 w = 0; w < words_count; ++w) {
 
-		if (((g1_pio_total - g1_pio_avail) % sec_size) == 0) {
+		u32 transfered = g1_pio_total - g1_pio_avail;
+		u32 gd_sec_remain = (transfered % gd_sec_size);
+
+		if (gd_sec_remain == 0 || gd_sec_remain == ide_sec_size || transfered == gd_sec_size >> 1) {
+			OUT8(G1_ATA_CTL, 0);
+		} else if (gd_sec_remain == (gd_sec_size - ide_sec_size) && transfered != ide_sec_size) {
+			OUT8(G1_ATA_CTL, 2);
+		}
+
+		if ((transfered % ide_sec_size) == 0) {
 			if (g1_ata_wait_drq()) {
 				LOGFF("Error, status=%02x\n", IN8(G1_ATA_ALTSTATUS));
 				break;
@@ -1130,14 +1222,12 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 	g1_pio_trans = 0;
 
 	if (g1_pio_avail == 0) {
-		g1_ata_ack_irq();
 		OUT8(G1_ATA_CTL, 0);
 	}
 }
 
 void g1_pio_abort(void) {
 	g1_pio_reset(0);
-	g1_ata_ack_irq();
 }
 
 u32 g1_pio_in_progress(void) {
@@ -1180,7 +1270,7 @@ void g1_ata_abort(void) {
 	} else {
 		g1_pio_abort();
 	}
-	/*
+
 	OUT8(G1_ATA_DEVICE_SELECT, 0x10);
 	OUT8(G1_ATA_FEATURES, 0);
 
@@ -1188,13 +1278,12 @@ void g1_ata_abort(void) {
 	OUT8(G1_ATA_COMMAND_REG, 0);
 
 	g1_ata_wait_bsydrq();
-	*/
-	g1_ata_ack_irq();
 }
 
 s32 g1_ata_ack_irq(void) {
 	/* Ack device IRQ. */
 	u8 st = IN8(G1_ATA_STATUS_REG);
+	DBGF("G1_ATA_ACK_IRQ: %02lx\n", st);
 
 	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
 		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
@@ -1204,6 +1293,10 @@ s32 g1_ata_ack_irq(void) {
 		return -1;
 	}
 	return 0;
+}
+
+s32 g1_ata_has_irq() {
+	return (ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT] & ASIC_EXT_GD_CMD);
 }
 
 s32 g1_bus_init(void)
