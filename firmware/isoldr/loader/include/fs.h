@@ -109,7 +109,7 @@ int ioctl(int fd, int cmd, void *data);
 int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb);
 int abort_async(int fd);
 int poll(int fd);
-void poll_all();
+void poll_all(int err);
 
 /**
  * Async stream read feature

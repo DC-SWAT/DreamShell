@@ -381,6 +381,7 @@ int poll(int fd) {
 	}
 
 	if(!fh[fd].poll_cb || fh[fd].async < 1) {
+		LOGFF("error, not async fd\n");
 		return 0;
 	}
 	
@@ -395,24 +396,32 @@ int poll(int fd) {
 		if (fh[fd].rcnt) {
 			if (cdrom_read_sectors_part(fh[fd].rbuf, fh[fd].sec0 + (fh[fd].loc >> 11), fh[fd].loc % 2048, fh[fd].rcnt, 0) < 0) {
 				fh[fd].async = 0;
-				fh[fd].poll_cb(-1);
+				fs_callback_f *cb = fh[fd].poll_cb;
 				fh[fd].poll_cb = NULL;
+				cb(-1);
 				return FS_ERR_SYSERR;
 			}
 			
 			return transfered + fh[fd].rcnt - 32;
 		}
-		
-		fh[fd].poll_cb(transfered);
+
+		fs_callback_f *cb = fh[fd].poll_cb;
 		fh[fd].poll_cb = NULL;
+		cb(transfered);
 		return 0;
 	}
 }
 
-void poll_all() {
+void poll_all(int err) {
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
 		if(fh[i].sec0 > 0 && fh[i].async > 0) {
-			poll(i);
+			if (err) {
+				fs_callback_f *cb = file->poll_cb;
+				file->poll_cb = NULL;
+				cb(err);
+			} else {
+				poll(i);
+			}
 		}
 	}
 }

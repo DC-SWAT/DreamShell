@@ -333,13 +333,19 @@ int poll(int fd) {
 	CHECK_FD();
 
 	if(!file->poll_cb || file->state == FILE_STATE_POLL) {
+		LOGFF("Error, not async fd\n");
 		return 0;
+	}
+
+	if(file->state == FILE_STATE_POLL) {
+		LOGFF("Busy\n");
+		return 1;
 	}
 
 	file->state = FILE_STATE_POLL;
 	rc = f_poll(&file->fp, &bp);
 
-//	LOGFF("%d %d %d\n", fd, rc, bp);
+	DBGFF("%d %d %d\n", fd, rc, bp);
 
 	switch(rc) {
 		case FR_OK:
@@ -364,10 +370,17 @@ int poll(int fd) {
 	return rv;
 }
 
-void poll_all() {
+void poll_all(int err) {
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
-		if(_files[i].state == FILE_STATE_USED && _files[i].poll_cb != NULL) {
-			poll(i);
+		FILE *file = &_files[i];
+		if(file->state == FILE_STATE_USED && file->poll_cb != NULL) {
+			if (err) {
+				fs_callback_f *cb = file->poll_cb;
+				file->poll_cb = NULL;
+				cb(err);
+			} else {
+				poll(i);
+			}
 		}
 	}
 }
@@ -441,11 +454,13 @@ int ioctl(int fd, int cmd, void *data) {
 			memcpy(data, &sec, sizeof(sec));
 			return 0;
 		}
+#if _FS_READONLY == 0
 		case FS_IOCTL_SYNC:
 			if (f_sync(&file->fp) == FR_OK) {
 				return 0;
 			}
 			break;
+#endif
 		default:
 			return FS_ERR_PARAM;
 	}

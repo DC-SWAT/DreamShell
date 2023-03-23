@@ -87,24 +87,21 @@ $(BUILD)/dcl_full.bin:
 
 clean: 
 	rm -f $(KOS) $(EXEC) $(MAIN) $(SD) $(IDE) $(CD) $(DCL) #$(NET) 
-	rm -R -f $(BUILD)/*.elf
-	rm -R -f $(BUILD)/*.bin
-	
+	rm -f $(BUILD)/*.elf
+	rm -f $(BUILD)/*.bin
+
 install: 
 	-mkdir -p $(INSTALL_PATH)
-	cp -R $(BUILD)/*.bin $(INSTALL_PATH)
-	
-test_cd: clean cd
-	-mkdir -p $(INSTALL_PATH)
-	-rm -f $(INSTALL_PATH)/cd.bin
-	cp $(BUILD)/cd.bin $(INSTALL_PATH)/cd.bin
+	cp $(BUILD)/*.bin $(INSTALL_PATH)
 
-test_ide: clean ide
+test_cd: clean cd_full cd_ext cd
 	-mkdir -p $(INSTALL_PATH)
-	-rm -f $(INSTALL_PATH)/ide.bin
-	cp $(BUILD)/ide.bin $(INSTALL_PATH)/ide.bin
+	cp $(BUILD)/cd*.bin $(INSTALL_PATH)
 
-test_sd: clean sd
+test_ide: clean ide_full ide_ext ide
 	-mkdir -p $(INSTALL_PATH)
-	-rm -f $(INSTALL_PATH)/sd.bin
-	cp $(BUILD)/sd.bin $(INSTALL_PATH)/sd.bin
+	cp $(BUILD)/ide*.bin $(INSTALL_PATH)
+
+test_sd: clean sd_full sd_ext sd
+	-mkdir -p $(INSTALL_PATH)
+	cp $(BUILD)/sd*.bin $(INSTALL_PATH)

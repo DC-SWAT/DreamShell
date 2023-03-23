@@ -140,6 +140,7 @@ typedef struct {
 	BYTE *rbuff;
 	UINT btr;
 	UINT cur;
+	UINT rcnt;
 #endif
 } FIL;
 

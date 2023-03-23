@@ -2751,11 +2751,10 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 	if (fp->err)
 		LEAVE_FF(fp->fs, (FRESULT)fp->err);
 
-	int rs = fp->cur > 0 ? disk_poll(fp->fs->drv) : 0;
+	INT rs = 0;
 
-	if (fp->btr <= 0 && !rs) {
-		*bp = fp->cur;
-		return FR_OK;
+	if (fp->cur) {
+		rs = disk_poll(fp->fs->drv);
 	}
 
 	if (!rs) {
@@ -2763,6 +2762,11 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 		DWORD clst, sect;
 		UINT cc, cs, rcnt;
 		BYTE csect;
+
+		if (!fp->btr) {
+			*bp = fp->cur;
+			return FR_OK;
+		}
 
 		if ((fp->fptr % SS(fp->fs)) == 0) {		/* On the sector boundary? */
 
@@ -2875,18 +2879,20 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 #endif
 
 _continue:
+		*bp = fp->cur;
+
 		fp->fptr += rcnt;
 		fp->rbuff += rcnt;
 		fp->cur += rcnt;
 		fp->btr -= rcnt;
-		*bp = fp->cur;
-		
+		fp->rcnt = rcnt;
+
 	} else if(rs < 0) {
-//		f_abort(fp);
 		*bp = fp->cur;
 		ABORT(fp->fs, FR_DISK_ERR);
 	}
 
+	*bp = fp->cur - (fp->rcnt - rs);
 	return FR_NOT_READY;
 }
 
