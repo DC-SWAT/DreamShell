@@ -89,7 +89,6 @@ int InitReader() {
 	}
 
 	gd_state_t *GDS = get_GDS();
-	memset(GDS, 0, sizeof(gd_state_t));
 	GDS->lba = 150;
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {

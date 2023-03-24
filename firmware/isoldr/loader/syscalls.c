@@ -684,6 +684,80 @@ static void data_transfer_pio_stream() {
 	GDS->drv_stat = CD_STATUS_PAUSED;
 }
 
+static int init_cmd() {
+
+#ifdef HAVE_EXPT
+
+	if(IsoInfo->use_irq) {
+
+		int old = irq_disable();
+		
+		/* Injection to exception handling */
+		if (!exception_init(0)) {
+
+			/* Use ASIC interrupts */
+			asic_init();
+
+# if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
+			/* Initialize G1 DMA interrupt */
+			if (IsoInfo->use_dma) {
+				g1_dma_init_irq();
+			}
+# endif
+# ifdef HAVE_MAPLE
+			if(IsoInfo->emu_vmu) {
+				maple_init_irq();
+			}
+# endif
+		}
+		
+		irq_restore(old);
+
+# ifdef HAVE_GDB
+
+		gdb_init();
+		
+	} else {
+		
+		int old = irq_disable();
+		int rs = exception_init(0);
+		irq_restore(old);
+		
+		if(!rs) {
+			gdb_init();
+		}
+	}
+# else
+	}
+# endif /* HAVE_GDB */
+	
+#endif /* HAVE_EXPT */
+
+	// if (IsoInfo->heap == HEAP_MODE_INGAME
+	// 	|| IsoInfo->heap == HEAP_MODE_MAPLE
+	// 	|| malloc_heap_pos() > APP_ADDR
+	// ) {
+		malloc_init();
+		InitReader();
+#ifdef HAVE_CDDA
+		if(IsoInfo->emu_cdda) {
+			CDDA_Init();
+		}
+#endif
+#ifdef HAVE_MAPLE
+		if(IsoInfo->emu_vmu) {
+			maple_init_vmu(IsoInfo->emu_vmu);
+		}
+#endif
+// 	}
+// #ifdef DEV_TYPE_SD
+// 	else {
+// 		spi_init();
+// 	}
+// #endif
+	return CMD_STAT_COMPLETED;
+}
+
 static int is_transfer_cmd(int cmd) {
 	if(cmd == CMD_PIOREAD
 		|| cmd == CMD_DMAREAD
@@ -807,7 +881,7 @@ void gdcMainLoop(void) {
 					GetTOC();
 					break;
 				case CMD_INIT:
-					GDS->status = CMD_STAT_COMPLETED;
+					GDS->status = init_cmd();
 					break;
 				case CMD_GET_VERS:
 					get_ver_str();
@@ -955,9 +1029,7 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 int gdcGetDrvStat(uint32 *status) {
 
 #ifdef HAVE_CDDA
-	if (IsoInfo->emu_cdda) {
-		CDDA_MainLoop();
-	}
+	CDDA_MainLoop();
 #endif
 
 	if(lock_gdsys()) {
@@ -1038,75 +1110,6 @@ void gdcInitSystem(void) {
 
 	OpenLog();
 	LOGFF(NULL);
-
-#ifdef HAVE_EXPT
-
-	if(IsoInfo->use_irq) {
-
-		int old = irq_disable();
-		
-		/* Injection to exception handling */
-		if (!exception_init(0)) {
-
-			/* Use ASIC interrupts */
-			asic_init();
-
-# if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-			/* Initialize G1 DMA interrupt */
-			if (IsoInfo->use_dma) {
-				g1_dma_init_irq();
-			}
-# endif
-# ifdef HAVE_MAPLE
-			if(IsoInfo->emu_vmu) {
-				maple_init_irq();
-			}
-# endif
-		}
-		
-		irq_restore(old);
-
-# ifdef HAVE_GDB
-
-		gdb_init();
-		
-	} else {
-		
-		int old = irq_disable();
-		int rs = exception_init(0);
-		irq_restore(old);
-		
-		if(!rs) {
-			gdb_init();
-		}
-	}
-# else
-	}
-# endif /* HAVE_GDB */
-	
-#endif /* HAVE_EXPT */
-
-	if (IsoInfo->heap == HEAP_MODE_INGAME
-		|| IsoInfo->heap == HEAP_MODE_MAPLE
-	) {
-		malloc_init();
-		InitReader();
-#ifdef HAVE_CDDA
-		if(IsoInfo->emu_cdda) {
-			CDDA_Init();
-		}
-#endif
-#ifdef HAVE_MAPLE
-		if(IsoInfo->emu_vmu) {
-			maple_init_vmu(IsoInfo->emu_vmu);
-		}
-#endif
-	}
-#ifdef DEV_TYPE_SD
-	else {
-		spi_init();
-	}
-#endif
 
 	reset_GDS(get_GDS());
 	gdcMainLoop();
