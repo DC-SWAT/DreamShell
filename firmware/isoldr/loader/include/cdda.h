@@ -56,6 +56,10 @@ typedef struct cdda_ctx {
 	/* Check status value for normalize playback */
 	uint32 check_val;
 
+	/* AICA channels index */
+	uint32 right_channel;
+	uint32 left_channel;
+
 	/* Mutex for G2 bus */
 	uint32 g2_lock;
 

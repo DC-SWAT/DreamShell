@@ -63,7 +63,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 # ifdef HAVE_CDDA
 		if(status & ASIC_NRM_AICA_DMA) {
 			back_vector = aica_dma_handler(NULL, stack, back_vector);
-		} else /*if (status & ASIC_NRM_VSYNC)*/ {
+		} else if ((status & ASIC_NRM_VSYNC) || (status & ASIC_NRM_MAPLE_DMA)) {
 			back_vector = aica_vsync_handler(NULL, stack, back_vector);
 		}
 # endif
