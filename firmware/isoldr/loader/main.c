@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 	OpenLog();
 	printf(NULL);
 
-	malloc_init();
+	malloc_init(1);
 
 	/* Setup BIOS timer */
 	timer_init();

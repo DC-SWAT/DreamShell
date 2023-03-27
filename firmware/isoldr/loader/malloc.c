@@ -12,7 +12,6 @@ enum malloc_types {
     MALLOC_TYPE_KATANA = 1
 };
 static int malloc_type = MALLOC_TYPE_INTERNAL;
-static int init_count = 0;
 
 
 /**
@@ -118,8 +117,8 @@ static void internal_malloc_init_auto() {
     }
 }
 
-static void internal_malloc_init_maple() {
-    if (init_count > 1) {
+static void internal_malloc_init_maple(int first) {
+    if (first == 0) {
 
         uint32 addr = MAPLE_REG(MAPLE_DMA_ADDR);
         internal_malloc_base = (void *)CACHED_ADDR(addr);
@@ -141,7 +140,7 @@ static void internal_malloc_init_maple() {
     }
 }
 
-static int internal_malloc_init(void) {
+static int internal_malloc_init(int first) {
 
     internal_malloc_base = (void *)ALIGN32_ADDR(loader_end);
     internal_malloc_pos = NULL;
@@ -164,7 +163,7 @@ static int internal_malloc_init(void) {
 
     } else if(IsoInfo->heap == HEAP_MODE_MAPLE) {
 
-        internal_malloc_init_maple();
+        internal_malloc_init_maple(first);
     }
 
     internal_malloc_pos = internal_malloc_base + word_align(sizeof(struct chunk));
@@ -293,18 +292,21 @@ void *internal_realloc(void *ptr, size_t size) {
     return newptr;
 }
 
-int malloc_init(void) {
-    init_count++;
+int malloc_init(int first) {
 
-    if (IsoInfo->heap == HEAP_MODE_INGAME &&
-        IsoInfo->exec.type == BIN_TYPE_KATANA
-        && init_count > 1
+    if (IsoInfo->heap == HEAP_MODE_INGAME
+        && IsoInfo->exec.type == BIN_TYPE_KATANA
+        && first == 0
     ) {
-        if (katana_malloc_init() < 0) {
-            return internal_malloc_init();
+        if (malloc_type == MALLOC_TYPE_KATANA) {
+            return 1;
         }
+        if (katana_malloc_init() < 0) {
+            return internal_malloc_init(first);
+        }
+        return 0;
     }
-    return internal_malloc_init();
+    return internal_malloc_init(first);
 }
 
 void malloc_stat(uint32 *free_size, uint32 *max_free_size) {
@@ -329,7 +331,7 @@ void *malloc(uint32 size) {
         if (ptr == NULL) {
             LOGFF("KATANA failed, trying internal\n");
             if (internal_malloc_pos == NULL) {
-                internal_malloc_init();
+                internal_malloc_init(0);
             }
             return internal_malloc(size);
         }

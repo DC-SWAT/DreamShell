@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Memory allocation
- * (c)2022 SWAT <http://www.dc-swat.ru>
+ * (c)2022-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef __MALLOC_H
@@ -12,7 +12,7 @@ __BEGIN_DECLS
 
 #include <arch/types.h>
 
-int malloc_init(void);
+int malloc_init(int first);
 void malloc_stat(uint32 *free_size, uint32 *max_free_size);
 uint32 malloc_heap_pos();
 

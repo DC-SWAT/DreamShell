@@ -62,7 +62,8 @@ void setup_machine_state() {
 	*ASIC_IRQ11_MASK = 0;
 	*ASIC_IRQ13_MASK = 0;
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
-	(void) *((volatile uint8 *)0xa05f709c);
+	addr = *((volatile uint8 *)0xa05f709c);
+	addr++; // Prevent gcc optimization on register reading.
 
 	*((volatile uint32 *)0xa05f6904) = 0xf;
 	*((volatile uint32 *)0xa05f6908) = 0x9fffff;

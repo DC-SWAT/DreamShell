@@ -368,11 +368,10 @@ static void get_ver_str() {
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 static void g1_ata_data_wait(gd_state_t *GDS) {
 	GDS->ata_status = CMD_WAIT_DRQ_0;
-	uint32 count = 0;
 
 	do {
 		gdcExitToGame();
-		if (pre_read_xfer_done() || count++ > 10) {
+		if (pre_read_xfer_done()) {
 			break;
 		}
 	} while(GDS->cmd_abort == 0);
@@ -733,11 +732,7 @@ static int init_cmd() {
 	
 #endif /* HAVE_EXPT */
 
-	// if (IsoInfo->heap == HEAP_MODE_INGAME
-	// 	|| IsoInfo->heap == HEAP_MODE_MAPLE
-	// 	|| malloc_heap_pos() > APP_ADDR
-	// ) {
-		malloc_init();
+	if (!malloc_init(0)) {
 		InitReader();
 #ifdef HAVE_CDDA
 		if(IsoInfo->emu_cdda) {
@@ -749,12 +744,12 @@ static int init_cmd() {
 			maple_init_vmu(IsoInfo->emu_vmu);
 		}
 #endif
-// 	}
-// #ifdef DEV_TYPE_SD
-// 	else {
-// 		spi_init();
-// 	}
-// #endif
+	}
+#ifdef DEV_TYPE_SD
+	else {
+		spi_init();
+	}
+#endif
 	return CMD_STAT_COMPLETED;
 }
 
@@ -1144,11 +1139,15 @@ int gdcReadAbort(int gd_chn) {
 	}
 
 	switch(GDS->cmd) {
-		case CMD_PIOREAD:
-		case CMD_DMAREAD:
+#ifdef HAVE_CDDA
 		case CMD_PLAY:
 		case CMD_PLAY2:
 		case CMD_PAUSE:
+			CDDA_Stop();
+			return 0;
+#endif
+		case CMD_PIOREAD:
+		case CMD_DMAREAD:
 		case CMD_SEEK:
 		case CMD_NOP:
 		case CMD_SCAN_CD:
@@ -1193,8 +1192,8 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 		return -1;
 	}
 	if(GDS->status != CMD_STAT_STREAMING || GDS->requested < (uint32)dmabuf[1]) {
-		LOGF("ERROR: status = %d, remain = %d, request = %d\n",
-			GDS->status, GDS->requested, dmabuf[1]);
+		LOGF("ERROR: status = %s, remain = %d, request = %d\n",
+			stat_name[GDS->status + 1], GDS->requested, dmabuf[1]);
 		return -1;
 	}
 
@@ -1221,7 +1220,7 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 	}
 
 	if(GDS->status != CMD_STAT_STREAMING) {
-		LOGF("ERROR: status = %d\n", GDS->status);
+		LOGF("ERROR: status = %s\n", stat_name[GDS->status + 1]);
 		return -1;
 	}
 
@@ -1239,8 +1238,12 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
  * DMA transfer end syscall
  */
 void gdcG1DmaEnd(uint32 func, uint32 param) {
-	
-	LOGFF("%08lx %08lx\n", func, param);
+
+#ifdef LOG
+	if (func) {
+		LOGFF("%08lx %08lx\n", func, param);
+	}
+#endif
 
 #if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
 	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
@@ -1273,8 +1276,8 @@ int gdcReqPioTrans(int gd_chn, int *piobuf) {
 	}
 	
 	if(GDS->status != CMD_STAT_STREAMING || GDS->requested < (uint32)piobuf[1]) {
-		LOGF("ERROR: status = %d, remain = %d, request = %d\n",
-			GDS->status, GDS->requested, piobuf[1]);
+		LOGF("ERROR: status = %s, remain = %d, request = %d\n",
+			stat_name[GDS->status + 1], GDS->requested, piobuf[1]);
 		return -1;
 	}
 
@@ -1297,7 +1300,7 @@ int gdcCheckPioTrans(int gd_chn, int *size) {
 	}
 
 	if(GDS->status != CMD_STAT_STREAMING) {
-		LOGF("ERROR: status = %d\n", GDS->status);
+		LOGF("ERROR: status = %s\n", stat_name[GDS->status + 1]);
 		return -1;
 	}
 
