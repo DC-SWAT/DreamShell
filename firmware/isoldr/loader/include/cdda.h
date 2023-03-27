@@ -41,6 +41,7 @@ typedef struct cdda_ctx {
 	uint32 aica_right[2];  /* First/second buffer for channel in sound RAM */
 	uint32 cur_buff;       /* AICA channel buffer */
 	size_t size;           /* Full buffer size */
+	uint32 dma;            /* Use DMA for transfer to AICA memory */
 
 	/* Format info */
 	uint16 wav_format;
@@ -55,6 +56,7 @@ typedef struct cdda_ctx {
 
 	/* Check status value for normalize playback */
 	uint32 check_val;
+	uint32 pan_restore_count;
 
 	/* AICA channels index */
 	uint32 right_channel;

@@ -291,6 +291,12 @@ int read_async(int fd, void *ptr, unsigned int size, fs_callback_f *cb) {
 		abort_async(fd);
 	}
 
+	if (fs_dma_enabled() == FS_DMA_DISABLED) {
+		int rv = read(fd, ptr, size);
+		cb(rv);
+		return 0;
+	}
+
 	file->poll_cb = cb;
 
 	if(f_read_async(&file->fp, ptr, size) == FR_OK) {
