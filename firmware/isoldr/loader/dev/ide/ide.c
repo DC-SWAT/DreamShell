@@ -153,7 +153,9 @@ typedef struct ide_req {
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static u32 device_count = 0;
+#ifndef DEV_TYPE_IDE
 static u32 g1_dma_part_avail = 0;
+#endif
 static u32 g1_dma_irq_visible = 1;
 static u32 g1_dma_irq_code_game = 0;
 
@@ -224,6 +226,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	if (statusExt & ASIC_EXT_GD_CMD) {
 		DBGF("G1_ATA_IRQ: %03lx %08lx\n", code, statusExt);
 		g1_ata_ack_irq();
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_EXTERNAL;
 	}
 	if (status & ASIC_NRM_GD_DMA) {
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
@@ -231,6 +234,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	if ((statusErr & errFlags)) {
 		LOGFF("G1_ERROR_IRQ: %03lx %08lx\n", code, statusErr);
 		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_ERROR;
 		poll_all(-1);
 		return current_vector;
 	}
@@ -414,6 +418,7 @@ static inline s32 g1_ata_wait_drq(void)
     return (val & (ATA_SR_ERR | ATA_SR_DF)) ? -1 : 0;
 }
 
+#ifndef DEV_TYPE_IDE
 static s32 g1_ata_set_transfer_mode(u8 mode) 
 {
     u8 status;
@@ -443,6 +448,7 @@ static s32 g1_ata_set_transfer_mode(u8 mode)
 
     return 0;
 }
+#endif
 
 #if defined(LOG) && !defined(DEV_TYPE_EMU)
 static const s8 *dev_bus_name[] = {"MASTER", "SLAVE"};
@@ -578,13 +584,13 @@ static s32 g1_dev_scan(void)
 				ide_devices[j].command_sets  = (u32)(data[82]) | ((u32)(data[83]) << 16);
 				ide_devices[j].capabilities  = (u32)(data[49]) | ((u32)(data[50]) << 16);
 				ide_devices[j].wdma_modes = data[63];
-
+#ifdef LOG
 				if (!(ide_devices[j].capabilities & (1 << 9)))
 				{
 					LOGF("CHS don't supported\n");
 					// continue;
 				}
-
+#endif
 				if(!(ide_devices[j].command_sets & (1 << 26)))
 				{
 					ide_devices[j].max_lba = (u64)(data[60]) | ((u64)(data[61]) << 16);
@@ -598,7 +604,7 @@ static s32 g1_dev_scan(void)
 											((u64)(data[103]) << 48);
 					ide_devices[j].lba48 = 1;
 				}
-
+#if 0 /* Already set in core so just save memory. */
 				g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
 
 				/*  Do we support Multiword DMA mode 2? If so, enable it. Otherwise, we won't
@@ -613,6 +619,7 @@ static s32 g1_dev_scan(void)
 				{
 					ide_devices[j].wdma_modes = 0;
 				}
+#endif
 			}
 #elif defined(DEV_TYPE_GD)
 			if (type == IDE_ATAPI) {
@@ -972,7 +979,7 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	req.lba = block;
 	req.async = (wait_dma || req.cmd == G1_READ_PIO) ? 0 : 1;
 
-	g1_dma_part_avail = 0;
+	// g1_dma_part_avail = 0;
 
 	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
 		req.cmd == G1_READ_DMA ? "DMA" : "PIO", fs_dma_enabled(),
@@ -1004,7 +1011,7 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 }
 
 #endif
-
+#if 0
 s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 
 	LOGF("G1_ATA_PART: b=%d a=%d", bytes, g1_dma_part_avail);
@@ -1035,7 +1042,7 @@ s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 	LOGF(" read c=%d a=%d\n", req.count, g1_dma_part_avail);
 	return g1_ata_access(&req);
 }
-
+#endif
 s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 
 	const u8 drive = 1; // TODO
@@ -1078,7 +1085,7 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	g1_ata_wait_bsydrq();
 
 	if (fs_dma_enabled()) {
-		g1_dma_part_avail = 0;
+		// g1_dma_part_avail = 0;
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_DMA_EXT);
 	} else {
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_PIO_EXT);
@@ -1132,7 +1139,7 @@ void g1_ata_raise_interrupt(u64 sector) {
 
 	for (u32 w = 0; w < 256; ++w) {
 		u16 d = IN16(G1_ATA_DATA);
-		d++;
+		d++; // Prevent gcc optimization on register reading.
 	}
 }
 
@@ -1148,9 +1155,9 @@ s32 g1_ata_poll(void) {
 		rv = g1_ata_ack_irq();
 	}
 
-	if(!g1_dma_part_avail) {
+	// if(!g1_dma_part_avail) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
-	}
+	// }
 	return rv;
 }
 

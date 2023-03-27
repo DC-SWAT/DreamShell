@@ -108,6 +108,8 @@
 #define ASIC_NRM_PVR_DMA          0x80000     /* PVR (CH2) DMA complete */
 #define ASIC_NRM_SORT_DMA         0x100000    /* Sort-DMA complete */
 #define ASIC_NRM_PUNCHPOLY        0x200000    /* Punchthrough polygon binning complete */
+#define ASIC_NRM_EXTERNAL         0x40000000  /* There are external interrupts */
+#define ASIC_NRM_ERROR            0x80000000  /* There are error interrupts */
 
 #define ASIC_EXT_GD_CMD           0x01        /* GD-ROM command status */
 #define ASIC_EXT_AICA             0x02        /* AICA */
