@@ -9,7 +9,7 @@
 #ifndef _ISOFS_CISO_H
 #define _ISOFS_CISO_H
 
-#include <arch/types.h>
+#include <kos.h>
 
 /**
  * \file

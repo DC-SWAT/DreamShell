@@ -104,10 +104,4 @@
 /* Initialize AICA with custom firmware */
 int snd_init_firmware(const char *filename);
 
-/* Initialize AICA with KOS firmware */
-int snd_init();
-
-/* Shutdown AICA */
-int snd_shutdown();
-
 #endif /* _DS_AICA_H */

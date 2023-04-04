@@ -1,0 +1,5 @@
+/* KallistiOS ##version##
+
+ kos.h
+
+*/

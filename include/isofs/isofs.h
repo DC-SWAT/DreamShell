@@ -8,7 +8,7 @@
 #ifndef _ISOFS_H
 #define _ISOFS_H
 
-#include <arch/types.h>
+#include <kos.h>
 #include <kos/blockdev.h>
 
 /**

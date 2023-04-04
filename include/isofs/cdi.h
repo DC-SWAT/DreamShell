@@ -9,7 +9,7 @@
 #ifndef _ISOFS_CDI_H
 #define _ISOFS_CDI_H
 
-#include <arch/types.h>
+#include <kos.h>
 
 /**
  * \file
