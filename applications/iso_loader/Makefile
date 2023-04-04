@@ -12,6 +12,8 @@ APP_NAME = iso_loader
 APP_DIR = $(DS_BUILD)/apps/$(APP_NAME)
 DEPS = modules/app_$(APP_NAME).klf
 
+KOS_CFLAGS += -I./
+
 all: install
 
 $(DEPS): modules/module.c

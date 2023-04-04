@@ -1,3 +1,6 @@
+include kos/exports.h
+include app_module.h
+
 # ISO Loader exports
 isoLoader_Init
 isoLoader_Shutdown

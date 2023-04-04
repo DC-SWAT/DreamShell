@@ -6,12 +6,14 @@
 
 */
 
-#include "ds.h"
-#include "isoldr.h"
-#include "utils.h"
-#include "vmu.h"
+#include <ds.h>
+#include <isoldr.h>
+#include <vmu.h>
+
 #include <stdbool.h>
 #include <kos/md5.h>
+
+#include "app_utils.h"
 
 DEFAULT_MODULE_EXPORTS(app_iso_loader);
 

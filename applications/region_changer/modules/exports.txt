@@ -1,4 +1,7 @@
-tolua_RC_open
+include kos/exports.h
+include rc.h
+
+#tolua_RC_open
 flash_write_file
 flash_read_file
 flash_write_factory

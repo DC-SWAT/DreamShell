@@ -10,6 +10,8 @@ OBJS = module.o
 DBG_LIBS = -lds -lisofs
 EXPORTS_FILE = exports.txt
 
+KOS_CFLAGS += -I./
+
 VER_MAJOR = 1
 VER_MINOR = 0
 VER_MICRO = 1

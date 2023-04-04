@@ -7,7 +7,7 @@
 
 #include "ds.h"
 #include "isoldr.h"
-#include "utils.h"
+#include "app_utils.h"
 
 /* Trim begin/end spaces and copy into output buffer */
 void trim_spaces(char *input, char *output, int size) {

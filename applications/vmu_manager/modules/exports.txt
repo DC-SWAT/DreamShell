@@ -1,3 +1,6 @@
+include kos/exports.h
+include app_module.h
+
 Vmu_Manager_Init
 VMU_Manager_Exit
 VMU_Manager_EnableMainPage

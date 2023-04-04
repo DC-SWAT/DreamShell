@@ -15,6 +15,8 @@ VER_MAJOR = 1
 VER_MINOR = 8
 VER_MICRO = 5
 
+KOS_CFLAGS += -I./
+
 all: rm-elf
 
 include ../../../sdk/Makefile.loadable
