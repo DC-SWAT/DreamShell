@@ -1,5 +1,13 @@
+include kos/exports.h
+include secp256k1/secp256k1.h
+include secp256k1/secp256k1_ecdh.h
+include secp256k1/secp256k1_extrakeys.h
+include secp256k1/secp256k1_preallocated.h
+include secp256k1/secp256k1_recovery.h
+include secp256k1/secp256k1_schnorrsig.h
+
 # Module
-bitcoin_generate_keys
+#bitcoin_generate_keys
 
 # Library
 secp256k1_context_create

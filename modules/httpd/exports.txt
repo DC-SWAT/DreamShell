@@ -1,2 +1,5 @@
+include kos/exports.h
+include network/http.h
+
 httpd_init
 httpd_shutdown

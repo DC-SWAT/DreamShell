@@ -1,3 +1,7 @@
+include kos/exports.h
+include audio/mp3.h
+include mpg123/mpg123.h
+
 #sfx_load
 #sfx_play
 #sfx_unload_all
@@ -10,10 +14,10 @@ sndmp3_fastforward
 sndmp3_rewind
 sndmp3_restart
 sndmp3_pause
-mp3_init
-mp3_start
-mp3_stop
-mp3_shutdown
+#mp3_init
+#mp3_start
+#mp3_stop
+#mp3_shutdown
 
 #tabsel_123
 #freqs

@@ -1,1 +1,4 @@
+include kos/exports.h
+include drivers/dreameye.h
+
 dreameye_get_video_frame

@@ -1,1 +1,3 @@
-tolua_DS_open
+include kos/exports.h
+
+#tolua_DS_open

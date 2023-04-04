@@ -1,1 +1,3 @@
-luaopen_socket_core
+include kos/exports.h
+
+#luaopen_socket_core

@@ -1,3 +1,8 @@
+
+include kos.h
+include kos/exports.h
+include ppp/ppp.h
+
 modem_init
 modem_shutdown
 modem_set_mode

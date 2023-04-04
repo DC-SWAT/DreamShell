@@ -1,3 +1,8 @@
+include kos/exports.h
+include isofs/isofs.h
+include isofs/cdi.h
+include isofs/gdi.h
+include isofs/ciso.h
 #
 # Mounting
 #

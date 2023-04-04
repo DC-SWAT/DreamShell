@@ -1,1 +1,3 @@
-luaopen_task
+include kos/exports.h
+
+#luaopen_task

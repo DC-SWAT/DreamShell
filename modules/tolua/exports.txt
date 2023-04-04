@@ -1,3 +1,6 @@
+include kos/exports.h
+include tolua.h
+
 tolua_typename
 tolua_error
 tolua_isnoobj

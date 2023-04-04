@@ -1,1 +1,3 @@
-tolua_SDL_open
+include kos/exports.h
+
+#tolua_SDL_open

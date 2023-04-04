@@ -1,2 +1,5 @@
+include kos/exports.h
+include audio/s3m.h
+
 s3m_play
 s3m_stop

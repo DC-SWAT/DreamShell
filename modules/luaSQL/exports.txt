@@ -1,1 +1,3 @@
-luaopen_luasql_sqlite3
+include kos/exports.h
+
+#luaopen_luasql_sqlite3

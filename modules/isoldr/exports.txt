@@ -1,2 +1,5 @@
+include kos/exports.h
+include isoldr.h
+
 isoldr_get_info
 isoldr_exec

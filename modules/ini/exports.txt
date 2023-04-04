@@ -1,3 +1,6 @@
+include kos/exports.h
+include libini.h
+
 ini_open
 ini_close
 ini_flush

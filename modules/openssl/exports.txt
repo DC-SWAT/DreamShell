@@ -1,3 +1,10 @@
+include kos/exports.h
+include openssl/sha.h
+include openssl/ripemd.h
+include openssl/seed.h
+include openssl/aes.h
+include openssl/blowfish.h
+
 # SHA
 SHA1_Init
 SHA1_Update

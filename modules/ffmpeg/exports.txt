@@ -1,4 +1,12 @@
-ffplay
+include kos/exports.h
+include ffmpeg/libavcodec/avcodec.h
+include ffmpeg/libavcodec/opt.h
+include ffmpeg/libavformat/avformat.h
+include ffmpeg/libavutil/avutil.h
+include ffmpeg/libavutil/fifo.h
+include ffmpeg/libavutil/pixdesc.h
+
+#ffplay
 #sdl_ffplay
 #
 av_destruct_packet

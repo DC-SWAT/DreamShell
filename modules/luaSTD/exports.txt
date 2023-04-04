@@ -1,1 +1,3 @@
-tolua_STD_open
+include kos/exports.h
+
+#tolua_STD_open
