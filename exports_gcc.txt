@@ -1,3 +1,6 @@
+include kos/exports.h
+include exports_fix.h
+
 #GCC
 __floatdidf
 __divdf3
