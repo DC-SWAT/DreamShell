@@ -1,7 +1,0 @@
-asCreateScriptEngine
-asGetLibraryVersion
-asGetLibraryOptions
-asGetActiveContext
-asThreadCleanup
-asSetGlobalMemoryFunctions
-asResetGlobalMemoryFunctions
