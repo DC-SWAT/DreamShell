@@ -6,7 +6,7 @@
 */          
 
 #include "ds.h"
-#include "dreameye.h"
+#include "drivers/dreameye.h"
 
 DEFAULT_MODULE_EXPORTS_CMD(dreameye, "Dreameye camera");
 

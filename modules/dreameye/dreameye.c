@@ -8,7 +8,7 @@
 #include <ds.h>
 #include <assert.h>
 #include <kos/genwait.h>
-#include "dreameye.h"
+#include <drivers/dreameye.h>
 
 static int frame_pkg_size = 1004; // FIXME
 static dreameye_state_t *first_state = NULL;
