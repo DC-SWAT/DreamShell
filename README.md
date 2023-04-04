@@ -27,7 +27,6 @@ git clone https://github.com/KallistiOS/kos-ports.git
 git clone https://github.com/KallistiOS/KallistiOS.git kos && cd kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
-patch -d ./ -p1 < ds/sdk/toolchain/patches/kos.diff
 cp ds/sdk/toolchain/environ.sh environ.sh
 ```
 ##### Toolchain

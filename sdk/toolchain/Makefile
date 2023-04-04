@@ -10,7 +10,7 @@
 #
 # Interesting targets (you can 'make' any of these):
 # all: patch build
-# patch: patch-gcc patch-newlib patch-kos
+# patch: patch-gcc patch-newlib
 # build: build-sh4 build-arm
 # build-sh4: build-sh4-binutils build-sh4-gcc
 # build-arm: build-arm-binutils build-arm-gcc
@@ -100,15 +100,13 @@ all: patch build
 binutils_patches := $(wildcard $(patches)/binutils-$(binutils_ver)*.diff)
 gcc_patches      := $(wildcard $(patches)/gcc-$(gcc_ver)*.diff)
 newlib_patches   := $(wildcard $(patches)/newlib-$(newlib_ver)*.diff)
-kos_patches      := $(wildcard $(patches)/kos.diff)
 
-patch_targets=patch-binutils patch-gcc patch-newlib patch-kos
+patch_targets=patch-binutils patch-gcc patch-newlib
 
 patch: $(patch_targets)
 patch-binutils: $(binutils_patches)
 patch-gcc: $(gcc_patches)
-patch-newlib: $(newlib_patches) 
-patch-kos: $(kos_patches)
+patch-newlib: $(newlib_patches)
 
 $(newlib_patches):
 	patch -d $(newlib_dir) -p1 < $@
@@ -118,9 +116,6 @@ $(binutils_patches):
 
 $(gcc_patches):
 	patch -d $(gcc_dir) -p1 < $@
-
-$(kos_patches):
-	patch -d $(kos_base) -p1 < $@
 
 # ---- }}}
 
