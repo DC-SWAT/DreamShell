@@ -54,9 +54,12 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
+	/* Just save memory for Extended loader... */
+#if !defined(HAVE_CDDA) || defined(HAVE_MAPLE)
 	if(IsoInfo->gdtex > 0) {
 		draw_gdtex((uint8 *)IsoInfo->gdtex);
 	}
+#endif
 
 	LOGF("Magic: %s\n"
 		"LBA: %d (%d)\n"

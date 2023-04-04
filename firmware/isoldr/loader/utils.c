@@ -522,6 +522,7 @@ void video_screenshot() {
 	}
 	if (fd < 0) {
 		LOGFF("Can't create file: %s\n", filename);
+		free(buffer);
 		return;
 	}
 

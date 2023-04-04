@@ -55,8 +55,9 @@ typedef struct cdda_ctx {
 	uint32 end_tm;
 
 	/* Check status value for normalize playback */
-	uint32 check_val;
-	uint32 pan_restore_count;
+	uint32 check_status;
+	uint32 check_freq;
+	uint32 restore_count;
 
 	/* AICA channels index */
 	uint32 right_channel;

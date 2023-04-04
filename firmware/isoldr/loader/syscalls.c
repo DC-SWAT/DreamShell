@@ -1013,7 +1013,7 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 	}
 
 	unlock_gdsys();
-	LOGFF("%d %s\n", gd_chn, stat_name[rv + 1]);
+	DBGFF("%d %s\n", gd_chn, stat_name[rv + 1]);
 	return rv;
 }
 
