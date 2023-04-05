@@ -376,7 +376,7 @@ static void aica_setup_cdda(int clean) {
 		cdda->timer = TMU2;
 	}
 
-	timer_prime_cdda(cdda->timer, cdda->end_tm);
+	timer_prime_cdda(cdda->timer, cdda->end_tm, 0);
 
 	if(clean) {
 		LOGFF("0x%08lx 0x%08lx %d %d %d %d\n",
