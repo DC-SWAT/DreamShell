@@ -54,8 +54,7 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
-	/* Just save memory for Extended loader... */
-#if !defined(HAVE_CDDA) || defined(HAVE_MAPLE)
+#ifndef HAVE_LIMIT
 	if(IsoInfo->gdtex > 0) {
 		draw_gdtex((uint8 *)IsoInfo->gdtex);
 	}
@@ -110,7 +109,7 @@ int main(int argc, char *argv[]) {
 
 		if(src[1] != 0xD0) {
 
-			printf("Descrambling...\n");
+			LOGF("Descrambling...\n");
 
 			uint32 exec_addr = NONCACHED_ADDR(IsoInfo->exec.addr);
 			uint8 *dest = (uint8 *)(exec_addr + (IsoInfo->exec.size * 3));
@@ -120,6 +119,7 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+#ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT
 		|| (loader_end < IPBIN_ADDR && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq))
 		|| (loader_addr > APP_ADDR)
@@ -130,6 +130,7 @@ int main(int argc, char *argv[]) {
 			goto error;
 		}
 	}
+#endif
 
 	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
 		/* Patch GDC driver entry */
@@ -168,6 +169,7 @@ int main(int argc, char *argv[]) {
 
 	setup_machine_state();
 
+#ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
 		launch(NONCACHED_ADDR(IsoInfo->exec.addr));
@@ -183,6 +185,16 @@ error:
 	}
 	timer_spin_sleep_bios(3000);
 	*(vuint32 *)0xA05F6890 = 0x7611;
-	// Load_DS();
+	Load_DS();
+
+#else
+	printf("Executing...\n");
+	launch(NONCACHED_ADDR(IsoInfo->exec.addr));
+error:
+	printf("Failed!\n");
+	*(vuint32 *)0xA05F6890 = 0x7611;
+	do {} while (1);
+#endif /* HAVE_LIMIT */
+
 	return -1;
 }

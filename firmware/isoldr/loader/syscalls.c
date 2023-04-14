@@ -1332,7 +1332,21 @@ void gdcDummy(int gd_chn, int *arg2) {
  */
 int menu_syscall(int func) {
 	LOGFF("%d\n", func);
+#ifndef HAVE_LIMIT
+	switch(func) {
+		case 1:
+			setup_machine_state();
+			Load_DS();
+			break;
+		case 2:
+			// Check disc
+			break;
+		default:
+			break;
+	}
+#else
 	(void)func;
+#endif
 	return 0;
 }
 

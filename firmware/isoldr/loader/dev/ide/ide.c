@@ -418,7 +418,7 @@ static inline s32 g1_ata_wait_drq(void)
     return (val & (ATA_SR_ERR | ATA_SR_DF)) ? -1 : 0;
 }
 
-#ifndef DEV_TYPE_IDE
+#if !defined(HAVE_LIMIT) || defined(DEV_TYPE_GD)
 static s32 g1_ata_set_transfer_mode(u8 mode) 
 {
     u8 status;
@@ -604,7 +604,7 @@ static s32 g1_dev_scan(void)
 											((u64)(data[103]) << 48);
 					ide_devices[j].lba48 = 1;
 				}
-#if 0 /* Already set in core so just save memory. */
+#ifndef HAVE_LIMIT
 				g1_ata_set_transfer_mode(ATA_TRANSFER_PIO_DEFAULT);
 
 				/*  Do we support Multiword DMA mode 2? If so, enable it. Otherwise, we won't
