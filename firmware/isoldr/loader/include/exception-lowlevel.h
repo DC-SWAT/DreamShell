@@ -28,6 +28,9 @@
 #define EXP_CODE_INT9   0x320
 #define EXP_CODE_INT11  0x360
 #define EXP_CODE_INT13  0x3A0
+#define EXC_CODE_TMU0   0x400
+#define EXC_CODE_TMU1   0x420
+#define EXC_CODE_TMU2   0x440
 #define EXP_CODE_TRAP   0x160
 #define EXP_CODE_UBC    0x1E0
 #define EXP_CODE_RXI    0x720

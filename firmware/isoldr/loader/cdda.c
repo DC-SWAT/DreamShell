@@ -239,9 +239,11 @@ static void setup_pcm_buffer() {
 				cdda->size = 0x4000;
 				cdda->end_tm = 36176 / cdda->chn;
 #ifdef LOG
-				// Need some memory for logging
-				cdda->size >>= 1;
-				cdda->end_tm >>= 1;
+				if (malloc_heap_pos() < APP_ADDR) {
+					// Need some memory for logging in some cases
+					cdda->size >>= 1;
+					cdda->end_tm >>= 1;
+				}
 #endif
 			}
 			break;
@@ -329,6 +331,9 @@ static void aica_stop_cdda(void) {
 	}
 
 	g2_unlock();
+
+	timer_stop(cdda->timer);
+	timer_clear(cdda->timer);
 }
 
 static void aica_stop_clean_cdda() {
@@ -369,25 +374,18 @@ static void aica_setup_cdda(int clean) {
 	freq_lo = (cdda->freq << 10) / freq_base;
 	freq_base = (freq_hi << 11) | (freq_lo & 1023);
 
-	/* Setup SH4 timer */
-	if (IsoInfo->emu_cdda == CDDA_MODE_DMA_TMU1 || IsoInfo->emu_cdda == CDDA_MODE_SQ_TMU1) {
-		cdda->timer = TMU1;
-	} else {
-		cdda->timer = TMU2;
-	}
-
-	timer_prime_cdda(cdda->timer, cdda->end_tm, 0);
+	/* Stop AICA channels */
+	aica_stop_cdda();
 
 	if(clean) {
 		LOGFF("0x%08lx 0x%08lx %d %d %d %d\n",
 				smp_ptr, (smp_ptr + smp_size), smp_size, 
 				cdda->freq, cdda->aica_format, cdda->end_tm);
-		/* Stop AICA channels */
-		aica_stop_cdda();
 		cdda->restore_count = 0;
+		cdda->cur_buff = 0;
 	}
 
-	cdda->cur_buff = 0;
+	timer_prime_cdda(cdda->timer, cdda->end_tm, 0);
 
 	/* Setup AICA channels */
 	g2_fifo_wait();
@@ -433,25 +431,32 @@ static void aica_setup_cdda(int clean) {
 		CHNREG32(cdda->right_channel, 0) = val | ((smp_ptr + smp_size) >> 16);
 	}
 
-	g2_unlock();
 	g2_fifo_wait();
 
 	/* Start SH4 timer */
 	timer_start(cdda->timer);
+
+	g2_unlock();
 }
 
-static uint32 aica_change_cdda_channel(uint32 channel) {
-	uint32 val = 0, try_count = 0;
+static uint32 aica_change_cdda_channel(uint32 channel, uint32 exclude) {
+	uint32 val = 0, try_count = 1;
 	g2_lock();
 	do {
 		if (++channel >= AICA_CHANNELS_COUNT) {
 			channel = 0;
 		}
-		if (channel == cdda->left_channel || channel == cdda->right_channel) {
+		if (channel == cdda->left_channel
+			|| channel == cdda->right_channel
+			|| channel == exclude
+		) {
 			continue;
 		}
+		if (++try_count >= AICA_CHANNELS_COUNT) {
+			break;
+		}
 		val = CHNREG32(channel, 0);
-	} while ((val & 0x4000) != 0 && ++try_count < AICA_CHANNELS_COUNT);
+	} while ((val & 0x4000) != 0);
 	g2_unlock();
 #ifdef LOG
 	if (try_count >= AICA_CHANNELS_COUNT) {
@@ -474,27 +479,32 @@ static void aica_check_cdda(void) {
 		val = CHNREG32(cdda->left_channel, 36) & 0xffff;
 		if(val != (AICA_PAN(0) | (0xf << 8))) {
 			invalid_level |= 0x11;
-			LOGF("CDDA: L PAN %04lx != %04lx\n", val, (AICA_PAN(0) | (0xf << 8)));
+			// LOGF("CDDA: L PAN %04lx != %04lx\n", val, (AICA_PAN(0) | (0xf << 8)));
 		}
 		val = CHNREG32(cdda->right_channel, 36) & 0xffff;
 		if(val != (AICA_PAN(255) | (0xf << 8))) {
 			invalid_level |= 0x12;
-			LOGF("CDDA: R PAN %04lx != %04lx\n", val, (AICA_PAN(255) | (0xf << 8)));
+			// LOGF("CDDA: R PAN %04lx != %04lx\n", val, (AICA_PAN(255) | (0xf << 8)));
 		}
 		val = CHNREG32(cdda->right_channel, 40) & 0xffff;
 		if(val != check_vol) {
 			invalid_level |= 0x22;
-			LOGF("CDDA: R VOL %04lx != %04lx\n", val, check_vol);
+			// LOGF("CDDA: R VOL %04lx != %04lx\n", val, check_vol);
 		}
 		val = CHNREG32(cdda->right_channel, 24) & 0xffff;
 		if(val != cdda->check_freq) {
 			invalid_level |= 0x42;
-			LOGF("CDDA: R FRQ %04lx != %04lx\n", val, cdda->check_freq);
+			// LOGF("CDDA: R FRQ %04lx != %04lx\n", val, cdda->check_freq);
+		}
+		val = CHNREG32(cdda->left_channel, 12) & 0xffff;
+		if (val != (cdda->end_pos & 0xffff)) {
+			invalid_level |= 0x42;
+			// LOGF("CDDA: R POS %04lx != %04lx\n", val, cdda->end_pos & 0xffff);
 		}
 		val = CHNREG32(cdda->right_channel, 0) & 0xffff;
 		if (val != cdda->check_status) {
 			invalid_level |= 0x82;
-			LOGF("CDDA: R CON %04lx != %04lx\n", val, cdda->check_status);
+			// LOGF("CDDA: R CON %04lx != %04lx\n", val, cdda->check_status);
 		}
 	} else {
 		val = CHNREG32(cdda->left_channel, 36) & 0xffff;
@@ -506,85 +516,68 @@ static void aica_check_cdda(void) {
 	val = CHNREG32(cdda->left_channel, 40) & 0xffff;
 	if(val != check_vol) {
 		invalid_level |= 0x21;
-		LOGF("CDDA: L VOL %04lx != %04lx\n", val, check_vol);
+		// LOGF("CDDA: L VOL %04lx != %04lx\n", val, check_vol);
 	}
 	val = CHNREG32(cdda->left_channel, 24) & 0xffff;
 	if(val != cdda->check_freq) {
 		invalid_level |= 0x41;
-		LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->check_freq);
+		// LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->check_freq);
+	}
+	val = CHNREG32(cdda->left_channel, 12) & 0xffff;
+	if (val != (cdda->end_pos & 0xffff)) {
+		invalid_level |= 0x41;
+		// LOGF("CDDA: L POS %04lx != %04lx\n", val, cdda->end_pos & 0xffff);
 	}
 	val = CHNREG32(cdda->left_channel, 0) & 0xffff;
 	if (val != cdda->check_status) {
 		invalid_level |= 0x81;
-		LOGF("CDDA: L CON %04lx != %04lx\n", val, cdda->check_status);
+		// LOGF("CDDA: L CON %04lx != %04lx\n", val, cdda->check_status);
 	}
-
 	g2_unlock();
 
 	if ((invalid_level >> 4) == 0) {
 		return;
 	}
+
 	LOGF("CDDA: Invalid 0x%02lx\n", invalid_level);
-	if ((invalid_level >> 4) == 1) {
-		if (cdda->restore_count++ < 10) {
+
+	if (cdda->restore_count++ < 10) {
+		if ((invalid_level >> 4) <= 3) {
 			aica_set_volume(0);
 			return;
-		} else {
-			LOGF("CDDA: PAN change too much\n");
-			invalid_level |= 0x100;
 		}
-	}
-	if ((invalid_level >> 4) <= 3) {
-		aica_set_volume(0);
-		return;
-	}
-	if ((invalid_level >> 4) < 8) {
-		if (cdda->restore_count++ < 10) {
-			aica_stop_cdda();
+		if ((invalid_level >> 4) < 8) {
 			aica_setup_cdda(0);
 			return;
-		} else {
-			LOGF("CDDA: FREQ change too much\n");
-			invalid_level |= 0x100;
 		}
 	}
-	if ((invalid_level >> 4) >= 8) {
+	aica_stop_cdda();
 
-		aica_stop_cdda();
+	if (cdda->restore_count >= 10 || (invalid_level >> 4) == 8) {
 
-		if ((invalid_level >> 4) >= 0x10) {
+		uint32 left_channel = cdda->left_channel;
 
-			uint32 start_channel;
-
-			if (cdda->left_channel > cdda->right_channel
-				&& cdda->right_channel < AICA_CHANNELS_COUNT - 1
-			) {
-				start_channel = cdda->left_channel;
-			} else {
-				start_channel = cdda->right_channel;
-			}
-
-			if (invalid_level & 0x01) {
-				cdda->left_channel = aica_change_cdda_channel(start_channel);
-				start_channel = cdda->left_channel;
-				LOGF("CDDA: Left channel: %d\n", cdda->left_channel);
-			}
-			if (invalid_level & 0x02) {
-				cdda->right_channel = aica_change_cdda_channel(start_channel);
-				LOGF("CDDA: Right channel: %d\n", cdda->right_channel);
-			}
+		if (invalid_level & 0x01) {
+			left_channel = aica_change_cdda_channel(cdda->left_channel, left_channel);
 		}
-
-		aica_setup_cdda(0);
+		if (invalid_level & 0x02) {
+			cdda->right_channel = aica_change_cdda_channel(cdda->right_channel, left_channel);
+			LOGF("CDDA: Right channel: %d\n", cdda->right_channel);
+		}
+		if (left_channel != cdda->left_channel) {
+			cdda->left_channel = left_channel;
+			LOGF("CDDA: Left channel: %d\n", cdda->left_channel);
+		}
+		cdda->restore_count = 0;
 	}
-	cdda->restore_count = 0;
+	aica_setup_cdda(0);
 }
 
 #if 0 // For debugging
 
 /* Get channel position */
-static int aica_get_pos(void) {
-	int p;
+static uint32 aica_get_pos(void) {
+	uint32 p;
 	g2_fifo_wait();
 
 	/* Observe channel ch */
@@ -601,17 +594,6 @@ static int aica_get_pos(void) {
 
 	return p;
 }
-
-static uint8 aica_get_tmval(void) {
-	uint8 val;
-	
-	g2_lock();
-	val = SNDREG32(AICA_CDDA_TIMER_ARM) & 0xff;
-	g2_unlock();
-	
-	return val;
-}
-
 
 static void aica_init(void) {
 
@@ -659,8 +641,8 @@ static void aica_dma_init(void) {
 static int aica_suitable_pos() {
 	uint32 tm = timer_count(cdda->timer);
 	uint32 ta = cdda->end_tm >> 1;
-	// int pos = aica_get_pos();
-	// LOGF("CDDA: POS: %ld TIME: %ld\n", pos, tm);
+	// uint32 pos = aica_get_pos();
+	// LOGF("CDDA: POS %ld %ld\n", pos, tm);
 	// if((cdda->cur_buff == 0 && pos >= (cdda->end_pos >> 1)) || 
 	// 	(cdda->cur_buff == 1 && pos < (cdda->end_pos >> 1))) {
 	if((cdda->cur_buff == 0 && tm < ta) || (cdda->cur_buff == 1 && tm > ta)) {
@@ -763,7 +745,18 @@ static uint32 sector_align(uint32 offset) {
 
 
 #ifdef HAVE_EXPT
-
+/*
+static void* tmu_handle_exception(register_stack *stack, void *current_vector) {
+	uint32 code = *REG_EXPEVT;
+	(void)stack;
+	if ((code == EXC_CODE_TMU2 && cdda->timer == TMU2) ||
+		(code == EXC_CODE_TMU1 && cdda->timer == TMU1)
+	) {
+		timer_clear(cdda->timer);
+	}
+	return current_vector;
+}
+*/
 void *aica_dma_handler(void *passer, register_stack *stack, void *current_vector) {
 
 	(void)passer;
@@ -835,13 +828,28 @@ int CDDA_Init() {
 	cdda->left_channel = AICA_CDDA_CH_LEFT;
 	cdda->right_channel = AICA_CDDA_CH_RIGHT;
 
+	/* AICA DMA */
+	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1) {
+		cdda->dma = 1;
+	} else {
+		cdda->dma = 0;
+	}
+
+	/* SH4 timer */
+	if (IsoInfo->emu_cdda == CDDA_MODE_DMA_TMU1 || IsoInfo->emu_cdda == CDDA_MODE_SQ_TMU1) {
+		cdda->timer = TMU1;
+	} else {
+		cdda->timer = TMU2;
+	}
+
 #if 0
 	/* It's not need for games (they do it), only for local test */
 	aica_init();
 	aica_dma_init();
 #endif
 
-#if defined(HAVE_EXPT) && !defined(NO_ASIC_LT)
+#if defined(HAVE_EXPT)
+# if !defined(NO_ASIC_LT)
 	asic_lookup_table_entry vsync_entry, dma_entry;
 
 	memset(&vsync_entry, 0, sizeof(vsync_entry));
@@ -857,10 +865,18 @@ int CDDA_Init() {
 	vsync_entry.mask[ASIC_MASK_NRM_INT] = ASIC_NRM_VSYNC;
 	vsync_entry.handler = vsync_handler;
 
-	return asic_add_handler(&vsync_entry, &old_vsync_handler, 0);
-#else
-	return 0;
+	asic_add_handler(&vsync_entry, &old_vsync_handler, 0);
+# endif
+/*
+	exception_table_entry tmu_entry;
+
+	tmu_entry.type = EXP_TYPE_GEN;
+	tmu_entry.code = (cdda->timer == TMU2 ? EXC_CODE_TMU2 : EXC_CODE_TMU1);
+	tmu_entry.handler = tmu_handle_exception;
+	exception_add_handler(&tmu_entry, NULL);
+*/
 #endif
+	return 0;
 }
 
 
@@ -976,16 +992,8 @@ static void play_track(uint32 track) {
 #else
 	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1) {
 		fs_enable_dma(FS_DMA_HIDDEN);
-	} else {
-		fs_enable_dma(FS_DMA_DISABLED);
 	}
 #endif
-
-	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1) {
-		cdda->dma = 1;
-	} else {
-		cdda->dma = 0;
-	}
 
 	cdda->stat = CDDA_STAT_FILL;
 
@@ -1158,7 +1166,7 @@ static void play_next_track() {
 		end_playback();
 	}
 
-	if (exception_inside_int() && mmu_enabled()) {
+	if (exception_inside_int() && IsoInfo->exec.type == BIN_TYPE_WINCE) {
 		cdda->stat = CDDA_STAT_END;
 		return;
 	}
@@ -1200,7 +1208,7 @@ static void play_next_track() {
 
 #ifdef _FS_ASYNC
 static void read_callback(size_t size) {
-	DBGFF("%d\n", size);
+	DBGF("CDDA: FILL END %d\n", size);
 	if(cdda->stat > CDDA_STAT_IDLE) {
 		if(size == (size_t)-1) {
 			lseek(cdda->fd, cdda->cur_offset + cdda->offset, SEEK_SET);
@@ -1236,7 +1244,7 @@ static void fill_pcm_buff() {
 		return;
 	}
 
-	DBGFF("%ld %ld\n", cdda->cur_offset, cdda->track_size - cdda->cur_offset);
+	DBGF("CDDA: FILL %ld %ld\n", cdda->cur_offset, cdda->track_size - cdda->cur_offset);
 
 	/* Reading data for all channels to work buffer.
 		Using physical address to prevent cache invalidation
@@ -1285,7 +1293,7 @@ void CDDA_MainLoop(void) {
 	if(cdda->stat == CDDA_STAT_WAIT) {
 		/* Polling async data transfer */
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-		if(!exception_inited())
+		if(!exception_inited() || !pre_read_xfer_busy())
 #endif
 		{
 			if(poll(cdda->fd) < 0) {
@@ -1313,11 +1321,16 @@ void CDDA_MainLoop(void) {
 	if(cdda->stat == CDDA_STAT_PREP) {
 		aica_dma_irq_restore();
 		aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
+		cdda->stat = CDDA_STAT_POS;
+	}
+
+	/* Wait suitable channels position */
+	if(cdda->stat == CDDA_STAT_POS && aica_suitable_pos()) {
 		cdda->stat = CDDA_STAT_SNDL;
 	}
 
 	/* Send data to AICA */
-	if(cdda->stat == CDDA_STAT_SNDL && !aica_transfer_in_progress() && aica_suitable_pos()) {
+	if(cdda->stat == CDDA_STAT_SNDL && !aica_transfer_in_progress()) {
 		if(cdda->chn > 1) {
 			aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
 			cdda->stat = CDDA_STAT_SNDR;

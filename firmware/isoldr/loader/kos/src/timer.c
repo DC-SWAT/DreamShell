@@ -56,7 +56,7 @@ int timer_prime_cdda(int which, uint32 count, int interrupts) {
 	/* Stop timer */
 	TIMER8(TSTR) &= ~(1 << which);
 
-	/* External clock */
+	/* External clock, maybe interrupts */
 	if (interrupts) {
 		TIMER16(tcrs[which]) = 32 | 3;
 	} else {
