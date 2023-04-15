@@ -69,7 +69,8 @@ int InitSDCard() {
 	kos_blockdev_t *dev;
 
 	if(sdc_init()) {
-		dbglog(DBG_INFO, "SD card not found.\n");
+		scif_init();
+		dbglog(DBG_INFO, "\nSD card not found.\n");
 		return -1;
 	}
 

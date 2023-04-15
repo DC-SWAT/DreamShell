@@ -167,10 +167,8 @@ int InitDS() {
 
 	if(!emu) {
 		InitIDE();
+		InitSDCard();
 
-		if(InitSDCard()) {
-			scif_init();
-		}
 		if(is_custom_bios()) {
 			InitRomdisk();
 		}
@@ -278,11 +276,6 @@ int InitDS() {
 #ifdef DS_DEBUG
 	uint64 t_end = timer_ms_gettime64();
 	dbglog(DBG_INFO, "Initializing time: %ld ms\n", (uint32)(t_end - t_start));
-#else
-	if(!emu) {
-		SetConsoleDebug(0);
-		dbgio_set_dev_ds();
-	}
 #endif
 
 	if(settings->startup[0] == '/') {
@@ -306,6 +299,11 @@ int InitDS() {
 #ifdef DS_DEBUG
 	t_end = timer_ms_gettime64();
 	dbglog(DBG_INFO, "Startup time: %ld ms\n", (uint32)(t_end - t_start));
+#else
+	if(!emu) {
+		SetConsoleDebug(0);
+		dbgio_set_dev_ds();
+	}
 #endif
 
 	HideLogo();

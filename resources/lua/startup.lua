@@ -44,7 +44,6 @@ local DreamShell = {
 		--"luaSQL",           -- Depends: sqlite3
 		--"luaSocket",
 		--"luaTask",
-		--"angelscript",
 		--"bzip2",
 		--"minilzo",
 		--"zip",              -- Depends: bzip2
@@ -68,7 +67,6 @@ local DreamShell = {
 		--"aicaos",
 		--"gumbo",
 		--"ini",
-		--"aicaos",
 		--"bflash",
 		--"openssl",
 		--"bitcoin"

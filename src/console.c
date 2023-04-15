@@ -10,6 +10,7 @@
 #include "ds.h"
 #include "video.h"
 #include "console.h"
+#include <arch/spinlock.h>
 
 //#define CONSOLE_DEBUG 1
 
@@ -18,29 +19,37 @@ static Event_t *con_input_event;
 static Event_t *con_video_event;
 static int console_debug = 0;
 
+static char printf_buf[1024];
+static spinlock_t lock = SPINLOCK_INITIALIZER;
+
 
 void SetConsoleDebug(int mode) {
-     console_debug = mode;
+	spinlock_lock(&lock);
+	console_debug = mode;
+	spinlock_unlock(&lock);
 }
 
 int ds_printf(const char *fmt, ...) {
 
-    char buff[512];
-    char *ptemp, *b, *cr;
-    va_list args;
-    int i;
+	char *ptemp, *b, *cr;
+	va_list args;
+	int i;
 
-    va_start(args, fmt);
-    i = vsnprintf(buff, sizeof(buff), fmt, args);
-    va_end(args);
-    
+	if(!irq_inside_int()) {
+		spinlock_lock(&lock);
+	}
+
+	va_start(args, fmt);
+	i = vsnprintf(printf_buf, sizeof(printf_buf), fmt, args);
+	va_end(args);
+
 	if(console_debug) {
-		dbglog(DBG_DEBUG, buff);
+		dbglog(DBG_DEBUG, printf_buf);
 	}
 
 	if(DSConsole != NULL) {
 
-		ptemp = buff;
+		ptemp = printf_buf;
 
 		if(ConsoleIsVisible()) {
 			SetEventState(con_video_event, EVENT_STATE_SLEEP);
@@ -69,6 +78,10 @@ int ds_printf(const char *fmt, ...) {
 			CON_UpdateConsole(DSConsole);
 			SetEventState(con_video_event, EVENT_STATE_ACTIVE);
 		}
+	}
+
+	if(!irq_inside_int()) {
+		spinlock_unlock(&lock);
 	}
 	return i;
 }
@@ -134,14 +147,14 @@ static char *TabFunction(char* command) {
 	}
 	
 	if(!internal) {
-		
+
 		file_t fd;
 		dirent_t *ent;
 		char dir[MAX_FN_LEN];
 
 		snprintf(dir, MAX_FN_LEN, "%s/cmds", getenv("PATH"));
 		fd = fs_open(dir, O_RDONLY | O_DIR);
-	    
+
 		if(fd != FILEHND_INVALID) {
 			
 			while ((ent = fs_readdir(fd)) != NULL) {
@@ -149,11 +162,11 @@ static char *TabFunction(char* command) {
 					strcpy(command, ent->name);
 				}
 			}
-			
+
 			fs_close(fd);
 		}
 	}
-	
+
 	return command;
 }
 
@@ -184,7 +197,7 @@ static void ConsoleEventHandler(void *ds_event, void *param, int action) {
 		switch(event->type) {
 			
 			case SDL_KEYDOWN:
-    			switch(event->key.keysym.sym) {
+				switch(event->key.keysym.sym) {
 					case SDLK_F1:
 					case SDLK_ESCAPE:
 						HideConsole();
@@ -200,7 +213,7 @@ static void ConsoleEventHandler(void *ds_event, void *param, int action) {
 		
 		switch(event->type) {
 			case SDL_KEYDOWN:
-    			switch(event->key.keysym.sym) {
+				switch(event->key.keysym.sym) {
 					case SDLK_F1:
 					case SDLK_ESCAPE:
 						ShowConsole();
@@ -233,7 +246,7 @@ static void SetGuiState(int state) {
 
 
 int InitConsole(const char *font, const char *background, int lines, int x, int y, int w, int h, int alpha) {
-    
+	
 	SDL_Rect Con_rect;
 
 	Con_rect.x = x;
@@ -245,11 +258,11 @@ int InitConsole(const char *font, const char *background, int lines, int x, int 
 		return 0;
 
 	CON_SetPrompt(DSConsole, "D$: ");
-    
+	
 	if(background != NULL) {
 		CON_Background(DSConsole, background, 0, 0); 
 	}
-    
+	
 	CON_SetExecuteFunction(DSConsole, Command_Handler);
 	CON_SetTabCompletion(DSConsole, TabFunction);
 	CON_Alpha(DSConsole, alpha);
@@ -272,8 +285,8 @@ void ShutdownConsole() {
 
 
 int ToggleConsole() {
-    
-    int vis = 0;
+
+	int vis = 0;
 
 	if(DSConsole != NULL) {
 
@@ -283,7 +296,7 @@ int ToggleConsole() {
 			ShowConsole();
 		}
 	}
-    
+
 	return vis;
 }
 
@@ -321,10 +334,9 @@ void HideConsole() {
 }
 
 ConsoleInformation *GetConsole() {
-     return DSConsole;
+	 return DSConsole;
 }
 
 int ConsoleIsVisible() {
 	return CON_isVisible(DSConsole);
 }
-
