@@ -23,55 +23,94 @@ int exception_inside_int(void) {
 }
 #endif
 
-void setup_machine_state() {
+void setup_machine(void) {
 
 	const uint32 val = 0xffffffff;
 	uint32 addr = 0xffd80000;
-	*(volatile uint8 *)(addr + 4) = 0;
-	*(volatile uint8 *)(addr + 0) = 0;
-	*(volatile uint32 *)(addr + 8) = val;
-	*(volatile uint32 *)(addr + 12) = val;
-	*(volatile uint32 *)(addr + 20) = val;
-	*(volatile uint32 *)(addr + 24) = val;
-	*(volatile uint16 *)(addr + 28) = 0;
-	*(volatile uint32 *)(addr + 32) = val;
-	*(volatile uint32 *)(addr + 36) = val;
-	*(volatile uint16 *)(addr + 40) = 0;
+	*(vuint8 *)(addr + 4) = 0;
+	*(vuint8 *)(addr + 0) = 0;
+	*(vuint32 *)(addr + 8) = val;
+	*(vuint32 *)(addr + 12) = val;
+	*(vuint32 *)(addr + 20) = val;
+	*(vuint32 *)(addr + 24) = val;
+	*(vuint16 *)(addr + 28) = 0;
+	*(vuint32 *)(addr + 32) = val;
+	*(vuint32 *)(addr + 36) = val;
+	*(vuint16 *)(addr + 40) = 0;
 
 	if (IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
-		*(volatile uint8 *)(addr + 4) |= 1;
+		*(vuint8 *)(addr + 4) |= 1;
 	}
 
-	addr = 0xFF000000;
-	*(volatile uint32 *)(addr) = 0;
-	*(volatile uint32 *)(addr + 4) = 0;
-	*(volatile uint32 *)(addr + 8) = 0;
-	*(volatile uint32 *)(addr + 12) = 0;
-	*(volatile uint32 *)(addr + 16) = 0;
-	*(volatile uint32 *)(addr + 28) = 0;
-	*(volatile uint32 *)(addr + 32) = 0;
-	*(volatile uint32 *)(addr + 36) = 32;
-	*(volatile uint32 *)(addr + 40) = 0x3a0;
-	*(volatile uint32 *)(addr + 44) = 0;
-	*(volatile uint32 *)(addr + 52) = 0;
-	*(volatile uint32 *)(addr + 56) = 0;
-	*(volatile uint32 *)(addr + 60) = 0;
-
 	/* Clear IRQ stuff */
-	*ASIC_IRQ9_MASK  = 0;
-	*ASIC_IRQ11_MASK = 0;
-	*ASIC_IRQ13_MASK = 0;
-	ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = 0x04038;
-	addr = *((volatile uint8 *)0xa05f709c);
+	*((vuint32 *) 0xa05f6910) = 0;
+	*((vuint32 *) 0xa05f6914) = 0;
+	*((vuint32 *) 0xa05f6918) = 0;
+
+	*((vuint32 *) 0xa05f6920) = 0;
+	*((vuint32 *) 0xa05f6924) = 0;
+	*((vuint32 *) 0xa05f6928) = 0;
+
+	*((vuint32 *) 0xa05f6930) = 0;
+	*((vuint32 *) 0xa05f6934) = 0;
+	*((vuint32 *) 0xa05f6938) = 0;
+
+	*((vuint32 *) 0xa05f6940) = 0;
+	*((vuint32 *) 0xa05f6944) = 0;
+
+	*((vuint32 *) 0xa05f6950) = 0;
+	*((vuint32 *) 0xa05f6954) = 0;
+
+	addr = *((vuint8 *)0xa05f709c);
 	addr++; // Prevent gcc optimization on register reading.
 
-	*((volatile uint32 *)0xa05f6904) = 0xf;
-	*((volatile uint32 *)0xa05f6908) = 0x9fffff;
-	*((volatile uint32 *)0xa05f74a0) = 0x2001;
-	// *(volatile uint32 *)(0xa05f78bc) = 0x46597f00;
-	// *(volatile uint32 *)(0xa05f6910) = 8;
-	// *(volatile uint32 *)(0xa05f6c04) = 0x0cff0000;
-	// *(volatile uint32 *)(0xa05f6c8c) = 0x61557f00;
+	*((vuint32 *) 0xA05F6900) = 0x4038;
+
+	*((vuint32 *)0xa05f6904) = 0xf;
+	*((vuint32 *)0xa05f6908) = 0x9fffff;
+	*((vuint32 *)0xa05f74a0) = 0x2001;
+}
+
+void shutdown_machine(void) {
+
+	const uint32 reset_regs[] = {
+		0xa05f6808, 0xa05f6820, 0xa05f6c14, 0xa05f7414, 
+		0xa05f7814, 0xa05f7834, 0xa05f7854, 0xa05f7874, 
+		0xa05f7c14, 0xffa0001c, 0xffa0002c, 0xffa0003c
+	};
+
+	*(vuint32 *)(0xff000010) = 0;
+	*(vuint32 *)(0xff00001c) = 0x929;
+
+	uint32 addr1 = 0xa05f6938;
+	uint32 addr2 = 0xffd0000c;
+
+	for (int i = 3; i; --i) {
+		*(vuint32 *)(addr1) = 0;
+		addr1 -= 4;
+		*(vuint32 *)(addr1) = 0;
+		addr1 -= 4;
+		*(vuint32 *)(addr1) = 0;
+		addr1 -= 8;
+		*(vuint32 *)(addr2) = 0;
+		addr2 -= 4;
+	}
+
+	*(vuint32 *)(addr2) = 0;
+	addr2 = *(vuint32 *)(addr1);
+	addr1 -= 8;
+	addr2 += *(vuint32 *)(addr1);
+
+	*(vuint32 *)(0xa05f8044) = (*(vuint32 *)(0xa05f8044) & 0xfffffffe);
+
+	for (uint32 i = 0; i < ((sizeof(reset_regs)) >> 2); ++i) {
+		*(vuint32 *)(reset_regs[i]) = (*(vuint32 *)(reset_regs[i]) & 0xfffffffe);
+		for (uint32 j = 0; j < 127; ++j) {
+			if (!(*(vuint32 *)(reset_regs[i]) & 0xfffffffe)) {
+				break;
+			}
+		}
+	}
 }
 
 uint Load_BootBin() {
@@ -172,8 +211,8 @@ static int get_ds_fd() {
 	return fd;
 }
 
-void Load_DS() {
-	printf("Loading DreamShell...\n");
+int Load_DS() {
+	LOGFF(NULL);
 
 	if (iso_fd > FILEHND_INVALID) {
 		close(iso_fd);
@@ -182,20 +221,14 @@ void Load_DS() {
 	int fd = get_ds_fd();
 
 	if (fd < 0) {
-		printf("FAILED\n");
-		return;
+		LOGFF("FAILED\n");
+		return -1;
 	}
+	restore_syscalls();
 
-	if (IsoInfo->syscalls == 0) {
-		int all_sc = loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
-			(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW);
-		disable_syscalls(all_sc);
-	}
-
-	if (read(fd, (uint8 *)NONCACHED_ADDR(APP_ADDR), total(fd)) > 0) {
-		launch(APP_ADDR);
-	}
+	int rs = read(fd, (uint8 *)NONCACHED_ADDR(APP_ADDR), total(fd));
 	close(fd);
+	return rs;
 }
 
 #ifdef HAVE_EXT_SYSCALLS

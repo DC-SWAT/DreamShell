@@ -1318,7 +1318,7 @@ void CDDA_MainLoop(void) {
 	}
 
 	/* Split PCM data to left and right channels */
-	if(cdda->stat == CDDA_STAT_PREP) {
+	if(cdda->stat == CDDA_STAT_PREP && !aica_transfer_in_progress()) {
 		aica_dma_irq_restore();
 		aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
 		cdda->stat = CDDA_STAT_POS;

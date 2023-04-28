@@ -45,7 +45,8 @@ extern uint32 loader_size;
 extern uint32 loader_addr;
 extern uint32 loader_end;
 extern void boot_stub(void *, uint32) __attribute__((noreturn));
-void setup_machine_state();
+void setup_machine(void);
+void shutdown_machine(void);
 
 #define launch(addr) \
 	void (*fboot)(uint32) __attribute__((noreturn));     \
@@ -70,7 +71,7 @@ int printf(const char *fmt, ...);
 
 uint Load_BootBin();
 uint Load_IPBin();
-void Load_DS();
+int Load_DS();
 void Load_Syscalls();
 
 #ifdef LOG

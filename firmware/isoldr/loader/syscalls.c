@@ -1330,24 +1330,23 @@ void gdcDummy(int gd_chn, int *arg2) {
 /**
  * Menu syscall
  */
-int menu_syscall(int func) {
-	LOGFF("%d\n", func);
-#ifndef HAVE_LIMIT
-	switch(func) {
-		case 1:
-			setup_machine_state();
-			Load_DS();
-			break;
-		case 2:
-			// Check disc
-			break;
-		default:
-			break;
+void menu_exit(void) {
+	LOGFF(NULL);
+
+	shutdown_machine();
+	fs_enable_dma(FS_DMA_DISABLED);
+
+	if (Load_DS() > 0) {
+		launch(NONCACHED_ADDR(APP_ADDR));
+	} else {
+		launch(0xa0000000);
 	}
-#else
-	(void)func;
-#endif
-	return 0;
+}
+
+int menu_check_disc(void) {
+	LOGFF(NULL);
+	gd_state_t *GDS = get_GDS();
+	return GDS->drv_media;
 }
 
 /**
@@ -1434,12 +1433,8 @@ int flashrom_delete(int offset) {
  * Sysinfo syscalls
  */
 int sys_misc_init(void) {
-	
 	LOGFF(NULL);
-
-	safe_memcpy((uint8 *)0x8c000068, (uint8 *)0xa021a056, 8);
-	safe_memcpy((uint8 *)0x8c000070, (uint8 *)0xa021a000, 5);
-	dcache_purge_range(0x8c000060, 32);
+	// It's done by BIOS at startup.
 	return 0;
 }
 
@@ -1449,7 +1444,6 @@ int sys_unknown(void) {
 }
 
 int sys_icon(int icon, uint8 *dest) {
-
 	LOGFF("%d 0x%08lx\n", icon, dest);
 	safe_memcpy(dest, (uint8 *)(0xa021a480 + (icon * 704)), 704);
 	return 704;
@@ -1498,6 +1492,16 @@ void disable_syscalls(int all) {
 		bfont_syscall_disable();
 		flash_syscall_disable();
 		sys_syscall_disable();
+	}
+}
+
+void restore_syscalls(void) {
+	if (IsoInfo->syscalls == 0 && loader_addr >= ISOLDR_DEFAULT_ADDR_LOW) {
+		disable_syscalls(0);
+	} else if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
+			(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW))
+	{
+		// FIXME: Restore syscalls from BIOS
 	}
 }
 

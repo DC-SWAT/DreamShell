@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2023 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _SYSCALLS_H
@@ -212,6 +212,7 @@ extern void bfont_syscall_disable(void);
 
 void enable_syscalls(int all);
 void disable_syscalls(int all);
+void restore_syscalls(void);
 
 int sys_misc_init(void);
 

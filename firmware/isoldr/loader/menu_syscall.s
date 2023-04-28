@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C)2010-2016 SWAT
+!   Copyright (C)2010-2023 SWAT
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -59,23 +59,40 @@ menu_redir_k:
 	.long menu_redir
 
 menu_redir:
-	mov r7,r0
-	mov #2,r1
-	cmp/hs r0,r1
-	bf badsyscall
-	mov.l menu_syscall,r1
-	shll2 r0
-	mov.l @(r0,r1),r0
-	jmp @r0
-	nop
-badsyscall:
-	mov #-1,r0
+	mov		r4, r0
+	cmp/eq	#1, r0
+	bt		menu_reboot
+	cmp/eq	#2, r0
+	bt		menu_chk_disk
 	rts
+	mov		#0, r0
+
+menu_chk_disk:
+	mov.l	menu_check_disc, r0
+	jmp		@r0
 	nop
 
-menu_syscall:
-	.long menu_syscall
-menu_syscall1:
-	.long _menu_syscall
-menu_syscall2:
-	.long _menu_syscall
+menu_reboot:
+	mov		r15, r5
+	mov.l   reg_sr_val, r0
+	ldc     r0, sr
+	mov.l   reg_gbr_val, r4
+	ldc     r4, gbr
+	mov.l   new_stack, r15
+	ldc     r4, vbr
+	sts.l	pr, @-r15
+	mov.l	menu_exit, r0
+	jmp		@r0
+	mov.l	@r15+, r4
+
+.align 4
+menu_check_disc:
+	.long _menu_check_disc
+menu_exit:
+	.long _menu_exit
+reg_sr_val:
+	.long 0x700000f0
+reg_gbr_val:
+	.long 0x8c000000
+new_stack:
+	.long 0x8d000000

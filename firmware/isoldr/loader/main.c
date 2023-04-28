@@ -29,6 +29,7 @@ int main(int argc, char *argv[]) {
 
 	OpenLog();
 	printf(NULL);
+	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 
 	malloc_init(1);
 
@@ -37,7 +38,6 @@ int main(int argc, char *argv[]) {
 	timer_prime_bios(TMU0);
 	timer_start(TMU0);
 
-	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 	int emu_all_sc = 0;
 
 	if (IsoInfo->syscalls == 0) {
@@ -167,25 +167,23 @@ int main(int argc, char *argv[]) {
 	}
 #endif
 
-	setup_machine_state();
+	setup_machine();
 
 #ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
 		launch(NONCACHED_ADDR(IsoInfo->exec.addr));
+	} else {
+		printf("Executing from IP.BIN...\n");
+		launch(0xac00e000);
 	}
-
-	printf("Executing from IP.BIN...\n");
-	launch(0xac00e000);
 
 error:
 	printf("Failed!\n");
-	if (IsoInfo->syscalls == 0) {
-		disable_syscalls(emu_all_sc);
-	}
 	timer_spin_sleep_bios(3000);
-	*(vuint32 *)0xA05F6890 = 0x7611;
 	Load_DS();
+	launch(NONCACHED_ADDR(IsoInfo->exec.addr));
+	*(vuint32 *)0xA05F6890 = 0x7611;
 
 #else
 	printf("Executing...\n");
