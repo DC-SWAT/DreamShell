@@ -1383,7 +1383,6 @@ dbglog_set_level
 #
 # Stdlib
 atexit
-_atexit_call_all
 atof
 atoi
 atol
@@ -1472,6 +1471,7 @@ isspace
 isalnum
 #
 # Misc
+_fini
 __errno
 pow
 sqrt

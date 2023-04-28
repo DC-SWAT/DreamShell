@@ -2,7 +2,7 @@
 
    exec.c
    Copyright (C) 2002 Dan Potter
-   Copyright (C) 2013-2014 SWAT
+   Copyright (C) 2013-2023 SWAT
 */
 
 #include <kos.h>
@@ -15,12 +15,6 @@
 #include <string.h>
 #include <stdio.h>
 
-void _atexit_call_all();
-
-#if __GNUC__ >= 4
-void init(void);
-void fini(void);
-#endif
 
 /* Pull these in from execasm.s */
 extern uint32 _isoldr_exec_template[];
@@ -30,23 +24,24 @@ extern uint32 _isoldr_exec_template_end[];
 /* Pull this in from startup.s */
 extern uint32 _arch_old_sr, _arch_old_vbr, _arch_old_stack, _arch_old_fpscr;
 
-void isoldr_arch_auto_shutdown() {
+/* GCC stuff */
+extern void _fini(void);
+
+static void isoldr_arch_auto_shutdown() {
 	fs_dclsocket_shutdown();
 	net_shutdown();
 
-	irq_disable();
 	snd_shutdown();
 	timer_shutdown();
 
-	/* hardware_shutdown() */
 	la_shutdown();
 	bba_shutdown();
 	maple_shutdown();
 	cdrom_shutdown();
 	spu_dma_shutdown();
 	spu_shutdown();
-	//vid_shutdown();
 	pvr_shutdown();
+
 	library_shutdown();
 	fs_dcload_shutdown();
 	fs_vmu_shutdown();
@@ -56,23 +51,17 @@ void isoldr_arch_auto_shutdown() {
 	fs_romdisk_shutdown();
 	fs_pty_shutdown();
 	fs_shutdown();
+
 	thd_shutdown();
 	rtc_shutdown();
 }
 
 static void isoldr_arch_shutdown() {
+
     /* Run dtors */
-    _atexit_call_all();
+    _fini();
 
-#if __GNUC__ < 4
-    arch_dtors();
-#else
-# if __GNUC__ < 8
-    fini();
-# endif
-#endif
-
-    dbglog(DBG_CRITICAL, "Shutting down DreamShell kernel\n");
+    dbglog(DBG_CRITICAL, "arch: shutting down kernel\n");
 
     /* Turn off UBC breakpoints, if any */
     ubc_disable_all();

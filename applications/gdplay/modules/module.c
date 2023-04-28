@@ -76,12 +76,6 @@ kthread_t *check_gdrom_thd;
 int kill_gdrom_thd = 0;
 
 void gdplay_run_game(void *param);
-void _atexit_call_all();
-
-#if __GNUC__ >= 4
-void init(void);
-void fini(void);
-#endif
 
 static void clear_text(void)
 {
@@ -365,41 +359,8 @@ void gdplay_play(GUI_Widget *widget)
 	thd_join(check_gdrom_thd, NULL);
 
 	ShutdownDS();
+    arch_shutdown();
 
-#if __GNUC__ < 4
-    arch_dtors();
-#else
-# if __GNUC__ < 8
-    fini();
-# endif
-#endif
-
-    ubc_disable_all();
-    fs_dclsocket_shutdown();
-	net_shutdown();
-	irq_disable();
-	snd_shutdown();
-	timer_shutdown();
-	la_shutdown();
-	bba_shutdown();
-	maple_shutdown();
-	cdrom_shutdown();
-	spu_dma_shutdown();
-	spu_shutdown();
-	pvr_shutdown();
-	library_shutdown();
-	fs_dcload_shutdown();
-	fs_vmu_shutdown();
-	vmufs_shutdown();
-	fs_iso9660_shutdown();
-	fs_ramdisk_shutdown();
-	fs_romdisk_shutdown();
-	fs_pty_shutdown();
-	fs_shutdown();
-	thd_shutdown();
-	rtc_shutdown();
-	irq_shutdown();
-	
 	gdplay_run_game(self.bios_patch);
 }
 

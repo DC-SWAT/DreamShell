@@ -12,7 +12,7 @@
 
 extern uint32 _arch_old_sr, _arch_old_vbr, _arch_old_stack, _arch_old_fpscr, start;
 extern volatile uint32 jiffies;
-void _atexit_call_all();
+extern void _fini(void);
 
 int asprintf(char **restrict strp, const char *restrict fmt, ...);
 int vasprintf(char **restrict strp, const char *restrict fmt, va_list ap);
