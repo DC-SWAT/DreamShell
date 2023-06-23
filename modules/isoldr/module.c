@@ -105,7 +105,7 @@ static int get_executable_info(isoldr_info_t *info, file_t fd) {
 static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdtex) {
 
 	file_t fd;
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	char mount[8] = "/isoldr";
 	uint8 sec[2048];
 	char *psec = (char *)sec;
@@ -130,7 +130,7 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 
 	if(use_gdtex) {
 
-		snprintf(fn, MAX_FN_LEN, "%s/0GDTEX.PVR", mount);
+		snprintf(fn, NAME_MAX, "%s/0GDTEX.PVR", mount);
 		fd = fs_open(fn, O_RDONLY);
 
 		if(fd != FILEHND_INVALID) {
@@ -171,7 +171,7 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 		info->exec.file[12] = '\0';
 	}
 
-	snprintf(fn, MAX_FN_LEN, "%s/%s", mount, info->exec.file);
+	snprintf(fn, NAME_MAX, "%s/%s", mount, info->exec.file);
 	fd = fs_open(fn, O_RDONLY);
 
 	if(fd == FILEHND_INVALID) {
@@ -224,8 +224,8 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 
 	len = strlen(psec);
 
-	if(len > MAX_FN_LEN) {
-		len = MAX_FN_LEN - 1;
+	if(len > NAME_MAX) {
+		len = NAME_MAX - 1;
 	}
 
 	strncpy(info->image_file, psec, len);
@@ -392,7 +392,7 @@ static void set_loader_type(isoldr_info_t *info) {
 
 void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 
 	if (strcmp(info->fs_dev, ISOLDR_DEV_DCLOAD) == 0
 		|| strcmp(info->fs_dev, ISOLDR_DEV_GDROM) == 0
@@ -403,9 +403,9 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 	}
 
 	if(info->fs_type[0] != '\0') {
-		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/%s_%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev, info->fs_type);
+		snprintf(fn, NAME_MAX, "%s/firmware/%s/%s_%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev, info->fs_type);
 	} else {
-		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev);
+		snprintf(fn, NAME_MAX, "%s/firmware/%s/%s.bin", getenv("PATH"), lib_get_name(), info->fs_dev);
 	}
 
 	file_t fd = fs_open(fn, O_RDONLY);
@@ -439,7 +439,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
 	if (info->syscalls == 1) {
 
-		snprintf(fn, MAX_FN_LEN, "%s/firmware/%s/syscalls.bin", getenv("PATH"), lib_get_name());
+		snprintf(fn, NAME_MAX, "%s/firmware/%s/syscalls.bin", getenv("PATH"), lib_get_name());
 		fd = fs_open(fn, O_RDONLY);
 
 		if (fd < 0) {

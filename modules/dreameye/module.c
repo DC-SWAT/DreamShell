@@ -51,7 +51,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	int num = -1;
 	
 	/* Buffers */
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	uint8 *buf;
 	int size, err, i;
 	

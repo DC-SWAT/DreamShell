@@ -68,7 +68,7 @@ App_t *GetAppByFileName(const char *fn) {
 
 	SLIST_FOREACH(i, apps, list) {
 		a = (App_t *) i->data;
-		if (!strncmp(fn, a->fn, MAX_FN_LEN))
+		if (!strncmp(fn, a->fn, NAME_MAX))
 			return a;
 	}
 
@@ -169,7 +169,7 @@ App_t *AddApp(const char *fn) {
 	file_t fd = FILEHND_INVALID;
 	mxml_node_t *tree = NULL, *node = NULL;
 	char *name = NULL, *icon = NULL;
-	char file[MAX_FN_LEN];
+	char file[NAME_MAX];
 
 	a = (App_t *) calloc(1, sizeof(App_t));
 
@@ -223,7 +223,7 @@ App_t *AddApp(const char *fn) {
 	if(icon == NULL) {
 		sprintf((char*)a->icon, "%s/gui/icons/normal/default_app.png", getenv("PATH"));
 	} else {
-		memset_sh4(file, 0, MAX_FN_LEN);
+		memset_sh4(file, 0, NAME_MAX);
 		relativeFilePath_wb(file, a->fn, icon);
 //		file[strlen(file)] = '\0';
 		strncpy((char*)a->icon, file, sizeof(a->icon));

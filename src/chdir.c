@@ -71,14 +71,14 @@ const char *relativeFilePath(const char *rel, const char *file) {
     if(file[0] == '/') return file;
     
     char *rslash, *dir, *ret;
-    char fn[MAX_FN_LEN];
-    char buff[MAX_FN_LEN];
+    char fn[NAME_MAX];
+    char buff[NAME_MAX];
 
     if((rslash = strrchr(rel, '/')) != NULL) {
                
-        strncpy(buff, file, MAX_FN_LEN);
+        strncpy(buff, file, NAME_MAX);
         dir = substring(rel, 0, strlen(rel) - strlen(rslash));
-        makeabspath_wd(fn, buff, dir, MAX_FN_LEN);
+        makeabspath_wd(fn, buff, dir, NAME_MAX);
         
         fn[strlen(fn)] = '\0';
         ret = strdup(fn);
@@ -97,7 +97,7 @@ const char *relativeFilePath(const char *rel, const char *file) {
 int relativeFilePath_wb(char *buff, const char *rel, const char *file) {
     
     if(file[0] == '/') {
-       strncpy(buff, file, MAX_FN_LEN);
+       strncpy(buff, file, NAME_MAX);
        return 1;
     }
 /*    
@@ -105,11 +105,11 @@ int relativeFilePath_wb(char *buff, const char *rel, const char *file) {
 
     if((rslash = strrchr(rel, '/')) != NULL) {
         dir = substring(rel, 0, strlen(rel) - strlen(rslash));
-        makeabspath_wd(buff, file, dir, MAX_FN_LEN);
+        makeabspath_wd(buff, file, dir, NAME_MAX);
         ds_printf("Directory: '%s' File: '%s' Out: '%s'", dir, rel, buff);
 */
 
-    makeabspath_wd(buff, (char*)file, getFilePath(rel), MAX_FN_LEN);
+    makeabspath_wd(buff, (char*)file, getFilePath(rel), NAME_MAX);
     //ds_printf("Directory: '%s' File: '%s' Out: '%s'", path, rel, buff);
     return 1;
 }

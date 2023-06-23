@@ -30,8 +30,8 @@
  */
 typedef struct App {
 
-	const char fn[MAX_FN_LEN];
-	const char icon[MAX_FN_LEN];
+	const char fn[NAME_MAX];
+	const char icon[NAME_MAX];
 	const char name[64];
 	const char ver[32];
 	const char ext[64];

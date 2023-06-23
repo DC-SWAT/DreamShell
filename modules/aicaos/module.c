@@ -28,7 +28,7 @@ int builtin_aicaos_cmd(int argc, char *argv[]) {
 
 	int a_init = 0, a_shut = 0, a_ver = 0;
 	char *file = NULL;
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 
 	struct cfg_option options[] = {
 		{"init",     'i', NULL, CFG_BOOL, (void *) &a_init,  0},

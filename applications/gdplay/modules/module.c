@@ -168,7 +168,7 @@ static void set_info(int disc_type)
 		return;
 	}
 	
-	char tmp[MAX_FN_LEN];
+	char tmp[NAME_MAX];
 	
 	if(strlen(trim_spaces(self.info->country_codes, sizeof(self.info->country_codes))) > 1)
 	{
@@ -194,7 +194,7 @@ static void set_info(int disc_type)
 	
 	GUI_LabelSetText(self.text[TXT_VGA], self.info->VGA[0] == '1'? "YES":"NO");
 	
-	memset(tmp, 0, MAX_FN_LEN);
+	memset(tmp, 0, NAME_MAX);
 	
 	snprintf(tmp, COLUMN_LEN, "%c%c%c%c-%c%c-%c%c", self.info->release_date[0], 
 													self.info->release_date[1], 
@@ -211,12 +211,12 @@ static void set_info(int disc_type)
 	
 	GUI_LabelSetText(self.text[TXT_DISCNUM], tmp);
 	
-	memset(tmp, 0, MAX_FN_LEN);
+	memset(tmp, 0, NAME_MAX);
 	memcpy(tmp, self.info->product_version, 6);
 	
 	GUI_LabelSetText(self.text[TXT_VERSION], tmp);
 	
-	memset(tmp, 0, MAX_FN_LEN);
+	memset(tmp, 0, NAME_MAX);
 	strncpy(tmp, trim_spaces(self.info->title, 128), 128);
 	
 	int num_column = strlen(tmp) / COLUMN_LEN;
@@ -391,9 +391,9 @@ void gdplay_Init(App_t *app)
 		self.gdtex[SURF_NODISC] = APP_GET_SURFACE("nodisc");
 		self.play 				= APP_GET_SURFACE("play");
 		
-		char path[MAX_FN_LEN];
+		char path[NAME_MAX];
 		
-		snprintf(path, MAX_FN_LEN, "%s/firmware/rungd.bin", getenv("PATH"));
+		snprintf(path, NAME_MAX, "%s/firmware/rungd.bin", getenv("PATH"));
 		
 		FILE *f = fopen(path, "rb");
 		

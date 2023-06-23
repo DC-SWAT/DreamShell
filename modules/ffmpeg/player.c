@@ -964,7 +964,7 @@ int ffplay(const char *filename, const char *force_format) {
 	cont_state_t *state = NULL;
 	int pause = 0, done = 0;
 	
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	sprintf(fn, "ds:%s", filename);
 
 	memset(&movie_txr, 0, sizeof(movie_txr));

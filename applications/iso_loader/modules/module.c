@@ -23,7 +23,7 @@ static struct {
 
 	App_t *app;
 	isoldr_info_t *isoldr;
-	char filename[MAX_FN_LEN];
+	char filename[NAME_MAX];
 	uint8 md5[16];
 	uint8 boot_sector[2048];
 	int image_type;
@@ -119,8 +119,8 @@ static int canUseTrueAsyncDMA(void) {
 }
 
 static char *relativeFilename(char *filename) {
-	static char filepath[MAX_FN_LEN];
-	char path[MAX_FN_LEN];
+	static char filepath[NAME_MAX];
+	char path[NAME_MAX];
 	int len;
 
 	if (strchr(self.filename, '/')) {
@@ -133,7 +133,7 @@ static char *relativeFilename(char *filename) {
 	memset(path, 0, sizeof(path));
 	strncpy(path, self.filename, strlen(self.filename) - len);
 
-	snprintf(filepath, MAX_FN_LEN, "%s/%s/%s",
+	snprintf(filepath, NAME_MAX, "%s/%s/%s",
 		GUI_FileManagerGetPath(self.filebrowser), path, filename);
 	return filepath;
 }
@@ -190,8 +190,8 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 }
 
 static void check_link_file(void) {
-	char save_file[MAX_FN_LEN];
-	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/scripts/%s.dsc",
+	char save_file[NAME_MAX];
+	snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc",
 		getenv("PATH"), GUI_TextEntryGetText(self.linktext));
 
 	if(FileExists(save_file)) {
@@ -272,7 +272,7 @@ static void get_md5_hash(const char *mountpoint) {
 static void showCover() {
 
 	GUI_Surface *s;
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 	char noext[128];
 	ipbin_meta_t *ipbin;
 	char use_cover = 0;
@@ -281,12 +281,12 @@ static void showCover() {
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
-	snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
+	snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
 
 	if (FileExists(path)) {
 		use_cover = 1;
 	} else {
-		snprintf(path, MAX_FN_LEN, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
+		snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
 		if (FileExists(path)) {
 			use_cover = 1;
 		}
@@ -297,7 +297,7 @@ static void showCover() {
 
 		s = GUI_SurfaceLoad(path);
 
-		snprintf(path, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 
 		if(!fs_iso_mount("/isocover", path)) {
 			
@@ -318,7 +318,7 @@ static void showCover() {
 
 	} else {
 
-		snprintf(path, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 
 		/* Try to mount ISO and get 0GDTEXT.PVR */
 		if(!fs_iso_mount("/isocover", path)) {
@@ -368,12 +368,12 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	(void)widget;
 	FILE *fd;
 	char *env = getenv("PATH");
-	char save_file[MAX_FN_LEN];
+	char save_file[NAME_MAX];
 	char cmd[512];
 	const char *tmpval;
 	int i;
 	
-	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/scripts/%s.dsc", env, GUI_TextEntryGetText(self.linktext));
+	snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", env, GUI_TextEntryGetText(self.linktext));
 	
 	fd = fopen(save_file, "w");
 	
@@ -448,7 +448,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		}
 	}
 
-	char fpath[MAX_FN_LEN];
+	char fpath[NAME_MAX];
 	sprintf(fpath, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 
 	strcat(cmd, " -f ");
@@ -541,7 +541,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	fprintf(fd, "console --show\n");
 	fclose(fd);
 
-	snprintf(save_file, MAX_FN_LEN, "%s/apps/main/images/%s.png", env, GUI_TextEntryGetText(self.linktext));
+	snprintf(save_file, NAME_MAX, "%s/apps/main/images/%s.png", env, GUI_TextEntryGetText(self.linktext));
 	GUI_SurfaceSavePNG(self.slnkico, save_file);
 
 	isoLoader_ShowGames(self.settings);
@@ -641,16 +641,16 @@ void isoLoader_toggleHideName(GUI_Widget *widget)
 {
 	int state = GUI_WidgetGetState(widget);
 	char *curtext = (char *)GUI_TextEntryGetText(self.linktext);
-	char text[MAX_FN_LEN];
+	char text[NAME_MAX];
 	
 	if(state && curtext[0] != '_')
 	{
-		snprintf(text, MAX_FN_LEN, "_%s", curtext);
+		snprintf(text, NAME_MAX, "_%s", curtext);
 		GUI_TextEntrySetText(self.linktext, text);
 	}
 	else if(!state && curtext[0] == '_')
 	{
-		snprintf(text, MAX_FN_LEN, "%s", &curtext[1]);
+		snprintf(text, NAME_MAX, "%s", &curtext[1]);
 		GUI_TextEntrySetText(self.linktext, text);
 	}
 	
@@ -837,13 +837,13 @@ void isoLoader_toggleExtension(GUI_Widget *widget) {
 
 void isoLoader_Run(GUI_Widget *widget) {
 
-	char filepath[MAX_FN_LEN];
+	char filepath[NAME_MAX];
 	const char *tmpval;
 	uint32 addr = ISOLDR_DEFAULT_ADDR_LOW;
 	(void)widget;
 
-	memset(filepath, 0, MAX_FN_LEN);
-	snprintf(filepath, MAX_FN_LEN, "%s/%s", 
+	memset(filepath, 0, NAME_MAX);
+	snprintf(filepath, NAME_MAX, "%s/%s", 
 				GUI_FileManagerGetPath(self.filebrowser), 
 				self.filename);
 				
@@ -1013,7 +1013,7 @@ static void selectFile(char *name, int index) {
 	}
 
 	self.current_item = index;
-	strncpy(self.filename, name, MAX_FN_LEN);
+	strncpy(self.filename, name, NAME_MAX);
 	highliteDevice();
 	showCover();
 	isoLoader_LoadPreset();
@@ -1029,7 +1029,7 @@ static void selectFile(char *name, int index) {
 static void changeDir(dirent_t *ent) {
 	self.current_item = -1;
 	self.current_item_dir = -1;
-	memset(self.filename, 0, MAX_FN_LEN);
+	memset(self.filename, 0, NAME_MAX);
 	GUI_FileManagerChangeDir(self.filebrowser, ent->name, ent->size);
 	highliteDevice();
 	GUI_WidgetSetEnabled(self.btn_run, 0);
@@ -1044,9 +1044,9 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 
 	if(ent->attr == O_DIR && self.current_item_dir != fm_ent->index) {
 
-		char filepath[MAX_FN_LEN];
-		memset(filepath, 0, MAX_FN_LEN);
-		snprintf(filepath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
+		char filepath[NAME_MAX];
+		memset(filepath, 0, NAME_MAX);
+		snprintf(filepath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
 
 		file_t fd = fs_open(filepath, O_RDONLY | O_DIR);
 
@@ -1072,8 +1072,8 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 				if(len > 4 && strncasecmp(dent->name + len - 4, ".gdi", 4) == 0) {
 					fs_close(fd);
 
-					memset(filepath, 0, MAX_FN_LEN);
-					snprintf(filepath, MAX_FN_LEN, "%s/%s", ent->name, dent->name);
+					memset(filepath, 0, NAME_MAX);
+					snprintf(filepath, NAME_MAX, "%s/%s", ent->name, dent->name);
 					selectFile(filepath, fm_ent->index);
 
 					self.current_item_dir = fm_ent->index;
@@ -1154,8 +1154,8 @@ void isoLoader_DefaultPreset() {
 	if (self.filename[0] != 0 && canUseTrueAsyncDMA()) {
 
 		int have_cdda = 0;
-		char filepath[MAX_FN_LEN];
-		char path[MAX_FN_LEN];
+		char filepath[NAME_MAX];
+		char path[NAME_MAX];
 		int len = 0;
 		const int min_size = 5 * 1024 * 1024;
 
@@ -1169,7 +1169,7 @@ void isoLoader_DefaultPreset() {
 		memset(path, 0, sizeof(path));
 		strncpy(path, self.filename, strlen(self.filename) - len);
 
-		snprintf(filepath, MAX_FN_LEN, "%s/%s/track05.raw",
+		snprintf(filepath, NAME_MAX, "%s/%s/track05.raw",
 			GUI_FileManagerGetPath(self.filebrowser), path);
 
 		if (FileSize(filepath) > min_size) {

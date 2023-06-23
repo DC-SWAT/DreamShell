@@ -90,7 +90,7 @@ static int install_package(char *package_path) {
 	size_t size;
 	const char *key, *val;
 	const char *metadata_name;
-	char dest[MAX_FN_LEN], lua_file[128];
+	char dest[NAME_MAX], lua_file[128];
 	char *file_list, *file, *filepath, *tmpval;
 	size_t skey, sval;
 
@@ -194,7 +194,7 @@ static int uninstall_package(char *package_path) {
 	size_t size;
 	const char *key, *val;
 	const char *metadata_name;
-	char dest[MAX_FN_LEN], lua_file[128];
+	char dest[NAME_MAX], lua_file[128];
 	char *file_list, *filepath, *tmpval;
 	size_t skey, sval;
 

@@ -9,7 +9,7 @@ extern "C" {
 	
 	SDL_Surface *GetScreen();
 	
-	static char FontList[8][MAX_FN_LEN];
+	static char FontList[8][NAME_MAX];
 
 	/* Note, this is only one way of looking up fonts */
 	static int FontFamilyToIndex(RTF_FontFamily family) {

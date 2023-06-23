@@ -729,7 +729,7 @@ class GUI_FileManager : public GUI_Container
 {
 protected:
 		int rescan;
-		char cur_path[MAX_FN_LEN];
+		char cur_path[NAME_MAX];
 		GUI_Rect item_area;
 		GUI_Surface *item_normal;
 		GUI_Surface *item_highlight;

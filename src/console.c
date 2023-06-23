@@ -150,9 +150,9 @@ static char *TabFunction(char* command) {
 
 		file_t fd;
 		dirent_t *ent;
-		char dir[MAX_FN_LEN];
+		char dir[NAME_MAX];
 
-		snprintf(dir, MAX_FN_LEN, "%s/cmds", getenv("PATH"));
+		snprintf(dir, NAME_MAX, "%s/cmds", getenv("PATH"));
 		fd = fs_open(dir, O_RDONLY | O_DIR);
 
 		if(fd != FILEHND_INVALID) {

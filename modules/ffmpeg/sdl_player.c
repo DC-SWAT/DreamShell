@@ -81,7 +81,7 @@ static void audioCallback( void *data, Uint8 *stream, int length )
 
 int sdl_ffplay(const char *filename) {
 
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	sprintf(fn, "ds:%s", filename);
 
     /* open file from arg[1] */

@@ -42,7 +42,7 @@ and may be used pretty much simultaneously in the same program.
 #define VMD_FILE    1
 #define VMD_ANY     -1  /* Used for checking validity */
 
-char vmdfile[MAX_FN_LEN];
+char vmdfile[NAME_MAX];
 
 /* File handles */
 typedef struct vmd_fh_str {

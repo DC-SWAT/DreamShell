@@ -114,7 +114,7 @@ static int gzip_kmg_to_img(const char * fn, kos_img_t * rv) {
 
 static void load_txr(const char *fn, pvr_ptr_t *txr) {
 	
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 	sprintf(path, "%s/%s", RES_PATH, fn);
 	
 	kos_img_t img;

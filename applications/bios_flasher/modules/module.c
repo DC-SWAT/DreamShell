@@ -524,24 +524,24 @@ void BiosFlasher_OnConfirmPressed(GUI_Widget *widget)
 
 	int result = eSuccess;
 	char* fileName = 0;
-	char filePath[MAX_FN_LEN];
-	memset(filePath, 0, MAX_FN_LEN);
+	char filePath[NAME_MAX];
+	memset(filePath, 0, NAME_MAX);
 
 	switch(self.m_CurrentOperation)
 	{
 		case eWriting:
-			snprintf(filePath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.m_SelectedBiosFile);	// TODO
+			snprintf(filePath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.m_SelectedBiosFile);	// TODO
 			result = BiosFlasher_WriteBiosFileToFlash(filePath, &BiosFlasher_OnOperationProgress);
 		break;
 
 		case eReading:
 			fileName = BiosFlasher_GenerateBackupName();
-			snprintf(filePath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), fileName);	// TODO
+			snprintf(filePath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), fileName);	// TODO
 			result = BiosFlasher_ReadBiosToFile(filePath, &BiosFlasher_OnOperationProgress);
 		break;
 
 		case eCompare:
-			snprintf(filePath, MAX_FN_LEN, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.m_SelectedBiosFile);	// TODO
+			snprintf(filePath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.m_SelectedBiosFile);	// TODO
 			result = BiosFlasher_CompareBiosWithFile(filePath, &BiosFlasher_OnOperationProgress);
 		break;
 

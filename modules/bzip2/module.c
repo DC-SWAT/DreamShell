@@ -21,7 +21,7 @@ int builtin_bzip2_cmd(int argc, char *argv[]) {
 		return CMD_NO_ARG; 
 	} 
 
-	char dst[MAX_FN_LEN];
+	char dst[NAME_MAX];
 	char buff[512];
 	int len = 0;
 	file_t fd;
@@ -29,7 +29,7 @@ int builtin_bzip2_cmd(int argc, char *argv[]) {
 
 	if(argc < 4) {
 
-		char tmp[MAX_FN_LEN];
+		char tmp[NAME_MAX];
 		relativeFilePath_wb(tmp, argv[2], strrchr(argv[2], '/'));
 		sprintf(dst, "%s.bz2", tmp);
 

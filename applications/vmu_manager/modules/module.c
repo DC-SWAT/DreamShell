@@ -147,7 +147,7 @@ static void* rmdir_recursive(const char* folder){
 	
 	file_t d;
 	dirent_t *de;
-	char dst[MAX_FN_LEN];
+	char dst[NAME_MAX];
 	
 	d = fs_open(folder, O_DIR);
 	
@@ -552,13 +552,13 @@ void VMU_Manager_EnableMainPage()
 void VMU_Manager_vmu(GUI_Widget *widget)
 {
 	
-	char vpath[MAX_FN_LEN];
+	char vpath[NAME_MAX];
 	
 	GUI_WidgetSetEnabled(self.button_home, 1);
 	ScreenFadeOut();
 	thd_sleep(200);
 	GUI_CardStackShowIndex(self.pages, 1);
-	snprintf(vpath, MAX_FN_LEN, "/vmu/%s", GUI_ObjectGetName(widget));
+	snprintf(vpath, NAME_MAX, "/vmu/%s", GUI_ObjectGetName(widget));
 	if(self.direction_flag == 0){
 	GUI_FileManagerSetPath(self.filebrowser, vpath);
 	GUI_ContainerRemove(self.vmu_container, widget);
@@ -621,8 +621,8 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent)
 	int flag_type = 0; // vms 0 ; vmd 1 ; vmi 2 ; dci 3
 	uint8 nyb;
 	char tmp[64];
-	char src[MAX_FN_LEN];
-	char dst[MAX_FN_LEN];
+	char src[NAME_MAX];
+	char dst[NAME_MAX];
 	char size[64];
 	char text[1024];
 	uint16 *tmpbuf = NULL;
@@ -1035,7 +1035,7 @@ void VMU_Manager_addfileman(GUI_Widget *widget)
 {
 	
 	file_t f;
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 	
 	if(strcmp(GUI_ObjectGetName(widget),"/cd") != 0 && strlen(GUI_ObjectGetName(widget)) > 2){
 		if((f = fs_open(GUI_ObjectGetName(widget),O_DIR)) == FILEHND_INVALID) {
@@ -1077,7 +1077,7 @@ void VMU_Manager_ItemContextClick(dirent_fm_t *fm_ent)
 	dirent_t *ent = &fm_ent->ent;
 	GUI_Widget *fmw = (GUI_Widget*)fm_ent->obj;
 	char text[1024];
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 
 	if(ent->attr == O_DIR){
 		if (strcmp(GUI_ObjectGetName(fmw), "file_browser") == 0){
@@ -1145,7 +1145,7 @@ int VMU_Manager_Dump(GUI_Widget *widget)
 	maple_device_t *dev = NULL;
 	uint8 *vmdata;
 	file_t f;
-	char src[MAX_FN_LEN] , dst[MAX_FN_LEN], addr[MAX_FN_LEN];
+	char src[NAME_MAX] , dst[NAME_MAX], addr[NAME_MAX];
 	int i,dumpflg;
 	double progress = 0.0;
 	
@@ -1264,7 +1264,7 @@ void VMU_Manager_format(GUI_Widget *widget)
 	dirent_t *de;
 	int num_files = 0, i = 0;
 	double progress = 0.0;
-	char path[MAX_FN_LEN],del_file[MAX_FN_LEN];
+	char path[NAME_MAX],del_file[NAME_MAX];
 	
 	GUI_LabelSetText(self.confirm_text, "ERASE VMU. WARNING all data on VMU lost");
 	if(Confirm_Window() == CMD_ERROR) return;
@@ -1322,8 +1322,8 @@ void VMU_Manager_sel_dst_vmu(GUI_Widget *widget)
 
 void VMU_Manager_make_folder(GUI_Widget *widget){
 	
-	char newfolder[MAX_FN_LEN];
-	char textentry[MAX_FN_LEN];
+	char newfolder[NAME_MAX];
+	char textentry[NAME_MAX];
 	
 	if (strcmp(GUI_ObjectGetName(widget),"confirm-no") == 0) GUI_CardStackShowIndex(self.pages, 1);
 	strcpy(textentry,GUI_TextEntryGetText(self.folder_name));

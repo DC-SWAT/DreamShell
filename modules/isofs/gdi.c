@@ -46,12 +46,12 @@ static char *fs_gets(file_t fd, char *buffer, int count) {
 
 static int check_gdi_image(file_t fd) {
     
-    char line[MAX_FN_LEN];
+    char line[NAME_MAX];
     uint32 track_count;
 
     fs_seek(fd, 0, SEEK_SET);
 	
-    if(fs_gets(fd, line, MAX_FN_LEN) == NULL) {
+    if(fs_gets(fd, line, NAME_MAX) == NULL) {
 #ifdef DEBUG
         dbglog(DBG_DEBUG, "%s: Not a GDI image\n", __func__);
 #endif
@@ -85,7 +85,7 @@ GDI_header_t *gdi_open(file_t fd, const char *filename) {
 #endif
 
 	int track_no, i, rc;
-	char line[MAX_FN_LEN], fname[MAX_FN_LEN / 2];
+	char line[NAME_MAX], fname[NAME_MAX / 2];
 	char *path = NULL;
 	GDI_header_t *hdr;
 	
@@ -135,7 +135,7 @@ GDI_header_t *gdi_open(file_t fd, const char *filename) {
 			goto error;
 		}
 		
-		snprintf(hdr->tracks[i]->filename, MAX_FN_LEN, "%s/%s", path, fname);
+		snprintf(hdr->tracks[i]->filename, NAME_MAX, "%s/%s", path, fname);
 	}
 
 	free(path);

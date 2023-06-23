@@ -63,9 +63,9 @@ static int builtin_help(int argc, char *argv[]) {
 
 		ds_printf("%s\n", ac);
 		file_t hnd;
-		char dir[MAX_FN_LEN];
+		char dir[NAME_MAX];
 
-		snprintf(dir, MAX_FN_LEN, "%s/cmds", getenv("PATH"));
+		snprintf(dir, NAME_MAX, "%s/cmds", getenv("PATH"));
 		hnd = fs_open(dir, O_RDONLY | O_DIR);
 
 		if(hnd != FILEHND_INVALID) {
@@ -169,11 +169,11 @@ int CallExtCmd(int argc, char *argv[]) {
 
 	dirent_t *ent;
 	file_t hnd;
-	char dir[MAX_FN_LEN];
-	char fn[MAX_FN_LEN];
+	char dir[NAME_MAX];
+	char fn[NAME_MAX];
 	int r = CMD_NOT_EXISTS;
 
-	snprintf(dir, MAX_FN_LEN, "%s/cmds", getenv("PATH"));
+	snprintf(dir, NAME_MAX, "%s/cmds", getenv("PATH"));
 	hnd = fs_open(dir, O_RDONLY | O_DIR);
 
 	if(hnd < 0) {
@@ -183,8 +183,8 @@ int CallExtCmd(int argc, char *argv[]) {
 
 	while ((ent = fs_readdir(hnd)) != NULL) {
 
-		if(!strncmp(ent->name, argv[0], MAX_FN_LEN) && ent->attr != O_DIR) {
-			snprintf(fn, MAX_FN_LEN, "%s/%s", dir, ent->name);
+		if(!strncmp(ent->name, argv[0], NAME_MAX) && ent->attr != O_DIR) {
+			snprintf(fn, NAME_MAX, "%s/%s", dir, ent->name);
 			r = CallCmdFile(fn, argc, argv);
 			break;
 		}
@@ -454,10 +454,10 @@ static int builtin_ls(int argc, char *argv[]) {
 
 	dirent_t *ent;
 	file_t fd;
-	char dir[MAX_FN_LEN];
+	char dir[NAME_MAX];
 	int dcnt, fcnt;
 
-	getcwd(dir, MAX_FN_LEN);
+	getcwd(dir, NAME_MAX);
 	fd = fs_open(dir, O_RDONLY | O_DIR);
 
 	if (fd == FILEHND_INVALID) {
@@ -1072,7 +1072,7 @@ static int builtin_dc(int argc, char *argv[]) {
 	} else if (!strncmp(argv[1], "-exit", 5)) {
 		arch_exit();
 	} else if (!strncmp(argv[1], "-return", 7)) {
-		arch_return();
+		arch_return(0);
 	} else if (!strncmp(argv[1], "-abort", 6)) {
 		arch_abort();
 	} else if (!strncmp(argv[1], "-reboot", 7)) {
@@ -1664,7 +1664,7 @@ static int builtin_console(int argc, char *argv[]) {
 	int show = 0, hide = 0, toggle = 0, back = 0, pos = 0, resize = 0, alpha = 0, update = 0;
 	int w = 0, h = 0, x = 0, y = 0, t = 0;
 	char *file = NULL;
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 
 	struct cfg_option options[] = {
 		{"show",         's', NULL,    CFG_BOOL, (void *) &show,   0},
@@ -1758,8 +1758,8 @@ int builtin_gzip(int argc, char *argv[]) {
 	}
 
 
-	char src[MAX_FN_LEN];
-	char dst[MAX_FN_LEN];
+	char src[NAME_MAX];
+	char dst[NAME_MAX];
 	char buff[512];
 	int len = 0;
 
@@ -1767,7 +1767,7 @@ int builtin_gzip(int argc, char *argv[]) {
 
 	if(argc < 4) {
 
-		char tmp[MAX_FN_LEN];
+		char tmp[NAME_MAX];
 		relativeFilePath_wb(tmp, src, strrchr(src, '/'));
 		sprintf(dst, "%s.gz", tmp);
 

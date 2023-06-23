@@ -169,11 +169,11 @@ static int LoadSettingsFile(const char *filename) {
 }
 
 int LoadSettings() {
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	loaded = LoadSettingsVMU();
 
 	if (!loaded) {
-		snprintf(fn, MAX_FN_LEN, "%s/%s", getenv("PATH"), raw_file);
+		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
 		loaded = LoadSettingsFile(fn);
 	}
 
@@ -246,12 +246,12 @@ static int SaveSettingsFile(const char *filename) {
 
 int SaveSettings() {
 
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 
 	if(current_set.version != GetVersion()) {
 		current_set.version = GetVersion();
 	}
 
-	snprintf(fn, MAX_FN_LEN, "%s/%s", getenv("PATH"), raw_file);
+	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
 	return SaveSettingsVMU() || SaveSettingsFile(fn);
 }

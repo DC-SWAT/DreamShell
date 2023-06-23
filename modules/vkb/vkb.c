@@ -112,7 +112,7 @@ static virt_kb_syms_t VirtKeyboardKeySyms[VIRT_KB_SURFACE_COUNT] =
 
 static int VirtKeyboardLoading(int reset) {
 	
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	int i = 0;
 	
 	if(reset) {
