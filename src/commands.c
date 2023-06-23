@@ -1072,7 +1072,7 @@ static int builtin_dc(int argc, char *argv[]) {
 	} else if (!strncmp(argv[1], "-exit", 5)) {
 		arch_exit();
 	} else if (!strncmp(argv[1], "-return", 7)) {
-		arch_return();
+		arch_return(0);
 	} else if (!strncmp(argv[1], "-abort", 6)) {
 		arch_abort();
 	} else if (!strncmp(argv[1], "-reboot", 7)) {
