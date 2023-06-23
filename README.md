@@ -35,7 +35,7 @@ sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
 cd /usr/local/dc/kos/kos/utils/dc-chain
 cp config.mk.testing.sample config.mk
-./download.sh && ./unpack.sh && make && cd ../../
+make && cd ../../
 ```
 ##### SDK
 ```console
@@ -44,9 +44,9 @@ source ./environ.sh
 make && cd ../kos-ports && ./utils/build-all.sh
 cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a libvorbis.a && cd ../../kos/ds
 cd ./sdk/bin/src && make && make install && cd ../../../
-ln -nsf `which tolua` ds/sdk/bin/tolua
-ln -nsf `which mkisofs` ds/sdk/bin/mkisofs
-ln -nsf `which mksquashfs` ds/sdk/bin/mksquashfs
+ln -nsf `which tolua` sdk/bin/tolua
+ln -nsf `which mkisofs` sdk/bin/mkisofs
+ln -nsf `which mksquashfs` sdk/bin/mksquashfs
 ```
 
 ### Use environment
