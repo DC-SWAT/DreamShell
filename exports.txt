@@ -1418,6 +1418,7 @@ index
 memchr
 memmove
 rindex
+stpcpy
 strchr
 strcmp
 strncmp

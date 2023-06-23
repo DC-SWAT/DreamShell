@@ -1129,6 +1129,8 @@ int CDDA_Release() {
 
 int CDDA_Stop(void) {
 
+	do {} while(lock_cdda());
+
 	LOGFF(NULL);
 	gd_state_t *GDS = get_GDS();
 
@@ -1149,6 +1151,8 @@ int CDDA_Stop(void) {
 	GDS->cdda_track = 0;
 	GDS->drv_stat = CD_STATUS_STANDBY;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
+	unlock_cdda();
+
 	return COMPLETED;
 }
 

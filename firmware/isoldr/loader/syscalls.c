@@ -1106,6 +1106,14 @@ void gdcInitSystem(void) {
 	OpenLog();
 	LOGFF(NULL);
 
+#ifdef HAVE_CDDA
+	/* Some games re-init syscalls without CDDA stopping */
+	gd_state_t *GDS = get_GDS();
+	if(IsoInfo->emu_cdda && GDS->cdda_stat != SCD_AUDIO_STATUS_NO_INFO) {
+		CDDA_Stop();
+	}
+#endif
+
 	reset_GDS(get_GDS());
 	gdcMainLoop();
 }
