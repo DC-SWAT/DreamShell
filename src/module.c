@@ -101,7 +101,7 @@ klibrary_t *library_lookup_fn(const char * fn) {
 	old = irq_disable();
 
 	LIST_FOREACH(lib, &library_list, list) {
-		if(!strncmp(lib->image.fn, fn, MAX_FN_LEN))
+		if(!strncmp(lib->image.fn, fn, NAME_MAX))
 			break;
 	}
 
@@ -169,8 +169,8 @@ void ShutdownModules() {
 Module_t *OpenModule(const char *fn) {
     
 	Module_t *m;
-	char full_path[MAX_FN_LEN];
-	char name[MAX_FN_LEN / 2];
+	char full_path[NAME_MAX];
+	char name[NAME_MAX / 2];
 	realpath(fn, full_path);
 	
 	char *file = strrchr(full_path, '/');
@@ -214,7 +214,7 @@ Module_t *OpenModule(const char *fn) {
 	EXPT_GUARD_END;
 	
 	if(m != NULL) {
-		strncpy(m->image.fn, full_path, MAX_FN_LEN);
+		strncpy(m->image.fn, full_path, NAME_MAX);
 	}
 	
 	return m;

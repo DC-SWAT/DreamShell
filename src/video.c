@@ -400,7 +400,7 @@ void InitVideoHardware() {
 int InitVideo(int w, int h, int bpp) {
     
 	int sdl_init_flags, sdl_video_flags, tex_mode;
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	Settings_t *settings = GetSettings();
 	
 	SDL_DC_ShowAskHz(SDL_TRUE);

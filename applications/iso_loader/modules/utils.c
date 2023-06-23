@@ -147,12 +147,12 @@ int getDeviceType(const char *dir) {
 }
 
 int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename) {
-	memset(filepath, 0, MAX_FN_LEN);
-	snprintf(filepath, MAX_FN_LEN, "%s/%s/%s.gdi", fmPath, dirname, filename);
+	memset(filepath, 0, NAME_MAX);
+	snprintf(filepath, NAME_MAX, "%s/%s/%s.gdi", fmPath, dirname, filename);
 
 	if(FileExists(filepath)) {
-		memset(filepath, 0, MAX_FN_LEN);
-		snprintf(filepath, MAX_FN_LEN, "%s/%s.gdi", dirname, filename);
+		memset(filepath, 0, NAME_MAX);
+		snprintf(filepath, NAME_MAX, "%s/%s.gdi", dirname, filename);
 		return 1;
 	}
 	
@@ -162,7 +162,7 @@ int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename) 
 char *makePresetFilename(const char *dir, uint8 *md5) {
 
 	char dev[8];
-	static char filename[MAX_FN_LEN];
+	static char filename[NAME_MAX];
 
 	memset(filename, 0, sizeof(filename));
 	strncpy(dev, &dir[1], 3);

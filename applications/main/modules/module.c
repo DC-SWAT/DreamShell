@@ -34,7 +34,7 @@ static struct {
 typedef struct script_item {
 	
 	char name[64];
-	char file[MAX_FN_LEN];
+	char file[NAME_MAX];
 	
 } script_item_t;
 
@@ -161,7 +161,7 @@ static void BuildAppList() {
 
 	file_t fd;
 	dirent_t *ent;
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 	int plen, elen, type;
 	App_t *app;
 	Item_list_t *applist = GetAppList();
@@ -183,7 +183,7 @@ static void BuildAppList() {
 		}
 	}
 	
-	snprintf(path, MAX_FN_LEN, "%s/apps/%s/scripts", getenv("PATH"), app_name);
+	snprintf(path, NAME_MAX, "%s/apps/%s/scripts", getenv("PATH"), app_name);
 	fd = fs_open(path, O_RDONLY | O_DIR);
 	
 	if(fd == FILEHND_INVALID)
@@ -202,8 +202,8 @@ static void BuildAppList() {
 			if(si == NULL)
 				break;
 			
-			snprintf(si->file, MAX_FN_LEN, "%s/apps/%s/scripts/%s", getenv("PATH"), app_name, ent->name);
-			snprintf(path, MAX_FN_LEN, "%s/apps/%s/images/%s", getenv("PATH"), app_name, ent->name);
+			snprintf(si->file, NAME_MAX, "%s/apps/%s/scripts/%s", getenv("PATH"), app_name, ent->name);
+			snprintf(path, NAME_MAX, "%s/apps/%s/images/%s", getenv("PATH"), app_name, ent->name);
 			plen = strlen(path);
 
 			path[plen - 3] = 'p';
@@ -223,7 +223,7 @@ static void BuildAppList() {
 					path[plen - 1] = 'p';
 				
 					if(!FileExists(path)) {
-						snprintf(path, MAX_FN_LEN, "%s/gui/icons/normal/%s.png", 
+						snprintf(path, NAME_MAX, "%s/gui/icons/normal/%s.png", 
 									getenv("PATH"), (type == 'l' ? "lua" : "script"));
 					}
 				}

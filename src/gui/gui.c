@@ -65,7 +65,7 @@ static uint8_t last_joy_state = 0;
 
 static void screenshot_callback(void) 
 {
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 	char *home_dir = getenv("PATH");
 	int i;
 	uint64 cur_time = timer_ms_gettime64();
@@ -79,7 +79,7 @@ static void screenshot_callback(void)
 	
 	for(i=0;;i++)
 	{
-		snprintf(path, MAX_FN_LEN, "%s/screenshot/ds_scr_%03d.png", home_dir, i);
+		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.png", home_dir, i);
 		if(!FileExists(path)) break;
 		if(i == 999)  return;
 	}

@@ -27,7 +27,7 @@ typedef struct GDI_track {
 	uint32 flags;
 	uint32 sector_size;
 	uint32 offset;
-	char filename[MAX_FN_LEN];
+	char filename[NAME_MAX];
 	
 } GDI_track_t;
 

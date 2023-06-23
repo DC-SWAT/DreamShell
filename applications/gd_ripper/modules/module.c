@@ -63,15 +63,15 @@ void gd_ripper_Number_read()
 void gd_ripper_Gamename()
 {
 	int x ;
-	char text[MAX_FN_LEN];
-	char txt[MAX_FN_LEN];
+	char text[NAME_MAX];
+	char txt[NAME_MAX];
 	strcpy(txt,"\0");
-	snprintf(txt,MAX_FN_LEN,"%s", GUI_TextEntryGetText(self.gname));
+	snprintf(txt,NAME_MAX,"%s", GUI_TextEntryGetText(self.gname));
 	
 	if(strlen(txt) == 0) 
 		strcpy(txt,"Game");
 		
-	snprintf(text,MAX_FN_LEN,"%s",txt);
+	snprintf(text,NAME_MAX,"%s",txt);
 	
 	for (x=0;text[x] !=0;x++) 
 	{
@@ -91,7 +91,7 @@ void gd_ripper_ipbin_name()
 {
 	CDROM_TOC toc ;
 	int status = 0, disc_type = 0, cdcr = 0, x = 0;
-	char pbuff[2048] , text[MAX_FN_LEN];
+	char pbuff[2048] , text[NAME_MAX];
 	uint32 lba;
 
 	cdrom_set_sector_size(2048);
@@ -245,10 +245,10 @@ void gd_ripper_StartRip()
 	file_t fd;
 	CDROM_TOC toc ;
 	int status, disc_type ,cdcr ,start ,s_end ,nsec ,type ,tn ,session, terr = 0;
-	char dst_folder[MAX_FN_LEN];
-	char dst_file[MAX_FN_LEN];
+	char dst_folder[NAME_MAX];
+	char dst_file[NAME_MAX];
 	char riplabel[64];
-	char text[MAX_FN_LEN];
+	char text[NAME_MAX];
 	uint64 stoptimer, starttimer, riptime;
 	
 	rip_cancel = 0;
@@ -257,19 +257,19 @@ void gd_ripper_StartRip()
 	
 	cdrom_reinit();
 	
-	snprintf(text ,MAX_FN_LEN,"%s", GUI_TextEntryGetText(self.gname));
+	snprintf(text ,NAME_MAX,"%s", GUI_TextEntryGetText(self.gname));
 	
 	if(GUI_WidgetGetState(self.sd_c)) 
 	{
-		snprintf(dst_folder, MAX_FN_LEN, "/sd/%s", text);
+		snprintf(dst_folder, NAME_MAX, "/sd/%s", text);
 	}
 	else if(GUI_WidgetGetState(self.hdd_c)) 
 	{
-		snprintf(dst_folder, MAX_FN_LEN, "/ide/%s", text);
+		snprintf(dst_folder, NAME_MAX, "/ide/%s", text);
 	}
 	else if(GUI_WidgetGetState(self.net_c)) 
 	{
-		snprintf(dst_folder, MAX_FN_LEN, "/net/%s", text);
+		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
 	}
 //ds_printf("Dst file1 %s\n" ,dst_folder);	
 getstatus:	
@@ -301,7 +301,7 @@ getstatus:
 	if(disc_type == CD_CDROM_XA)
 	{
 	rname:
-		snprintf(dst_file,MAX_FN_LEN, "%s.iso", dst_folder);
+		snprintf(dst_file,NAME_MAX, "%s.iso", dst_folder);
 		if ((fd=fs_open(dst_file , O_RDONLY)) != FILEHND_INVALID) 
 		{
 			fs_close(fd); strcpy(dst_file,"\0"); 
@@ -325,7 +325,7 @@ getstatus:
 		else 
 		{
 			strcpy(dst_file,"\0");
-			snprintf(dst_file,MAX_FN_LEN,"%s", dst_folder); 
+			snprintf(dst_file,NAME_MAX,"%s", dst_folder); 
 			disc_type = 2; 
 			fs_mkdir(dst_file);
 		}
@@ -383,7 +383,7 @@ getstatus:
 					{
 						if (!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
 						strcpy(dst_file,"\0");
-						snprintf(dst_file, MAX_FN_LEN, "%s/%s", dst_folder, dir->name);
+						snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
 						fs_unlink(dst_file);
 					}
 					
@@ -408,7 +408,7 @@ getstatus:
 			if (disc_type == 2) 
 			{
 				strcpy(dst_file,"\0"); 
-				snprintf(dst_file,MAX_FN_LEN,"%s/track%02d.%s", dst_folder, tn, (type == 4 ? "iso" : "raw"));
+				snprintf(dst_file,NAME_MAX,"%s/track%02d.%s", dst_folder, tn, (type == 4 ? "iso" : "raw"));
 			}
 			
 			start = TOC_LBA(toc.entry[tn-1]);
@@ -461,7 +461,7 @@ getstatus:
 					{
 						if (!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
 						strcpy(dst_file,"\0");
-						snprintf(dst_file, MAX_FN_LEN, "%s/%s", dst_folder, dir->name);
+						snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
 						fs_unlink(dst_file);
 					}
 					fs_close(fd);
@@ -496,7 +496,7 @@ getstatus:
 				if(!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
 				
 				strcpy(dst_file,"\0");
-				snprintf(dst_file, MAX_FN_LEN, "%s/%s", dst_folder, dir->name);
+				snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
 				fs_unlink(dst_file);
 			}
 			fs_close(fd);
@@ -706,7 +706,7 @@ int gdfiles(char *dst_folder,char *dst_file,char *text)
 	}
 	
 	strcpy(dst_file,"\0"); 
-	snprintf(dst_file,MAX_FN_LEN,"%s/IP.BIN",dst_folder); 
+	snprintf(dst_file,NAME_MAX,"%s/IP.BIN",dst_folder); 
 	
 	if ((gdfd=fs_open(dst_file,O_WRONLY | O_TRUNC | O_CREAT)) == FILEHND_INVALID) 
 	{ 
@@ -729,7 +729,7 @@ int gdfiles(char *dst_folder,char *dst_file,char *text)
 	
 	fs_chdir(dst_folder);
 	strcpy(dst_file,"\0"); 
-	snprintf(dst_file,MAX_FN_LEN,"%s.gdi",text);
+	snprintf(dst_file,NAME_MAX,"%s.gdi",text);
 	
 	if ((gdifd=fopen(dst_file,"w")) == NULL)
 	{

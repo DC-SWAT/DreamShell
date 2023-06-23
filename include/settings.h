@@ -38,10 +38,10 @@ typedef struct Settings {
 	uint32 version;
 
 	/* Root directory with resources (leave empty for auto detect) */
-	char root[MAX_FN_LEN / 2];
+	char root[NAME_MAX / 2];
 
 	/* Default startup lua script path (without root) or console/lua script content */
-	char startup[MAX_FN_LEN / 2];
+	char startup[NAME_MAX / 2];
 
 	/* Default app name */
 	char app[64];

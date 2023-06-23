@@ -593,7 +593,7 @@ static GUI_Surface *getElementSurface(App_t *app, char *name) {
 
 		} else {
 
-			char file[MAX_FN_LEN];
+			char file[NAME_MAX];
 			relativeFilePath_wb(file, app->fn, name);
 			s = GUI_SurfaceLoad(file);
 
@@ -687,7 +687,7 @@ static GUI_Font *getElementFont(App_t *app, mxml_node_t *node, char *name) {
 
 		} else {
 
-			char file[MAX_FN_LEN];
+			char file[NAME_MAX];
 			relativeFilePath_wb(file, app->fn, name);
 			fnt = GUI_FontLoadTrueType(file, atoi(FindXmlAttr("fontsize", node, "12")));
 
@@ -822,7 +822,7 @@ static void parseAppSurfaceBlit(App_t *app, mxml_node_t *node, GUI_Surface *surf
 		Item_t *res;
 		GUI_Surface *surf = NULL;
 		int decref = 0;
-		char file[MAX_FN_LEN];
+		char file[NAME_MAX];
 
 		if((res = listGetItemByName(app->resources, src)) != NULL) {
 
@@ -996,7 +996,7 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 		return 1;
 
 	char *s = FindXmlAttr("src", node, NULL);
-	char src[MAX_FN_LEN];
+	char src[NAME_MAX];
 
 	if(s == NULL && strncmp(node->value.element.name, "surface", 7) && strncmp(node->value.element.name, "theme", 5)) {
 		ds_printf("DS_ERROR: Empty src attribute in %s\n", node->value.element.name);
@@ -1539,7 +1539,7 @@ static GUI_Widget *parseAppRTFElement(App_t *app, mxml_node_t *node, char *name,
 		freesrc = FindXmlAttr("freesrc", node, "0");
 		widget = GUI_RTF_LoadRW(name, rwf, atoi(freesrc), font, x, y, w, h);
 	} else {
-		char file[MAX_FN_LEN];
+		char file[NAME_MAX];
 		relativeFilePath_wb(file, app->fn, src);
 		widget = GUI_RTF_Load(name, file, font, x, y, w, h);
 	}
@@ -2408,7 +2408,7 @@ static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, cha
 	ds_printf("DS_DEBUG: Parsing FileManager: %s\n", name);
 #endif
 
-	char path[MAX_FN_LEN];
+	char path[NAME_MAX];
 	relativeFilePath_wb(path, app->fn, FindXmlAttr("path", node, "/"));
 
 	fm = GUI_FileManagerCreate(name, path, x, y, w, h);

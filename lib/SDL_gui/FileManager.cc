@@ -12,7 +12,7 @@ void SDL_DC_EmulateMouse(SDL_bool value);
 GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int y, int w, int h)
 : GUI_Container(aname, x, y, w, h) {
 	
-	strncpy(cur_path, path != NULL ? path : "/", MAX_FN_LEN);
+	strncpy(cur_path, path != NULL ? path : "/", NAME_MAX);
 	rescan = 1;
 	
 	item_area.w = w - 20; 
@@ -195,7 +195,7 @@ void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 
 
 void GUI_FileManager::SetPath(const char *path) {
-	strncpy(cur_path, path, MAX_FN_LEN);
+	strncpy(cur_path, path, NAME_MAX);
 	ReScan();
 }
 
@@ -204,7 +204,7 @@ const char *GUI_FileManager::GetPath() {
 }
 
 void GUI_FileManager::ChangeDir(const char *name, int size) {
-	char *b, path[MAX_FN_LEN];
+	char *b, path[NAME_MAX];
 	int s;
 	file_t fd;
 	
@@ -226,22 +226,22 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 			}
 		} else {
 
-			memset(path, 0, MAX_FN_LEN);
+			memset(path, 0, NAME_MAX);
 
 			if(strlen(cur_path) > 1) {
-				snprintf(path, MAX_FN_LEN, "%s/%s", cur_path, name);
+				snprintf(path, NAME_MAX, "%s/%s", cur_path, name);
 			} else {
-				snprintf(path, MAX_FN_LEN, "%s%s", cur_path, name);
+				snprintf(path, NAME_MAX, "%s%s", cur_path, name);
 			}
 
 			s = strlen(cur_path) + strlen(name) + 1;
-			path[s > MAX_FN_LEN-1 ? MAX_FN_LEN-1 : s] = '\0';
+			path[s > NAME_MAX-1 ? NAME_MAX-1 : s] = '\0';
 
 			fd = fs_open(path, O_RDONLY | O_DIR);
 
 			if(fd != FILEHND_INVALID) {
 				fs_close(fd);
-				strncpy(cur_path, path, MAX_FN_LEN);
+				strncpy(cur_path, path, NAME_MAX);
 				ReScan();
 			} else {
 				printf("GUI_FileManager: Can't open dir: %s\n", path);
@@ -292,9 +292,9 @@ void GUI_FileManager::Scan()
 	while ((ent = fs_readdir(f)) != NULL) 
 	{
 		if(ent->name[0] != '.' &&
-			strncasecmp(ent->name, "RECYCLER", MAX_FN_LEN) &&
-			strncasecmp(ent->name, "$RECYCLE.BIN", MAX_FN_LEN) &&
-			strncasecmp(ent->name, "System Volume Information", MAX_FN_LEN)
+			strncasecmp(ent->name, "RECYCLER", NAME_MAX) &&
+			strncasecmp(ent->name, "$RECYCLE.BIN", NAME_MAX) &&
+			strncasecmp(ent->name, "System Volume Information", NAME_MAX)
 		) {
 			if (n) {
 				sorts = (dirent_t *) realloc((void *) sorts, (sizeof(dirent_t)*(n+1)));
@@ -354,7 +354,7 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 		prm = (dirent_fm_t *) malloc(sizeof(dirent_fm_t));
 		
 		if(prm != NULL) {
-			strncpy(prm->ent.name, name, MAX_FN_LEN);
+			strncpy(prm->ent.name, name, NAME_MAX);
 			prm->ent.size = size;
 			prm->ent.time = time;
 			prm->ent.attr = attr;

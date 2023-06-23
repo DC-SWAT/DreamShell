@@ -324,7 +324,7 @@ int RootDeviceIsSupported(const char *name) {
 
 static int SearchRootCheck(char *device, char *path, char *file) {
 
-	char check[MAX_FN_LEN];
+	char check[NAME_MAX];
 
 	if(file == NULL) {
 		sprintf(check, "/%s%s", device, path);

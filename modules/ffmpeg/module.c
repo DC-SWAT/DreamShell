@@ -14,7 +14,7 @@ DEFAULT_MODULE_HEADER(ffmpeg);
 static int file_open(URLContext *h, const char *filename, int flags) {
 	file_t fd;
 	int _flags = 0;
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 	char proto[32];
 	
 	sscanf(filename, "%[a-zA-Z0-9_]:%s", proto, fn);

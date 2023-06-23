@@ -21,8 +21,8 @@ static uint32 binary_size = 0;
 static uint8 *binary_buff = NULL;
 
 typedef struct menu_item {
-	char name[MAX_FN_LEN];
-	char path[MAX_FN_LEN];
+	char name[NAME_MAX];
+	char path[NAME_MAX];
 	int mode;
 	int is_gz;
 	int is_scrambled;
@@ -32,9 +32,9 @@ typedef struct menu_item {
 static menu_item_t *items;
 static int items_cnt = 0;
 static int selected = 0;
-static char message[MAX_FN_LEN];
+static char message[NAME_MAX];
 
-//static char cur_path[MAX_FN_LEN];
+//static char cur_path[NAME_MAX];
 //static void clear_menu();
 
 static int must_lock_video() {
@@ -65,7 +65,7 @@ int show_message(const char *fmt, ...) {
 		return 0;
 	
 	va_start(args, fmt);
-	i = vsnprintf(message, MAX_FN_LEN, fmt, args);
+	i = vsnprintf(message, NAME_MAX, fmt, args);
 	va_end(args);
 
 
@@ -194,7 +194,7 @@ static void draw_box(float x, float y, float w, float h, float z, float a, float
 
 static int search_root_check(char *device, char *path, char *file) {
 	
-	char check[MAX_FN_LEN];
+	char check[NAME_MAX];
 	
 	if(file == NULL) {
 		sprintf(check, "/%s%s", device, path);
@@ -215,7 +215,7 @@ static int search_root() {
 	dirent_t *ent;
 	file_t hnd;
 	menu_item_t *item;
-	char name[MAX_FN_LEN];
+	char name[NAME_MAX];
 	int i;
 
 	hnd = fs_open("/", O_RDONLY | O_DIR);
@@ -245,7 +245,7 @@ static int search_root() {
 		}
 
 		name[i] = '\0';
-		snprintf(item->name, MAX_FN_LEN, "Boot from %s", name);
+		snprintf(item->name, NAME_MAX, "Boot from %s", name);
 		item->mode = 0;
 		items_cnt++;
 
@@ -253,25 +253,25 @@ static int search_root() {
 
 		if(!search_root_check(ent->name, "/DS", "/DS_CORE.BIN")) {
 
-			snprintf(item->path, MAX_FN_LEN, "/%s/DS/DS_CORE.BIN", ent->name);
+			snprintf(item->path, NAME_MAX, "/%s/DS/DS_CORE.BIN", ent->name);
 
 		} else if(!search_root_check(ent->name, "", "/DS_CORE.BIN")) {
 
-			snprintf(item->path, MAX_FN_LEN, "/%s/DS_CORE.BIN", ent->name);
+			snprintf(item->path, NAME_MAX, "/%s/DS_CORE.BIN", ent->name);
 
 		} else if(!search_root_check(ent->name, "", "/1DS_CORE.BIN")) {
 
-			snprintf(item->path, MAX_FN_LEN, "/%s/1DS_CORE.BIN", ent->name);
+			snprintf(item->path, NAME_MAX, "/%s/1DS_CORE.BIN", ent->name);
 			item->is_scrambled = 1;
 
 		} else if(!search_root_check(ent->name, "/DS", "/ZDS_CORE.BIN")) {
 
-			snprintf(item->path, MAX_FN_LEN, "/%s/DS/ZDS_CORE.BIN", ent->name);
+			snprintf(item->path, NAME_MAX, "/%s/DS/ZDS_CORE.BIN", ent->name);
 			item->is_gz = 1;
 
 		} else if(!search_root_check(ent->name, "", "/ZDS_CORE.BIN")) {
 
-			snprintf(item->path, MAX_FN_LEN, "/%s/ZDS_CORE.BIN", ent->name);
+			snprintf(item->path, NAME_MAX, "/%s/ZDS_CORE.BIN", ent->name);
 			item->is_gz = 1;
 
 		} else {
@@ -313,15 +313,15 @@ static int read_directory() {
 			items = item;
 			
 			if(ent->attr == O_DIR) {
-				strncpy(item->name, ent->name, MAX_FN_LEN);
+				strncpy(item->name, ent->name, NAME_MAX);
 				item->mode = 0;
 			} else {
-				snprintf(item->name, MAX_FN_LEN, "%s %dKB", ent->name, ent->size);
+				snprintf(item->name, NAME_MAX, "%s %dKB", ent->name, ent->size);
 				item->mode = 1;
 			}
 			
 			item->name[strlen(item->name)] = '\0';
-			snprintf(item->path, MAX_FN_LEN, "%s/%s", cur_path, ent->name);
+			snprintf(item->path, NAME_MAX, "%s/%s", cur_path, ent->name);
 			item->path[strlen(item->path)] = '\0';
 			items_cnt++;
 			

@@ -637,7 +637,7 @@ static virt_iso_dirent_t *find_object(const char *fn, int dir,
 	/* RockRidge */
 	int		len;
 	uint8	*pnt;
-	char	rrname[MAX_FN_LEN];
+	char	rrname[NAME_MAX];
 	int		rrnamelen;
 	int		size_left;
 
@@ -1486,7 +1486,7 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 	}
 
 	memcpy_sh4(vfs, &vh, sizeof(vfs_handler_t));
-	strncpy(vfs->nmmgr.pathname, mountpoint, MAX_FN_LEN);
+	strncpy(vfs->nmmgr.pathname, mountpoint, NAME_MAX);
 	vfs->privdata = (void*)ifs;
 
 	memset_sh4(ifs, 0, sizeof(isofs_t));
@@ -1593,7 +1593,7 @@ int fs_iso_unmount(const char *mountpoint) {
 
 	SLIST_FOREACH(n, &virt_iso_list, list) {
 					 
-		if (!strncasecmp(mountpoint, n->vfs->nmmgr.pathname, MAX_FN_LEN)) {
+		if (!strncasecmp(mountpoint, n->vfs->nmmgr.pathname, NAME_MAX)) {
 			
 			nmmgr_handler_remove(&n->vfs->nmmgr); // TODO check for errors
 			free(n->vfs);

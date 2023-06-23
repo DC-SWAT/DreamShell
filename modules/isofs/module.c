@@ -178,7 +178,7 @@ file_t fs_iso_first_file(const char *mountpoint) {
 	
 	file_t fd;
 	dirent_t *ent;
-	char fn[MAX_FN_LEN];
+	char fn[NAME_MAX];
 
 	fd = fs_open(mountpoint, O_DIR | O_RDONLY);
 	
@@ -191,7 +191,7 @@ file_t fs_iso_first_file(const char *mountpoint) {
 	} while(ent && ent->attr != 0);
 	
 	if(ent != NULL) {
-		snprintf(fn, MAX_FN_LEN, "%s/%s", mountpoint, ent->name);
+		snprintf(fn, NAME_MAX, "%s/%s", mountpoint, ent->name);
 		fs_close(fd);
 		fd = fs_open(fn, O_RDONLY);
 	} else {

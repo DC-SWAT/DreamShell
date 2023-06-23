@@ -489,7 +489,7 @@ static dirent_t *fat_readdir(void * hnd) {
 
 #if _USE_LFN
 	inf.lfname = sf->dent.name;
-	inf.lfsize = MAX_FN_LEN;
+	inf.lfsize = NAME_MAX;
 #endif
 
 	rc = f_readdir(&sf->dir, &inf);

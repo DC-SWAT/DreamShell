@@ -142,7 +142,7 @@ void ShutdownNet() {
 
 int InitDS() {
 
-	char fn[MAX_FN_LEN], bf[32];
+	char fn[NAME_MAX], bf[32];
 	int tmpi = 0;
 	uint8 *tmpb = NULL;
 	Settings_t *settings;
@@ -247,14 +247,14 @@ int InitDS() {
 
 	SetScreenMode(settings->video.virt_width, settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 
-	snprintf(fn, MAX_FN_LEN, "%s/gui/cursors/default.png", getenv("PATH"));
+	snprintf(fn, NAME_MAX, "%s/gui/cursors/default.png", getenv("PATH"));
 	SetActiveMouseCursor(CreateMouseCursor(fn, NULL));
 	
 	TTF_Init();
 	InitGUI();
 	snd_stream_init();
 
-	snprintf(fn, MAX_FN_LEN, "%s/fonts/bitmap/console.png", getenv("PATH"));
+	snprintf(fn, NAME_MAX, "%s/fonts/bitmap/console.png", getenv("PATH"));
 	InitCmd(); 
 	InitConsole(fn, NULL, 40, 0, 0, GetScreenWidth(), GetScreenHeight(), 255);
 
@@ -280,7 +280,7 @@ int InitDS() {
 
 	if(settings->startup[0] == '/') {
 
-		snprintf(fn, MAX_FN_LEN, "%s%s", getenv("PATH"), settings->startup);
+		snprintf(fn, NAME_MAX, "%s%s", getenv("PATH"), settings->startup);
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
 
 	} else if(settings->startup[0] == '#') {
@@ -292,7 +292,7 @@ int InitDS() {
 		LuaDo(LUA_DO_STRING, settings->startup, GetLuaState());
 
 	} else {
-		snprintf(fn, MAX_FN_LEN, "%s/lua/startup.lua", getenv("PATH"));
+		snprintf(fn, NAME_MAX, "%s/lua/startup.lua", getenv("PATH"));
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
 	}
 
@@ -326,8 +326,8 @@ void ShutdownDS() {
 #endif
 	dbglog(DBG_INFO, "Shutting down DreamShell Core...\n");
 
-	char fn[MAX_FN_LEN];
-	snprintf(fn, MAX_FN_LEN, "%s/lua/shutdown.lua", getenv("PATH"));
+	char fn[NAME_MAX];
+	snprintf(fn, NAME_MAX, "%s/lua/shutdown.lua", getenv("PATH"));
 	LuaDo(LUA_DO_FILE, fn, GetLuaState());
 
 	ShutdownCmd();
