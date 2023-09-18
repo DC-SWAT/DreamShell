@@ -34,7 +34,7 @@ cp ds/sdk/toolchain/environ.sh environ.sh
 sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
 cd /usr/local/dc/kos/kos/utils/dc-chain
-cp config.mk.testing.sample config.mk
+cp config/config.mk.stable.sample config.mk
 make && cd ../../
 ```
 ##### SDK
