@@ -14,6 +14,10 @@ isoLoader_ItemContextClick
 isoLoader_toggleDMA
 isoLoader_toggleAsync
 isoLoader_toggleCDDA
+isoLoader_toggleCDDA_Source
+isoLoader_toggleCDDA_Dest
+isoLoader_toggleCDDA_Pos
+isoLoader_toggleCDDA_Chan
 isoLoader_toggleBootMode
 isoLoader_toggleMemory
 isoLoader_toggleOS

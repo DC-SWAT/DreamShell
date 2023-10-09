@@ -1,8 +1,7 @@
 /* DreamShell ##version##
 
-   module.c - ISO Loader app module
-   Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2023 SWAT
+   app_module.h - ISO Loader app module header
+   Copyright (C) 2023 SWAT
 
 */
 
@@ -57,6 +56,14 @@ void isoLoader_toggleDMA(GUI_Widget *widget);
 
 void isoLoader_toggleCDDA(GUI_Widget *widget);
 
+void isoLoader_toggleCDDA_Source(GUI_Widget *widget);
+
+void isoLoader_toggleCDDA_Dest(GUI_Widget *widget);
+
+void isoLoader_toggleCDDA_Pos(GUI_Widget *widget);
+
+void isoLoader_toggleCDDA_Chan(GUI_Widget *widget);
+
 void isoLoader_toggleHeap(GUI_Widget *widget);
 
 void isoLoader_toggleMemory(GUI_Widget *widget);
@@ -78,3 +85,6 @@ void isoLoader_ResizeUI();
 void isoLoader_Shutdown(App_t *app);
 
 void isoLoader_Exit(GUI_Widget *widget);
+
+uint32 getExtModeCDDA();
+void setExtModeCDDA(uint32 mode);
