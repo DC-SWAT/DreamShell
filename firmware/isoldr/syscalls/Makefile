@@ -1,6 +1,6 @@
 #
 # DreamShell ISO Loader (low-level version)
-# Copyright (C) 2009-2022 SWAT
+# Copyright (C) 2009-2023 SWAT
 # Copyright (C) 2019 megavolt85
 #
 
@@ -18,7 +18,7 @@ TARGETSIZE		= $(TARGETPREFIX)-size
 TARGETLDFLAGS	= -Wl,--gc-sections -Tshlelf.xc -nostartfiles -nostdlib -nodefaultlibs
 TARGETCFLAGS	= -ml -m4-single-only -ffunction-sections -fdata-sections -ffreestanding \
 					-fno-builtin -fno-strict-aliasing -fomit-frame-pointer \
-					-Wall -std=c11 -Wextra -Werror
+					-Wall -std=c17 -Wextra -Werror
 
 # TARGETCFLAGS += -DLOG
 # SYSCALLOBJS += log.o memcpy.o

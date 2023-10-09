@@ -541,6 +541,12 @@ static void aica_check_cdda(void) {
 
 	LOGF("CDDA: Invalid 0x%02lx\n", invalid_level);
 
+	if (!cdda->adapt_channels) {
+		aica_stop_cdda();
+		aica_setup_cdda(0);
+		return;
+	}
+
 	if (cdda->restore_count++ < 10) {
 		if ((invalid_level >> 4) <= 3) {
 			aica_set_volume(0);
@@ -829,17 +835,26 @@ int CDDA_Init() {
 	cdda->right_channel = AICA_CDDA_CH_RIGHT;
 
 	/* AICA DMA */
-	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1) {
+	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1
+		|| (IsoInfo->emu_cdda & CDDA_MODE_DST_DMA)) {
 		cdda->dma = 1;
 	} else {
 		cdda->dma = 0;
 	}
 
 	/* SH4 timer */
-	if (IsoInfo->emu_cdda == CDDA_MODE_DMA_TMU1 || IsoInfo->emu_cdda == CDDA_MODE_SQ_TMU1) {
+	if(IsoInfo->emu_cdda == CDDA_MODE_DMA_TMU1
+		|| IsoInfo->emu_cdda == CDDA_MODE_SQ_TMU1
+		|| (IsoInfo->emu_cdda & CDDA_MODE_POS_TMU1)) {
 		cdda->timer = TMU1;
 	} else {
 		cdda->timer = TMU2;
+	}
+
+	if(IsoInfo->emu_cdda & CDDA_MODE_CH_FIXED) {
+		cdda->adapt_channels = 0;
+	} else {
+		cdda->adapt_channels = 1;
 	}
 
 #if 0
@@ -990,7 +1005,8 @@ static void play_track(uint32 track) {
 		fs_enable_dma(cdda->size >> 12);
 	}
 #else
-	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1) {
+	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1
+		|| (IsoInfo->emu_cdda & CDDA_MODE_SRC_DMA)) {
 		fs_enable_dma(FS_DMA_HIDDEN);
 	}
 #endif
@@ -1010,7 +1026,7 @@ int CDDA_Play(uint32 first, uint32 last, uint32 loop) {
 
 	gd_state_t *GDS = get_GDS();
 
-	if(!IsoInfo->emu_cdda) {
+	if(IsoInfo->emu_cdda == CDDA_MODE_DISABLED) {
 		GDS->cdda_track = first;
 		GDS->drv_stat = CD_STATUS_PLAYING;
 		GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
@@ -1287,7 +1303,7 @@ void CDDA_MainLoop(void) {
 		return;
 	}
 
-	DBGFF("%d %d\n", IsoInfo->emu_cdda, cdda->stat);
+	DBGFF("0x%08lx %d\n", IsoInfo->emu_cdda, cdda->stat);
 
 	if(cdda->stat == CDDA_STAT_END && !exception_inside_int()) {
 		play_next_track();

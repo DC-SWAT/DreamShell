@@ -530,7 +530,9 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      1 = DMA and TMU2\n"
 		          "                      2 = DMA and TMU1\n"
 		          "                      3 = SQ and TMU2\n"
-		          "                      4 = SQ and TMU1\n");
+		          "                      4 = SQ and TMU1\n"
+		          "             0x000CPDS%d = Ch[1-2],Pos[1-2],Dst[1-2],Src[1-2],%d\n",
+				  CDDA_MODE_EXTENDED, CDDA_MODE_EXTENDED);
 		ds_printf(" -v, --vmu        -Emulate VMU on port A1.\n"
 		          "                      0 = disabled (default)\n"
 		          "                      1 = number for VMU dump /vmu/vmudump001.vmd\n"
@@ -709,7 +711,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          info->use_irq,
 		          info->heap);
 		ds_printf("Emu async: %d\n"
-		          "Emu CDDA: %d\n"
+		          "Emu CDDA: 0x%08lx\n"
 		          "Emu VMU: %d\n"
 		          "Syscalls: %lx\n\n",
 		          info->emu_async,

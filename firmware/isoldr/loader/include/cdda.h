@@ -64,6 +64,9 @@ typedef struct cdda_ctx {
 	uint32 right_channel;
 	uint32 left_channel;
 
+	/* AICA channels restore mode */
+	uint32 adapt_channels;
+
 	/* Mutex for G2 bus */
 	uint32 g2_lock;
 
