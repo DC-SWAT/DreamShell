@@ -148,7 +148,11 @@ static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
-	uint32 *d = (uint32 *)(void *)(0xe0000000 | (dest & 0x03ffffe0));
+	/* Wait for both store queues to complete */
+	uint32 *d = (uint32 *)0xe0000000;
+	d[0] = d[8] = 0;
+
+	d = (uint32 *)(void *)(0xe0000000 | (dest & 0x03ffffe0));
 	uint32 *s = (uint32 *)data;
 
 	/* Set store queue memory area as desired */
@@ -175,9 +179,6 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 		d += 8;
 		s += 8;
 	}
-	/* Wait for both store queues to complete */
-	d = (uint32 *)0xe0000000;
-	d[0] = d[8] = 0;
 }
 
 static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
@@ -541,9 +542,12 @@ static void aica_check_cdda(void) {
 
 	LOGF("CDDA: Invalid 0x%02lx\n", invalid_level);
 
-	if (!cdda->adapt_channels) {
-		aica_stop_cdda();
-		aica_setup_cdda(0);
+	if (cdda->adapt_channels == 0) {
+		if ((invalid_level >> 4) <= 3) {
+			aica_set_volume(0);
+		} else {
+			aica_setup_cdda(0);
+		}
 		return;
 	}
 

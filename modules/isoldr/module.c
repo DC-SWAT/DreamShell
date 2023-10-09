@@ -527,10 +527,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "             0x8cXXXXXX = address (specify valid address)\n");
 		ds_printf(" -g, --cddamode   -CDDA emulation mode\n"
 		          "                      0 = Disabled (default)\n"
-		          "                      1 = DMA and TMU2\n"
-		          "                      2 = DMA and TMU1\n"
-		          "                      3 = SQ and TMU2\n"
-		          "                      4 = SQ and TMU1\n"
+		          "                      1 = DMA/DMA/TMU2\n"
+		          "                      2 = DMA/DMA/TMU1\n"
+		          "                      3 = SQ/PIO/TMU2\n"
+		          "                      4 = SQ/PIO/TMU1\n"
 		          "             0x000CPDS%d = Ch[1-2],Pos[1-2],Dst[1-2],Src[1-2],%d\n",
 				  CDDA_MODE_EXTENDED, CDDA_MODE_EXTENDED);
 		ds_printf(" -v, --vmu        -Emulate VMU on port A1.\n"
