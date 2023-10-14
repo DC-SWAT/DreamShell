@@ -25,67 +25,97 @@
 !
 ! void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
 !
-! TODO optimize:
-! 1) Use movca.l once per 32 bytes for left and right
-! 2) Purge cache for left and right every 32 bytes
-! 3) Better pipelining
-!
 _pcm16_split:
-	mov.l .shift5r, r3
+	mov #-5, r3
 	shld r3, r7
+	mov.l r8, @-r15
 	mov.l r11, @-r15
-	mov #4, r3
 	mov.l r12, @-r15
+	sts.l fpul, @-r15
+	sts.l fpscr, @-r15
+	mov #0, r0
+	lds r0, fpscr
+	fmov.s fr0, @-r15
+	fmov.s fr1, @-r15
+	fmov.s fr2, @-r15
+	fmov.s fr3, @-r15
+	fmov.s fr4, @-r15
+	fmov.s fr5, @-r15
+	mov	#0x10, r0
+	shll16 r0
+	lds	r0, fpscr
+	mov #2, r8
+	mov #2, r3
 	mov #0, r0
 .pcm16_cache:
 	pref @r4
-.pcm16_copy:
-	dt	r3
-	mov.l @r4+, r1
+.pcm16_load:
+	dt r8
+	fmov.d @r4+, dr0
+	flds fr0, fpul
+	sts fpul, r1
+	flds fr1, fpul
 	mov r1, r2
+	sts fpul, r11
 	shll16 r2
+	mov r11, r12
 	shlr16 r1
 	shlr16 r2
-	mov.l @r4+, r11
-	mov r11, r12
 	shlr16 r11
 	shll16 r12
 	shll16 r11
+	or r2, r12
+	bt/s .pcm16_save
 	or r1, r11
-	mov.l r11, @(r0,r5)
-	or r12, r2
-	mov.l r2, @(r0,r6)
-	bf/s .pcm16_copy
-	add #4, r0
-	dt	r7
-	add #-32, r4
-	ocbi @r4 !WARNING! Invalidate cache for the source
-	add #32, r4
+	lds r12, fpul
+	fsts fpul, fr4
+	lds r11, fpul
+	bra .pcm16_load
+	fsts fpul, fr2
+.pcm16_save:
+	mov #2, r8
+	lds r12, fpul
+	fsts fpul, fr5
+	lds r11, fpul
+	fsts fpul, fr3
+	fmov.d dr2, @(r0,r5)
+	fmov.d dr4, @(r0,r6)
+.pcm16_loops:
+	dt r3
+	bf/s .pcm16_load
+	add #8, r0
+	dt r7
 	bf/s .pcm16_cache
-	mov #4, r3
+	mov #2, r3
+.pcm16_exit:
+	mov #0, r0
+	lds r0, fpscr
+	fmov.s @r15+, fr5
+	fmov.s @r15+, fr4
+	fmov.s @r15+, fr3
+	fmov.s @r15+, fr2
+	fmov.s @r15+, fr1
+	fmov.s @r15+, fr0
+	lds.l @r15+, fpscr
+	lds.l @r15+, fpul
 	mov.l @r15+, r12
 	mov.l @r15+, r11
+	mov.l @r15+, r8
 	rts
 	nop
 
 !
 ! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 !
-! TODO optimize:
-! 1) Use 32bit copy to/from memory
-! 2) Use movca.l once per 32 bytes for left and right
-! 3) Purge cache for left and right every 32 bytes
-! 4) Better pipelining
-!
 _adpcm_split:
-	mov.l .shift5r, r1
+	mov #-5, r1
 	shld r1, r7
 	mov.l r10, @-r15
 	mov #16, r1
 .adpcm_cache:
 	pref @r4
 .adpcm_copy:
-	dt	r1
+	dt r1
 	mov.w @r4+, r10
 	mov r10, r0
 	and #0xf0, r0
@@ -109,10 +139,7 @@ _adpcm_split:
 	mov.b r3, @r6
 	bf/s .adpcm_copy
 	add #1, r6
-	dt	r7
-	add #-32, r4
-	ocbi @r4 !WARNING! Invalidate cache for the source
-	add #32, r4
+	dt r7
 	bf/s .adpcm_cache
 	mov #16, r1
 	mov.l @r15+, r10
@@ -136,7 +163,5 @@ _unlock_cdda:
 	mov.l   r2, @r0
 
 .align 4
-.shift5r:
-	.long 0xfffffffb
 lock_cdda:
 	.long 0
