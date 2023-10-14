@@ -25,6 +25,10 @@ typedef enum PCM_buff {
 	PCM_DMA_BUFF = 1
 } PCM_buff_t;
 
+typedef enum PCM_transfer {
+	PCM_TRANS_DMA = 0,
+	PCM_TRANS_SQ
+} PCM_transfer_t;
 
 typedef struct cdda_ctx {
 
@@ -42,7 +46,7 @@ typedef struct cdda_ctx {
 	uint32 aica_right[2];  /* First/second buffer for channel in sound RAM */
 	uint32 cur_buff;       /* AICA channel buffer */
 	size_t size;           /* Full buffer size */
-	uint32 dma;            /* Use DMA for transfer to AICA memory */
+	uint32 trans_method;   /* Transfer method to AICA memory */
 
 	/* Format info */
 	uint16 wav_format;
@@ -93,7 +97,6 @@ typedef struct cdda_ctx {
 
 /* PCM stereo splitters, optimized for SH4 */
 void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
-void pcm8_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 
 int lock_cdda(void);

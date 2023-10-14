@@ -16,7 +16,6 @@
 
 .section .text
 .globl _pcm16_split
-.globl _pcm8_split
 .globl _adpcm_split
 
 .globl _lock_cdda
@@ -66,39 +65,6 @@ _pcm16_split:
 	mov #4, r3
 	mov.l @r15+, r12
 	mov.l @r15+, r11
-	rts
-	nop
-
-!
-! void pcm8_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
-!
-! TODO optimize:
-! 1) Use 32bit copy to/from memory
-! 2) Use movca.l once per 32 bytes for left and right
-! 3) Purge cache for left and right every 32 bytes
-! 4) Better pipelining
-!
-_pcm8_split:
-	mov.l .shift5r, r1
-	shld r1, r7
-	mov #0, r0
-	mov #16, r1
-.pcm8_cache:
-	pref @r4
-.pcm8_copy:
-	mov.b @r4+, r3
-	mov.b r3, @(r0,r5)
-	dt	r1
-	mov.b @r4+, r3
-	mov.b r3, @(r0,r6)
-	bf/s .pcm8_copy
-	add #1, r0
-	dt	r7
-	add #-32, r4
-	ocbi @r4 !WARNING! Invalidate cache for the source
-	add #32, r4
-	bf/s .pcm8_cache
-	mov #16, r1
 	rts
 	nop
 
