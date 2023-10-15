@@ -48,7 +48,9 @@ _pcm16_split:
 	mov #2, r3
 	mov #0, r0
 .pcm16_cache:
+	add #32, r4
 	pref @r4
+	add #-32, r4
 .pcm16_load:
 	dt r8
 	fmov.d @r4+, dr0
@@ -113,7 +115,9 @@ _adpcm_split:
 	mov.l r10, @-r15
 	mov #16, r1
 .adpcm_cache:
+	add #32, r4
 	pref @r4
+	add #-32, r4
 .adpcm_copy:
 	dt r1
 	mov.w @r4+, r10

@@ -1227,23 +1227,11 @@ static void fill_pcm_buff() {
 
 	DBGF("CDDA: FILL %ld %ld\n", cdda->cur_offset, cdda->track_size - cdda->cur_offset);
 
-	/* Reading data for all channels to work buffer.
-		Using physical address to prevent cache invalidation
-		becuase it's already done at PCM splitting.
-	*/
-	uint8 *buff;
-
-	if (cdda->cur_offset) {
-		buff = (uint8 *)PHYS_ADDR((uint32)cdda->buff[PCM_TMP_BUFF]);
-	} else {
-		buff = cdda->buff[PCM_TMP_BUFF];
-	}
-
 #ifdef _FS_ASYNC
 	cdda->stat = CDDA_STAT_WAIT;
-	int rc = read_async(cdda->fd, buff, cdda->size >> 1, read_callback);
+	int rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1, read_callback);
 #else
-	int rc = read(cdda->fd, buff, cdda->size >> 1);
+	int rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1);
 	cdda->stat = CDDA_STAT_PREP;
 #endif
 
