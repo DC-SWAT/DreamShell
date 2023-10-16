@@ -31,80 +31,53 @@ _pcm16_split:
 	mov.l r8, @-r15
 	mov.l r11, @-r15
 	mov.l r12, @-r15
-	sts.l fpul, @-r15
-	sts.l fpscr, @-r15
+	mov r4, r8
+	add #32, r8
+	mov #31, r3
 	mov #0, r0
-	lds r0, fpscr
-	fmov.s fr0, @-r15
-	fmov.s fr1, @-r15
-	fmov.s fr2, @-r15
-	fmov.s fr3, @-r15
-	fmov.s fr4, @-r15
-	fmov.s fr5, @-r15
-	mov	#0x10, r0
-	shll16 r0
-	lds	r0, fpscr
-	mov #2, r8
-	mov #2, r3
-	mov #0, r0
-.pcm16_cache:
-	add #32, r4
-	pref @r4
-	add #-32, r4
+.pcm16_pref:
+	pref @r8
 .pcm16_load:
-	dt r8
-	fmov.d @r4+, dr0
-	flds fr0, fpul
-	sts fpul, r1
-	flds fr1, fpul
-	mov r1, r2
-	sts fpul, r11
-	shll16 r2
-	mov r11, r12
+	tst r3, r0
+	mov.l @r4+, r1
+	extu.w r1, r2
+	mov.l @r4+, r11
 	shlr16 r1
-	shlr16 r2
+	mov r11, r12
 	shlr16 r11
 	shll16 r12
 	shll16 r11
 	or r2, r12
-	bt/s .pcm16_save
+	bt/s .pcm16_store_alloc
 	or r1, r11
-	lds r12, fpul
-	fsts fpul, fr4
-	lds r11, fpul
-	bra .pcm16_load
-	fsts fpul, fr2
-.pcm16_save:
-	mov #2, r8
-	lds r12, fpul
-	fsts fpul, fr5
-	lds r11, fpul
-	fsts fpul, fr3
-	fmov.d dr2, @(r0,r5)
-	fmov.d dr4, @(r0,r6)
+.pcm16_store:
+	mov.l r11, @(r0,r5)
+	mov.l r12, @(r0,r6)
 .pcm16_loops:
-	dt r3
+	tst r3, r4
 	bf/s .pcm16_load
-	add #8, r0
+	add #4, r0
 	dt r7
-	bf/s .pcm16_cache
-	mov #2, r3
+	bf/s .pcm16_pref
+	add #32, r8
 .pcm16_exit:
-	mov #0, r0
-	lds r0, fpscr
-	fmov.s @r15+, fr5
-	fmov.s @r15+, fr4
-	fmov.s @r15+, fr3
-	fmov.s @r15+, fr2
-	fmov.s @r15+, fr1
-	fmov.s @r15+, fr0
-	lds.l @r15+, fpscr
-	lds.l @r15+, fpul
 	mov.l @r15+, r12
 	mov.l @r15+, r11
 	mov.l @r15+, r8
 	rts
 	nop
+.pcm16_store_alloc:
+	mov r0, r1
+	mov r11, r0
+	mov r5, r11
+	add r1, r11
+	movca.l r0, @r11
+	mov r12, r0
+	mov r6, r12
+	add r1, r12
+	movca.l r0, @r12
+	bra .pcm16_loops
+	mov r1, r0
 
 !
 ! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
@@ -114,7 +87,7 @@ _adpcm_split:
 	shld r1, r7
 	mov.l r10, @-r15
 	mov #16, r1
-.adpcm_cache:
+.adpcm_pref:
 	add #32, r4
 	pref @r4
 	add #-32, r4
@@ -144,7 +117,7 @@ _adpcm_split:
 	bf/s .adpcm_copy
 	add #1, r6
 	dt r7
-	bf/s .adpcm_cache
+	bf/s .adpcm_pref
 	mov #16, r1
 	mov.l @r15+, r10
 	rts
