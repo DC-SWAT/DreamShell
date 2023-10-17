@@ -256,7 +256,13 @@ static void setup_pcm_buffer() {
 	}
 
 	if (cdda->alloc_buff == NULL) {
-		cdda->alloc_buff = malloc(cdda->size + 32);
+		if (cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
+			/* DMA buffer not is used in this case */
+			cdda->alloc_buff = malloc((cdda->size >> 1) + 32);
+			cdda->buff[PCM_DMA_BUFF] = NULL;
+		} else {
+			cdda->alloc_buff = malloc(cdda->size + 32);
+		}
 	}
 
 	if (cdda->alloc_buff == NULL) {
@@ -265,7 +271,9 @@ static void setup_pcm_buffer() {
 	}
 
 	cdda->buff[PCM_TMP_BUFF] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
-	cdda->buff[PCM_DMA_BUFF] = cdda->buff[0] + (cdda->size >> 1);
+	if (cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
+		cdda->buff[PCM_DMA_BUFF] = cdda->buff[0] + (cdda->size >> 1);
+	}
 
 	/* Setup buffer at end of sound memory */
 	cdda->aica_left[0] = AICA_MEMORY_END - cdda->size;
@@ -649,6 +657,25 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 	}
 }
 
+static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
+
+	/* Wait for both store queues to complete */
+	uint32 *d = (uint32 *)0xe0000000;
+	d[0] = d[8] = 0;
+
+	uint32 masked_left = (0xe0000000 | (aica_left & 0x03ffffe0));
+	uint32 masked_right = (0xe0000000 | (aica_right & 0x03ffffe0));
+
+	/* Set store queue memory area as desired */
+	QACR0 = ((aica_left >> 26) << 2) & 0x1c;
+	QACR1 = ((aica_right >> 26) << 2) & 0x1c;
+
+	g2_fifo_wait();
+
+	/* Separating channels and do fill/write queues as many times necessary. */
+	pcm16_split_sq(data, masked_left, masked_right, size);
+}
+
 static void switch_cdda_track(uint8 track) {
 
 	gd_state_t *GDS = get_GDS();
@@ -972,6 +999,14 @@ static void play_track(uint32 track) {
 	}
 #endif
 
+	if(cdda->trans_method != PCM_TRANS_DMA) {
+		if(cdda->bitsize == 16) {
+			cdda->trans_method = PCM_TRANS_SQ_SPLIT;
+		} else {
+			cdda->trans_method = PCM_TRANS_SQ;
+		}
+	}
+
 	cdda->stat = CDDA_STAT_FILL;
 
 	gd_state_t *GDS = get_GDS();
@@ -1291,7 +1326,9 @@ void CDDA_MainLoop(void) {
 		if (cdda->trans_method == PCM_TRANS_DMA) {
 			aica_dma_irq_restore();
 		}
-		aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
+		if (cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
+			aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
+		}
 		cdda->stat = CDDA_STAT_POS;
 	}
 
@@ -1302,8 +1339,17 @@ void CDDA_MainLoop(void) {
 
 	/* Send data to AICA */
 	if(cdda->stat == CDDA_STAT_SNDL && !aica_transfer_in_progress()) {
-		aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
-		cdda->stat = CDDA_STAT_SNDR;
+		if (cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
+			aica_pcm_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
+					cdda->aica_left[cdda->cur_buff],
+					cdda->aica_right[cdda->cur_buff],
+					cdda->size >> 1);
+			cdda->cur_buff = !cdda->cur_buff;
+			cdda->stat = CDDA_STAT_FILL;
+		} else {
+			aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
+			cdda->stat = CDDA_STAT_SNDR;
+		}
 	}
 	/* If transfer of left channel is done, start for right channel */
 	else if(cdda->stat == CDDA_STAT_SNDR && !aica_transfer_in_progress()) {

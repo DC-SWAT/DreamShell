@@ -27,7 +27,8 @@ typedef enum PCM_buff {
 
 typedef enum PCM_transfer {
 	PCM_TRANS_DMA = 0,
-	PCM_TRANS_SQ
+	PCM_TRANS_SQ,
+	PCM_TRANS_SQ_SPLIT
 } PCM_transfer_t;
 
 typedef struct cdda_ctx {
@@ -97,6 +98,7 @@ typedef struct cdda_ctx {
 
 /* PCM stereo splitters, optimized for SH4 */
 void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
+void pcm16_split_sq(uint32 all, uint32 left, uint32 right, uint32 size);
 void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 
 int lock_cdda(void);
