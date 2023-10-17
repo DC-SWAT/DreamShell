@@ -40,16 +40,13 @@ _pcm16_split:
 .pcm16_load:
 	tst r3, r0
 	mov.l @r4+, r1
-	extu.w r1, r2
-	mov.l @r4+, r11
-	shlr16 r1
-	mov r11, r12
-	shlr16 r11
-	shll16 r12
-	shll16 r11
-	or r2, r12
+	mov.l @r4+, r2
+	swap.w r1, r11
+	mov r2, r12
+	xtrct r11, r12
+	swap.w r2, r11
 	bt/s .pcm16_store_alloc
-	or r1, r11
+	xtrct r1, r11
 .pcm16_store:
 	mov.l r11, @(r0,r5)
 	mov.l r12, @(r0,r6)
@@ -67,17 +64,14 @@ _pcm16_split:
 	rts
 	nop
 .pcm16_store_alloc:
-	mov r0, r1
+	add r0, r5
+	add r0, r6
 	mov r11, r0
-	mov r5, r11
-	add r1, r11
-	movca.l r0, @r11
+	movca.l r0, @r5
 	mov r12, r0
-	mov r6, r12
-	add r1, r12
-	movca.l r0, @r12
+	movca.l r0, @r6
 	bra .pcm16_loops
-	mov r1, r0
+	mov #0, r0
 
 !
 ! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
