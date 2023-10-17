@@ -1,13 +1,12 @@
 #
 # DreamShell boot loader
-# (c)2011-2022 SWAT
+# (c)2011-2023 SWAT
 #
 
 TARGET = loader
 VERSION = 2.5
 TARGET_NAME = DreamShell_boot_$(TARGET)_v$(VERSION)
 TARGET_CD = cd/1DS_BOOT.BIN
-TARGET_DUMMY = cd/0.0
 
 all: rm-elf $(TARGET).elf
 
@@ -17,7 +16,7 @@ clean: rm-elf
 
 rm-elf:
 	-rm -f $(TARGET).elf $(TARGET_NAME).elf $(TARGET).bin $(TARGET_NAME).bin \
-		$(TARGET_CD) $(TARGET_NAME).cdi $(TARGET_DUMMY) romdisk.*
+		$(TARGET_CD) $(TARGET_NAME).cdi romdisk.*
 
 include ../../sdk/Makefile.cfg
 
@@ -39,10 +38,10 @@ $(TARGET).elf: $(OBJS) romdisk.o
 		$(OBJS) romdisk.o $(OBJEXTRA) -lkosext2fs -lz -lkmg $(KOS_LIBS)
 	$(KOS_STRIP) $(TARGET).elf
 	$(KOS_OBJCOPY) -R .stack -O binary $(TARGET).elf $(TARGET).bin
-	
+
 %.op: %.S
 	kos-cc $(CFLAGS) -c $< -o $@
-		
+
 romdisk.img:
 	$(KOS_GENROMFS) -f romdisk.img -d romdisk -v
 
@@ -64,7 +63,7 @@ cdi: $(TARGET_CD)
 # $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
 # @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d >/dev/null
 
-release: all $(TARGET_DUMMY) cdi install
+release: all cdi install
 	@rm -f $(TARGET_NAME).bin $(TARGET_NAME).cdi
 	@cp $(TARGET).bin $(TARGET_NAME).bin
 	@mv $(TARGET).cdi $(TARGET_NAME).cdi
@@ -75,10 +74,6 @@ install: $(TARGET).bin
 	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_nogdrom.bios $(TARGET).bin
 	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail.bios $(TARGET).bin
 
-$(TARGET_DUMMY):
-	@mkdir -p ./cd
-	dd if=/dev/zero of=cd/0.0 bs=1024k count=500
-
 nulldc: all cdi
 	@echo Running...
 	@-rm -f $(DS_BASE)/DS.cdi
@@ -88,7 +83,7 @@ nulldc: all cdi
 lxdream: all cdi
 	@echo Running...
 	@lxdream -p $(TARGET).cdi
-	
+
 lxdelf: $(TARGET).elf
 	lxdream -u -p -e $(TARGET).elf
 

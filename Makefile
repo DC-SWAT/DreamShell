@@ -209,14 +209,12 @@ $(TARGET).cdi: $(TARGET_BIN_CD) make-build
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
 	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
-	@dd if=/dev/zero of=$(DS_BUILD)/0.0 bs=1024k count=450
 	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 	@-rm -f $(TARGET).iso
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
-	@-rm -f $(DS_BUILD)/0.0
 
 # If you have problems with mkisofs try data/data image:
 # $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
