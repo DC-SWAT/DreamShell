@@ -28,6 +28,7 @@ git clone https://github.com/KallistiOS/KallistiOS.git kos && cd kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
 cp ds/sdk/toolchain/environ.sh environ.sh
+cp ds/sdk/toolchain/patches/newlib-4.3.0.20230120-kos.diff utils/dc-chain/patches
 ```
 ##### Toolchain
 ```console
@@ -41,9 +42,12 @@ make && cd ../../
 ```console
 cd /usr/local/dc/kos/kos
 source ./environ.sh
-make && cd ../kos-ports && ./utils/build-all.sh
-cd ./lib && rm -f libfreetype.a liboggvorbisplay.a libogg.a libvorbis.a && cd ../../kos/ds
-cd ./sdk/bin/src && make && make install && cd ../../../
+make && cd ../kos-ports && ./utils/build-all.sh && cd ./lib
+mv libfreetype.a libfreetype-kos.a
+mv liboggvorbisplay.a liboggvorbisplay-kos.a
+mv libogg.a libogg-kos.a
+mv libvorbis.a libvorbis-kos.a
+cd ../../kos/ds/sdk/bin/src && make && make install && cd ../../../
 ln -nsf `which tolua` sdk/bin/tolua
 ln -nsf `which mkisofs` sdk/bin/mkisofs
 ln -nsf `which mksquashfs` sdk/bin/mksquashfs
