@@ -25,7 +25,7 @@
 static ADX_INFO ADX_Info;
 static FILE *adx_in;
 static int pcm_samples, loop;
-static unsigned char adx_buf[ADX_HDR_SIZE];
+static unsigned char adx_buf[ADX_HDR_SIZE] __attribute__((aligned(32)));
 
 /* Local function definitions */
 static int  adx_parse( unsigned char *buf );
@@ -229,7 +229,7 @@ static void *adx_thread(void *p)
 	//FILE *adx_in;
 	//unsigned char buf[ADX_HDR_SIZE];
     unsigned char *pcm_buf=NULL;
-	short outbuf[32*2];
+	short outbuf[32*2] __attribute__((aligned(32)));
 	PREV prev[2];
     //ADX_INFO ADX_Info;
     int pcm_size=0,wsize;
@@ -238,7 +238,7 @@ static void *adx_thread(void *p)
     if( ADX_Info.loop && loop )         	
 	    printf("LibADX: Loop Enabled\n");
 
-    pcm_buf = malloc(PCM_BUF_SIZE);                    /* allocate PCM buffer */
+    pcm_buf = memalign(32, PCM_BUF_SIZE);                    /* allocate PCM buffer */
     if( pcm_buf == NULL )
         goto exit;
 
