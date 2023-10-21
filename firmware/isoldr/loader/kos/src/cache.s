@@ -19,7 +19,7 @@
 	.globl _dcache_inval_range
 	.globl _dcache_flush_range
 	.globl _dcache_purge_range
-	.globl _dcache_pref_range
+	.globl _dcache_purge_all
 
 ! r4 is starting address
 ! r5 is count
@@ -158,25 +158,22 @@ dpurge_loop:
 	rts
 	nop
 
-! This routine prefetch to operand cache the specified data range. 
-! r4 is starting address
-! r5 is count
-_dcache_pref_range:
-	! Get ending address from count and align start address
-	add	r4,r5
-	mov.l	l1align,r0
-	and	r0,r4
-	mov	r4,r6
 
-dpref_loop:
-	! Prefetch to the O cache
-	pref	@r4
-	cmp/hs	r4,r5
-	bt/s	dpref_loop
-	add	#32,r4		! += CPU_CACHE_BLOCK_SIZE
-
+! This routine just forces a write-back and invalidate all O cache.
+! r4 is address for temporary buffer 32-byte aligned
+! r5 is size of temporary buffer (8 KB or 16 KB)
+_dcache_purge_all:
+	mov #0, r0
+	add r4, r5
+dpurge_all_loop:
+	! Allocate and then invalidate the O cache block
+	movca.l r0, @r4
+	ocbi @r4
+	cmp/hs r4, r5
+	bt/s dpurge_all_loop
+	add #32, r4		! += CPU_CACHE_BLOCK_SIZE
 	rts
-	mov	r6,r0
+	nop
 
 
 	.align	2

@@ -821,7 +821,6 @@ static s32 g1_ata_access(struct ide_req *req)
 			OUT8(G1_ATA_CTL, 2);
 			for (u32 i = 0; i < len; i++)
 			{
-				// dcache_pref_range((u32)buff, sector_size);
 				g1_ata_wait_nbsy();
 
 				for (u32 j = 0; j < sector_size >> 1; ++j)

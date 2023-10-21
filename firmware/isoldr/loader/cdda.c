@@ -156,8 +156,8 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 	uint32 *s = (uint32 *)data;
 
 	/* Set store queue memory area as desired */
-	QACR0 = ((dest >> 26) << 2) & 0x1c;
-	QACR1 = ((dest >> 26) << 2) & 0x1c;
+	QACR0 = (dest >> 24) & 0x1c;
+	QACR1 = (dest >> 24) & 0x1c;
 
 	/* fill/write queues as many times necessary */
 	size >>= 5;
@@ -667,8 +667,8 @@ static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, 
 	uint32 masked_right = (0xe0000000 | (aica_right & 0x03ffffe0));
 
 	/* Set store queue memory area as desired */
-	QACR0 = ((aica_left >> 26) << 2) & 0x1c;
-	QACR1 = ((aica_right >> 26) << 2) & 0x1c;
+	QACR0 = (aica_left >> 24) & 0x1c;
+	QACR1 = (aica_right >> 24) & 0x1c;
 
 	g2_fifo_wait();
 

@@ -531,8 +531,7 @@ static int write_data (
 	spi_send_byte(token);	 /* Xmit data token */
 	
 	if (token != 0xFD) {	/* Is data token */
-	
-		dcache_pref_range((uint32)buff, 512);
+
 		crc = sd_crc16(buff, 512, 0);
 		spi_send_data(buff, 512);
 		spi_send_byte((uint8)(crc >> 8));
