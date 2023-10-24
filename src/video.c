@@ -556,7 +556,7 @@ void SDL_DS_Blit_Textured() {
 		
 		//if(wait_dma_ready() < 0) {
 			//pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
-			sq_cpy(sdl_dc_memtex, sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+			sq_cpy_pvr(sdl_dc_memtex, sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
 		//} else {
 //			dcache_flush_range((unsigned)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
 //			pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2, -1, NULL, 0);
