@@ -15,6 +15,7 @@
 #include <arch/cache.h>
 #include <arch/timer.h>
 #include <dc/sq.h>
+#include <dc/fifo.h>
 
 /*
 static const uint8 logs[] = {
@@ -64,8 +65,6 @@ static const uint8 logs[] = {
 #define AICA_MEMORY_END 0x00A00000
 #define AICA_MEMORY_END_ARM 0x00200000
 
-#define G2BUS_FIFO (*(vuint32 *)0xa05f688c)
-
 #define aica_dma_in_progress() AICA_DMA_ADST
 #define aica_dma_wait() do { } while(AICA_DMA_ADST)
 
@@ -78,26 +77,40 @@ cdda_ctx_t *get_CDDA(void) {
 	return &_cdda;
 }
 
+/* When accessing to the SPU RAM or AICA,
+	this is required at least every 8 32-bit */
+static void g2_fifo_wait() {
+	do { } while(FIFO_STATUS & FIFO_G2) ;
+	do { } while(FIFO_STATUS & FIFO_AICA) ;
+}
+
 /* G2 Bus locking */
 static void g2_lock(void) {
 	cdda->g2_lock = irq_disable();
-	AICA_DMA_ADSUSP = 1;
-	do { } while(G2BUS_FIFO & 0x20) ;
+	if (AICA_DMA_ADEN) { /* AICA DMA enabled  */
+		AICA_DMA_ADSUSP = 1; /* AICA DMA suspend  */
+	}
+	if (*((vuint32 *)0xa05f7834)) { /* Ext1 DMA enabled  */
+		*((vuint32 *)0xa05f783c) = 1; /* Ext1 DMA suspend  */
+	}
+	if (*((vuint32 *)0xa05f7854)) { /* Ext2 DMA enabled  */
+		*((vuint32 *)0xa05f785c) = 1; /* Ext2 DMA suspend */
+	}
+	do { } while(FIFO_STATUS & FIFO_SH4) ;
+	g2_fifo_wait();
 }
 
 static void g2_unlock(void) {
-	AICA_DMA_ADSUSP = 0;
-	irq_restore(cdda->g2_lock);
-}
-
-/* When writing to the SPU RAM, this is required at least every 8 32-bit
-   writes that you execute */
-static void g2_fifo_wait() {
-	for (uint32 i = 0; i < 0x1800; ++i) {
-		if (!(G2BUS_FIFO & 0x11)) {
-			break;
-		}
+	if (AICA_DMA_ADEN) { /* AICA DMA enabled  */
+		AICA_DMA_ADSUSP = 0; /* AICA DMA resume  */
 	}
+	if (*((vuint32 *)0xa05f7834)) { /* Ext1 DMA enabled  */
+		*((vuint32 *)0xa05f783c) = 0; /* Ext1 DMA resume  */
+	}
+	if (*((vuint32 *)0xa05f7854)) { /* Ext2 DMA enabled  */
+		*((vuint32 *)0xa05f785c) = 0; /* Ext2 DMA resume */
+	}
+	irq_restore(cdda->g2_lock);
 }
 
 static void aica_dma_irq_hide() {
@@ -133,19 +146,19 @@ static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 	uint32 addr = (uint32)data;
 	dcache_purge_range(addr, size);
-	addr = addr & 0x0FFFFFFF;
 
-	AICA_DMA_G2APRO = 0x4659007F;      // Protection code
+	AICA_DMA_G2APRO = 0x4659007f;      // Protection code
 	AICA_DMA_ADEN   = 0;               // Disable wave DMA
 	AICA_DMA_ADDIR  = 0;               // To wave memory
 	AICA_DMA_ADTRG  = 0x00000004;      // Initiate by CPU, suspend enabled
-	AICA_DMA_ADSTAR = addr;            // System memory address
+	AICA_DMA_ADSTAR = PHYS_ADDR(addr); // System memory address
 	AICA_DMA_ADSTAG = dest;            // Wave memory address
 	AICA_DMA_ADLEN  = size|0x80000000; // Data size, disable after DMA end
 	AICA_DMA_ADEN   = 1;               // Enable wave DMA
 	AICA_DMA_ADST   = 1;               // Start wave DMA
 }
 
+#ifdef DEV_TYPE_SD
 static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 	/* Wait for both store queues to complete */
@@ -161,7 +174,7 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 	/* fill/write queues as many times necessary */
 	size >>= 5;
-	g2_fifo_wait();
+	g2_lock();
 
 	while(size--) {
 		/* Prefetch 32 bytes for next loop */
@@ -179,15 +192,20 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 		d += 8;
 		s += 8;
 	}
+	g2_unlock();
 }
+#endif
 
 static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 	if (cdda->trans_method == PCM_TRANS_DMA) {
 		aica_dma_irq_hide();
 		aica_dma_transfer(data, dest, size);
-	} else {
+	} 
+#ifdef DEV_TYPE_SD
+	else {
 		aica_sq_transfer(data, dest, size);
 	}
+#endif
 }
 
 static int aica_transfer_in_progress() {
@@ -298,7 +316,6 @@ static void aica_set_volume(int volume) {
 	uint32 val;
 	cdda->volume = volume;
 
-	g2_fifo_wait();
 	g2_lock();
 
 	val = 0x24 | (volume << 8); //(AICA_VOL(vol) << 8);
@@ -317,7 +334,6 @@ static void aica_stop_cdda(void) {
 	uint32 val;
 	DBGFF(NULL);
 
-	g2_fifo_wait();
 	g2_lock();
 
 	val = CHNREG32(cdda->left_channel,  0);
@@ -384,7 +400,6 @@ static void aica_setup_cdda(int clean) {
 	timer_prime_cdda(cdda->timer, cdda->end_tm, 0);
 
 	/* Setup AICA channels */
-	g2_fifo_wait();
 	g2_lock();
 
 	CHNREG32(cdda->left_channel, 8) = 0;
@@ -400,7 +415,6 @@ static void aica_setup_cdda(int clean) {
 	g2_unlock();
 	aica_set_volume(clean ? 255 : 0);
 
-	g2_fifo_wait();
 	g2_lock();
 
 	CHNREG32(cdda->left_channel, 16) = 0x1f;
@@ -459,7 +473,6 @@ static void aica_check_cdda(void) {
 	uint32 invalid_level = 0;
 	uint32 val;
 
-	// g2_fifo_wait();
 	g2_lock();
 
 	val = CHNREG32(cdda->left_channel, 36) & 0xffff;
@@ -472,10 +485,20 @@ static void aica_check_cdda(void) {
 		invalid_level |= 0x12;
 		// LOGF("CDDA: R PAN %04lx != %04lx\n", val, (AICA_PAN(255) | (0xf << 8)));
 	}
+	val = CHNREG32(cdda->left_channel, 40) & 0xffff;
+	if(val != check_vol) {
+		invalid_level |= 0x21;
+		// LOGF("CDDA: L VOL %04lx != %04lx\n", val, check_vol);
+	}
 	val = CHNREG32(cdda->right_channel, 40) & 0xffff;
 	if(val != check_vol) {
 		invalid_level |= 0x22;
 		// LOGF("CDDA: R VOL %04lx != %04lx\n", val, check_vol);
+	}
+	val = CHNREG32(cdda->left_channel, 24) & 0xffff;
+	if(val != cdda->check_freq) {
+		invalid_level |= 0x41;
+		// LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->check_freq);
 	}
 	val = CHNREG32(cdda->right_channel, 24) & 0xffff;
 	if(val != cdda->check_freq) {
@@ -484,8 +507,21 @@ static void aica_check_cdda(void) {
 	}
 	val = CHNREG32(cdda->left_channel, 12) & 0xffff;
 	if (val != (cdda->end_pos & 0xffff)) {
+		invalid_level |= 0x41;
+		// LOGF("CDDA: L POS %04lx != %04lx\n", val, cdda->end_pos & 0xffff);
+	}
+	val = CHNREG32(cdda->right_channel, 12) & 0xffff;
+	if (val != (cdda->end_pos & 0xffff)) {
 		invalid_level |= 0x42;
 		// LOGF("CDDA: R POS %04lx != %04lx\n", val, cdda->end_pos & 0xffff);
+	}
+
+	g2_fifo_wait();
+
+	val = CHNREG32(cdda->left_channel, 0) & 0xffff;
+	if (val != cdda->check_status) {
+		invalid_level |= 0x81;
+		// LOGF("CDDA: L CON %04lx != %04lx\n", val, cdda->check_status);
 	}
 	val = CHNREG32(cdda->right_channel, 0) & 0xffff;
 	if (val != cdda->check_status) {
@@ -493,26 +529,6 @@ static void aica_check_cdda(void) {
 		// LOGF("CDDA: R CON %04lx != %04lx\n", val, cdda->check_status);
 	}
 
-	val = CHNREG32(cdda->left_channel, 40) & 0xffff;
-	if(val != check_vol) {
-		invalid_level |= 0x21;
-		// LOGF("CDDA: L VOL %04lx != %04lx\n", val, check_vol);
-	}
-	val = CHNREG32(cdda->left_channel, 24) & 0xffff;
-	if(val != cdda->check_freq) {
-		invalid_level |= 0x41;
-		// LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->check_freq);
-	}
-	val = CHNREG32(cdda->left_channel, 12) & 0xffff;
-	if (val != (cdda->end_pos & 0xffff)) {
-		invalid_level |= 0x41;
-		// LOGF("CDDA: L POS %04lx != %04lx\n", val, cdda->end_pos & 0xffff);
-	}
-	val = CHNREG32(cdda->left_channel, 0) & 0xffff;
-	if (val != cdda->check_status) {
-		invalid_level |= 0x81;
-		// LOGF("CDDA: L CON %04lx != %04lx\n", val, cdda->check_status);
-	}
 	g2_unlock();
 
 	if ((invalid_level >> 4) == 0) {
@@ -567,7 +583,6 @@ static void aica_check_cdda(void) {
 /* Get channel position */
 static uint32 aica_get_pos(void) {
 	uint32 p;
-	g2_fifo_wait();
 
 	/* Observe channel ch */
 	g2_lock();
@@ -586,7 +601,6 @@ static uint32 aica_get_pos(void) {
 
 static void aica_init(void) {
 
-	g2_fifo_wait();
 	g2_lock();
 
 	SNDREG32(0x2800) = 0x0000;
@@ -646,9 +660,11 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 	uint32 count = size >> 1;
 
 	switch(cdda->bitsize) {
+#ifdef DEV_TYPE_SD
 		case 4:
 			adpcm_split(src, dst, dst + count, size);
 			break;
+#endif
 		case 16:
 			pcm16_split((int16 *)src, (int16 *)dst, (int16 *)(dst + count), size);
 			break;
@@ -670,10 +686,12 @@ static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, 
 	QACR0 = (aica_left >> 24) & 0x1c;
 	QACR1 = (aica_right >> 24) & 0x1c;
 
-	g2_fifo_wait();
+	g2_lock();
 
 	/* Separating channels and do fill/write queues as many times necessary. */
 	pcm16_split_sq(data, masked_left, masked_right, size);
+
+	g2_unlock();
 }
 
 static void switch_cdda_track(uint8 track) {
@@ -1098,16 +1116,16 @@ int CDDA_Seek(uint32 offset) {
 
 
 int CDDA_Pause(void) {
-	
+
 	gd_state_t *GDS = get_GDS();
-	
+
 	if(cdda->stat) {
 		aica_stop_clean_cdda();
 		cdda->cur_offset = tell(cdda->fd) - cdda->offset;
+		GDS->cdda_stat = SCD_AUDIO_STATUS_PAUSED;
 	}
 
 	GDS->drv_stat = CD_STATUS_PAUSED;
-	GDS->cdda_stat = SCD_AUDIO_STATUS_PAUSED;
 	return COMPLETED;
 }
 
@@ -1240,8 +1258,15 @@ static void read_callback(size_t size) {
 
 static void fill_pcm_buff() {
 
-	if(cdda->volume && cdda->cur_offset) {
-		aica_set_volume(0);
+	/* On first loading the channels is muted */
+	if(cdda->volume) {
+		/* FIXME: Strange issue in rare cases */
+		if ((tell(cdda->fd) - cdda->offset) >= cdda->track_size && cdda->loop == 0) {
+			cdda->loop = 1;
+		}
+		if(cdda->cur_offset) {
+			aica_set_volume(0);
+		}
 	}
 
 	cdda->cur_offset = tell(cdda->fd) - cdda->offset;

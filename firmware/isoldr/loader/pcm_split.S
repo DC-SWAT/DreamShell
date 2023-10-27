@@ -124,6 +124,7 @@ _pcm16_split_sq:
 	rts
 	nop
 
+#ifdef DEV_TYPE_SD
 !
 ! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 !
@@ -167,6 +168,7 @@ _adpcm_split:
 	mov.l @r15+, r10
 	rts
 	nop
+#endif
 
 _lock_cdda:
 	mova    lock_cdda, r0
