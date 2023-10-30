@@ -13,7 +13,7 @@
 #include "network/net.h"
 
 extern uint8 romdisk[];
-KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
+KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT | INIT_EXPORT);
 KOS_INIT_ROMDISK(romdisk);
 
 static uint32 ver_int = 0;

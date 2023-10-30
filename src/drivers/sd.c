@@ -468,7 +468,6 @@ static int write_data (
 
 	if (token != 0xFD) {	/* Is data token */
 
-		dcache_pref_range((uint32)buff, 512);
 		crc = net_crc16ccitt(buff, 512, 0);
 
 		spi_send_data(buff, 512);

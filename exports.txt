@@ -1806,25 +1806,6 @@ spu_shutdown
 spu_dma_init
 spu_dma_shutdown
 #
-# Sound
-snd_mem_init
-snd_mem_shutdown
-snd_sh4_to_aica
-snd_sh4_to_aica_start
-snd_sh4_to_aica_stop
-snd_aica_to_sh4
-snd_poll_resp
-snd_sfx_play_chn
-snd_sfx_stop
-snd_sfx_chn_alloc
-snd_sfx_chn_free
-snd_init
-snd_shutdown
-snd_stream_prefill
-snd_stream_alloc
-snd_stream_destroy
-snd_stream_reinit
-#
 # Maple
 vmu_beep_raw
 purupuru_rumble

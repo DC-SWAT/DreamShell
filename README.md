@@ -28,7 +28,7 @@ git clone https://github.com/KallistiOS/KallistiOS.git kos && cd kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
 cp ds/sdk/toolchain/environ.sh environ.sh
-cp ds/sdk/toolchain/patches/newlib-4.3.0.20230120-kos.diff utils/dc-chain/patches
+cp ds/sdk/toolchain/patches/*.diff utils/dc-chain/patches
 ```
 ##### Toolchain
 ```console
