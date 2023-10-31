@@ -45,10 +45,10 @@ static const uint8 logs[] = {
 //#define AICA_VOL(x) (0xff - logs[128 + (((x) & 0xff) / 2)])
 
 /* AICA sample formats */
-#define AICA_SM_16BIT    0
-#define AICA_SM_8BIT     1
-#define AICA_SM_ADPCM    3
-#define AICA_SM_ADPCM_LS 4
+#define AICA_SM_16BIT    0 /* Linear PCM 16-bit */
+#define AICA_SM_8BIT     1 /* Linear PCM 8-bit */
+#define AICA_SM_ADPCM    2 /* Yamaha ADPCM 4-bit */
+#define AICA_SM_ADPCM_LS 3 /* Long stream ADPCM 4-bit */
 
 /* WAV sample formats */
 #define WAVE_FMT_PCM                   0x0001 /* PCM */
@@ -66,7 +66,7 @@ static const uint8 logs[] = {
 #define AICA_MEMORY_END_ARM 0x00200000
 
 #define aica_dma_in_progress() AICA_DMA_ADST
-#define aica_dma_wait() do { } while(AICA_DMA_ADST)
+#define aica_dma_disable() AICA_DMA_ADEN = 0
 
 #define RAW_SECTOR_SIZE 2352
 
@@ -208,25 +208,6 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 #endif
 }
 
-static int aica_transfer_in_progress() {
-	if (cdda->trans_method == PCM_TRANS_DMA) {
-		return aica_dma_in_progress();
-	}
-	return 0;
-}
-
-static void aica_transfer_wait() {
-	if (cdda->trans_method == PCM_TRANS_DMA) {
-		aica_dma_wait();
-	}
-}
-
-static void aica_transfer_stop() {
-	if (cdda->trans_method == PCM_TRANS_DMA) {
-		AICA_DMA_ADEN = 0;
-	}
-}
-
 static void setup_pcm_buffer() {
 
 	/* 
@@ -301,7 +282,7 @@ static void setup_pcm_buffer() {
 	cdda->aica_right[1] = cdda->aica_right[0] + (cdda->size >> 2);
 
 	/* Setup end position for sound buffer */
-	if(cdda->aica_format == AICA_SM_ADPCM) {
+	if(cdda->aica_format == AICA_SM_ADPCM_LS) {
 		cdda->end_pos = cdda->size - 1;
 	} else {
 		cdda->end_pos = ((cdda->size / cdda->chn) / (cdda->bitsize >> 3)) - (cdda->bitsize >> 3);
@@ -361,9 +342,8 @@ static void aica_stop_clean_cdda() {
 	}
 #endif
 
-	if(aica_transfer_in_progress()) {
-		aica_transfer_stop();
-		aica_transfer_wait();
+	if (cdda->trans_method == PCM_TRANS_DMA && aica_dma_in_progress()) {
+		aica_dma_disable();
 	}
 	cdda->stat = CDDA_STAT_IDLE;
 }
@@ -476,32 +456,32 @@ static void aica_check_cdda(void) {
 	g2_lock();
 
 	val = CHNREG32(cdda->left_channel, 36) & 0xffff;
-	if(val != (AICA_PAN(0) | (0xf << 8))) {
+	if (val != (AICA_PAN(0) | (0xf << 8))) {
 		invalid_level |= 0x11;
 		// LOGF("CDDA: L PAN %04lx != %04lx\n", val, (AICA_PAN(0) | (0xf << 8)));
 	}
 	val = CHNREG32(cdda->right_channel, 36) & 0xffff;
-	if(val != (AICA_PAN(255) | (0xf << 8))) {
+	if (val != (AICA_PAN(255) | (0xf << 8))) {
 		invalid_level |= 0x12;
 		// LOGF("CDDA: R PAN %04lx != %04lx\n", val, (AICA_PAN(255) | (0xf << 8)));
 	}
 	val = CHNREG32(cdda->left_channel, 40) & 0xffff;
-	if(val != check_vol) {
+	if (val != check_vol) {
 		invalid_level |= 0x21;
 		// LOGF("CDDA: L VOL %04lx != %04lx\n", val, check_vol);
 	}
 	val = CHNREG32(cdda->right_channel, 40) & 0xffff;
-	if(val != check_vol) {
+	if (val != check_vol) {
 		invalid_level |= 0x22;
 		// LOGF("CDDA: R VOL %04lx != %04lx\n", val, check_vol);
 	}
 	val = CHNREG32(cdda->left_channel, 24) & 0xffff;
-	if(val != cdda->check_freq) {
+	if (val != cdda->check_freq) {
 		invalid_level |= 0x41;
 		// LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->check_freq);
 	}
 	val = CHNREG32(cdda->right_channel, 24) & 0xffff;
-	if(val != cdda->check_freq) {
+	if (val != cdda->check_freq) {
 		invalid_level |= 0x42;
 		// LOGF("CDDA: R FRQ %04lx != %04lx\n", val, cdda->check_freq);
 	}
@@ -965,7 +945,7 @@ static void play_track(uint32 track) {
 		switch(cdda->wav_format) {
 			case WAVE_FMT_YAMAHA_ADPCM:
 			case WAVE_FMT_YAMAHA_ADPCM_ITU_G723:
-				cdda->aica_format = AICA_SM_ADPCM;
+				cdda->aica_format = AICA_SM_ADPCM_LS;
 				break;
 			default:
 				cdda->aica_format = AICA_SM_16BIT;
@@ -1347,8 +1327,12 @@ void CDDA_MainLoop(void) {
 	}
 
 	/* Split PCM data to left and right channels */
-	if(cdda->stat == CDDA_STAT_PREP && !aica_transfer_in_progress()) {
+	if(cdda->stat == CDDA_STAT_PREP) {
 		if (cdda->trans_method == PCM_TRANS_DMA) {
+			if (aica_dma_in_progress()) {
+				unlock_cdda();
+				return;
+			}
 			aica_dma_irq_restore();
 		}
 		if (cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
@@ -1363,7 +1347,7 @@ void CDDA_MainLoop(void) {
 	}
 
 	/* Send data to AICA */
-	if(cdda->stat == CDDA_STAT_SNDL && !aica_transfer_in_progress()) {
+	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_in_progress() == 0) {
 		if (cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
 					cdda->aica_left[cdda->cur_buff],
@@ -1377,7 +1361,7 @@ void CDDA_MainLoop(void) {
 		}
 	}
 	/* If transfer of left channel is done, start for right channel */
-	else if(cdda->stat == CDDA_STAT_SNDR && !aica_transfer_in_progress()) {
+	else if(cdda->stat == CDDA_STAT_SNDR && aica_dma_in_progress() == 0) {
 		uint32 size = cdda->size >> 2;
 		aica_transfer(cdda->buff[PCM_DMA_BUFF] + size, cdda->aica_right[cdda->cur_buff], size);
 		cdda->cur_buff = !cdda->cur_buff;
