@@ -68,6 +68,11 @@ static const uint8 logs[] = {
 #define aica_dma_in_progress() AICA_DMA_ADST
 #define aica_dma_disable() AICA_DMA_ADEN = 0
 
+#define AICA_DMA_SUSPEND AICA_DMA_ADSUSP
+#define BBA_DMA_SUSPEND  *((vuint32 *)0xa05f783c)
+#define EXT2_DMA_SUSPEND *((vuint32 *)0xa05f785c)
+#define DEV_DMA_SUSPEND  *((vuint32 *)0xa05f787c)
+
 #define RAW_SECTOR_SIZE 2352
 
 static cdda_ctx_t _cdda;
@@ -79,37 +84,25 @@ cdda_ctx_t *get_CDDA(void) {
 
 /* When accessing to the SPU RAM or AICA,
 	this is required at least every 8 32-bit */
-static void g2_fifo_wait() {
-	do { } while(FIFO_STATUS & FIFO_G2) ;
-	do { } while(FIFO_STATUS & FIFO_AICA) ;
+static inline void g2_fifo_wait() {
+	do { } while(FIFO_STATUS & (FIFO_G2 | FIFO_AICA));
 }
 
 /* G2 Bus locking */
 static void g2_lock(void) {
 	cdda->g2_lock = irq_disable();
-	if (AICA_DMA_ADEN) { /* AICA DMA enabled  */
-		AICA_DMA_ADSUSP = 1; /* AICA DMA suspend  */
-	}
-	if (*((vuint32 *)0xa05f7834)) { /* Ext1 DMA enabled  */
-		*((vuint32 *)0xa05f783c) = 1; /* Ext1 DMA suspend  */
-	}
-	if (*((vuint32 *)0xa05f7854)) { /* Ext2 DMA enabled  */
-		*((vuint32 *)0xa05f785c) = 1; /* Ext2 DMA suspend */
-	}
-	do { } while(FIFO_STATUS & FIFO_SH4) ;
-	g2_fifo_wait();
+	AICA_DMA_SUSPEND = 1;
+	BBA_DMA_SUSPEND  = 1;
+	EXT2_DMA_SUSPEND = 1;
+	DEV_DMA_SUSPEND  = 1;
+	do { } while(FIFO_STATUS & (FIFO_SH4 | FIFO_G2 | FIFO_AICA));
 }
 
 static void g2_unlock(void) {
-	if (AICA_DMA_ADEN) { /* AICA DMA enabled  */
-		AICA_DMA_ADSUSP = 0; /* AICA DMA resume  */
-	}
-	if (*((vuint32 *)0xa05f7834)) { /* Ext1 DMA enabled  */
-		*((vuint32 *)0xa05f783c) = 0; /* Ext1 DMA resume  */
-	}
-	if (*((vuint32 *)0xa05f7854)) { /* Ext2 DMA enabled  */
-		*((vuint32 *)0xa05f785c) = 0; /* Ext2 DMA resume */
-	}
+	AICA_DMA_SUSPEND = 0;
+	BBA_DMA_SUSPEND  = 0;
+	EXT2_DMA_SUSPEND = 0;
+	DEV_DMA_SUSPEND  = 0;
 	irq_restore(cdda->g2_lock);
 }
 
@@ -143,9 +136,7 @@ static void aica_dma_irq_restore() {
 static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 	DBGFF("0x%08lx %ld\n", data, size);
-
 	uint32 addr = (uint32)data;
-	dcache_purge_range(addr, size);
 
 	AICA_DMA_G2APRO = 0x4659007f;      // Protection code
 	AICA_DMA_ADEN   = 0;               // Disable wave DMA
@@ -161,21 +152,17 @@ static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 #ifdef DEV_TYPE_SD
 static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
-	/* Wait for both store queues to complete */
-	uint32 *d = (uint32 *)0xe0000000;
-	d[0] = d[8] = 0;
-
-	d = (uint32 *)(void *)(0xe0000000 | (dest & 0x03ffffe0));
+	uint32 *d = (uint32 *)(void *)(0xe0000000 | (dest & 0x03ffffe0));
 	uint32 *s = (uint32 *)data;
+	size >>= 5;
+
+	g2_lock();
 
 	/* Set store queue memory area as desired */
 	QACR0 = (dest >> 24) & 0x1c;
 	QACR1 = (dest >> 24) & 0x1c;
 
 	/* fill/write queues as many times necessary */
-	size >>= 5;
-	g2_lock();
-
 	while(size--) {
 		/* Prefetch 32 bytes for next loop */
 		dcache_pref_block(s + 8);
@@ -192,14 +179,22 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 		d += 8;
 		s += 8;
 	}
+
+	/* Wait for both store queues to complete */
+	d = (uint32 *)0xe0000000;
+	d[0] = d[8] = 0;
+
 	g2_unlock();
 }
 #endif
 
 static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 	if (cdda->trans_method == PCM_TRANS_DMA) {
+		dcache_purge_range((uint32)data, size);
+		int old = irq_disable();
 		aica_dma_irq_hide();
 		aica_dma_transfer(data, dest, size);
+		irq_restore(old);
 	} 
 #ifdef DEV_TYPE_SD
 	else {
@@ -655,21 +650,21 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 
 static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
 
-	/* Wait for both store queues to complete */
-	uint32 *d = (uint32 *)0xe0000000;
-	d[0] = d[8] = 0;
-
 	uint32 masked_left = (0xe0000000 | (aica_left & 0x03ffffe0));
 	uint32 masked_right = (0xe0000000 | (aica_right & 0x03ffffe0));
+
+	g2_lock();
 
 	/* Set store queue memory area as desired */
 	QACR0 = (aica_left >> 24) & 0x1c;
 	QACR1 = (aica_right >> 24) & 0x1c;
 
-	g2_lock();
-
 	/* Separating channels and do fill/write queues as many times necessary. */
 	pcm16_split_sq(data, masked_left, masked_right, size);
+
+	/* Wait for both store queues to complete */
+	uint32 *d = (uint32 *)0xe0000000;
+	d[0] = d[8] = 0;
 
 	g2_unlock();
 }
@@ -1333,7 +1328,9 @@ void CDDA_MainLoop(void) {
 				unlock_cdda();
 				return;
 			}
+			int old = irq_disable();
 			aica_dma_irq_restore();
+			irq_restore(old);
 		}
 		if (cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);

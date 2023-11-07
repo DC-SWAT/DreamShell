@@ -21,11 +21,11 @@
 
 .globl _lock_cdda
 .globl _unlock_cdda
-.align 2
 
 !
 ! void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
 !
+.align 2
 _pcm16_split:
 	mov #-5, r3
 	shld r3, r7
@@ -77,6 +77,7 @@ _pcm16_split:
 !
 ! void pcm16_split_sq(int16 all, int16 *left, int16 *right, uint32 size);
 !
+.align 2
 _pcm16_split_sq:
 	mov #-5, r3
 	shld r3, r7
@@ -128,6 +129,7 @@ _pcm16_split_sq:
 !
 ! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 !
+.align 2
 _adpcm_split:
 	mov #-5, r1
 	shld r1, r7
@@ -170,21 +172,23 @@ _adpcm_split:
 	nop
 #endif
 
+.align 2
 _lock_cdda:
-	mova    lock_cdda, r0
-	tas.b   @r0
-	bt      lock_cdda_success
+	mova lock_cdda, r0
+	tas.b @r0
+	bt lock_cdda_success
 	rts
-	mov     #1, r0
+	mov #1, r0
 lock_cdda_success:
 	rts
-	mov     #0, r0
-	
+	mov #0, r0
+
+.align 2
 _unlock_cdda:
-	mova    lock_cdda, r0
-	mov     #0, r2
+	mova lock_cdda, r0
+	mov #0, r2
 	rts
-	mov.l   r2, @r0
+	mov.l r2, @r0
 
 .align 4
 lock_cdda:
