@@ -1,7 +1,7 @@
 -------------------------------------------
 --                                       --
 -- @name:    File Manager                --
--- @version: 0.6.5                       --
+-- @version: 0.6.6                       --
 -- @author:  SWAT                        --
 -- @url:     http://www.dc-swat.ru       --
 --                                       --
@@ -23,6 +23,12 @@ FileManager = {
 			".mpg", ".m1v", ".m2v", ".sfd", ".pss", "mpeg", ".avi", 
 			".mkv", ".m4v", ".flv", ".f4v", ".wmv", "m2ts", ".mpv", 
 			".mp4", ".3gp", ".4xm", ".mov", ".mgp"
+		}
+	},
+	audio = {
+		ext = {
+			".mp1", ".mp2", ".mp3", ".ogg", ".adx", ".s3m", ".wav",
+			".raw"
 		}
 	},
 
@@ -409,12 +415,12 @@ function FileManager:loadModule(name)
 
 	local file = os.getenv("PATH") .. "/modules/" .. name .. ".klf";
 	local m = OpenModule(file);
-	
+
 	if m ~= nil then
 		table.insert(self.modules, m);
 		return true;
 	end
-	
+
 	return false;
 end
 
@@ -422,13 +428,13 @@ end
 function FileManager:unloadModules()
 
     if table.getn(self.modules) > 0 then
-    
+
 		for i = 1, table.getn(self.modules) do
-		
+
 			if self.modules[i] ~= nil then
 				CloseModule(self.modules[i]);
 			end
-			
+
 			table.remove(self.modules, i);
 		end
 	end
@@ -436,7 +442,7 @@ end
 
 
 function FileManager:openApp(name, args, unload_fm)
-	self:Shutdown(); -- Unload user modules?
+	self:Shutdown();
 	CloseApp(self.app.name, unload_fm);
 	OpenApp(name, args);
 end
@@ -451,153 +457,121 @@ function FileManager:openFile()
 
 	if ext == ".bin" or ext == ".elf" then
 
-		if not self.modal.visible then 
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Execute "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		local flag = "-b";
-		
+
   		if ext == ".elf" then
   		   flag = "-e";
   		end
 
 		self:execConsole("exec "..flag.." -f " .. file);
-	
+
 	elseif ext == ".txt" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Cat file "' .. name .. '" to console?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		self:showConsole();
 		os.execute("cat " .. file);
-	
+
 	elseif ext == ".klf" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Load module "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		--if DS.GetModuleByFileName(file) then return file end
-		
+
 		self:execConsole("module -o -f " .. file)
-		
+
 	elseif ext == ".lua" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Run lua script "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		self:execConsole("lua " .. file)
 	
 	elseif ext == ".dsc" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Run cmd script "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		self:execConsole("dsc " .. file)
-		
+
 	elseif ext == ".xml" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Add application "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		self:execConsole("app -a -f " .. file)
-		
+
 	elseif ext == ".dsr" or ext == ".img" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Mount romdisk image "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		self:execConsole("romdisk -m " .. file)
-		
-	elseif ext == ".mp1" or ext == ".mp2" or ext == ".mp3" then
-		
-		if not self.modal.visible then 
-			return self:ShowModal("confirm", 'Play file "' .. name .. '" ?', "exec");
-		else
-			self:HideModal();
-		end
-		
-		if not DS.GetCmdByName("mpg123") then
-		
-			 if not self:loadModule("mpg123") then
-			 	self:showConsole();
-			 	return file; 
-			 end
-		end
-		
-		if os.execute("mpg123 -p -f " .. file) ~= DS.CMD_OK then
-			self:showConsole();
-		end
-		
-	elseif ext == ".ogg" then
-	
-		if not self.modal.visible then 
-			return self:ShowModal("confirm", 'Play file "' .. name .. '" ?', "exec");
-		else
-			self:HideModal();
+
+	elseif self:ext_supported(self.audio.ext, ext) then
+
+		local mod = string.sub(ext, -3);
+
+		if mod == "raw" then
+			mod = "wav"
+		elseif mod == "ogg" then
+			mod = "oggvorbis"
+		elseif mod == "mp1" or mod == "mp2" or mod == "mp3" then
+			mod = "mpg123"
 		end
 
-		if not DS.GetCmdByName("oggvorbis") then
-		
-			 if not self:loadModule("oggvorbis") then
-			 	self:showConsole();
-			 	return file; 
-			 end
-		end
-		
-		if os.execute("oggvorbis -p -f " .. file) ~= DS.CMD_OK then
-			self:showConsole();
-		end
-		
-	elseif ext == ".adx" or ext == ".s3m" then
-	
-		local mod = string.sub(ext, -3);
-	
-		if not self.modal.visible then 
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Play file "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
 
 		if not DS.GetCmdByName(mod) then
-		
+
 			 if not self:loadModule(mod) then
 			 	self:showConsole();
-			 	return file; 
+			 	return file;
 			 end
 		end
-		
+
 		if os.execute(mod .. " -p -f " .. file) ~= DS.CMD_OK then
 			self:showConsole();
 		end
-		
+
 	elseif self:ext_supported(self.ffmpeg.ext, ext) then
-		
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Play file "' .. name .. '" ?', "exec");
 		else
 			self:HideModal();
 		end
-		
+
 		if not DS.GetCmdByName("ffplay") then
 		
 			 if not self:loadModule("bzip2") 
@@ -605,17 +579,17 @@ function FileManager:openFile()
 				 or not self:loadModule("oggvorbis") 
 				 or not self:loadModule("ffmpeg") then
 			 	self:showConsole();
-			 	return file; 
+			 	return file;
 			 end
 		end
-		
+
 		if os.execute("ffplay -p -f " .. file) ~= DS.CMD_OK then
 			self:showConsole();
 		end
-		
+
 	elseif ext == ".opk" then
-	
-		if not self.modal.visible then 
+
+		if not self.modal.visible then
 			return self:ShowModal("confirm", 'Install "' .. name .. '" package?', "exec");
 		else
 			self:HideModal();
@@ -625,34 +599,34 @@ function FileManager:openFile()
 		
 			 if not self:loadModule("minilzo") or not self:loadModule("opkg") then
 			 	self:showConsole();
-			 	return file; 
+			 	return file;
 			 end
 		end
-		
+
 		self:execConsole("opkg -i -f " .. file);
-		
+
 	else
-	
+
 		local app = DS.GetAppByExtension(ext);
-		
+
 		if app ~= nil then
-		
-			if not self.modal.visible then 
+
+			if not self.modal.visible then
 				return self:ShowModal("confirm", 'Open file in ' .. app.name .. ' app?', "exec");
 			else
 				self:HideModal();
 			end
-			
+
 			self:openApp(app.name, file, 0); -- Unload filemanager?
 			return file;
 		end
-	
+
 		local mgr = self:getFocusedManager();
 		local bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
 		GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
 		mgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
 	end
-	
+
 	return file;
 end
 
