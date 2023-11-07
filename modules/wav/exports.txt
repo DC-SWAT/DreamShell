@@ -1,0 +1,20 @@
+include kos/exports.h
+include audio/wav.h
+include libwav.h
+
+wav_init
+wav_shutdown
+wav_destroy
+wav_create
+wav_create_fd
+wav_create_buf
+wav_play
+wav_pause
+wav_stop
+wav_volume
+wav_isplaying
+wav_add_filter
+wav_remove_filter
+
+wav_get_info_file
+wav_get_info_buffer
