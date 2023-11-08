@@ -2,17 +2,19 @@
 
    audio/wav.h
    Copyright (C) 2023 Andy Barajas
+   Copyright (C) 2023 SWAT
 */
 
 /** \file   wav.h
     \brief  Wav file player
 
     \author Andy Barajas
+    \author SWAT
 */
 #ifndef WAV_H
 #define WAV_H
 
-#include <stdio.h>
+#include <kos/fs.h>
 
 #define STREAM_BUFFER_SIZE 65536
 
@@ -24,7 +26,7 @@ void wav_shutdown();
 void wav_destroy(wav_stream_hnd_t hnd);
 
 wav_stream_hnd_t wav_create(const char* filename, int loop);
-wav_stream_hnd_t wav_create_fd(FILE* f, int loop);
+wav_stream_hnd_t wav_create_fd(file_t fd, int loop);
 wav_stream_hnd_t wav_create_buf(const unsigned char* buf, int loop);
 
 void wav_play(wav_stream_hnd_t hnd);

@@ -11,20 +11,12 @@ DEFAULT_MODULE_HEADER(wav);
 
 static int wav_inited = 0;
 static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;
-static FILE *wav_fp = NULL;
 
 static int start_playback(const char *file, int loop) {
-    wav_fp = fopen(file, "rb");
-
-    if(wav_fp == NULL) {
-        ds_printf("DS_ERROR: Can't open file: %s\n", file);
-        return CMD_ERROR; 
-    }
-    wav_hnd = wav_create_fd(wav_fp, loop);
+    wav_hnd = wav_create(file, loop);
 
     if(wav_hnd == SND_STREAM_INVALID) {
         ds_printf("DS_ERROR: Can't play file: %s\n", file);
-        fclose(wav_fp);
         return CMD_ERROR; 
     }
     wav_play(wav_hnd);
@@ -35,17 +27,8 @@ static void stop_playback() {
     if(wav_hnd == SND_STREAM_INVALID) {
         return;
     }
-    wav_stop(wav_hnd);
-
-    while(wav_isplaying(wav_hnd)) {
-        thd_sleep(50);
-    }
-
-    snd_stream_destroy(wav_hnd);
+    wav_destroy(wav_hnd);
     wav_hnd = SND_STREAM_INVALID;
-
-    fclose(wav_fp);
-    wav_fp = NULL;
 }
 
 static int builtin_wav(int argc, char *argv[]) {
