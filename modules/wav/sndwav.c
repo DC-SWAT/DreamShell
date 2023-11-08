@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 
 #include <kos/thread.h>
 #include <dc/sound/stream.h>
@@ -62,7 +63,7 @@ typedef struct
     unsigned int sample_size; /* 4/8/16-Bit */
     unsigned short vol; /* 0-255 */
 
-    unsigned char drv_buf[STREAM_BUFFER_SIZE];
+    unsigned char *drv_buf;
     file_t wave_fd;
     const unsigned char *wave_buf;
     unsigned int buf_offset;
@@ -115,6 +116,10 @@ void wav_destroy(wav_stream_hnd_t hnd) {
     if(streams[hnd].wave_fd != FILEHND_INVALID) {
         fs_close(streams[hnd].wave_fd);
     }
+    if(streams[hnd].drv_buf) {
+        free(streams[hnd].drv_buf);
+        streams[hnd].drv_buf = NULL;
+    }
     snd_stream_stop(streams[hnd].shnd);
     snd_stream_destroy(streams[hnd].shnd);
     streams[hnd].shnd = SND_STREAM_INVALID;
@@ -124,9 +129,14 @@ void wav_destroy(wav_stream_hnd_t hnd) {
 }
 
 wav_stream_hnd_t wav_create(const char *filename, int loop) {
+
+    if(filename == NULL) {
+        return SND_STREAM_INVALID;
+    }
+
     wav_stream_hnd_t index = snd_stream_alloc(wav_file_callback, SND_STREAM_BUFFER_MAX);
 
-    if(filename == NULL || index == SND_STREAM_INVALID) {
+    if(index == SND_STREAM_INVALID) {
         snd_stream_destroy(index);
         return SND_STREAM_INVALID;
     }
@@ -145,6 +155,15 @@ wav_stream_hnd_t wav_create(const char *filename, int loop) {
     }
     else if(!wav_get_info_fd(fd, &info)) {
         snd_stream_destroy(index);
+        fs_close(fd);
+        return SND_STREAM_INVALID;
+    }
+
+    streams[index].drv_buf = (unsigned char *)memalign(32, SND_STREAM_BUFFER_MAX);
+
+    if(streams[index].drv_buf == NULL) {
+        snd_stream_destroy(index);
+        fs_close(fd);
         return SND_STREAM_INVALID;
     }
 
@@ -165,15 +184,27 @@ wav_stream_hnd_t wav_create(const char *filename, int loop) {
 }
 
 wav_stream_hnd_t wav_create_fd(file_t fd, int loop) {
+
+    if(fd == FILEHND_INVALID) {
+        return SND_STREAM_INVALID;
+    }
+
     wav_stream_hnd_t index = snd_stream_alloc(wav_file_callback, SND_STREAM_BUFFER_MAX);
 
-    if(fd == FILEHND_INVALID || index == SND_STREAM_INVALID) {
+    if(index == SND_STREAM_INVALID) {
         snd_stream_destroy(index);
         return SND_STREAM_INVALID;
     }
 
     WavFileInfo info;
     if(!wav_get_info_fd(fd, &info)) {
+        snd_stream_destroy(index);
+        return SND_STREAM_INVALID;
+    }
+
+    streams[index].drv_buf = (unsigned char *)memalign(32, SND_STREAM_BUFFER_MAX);
+
+    if(streams[index].drv_buf == NULL) {
         snd_stream_destroy(index);
         return SND_STREAM_INVALID;
     }
@@ -195,15 +226,27 @@ wav_stream_hnd_t wav_create_fd(file_t fd, int loop) {
 }
 
 wav_stream_hnd_t wav_create_buf(const unsigned char* buf, int loop) {
+
+    if(buf == NULL) {
+        return SND_STREAM_INVALID;
+    }
+
     wav_stream_hnd_t index = snd_stream_alloc(wav_buf_callback, SND_STREAM_BUFFER_MAX);
 
-    if(buf == NULL || index == SND_STREAM_INVALID) {
+    if(index == SND_STREAM_INVALID) {
         snd_stream_destroy(index);
         return SND_STREAM_INVALID;
     }
 
     WavFileInfo info;
     if(!wav_get_info_buffer(buf, &info)) {
+        snd_stream_destroy(index);
+        return SND_STREAM_INVALID;
+    }
+
+    streams[index].drv_buf = (unsigned char *)memalign(32, SND_STREAM_BUFFER_MAX);
+
+    if(streams[index].drv_buf == NULL) {
         snd_stream_destroy(index);
         return SND_STREAM_INVALID;
     }
