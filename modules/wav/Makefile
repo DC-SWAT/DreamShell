@@ -5,20 +5,25 @@
 #
 
 TARGET_NAME = wav
-OBJS = module.o sndwav.o libwav.o
+OBJS = module.o sndwav.o libwav/libwav.o
 DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 1
-VER_MICRO = 0
+VER_MICRO = 1
 VER_BUILD = 0
 
-KOS_CFLAGS += -I./
+KOS_CFLAGS += -I./libwav
 
-all: rm-elf install
+all: rm-elf library install
 
 include ../../sdk/Makefile.loadable
+
+libwav/libwav.h:
+	git clone https://github.com/Dreamcast-Projects/libwav.git
+
+library: libwav/libwav.h
 
 rm-elf:
 	-rm -f $(TARGET)

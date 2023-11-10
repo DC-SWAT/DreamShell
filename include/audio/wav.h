@@ -16,8 +16,6 @@
 
 #include <kos/fs.h>
 
-#define STREAM_BUFFER_SIZE 65536
-
 typedef int wav_stream_hnd_t;
 typedef void (*wav_filter)(wav_stream_hnd_t hnd, void *obj, int hz, int channels, void **buffer, int *samplecnt);
 

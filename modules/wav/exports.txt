@@ -16,6 +16,6 @@ wav_isplaying
 wav_add_filter
 wav_remove_filter
 
-wav_get_info_fd
-wav_get_info_cdda_fd
+wav_get_info_file
+wav_get_info_cdda
 wav_get_info_buffer

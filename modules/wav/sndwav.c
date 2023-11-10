@@ -113,6 +113,9 @@ void wav_destroy(wav_stream_hnd_t hnd) {
     if(streams[hnd].shnd == SND_STREAM_INVALID) {
         return;
     }
+    snd_stream_stop(streams[hnd].shnd);
+    snd_stream_destroy(streams[hnd].shnd);
+
     if(streams[hnd].wave_fd != FILEHND_INVALID) {
         fs_close(streams[hnd].wave_fd);
     }
@@ -120,8 +123,6 @@ void wav_destroy(wav_stream_hnd_t hnd) {
         free(streams[hnd].drv_buf);
         streams[hnd].drv_buf = NULL;
     }
-    snd_stream_stop(streams[hnd].shnd);
-    snd_stream_destroy(streams[hnd].shnd);
     streams[hnd].shnd = SND_STREAM_INVALID;
     streams[hnd].vol = 255;
     streams[hnd].status = SNDDEC_STATUS_NULL;
@@ -134,16 +135,15 @@ wav_stream_hnd_t wav_create(const char *filename, int loop) {
         return SND_STREAM_INVALID;
     }
 
-    wav_stream_hnd_t index = snd_stream_alloc(wav_file_callback, SND_STREAM_BUFFER_MAX);
-
-    if(index == SND_STREAM_INVALID) {
-        snd_stream_destroy(index);
+    file_t fd = fs_open(filename, O_RDONLY);
+    if(fd == FILEHND_INVALID) {
         return SND_STREAM_INVALID;
     }
 
-    file_t fd = fs_open(filename, O_RDONLY);
-    if(fd == FILEHND_INVALID) {
-        snd_stream_destroy(index);
+    wav_stream_hnd_t index = snd_stream_alloc(wav_file_callback, SND_STREAM_BUFFER_MAX);
+
+    if(index == SND_STREAM_INVALID) {
+        fs_close(fd);
         return SND_STREAM_INVALID;
     }
 
@@ -151,9 +151,9 @@ wav_stream_hnd_t wav_create(const char *filename, int loop) {
     int fn_len = strlen(filename);
 
     if(filename[fn_len - 3] == 'r' && filename[fn_len - 1] == 'w') {
-        wav_get_info_cdda_fd(fd, &info);
+        wav_get_info_cdda(fd, &info);
     }
-    else if(!wav_get_info_fd(fd, &info)) {
+    else if(!wav_get_info_file(fd, &info)) {
         snd_stream_destroy(index);
         fs_close(fd);
         return SND_STREAM_INVALID;
@@ -197,7 +197,7 @@ wav_stream_hnd_t wav_create_fd(file_t fd, int loop) {
     }
 
     WavFileInfo info;
-    if(!wav_get_info_fd(fd, &info)) {
+    if(!wav_get_info_file(fd, &info)) {
         snd_stream_destroy(index);
         return SND_STREAM_INVALID;
     }
