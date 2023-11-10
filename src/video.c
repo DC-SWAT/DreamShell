@@ -974,6 +974,9 @@ void HideLogo() {
 	
 	if(!logo_txr) {
 		scr_fade_act = 1;
+		if(!video_inited) {
+			InitVideoThread();
+		}
 		return;
 	}
 	

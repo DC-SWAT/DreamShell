@@ -134,7 +134,7 @@ int FileSize(const char *fn) {
 	file_t f = fs_open(fn, O_RDONLY); 
 
 	if(f == FILEHND_INVALID) {
-		return -1; 
+		return 0; 
 	}
 
 	size = fs_total(f);

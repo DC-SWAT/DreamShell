@@ -1560,6 +1560,7 @@ roundf
 signal
 gethostname
 __locale_mb_cur_max
+random
 #
 # File System
 opendir
