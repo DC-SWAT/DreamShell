@@ -1213,6 +1213,20 @@ static void selectFile(char *name, int index) {
 	showCover();
 	isoLoader_LoadPreset();
 
+	if (GUI_WidgetGetState(self.cdda)) {
+		char filepath[NAME_MAX];
+		size_t track_size = GetCDDATrackFilename(5,
+			GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
+
+		if (track_size) {
+			do {
+				track_size = GetCDDATrackFilename((random() % 15) + 4,
+								GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
+			} while(track_size == 0);
+			PlayCDDATrack(filepath, 3);
+		}
+	}
+
 	if (GUI_WidgetGetFlags(self.settings) & WIDGET_DISABLED) {
 		GUI_WidgetSetEnabled(self.settings, 1);
 		GUI_WidgetSetEnabled(self.link, 1);
@@ -1344,41 +1358,20 @@ void isoLoader_DefaultPreset() {
 	isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
 
 	/*
-	 * Enable CDDA if present on IDE/GD
+	 * Enable CDDA if present
 	 */
-	if (self.filename[0] != 0 && canUseTrueAsyncDMA()) {
+	if (self.filename[0] != 0) {
 
-		int have_cdda = 0;
 		char filepath[NAME_MAX];
-		char path[NAME_MAX];
-		int len = 0;
-		const int min_size = 5 * 1024 * 1024;
+		size_t track_size = GetCDDATrackFilename(4,
+			GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
 
-		if (strchr(self.filename, '/')) {
-			len = strlen(strchr(self.filename, '/'));
-		} else {
-			len = strlen(self.filename);
+		if (track_size && track_size < 30 * 1024 * 1024) {
+			track_size = GetCDDATrackFilename(6,
+				GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
 		}
 
-		memset(filepath, 0, sizeof(filepath));
-		memset(path, 0, sizeof(path));
-		strncpy(path, self.filename, strlen(self.filename) - len);
-
-		snprintf(filepath, NAME_MAX, "%s/%s/track05.raw",
-			GUI_FileManagerGetPath(self.filebrowser), path);
-
-		if (FileSize(filepath) > min_size) {
-			have_cdda = 1;
-		} else {
-			int len = strlen(filepath);
-			filepath[len - 3] = 'w';
-			filepath[len - 1] = 'v';
-
-			if (FileSize(filepath) > min_size) {
-				have_cdda = 1;
-			}
-		}
-		if (have_cdda) {
+		if (track_size > 0) {
 			GUI_WidgetSetState(self.irq, 1);
 			GUI_WidgetSetState(self.cdda, 1);
 			isoLoader_toggleCDDA(self.cdda);
@@ -1979,17 +1972,18 @@ void isoLoader_ResizeUI()
 
 void isoLoader_Shutdown(App_t *app) {
 	(void)app;
-	
+
 	if(self.isoldr) {
 		free(self.isoldr);
 	}
+	StopCDDATrack();
 }
 
 void isoLoader_Exit(GUI_Widget *widget) {
-	
+
 	(void)widget;
 	App_t *app = NULL;
-	
+
 	if(self.have_args == true) {
 		
 		app = GetAppByName("File Manager");
@@ -1998,11 +1992,11 @@ void isoLoader_Exit(GUI_Widget *widget) {
 			app = NULL;
 		}
 	}
-	
 	if(!app) {
 		app = GetAppByName("Main");
 	}
-	
+
+	StopCDDATrack();
 	OpenApp(app, NULL);
 }
 

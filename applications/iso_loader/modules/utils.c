@@ -8,6 +8,7 @@
 #include "ds.h"
 #include "isoldr.h"
 #include "app_utils.h"
+#include "audio/wav.h"
 
 /* Trim begin/end spaces and copy into output buffer */
 void trim_spaces(char *input, char *output, int size) {
@@ -180,4 +181,65 @@ char *makePresetFilename(const char *dir, uint8 *md5) {
 				md5[6], md5[7], md5[8], md5[9], md5[10], 
 				md5[11], md5[12], md5[13], md5[14], md5[15]);
 	return filename;
+}
+
+size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, char *result) {
+	char path[NAME_MAX];
+	int len = 0;
+	int size = 0;
+
+	if (strchr(filename, '/')) {
+		len = strlen(strchr(filename, '/'));
+	} else {
+		len = strlen(filename);
+	}
+
+	memset(result, 0, NAME_MAX);
+	memset(path, 0, NAME_MAX);
+	strncpy(path, filename, strlen(filename) - len);
+	snprintf(result, NAME_MAX, "%s/%s/track%02d.raw", fpath, path, num);
+
+	size = FileSize(result);
+
+	if (size > 0) {
+		return size;
+	}
+
+	len = strlen(result);
+	result[len - 3] = 'w';
+	result[len - 1] = 'v';
+
+	size = FileSize(result);
+	return size;
+}
+
+static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;
+static int wav_inited = 0;
+
+void StopCDDATrack() {
+	if(wav_inited && wav_hnd != SND_STREAM_INVALID) {
+		wav_stop(wav_hnd);
+		thd_sleep(100);
+		wav_destroy(wav_hnd);
+		wav_hnd = SND_STREAM_INVALID;
+	}
+}
+
+void PlayCDDATrack(const char *file, int loop) {
+	if(!wav_inited) {
+		wav_inited = wav_init();
+	}
+
+	StopCDDATrack();
+
+	if(wav_inited) {
+		wav_hnd = wav_create(file, loop);
+
+		if(wav_hnd == SND_STREAM_INVALID) {
+			ds_printf("DS_ERROR: Can't play file: %s\n", file);
+			return;
+		}
+		ds_printf("DS_OK: Start playing: %s\n", file);
+		wav_play(wav_hnd);
+	}
 }

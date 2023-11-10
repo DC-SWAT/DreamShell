@@ -4,6 +4,7 @@
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" />
 		<module src="../../modules/isoldr.klf" />
+		<module src="../../modules/wav.klf" />
 		<module src="modules/app_iso_loader.klf" />
 
 		<font name="m23" size="14" src="../../fonts/ttf/m23.ttf" type="ttf" />

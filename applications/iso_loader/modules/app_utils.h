@@ -35,5 +35,9 @@ int getDeviceType(const char *dir);
 int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename);
 char *makePresetFilename(const char *dir, uint8 *md5);
 
+size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, char *result);
+void PlayCDDATrack(const char *file, int loop);
+void StopCDDATrack();
+
 char *lib_get_name();
 uint32 lib_get_version();

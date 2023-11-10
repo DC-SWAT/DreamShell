@@ -7,7 +7,7 @@
 APP_NAME = iso_loader
 TARGET_NAME = app_$(APP_NAME)
 OBJS = module.o utils.o
-DBG_LIBS = -lds -lisofs -lisoldr
+DBG_LIBS = -lds -lisofs -lisoldr -lwav
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
