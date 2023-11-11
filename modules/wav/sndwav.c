@@ -305,8 +305,12 @@ void wav_volume(wav_stream_hnd_t hnd, int vol) {
     snd_stream_volume(streams[hnd].shnd, streams[hnd].vol);
 }
 
-int wav_isplaying(wav_stream_hnd_t hnd) {
+int wav_is_playing(wav_stream_hnd_t hnd) {
     return streams[hnd].status == SNDDEC_STATUS_STREAMING;
+}
+
+int wav_is_ready(wav_stream_hnd_t hnd) {
+    return streams[hnd].status == SNDDEC_STATUS_READY;
 }
 
 void wav_add_filter(wav_stream_hnd_t hnd, wav_filter filter, void* obj) {

@@ -27,9 +27,11 @@ static void stop_playback() {
     if(wav_hnd == SND_STREAM_INVALID) {
         return;
     }
-
     wav_stop(wav_hnd);
-	thd_sleep(100);
+
+    while(!wav_is_ready(wav_hnd)) {
+        thd_sleep(50);
+    }
     wav_destroy(wav_hnd);
     wav_hnd = SND_STREAM_INVALID;
 }
