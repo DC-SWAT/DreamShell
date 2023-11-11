@@ -221,7 +221,7 @@ static void setup_pcm_buffer() {
 	switch(cdda->bitsize) {
 		case 4:
 			cdda->size = 0x4000;
-			cdda->end_tm *= 2;   /* 4 bits decoded to 16 bits */
+			cdda->end_tm *= 2;   /* 4-bit decoded to 16-bit */
 			cdda->end_tm += 10;  /* Fixup timer value for ADPCM */
 			break;
 		case 8:
@@ -278,9 +278,9 @@ static void setup_pcm_buffer() {
 
 	/* Setup end position for sound buffer */
 	if(cdda->aica_format == AICA_SM_ADPCM_LS) {
-		cdda->end_pos = cdda->size - 1;
+		cdda->end_pos = cdda->size - 1; /* (((cdda->size / cdda->chn) * 2) - 1; */
 	} else {
-		cdda->end_pos = ((cdda->size / cdda->chn) / (cdda->bitsize >> 3)) - (cdda->bitsize >> 3);
+		cdda->end_pos = ((cdda->size / cdda->chn) / (cdda->bitsize >> 3)) - 1;
 	}
 
 	LOGFF("0x%08lx 0x%08lx %d\n",
