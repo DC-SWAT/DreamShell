@@ -219,7 +219,11 @@ static int wav_inited = 0;
 void StopCDDATrack() {
 	if(wav_inited && wav_hnd != SND_STREAM_INVALID) {
 		wav_stop(wav_hnd);
-		thd_sleep(100);
+
+		while(!wav_is_ready(wav_hnd)) {
+			thd_sleep(50);
+		}
+
 		wav_destroy(wav_hnd);
 		wav_hnd = SND_STREAM_INVALID;
 	}

@@ -1039,6 +1039,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 				self.filename);
 				
 	ScreenFadeOut();
+	StopCDDATrack();
 	thd_sleep(400);
 
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
@@ -1210,6 +1211,7 @@ static void selectFile(char *name, int index) {
 	self.current_item = index;
 	strncpy(self.filename, name, NAME_MAX);
 	highliteDevice();
+	StopCDDATrack();
 	showCover();
 	isoLoader_LoadPreset();
 
