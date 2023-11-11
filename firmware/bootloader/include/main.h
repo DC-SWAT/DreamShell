@@ -31,6 +31,6 @@ extern const char	title[28];
 extern uint32 spiral_color;
 extern int start_pressed;
 
-#define RES_PATH "/brd"
+#define RES_PATH "/rd"
 
 #endif	/* __MAIN_H */

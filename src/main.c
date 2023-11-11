@@ -12,13 +12,10 @@
 #include "profiler.h"
 #include "network/net.h"
 
-extern uint8 romdisk[];
-KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT | INIT_EXPORT);
-KOS_INIT_ROMDISK(romdisk);
+KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT);
 
 static uint32 ver_int = 0;
 static const char *build_str[4] = {"Alpha", "Beta", "RC", "Release"};
-
 static uint32 net_inited = 0;
 
 void gdb_init();

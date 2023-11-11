@@ -3,7 +3,7 @@
 # (c)2011-2023 SWAT
 #
 
-TARGET = loader
+TARGET = bootloader
 VERSION = 2.5
 TARGET_NAME = DreamShell_boot_$(TARGET)_v$(VERSION)
 TARGET_CD = cd/1DS_BOOT.BIN
@@ -18,6 +18,8 @@ rm-elf:
 	-rm -f $(TARGET).elf $(TARGET_NAME).elf $(TARGET).bin $(TARGET_NAME).bin \
 		$(TARGET_CD) $(TARGET_NAME).cdi romdisk.*
 
+KOS_ROMDISK_DIR = romdisk
+
 include ../../sdk/Makefile.cfg
 
 FATFS = $(DS_BASE)/src/fs/fat
@@ -28,25 +30,19 @@ OBJS = src/main.o src/spiral.o src/menu.o src/descramble.o \
 		$(DRIVERS)/spi.o $(DRIVERS)/sd.o $(DRIVERS)/rtc.o \
 		$(FATFS)/utils.o $(FATFS)/option/ccsbcs.o $(FATFS)/option/syscall.o \
 		$(FATFS)/ff.o $(FATFS)/dc.o $(FATFS)/../fs.o \
-		$(UTILS)/memcpy.op $(UTILS)/memset.op
+		$(UTILS)/memcpy.op $(UTILS)/memset.op romdisk.o
 
 KOS_CFLAGS += -I$(DS_BASE)/include -I$(DS_BASE)/include/fatfs -I./include -DVERSION="$(VERSION)"
 
 $(TARGET).bin: $(TARGET).elf
-$(TARGET).elf: $(OBJS) romdisk.o
+$(TARGET).elf: $(OBJS)
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $(TARGET).elf \
-		$(OBJS) romdisk.o $(OBJEXTRA) -lkosext2fs -lz -lkmg $(KOS_LIBS)
+		$(OBJS) $(OBJEXTRA) -lkosext2fs -lz -lkmg $(KOS_LIBS)
 	$(KOS_STRIP) $(TARGET).elf
 	$(KOS_OBJCOPY) -R .stack -O binary $(TARGET).elf $(TARGET).bin
 
 %.op: %.S
 	kos-cc $(CFLAGS) -c $< -o $@
-
-romdisk.img:
-	$(KOS_GENROMFS) -f romdisk.img -d romdisk -v
-
-romdisk.o: romdisk.img
-	$(KOS_BASE)/utils/bin2o/bin2o romdisk.img romdisk romdisk.o
 
 $(TARGET_CD): $(TARGET).bin
 

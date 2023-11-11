@@ -7,8 +7,15 @@
 #include "main.h"
 #include "fs.h"
 
-KOS_INIT_FLAGS(INIT_DEFAULT/* | INIT_NET*/);
+//#define EMU
+//#define BIOS_MODE
+
+#ifdef BIOS_MODE
 extern uint8 romdisk[];
+KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
+#else
+KOS_INIT_FLAGS(INIT_DEFAULT);
+#endif
 
 pvr_init_params_t params = {
 	{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
@@ -17,8 +24,6 @@ pvr_init_params_t params = {
 
 const char	title[28] = "DreamShell boot loader v"VERSION;
 
-//#define EMU
-//#define BIOS_MODE
 
 int FileExists(const char *fn) {
     file_t f;
@@ -233,17 +238,12 @@ int main(int argc, char **argv) {
 	}
 
 	pvr_init(&params);
+	spiral_init();
 
 #ifdef BIOS_MODE	
-	spiral_init();
 	fs_romdisk_unmount(RES_PATH);
-#else
-	if(!fs_romdisk_mount(RES_PATH, (const uint8 *)romdisk, 0)) {
-		spiral_init();
-		fs_romdisk_unmount(RES_PATH);
-	}
 #endif
-	
+
 	if(!start_pressed) 
 		init_menu_txr();
 	else

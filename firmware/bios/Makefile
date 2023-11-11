@@ -17,7 +17,7 @@ FW_FILES = ds_core.bios ds_core_rd.bios \
 			boot_loader.bios boot_loader_rd_ext.bios
 
 DEPS = $(FW_BOOTSTRAP) $(DS_BUILD)/DS_CORE.BIN \
-		$(DS_BASE)/firmware/bootloader/loader.bin \
+		$(DS_BASE)/firmware/bootloader/bootloader.bin \
 		initrd.img initrd_ext.img initrd_core.img
 
 all: fw install
@@ -30,9 +30,9 @@ $(FW_FILES): $(DEPS)
 	-rm -f $(FW_FILES)
 	cat $(FW_BOOTSTRAP) $(DS_BUILD)/DS_CORE.BIN > ds_core.bios
 	cat $(FW_BOOTSTRAP) $(DS_BUILD)/DS_CORE.BIN initrd.img > ds_core_rd.bios
-	cat $(FW_BOOTSTRAP) ../bootloader/loader.bin > boot_loader.bios
-	cat $(FW_BOOTSTRAP) ../bootloader/loader.bin initrd_ext.img > boot_loader_rd_ext.bios
-	cat $(FW_BOOTSTRAP) ../bootloader/loader.bin initrd_core.img > boot_loader_rd_core.bios
+	cat $(FW_BOOTSTRAP) ../bootloader/bootloader.bin > boot_loader.bios
+	cat $(FW_BOOTSTRAP) ../bootloader/bootloader.bin initrd_ext.img > boot_loader_rd_ext.bios
+	cat $(FW_BOOTSTRAP) ../bootloader/bootloader.bin initrd_core.img > boot_loader_rd_core.bios
 	
 initrd: initrd.img initrd_ext.img initrd_core.img
 initrd.img: ./initrd/* ./initrd_ext/*

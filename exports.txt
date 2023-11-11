@@ -1804,8 +1804,8 @@ flashrom_get_pw_ispcfg
 # SPU
 spu_init
 spu_shutdown
-spu_dma_init
-spu_dma_shutdown
+g2_dma_init
+g2_dma_shutdown
 #
 # Maple
 vmu_beep_raw

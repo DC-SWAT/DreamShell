@@ -21,6 +21,8 @@ TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x25 #RC 
 
 all: rm-elf $(TARGET)
 
+KOS_ROMDISK_DIR = romdisk
+
 include sdk/Makefile.cfg
 
 INC_DIR = $(DS_BASE)/include
@@ -122,12 +124,6 @@ $(SRC_DIR)/exports_gcc.c: exports_gcc.txt
 	$(KOS_BASE)/utils/genexports/genexports.sh exports_gcc.txt $(SRC_DIR)/exports_gcc.c gcc_symtab
 	$(KOS_BASE)/utils/genexports/genexportstubs.sh exports_gcc.txt $(SRC_DIR)/exports_gcc_stubs.c
 	$(KOS_MAKE) -f Makefile.gcc_stubs
-
-romdisk.img: romdisk/logo.kmg.gz
-	$(KOS_GENROMFS) -f romdisk.img -d romdisk -v
-
-romdisk.o: romdisk.img
-	$(KOS_BASE)/utils/bin2o/bin2o romdisk.img romdisk romdisk.o
 
 logo: romdisk/logo.kmg.gz
 romdisk/logo.kmg.gz: $(DS_RES)/logo_sq.png

@@ -47,6 +47,7 @@ mv libfreetype.a libfreetype-kos.a
 mv liboggvorbisplay.a liboggvorbisplay-kos.a
 mv libogg.a libogg-kos.a
 mv libvorbis.a libvorbis-kos.a
+mv libwav.a libwav-kos.a
 cd ../../kos/ds/sdk/bin/src && make && make install && cd ../../../
 ln -nsf `which tolua` sdk/bin/tolua
 ln -nsf `which mkisofs` sdk/bin/mkisofs

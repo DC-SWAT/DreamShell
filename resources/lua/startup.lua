@@ -56,6 +56,7 @@ local DreamShell = {
 		--"oggvorbis",
 		--"adx",
 		--"s3m",
+		--"wav",
 		--"xvid",
 		--"SDL_mixer",        -- Depends: oggvorbis
 		--"ffmpeg",           -- Depends: oggvorbis, mpg123, bzip2

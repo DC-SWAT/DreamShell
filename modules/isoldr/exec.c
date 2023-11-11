@@ -38,7 +38,7 @@ static void isoldr_arch_auto_shutdown() {
 	bba_shutdown();
 	maple_shutdown();
 	cdrom_shutdown();
-	spu_dma_shutdown();
+	g2_dma_shutdown();
 	spu_shutdown();
 	pvr_shutdown();
 
