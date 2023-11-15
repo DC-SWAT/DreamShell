@@ -13,7 +13,6 @@ wav_pause
 wav_stop
 wav_volume
 wav_is_playing
-wav_is_ready
 wav_add_filter
 wav_remove_filter
 

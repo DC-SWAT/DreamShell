@@ -5,7 +5,7 @@
 #
 
 TARGET_NAME = wav
-OBJS = module.o sndwav.o libwav/libwav.o
+OBJS = module.o libwav/sndwav.o libwav/libwav.o
 DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt
 

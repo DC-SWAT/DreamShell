@@ -44,7 +44,7 @@ static struct snddrv {
        volatile int drv_status;
        volatile int dec_status;
        volatile int buf_status;
-       unsigned int pcm_buffer[65536+16384];
+       unsigned int pcm_buffer[65536+16384] __attribute__((aligned(32)));
        unsigned int *pcm_ptr;
 }snddrv;
 

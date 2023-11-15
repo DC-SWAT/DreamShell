@@ -17,7 +17,7 @@ static int start_playback(const char *file, int loop) {
 
     if(wav_hnd == SND_STREAM_INVALID) {
         ds_printf("DS_ERROR: Can't play file: %s\n", file);
-        return CMD_ERROR; 
+        return CMD_ERROR;
     }
     wav_play(wav_hnd);
     return CMD_OK;
@@ -26,11 +26,6 @@ static int start_playback(const char *file, int loop) {
 static void stop_playback() {
     if(wav_hnd == SND_STREAM_INVALID) {
         return;
-    }
-    wav_stop(wav_hnd);
-
-    while(!wav_is_ready(wav_hnd)) {
-        thd_sleep(50);
     }
     wav_destroy(wav_hnd);
     wav_hnd = SND_STREAM_INVALID;
@@ -103,7 +98,6 @@ int lib_open(klibrary_t *lib) {
 int lib_close(klibrary_t *lib) {
     RemoveCmd(GetCmdByName(lib_get_name()));
     if(wav_inited) {
-        stop_playback();
         wav_shutdown();
         wav_inited = 0;
     }
