@@ -1037,10 +1037,13 @@ void isoLoader_Run(GUI_Widget *widget) {
 	snprintf(filepath, NAME_MAX, "%s/%s", 
 				GUI_FileManagerGetPath(self.filebrowser), 
 				self.filename);
-				
+
 	ScreenFadeOut();
 	StopCDDATrack();
-	thd_sleep(400);
+
+	if(!GUI_WidgetGetState(self.fastboot)) {
+		thd_sleep(400);
+	}
 
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
 		isoLoader_SavePreset();
@@ -1587,6 +1590,7 @@ int isoLoader_LoadPreset() {
 	GUI_WidgetSetState(self.irq, use_irq);
 	GUI_WidgetSetState(self.vmu, emu_vmu ? 1 : 0);
 	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
+	GUI_WidgetSetState(self.low, low);
 
 	if (emu_vmu) {
 		char num[8];
@@ -1974,17 +1978,18 @@ void isoLoader_ResizeUI()
 
 void isoLoader_Shutdown(App_t *app) {
 	(void)app;
+	StopCDDATrack();
 
 	if(self.isoldr) {
 		free(self.isoldr);
 	}
-	StopCDDATrack();
 }
 
 void isoLoader_Exit(GUI_Widget *widget) {
 
 	(void)widget;
 	App_t *app = NULL;
+	StopCDDATrack();
 
 	if(self.have_args == true) {
 		
@@ -1998,7 +2003,5 @@ void isoLoader_Exit(GUI_Widget *widget) {
 		app = GetAppByName("Main");
 	}
 
-	StopCDDATrack();
 	OpenApp(app, NULL);
 }
-
