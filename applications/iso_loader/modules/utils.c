@@ -217,18 +217,15 @@ static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;
 static int wav_inited = 0;
 
 void StopCDDATrack() {
-	if(wav_inited && wav_hnd != SND_STREAM_INVALID) {
-		wav_destroy(wav_hnd);
-		wav_hnd = SND_STREAM_INVALID;
+	if(wav_inited) {
+		wav_shutdown();
 	}
 }
 
 void PlayCDDATrack(const char *file, int loop) {
-	if(!wav_inited) {
-		wav_inited = wav_init();
-	}
 
 	StopCDDATrack();
+	wav_inited = wav_init();
 
 	if(wav_inited) {
 		wav_hnd = wav_create(file, loop);

@@ -115,7 +115,7 @@ void isoLoader_ResizeUI();
 void isoLoader_toggleMemory(GUI_Widget *widget);
 void isoLoader_toggleBootMode(GUI_Widget *widget);
 void isoLoader_toggleIconSize(GUI_Widget *widget);
-static void setico(int size, int force);
+static void setIcon(int size);
 
 static int canUseTrueAsyncDMA(void) {
 	return (self.sector_size == 2048 && 
@@ -145,7 +145,7 @@ static char *relativeFilename(char *filename) {
 
 void isoLoader_Rotate_Image(GUI_Widget *widget) {
 	(void)widget;
-	setico(GUI_SurfaceGetWidth(self.slnkico), 1);
+	setIcon(GUI_SurfaceGetWidth(self.slnkico));
 }
 
 void isoLoader_ShowPage(GUI_Widget *widget) {
@@ -215,15 +215,14 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 
 	GUI_WidgetSetState(self.rotate180, 0);
 	GUI_WidgetSetState(self.btn_hidetext, 0);
-	isoLoader_toggleIconSize(self.icosizebtn[0]);
 
-	setico(48, 1);
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	ipbin->title[sizeof(ipbin->title)-1] = '\0';
 	GUI_TextEntrySetText(self.linktext, trim_spaces2(ipbin->title));
 	check_link_file();
 
 	isoLoader_ShowPage(widget);
+	isoLoader_toggleIconSize(self.icosizebtn[0]);
 	ScreenFadeIn();
 }
 
@@ -276,95 +275,61 @@ static void get_md5_hash(const char *mountpoint) {
 /* Try to get cover image from ISO */
 static void showCover() {
 
-	GUI_Surface *s;
+	GUI_Surface *s = NULL;
 	char path[NAME_MAX];
 	char noext[128];
 	ipbin_meta_t *ipbin;
-	char use_cover = 0;
+	int use_cover = 0;
+
+	snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+
+	if(fs_iso_mount("/isocover", path)) {
+		GUI_LabelSetText(self.title, "None");
+		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
+		self.current_cover = self.default_cover;
+		return;
+	}
 
 	memset(noext, 0, sizeof(noext));
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
-	snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
+	get_md5_hash("/isocover");
+	ipbin = (ipbin_meta_t *)self.boot_sector;
+	trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
+	GUI_LabelSetText(self.title, noext);
 
-	if (FileExists(path)) {
+	snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
+	if(FileExists(path)) {
 		use_cover = 1;
 	} else {
 		snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
-		if (FileExists(path)) {
+		if(FileExists(path)) {
 			use_cover = 1;
-		}
-	}
-
-	/* Check for jpeg cover */
-	if(use_cover) {
-
-		s = GUI_SurfaceLoad(path);
-
-		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
-
-		if(!fs_iso_mount("/isocover", path)) {
-			
-			get_md5_hash("/isocover");
-			fs_iso_unmount("/isocover");
-			
-			ipbin = (ipbin_meta_t *)self.boot_sector;
-			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
-		}
-
-		GUI_LabelSetText(self.title, noext);
-
-		if(s != NULL) {
-			GUI_PanelSetBackground(self.cover_widget, s);
-			GUI_ObjectDecRef((GUI_Object *) s);
-			self.current_cover = s;
-		}
-
-	} else {
-
-		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
-
-		/* Try to mount ISO and get 0GDTEXT.PVR */
-		if(!fs_iso_mount("/isocover", path)) {
-
-			get_md5_hash("/isocover");
-			ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
-			trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
-
-			if(FileExists("/isocover/0GDTEX.PVR")) {
-
-				s = GUI_SurfaceLoad("/isocover/0GDTEX.PVR");
-				fs_iso_unmount("/isocover");
-
-				GUI_LabelSetText(self.title, noext);
-
-				if(s != NULL) {
-					GUI_PanelSetBackground(self.cover_widget, s);
-					GUI_ObjectDecRef((GUI_Object *) s);
-					self.current_cover = s;
-				} else {
-					goto check_default;
-				}
-
-			} else {
-				fs_iso_unmount("/isocover");
-				GUI_LabelSetText(self.title, noext);
-				goto check_default;
-			}
-
 		} else {
-			goto check_default;
+			memset(path, 0, sizeof(path));
+			strcpy(path, "/isocover/0GDTEX.PVR");
+			if (FileExists(path)) {
+				use_cover = 1;
+			}
 		}
+	} 
+
+	if (use_cover) {
+		s = GUI_SurfaceLoad(path);
 	}
-	vmu_draw_string(noext);
-	return;
-	
-check_default:
-	if(self.current_cover != self.default_cover) {
+
+	fs_iso_unmount("/isocover");
+
+	if(s != NULL) {
+		GUI_PanelSetBackground(self.cover_widget, s);
+		GUI_ObjectDecRef((GUI_Object *) s);
+		self.current_cover = s;
+	} else if(self.current_cover != self.default_cover) {
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
 	}
+
 	vmu_draw_string(noext);
 }
 
@@ -374,28 +339,28 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	FILE *fd;
 	char *env = getenv("PATH");
 	char save_file[NAME_MAX];
-	char cmd[512];
+	char cmd[NAME_MAX * 2];
 	const char *tmpval;
 	int i;
-	
+
+	StopCDDATrack();
 	snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", env, GUI_TextEntryGetText(self.linktext));
-	
+
 	fd = fopen(save_file, "w");
-	
+
 	if(!fd)
 	{
 		ds_printf("DS_ERROR: Can't save shortcut\n");
 		return;
 	}
-	
+
 	fprintf(fd, "module -o -f %s/modules/minilzo.klf\n", env);
 	fprintf(fd, "module -o -f %s/modules/isofs.klf\n", env);
 	fprintf(fd, "module -o -f %s/modules/isoldr.klf\n", env);
-	
+
 	strcpy(cmd, "isoldr");
-	
-	strcat(cmd, GUI_WidgetGetState(self.fastboot) ? " -s 1":" -i" );
-	
+	strcat(cmd, GUI_WidgetGetState(self.fastboot) ? " -s" : " -i" );
+
 	if(GUI_WidgetGetState(self.dma)) 
 	{
 		strcat(cmd, " -a");
@@ -434,9 +399,9 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		strcat(cmd, tmpval);
 	}
 
-	for(i = 0; self.memory_chk[i]; i++) 
+	for(i = 0; self.memory_chk[i]; i++)
 	{
-		if(GUI_WidgetGetState(self.memory_chk[i])) 
+		if(GUI_WidgetGetState(self.memory_chk[i]))
 		{
 			tmpval = GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
 			
@@ -459,32 +424,31 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	strcat(cmd, " -f ");
 	strcat(cmd, fix_spaces(fpath));
 
-
 	for(i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) 
 	{
 		if(i && GUI_WidgetGetState(self.boot_mode_chk[i])) 
 		{
-			char boot_mode[3];
+			char boot_mode[8];
 			sprintf(boot_mode, "%d", i);
 			strcat(cmd, " -j ");
 			strcat(cmd, boot_mode);
 			break;
 		}
 	}
-	
+
 	for(i = 0; i < sizeof(self.os_chk) >> 2; i++) 
 	{
 		if(i && GUI_WidgetGetState(self.os_chk[i])) 
 		{
-			char os[3];
+			char os[8];
 			sprintf(os, "%d", i);
 			strcat(cmd, " -o ");
 			strcat(cmd, os);
 			break;
 		}
 	}
-	
-	char patchstr[18];
+
+	char patchstr[24];
 	for(i = 0; i < sizeof(self.pa) >> 2; ++i)
 	{
 		if(self.pa[i] & 0xffffff)
@@ -515,7 +479,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
 		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
 			if (i <= HEAP_MODE_MAPLE) {
-				char mode[12];
+				char mode[24];
 				sprintf(mode, " -h %d", i);
 				strcat(cmd, mode);
 				break;
@@ -551,61 +515,62 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	fclose(fd);
 
 	snprintf(save_file, NAME_MAX, "%s/apps/main/images/%s.png", env, GUI_TextEntryGetText(self.linktext));
+	if(FileExists(save_file)) {
+		fs_unlink(save_file);
+	}
 	GUI_SurfaceSavePNG(self.slnkico, save_file);
 
 	isoLoader_ShowGames(self.settings);
 }
 
-static void setico(int size, int force)
-{
-	GUI_Surface *image, *s;
-	int cursize = GUI_SurfaceGetWidth(self.slnkico);
-	
-	if(size == cursize && !force) {
+static void setIcon(int size) {
+	GUI_Surface *image, *surf;
+	SDL_Surface *orig_s, *new_s, *temp_s;
+
+	if(self.current_cover == self.default_cover) {
+		surf = self.stdico;
+	} else {
+		surf = self.current_cover;
+	}
+
+	orig_s = GUI_SurfaceGet(surf);
+	double scaling = (double)size / (double)orig_s->w;
+	new_s = zoomSurface(orig_s, scaling, scaling, 1);
+
+	if(!new_s) {
 		return;
 	}
-	
-	if(self.current_cover == self.default_cover) {
-		s = self.stdico;
-	} else {
-		s = self.current_cover;
-	}
-	
-	SDL_Surface *sdls = GUI_SurfaceGet(s);
-	
+
 	if(GUI_WidgetGetState(self.rotate180)) {
-		sdls = rotateSurface90Degrees(sdls, 2);
+		temp_s = rotateSurface90Degrees(new_s, 2);
+		if(temp_s) {
+			SDL_FreeSurface(new_s);
+			new_s = temp_s;
+		}
 	}
 
-	double scaling = (double) size / (double) GUI_SurfaceGetWidth(s);
+	image = GUI_SurfaceFrom("shortcut-icon-surface", new_s);
 
-	image = GUI_SurfaceFrom("ico-surface", zoomSurface(sdls, scaling, scaling, 1));
-	GUI_PictureSetImage(self.wlnkico, image);
-
-	if(self.slnkico) {
-		GUI_ObjectDecRef((GUI_Object *) self.slnkico);
+	if (image) {
+		GUI_PictureSetImage(self.wlnkico, image);
+		GUI_ObjectDecRef((GUI_Object *) image);
+		self.slnkico = image;
 	}
-	self.slnkico = image;
-
 	GUI_WidgetMarkChanged(self.pages);
 	GUI_WidgetMarkChanged(self.run_pane);
 }
 
-void isoLoader_toggleIconSize(GUI_Widget *widget)
-{
-	int i, size = 48;
-	
-	for(i=0; i<5; i++)
-	{
+void isoLoader_toggleIconSize(GUI_Widget *widget) {
+	int i, size;
+
+	for(i = 0; i < 5; ++i) {
 		GUI_WidgetSetState(self.icosizebtn[i], 0);
 	}
-	
+
 	GUI_WidgetSetState(widget, 1);
-	
-	char *name = (char *) GUI_ObjectGetName((GUI_Object *)widget);
-	
-	switch(name[1])
-	{
+	char *name = (char *)GUI_ObjectGetName((GUI_Object *)widget);
+
+	switch(name[1]) {
 		case '2':
 			size = 128;
 			break;
@@ -622,8 +587,7 @@ void isoLoader_toggleIconSize(GUI_Widget *widget)
 		default:
 			size = 48;
 	}
-	
-	setico(size, 0);
+	setIcon(size);
 }
 
 void isoLoader_toggleLinkName(GUI_Widget *widget)
@@ -1393,8 +1357,8 @@ int isoLoader_SavePreset() {
 	char *filename, *memory = NULL;
 	file_t fd;
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
-	char text[32];
 	char result[1024];
+	char text[24];
 	int async = 0, type = 0, mode = 0;
 	uint32 heap = HEAP_MODE_AUTO;
 	uint32 cdda_mode = CDDA_MODE_DISABLED;
@@ -1403,6 +1367,7 @@ int isoLoader_SavePreset() {
 		return 0;
 	}
 
+	StopCDDATrack();
 	filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
 
 	fd = fs_open(filename, O_CREAT | O_TRUNC | O_WRONLY);
@@ -1440,7 +1405,6 @@ int isoLoader_SavePreset() {
 				char *tmpval = (char* )GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 
 				if(strlen(tmpval) < 8) {
-					char text[24];
 					memset(text, 0, sizeof(text));
 					strncpy(text, tmpval, 10);
 					tmpval = strncat(text, GUI_TextEntryGetText(self.heap_memory_text), 10);
@@ -1462,19 +1426,18 @@ int isoLoader_SavePreset() {
 			break;
 		}
 	}
-	
+
 	for(int i = 0; self.memory_chk[i]; i++) {
-		
+
 		if(GUI_WidgetGetState(self.memory_chk[i])) {
-			
+
 			memory = (char* )GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
-			
+
 			if(strlen(memory) < 8) {
 				memset(text, 0, sizeof(text));
 				strncpy(text, memory, 10);
 				memory = strncat(text, GUI_TextEntryGetText(self.memory_text), 10);
 			}
-			
 			break;
 		}
 	}
@@ -1738,7 +1701,7 @@ void isoLoader_Init(App_t *app) {
 		self.wpa[1]	          = APP_GET_WIDGET("pa2-text");
 		self.wpv[0]	          = APP_GET_WIDGET("pv1-text");
 		self.wpv[1]	          = APP_GET_WIDGET("pv2-text");
-		
+
 		self.icosizebtn[0]	  = APP_GET_WIDGET("48x48");
 		self.icosizebtn[1]	  = APP_GET_WIDGET("64x64");
 		self.icosizebtn[2]	  = APP_GET_WIDGET("96x96");
@@ -1751,13 +1714,11 @@ void isoLoader_Init(App_t *app) {
 		self.save_link_txt    = APP_GET_WIDGET("save-link-txt");
 		self.wlnkico	      = APP_GET_WIDGET("link-icon");
 		self.stdico           = APP_GET_SURFACE("stdico");
-		
-		self.slnkico = GUI_SurfaceFrom("ico-surface", GUI_SurfaceGet(self.stdico));
-		
+
 		w = APP_GET_WIDGET("async-panel");
 		self.async[0] = GUI_ContainerGetChild(w, 1);
 		int sz = (sizeof(self.async) >> 2) - 1;
-		
+
 		for(int i = 0; i < sz; i++) {
 
 			b = GUI_ContainerGetChild(w, i + 2);
