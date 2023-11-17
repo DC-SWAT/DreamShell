@@ -951,7 +951,7 @@ void gdcMainLoop(void) {
 int gdcGetCmdStat(int gd_chn, uint32 *status) {
 
 	if(lock_gdsys()) {
-		LOGFF("%s: Busy\n");
+		DBGFF("%s: Busy\n");
 		return CMD_STAT_BUSY;
 	}
 
