@@ -10,6 +10,7 @@
 #include "fs.h"
 
 static uint8 kos_hdr[8] = {0x2D, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x2B, 0xD0};
+static uint8 kos_hdr_2[8] = {0x38, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x36, 0xD0};
 static uint8 ron_hdr[8] = {0x1B, 0xD0, 0x1A, 0xD1, 0x1B, 0x20, 0x2B, 0x40};
 static uint8 win_hdr[4] = {0x45, 0x43, 0x45, 0x43};
 
@@ -57,10 +58,13 @@ static int is_homebrew(file_t fd) {
 	fs_seek(fd, 0, SEEK_SET);
 
 	/* Check for unscrambled homebrew */
-	if(!memcmp(src, kos_hdr, sizeof(kos_hdr)) || !memcmp(src, ron_hdr, sizeof(ron_hdr))) {
+	if(!memcmp(src, kos_hdr, sizeof(kos_hdr))
+		|| !memcmp(src, kos_hdr_2, sizeof(kos_hdr_2))
+		|| !memcmp(src, ron_hdr, sizeof(ron_hdr))
+	) {
 		return 1;
 	}
-	
+
 	/* TODO: Check for scrambled homebrew */
 	return 0;
 }
@@ -68,11 +72,11 @@ static int is_homebrew(file_t fd) {
 static int is_wince_rom(file_t fd) {
 
 	uint8 src[sizeof(win_hdr)];
-	
+
 	fs_seek(fd, 64, SEEK_SET);
 	fs_read(fd, src, sizeof(win_hdr));
 	fs_seek(fd, 0, SEEK_SET);
-	
+
 	return !memcmp(src, win_hdr, sizeof(win_hdr));
 }
 
@@ -85,7 +89,7 @@ static int get_executable_info(isoldr_info_t *info, file_t fd) {
 		info->exec.size -= 2048;
 
 	} else if(is_wince_rom(fd)) {
-		
+
 		info->exec.type = BIN_TYPE_WINCE;
 
 	} else if(is_homebrew(fd)) {

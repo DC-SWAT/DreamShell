@@ -107,7 +107,6 @@ void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 par
     values[4] = params_len;         /* Params size */
 
     /* Flush both caches for the trampoline area */
-    dcache_flush_range((uint32)buffer, tcount * 4);
     icache_flush_range((uint32)buffer, tcount * 4);
 
     /* Shut us down */
