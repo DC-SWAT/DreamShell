@@ -207,36 +207,30 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 static void setup_pcm_buffer() {
 
 	/* 
-	 * SH4 timer counter value for polling playback position 
-	 * 
-	 * Some values for PCM 16 bit 44100 Hz:
-	 * 
-	 * 32 KB = 72374 / chn
-	 * 24 KB = 54278 / chn
-	 * 16 KB = 36176 / chn
+	 * SH4 timer counter value for polling playback position.
+	 * Base timer value for PCM 16 bit 44100 Hz and 32KB buffer.
 	 */
 	cdda->end_tm = 72374 / cdda->chn;
 	size_t old_size = cdda->size;
-//	cdda->size = (cdda->bitsize << 10) * cdda->chn;
-	
+	cdda->size = 0x8000;
+
 	switch(cdda->bitsize) {
+#ifdef DEV_TYPE_SD
 		case 4:
-			cdda->size = 0x4000;
-			cdda->end_tm *= 2;   /* 4-bit decoded to 16-bit */
+			cdda->size >>= 1;
+			cdda->end_tm <<= 1;  /* 4-bit decoded to 16-bit */
 			cdda->end_tm += 10;  /* Fixup timer value for ADPCM */
 			break;
-		case 8:
-			cdda->size = 0x4000;
-			break;
+#endif
 		case 16:
 		default:
-			cdda->size = 0x8000;
 			if(exception_inited()) {
-				cdda->size = 0x4000;
-				cdda->end_tm = 36176 / cdda->chn;
+				/* Save some memory because we can polling faster */
+				cdda->size >>= 1;
+				cdda->end_tm >>= 1;
 #ifdef LOG
 				if (malloc_heap_pos() < CACHED_ADDR(APP_BIN_ADDR)) {
-					// Need some memory for logging in some cases
+					/* Need some memory for logging in this case */
 					cdda->size >>= 1;
 					cdda->end_tm >>= 1;
 				}
@@ -642,9 +636,8 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 			break;
 #endif
 		case 16:
-			pcm16_split((int16 *)src, (int16 *)dst, (int16 *)(dst + count), size);
-			break;
 		default:
+			pcm16_split((int16 *)src, (int16 *)dst, (int16 *)(dst + count), size);
 			break;
 	}
 }

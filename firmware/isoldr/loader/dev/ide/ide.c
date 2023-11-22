@@ -356,6 +356,7 @@ void g1_dma_irq_restore(void) {
 
 void g1_dma_set_irq_mask(s32 last_transfer) {
 
+	int old = irq_disable();
 	s32 dma_mode = fs_dma_enabled();
 
 	if (dma_mode == FS_DMA_DISABLED) {
@@ -381,6 +382,8 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 			g1_dma_irq_code_game = g1_dma_has_irq_mask();
 		}
 	}
+
+	irq_restore(old);
 
 #ifdef DEBUG
 	LOGFF("%03lx %03lx %03lx (mode=%d last=%d game=%03lx int=%03lx)\n",
@@ -772,13 +775,13 @@ static s32 g1_ata_access(struct ide_req *req)
 #if _FS_READONLY == 0
 			else {
 				/* Flush the dcache over the range of the data. */
-				dcache_flush_range((u32) buff, len * sector_size);
+				dcache_purge_range((u32) buff, len * sector_size);
 			}
 #endif
 
 			/* Set the DMA parameters up. */
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
-			OUT32(G1_ATA_DMA_ADDRESS, ((u32) buff & 0x0FFFFFFF));
+			OUT32(G1_ATA_DMA_ADDRESS, PHYS_ADDR((u32)buff));
 			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * sector_size));
 			OUT8(G1_ATA_DMA_DIRECTION, (req->cmd == G1_READ_DMA));
 
@@ -828,7 +831,6 @@ static s32 g1_ata_access(struct ide_req *req)
 					OUT16(G1_ATA_DATA, (u16)(buff[0] | buff[1] << 8));
 					buff += 2;
 				}
-				// dcache_purge_range(((u32)buff) - sector_size, sector_size);
 			}
 			OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 			g1_ata_wait_bsydrq();
