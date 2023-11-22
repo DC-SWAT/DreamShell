@@ -390,7 +390,7 @@ int system(const char *buff) {
 
 
 int dsystemf(const char *fmt, ...) {
-	char buff[256];
+	char buff[512];
 	va_list args;
 	va_start(args, fmt);
 	vsnprintf(buff, sizeof(buff), fmt, args);
@@ -400,7 +400,7 @@ int dsystemf(const char *fmt, ...) {
 
 
 int dsystem_script(const char *fn) {
-	char buff[256];
+	char buff[512];
 	FILE *f;
 	int r = CMD_OK;
 

@@ -626,6 +626,7 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 						if (abs(scrollbar->GetVerticalPosition() - sp) > 2) {
 							scrollbar->SetVerticalPosition(sp);
 							AdjustScrollbar(NULL);
+							thd_sleep(100);
 						}
 					}
 					break;

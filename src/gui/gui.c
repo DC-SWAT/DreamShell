@@ -64,7 +64,7 @@ static void screenshot_callback(void)  {
 	int try_cnt = 99;
 
 	if(!strncmp(root_dir, "/cd", 3)) {
-		return;
+		root_dir = "/rd";
 	}
 
 	do {
@@ -88,13 +88,15 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 
 	SDL_Event *event = (SDL_Event *) param;
 	GUI_ScreenEvent(GUI_GetScreen(), event, 0, 0);
-	cur_joy_state = 0;
 
 	switch(event->type) {
 		case SDL_JOYBUTTONDOWN:
 			switch(event->jbutton.button) {
 				case 6: // X button
 					cur_joy_state |= 1;
+					break;
+				default:
+					cur_joy_state ^= 1;
 					break;
 			}
 			break;
@@ -103,17 +105,22 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 				case 2: // rtrig
 					if(event->jaxis.value)
 						cur_joy_state |= 2;
+					else
+						cur_joy_state ^= 2;
 					break;
 				case 3: // ltrig
 					if(event->jaxis.value)
 						cur_joy_state |= 4;
+					else
+						cur_joy_state ^= 4;
 					break;
 			}
 			break;
 		default:
+			cur_joy_state = 0;
 			break;
 	}
-	
+
 	if(cur_joy_state != last_joy_state && last_joy_state == 7) {
 		screenshot_callback();
 	}
