@@ -174,6 +174,11 @@ typedef struct isoldr_info {
 isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex);
 
 /**
+ * Set alternative boot file
+ */
+int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *boot_file);
+
+/**
  * Execute loader for specified device at any valid memory address
  */
 void isoldr_exec(isoldr_info_t *info, uint32 addr);

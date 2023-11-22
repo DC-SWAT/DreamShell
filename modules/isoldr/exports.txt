@@ -2,4 +2,5 @@ include kos/exports.h
 include isoldr.h
 
 isoldr_get_info
+isoldr_set_boot_file
 isoldr_exec

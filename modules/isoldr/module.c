@@ -346,6 +346,37 @@ error:
 }
 
 
+int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *boot_file) {
+
+	file_t fd;
+	char fn[NAME_MAX];
+	char *mount = "/isoldr";
+
+	if(fs_iso_mount(mount, iso_file) < 0) {
+		ds_printf("DS_ERROR: Can't mount %s to %s\n", iso_file, mount);
+		return -1;
+	}
+
+	snprintf(fn, NAME_MAX, "%s/%s", mount, boot_file);
+	fd = fs_open(fn, O_RDONLY);
+
+	if(fd == FILEHND_INVALID) {
+		return -1;
+	}
+
+	fs_ioctl(fd, ISOFS_IOCTL_GET_FD_LBA, &info->exec.lba);
+
+	info->exec.lba += 150;
+	info->exec.size = fs_total(fd);
+	strncpy(info->exec.file, boot_file, 12);
+	info->exec.file[12] = '\0';
+
+	fs_close(fd);
+	fs_iso_unmount(mount);
+	return 0;
+}
+
+
 static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 
 	uint32 i = 0, a = 0;
@@ -634,8 +665,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	}
 
 	if(bin_file != NULL) {
-		strncpy(info->exec.file, bin_file, 12);
-		info->exec.file[12] = '\0';
+		isoldr_set_boot_file(info, file, bin_file);
 	}
 
 	if(bin_type) {
