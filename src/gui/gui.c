@@ -25,7 +25,6 @@ typedef struct TrashItem {
  */
 typedef SLIST_HEAD(TrashItemList, TrashItem) TrashItem_list_t;
 
-static MouseCursor_t *cur_mouse = NULL;
 static mutex_t gui_mutex = MUTEX_INITIALIZER;
 static TrashItem_list_t *trash_list;
 static Event_t *gui_input_event;
@@ -36,23 +35,18 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 	
 	switch(action) {
 		case EVENT_ACTION_RENDER:
-			DrawActiveMouseCursor();
+			GUI_ScreenDoUpdate(GUI_GetScreen(), 0);
 			break;
 		case EVENT_ACTION_UPDATE:
 		{
 			App_t *app = GetCurApp();
-			
 			// TODO optimize update area
-			
 			if(app != NULL && app->body != NULL) {
 				//GUI_WidgetErase(app->body, (SDL_Rect *)param);
 				GUI_WidgetMarkChanged(app->body);
 			} else {
-				//GUI_ScreenErase(GUI_GetScreen(), (SDL_Rect *)param);
 				GUI_ScreenDoUpdate(GUI_GetScreen(), 1); 
 			}
-
-			UpdateActiveMouseCursor();
 			break;
 		}
 		default:
@@ -60,93 +54,77 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 	}
 }
 
-static uint64_t last_saved_time = 0;
 static uint8_t last_joy_state = 0;
+static uint8_t cur_joy_state = 0;
+static int scr_num = 0;
 
-static void screenshot_callback(void) 
-{
+static void screenshot_callback(void)  {
 	char path[NAME_MAX];
-	char *home_dir = getenv("PATH");
-	int i;
-	uint64 cur_time = timer_ms_gettime64();
-	
-	if(!strncmp(home_dir, "/cd", 3) || ((cur_time - last_saved_time) < 5000)) 
-	{
+	char *root_dir = getenv("PATH");
+	int try_cnt = 99;
+
+	if(!strncmp(root_dir, "/cd", 3)) {
 		return;
 	}
-	
-	last_saved_time = cur_time;
-	
-	for(i=0;;i++)
-	{
-		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.png", home_dir, i);
-		if(!FileExists(path)) break;
-		if(i == 999)  return;
+
+	do {
+		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.png", root_dir, ++scr_num);
+		if (!FileExists(path)) {
+			break;
+		}
+	} while(--try_cnt > 0);
+
+	if(try_cnt == 0) {
+		return;
 	}
-	
-	char *arg[3] = {"screenshot", path, "png"};
 
 	LockVideo();
-	CallCmd(3, arg);
+	dsystemf("screenshot %s png", path);
 	UnlockVideo();
 }
+
 
 static void GUI_EventHandler(void *ds_event, void *param, int action) {
 
 	SDL_Event *event = (SDL_Event *) param;
 	GUI_ScreenEvent(GUI_GetScreen(), event, 0, 0);
+	cur_joy_state = 0;
 
-	switch(event->type) 
-	{
+	switch(event->type) {
 		case SDL_JOYBUTTONDOWN:
-			switch(event->jbutton.button) 
-			{
+			switch(event->jbutton.button) {
 				case 6: // X button
-					last_joy_state |= 1;
+					cur_joy_state |= 1;
 					break;
 			}
 			break;
 		case SDL_JOYAXISMOTION:
-			switch(event->jaxis.axis)
-			{
+			switch(event->jaxis.axis) {
 				case 2: // rtrig
 					if(event->jaxis.value)
-						last_joy_state |= 2;
+						cur_joy_state |= 2;
 					break;
 				case 3: // ltrig
 					if(event->jaxis.value)
-						last_joy_state |= 4;
+						cur_joy_state |= 4;
 					break;
 			}
 			break;
 		default:
-			last_joy_state = 0;
 			break;
 	}
 	
-	if(last_joy_state == 7)
+	if(cur_joy_state != last_joy_state && last_joy_state == 7) {
 		screenshot_callback();
-/*
-	switch(event->type) {
-		case SDL_KEYDOWN:
-			UpdateActiveMouseCursor();
-			break;
-		case SDL_MOUSEMOTION:
-		case SDL_MOUSEBUTTONDOWN:
-		case SDL_MOUSEBUTTONUP:
-			UpdateActiveMouseCursor();
-			break;
-		default:
-			break;
 	}
-*/
+	last_joy_state = cur_joy_state;
 }
 
 
 int InitGUI() {
 
 	trash_list = (TrashItem_list_t *) calloc(1, sizeof(TrashItem_list_t)); 
-	
+
 	if(trash_list == NULL) 
 		return 0;
 
@@ -160,7 +138,7 @@ int InitGUI() {
 		ds_printf("DS_ERROR: GUI init RealScreen error\n");
 		UnlockVideo();
 		return 0;
-		
+
 	} else {
 		GUI_SetScreen(gui);
 	}
@@ -226,144 +204,6 @@ int GUI_Object2Trash(GUI_Object *object) {
 
 	SLIST_INSERT_HEAD(trash_list, i, list); 
 	return 1; 
-}
-
-
-MouseCursor_t *CreateMouseCursor(const char *fn, SDL_Surface *surface) {
-
-	MouseCursor_t *c;
-
-	c = (MouseCursor_t*) calloc(1, sizeof(MouseCursor_t));
-
-	if(c == NULL) {
-		ds_printf("DS_ERROR: Malloc error\n");
-		return NULL;
-	}
-
-	c->cursor = surface ? surface : IMG_Load(fn);
-	c->draw = 0;
-
-	if(c->cursor == NULL) {
-		free(c);
-		ds_printf("DS_ERROR: Can't create surface\n");
-		return NULL; 
-	}
-
-	c->bg = SDL_CreateRGBSurface(c->cursor->flags, c->cursor->w, c->cursor->h,
-									c->cursor->format->BitsPerPixel, c->cursor->format->Rmask,
-									c->cursor->format->Gmask, c->cursor->format->Bmask,
-									c->cursor->format->Amask);
-
-	if(c->bg == NULL) {
-		SDL_FreeSurface(c->cursor);
-		free(c);
-		ds_printf("DS_ERROR: Can't create background for mouse cursor\n");
-		return NULL;
-	}
-
-	return c;
-}
-
-
-void DestroyMouseCursor(MouseCursor_t *c) {
-	SDL_FreeSurface(c->bg);
-	SDL_FreeSurface(c->cursor);
-	free(c);
-}
-
-static int old_x = 0, old_y = 0;
-
-void DrawMouseCursor(MouseCursor_t *c/*, SDL_Event *event*/) {
-	
-	SDL_Rect src, dst;
-	SDL_Surface *scr = NULL;
-	int x = 0;//c->x;//event->motion.x;
-	int y = 0;//c->y;//event->motion.y;
-
-	SDL_GetMouseState(&x, &y);
-
-	if(c->draw || (old_x != x || old_y != y)) {
-
-		if(!c->draw) {
-			c->draw++;
-		}
-
-		old_x = x;
-		old_y = y;
-
-		scr = GetScreen();
-		src.x = 0;
-		src.y = 0;
-		src.w = c->cursor->w;
-		src.h = c->cursor->h;
-
-		if (x + c->cursor->w <= scr->w) {
-			src.w = c->cursor->w;
-		} else {
-			src.w = scr->w - x - 1;
-		}
-
-		if (y + c->cursor->h <= scr->h) {
-			src.h = c->cursor->h;
-		} else {
-			src.h = scr->h - y - 1;
-		}
-
-		dst.x = x;
-		dst.y = y;
-		dst.w = src.w;
-		dst.h = src.h;
-		
-		if(c->bg) {
-			SDL_BlitSurface(c->bg, &c->src, scr, &c->dst);
-		}
-	}
-
-	GUI_ScreenDoUpdate(GUI_GetScreen(), 0);
-	
-	if(c->draw) {
-
-		SDL_BlitSurface(scr, &dst, c->bg, &src);
-		SDL_BlitSurface(c->cursor, &src, scr, &dst);
-		ScreenChanged();
-
-		c->src = src;
-		c->dst = dst;
-
-		if (c->draw > 15) {
-			c->draw = 15;
-		}
-		c->draw--;
-	}
-}
-
-
-void DrawActiveMouseCursor() {
-	if (cur_mouse) {
-		DrawMouseCursor(cur_mouse);
-	} else {
-		GUI_ScreenDoUpdate(GUI_GetScreen(), 0);
-	}
-}
-
-void SetActiveMouseCursor(MouseCursor_t *c) {
-	if(VideoMustLock()) LockVideo();
-	cur_mouse = c;
-	if(VideoMustLock()) UnlockVideo();
-}
-
-
-MouseCursor_t *GetActiveMouseCursor() {
-	return cur_mouse;
-}
-
-
-void WaitDrawActiveMouseCursor() {
-	while(cur_mouse->draw) thd_pass();
-}
-
-void UpdateActiveMouseCursor() {
-	cur_mouse->draw++;
 }
 
 
@@ -452,4 +292,3 @@ SDL_Surface *SDL_ImageLoad(const char *filename, SDL_Rect *selection) {
 	}
 	return surface;
 }
-

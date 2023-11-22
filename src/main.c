@@ -244,9 +244,6 @@ int InitDS() {
 
 	SetScreenMode(settings->video.virt_width, settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 
-	snprintf(fn, NAME_MAX, "%s/gui/cursors/default.png", getenv("PATH"));
-	SetActiveMouseCursor(CreateMouseCursor(fn, NULL));
-	
 	TTF_Init();
 	InitGUI();
 	snd_stream_init();

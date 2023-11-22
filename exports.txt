@@ -262,14 +262,6 @@ ShutdownGUI
 #GUI_Object2Trash
 #GUI_ClearTrash
 #
-CreateMouseCursor
-DestroyMouseCursor
-DrawMouseCursor
-SetActiveMouseCursor
-GetActiveMouseCursor
-UpdateActiveMouseCursor
-#DrawActiveMouseCursor
-#
 #colorHexToRGB
 #Uint32ToColor
 #ColorToUint32

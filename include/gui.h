@@ -15,29 +15,6 @@
 #include "SDL/SDL_gui.h"
 
 
-typedef struct MouseCursor {
-    
-	SDL_Surface *bg;
-	SDL_Surface *cursor;
-	SDL_Rect src, dst;
-	int draw;
-
-} MouseCursor_t;
-
-
-/*
-  Mouse cursor
-*/
-MouseCursor_t *CreateMouseCursor(const char *fn, /* or */ SDL_Surface *surface);
-void DestroyMouseCursor(MouseCursor_t *c);
-void DrawMouseCursor(MouseCursor_t *c);
-void DrawMouseCursorEvent(MouseCursor_t *c, SDL_Event *event);
-void SetActiveMouseCursor(MouseCursor_t *c);
-MouseCursor_t *GetActiveMouseCursor();
-void UpdateActiveMouseCursor();
-void DrawActiveMouseCursor();
-
-
 /* Virtual keyboard from vkb module */
 int VirtKeyboardInit();
 void VirtKeyboardShutdown();

@@ -1226,7 +1226,7 @@ static int builtin_dsc(int argc, char *argv[]) {
 static int builtin_screenshot(int argc, char *argv[]) {
 
 	if(argc < 3) {
-		ds_printf("Usage: %s filename format(bmp,ppm)\n", argv[0]);
+		ds_printf("Usage: %s filename format(bmp/ppm/png)\n", argv[0]);
 		return CMD_NO_ARG;
 	}
 
@@ -1238,7 +1238,7 @@ static int builtin_screenshot(int argc, char *argv[]) {
 		}
 
 	} else if(argc > 2 && !strncmp(argv[2], "bmp", 3)) {
-		
+
 		if(SDL_SaveBMP(GetScreen(), argv[1]) < 0) {
 			ds_printf("DS_ERROR: Can't save BMP screenshot to %s\n", argv[1]);
 			return CMD_ERROR;

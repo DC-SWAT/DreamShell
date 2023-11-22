@@ -4,10 +4,6 @@
 
 #include "SDL_gui.h"
 
- extern "C"
- {
-	void UpdateActiveMouseCursor();
- }
 
 GUI_CardStack::GUI_CardStack(const char *aname, int x, int y, int w, int h)
 : GUI_Container(aname, x, y, w, h)
@@ -86,7 +82,6 @@ void GUI_CardStack::ShowIndex(int index)
 		if (index >= 0 && index < n_widgets) {
 			visible_index = index;
 			MarkChanged();
-			UpdateActiveMouseCursor();
 		}
 	}
 }
@@ -100,7 +95,6 @@ void GUI_CardStack::Show(const char *aname)
 		{	
 			visible_index = i;
 			MarkChanged();
-			UpdateActiveMouseCursor();
 			break;
 		}
 }

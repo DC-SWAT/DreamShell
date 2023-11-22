@@ -4,10 +4,6 @@
 
 #include "SDL_gui.h"
 
-extern "C"
-{
-void UpdateActiveMouseCursor();
-}
 
 static int Inside(int x, int y, SDL_Rect *r)
 {
@@ -138,7 +134,6 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 				if (Inside(x, y, &area))
 					if (focus == 0 || focus == this) {
 						SetFlags(WIDGET_PRESSED);
-						UpdateActiveMouseCursor();
 					}
 			}
 			break;
@@ -162,7 +157,6 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			}
 			if (flags & WIDGET_PRESSED) {
 				ClearFlags(WIDGET_PRESSED);
-				UpdateActiveMouseCursor();
 			}
 			break;
 		}
@@ -177,7 +171,6 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 					
 					if(!focused) {
 						SetFlags(WIDGET_INSIDE);
-						UpdateActiveMouseCursor();
 						Highlighted(x, y);
 						focused = 1;
 					}
@@ -188,7 +181,6 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 						
 						if(focused) {
 							ClearFlags(WIDGET_INSIDE);
-							UpdateActiveMouseCursor();
 							unHighlighted(x, y);
 							focused = 0;
 						}

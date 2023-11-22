@@ -58,7 +58,8 @@ unsigned short *sdl_dc_buftex;
 
 static plx_font_t *plx_fnt;
 static plx_fcxt_t *plx_cxt;
-static plx_texture_t *plx_screen_texture;
+static plx_texture_t *plx_screen_txr;
+static plx_texture_t *plx_cursor_txr;
 static int screen_filter = PVR_FILTER_NEAREST;
 
 static float sdl_dc_u1 = 0.3f;
@@ -185,7 +186,7 @@ void SetScreenFilter(int filter) {
 		screen_filter = filter;
 	}
 
-	plx_txr_setfilter(plx_screen_texture, screen_filter);
+	plx_txr_setfilter(plx_screen_txr, screen_filter);
 	UnlockVideo();
 }
 
@@ -307,7 +308,6 @@ void ScreenTranslate(float x, float y, float z) {
 	UnlockVideo();
 }
 
-
 void InitVideoThread() {
 	video_inited = 1;
 	video_thd = thd_create(0, VideoThread, NULL);
@@ -317,50 +317,35 @@ void InitVideoThread() {
 
 void ShutdownVideoThread() {
 
-	// LockVideo();
 	video_inited = 0;
-	// UnlockVideo();
-	
+
 	if(video_thd) {
 		thd_join(video_thd, NULL); 
 	}
 
-	// if(VideoIsLocked()) UnlockVideo();
+	if(VideoIsLocked()) UnlockVideo();
 }
 
-
 int VideoIsLocked() {
-	//if(!video_inited) return 0;
 	return mutex_is_locked(&video_mutex);
 }
 
 int VideoMustLock() {
-#ifdef DEBUG_VIDEO
-	kthread_t *ct = thd_get_current();
-	printf("%s: %p != %p\n", __func__, video_thd, ct);
-#endif
 	return (video_inited && video_thd != thd_get_current());
 }
 
 void LockVideo() { 
-	
-//	if(!video_inited) return;
-
-#ifdef DEBUG_VIDEO
-	printf("%s\n", __func__);
-#endif
+	if(!VideoMustLock()) {
+		return;
+	}
 	mutex_lock(&video_mutex);
-//	mutex_lock_timed(&video_mutex, 60000);
 }
 
 
 void UnlockVideo() {
-
-//	if(!video_inited) return;
-
-#ifdef DEBUG_VIDEO
-	printf("%s\n", __func__);
-#endif
+	if(!VideoMustLock()) {
+		return;
+	}
 	mutex_unlock(&video_mutex);
 }
 
@@ -438,13 +423,15 @@ int InitVideo(int w, int h, int bpp) {
 	plx_mat3d_mode(PLX_MAT_MODELVIEW);   /** Modelview (rotate, scale) matrix */
 	plx_mat_identity();
 	plx_mat3d_apply_all();
-	
+
+	plx_cxt_init();
+
 	if(settings->video.tex_filter >= PVR_FILTER_NEAREST) {
 		screen_filter = settings->video.tex_filter;
 	}
 
-	plx_screen_texture = (plx_texture_t*) malloc(sizeof(plx_texture_t));
-	
+	plx_screen_txr = (plx_texture_t*) malloc(sizeof(plx_texture_t));
+
 	switch(settings->video.bpp) {
 		case 15:
 			tex_mode = PVR_TXRFMT_ARGB1555;
@@ -456,41 +443,48 @@ int InitVideo(int w, int h, int bpp) {
 			tex_mode = PVR_TXRFMT_RGB565;
 			break;
 	}
-	
-	if(plx_screen_texture != NULL) {
-		plx_screen_texture->ptr = sdl_dc_memtex;
-		plx_screen_texture->w = w;
-		plx_screen_texture->h = h;
-		plx_screen_texture->fmt = tex_mode|PVR_TXRFMT_NONTWIDDLED;//|PVR_TXRFMT_STRIDE;
-		plx_fill_contexts(plx_screen_texture);
-		plx_txr_setfilter(plx_screen_texture, screen_filter);
+
+	if(plx_screen_txr != NULL) {
+		plx_screen_txr->ptr = sdl_dc_memtex;
+		plx_screen_txr->w = w;
+		plx_screen_txr->h = h;
+		plx_screen_txr->fmt = tex_mode | PVR_TXRFMT_NONTWIDDLED;
+		plx_fill_contexts(plx_screen_txr);
+		plx_txr_setfilter(plx_screen_txr, screen_filter);
 	}
-	
-	plx_cxt_init();
+
+	sprintf(fn, "%s/gui/cursors/default.png", getenv("PATH"));
+	plx_cursor_txr = plx_txr_load(fn, 1, PVR_TXRLOAD_16BPP | PVR_TXRLOAD_SQ);
+
 	sprintf(fn, "%s/fonts/txf/axaxax.txf", getenv("PATH"));
 	plx_fnt = plx_font_load(fn);
-	
+
 	if(plx_fnt) {
 		plx_cxt = plx_fcxt_create(plx_fnt, PVR_LIST_TR_POLY);
 		plx_fcxt_setcolor4f(plx_cxt, plx_opacity, 0.9f, 0.9f, 0.9f);
 	} else {
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
 	}
-	
+
 	mutex_init((mutex_t *)&video_mutex, MUTEX_TYPE_NORMAL);
 	return 1; 
 }
 
 
 void ShutdownVideo() { 
-	
+
 	mutex_destroy(&video_mutex);
-	
-	if(plx_screen_texture) {
-		free(plx_screen_texture);
-		plx_screen_texture = NULL;
+
+	if(plx_screen_txr) {
+		free(plx_screen_txr);
+		plx_screen_txr = NULL;
 	}
-	 
+
+	if(plx_cursor_txr) {
+		plx_txr_destroy(plx_screen_txr);
+		plx_screen_txr = NULL;
+	}
+
 	if (plx_cxt) {
 		plx_fcxt_destroy(plx_cxt);
 		plx_cxt = NULL;
@@ -499,14 +493,14 @@ void ShutdownVideo() {
 		plx_font_destroy(plx_fnt);
 		plx_fnt = NULL;
 	}
-		
+
 	SDL_Quit();
 }
 
 
 
 void SDL_DS_SetWindow(int width, int height) {
-	
+
 	LockVideo();
 
 	sdl_dc_width = width;
@@ -516,64 +510,52 @@ void SDL_DS_SetWindow(int width, int height) {
 	sdl_dc_v1 = 0.3f*(1.0f/((float)sdl_dc_wtex));
 	sdl_dc_u2 = (((float)sdl_dc_width)+0.5f)*(1.0f/((float)sdl_dc_wtex));
 	sdl_dc_v2 = (((float)sdl_dc_height)+0.5f)*(1.0f/((float)sdl_dc_htex));
-	
+
 	//plx_mat3d_perspective(45.0f, (float)sdl_dc_width / (float)sdl_dc_height, 0.1f, 100.0f);
-	
-	/*
-	dbg_printf(" sdl_dc_width=%d\n sdl_dc_height=%d\n sdl_dc_wtex=%d\n sdl_dc_htex=%d\n sdl_dc_u1=%f\n sdl_dc_v1=%f\n sdl_dc_u2=%f\n sdl_dc_v2=%f\n", 
-	sdl_dc_width, sdl_dc_height,
-	sdl_dc_wtex, sdl_dc_htex, sdl_dc_u1, sdl_dc_v1, sdl_dc_u2, sdl_dc_v2);
-	*/
 	UnlockVideo();
 }
 
 
 void SDL_DS_Blit_Textured() {
-	
+
+	pvr_list_begin(PVR_LIST_TR_POLY);
+
 	if(!first_fade && screen_opacity < 0.9f && plx_fnt) {
-		
+
 		point_t w;
 		w.x = 255.0f;
 		w.y = 230.0f;
 		w.z = 12.0f;
 
-		pvr_list_begin(PVR_LIST_TR_POLY);
 		plx_fcxt_begin(plx_cxt);
 		plx_fcxt_setpos_pnt(plx_cxt, &w);
-//		plx_fcxt_setcolor4f(plx_cxt, plx_opacity, 0.2f, 0.2f, 0.2f);
 		plx_fcxt_setcolor4f(plx_cxt, plx_opacity, 0.9f, 0.9f, 0.9f);
 		plx_fcxt_draw(plx_cxt, "Loading...");
 		plx_fcxt_end(plx_cxt);
 	}
-	
-	//printf("Draw frame: %d\n", ++frame);
-	
+
 	if (screen_changed) {
-		
 #ifdef DEBUG_VIDEO
-		ds_printf("%s: buftex=%p memtex=%p size=%d\n", __func__, (unsigned)sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+		ds_printf("%s: buftex=%p memtex=%p size=%d\n",
+			__func__, (unsigned)sdl_dc_buftex,
+			sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
 #endif
-		
-		//if(wait_dma_ready() < 0) {
-			//pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+		// if(wait_dma_ready() < 0) {
 			sq_cpy_pvr(sdl_dc_memtex, sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-		//} else {
-//			dcache_flush_range((unsigned)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-//			pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2, -1, NULL, 0);
-		//}
-		
+		// } else {
+		// 	dcache_flush_range((unsigned)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+		// 	pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2, -1, NULL, 0);
+		// }
 		screen_changed = 0;
 	}
-	
-	pvr_list_begin(PVR_LIST_TR_POLY);
 
 	plx_mat3d_identity();
 	plx_mat3d_translate(sdl_dc_trans_x, sdl_dc_trans_y, sdl_dc_trans_z);
 	//plx_mat3d_translate((sdl_dc_wtex/2)+512.0f*sdl_dc_trans_x/native_width,(sdl_dc_htex/2)+512.0f*sdl_dc_trans_y/native_height,sdl_dc_trans_z - 3);
-	
+
 	/* Clear internal to an identity matrix */
 	plx_mat_identity();
-	
+
 	/* "Applying" all matrixs: multiply a matrix onto the "internal" one */
 	plx_mat3d_apply_all();
 
@@ -581,31 +563,45 @@ void SDL_DS_Blit_Textured() {
 	plx_mat3d_rotate(sdl_dc_rot_y, 0.0f, 1.0f, 0.0f);
 	plx_mat3d_rotate(sdl_dc_rot_z, 0.0f, 0.0f, 1.0f);
 	plx_mat3d_translate(0, 0, 0);
-	
-	plx_cxt_texture(plx_screen_texture);
-	//plx_cxt_culling(PLX_CULL_NONE);
+
+	plx_cxt_texture(plx_screen_txr);
+	plx_cxt_culling(PLX_CULL_NONE);
 	plx_cxt_send(PLX_LIST_TR_POLY);
-	
+
 	uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);
-	
+
 	plx_vert_ifpm3(PLX_VERT, sdl_dc_x, sdl_dc_y, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v1);
 	plx_vert_ifpm3(PLX_VERT, sdl_dc_x + native_width, sdl_dc_y, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v1);
 	plx_vert_ifpm3(PLX_VERT, sdl_dc_x, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v2);
 	plx_vert_ifpm3(PLX_VERT_EOS, sdl_dc_x + native_width, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v2);
+
+	plx_cxt_texture(plx_cursor_txr);
+	plx_cxt_culling(PLX_CULL_NONE);
+	plx_cxt_send(PLX_LIST_TR_POLY);
+
+	if (!ConsoleIsVisible()) {
+		int mouse_cursor_x = 0;
+		int mouse_cursor_y = 0;
+
+		SDL_GetMouseState(&mouse_cursor_x, &mouse_cursor_y);
+
+		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x, mouse_cursor_y, 1.0f, color, 0.0f, 0.0f);
+		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y, 1.0f, color, 1.0f, 0.0f);
+		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x, mouse_cursor_y + plx_cursor_txr->w, 1.0f, color, 0.0f, 1.0f);
+		plx_vert_ifpm3(PLX_VERT_EOS, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y + plx_cursor_txr->w, 1.0f, color, 1.0f, 1.0f);
+	}
 }
 
 
 static void *VideoThread(void *ptr) {
 
 	while(video_inited) {
-
-
 		/*
 		plx_mat3d_identity();
 		plx_mat_identity();
 		plx_mat3d_apply_all();
 		*/
-		
+
 		pvr_wait_ready();
 		pvr_scene_begin();
 
@@ -651,10 +647,10 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 		SDL_DS_FreeScreenTexture(0);
 		SDL_DS_AllocScreenTexture(DScreen);
 
-		if(plx_screen_texture != NULL) {
-			plx_screen_texture->h = sdl_dc_htex;
-			plx_screen_texture->ptr = sdl_dc_memtex;
-			plx_fill_contexts(plx_screen_texture);
+		if(plx_screen_txr != NULL) {
+			plx_screen_txr->h = sdl_dc_htex;
+			plx_screen_txr->ptr = sdl_dc_memtex;
+			plx_fill_contexts(plx_screen_txr);
 		}
 		
 	} else {
@@ -666,10 +662,10 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 			SDL_DS_FreeScreenTexture(0);
 			SDL_DS_AllocScreenTexture(DScreen);
 
-			if(plx_screen_texture != NULL) {
-				plx_screen_texture->h = sdl_dc_htex;
-				plx_screen_texture->ptr = sdl_dc_memtex;
-				plx_fill_contexts(plx_screen_texture);
+			if(plx_screen_txr != NULL) {
+				plx_screen_txr->h = sdl_dc_htex;
+				plx_screen_txr->ptr = sdl_dc_memtex;
+				plx_fill_contexts(plx_screen_txr);
 			}
 		}
 	}
@@ -864,13 +860,12 @@ int gzip_kmg_to_img(const char * fn, kos_img_t * rv) {
 }
 
 
-
 void ShowLogo() {
 
 	kos_img_t img;
 	float opacity = 0.0f;
-	float w = native_width; //(float)DScreen->w;
-	float h = native_height; //(float)DScreen->h;
+	float w = native_width;
+	float h = native_height;
 	float u1, v1, u2, v2;
 
 	pvr_poly_cxt_t cxt;
@@ -961,8 +956,8 @@ void ShowLogo() {
 void HideLogo() {
 
 	float opacity = 1.0f;
-	float w = native_width;//(float)DScreen->w;
-	float h = native_height;//(float)DScreen->h;
+	float w = native_width;
+	float h = native_height;
 	float u1 = 0.3f * (1.0f / ((float)logo_w));
 	float v1 = 0.3f * (1.0f / ((float)logo_w));
 	float u2 = (w + 0.5f) * (1.0f / ((float)logo_w));

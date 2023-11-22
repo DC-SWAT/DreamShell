@@ -368,8 +368,6 @@ int OpenApp(App_t *app, const char *args) {
 			//LockVideo();
 			GUI_ScreenSetContents(GUI_GetScreen(), app->body);
 			//GUI_ScreenDoUpdate(GUI_GetScreen(), 1);
-			UpdateActiveMouseCursor();
-			//DrawActiveMouseCursor();
 			//UnlockVideo();
 		}
 

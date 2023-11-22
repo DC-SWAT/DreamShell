@@ -240,7 +240,6 @@ static void highliteDevice() {
 		
 		GUI_ButtonSetNormalImage(self.btn_dev[dev], self.btn_dev_over[dev]);
 		self.current_dev = dev;
-		UpdateActiveMouseCursor();
 	}
 }
 

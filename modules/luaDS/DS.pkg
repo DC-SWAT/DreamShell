@@ -287,8 +287,6 @@ void ShutdownVideoThread();
 void ShowLogo();
 void HideLogo();
 
-void UpdateActiveMouseCursor();
-
 
 /* Ends C function definitions when using C++ */
 
