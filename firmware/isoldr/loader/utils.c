@@ -6,6 +6,7 @@
 
 #include <main.h>
 #include <limits.h>
+#include <arch/cache.h>
 #include <dc/sq.h>
 #include <dcload.h>
 #include <asic.h>
@@ -24,6 +25,8 @@ int exception_inside_int(void) {
 #endif
 
 void setup_machine(void) {
+
+	irq_disable();
 
 	const uint32 val = 0xffffffff;
 	uint32 addr = 0xffd80000;
@@ -46,25 +49,22 @@ void setup_machine(void) {
 	*((vuint32 *) 0xa05f6910) = 0;
 	*((vuint32 *) 0xa05f6914) = 0;
 	*((vuint32 *) 0xa05f6918) = 0;
-
 	*((vuint32 *) 0xa05f6920) = 0;
 	*((vuint32 *) 0xa05f6924) = 0;
 	*((vuint32 *) 0xa05f6928) = 0;
-
 	*((vuint32 *) 0xa05f6930) = 0;
 	*((vuint32 *) 0xa05f6934) = 0;
 	*((vuint32 *) 0xa05f6938) = 0;
-
 	*((vuint32 *) 0xa05f6940) = 0;
 	*((vuint32 *) 0xa05f6944) = 0;
-
 	*((vuint32 *) 0xa05f6950) = 0;
 	*((vuint32 *) 0xa05f6954) = 0;
 
 	addr = *((vuint8 *)0xa05f709c);
 	addr++; // Prevent gcc optimization on register reading.
 
-	*((vuint32 *) 0xA05F6900) = 0x4038;
+	*((vuint32 *) 0xa05f6900) = val;
+	*((vuint32 *) 0xa05f6908) = val;
 
 	*((vuint32 *)0xa05f6904) = 0xf;
 	*((vuint32 *)0xa05f6908) = 0x9fffff;
@@ -78,6 +78,8 @@ void shutdown_machine(void) {
 		0xa05f7814, 0xa05f7834, 0xa05f7854, 0xa05f7874, 
 		0xa05f7c14, 0xffa0001c, 0xffa0002c, 0xffa0003c
 	};
+
+	irq_disable();
 
 	*(vuint32 *)(0xff000010) = 0;
 	*(vuint32 *)(0xff00001c) = 0x929;
@@ -152,17 +154,18 @@ static void set_region() {
 		{"00110"},
 		{"00211"}
 	};
-	uint8 *src = (uint8 *)0xa021a000;
-	uint8 *dst = (uint8 *)0x8c000070;
-	uint8 *reg = (uint8 *)0x8c000020;
+	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_REGION_ADDR);
+	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
+	uint8 *reg = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_ADDR + 0x20);
+	uint32 ipbin_reg = NONCACHED_ADDR(IP_BIN_REGION_ADDR);
 
-	if (*((uint32 *)0xac008030) == 0x2045554a) {
+	if (*(uint32 *)(ipbin_reg) == 0x2045554a) {
 		*reg = 0;
 		memcpy(dst, src, 5);
-	} else if(*((char *)0x8c008032) == 'E') {
+	} else if(*((char *)(ipbin_reg + 2)) == 'E') {
 		*reg = 3;
 		memcpy(dst, region_str[2], 5);
-	} else if(*((char *)0x8c008031) == 'U') {
+	} else if(*((char *)(ipbin_reg + 1)) == 'U') {
 		*reg = 2;
 		memcpy(dst, region_str[1], 5);
 	} else {
@@ -173,7 +176,7 @@ static void set_region() {
 
 uint Load_IPBin(int header_only) {
 
-	uint32 ipbin_addr = NONCACHED_ADDR(IPBIN_ADDR);
+	uint32 ipbin_addr = NONCACHED_ADDR(IP_BIN_ADDR);
 	uint32 lba = IsoInfo->track_lba[0];
 	uint32 cnt = 16;
 	uint8 *buff = (uint8*)ipbin_addr;
@@ -188,10 +191,10 @@ uint Load_IPBin(int header_only) {
 
 	if(ReadSectors(buff, lba, cnt, NULL) == COMPLETED) {
 		if(IsoInfo->boot_mode != BOOT_MODE_IPBIN_TRUNC && header_only == 0) {
-			*((uint32 *)ipbin_addr + 0x032c) = 0x8c00e000;
+			*((uint32 *)ipbin_addr + 0x032c) = CACHED_ADDR(IP_BIN_BOOTSTRAP_2_ADDR);
 			*((uint16 *)ipbin_addr + 0x10d8) = 0x5113;
 			*((uint16 *)ipbin_addr + 0x140a) = 0x000b;
-			*((uint16 *)ipbin_addr + 0x140c) = 0x0009;
+			*((uint16 *)ipbin_addr + 0x140c) = SH4_OPCODE_NOP;
 			set_region();
 		} else if(header_only) {
 			set_region();
@@ -212,23 +215,34 @@ static int get_ds_fd() {
 }
 
 int Load_DS() {
+	int fd;
+	size_t sz;
+	uint8 *dst = (uint8 *)CACHED_ADDR(APP_BIN_ADDR);
+	uint16 *bios_app = (uint16 *)NONCACHED_ADDR(BIOS_ROM_APP_BIN_ADDR);
+
 	LOGFF(NULL);
 
-	if (iso_fd > FILEHND_INVALID) {
-		close(iso_fd);
-	}
+	/* Check for bootloader in BIOS ROM */
+	if (*bios_app != SH4_OPCODE_NOP) {
+		sz = (BIOS_ROM_FONT_ADDR - BIOS_ROM_APP_BIN_ADDR);
+		rom_memcpy(dst, bios_app, sz);
+	} else {
+		if (iso_fd > FILEHND_INVALID) {
+			close(iso_fd);
+		}
 
-	int fd = get_ds_fd();
+		fd = get_ds_fd();
 
-	if (fd < 0) {
-		LOGFF("FAILED\n");
-		return -1;
+		if (fd < 0) {
+			LOGFF("FAILED\n");
+			return -1;
+		}
+		sz = read(fd, dst, total(fd));
+		close(fd);
 	}
 	restore_syscalls();
-
-	int rs = read(fd, (uint8 *)NONCACHED_ADDR(APP_ADDR), total(fd));
-	close(fd);
-	return rs;
+	icache_flush_range(CACHED_ADDR(APP_BIN_ADDR), sz);
+	return sz;
 }
 
 #ifdef HAVE_EXT_SYSCALLS

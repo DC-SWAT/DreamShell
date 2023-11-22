@@ -121,8 +121,8 @@ int main(int argc, char *argv[]) {
 
 #ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT
-		|| (loader_end < IPBIN_ADDR && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq))
-		|| (loader_addr > APP_ADDR)
+		|| (loader_end < CACHED_ADDR(IP_BIN_ADDR) && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq))
+		|| (loader_addr > CACHED_ADDR(APP_BIN_ADDR))
 	) {
 		printf("Loading IP.BIN...\n");
 
@@ -172,22 +172,22 @@ int main(int argc, char *argv[]) {
 #ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
-		launch(NONCACHED_ADDR(IsoInfo->exec.addr));
+		launch(IsoInfo->exec.addr);
 	} else {
 		printf("Executing from IP.BIN...\n");
-		launch(0xac00e000);
+		launch(IP_BIN_BOOTSTRAP_2_ADDR);
 	}
 
 error:
 	printf("Failed!\n");
 	timer_spin_sleep_bios(3000);
 	Load_DS();
-	launch(NONCACHED_ADDR(IsoInfo->exec.addr));
+	launch(IsoInfo->exec.addr);
 	*(vuint32 *)0xA05F6890 = 0x7611;
 
 #else
 	printf("Executing...\n");
-	launch(NONCACHED_ADDR(IsoInfo->exec.addr));
+	launch(IsoInfo->exec.addr);
 error:
 	printf("Failed!\n");
 	*(vuint32 *)0xA05F6890 = 0x7611;

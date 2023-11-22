@@ -91,28 +91,28 @@ static void *internal_malloc_base = NULL;
 static void *internal_malloc_pos = NULL;
 
 static void internal_malloc_init_auto() {
-    if (loader_addr < APP_ADDR && IsoInfo->exec.type != BIN_TYPE_WINCE) {
+    if (loader_addr < CACHED_ADDR(APP_BIN_ADDR) && IsoInfo->exec.type != BIN_TYPE_WINCE) {
 
         if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda)
             || (IsoInfo->emu_cdda && IsoInfo->use_irq == 0)
             || IsoInfo->boot_mode != BOOT_MODE_DIRECT
-            || (loader_end > (IPBIN_ADDR + 0x2000)
+            || (loader_end > (CACHED_ADDR(IP_BIN_ADDR) + 0x2000)
                 && (IsoInfo->emu_cdda || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO))
         ) {
             internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
-        } else if (loader_end < IPBIN_ADDR
+        } else if (loader_end < CACHED_ADDR(IP_BIN_ADDR)
             && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq)
         ) {
-            internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
+            internal_malloc_base = (void *)CACHED_ADDR(IP_BIN_ADDR) + 0x800;
         }
-    } else if (loader_addr > APP_ADDR) {
+    } else if (loader_addr > CACHED_ADDR(APP_BIN_ADDR)) {
 
         internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_MIN + 0x1000;
 
     } else if (IsoInfo->exec.type == BIN_TYPE_WINCE) {
 
-        if (loader_end < IPBIN_ADDR) {
-            internal_malloc_base = (void *)IPBIN_ADDR + 0x800;
+        if (loader_end < CACHED_ADDR(IP_BIN_ADDR)) {
+            internal_malloc_base = (void *)CACHED_ADDR(IP_BIN_ADDR) + 0x800;
         }
     }
 }
@@ -190,8 +190,8 @@ static void internal_malloc_stat(uint32 *free_size, uint32 *max_free_size) {
 
     } else {
 
-        *free_size = RAM_END_ADDR - (uint32)internal_malloc_pos;
-        *max_free_size = RAM_END_ADDR - (uint32)internal_malloc_base;
+        *free_size = CACHED_ADDR(RAM_END_ADDR) - (uint32)internal_malloc_pos;
+        *max_free_size = CACHED_ADDR(RAM_END_ADDR) - (uint32)internal_malloc_base;
     }
 }
 

@@ -123,7 +123,6 @@ int exception_init(uint32 vbr_addr) {
 //	);
 
 	/* Flush cache after modifying application memory. */
-	dcache_flush_range((uint32)vbr_buffer, 0xC08);
 	icache_flush_range((uint32)vbr_buffer, 0xC08);
 
 	inited = 1;

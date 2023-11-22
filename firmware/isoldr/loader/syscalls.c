@@ -1341,13 +1341,13 @@ void gdcDummy(int gd_chn, int *arg2) {
 void menu_exit(void) {
 	LOGFF(NULL);
 
-	shutdown_machine();
 	fs_enable_dma(FS_DMA_DISABLED);
+	shutdown_machine();
 
 	if (Load_DS() > 0) {
-		launch(NONCACHED_ADDR(APP_ADDR));
+		launch(APP_BIN_ADDR);
 	} else {
-		launch(0xa0000000);
+		launch(BIOS_ROM_ADDR);
 	}
 }
 
@@ -1394,7 +1394,7 @@ int flashrom_info(int part, uint32 *info) {
 }
 
 
-static void safe_memcpy(void* dst, const void* src, size_t cnt) {
+void rom_memcpy(void* dst, const void* src, size_t cnt) {
 
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	do {} while(pre_read_xfer_busy());
@@ -1408,14 +1408,13 @@ static void safe_memcpy(void* dst, const void* src, size_t cnt) {
 	}
 }
 
-
 int flashrom_read(int offset, void *buffer, int bytes) {
 
 	DBGFF("0x%08lx 0x%08lx %d\n", offset, (uint32)buffer, bytes);
 
-	uint8 *src = (uint8 *)(0xa0200000 + offset);
+	uint8 *src = (uint8 *)(NONCACHED_ADDR(FLASH_ROM_ADDR) + offset);
 
-	safe_memcpy(buffer, src, bytes);
+	rom_memcpy(buffer, src, bytes);
 	return 0;
 }
 
@@ -1453,13 +1452,14 @@ int sys_unknown(void) {
 
 int sys_icon(int icon, uint8 *dest) {
 	LOGFF("%d 0x%08lx\n", icon, dest);
-	safe_memcpy(dest, (uint8 *)(0xa021a480 + (icon * 704)), 704);
+	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_ICON_ADDR + (icon * 704));
+	rom_memcpy(dest, src, 704);
 	return 704;
 }
 
 uint8 *sys_id(void) {
 	LOGFF(NULL);
-	return (uint8 *)0x8c000068;
+	return (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
 }
 
 void enable_syscalls(int all) {
@@ -1509,7 +1509,11 @@ void restore_syscalls(void) {
 	} else if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
 			(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW))
 	{
-		// FIXME: Restore syscalls from BIOS
+		size_t size = (SYSCALLS_RESERVED_ADDR - SYSCALLS_INFO_ADDR);
+		uint8 *src = (uint8 *)CACHED_ADDR(BIOS_ROM_SYSCALLS_ADDR);
+		uint8 *dst = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_ADDR);
+		rom_memcpy(dst, src, size);
+		icache_flush_range(CACHED_ADDR(SYSCALLS_INFO_ADDR), size);
 	}
 }
 
@@ -1519,17 +1523,16 @@ void gdc_syscall_patch(void) {
 	size_t size = bios_patch_end - bios_patch_base;
 	uint32 second_offset = 0xf0;
 
-	if(loader_addr > (GDC_SYS_ADDR + second_offset + size)) {
+	if(loader_addr > (CACHED_ADDR(SYSCALLS_FW_GDC_ADDR) + second_offset + size)) {
 
 		bios_patch_handler = gdc_redir;
 
-		memcpy((uint32 *) GDC_SYS_ADDR, bios_patch_base, size);
-		memcpy((uint32 *) (GDC_SYS_ADDR + second_offset), bios_patch_base, size);
+		memcpy((uint32 *) CACHED_ADDR(SYSCALLS_FW_GDC_ADDR), bios_patch_base, size);
+		memcpy((uint32 *) (CACHED_ADDR(SYSCALLS_FW_GDC_ADDR) + second_offset), bios_patch_base, size);
 
 		size += second_offset;
-		icache_flush_range(GDC_SYS_ADDR, size);
-		dcache_flush_range(GDC_SYS_ADDR, size);
+		icache_flush_range(CACHED_ADDR(SYSCALLS_FW_GDC_ADDR), size);
 	} else {
-		patch_memory(0x8c0010f0, (uint32)gdc_redir);
+		patch_memory(CACHED_ADDR(SYSCALLS_FW_GDC_ENTRY_ADDR), (uint32)gdc_redir);
 	}
 }

@@ -102,6 +102,7 @@
 #define CD_STATUS_NODISC   0x07
 #define CD_STATUS_RETRY    0x08
 #define CD_STATUS_ERROR    0x09
+#define CD_STATUS_FATAL    0x0c
 /** @} */
 
 /* Values for CMD_GETSCD command */

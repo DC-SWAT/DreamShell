@@ -62,7 +62,8 @@ static const uint8 logs[] = {
 #define AICA_CDDA_CH_RIGHT (AICA_CHANNELS_COUNT - 1)
 
 /* AICA memory end for PCM buffer */
-#define AICA_MEMORY_END 0x00A00000
+#define AICA_MEMORY_START 0x00800000
+#define AICA_MEMORY_END 0x00a00000
 #define AICA_MEMORY_END_ARM 0x00200000
 
 #define aica_dma_in_progress() AICA_DMA_ADST
@@ -234,7 +235,7 @@ static void setup_pcm_buffer() {
 				cdda->size = 0x4000;
 				cdda->end_tm = 36176 / cdda->chn;
 #ifdef LOG
-				if (malloc_heap_pos() < APP_ADDR) {
+				if (malloc_heap_pos() < CACHED_ADDR(APP_BIN_ADDR)) {
 					// Need some memory for logging in some cases
 					cdda->size >>= 1;
 					cdda->end_tm >>= 1;
@@ -591,7 +592,7 @@ static void aica_init(void) {
 
 	g2_fifo_wait();
 	SNDREG32(0x2800) = 0x000f;
-	*((vuint32*)SPU_RAM_BASE) = 0xeafffff8;
+	*(vuint32 *)NONCACHED_ADDR(AICA_MEMORY_START) = 0xeafffff8;
 
 	g2_fifo_wait();
 	SNDREG32(0x2c00) = SNDREG32(0x2c00) & ~1;
@@ -601,7 +602,7 @@ static void aica_init(void) {
 
 static void aica_dma_init(void) {
 
-	uint32 main_addr = ((uint32)cdda->buff[0]) & 0x0FFFFFFF;
+	uint32 main_addr = PHYS_ADDR((uint32)cdda->buff[0]);
 	uint32 sound_addr = AICA_MEMORY_END - cdda->size;
 
 	AICA_DMA_G2APRO = 0x4659007F;    // Protection code

@@ -94,7 +94,7 @@
 /**
  * AICA macros
  */
-#define SPU_RAM_BASE      0xA0800000
+// #define SPU_RAM_BASE      0xA0800000
 #define SNDREGADDR(x)     (0xA0700000 + (x))
 #define CHNREGADDR(ch, x) SNDREGADDR(0x80 * (ch) + (x))
 #define SNDREG32(x)       (*(vuint32 *)SNDREGADDR(x))

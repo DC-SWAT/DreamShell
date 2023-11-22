@@ -318,7 +318,7 @@ int pread(int fd, void *buf, unsigned int nbyte, unsigned int offset) {
 			t += r;
 	} else {
 
-		if (!((uint32)buf & PHYS_ADDR(RAM_START_ADDR)) && mmu_enabled()) {
+		if (!((uint32)buf & RAM_START_ADDR) && mmu_enabled()) {
 
 			if((r = cdrom_read_sectors_part(buf, fh[fd].sec0+(offset>>11), offset, nbyte, 0))) {
 				return r;
