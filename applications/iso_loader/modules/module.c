@@ -69,6 +69,7 @@ static struct {
 	GUI_Widget *vmu_number;
 	GUI_Widget *vmu_create;
 	GUI_Widget *screenshot;
+	GUI_Widget *alt_boot;
 
 	GUI_Widget *device;
 	GUI_Widget *os_chk[4];
@@ -1150,6 +1151,10 @@ void isoLoader_Run(GUI_Widget *widget) {
 		self.isoldr->scr_hotkey = SCREENSHOT_HOTKEY;
 	}
 
+	if(GUI_WidgetGetState(self.alt_boot)) {
+		isoldr_set_boot_file(self.isoldr, filepath, "2ST_READ.BIN");
+	}
+
 	isoldr_exec(self.isoldr, addr);
 
 	/* If we there, then something wrong... */
@@ -1694,6 +1699,7 @@ void isoLoader_Init(App_t *app) {
 		self.vmu_number    = APP_GET_WIDGET("vmu-number");
 		self.vmu_create    = APP_GET_WIDGET("vmu-create-checkbox");
 		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
+		self.alt_boot      = APP_GET_WIDGET("alt-boot-checkbox");
 		
 		self.options_panel	  = APP_GET_WIDGET("options-panel");
 		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
