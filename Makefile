@@ -164,6 +164,16 @@ build: $(TARGET)
 	cd $(DS_BASE)/firmware/bootloader && make && make install
 #   cd $(DS_BASE)/firmware/aica && make && make install
 
+clean-all: clean
+	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
+	@-rm -rf $(DS_BASE)/release
+	cd $(DS_BASE)/lib && make clean
+	cd $(DS_BASE)/modules && make clean
+	cd $(DS_BASE)/commands && make clean
+	cd $(DS_BASE)/applications && make clean
+	cd $(DS_BASE)/firmware/isoldr && make clean
+	cd $(DS_BASE)/firmware/bootloader && make clean
+
 release: build cdi
 	@echo Creating a full release...
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
@@ -249,6 +259,9 @@ lxdgdb: $(TARGET).cdi
 	lxdream -g 2000 -n $(TARGET).cdi &
 	sleep 2
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"
+
+flycast: $(TARGET).cdi
+	Flycast -config config:Debug.SerialConsoleEnabled=yes
 
 gprof:
 	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/kernel_gmon.out > gprof.out
