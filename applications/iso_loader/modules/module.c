@@ -804,6 +804,14 @@ void isoLoader_toggleCDDA_Source(GUI_Widget *widget) {
 		isoLoader_toggleCDDA(self.cdda_mode[CDDA_MODE_EXTENDED]);
 	}
 
+	int dev = getDeviceType(GUI_FileManagerGetPath(self.filebrowser));
+
+	if(dev == APP_DEVICE_SD) {
+		GUI_WidgetSetState(self.cdda_mode_src[0], 1);
+		GUI_WidgetSetState(self.cdda_mode_src[1], 0);
+		return;
+	}
+
 	for(int i = 0; i < sizeof(self.cdda_mode_src) >> 2; i++) {
 		if(widget != self.cdda_mode_src[i]) {
 			GUI_WidgetSetState(self.cdda_mode_src[i], 0);
@@ -902,7 +910,9 @@ uint32 getExtModeCDDA() {
 }
 
 void setExtModeCDDA(uint32 mode) {
-	isoLoader_toggleCDDA(self.cdda_mode[CDDA_MODE_EXTENDED]);
+	if (!GUI_WidgetGetState(self.cdda_mode[CDDA_MODE_EXTENDED])) {
+		isoLoader_toggleCDDA(self.cdda_mode[CDDA_MODE_EXTENDED]);
+	}
 
 	if (mode & CDDA_MODE_SRC_PIO) {
 		isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
@@ -917,15 +927,15 @@ void setExtModeCDDA(uint32 mode) {
 	}
 
 	if (mode & CDDA_MODE_POS_TMU1) {
-		isoLoader_toggleCDDA_Dest(self.cdda_mode_pos[0]);
+		isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
 	} else {
-		isoLoader_toggleCDDA_Dest(self.cdda_mode_pos[1]);
+		isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 	}
 
 	if (mode & CDDA_MODE_CH_FIXED) {
-		isoLoader_toggleCDDA_Dest(self.cdda_mode_ch[0]);
+		isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
 	} else {
-		isoLoader_toggleCDDA_Dest(self.cdda_mode_ch[1]);
+		isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 	}
 }
 
@@ -1486,11 +1496,11 @@ int isoLoader_LoadPreset() {
 		return -1;
 	}
 
-	int use_dma = 0, emu_async = 16, emu_cdda = 0, use_irq = 0;
+	int use_dma = 0, emu_async = 16, use_irq = 0;
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
-	uint32 heap = HEAP_MODE_AUTO;
+	uint32 heap = HEAP_MODE_AUTO, emu_cdda = 0;
 	char title[32] = "";
 	char device[8] = "";
 	char memory[12] = "0x8c000100";
@@ -1504,7 +1514,7 @@ int isoLoader_LoadPreset() {
 
 	isoldr_conf options[] = {
 		{ "dma",      CONF_INT,   (void *) &use_dma    },
-		{ "cdda",     CONF_INT,   (void *) &emu_cdda   },
+		{ "cdda",     CONF_ULONG, (void *) &emu_cdda   },
 		{ "irq",      CONF_INT,   (void *) &use_irq    },
 		{ "low",      CONF_INT,   (void *) &low        },
 		{ "vmu",      CONF_INT,   (void *) &emu_vmu    },
@@ -1548,7 +1558,7 @@ int isoLoader_LoadPreset() {
 	}
 
 	GUI_WidgetSetState(self.cdda, emu_cdda ? 1 : 0);
-	if (emu_cdda >= CDDA_MODE_EXTENDED) {
+	if (emu_cdda & CDDA_MODE_EXTENDED) {
 		setExtModeCDDA(emu_cdda);
 	} else {
 		isoLoader_toggleCDDA(self.cdda_mode[emu_cdda]);
@@ -1578,7 +1588,7 @@ int isoLoader_LoadPreset() {
 			name = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 			len = strlen(name);
 
-			if (!strncmp(name, heap_memory, sizeof(heap_memory)) || len < 8) {
+			if (len < 8 || strncmp(name + 2, heap_memory, sizeof(heap_memory)) == 0) {
 				GUI_WidgetSetState(self.heap[i], 1);
 				isoLoader_toggleHeap(self.heap[i]);
 				if (len < 8) {

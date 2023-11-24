@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    utils.c - ISO Loader app utils
-   Copyright (C) 2022 SWAT
+   Copyright (C) 2022-2023 SWAT
 
 */
 
@@ -122,6 +122,9 @@ int conf_parse(isoldr_conf *cfg, const char *filename)
 				case CONF_STR:
 					strcpy((char *)cfg[i].pointer, trim_spaces2(value));
 					break;
+
+				case CONF_ULONG:
+					*(uint32 *)cfg[i].pointer = strtoul(value, NULL, 16);
 			}
 			break;
 		}

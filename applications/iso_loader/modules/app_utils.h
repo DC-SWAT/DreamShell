@@ -17,7 +17,8 @@ enum {
 enum {
 	CONF_END = 0,
 	CONF_INT = 1,
-	CONF_STR
+	CONF_STR,
+	CONF_ULONG,
 };
 
 typedef struct {
