@@ -150,10 +150,6 @@
 #   include <strings.h>
 #endif
 
-#ifndef HAVE_STRCASECMP
-#   define strcasecmp _stricmp
-#endif
-
 enum
 {
     INI_NEW_LINE      = 1,
