@@ -16,7 +16,6 @@
 
 .section .text
 .globl _pcm16_split
-.globl _pcm16_split_sq
 .globl _adpcm_split
 
 .globl _lock_cdda
@@ -74,58 +73,7 @@ _pcm16_split:
 	bra .pcm16_loops
 	mov #0, r0
 
-!
-! void pcm16_split_sq(int16 all, int16 *left, int16 *right, uint32 size);
-!
-.align 2
-_pcm16_split_sq:
-	mov #-5, r3
-	shld r3, r7
-	mov.l r8, @-r15
-	mov.l r11, @-r15
-	mov.l r12, @-r15
-	mov r4, r8
-	add #32, r8
-	mov #31, r3
-	mov #0, r0
-.pcm16_sq_pref:
-	pref @r8
-.pcm16_sq_load:
-	mov.l @r4+, r1
-	mov.l @r4+, r2
-	swap.w r1, r11
-	mov r2, r12
-	xtrct r11, r12
-	swap.w r2, r11
-	xtrct r1, r11
-	mov.l r11, @(r0,r5)
-	mov.l r12, @(r0,r6)
-	tst r3, r4
-	bf/s .pcm16_sq_load
-	add #4, r0
-	tst r3, r0
-	bf .pcm16_sq_count
-.pcm16_sq_flush:
-	mov r5, r1
-	add r0, r1
-	add #-32, r1
-	pref @r1
-	mov r6, r2
-	add r0, r2
-	add #-32, r2
-	pref @r2
-.pcm16_sq_count:
-	dt r7
-	bf/s .pcm16_sq_pref
-	add #32, r8
-.pcm16_sq_exit:
-	mov.l @r15+, r12
-	mov.l @r15+, r11
-	mov.l @r15+, r8
-	rts
-	nop
-
-#ifdef DEV_TYPE_SD
+#ifdef HAVE_CDDA_ADPCM
 !
 ! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 !

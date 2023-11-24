@@ -50,11 +50,9 @@ typedef struct cdda_ctx {
 	uint32 trans_method;   /* Transfer method to AICA memory */
 
 	/* Format info */
-	uint16 wav_format;
+	uint32 aica_freq;
 	uint16 aica_format;
-	uint16 chn;
 	uint16 bitsize;
-	uint32 freq;
 
 	/* End pos for channel */
 	uint32 end_pos;
@@ -62,7 +60,6 @@ typedef struct cdda_ctx {
 
 	/* Check status value for normalize playback */
 	uint32 check_status;
-	uint32 check_freq;
 	uint32 restore_count;
 
 	/* AICA channels index */
@@ -96,9 +93,8 @@ typedef struct cdda_ctx {
 
 } cdda_ctx_t;
 
-/* PCM stereo splitters, optimized for SH4 */
+/* PCM and ADPCM stereo splitters, optimized for SH4 */
 void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
-void pcm16_split_sq(uint32 all, uint32 left, uint32 right, uint32 size);
 void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
 
 int lock_cdda(void);

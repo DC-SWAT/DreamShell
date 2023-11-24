@@ -17,32 +17,7 @@
 #include <dc/sq.h>
 #include <dc/fifo.h>
 
-/*
-static const uint8 logs[] = {
-	0, 15, 22, 27, 31, 35, 39, 42, 45, 47, 50, 52, 55, 57, 59, 61,
-	63, 65, 67, 69, 71, 73, 74, 76, 78, 79, 81, 82, 84, 85, 87, 88,
-	90, 91, 92, 94, 95, 96, 98, 99, 100, 102, 103, 104, 105, 106,
-	108, 109, 110, 111, 112, 113, 114, 116, 117, 118, 119, 120, 121,
-	122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134,
-	135, 136, 137, 138, 138, 139, 140, 141, 142, 143, 144, 145, 146,
-	146, 147, 148, 149, 150, 151, 152, 152, 153, 154, 155, 156, 156,
-	157, 158, 159, 160, 160, 161, 162, 163, 164, 164, 165, 166, 167,
-	167, 168, 169, 170, 170, 171, 172, 173, 173, 174, 175, 176, 176,
-	177, 178, 178, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185,
-	186, 187, 187, 188, 189, 189, 190, 191, 191, 192, 193, 193, 194,
-	195, 195, 196, 197, 197, 198, 199, 199, 200, 200, 201, 202, 202,
-	203, 204, 204, 205, 205, 206, 207, 207, 208, 209, 209, 210, 210,
-	211, 212, 212, 213, 213, 214, 215, 215, 216, 216, 217, 217, 218,
-	219, 219, 220, 220, 221, 221, 222, 223, 223, 224, 224, 225, 225,
-	226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 232, 232, 233,
-	233, 234, 234, 235, 235, 236, 236, 237, 237, 238, 239, 239, 240,
-	240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 246, 246,
-	247, 247, 248, 248, 249, 249, 250, 250, 251, 251, 252, 252, 253, 254, 255
-};
-*/
-
 #define AICA_PAN(x) ((x) == 0x80 ? (0) : ((x) < 0x80 ? (0x1f) : (0x0f)))
-//#define AICA_VOL(x) (0xff - logs[128 + (((x) & 0xff) / 2)])
 
 /* AICA sample formats */
 #define AICA_SM_16BIT    0 /* Linear PCM 16-bit */
@@ -150,18 +125,19 @@ static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 	AICA_DMA_ADST   = 1;               // Start wave DMA
 }
 
-#ifdef DEV_TYPE_SD
+#ifdef HAVE_CDDA_ADPCM
 static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 	uint32 *d = (uint32 *)(void *)(0xe0000000 | (dest & 0x03ffffe0));
 	uint32 *s = (uint32 *)data;
 	size >>= 5;
 
+	dcache_pref_block(s);
 	g2_lock();
 
 	/* Set store queue memory area as desired */
-	QACR0 = (dest >> 24) & 0x1c;
-	QACR1 = (dest >> 24) & 0x1c;
+	QACR0 = 0; /* (dest >> 24) & 0x1c; */
+	QACR1 = 0; /* (dest >> 24) & 0x1c; */
 
 	/* fill/write queues as many times necessary */
 	while(size--) {
@@ -197,7 +173,7 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 		aica_dma_transfer(data, dest, size);
 		irq_restore(old);
 	} 
-#ifdef DEV_TYPE_SD
+#ifdef HAVE_CDDA_ADPCM
 	else {
 		aica_sq_transfer(data, dest, size);
 	}
@@ -208,14 +184,15 @@ static void setup_pcm_buffer() {
 
 	/* 
 	 * SH4 timer counter value for polling playback position.
-	 * Base timer value for PCM 16 bit 44100 Hz and 32KB buffer.
+	 * Base timer value for one channel of 16-bit PCM at 44100 Hz
+	 * and 16 KB of AICA memory.
 	 */
-	cdda->end_tm = 72374 / cdda->chn;
+	cdda->end_tm = 36187;
 	size_t old_size = cdda->size;
 	cdda->size = 0x8000;
 
 	switch(cdda->bitsize) {
-#ifdef DEV_TYPE_SD
+#ifdef HAVE_CDDA_ADPCM
 		case 4:
 			cdda->size >>= 1;
 			cdda->end_tm <<= 1;  /* 4-bit decoded to 16-bit */
@@ -273,9 +250,9 @@ static void setup_pcm_buffer() {
 
 	/* Setup end position for sound buffer */
 	if(cdda->aica_format == AICA_SM_ADPCM_LS) {
-		cdda->end_pos = cdda->size - 1; /* (((cdda->size / cdda->chn) * 2) - 1; */
+		cdda->end_pos = cdda->size - 1; /* (((cdda->size >> 1) * 2) - 1; */
 	} else {
-		cdda->end_pos = ((cdda->size / cdda->chn) / (cdda->bitsize >> 3)) - 1;
+		cdda->end_pos = ((cdda->size >> 1) / (cdda->bitsize >> 3)) - 1;
 	}
 
 	LOGFF("0x%08lx 0x%08lx %d\n",
@@ -289,12 +266,10 @@ static void aica_set_volume(int volume) {
 
 	g2_lock();
 
-	val = 0x24 | (volume << 8); //(AICA_VOL(vol) << 8);
+	val = 0x24 | (volume << 8);
 	CHNREG32(cdda->left_channel,  40) = val;
-
-//	val = 0x24 | (right_chn << 8); //(AICA_VOL(right_chn) << 8);
 	CHNREG32(cdda->right_channel, 40) = val;
-	CHNREG32(cdda->left_channel, 36) = AICA_PAN(0)   | (0xf << 8);
+	CHNREG32(cdda->left_channel, 36) = AICA_PAN(0) | (0xf << 8);
 	CHNREG32(cdda->right_channel, 36) = AICA_PAN(255) | (0xf << 8);
 
 	g2_unlock();
@@ -340,21 +315,9 @@ static void aica_stop_clean_cdda() {
 
 static void aica_setup_cdda(int clean) {
 
-	int freq_hi = 7;
-	uint32 val, freq_lo, freq_base = 5644800;
+	uint32 val;
 	const uint32 smp_ptr = AICA_MEMORY_END_ARM - cdda->size;
-	const int smp_size = cdda->size / cdda->chn;
-
-	/* Need to convert frequency to floating point format
-	   (freq_hi is exponent, freq_lo is mantissa)
-	   Formula is freq = 44100*2^freq_hi*(1+freq_lo/1024) */
-	while (cdda->freq < freq_base && freq_hi > -8) {
-		freq_base >>= 1;
-		--freq_hi;
-	}
-
-	freq_lo = (cdda->freq << 10) / freq_base;
-	freq_base = (freq_hi << 11) | (freq_lo & 1023);
+	const int smp_size = cdda->size >> 1;
 
 	/* Stop AICA channels */
 	aica_stop_cdda();
@@ -374,13 +337,11 @@ static void aica_setup_cdda(int clean) {
 
 	CHNREG32(cdda->left_channel, 8) = 0;
 	CHNREG32(cdda->left_channel, 12) = cdda->end_pos & 0xffff;
-	CHNREG32(cdda->left_channel, 24) = freq_base;
+	CHNREG32(cdda->left_channel, 24) = cdda->aica_freq;
 
 	CHNREG32(cdda->right_channel, 8) = 0;
 	CHNREG32(cdda->right_channel, 12) = cdda->end_pos & 0xffff;
-	CHNREG32(cdda->right_channel, 24) = freq_base;
-
-	cdda->check_freq = freq_base;
+	CHNREG32(cdda->right_channel, 24) = cdda->aica_freq;
 
 	g2_unlock();
 	aica_set_volume(clean ? 255 : 0);
@@ -466,14 +427,14 @@ static void aica_check_cdda(void) {
 		// LOGF("CDDA: R VOL %04lx != %04lx\n", val, check_vol);
 	}
 	val = CHNREG32(cdda->left_channel, 24) & 0xffff;
-	if (val != cdda->check_freq) {
+	if (val != cdda->aica_freq) {
 		invalid_level |= 0x41;
-		// LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->check_freq);
+		// LOGF("CDDA: L FRQ %04lx != %04lx\n", val, cdda->aica_freq);
 	}
 	val = CHNREG32(cdda->right_channel, 24) & 0xffff;
-	if (val != cdda->check_freq) {
+	if (val != cdda->aica_freq) {
 		invalid_level |= 0x42;
-		// LOGF("CDDA: R FRQ %04lx != %04lx\n", val, cdda->check_freq);
+		// LOGF("CDDA: R FRQ %04lx != %04lx\n", val, cdda->aica_freq);
 	}
 	val = CHNREG32(cdda->left_channel, 12) & 0xffff;
 	if (val != (cdda->end_pos & 0xffff)) {
@@ -630,7 +591,7 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 	uint32 count = size >> 1;
 
 	switch(cdda->bitsize) {
-#ifdef DEV_TYPE_SD
+#ifdef HAVE_CDDA_ADPCM
 		case 4:
 			adpcm_split(src, dst, dst + count, size);
 			break;
@@ -644,17 +605,55 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 
 static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
 
-	uint32 masked_left = (0xe0000000 | (aica_left & 0x03ffffe0));
-	uint32 masked_right = (0xe0000000 | (aica_right & 0x03ffffe0));
+	uint32 *masked_left = (uint32 *)(void *)(0xe0000000 | (aica_left & 0x03ffffe0));
+	uint32 *masked_right = (uint32 *)(void *)(0xe0000000 | (aica_right & 0x03ffffe0));
+	uint16 *s = (uint16 *)data;
+	uint32 i;
 
+	dcache_pref_block(s);
 	g2_lock();
 
 	/* Set store queue memory area as desired */
-	QACR0 = (aica_left >> 24) & 0x1c;
-	QACR1 = (aica_right >> 24) & 0x1c;
+	QACR0 = 0; /* (aica_left >> 24) & 0x1c; */
+	QACR1 = 0; /* (aica_right >> 24) & 0x1c; */
 
-	/* Separating channels and do fill/write queues as many times necessary. */
-	pcm16_split_sq(data, masked_left, masked_right, size);
+	for(; size >= 128; size -= 128) {
+
+		/* Fill SQ0 */
+		for(i = 0; i < 16; i += 2) {
+			masked_left[i / 2] = (s[i * 2] << 16) | s[(i + 1) * 2];
+		}
+
+		/* Write-back SQ0 */
+		dcache_pref_block(masked_left);
+
+		/* Fill SQ1 */
+		for(i = 16; i < 32; i += 2) {
+			masked_left[i / 2] = (s[i * 2] << 16) | s[(i + 1) * 2];
+		}
+
+		/* Write-back SQ1 */
+		dcache_pref_block(masked_left + 8);
+		masked_left += 16;
+
+		/* Fill SQ0 */
+		for(i = 0; i < 16; i += 2) {
+			masked_right[i / 2] = (s[(i * 2) + 1] << 16) | s[((i + 1) * 2) + 1];
+		}
+
+		/* Write-back SQ0 */
+		dcache_pref_block(masked_right);
+
+		/* Fill SQ1 */
+		for(i = 16; i < 32; i += 2) {
+			masked_right[i / 2] = (s[(i * 2) + 1] << 16) | s[((i + 1) * 2) + 1];
+		}
+
+		/* Write-back SQ1 */
+		dcache_pref_block(masked_right + 8);
+		masked_right += 16;
+		s += 64;
+	}
 
 	/* Wait for both store queues to complete */
 	uint32 *d = (uint32 *)0xe0000000;
@@ -892,7 +891,8 @@ static void play_track(uint32 track) {
 		cdda->offset = 0;
 	}
 
-	uint32 len = 0;
+	uint32 len = 0, freq;
+	uint16 wav_format, channels;
 
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	fs_enable_dma(FS_DMA_DISABLED);
@@ -902,13 +902,15 @@ static void play_track(uint32 track) {
 	lseek(cdda->fd, cdda->offset + 8, SEEK_SET);
 	read(cdda->fd, &len, 4);
 
+	cdda->aica_freq = 0;
+
 	if(!memcmp(&len, "WAVE", 4)) {
 
 		/* Read WAV header info */
 		lseek(cdda->fd, cdda->offset + 0x14, SEEK_SET);
-		read(cdda->fd, &cdda->wav_format, 2);
-		read(cdda->fd, &cdda->chn, 2);
-		read(cdda->fd, &cdda->freq, 4);
+		read(cdda->fd, &wav_format, 2);
+		read(cdda->fd, &channels, 2);
+		read(cdda->fd, &freq, 4);
 		lseek(cdda->fd, cdda->offset + 0x22, SEEK_SET);
 		read(cdda->fd, &cdda->bitsize, 2);
 		read(cdda->fd, &len, 4);
@@ -931,21 +933,20 @@ static void play_track(uint32 track) {
 
 		read(cdda->fd, &len, 4);
 
-		switch(cdda->wav_format) {
-			case WAVE_FMT_YAMAHA_ADPCM:
-			case WAVE_FMT_YAMAHA_ADPCM_ITU_G723:
-				cdda->aica_format = AICA_SM_ADPCM_LS;
-				break;
-			default:
-				cdda->aica_format = AICA_SM_16BIT;
-				break;
+		if ((wav_format != WAVE_FMT_PCM && wav_format != WAVE_FMT_YAMAHA_ADPCM)
+			|| (cdda->bitsize != 16 && cdda->bitsize != 4)
+			|| freq != 44100
+			|| channels != 2
+		) {
+			close(cdda->fd);
+			return;
 		}
+
+		cdda->aica_format = (cdda->bitsize == 16 ? AICA_SM_16BIT : AICA_SM_ADPCM_LS);
+
 	} else {
-		cdda->freq = 44100;
-		cdda->chn = 2;
 		cdda->bitsize = 16;
 		cdda->aica_format = AICA_SM_16BIT;
-		cdda->wav_format = WAVE_FMT_PCM;
 	}
 
 	/* Make alignment by sector */
@@ -969,9 +970,8 @@ static void play_track(uint32 track) {
 		cdda->track_size = total(cdda->fd) - cdda->offset - (cdda->size >> 1);
 	}
 
-	LOGFF("Track #%lu, %s %luHZ %d bits/sample, %lu bytes total,"
-			  " format %d, LBA %ld\n", track, cdda->chn == 1 ? "mono" : "stereo", 
-			  cdda->freq, cdda->bitsize, cdda->track_size, cdda->wav_format, cdda->lba);
+	LOGFF("Track #%lu, %d bits/sample, %lu bytes total, LBA %ld\n",
+		track, cdda->bitsize, cdda->track_size, cdda->lba);
 
 #ifdef DEV_TYPE_SD
 	if(cdda->bitsize == 4) {
