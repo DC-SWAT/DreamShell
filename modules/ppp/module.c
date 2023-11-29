@@ -1,11 +1,12 @@
 /* DreamShell ##version##
 
    module.c - PPP module
-   Copyright (C)2014-2019 SWAT 
+   Copyright (C) 2014-2023 SWAT 
 
-*/          
+*/
 
 #include "ds.h"
+#include "network/net.h"
 #include <ppp/ppp.h>
 
 DEFAULT_MODULE_EXPORTS_CMD(ppp, "PPP connection manager");
@@ -77,15 +78,7 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 		}
 
 		ds_printf("DS_OK: Link established, rate is %d bps\n", conn_rate);
-
-		char ip_str[64];
-		memset(ip_str, 0, sizeof(ip_str));
-		snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d",
-			net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
-			net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
-		setenv("NET_IPV4", ip_str, 1);
-
-		ds_printf("Network IPv4 address: %s\n", ip_str);
+		InitNet(0);
 		return CMD_OK;
 	}
 
@@ -94,7 +87,7 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 
 		if(modem_is_connected() || modem_is_connecting()) {
 			modem_shutdown();
-			setenv("NET_IPV4", "0.0.0.0", 1);
+			ShutdownNet();
 		}
 		ds_printf("DS_OK: Complete!\n");
 		return CMD_OK;
