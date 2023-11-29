@@ -175,7 +175,7 @@ CON_DrawConsole
 CON_Init
 CON_Destroy
 CON_Free
-CON_Out
+#CON_Out
 CON_Alpha
 #CON_AlphaGL
 CON_Background

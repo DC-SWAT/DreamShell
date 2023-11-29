@@ -45,6 +45,8 @@
  * is currently taking keyboard input. */
 static ConsoleInformation *Topmost;
 
+#define CON_Out(c, ...) ds_printf(__VA_ARGS__)
+
 /*  Takes keys from the keyboard and inputs them to the console
     If the event was not handled (i.e. WM events or unknown ctrl-shift 
     sequences) the function returns the event for further processing. */
@@ -278,7 +280,6 @@ void CON_UpdateConsole(ConsoleInformation *console) {
 
 	Screenlines = (console->ConsoleSurface->h / console->FontHeight) - 2;
 
-	console->WasUnicode = 1;
 	SDL_FillRect(console->ConsoleSurface, NULL, SDL_MapRGBA(console->ConsoleSurface->format, 0, 0, 0, console->ConsoleAlpha));
 
 //	if(console->OutputScreen->flags & SDL_OPENGLBLIT)
@@ -316,6 +317,8 @@ void CON_UpdateConsole(ConsoleInformation *console) {
 
 //	if(console->OutputScreen->flags & SDL_OPENGLBLIT)
 //		SDL_SetColorKey(CurrentFont->FontSurface, 0, 0);
+
+	console->WasUnicode = 1;
 }
 
 void CON_UpdateOffset(ConsoleInformation* console) {
@@ -696,6 +699,7 @@ void DrawCommandLine() {
 }
 
 /* Outputs text to the console (in game), up to CON_CHARS_PER_LINE chars can be entered */
+#if 0
 void CON_Out(ConsoleInformation *console, const char *str, ...) {
 	va_list marker;
 
@@ -733,7 +737,7 @@ void CON_Out(ConsoleInformation *console, const char *str, ...) {
 	/* And print to stdout */
 	/* printf("%s\n", temp); */
 }
-
+#endif
 
 /* Sets the alpha level of the console, 0 turns off alpha blending */
 void CON_Alpha(ConsoleInformation *console, unsigned char alpha) {

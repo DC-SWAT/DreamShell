@@ -33,7 +33,7 @@ int ds_printf(const char *fmt, ...) {
 
 	char *ptemp, *b, *cr;
 	va_list args;
-	int i;
+	int i, len;
 
 	if(!irq_inside_int()) {
 		spinlock_lock(&lock);
@@ -64,13 +64,18 @@ int ds_printf(const char *fmt, ...) {
 				b = &b[DSConsole->VChars];
 			}
 
-			cr = b + strlen(b) - 1;
+			len = strlen(b);
+			cr = b + len - 1;
 
 			if(*cr != '\r') {
 				CON_NewLineConsole(DSConsole);
 			}
 
-			strncpy(DSConsole->ConsoleLines[0], b, DSConsole->VChars);
+			if(len > DSConsole->VChars) {
+				len = DSConsole->VChars;
+			}
+
+			memcpy(DSConsole->ConsoleLines[0], b, len);
 			DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
 		}
 
@@ -304,13 +309,17 @@ void ShowConsole() {
 
 	if(!ConsoleIsVisible()) {
 
+		SDL_DC_EmulateMouse(SDL_FALSE);
+		SetGuiState(EVENT_STATE_SLEEP);
+
 		CON_Show(DSConsole);
 		CON_Topmost(DSConsole);
 		CON_UpdateConsole(DSConsole);
-
-		SDL_DC_EmulateMouse(SDL_FALSE);
-		SetGuiState(EVENT_STATE_SLEEP);
 		SetEventState(con_video_event, EVENT_STATE_ACTIVE);
+
+		while(DSConsole->Visible != CON_OPEN) {
+			thd_sleep(100);
+		}
 	}
 }
 
@@ -322,12 +331,13 @@ void HideConsole() {
 		CON_Hide(DSConsole);
 		CON_Topmost(NULL);
 
-		while(DSConsole->Visible != CON_CLOSED) thd_sleep(100);
+		while(DSConsole->Visible != CON_CLOSED) {
+			thd_sleep(100);
+		}
 
-		SDL_DC_EmulateMouse(SDL_TRUE);
 		SetEventState(con_video_event, EVENT_STATE_SLEEP);
 		SetGuiState(EVENT_STATE_ACTIVE);
-
+		SDL_DC_EmulateMouse(SDL_TRUE);
 		ProcessVideoEventsUpdate(NULL);
 		ScreenFadeIn();
 	}

@@ -148,6 +148,8 @@ void GUI_FileManager::AdjustScrollbar(GUI_Object * sender) {
 	} else {
 		button_down->SetEnabled(1);
 	}
+
+	thd_sleep(100);
 }
 
 void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
@@ -626,7 +628,6 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 						if (abs(scrollbar->GetVerticalPosition() - sp) > 2) {
 							scrollbar->SetVerticalPosition(sp);
 							AdjustScrollbar(NULL);
-							thd_sleep(100);
 						}
 					}
 					break;
