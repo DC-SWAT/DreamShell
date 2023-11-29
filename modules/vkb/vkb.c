@@ -328,7 +328,9 @@ static void VirtKeyboardSetSurface(int index) {
 }
 
 void VirtKeyboardReDraw() {
-	vkb.redraw = 1;
+	if(vkb.visible) {
+		vkb.redraw = 1;
+	}
 }
 
 static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
