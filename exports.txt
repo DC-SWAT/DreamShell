@@ -254,6 +254,8 @@ InitVideo
 ShutdownVideo
 ShowLogo
 HideLogo
+InitNet
+ShutdownNet
 pvr_to_img
 png_to_img
 #

@@ -73,10 +73,6 @@ static uint8 *get_board_id() {
 
 int InitNet(uint32 ipl) {
 
-#if defined(DS_DEBUG)
-	net_inited = 1;
-#endif
-
 	if(net_inited) {
 		return 0;
 	}
@@ -89,7 +85,7 @@ int InitNet(uint32 ipl) {
 
 	/* Check if the dcload-ip console is up, and if so, disable it,
 		otherwise we'll crash when we attempt to bring up the BBA */
-	if(dcload_type == DCLOAD_TYPE_IP) {
+	if(ipl == 0 && dcload_type == DCLOAD_TYPE_IP) {
 		/* Grab the IP address from dcload before we disable dbgio... */
 		ip.ipl = _fs_dclsocket_get_ip();
 		dbglog(DBG_INFO, "dc-load says our IP is %d.%d.%d.%d\n", ip.ipb[3],
@@ -97,10 +93,19 @@ int InitNet(uint32 ipl) {
 		dbgio_disable();
 	}
 
-	int rv = net_init(ip.ipl);     /* Enable networking (and drivers) */
+	if(net_default_dev == NULL) {
+		/* Trying init LAN network devices */
+		la_init();
+		bba_init();
+	}
+
+	/* Trying enable networking */
+	int rv = net_init(ip.ipl);
 
 	if(rv < 0) {
-		dbgio_enable();
+		if(dcload_type == DCLOAD_TYPE_IP) {
+			dbgio_enable();
+		}
 		return -1;
 	}
 	if(dcload_type == DCLOAD_TYPE_IP) {
@@ -114,7 +119,7 @@ int InitNet(uint32 ipl) {
 			dbgio_enable();
 		}
 	}
-	if (net_default_dev != NULL) {
+	if(net_default_dev != NULL) {
 		char ip_str[64];
 		memset(ip_str, 0, sizeof(ip_str));
 		snprintf(ip_str, sizeof(ip_str), "%d.%d.%d.%d",
