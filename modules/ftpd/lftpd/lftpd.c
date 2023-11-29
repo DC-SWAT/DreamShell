@@ -12,6 +12,7 @@
 #include <arpa/inet.h>
 #include <dirent.h>
 #include <errno.h>
+#include <malloc.h>
 #include <sys/stat.h>
 #include <kos/net.h>
 
@@ -30,7 +31,7 @@
 // https://tools.ietf.org/html/rfc2428#section-3 EPSV
 // https://en.wikipedia.org/wiki/List_of_FTP_commands
 
-#define FILE_BUFFER_SIZE 8 * 1024
+#define FILE_BUFFER_SIZE 64 * 1024
 
 typedef struct {
 	char *command;
@@ -168,7 +169,7 @@ static int send_file(int socket, const char* path) {
 		return -1;
 	}
 
-	uint8_t *buffer = (uint8_t *)malloc(FILE_BUFFER_SIZE);
+	uint8_t *buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
 	int read_len;
 
 	while ((read_len = fs_read(fd, buffer, FILE_BUFFER_SIZE)) > 0) {
@@ -200,7 +201,7 @@ static int receive_file(int socket, const char* path) {
 		return -1;
 	}
 
-	uint8_t *buffer = (uint8_t *)malloc(FILE_BUFFER_SIZE);
+	uint8_t *buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
 	int read_len;
 
 	while ((read_len = read(socket, buffer, FILE_BUFFER_SIZE)) > 0) {
@@ -379,6 +380,10 @@ static int cmd_pasv(lftpd_client_t* client, const char* arg) {
 	// close the listener
 	close(listener_socket);
 
+	uint32_t new_buf_sz = FILE_BUFFER_SIZE;
+	setsockopt(client_socket, SOL_SOCKET, SO_SNDBUF, &new_buf_sz, sizeof(new_buf_sz));
+	setsockopt(client_socket, SOL_SOCKET, SO_RCVBUF, &new_buf_sz, sizeof(new_buf_sz));
+
 	client->data_socket = client_socket;
 
 	return 0;
@@ -474,14 +479,16 @@ static int cmd_user(lftpd_client_t* client, const char* arg) {
 }
 
 static int handle_control_channel(lftpd_client_t* client) {
+	size_t read_buffer_len = 512;
+	char _read_buffer[read_buffer_len];
+	char *read_buffer = _read_buffer;
 	int err = send_simple_response(client->socket, 220, STATUS_220);
+
 	if (err != 0) {
 		lftpd_log_error("error sending welcome message");
 		goto cleanup;
 	}
 
-	size_t read_buffer_len = 512;
-	char* read_buffer = malloc(read_buffer_len);
 	while (err == 0) {
 		int line_len = lftpd_inet_read_line(client->socket, read_buffer, read_buffer_len);
 		if (line_len != 0) {
@@ -527,7 +534,9 @@ static int handle_control_channel(lftpd_client_t* client) {
 					arg = lftpd_string_trim(arg);
 				}
 				err = commands[i].handler(client, arg);
-				free(arg);
+				if (arg) {
+					free(arg);
+				}
 				matched = true;
 				break;
 			}

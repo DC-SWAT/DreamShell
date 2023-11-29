@@ -19,7 +19,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
 VER_MINOR = 1
-VER_MICRO = 0
+VER_MICRO = 1
 
 all: rm-elf #$(LIBRARY_NAME)/Makefile
 
