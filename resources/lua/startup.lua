@@ -91,7 +91,6 @@ local DreamShell = {
 		end
 
 		print("\n");
-		os.execute("net --init");
 
 		if not MapleAttached("Keyboard") then
 			table.insert(self.modules, "vkb");
