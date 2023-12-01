@@ -379,7 +379,9 @@ static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
 		
 		//if(param == NULL) {
 			VirtKeyboardReDraw();
-			SDL_DC_EmulateMouse(SDL_FALSE); // Console can switch on this feature.
+			if(vkb.visible) {
+				SDL_DC_EmulateMouse(SDL_FALSE); // Console can switch on this feature.
+			}
 			
 		//} else {
 			/*
