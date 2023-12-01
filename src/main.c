@@ -90,7 +90,7 @@ int InitNet(uint32 ipl) {
 		ip.ipl = _fs_dclsocket_get_ip();
 		dbglog(DBG_INFO, "dc-load says our IP is %d.%d.%d.%d\n", ip.ipb[3],
 				ip.ipb[2], ip.ipb[1], ip.ipb[0]);
-		dbgio_disable();
+		dbgio_dev_select("scif");
 	}
 
 	if(net_default_dev == NULL) {
@@ -103,20 +103,14 @@ int InitNet(uint32 ipl) {
 	int rv = net_init(ip.ipl);
 
 	if(rv < 0) {
-		if(dcload_type == DCLOAD_TYPE_IP) {
-			dbgio_enable();
-		}
 		return -1;
 	}
 	if(dcload_type == DCLOAD_TYPE_IP) {
-		fs_dclsocket_init_console();
 
 		if(!fs_dclsocket_init()) {
-			dbgio_dev_select("fs_dclsocket");
-			dbgio_enable();
 			dbglog(DBG_INFO, "fs_dclsocket console support enabled\n");
-		} else {
-			dbgio_enable();
+			fs_dclsocket_init_console();
+			dbgio_dev_select("fs_dclsocket");
 		}
 	}
 	if(net_default_dev != NULL) {
@@ -126,8 +120,7 @@ int InitNet(uint32 ipl) {
 			net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
 			net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
 		setenv("NET_IPV4", ip_str, 1);
-
-		dbglog(DBG_INFO, "Network IPv4 address: %s\n", ip_str);
+		ds_printf("Network IPv4 address: %s\n", ip_str);
 	}
 	net_inited = 1;
 	return rv;

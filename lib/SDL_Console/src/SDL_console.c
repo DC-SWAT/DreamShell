@@ -328,20 +328,21 @@ void CON_UpdateOffset(ConsoleInformation* console) {
 	switch(console->Visible) {
 		case CON_CLOSING:
 			console->RaiseOffset -= CON_OPENCLOSE_SPEED;
-			console->WasUnicode = 1;
 			if(console->RaiseOffset <= 0) {
 				console->RaiseOffset = 0;
 				console->Visible = CON_CLOSED;
 				console->WasUnicode = 0;
+			} else {
+				console->WasUnicode = 1;
 			}
 			break;
 		case CON_OPENING:
 			console->RaiseOffset += CON_OPENCLOSE_SPEED;
-			console->WasUnicode = 1;
 			if(console->RaiseOffset >= console->ConsoleSurface->h) {
 				console->RaiseOffset = console->ConsoleSurface->h;
 				console->Visible = CON_OPEN;
 			}
+			console->WasUnicode = 1;
 			break;
 		case CON_OPEN:
 		case CON_CLOSED:
@@ -503,9 +504,7 @@ ConsoleInformation *CON_Init(const char *FontName, SDL_Surface *DisplayScreen, i
 	memset_sh4(newinfo->RCommand, 0, CON_CHARS_PER_LINE+1);
 	memset_sh4(newinfo->VCommand, 0, CON_CHARS_PER_LINE+1);
 
-
-	CON_Out(newinfo, "Console initialised.");
-	CON_NewLineConsole(newinfo);
+	CON_Out(newinfo, "Console initialised.\n");
 
 	return newinfo;
 }
@@ -923,6 +922,7 @@ void CON_Topmost(ConsoleInformation *console) {
 		rect.h = Topmost->InputBackground->h;
 		SDL_BlitSurface(Topmost->InputBackground, NULL, Topmost->ConsoleSurface, &rect);
 		DT_DrawText(Topmost->VCommand, Topmost->ConsoleSurface, Topmost->FontNumber, CON_CHAR_BORDER, Topmost->ConsoleSurface->h - Topmost->FontHeight);
+		console->WasUnicode = 1;
 	}
 	Topmost = console;
 }
