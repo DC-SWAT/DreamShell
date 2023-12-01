@@ -75,8 +75,11 @@ typedef struct cdda_ctx {
 	/* SH4 timer for checking playback position */
 	uint32 timer;
 
-	/* Exception code for AICA DMA IRQ */
-	uint32 irq_code;
+	/* Exception code for internal AICA DMA IRQ */
+	uint32 int_irq_code;
+
+	/* Exception code for game AICA DMA IRQ */
+	uint32 game_irq_code;
 
 	/* Volume for both channels */
 	uint32 volume;
