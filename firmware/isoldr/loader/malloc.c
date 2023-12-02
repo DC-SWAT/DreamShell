@@ -5,7 +5,7 @@
  */
 
 #include <main.h>
-#include <maple.h>
+#include <dc/maple.h>
 
 enum malloc_types {
     MALLOC_TYPE_INTERNAL = 0,

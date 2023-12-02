@@ -9,11 +9,6 @@
 
 #include <arch/types.h>
 
-#define MAPLE_REG(x) (*(vuint32 *)(x))
-#define MAPLE_BASE 0xa05f6c00
-#define MAPLE_DMA_ADDR (MAPLE_BASE + 0x04)
-#define MAPLE_DMA_STATUS (MAPLE_BASE + 0x18)
-
 int maple_init_irq();
 int maple_init_vmu(int num);
 

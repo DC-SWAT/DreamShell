@@ -1,56 +1,79 @@
-/* This file is part of the libdream Dreamcast function library.
- * Please see libdream.c for further details.
- *
- * (c)2000 Jordan DeLong
- 
-   Thanks to Marcus Comstedt for information on the Maple Bus.
-   
-   Ported from KallistiOS (Dreamcast OS) for libdream by Dan Potter
-
+/**
+ * DreamShell ISO Loader
+ * Maple bus
+ * (c)2023 SWAT <http://www.dc-swat.ru>
  */
-
 
 #include <sys/cdefs.h>
 #include <arch/types.h>
 
-
 #ifndef __MAPLE_H
 #define __MAPLE_H
 
-/* Command and response codes */
-#define MAPLE_RESPONSE_FILEERR		-5
-#define MAPLE_RESPONSE_AGAIN 		-4
-#define MAPLE_RESPONSE_BADCMD		-3
-#define MAPLE_RESPONSE_BADFUNC		-2
-#define MAPLE_RESPONSE_NONE		-1
-#define MAPLE_COMMAND_DEVINFO		1
-#define MAPLE_COMMAND_ALLINFO		2
-#define MAPLE_COMMAND_RESET		3
-#define MAPLE_COMMAND_KILL		4
-#define MAPLE_RESPONSE_DEVINFO		5
-#define MAPLE_RESPONSE_ALLINFO		6
-#define MAPLE_RESPONSE_OK		7
-#define MAPLE_RESPONSE_DATATRF		8
-#define MAPLE_COMMAND_GETCOND		9
-#define MAPLE_COMMAND_GETMINFO		10
-#define MAPLE_COMMAND_BREAD		11
-#define MAPLE_COMMAND_BWRITE		12
-#define MAPLE_COMMAND_BSYNC		13
-#define MAPLE_COMMAND_SETCOND		14
+#define MAPLE_REG(x) (*(vuint32 *)(x))
+#define MAPLE_BASE 0xa05f6c00
+#define MAPLE_DMA_ADDR (MAPLE_BASE + 0x04)
+#define MAPLE_DMA_STATUS (MAPLE_BASE + 0x18)
 
-/* Function codes */
-#define MAPLE_FUNC_MOUSE		(1<<17)
-#define MAPLE_FUNC_PURUPURU		(1<<16)
-#define MAPLE_FUNC_CONTROLLER		(1<<24)
-#define MAPLE_FUNC_MEMCARD		(1<<25)
-#define MAPLE_FUNC_LCD			(1<<26)
-#define MAPLE_FUNC_CLOCK		(1<<27)
-#define MAPLE_FUNC_MICROPHONE		(1<<28)
-#define MAPLE_FUNC_ARGUN		(1<<29)
-#define MAPLE_FUNC_KEYBOARD		(1<<30)
-#define MAPLE_FUNC_LIGHTGUN		(1<<31)
+/** \defgroup maple_cmds            Maple commands and responses
 
-/* frame struct */
+    These are all either commands or responses to commands sent to or from Maple
+    in normal operation.
+
+    @{
+*/
+#define MAPLE_RESPONSE_FILEERR      -5  /**< \brief File error */
+#define MAPLE_RESPONSE_AGAIN        -4  /**< \brief Try again later */
+#define MAPLE_RESPONSE_BADCMD       -3  /**< \brief Bad command sent */
+#define MAPLE_RESPONSE_BADFUNC      -2  /**< \brief Bad function code */
+#define MAPLE_RESPONSE_NONE         -1  /**< \brief No response */
+#define MAPLE_COMMAND_DEVINFO       1   /**< \brief Device info request */
+#define MAPLE_COMMAND_ALLINFO       2   /**< \brief All info request */
+#define MAPLE_COMMAND_RESET         3   /**< \brief Reset device request */
+#define MAPLE_COMMAND_KILL          4   /**< \brief Kill device request */
+#define MAPLE_RESPONSE_DEVINFO      5   /**< \brief Device info response */
+#define MAPLE_RESPONSE_ALLINFO      6   /**< \brief All info response */
+#define MAPLE_RESPONSE_OK           7   /**< \brief Command completed ok */
+#define MAPLE_RESPONSE_DATATRF      8   /**< \brief Data transfer */
+#define MAPLE_COMMAND_GETCOND       9   /**< \brief Get condition request */
+#define MAPLE_COMMAND_GETMINFO      10  /**< \brief Get memory information */
+#define MAPLE_COMMAND_BREAD         11  /**< \brief Block read */
+#define MAPLE_COMMAND_BWRITE        12  /**< \brief Block write */
+#define MAPLE_COMMAND_BSYNC         13  /**< \brief Block sync */
+#define MAPLE_COMMAND_SETCOND       14  /**< \brief Set condition request */
+#define MAPLE_COMMAND_MICCONTROL    15  /**< \brief Microphone control */
+#define MAPLE_COMMAND_CAMCONTROL    17  /**< \brief Camera control */
+/** @} */
+
+/** \defgroup maple_functions       Maple device function codes
+
+    This is the list of maple device types (function codes). Each device must
+    have at least one function to actually do anything.
+
+    @{
+*/
+
+/* Function codes; most sources claim that these numbers are little
+   endian, and for all I know, they might be; but since it's a bitmask
+   it doesn't really make much different. We'll just reverse our constants
+   from the "big-endian" version. */
+#define MAPLE_FUNC_PURUPURU     0x00010000  /**< \brief Jump pack */
+#define MAPLE_FUNC_MOUSE        0x00020000  /**< \brief Mouse */
+#define MAPLE_FUNC_CAMERA       0x00080000  /**< \brief Camera (Dreameye) */
+#define MAPLE_FUNC_CONTROLLER   0x01000000  /**< \brief Controller */
+#define MAPLE_FUNC_STORAGE      0x02000000  /**< \brief Storage */
+#define MAPLE_FUNC_LCD          0x04000000  /**< \brief LCD screen */
+#define MAPLE_FUNC_CLOCK        0x08000000  /**< \brief Clock */
+#define MAPLE_FUNC_MICROPHONE   0x10000000  /**< \brief Microphone */
+#define MAPLE_FUNC_ARGUN        0x20000000  /**< \brief AR gun? */
+#define MAPLE_FUNC_KEYBOARD     0x40000000  /**< \brief Keyboard */
+#define MAPLE_FUNC_LIGHTGUN     0x80000000  /**< \brief Lightgun */
+/** @} */
+
+/** \brief  Maple frame structure.
+
+    \headerfile dc/maple.h
+*/
 typedef struct {
 	int8 cmd;			/* command (defined above) */
 	uint8 to;			/* recipient address */
@@ -59,41 +82,24 @@ typedef struct {
 	void *data;			/* ptr to parameter data */
 } maple_frame_t;
 
-/* transfer descriptor struct */
-typedef struct {
-	uint8 lastdesc;			/* set to nonzero if this is the last descriptor */
-	uint8 port;			/* port for transfer to go to, 0-3 */
-	uint8 length;			/* length of data - 1 word */
-	uint32 *recvaddr;		/* where the result gets written to */
-	maple_frame_t *frames;		/* array of frames in this transfer */
-	uint8 numframes;		/* number of frames in frames */
-} maple_tdesc_t;
 
-typedef struct {
-	uint32		func;
-	uint32		function_data[3];
-	uint8		area_code;
-	uint8		connector_direction;
-	char		product_name[30];
-	char		product_license[60];
-	uint16		standby_power;
-	uint16		max_power;
+/** \brief  Maple device info structure.
+
+    This structure is used by the hardware to deliver the response to the device
+    info request.
+
+    \headerfile dc/maple.h
+*/
+typedef struct maple_devinfo {
+    uint32  functions;              /**< \brief Function codes supported */
+	uint32  function_data[3];       /**< \brief Additional data per function */
+    uint8   area_code;              /**< \brief Region code */
+    uint8   connector_direction;    /**< \brief 0: UP (most controllers), 1: DOWN (lightgun, microphones) */
+    char    product_name[30];       /**< \brief Name of device */
+    char    product_license[60];    /**< \brief License statement */
+    uint16  standby_power;          /**< \brief Power consumption (standby) */
+    uint16  max_power;              /**< \brief Power consumption (max) */
 } maple_devinfo_t;
 
-void maple_init(int quiet);
-void maple_shutdown();
-int maple_dma_in_progress();
-uint32 *maple_add_trans(maple_tdesc_t tdesc, uint32 *buffer);
-void maple_read_frame(uint32 *buffer, maple_frame_t *frame);
-uint8 maple_create_addr(uint8 port, uint8 unit);
-int maple_docmd_block(int8 cmd, uint8 addr, uint8 datalen, void *data, maple_frame_t *retframe);
-int maple_rescan_bus(int quiet);
-
-uint8 maple_device_addr(int code);
-uint8 maple_controller_addr();
-uint8 maple_mouse_addr();
-uint8 maple_kb_addr();
-uint8 maple_lcd_addr();
-uint8 maple_vmu_addr();
 
 #endif /* __MAPLE_H */
