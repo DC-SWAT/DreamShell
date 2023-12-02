@@ -11,6 +11,7 @@
 #include <maple.h>
 #include <dc/maple.h>
 #include <dc/controller.h>
+#include <dc/vmu.h>
 
 /**
  * Turn off maple logging by default
@@ -25,22 +26,6 @@
 #  define MAPLE_LOG 1
 # endif
 #endif
-
-typedef struct {
-    uint32 function;
-    uint16 size;
-    uint16 partition;
-    uint16 sys_block;
-    uint16 fat_block;
-    uint16 fat_cnt;
-    uint16 file_info_block;
-    uint16 file_info_cnt;
-    uint8  vol_icon;
-    uint8  reserved;
-    uint16 save_block;
-    uint16 save_cnt;
-    uint32 reserved_exec;
-} maple_memory_t;
 
 
 #ifdef MAPLE_LOG
@@ -63,14 +48,14 @@ static void maple_dump_device_info(maple_devinfo_t *di) {
     name[sizeof(di->product_name)] = '\0';
 
     LOGF("      DEVICE: %s | 0x%08lx | 0x%08lx 0x%08lx 0x%08lx | 0x%02lx | 0x%02lx | %d | %d\n",
-        name, di->func, di->function_data[0], di->function_data[1], di->function_data[2],
+        name, di->function, di->function_data[0], di->function_data[1], di->function_data[2],
         di->area_code, di->connector_direction, di->standby_power, di->max_power);
 }
 static void maple_dump_memory_info(maple_memory_t *mi) {
-    LOGF("      MEMORY: 0x%08lx | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | 0x%08lx\n",
-        mi->function, mi->size, mi->partition, mi->sys_block, mi->fat_block,
+    LOGF("      MEMORY: 0x%08lx | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d | %d\n",
+        mi->function, mi->last_block, mi->partition, mi->sys_block, mi->fat_block,
         mi->fat_cnt, mi->file_info_block, mi->file_info_cnt, mi->vol_icon,
-        mi->reserved, mi->save_block, mi->save_cnt, mi->reserved_exec);
+        mi->sort_flag, mi->save_block, mi->save_cnt, mi->exe_block, mi->exe_cnt);
 }
 #else
 # define maple_dump_frame(a, b, c)
@@ -91,8 +76,12 @@ void maple_read_frame(uint32 *buffer, maple_frame_t *frame) {
 #ifndef MAPLE_SNIFFER
 static int vmu_fd = FILEHND_INVALID;
 static maple_devinfo_t device_info = {
-    MAPLE_FUNC_MEMCARD | MAPLE_FUNC_LCD | MAPLE_FUNC_CLOCK,
-    { 0x403f7e7e, 0x00100500, 0x00410f00 },
+    MAPLE_FUNC_STORAGE | MAPLE_FUNC_LCD | MAPLE_FUNC_CLOCK,
+    {
+        MAKE_CLOCK_FUNC_DATA(64, 63, 126, 126),
+        MAKE_LCD_FUNC_DATA(0, 192, 1, 0),
+        MAKE_STORAGE_FUNC_DATA(0, 512, 4, 1, 0, 0)
+    },
     0xff,
     0x00,
     { 
@@ -110,19 +99,20 @@ static maple_devinfo_t device_info = {
     0x0082
 };
 static maple_memory_t memory_info = {
-    MAPLE_FUNC_MEMCARD,
-    255,
+    MAPLE_FUNC_STORAGE,
+    STORAGE_MEMORY_LAST_BLOCK_DEFAULT,
     0,
-    255,
-    254,
+    STORAGE_MEMORY_LAST_BLOCK_DEFAULT,
+    STORAGE_MEMORY_LAST_BLOCK_DEFAULT - 1,
     1,
-    253,
+    STORAGE_MEMORY_LAST_BLOCK_DEFAULT - 2,
     13,
     0,
     0,
     200,
     0,
-    0x00800000
+    (STORAGE_MEMORY_LAST_BLOCK_DEFAULT + 1) / 2,
+    0
 };
 
 static void maple_vmu_device_info(maple_frame_t *req, maple_frame_t *resp) {
@@ -171,11 +161,15 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
         return;
     }
 
+    uint8 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    uint8 phase_count = STORAGE_FUNC_READ_PHASE_COUNT(device_info);
+    uint8 phase = (req_params[1] >> 8) & 0x0f;
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
     uint8 *buff = (uint8 *)&resp_params[2];
+    int offset = (block * block_size) + ((block_size / phase_count) * phase);
 
-    lseek(vmu_fd, block * 512, SEEK_SET);
-    int res = read(vmu_fd, buff, 512);
+    lseek(vmu_fd, offset, SEEK_SET);
+    int res = read(vmu_fd, buff, (block_size / phase_count));
     LOGF("      BREAD: block=%d buff=0x%08lx res=%d\n", block, buff, res);
 
     if (res < 0) {
@@ -184,9 +178,9 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
         return;
     }
     resp->cmd = MAPLE_RESPONSE_DATATRF;
-    resp->datalen = 130;
+    resp->datalen = (block_size / phase_count) + 2;
 
-    if (block == 255) {
+    if (block == memory_info.sys_block) {
         memcpy((uint8 *)&memory_info.fat_block, &buff[70], 14);
     }
 }
@@ -199,7 +193,7 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     resp->datalen = 0;
 
     // Maybe it's LCD or Buzzer data
-    if (req_params[0] != MAPLE_FUNC_MEMCARD) {
+    if (req_params[0] != MAPLE_FUNC_STORAGE) {
         return;
     }
     if (pre_read_xfer_busy()) {
@@ -207,14 +201,16 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
         LOGF("      BWRITE: device busy\n");
         return;
     }
-
+    uint8 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    uint8 phase_count = STORAGE_FUNC_WRITE_PHASE_COUNT(device_info);
     uint8 phase = (req_params[1] >> 8) & 0x0f;
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
     uint8 *buff = (uint8 *)&req_params[2];
 
 #if _FS_READONLY == 0
-    lseek(vmu_fd, (block * 512) + (128 * phase), SEEK_SET);
-    int res = write(vmu_fd, buff, 128);
+    int offset = (block * block_size) + ((block_size / phase_count) * phase);
+    lseek(vmu_fd, offset, SEEK_SET);
+    int res = write(vmu_fd, buff, (block_size / phase_count));
     LOGF("      BWRITE: block=%d phase=%d buff=0x%08lx res=%d\n", block, phase, buff, res);
 
     if (res < 0) {
@@ -229,7 +225,7 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
     LOGF("      BWRITE: block=%d phase=%d buff=0x%08lx disabled\n", block, phase, buff);
 #endif
 
-    if (block == 255 && phase == 0) {
+    if (block == memory_info.sys_block && phase == 0) {
         memcpy((uint8 *)&memory_info.fat_block, &buff[70], 14);
     }
 }
@@ -494,7 +490,14 @@ int maple_init_vmu(int num) {
         }
     }
 
-    lseek(vmu_fd, (255 * 512) + 70, SEEK_SET);
+    uint8 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    memory_info.sys_block = (total(vmu_fd) / block_size) - 1;
+    memory_info.partition = STORAGE_FUNC_PARTITION(device_info);
+
+    LOGFF("blk_size=%d sys_block=%d part=%d\n",
+        block_size, memory_info.sys_block, memory_info.partition);
+
+    lseek(vmu_fd, (memory_info.sys_block * block_size) + 70, SEEK_SET);
     read(vmu_fd, (uint8 *)&memory_info.fat_block, 14);
 
     LOGFF("fat_blk=%d fat_cnt=%d fileinf_blk=%d fileinf_cnt=%d\n",

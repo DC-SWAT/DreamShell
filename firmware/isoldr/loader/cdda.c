@@ -82,7 +82,7 @@ static void g2_unlock(void) {
 	irq_restore(cdda->g2_lock);
 }
 
-static inline u32 aica_dma_irq_code() {
+static inline uint32 aica_dma_irq_code() {
 	if (*ASIC_IRQ9_MASK & ASIC_NRM_AICA_DMA) return EXP_CODE_INT9; 
 	if (*ASIC_IRQ11_MASK & ASIC_NRM_AICA_DMA) return EXP_CODE_INT11; 
 	if (*ASIC_IRQ13_MASK & ASIC_NRM_AICA_DMA) return EXP_CODE_INT13;
