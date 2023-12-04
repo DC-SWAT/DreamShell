@@ -106,12 +106,12 @@ static maple_memory_t memory_info = {
     STORAGE_MEMORY_LAST_BLOCK_DEFAULT - 1,
     1,
     STORAGE_MEMORY_LAST_BLOCK_DEFAULT - 2,
-    13,
+    STORAGE_MEMORY_FILEINFO_BLOCKS_DEFAULT,
     0,
     0,
-    200,
+    STORAGE_MEMORY_SAVE_BLOCK(STORAGE_MEMORY_LAST_BLOCK_DEFAULT),
     0,
-    (STORAGE_MEMORY_LAST_BLOCK_DEFAULT + 1) / 2,
+    STORAGE_MEMORY_EXE_BLOCK(STORAGE_MEMORY_LAST_BLOCK_DEFAULT),
     0
 };
 
@@ -161,7 +161,7 @@ static void maple_vmu_block_read(maple_frame_t *req, maple_frame_t *resp) {
         return;
     }
 
-    uint8 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    uint16 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
     uint8 phase_count = STORAGE_FUNC_READ_PHASE_COUNT(device_info);
     uint8 phase = (req_params[1] >> 8) & 0x0f;
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
@@ -201,7 +201,7 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
         LOGF("      BWRITE: device busy\n");
         return;
     }
-    uint8 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    uint16 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
     uint8 phase_count = STORAGE_FUNC_WRITE_PHASE_COUNT(device_info);
     uint8 phase = (req_params[1] >> 8) & 0x0f;
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
@@ -490,19 +490,24 @@ int maple_init_vmu(int num) {
         }
     }
 
-    uint8 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    uint16 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
     memory_info.sys_block = (total(vmu_fd) / block_size) - 1;
     memory_info.partition = STORAGE_FUNC_PARTITION(device_info);
+    memory_info.save_block = STORAGE_MEMORY_SAVE_BLOCK(memory_info.sys_block);
 
-    LOGFF("blk_size=%d sys_block=%d part=%d\n",
-        block_size, memory_info.sys_block, memory_info.partition);
+    LOGFF("device: blk_size=%d part=%d sys_block=%d rp_cnt=%d wp_cnt=%d\n",
+        block_size, memory_info.partition, memory_info.sys_block,
+        STORAGE_FUNC_READ_PHASE_COUNT(device_info),
+        STORAGE_FUNC_WRITE_PHASE_COUNT(device_info)
+    );
 
     lseek(vmu_fd, (memory_info.sys_block * block_size) + 70, SEEK_SET);
     read(vmu_fd, (uint8 *)&memory_info.fat_block, 14);
 
-    LOGFF("fat_blk=%d fat_cnt=%d fileinf_blk=%d fileinf_cnt=%d\n",
+    LOGFF("fs: fat_blk=%d fat_cnt=%d fileinf_blk=%d fileinf_cnt=%d save_blk=%d save_cnt=%d\n",
             memory_info.fat_block, memory_info.fat_cnt,
-            memory_info.file_info_block, memory_info.file_info_cnt);
+            memory_info.file_info_block, memory_info.file_info_cnt,
+            memory_info.save_block, memory_info.save_cnt);
 
 #endif
     return 0;
