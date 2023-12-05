@@ -48,7 +48,7 @@ static void maple_dump_device_info(maple_devinfo_t *di) {
     name[sizeof(di->product_name)] = '\0';
 
     LOGF("      DEVICE: %s | 0x%08lx | 0x%08lx 0x%08lx 0x%08lx | 0x%02lx | 0x%02lx | %d | %d\n",
-        name, di->function, di->function_data[0], di->function_data[1], di->function_data[2],
+        name, di->functions, di->function_data[0], di->function_data[1], di->function_data[2],
         di->area_code, di->connector_direction, di->standby_power, di->max_power);
 }
 static void maple_dump_memory_info(maple_memory_t *mi) {
@@ -75,6 +75,7 @@ void maple_read_frame(uint32 *buffer, maple_frame_t *frame) {
 
 #ifndef MAPLE_SNIFFER
 static int vmu_fd = FILEHND_INVALID;
+/* Default values are the same as the original device. */
 static maple_devinfo_t device_info = {
     MAPLE_FUNC_STORAGE | MAPLE_FUNC_LCD | MAPLE_FUNC_CLOCK,
     {
@@ -99,20 +100,27 @@ static maple_devinfo_t device_info = {
     0x0082
 };
 static maple_memory_t memory_info = {
-    MAPLE_FUNC_STORAGE,
-    STORAGE_MEMORY_LAST_BLOCK_DEFAULT,
-    0,
-    STORAGE_MEMORY_LAST_BLOCK_DEFAULT,
-    STORAGE_MEMORY_LAST_BLOCK_DEFAULT - 1,
-    1,
-    STORAGE_MEMORY_LAST_BLOCK_DEFAULT - 2,
-    STORAGE_MEMORY_FILEINFO_BLOCKS_DEFAULT,
-    0,
-    0,
-    STORAGE_MEMORY_SAVE_BLOCK(STORAGE_MEMORY_LAST_BLOCK_DEFAULT),
-    0,
-    STORAGE_MEMORY_EXE_BLOCK(STORAGE_MEMORY_LAST_BLOCK_DEFAULT),
-    0
+    .function = MAPLE_FUNC_STORAGE,
+    .last_block = STORAGE_MEMORY_LAST_BLOCK_128KB,
+    .partition = 0,
+    .sys_block = STORAGE_MEMORY_LAST_BLOCK_128KB,
+    .fat_block = (STORAGE_MEMORY_LAST_BLOCK_128KB
+        - STORAGE_MEMORY_SYSTEM_BLOCKS),
+    .fat_cnt = STORAGE_MEMORY_FAT_BLOCKS_128KB,
+    .file_info_block = (STORAGE_MEMORY_LAST_BLOCK_128KB
+        - STORAGE_MEMORY_SYSTEM_BLOCKS
+        - STORAGE_MEMORY_FAT_BLOCKS_128KB),
+    .file_info_cnt = STORAGE_MEMORY_FILEINFO_BLOCKS_128KB,
+    .vol_icon = 0,
+    .sort_flag = 0,
+    .save_block = (STORAGE_MEMORY_LAST_BLOCK_128KB
+        - STORAGE_MEMORY_SYSTEM_BLOCKS
+        - STORAGE_MEMORY_FAT_BLOCKS_128KB
+        - STORAGE_MEMORY_FILEINFO_BLOCKS_128KB
+        - STORAGE_MEMORY_RESERVED_BLOCKS_128KB),
+    .save_cnt = STORAGE_MEMORY_SAVE_COUNT_128KB,
+    .exe_block = 0,
+    .exe_cnt = STORAGE_MEMORY_EXE_BLOCKS(STORAGE_MEMORY_LAST_BLOCK_128KB)
 };
 
 static void maple_vmu_device_info(maple_frame_t *req, maple_frame_t *resp) {
@@ -252,9 +260,9 @@ static void maple_vmu_block_sync(maple_frame_t *req, maple_frame_t *resp) {
 #endif
 }
 
+#ifdef HAVE_SCREENSHOT
 static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
     uint32 *resp_params = (uint32 *)&resp->data;
-    static uint32 prev_buttons = 0;
     (void)req;
 
     if (resp_params[0] != MAPLE_FUNC_CONTROLLER
@@ -272,14 +280,15 @@ static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
     uint32 buttons = (~cond->buttons & 0xffff);
     // LOGF("      CTRL: but=0x%04lx joyx=%d joyy=%d\n", buttons, cond->joyx, cond->joyy);
 
-#ifdef HAVE_SCREENSHOT
+
     if (buttons == IsoInfo->scr_hotkey && buttons != prev_buttons) {
         video_screenshot();
     }
-#endif
 
     prev_buttons = buttons;
 }
+
+#endif
 
 static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
 
@@ -311,10 +320,11 @@ static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
             }
         }
     }
-
+#ifdef HAVE_SCREENSHOT
     if (IsoInfo->scr_hotkey && cmd == MAPLE_COMMAND_GETCOND) {
         maple_controller(req, resp);
     }
+#endif
 }
 
 #else // MAPLE_SNIFFER
@@ -456,7 +466,7 @@ int maple_init_irq() {
 #endif
 }
 
-int maple_init_vmu(int num) {
+int maple_init_vmu(int num, int full_featured) {
 #ifdef MAPLE_SNIFFER
     (void)num;
 #else
@@ -491,9 +501,17 @@ int maple_init_vmu(int num) {
     }
 
     uint16 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
-    memory_info.sys_block = (total(vmu_fd) / block_size) - 1;
-    memory_info.partition = STORAGE_FUNC_PARTITION(device_info);
-    memory_info.save_block = STORAGE_MEMORY_SAVE_BLOCK(memory_info.sys_block);
+    uint16 partition = STORAGE_FUNC_PARTITION(device_info);
+
+    if (full_featured) {
+        /* Using single phase writes if possible */
+        device_info.function_data[2] = MAKE_STORAGE_FUNC_DATA(
+            partition, block_size, 1, 1, 0, 0);
+    }
+
+    memory_info.last_block = (total(vmu_fd) / block_size) - 1;
+    memory_info.sys_block = memory_info.last_block;
+    memory_info.partition = partition;
 
     LOGFF("device: blk_size=%d part=%d sys_block=%d rp_cnt=%d wp_cnt=%d\n",
         block_size, memory_info.partition, memory_info.sys_block,
@@ -502,12 +520,12 @@ int maple_init_vmu(int num) {
     );
 
     lseek(vmu_fd, (memory_info.sys_block * block_size) + 70, SEEK_SET);
-    read(vmu_fd, (uint8 *)&memory_info.fat_block, 14);
+    read(vmu_fd, (uint8 *)&memory_info.fat_block, sizeof(maple_memory_t) - 8);
 
-    LOGFF("fs: fat_blk=%d fat_cnt=%d fileinf_blk=%d fileinf_cnt=%d save_blk=%d save_cnt=%d\n",
+    LOGFF("fs: fat_blk=%d fat_cnt=%d fileinf_blk=%d fileinf_cnt=%d save_blk=%d\n",
             memory_info.fat_block, memory_info.fat_cnt,
             memory_info.file_info_block, memory_info.file_info_cnt,
-            memory_info.save_block, memory_info.save_cnt);
+            memory_info.save_block);
 
 #endif
     return 0;

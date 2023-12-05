@@ -741,7 +741,7 @@ static int init_cmd() {
 #endif
 #ifdef HAVE_MAPLE
 		if(IsoInfo->emu_vmu) {
-			maple_init_vmu(IsoInfo->emu_vmu);
+			maple_init_vmu(IsoInfo->emu_vmu, IsoInfo->exec.type != BIN_TYPE_KOS);
 		}
 #endif
 	}

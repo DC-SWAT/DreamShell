@@ -29,19 +29,36 @@
     (wtm << 24) | (rtm << 16) | (button << 8) | alarm \
 )
 
-/* (last_block + 1) * block_size = full capacity in bytes. */
-#define STORAGE_MEMORY_LAST_BLOCK_DEFAULT 0x00ff
+/* Full capacity in bytes: (last_block + 1) * block_size */
 /* KATANA SDK support only 128/256/512/1024 KB with fixed block size (512). */
-#define STORAGE_MEMORY_LAST_BLOCK_MAX 0x07ff
-/* File info size in blocks for 128 KB. */
-#define STORAGE_MEMORY_FILEINFO_BLOCKS_DEFAULT 13
-/* Block offset for saves. */
-#define STORAGE_MEMORY_SAVE_BLOCK(last_block) ( \
-    (last_block + 1) - ((STORAGE_MEMORY_FILEINFO_BLOCKS_DEFAULT * \
-    ((last_block + 1) / (STORAGE_MEMORY_LAST_BLOCK_DEFAULT + 1))) + 2) \
-)
-/* Block offset for game executable. */
-#define STORAGE_MEMORY_EXE_BLOCK(last_block) ((last_block + 1) / 2)
+#define STORAGE_MEMORY_LAST_BLOCK_128KB  0x00ff
+#define STORAGE_MEMORY_LAST_BLOCK_256KB  0x01ff
+#define STORAGE_MEMORY_LAST_BLOCK_512KB  0x03ff
+#define STORAGE_MEMORY_LAST_BLOCK_1024KB 0x07ff
+
+/* FAT size in blocks */
+#define STORAGE_MEMORY_FAT_BLOCKS_128KB  1
+#define STORAGE_MEMORY_FAT_BLOCKS_256KB  2
+#define STORAGE_MEMORY_FAT_BLOCKS_512KB  4
+#define STORAGE_MEMORY_FAT_BLOCKS_1024KB 8
+
+/* File info size in blocks */
+#define STORAGE_MEMORY_FILEINFO_BLOCKS_128KB  13
+#define STORAGE_MEMORY_FILEINFO_BLOCKS_256KB  30
+#define STORAGE_MEMORY_FILEINFO_BLOCKS_512KB  60
+#define STORAGE_MEMORY_FILEINFO_BLOCKS_1024KB 113
+
+/* Reserved blocks count */
+#define STORAGE_MEMORY_RESERVED_BLOCKS_128KB  40
+
+/* Save count or ??? */
+#define STORAGE_MEMORY_SAVE_COUNT_128KB  31
+
+/* System blocks count */
+#define STORAGE_MEMORY_SYSTEM_BLOCKS 1
+
+/* Blocks for game executable. */
+#define STORAGE_MEMORY_EXE_BLOCKS(last_block) ((last_block + 1) / 2)
 
 typedef struct {
     uint32 function;
