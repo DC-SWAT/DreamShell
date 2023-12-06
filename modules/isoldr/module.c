@@ -414,12 +414,18 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 }
 
 static void set_loader_type(isoldr_info_t *info) {
-	if (info->emu_vmu != 0 || info->syscalls != 0 || info->scr_hotkey != 0) {
+	if (info->syscalls != 0 || info->scr_hotkey != 0) {
 		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
 		info->fs_type[4] = '\0';
-	} else if (info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0) {
-		strncpy(info->fs_type, ISOLDR_TYPE_EXTENDED, 3);
+	} else if (info->emu_cdda != CDDA_MODE_DISABLED || (info->use_irq != 0 && info->emu_vmu == 0)) {
+		strncpy(info->fs_type, ISOLDR_TYPE_CDDA, 4);
+		info->fs_type[4] = '\0';
+	} else if (info->emu_vmu != 0 && info->emu_cdda == CDDA_MODE_DISABLED) {
+		strncpy(info->fs_type, ISOLDR_TYPE_VMU, 3);
 		info->fs_type[3] = '\0';
+	} else if (info->emu_vmu != 0 && info->emu_cdda != CDDA_MODE_DISABLED) {
+		strncpy(info->fs_type, ISOLDR_TYPE_FEATURED, 4);
+		info->fs_type[4] = '\0';
 	} else {
 		info->fs_type[0] = '\0';
 	}

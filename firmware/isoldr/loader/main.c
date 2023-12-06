@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
-#ifndef HAVE_LIMIT
+#if 0//ndef HAVE_LIMIT
 	if(IsoInfo->gdtex > 0) {
 		draw_gdtex((uint8 *)IsoInfo->gdtex);
 	}
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
 #endif
 #ifdef HAVE_MAPLE
 	if(IsoInfo->emu_vmu) {
-		maple_init_vmu(IsoInfo->emu_vmu);
+		maple_init_vmu(IsoInfo->emu_vmu, IsoInfo->exec.type != BIN_TYPE_KOS);
 	}
 #endif
 

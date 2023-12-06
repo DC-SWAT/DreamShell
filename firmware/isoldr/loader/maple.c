@@ -263,6 +263,7 @@ static void maple_vmu_block_sync(maple_frame_t *req, maple_frame_t *resp) {
 #ifdef HAVE_SCREENSHOT
 static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
     uint32 *resp_params = (uint32 *)&resp->data;
+    static uint32 prev_buttons = 0;
     (void)req;
 
     if (resp_params[0] != MAPLE_FUNC_CONTROLLER
@@ -279,7 +280,6 @@ static void maple_controller(maple_frame_t *req, maple_frame_t *resp) {
 
     uint32 buttons = (~cond->buttons & 0xffff);
     // LOGF("      CTRL: but=0x%04lx joyx=%d joyy=%d\n", buttons, cond->joyx, cond->joyy);
-
 
     if (buttons == IsoInfo->scr_hotkey && buttons != prev_buttons) {
         video_screenshot();

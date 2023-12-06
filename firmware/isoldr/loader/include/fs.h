@@ -16,7 +16,7 @@
 #include "diskio.h"
 
 #if defined(DEV_TYPE_SD)
-#include "spi.h"
+#include <sd/spi.h>
 #elif defined(DEV_TYPE_IDE)
 #include <ide/ide.h>
 #endif

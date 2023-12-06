@@ -52,7 +52,9 @@
  * Supported types
  */
 #define ISOLDR_TYPE_DEFAULT  ""
-#define ISOLDR_TYPE_EXTENDED "ext"
+#define ISOLDR_TYPE_CDDA     "cdda"
+#define ISOLDR_TYPE_VMU      "vmu"
+#define ISOLDR_TYPE_FEATURED "feat"
 #define ISOLDR_TYPE_FULL     "full"
 
 

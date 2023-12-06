@@ -15,7 +15,7 @@
 #include <arch/gdb.h>
 
 #ifdef DEV_TYPE_SD
-#include <spi.h>
+#include <sd/spi.h>
 #endif
 
 
