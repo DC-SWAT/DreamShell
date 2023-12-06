@@ -550,29 +550,34 @@
 			</panel>
 
 			<panel background="settings_bg" height="380">
-				<panel height="350" width="50%" y="10">
+				<panel height="350" width="55%" y="10">
 
-					<label align="left" color="#31799F" font="m23" height="40" text="Extensions:" width="45%" x="13%" y="5" />
+					<label align="left" color="#31799F" font="m23" height="40" text="Extensions:" width="45%" x="12%" y="5" />
 
-					<panel height="30" width="86%" x="13%" y="45">
-						<input height="25" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
-							<label align="left" color="#000000" font="arial" height="20" text="Screenshots (START + A + B)" x="9%" />
-						</input>
-					</panel>
-					<panel height="65" width="86%" x="13%" y="75">
-						<input height="25" name="vmu-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
-							<label align="left" color="#000000" font="arial" height="20" text="VMU emulation" x="9%" />
-						</input>
-						<input font="arial" fontcolor="#000000" height="18" name="vmu-number" size="30" type="text" value="001" width="50%" />
-					</panel>
-					<panel height="30" width="86%" x="13%" y="135">
-						<input height="25" name="vmu-create-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
-							<label align="left" color="#000000" font="arial" height="20" text="Create new VMU in game directory" x="9%" />
-						</input>
-					</panel>
-					<panel height="30" width="86%" x="13%" y="165">
+					<panel height="30" width="86%" x="12%" y="45">
 						<input height="25" name="alt-boot-checkbox" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Boot from 2ST_READ.BIN" x="9%" />
+						</input>
+					</panel>
+					<panel height="30" width="86%" x="12%" y="75">
+						<input height="25" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Enable screenshots (START + A + B)" x="9%" />
+						</input>
+					</panel>
+					<panel height="150" width="86%" x="12%" y="105">
+						<label align="left" color="#31799F" font="arial" height="25" width="100%" text="VMU emulation:" />
+						<input font="arial" fontcolor="#000000" height="18" name="vmu-number" size="20" type="text" value="001" width="40" />
+						<input height="25" y="50" name="vmu-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Disabled" x="9%" />
+						</input>
+						<input height="25" name="vmu-shared-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Shared dump from root" x="9%" />
+						</input>
+						<input height="25" name="vmu-priv-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Private dump 200 blocks (128 KB)" x="9%" />
+						</input>
+						<input height="25" name="vmu-priv-1mb-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Private dump 1800 blocks (1024 KB)" x="9%" />
 						</input>
 					</panel>
 				</panel>

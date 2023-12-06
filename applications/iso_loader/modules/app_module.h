@@ -72,6 +72,8 @@ void isoLoader_toggleBootMode(GUI_Widget *widget);
 
 void isoLoader_toggleExtension(GUI_Widget *widget);
 
+void isoLoader_toggleVMU(GUI_Widget *widget);
+
 void isoLoader_Run(GUI_Widget *widget);
 
 void isoLoader_ItemClick(dirent_fm_t *fm_ent);

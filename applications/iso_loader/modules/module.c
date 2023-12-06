@@ -65,9 +65,11 @@ static struct {
 	GUI_Widget *fastboot;
 	GUI_Widget *async[10];
 	GUI_Widget *async_label;
-	GUI_Widget *vmu;
+	GUI_Widget *vmu_disabled;
 	GUI_Widget *vmu_number;
-	GUI_Widget *vmu_create;
+	GUI_Widget *vmu_shared;
+	GUI_Widget *vmu_priv;
+	GUI_Widget *vmu_priv_1mb;
 	GUI_Widget *screenshot;
 	GUI_Widget *alt_boot;
 
@@ -498,7 +500,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		}
 	}
 
-	if(GUI_WidgetGetState(self.vmu)) {
+	if(GUI_WidgetGetState(self.vmu_disabled) == 0) {
 		char number[12];
 		sprintf(number, " -v %d", atoi(GUI_TextEntryGetText(self.vmu_number)));
 		strcat(cmd, number);
@@ -994,9 +996,24 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 void isoLoader_toggleExtension(GUI_Widget *widget) {
 	if (GUI_WidgetGetState(widget)) {
 		GUI_WidgetSetState(self.irq, 1);
-		if (widget == self.vmu_create) {
-			GUI_WidgetSetState(self.vmu, 1);
-		}
+	}
+}
+
+void isoLoader_toggleVMU(GUI_Widget *widget) {
+	GUI_WidgetSetState(widget, 1);
+
+	if (widget != self.vmu_disabled) {
+		GUI_WidgetSetState(self.vmu_disabled, 0);
+		GUI_WidgetSetState(self.irq, 1);
+	}
+	if (widget != self.vmu_shared) {
+		GUI_WidgetSetState(self.vmu_shared, 0);
+	}
+	if (widget != self.vmu_priv) {
+		GUI_WidgetSetState(self.vmu_priv, 0);
+	}
+	if (widget != self.vmu_priv_1mb) {
+		GUI_WidgetSetState(self.vmu_priv_1mb, 0);
 	}
 }
 
@@ -1142,19 +1159,41 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 
-	if(GUI_WidgetGetState(self.vmu)) {
+	if(GUI_WidgetGetState(self.vmu_disabled) == 0) {
+
 		self.isoldr->emu_vmu = atoi(GUI_TextEntryGetText(self.vmu_number));
-	}
-
-	if(GUI_WidgetGetState(self.vmu_create)) {
-
-		snprintf(filepath, sizeof(filepath),
-				"%s/apps/%s/resources/empty_vmu.vmd",
-				getenv("PATH"), lib_get_name() + 4);
 
 		char fn[32];
 		snprintf(fn, sizeof(fn), "vmu%03ld.vmd", self.isoldr->emu_vmu);
-		CopyFile(filepath, relativeFilename(fn), 0);
+		char *priv_path = relativeFilename(fn);
+		int priv_size = FileSize(priv_path);
+
+		if(GUI_WidgetGetState(self.vmu_shared)) {
+
+			if (priv_size > 0) {
+				fs_unlink(priv_path);
+			}
+
+		} else {
+
+			if(GUI_WidgetGetState(self.vmu_priv_1mb)) {
+				snprintf(filepath, sizeof(filepath),
+					"%s/apps/%s/resources/empty_vmu_1024kb.vmd",
+					getenv("PATH"), lib_get_name() + 4);
+			} else {
+				snprintf(filepath, sizeof(filepath),
+					"%s/apps/%s/resources/empty_vmu_128kb.vmd",
+					getenv("PATH"), lib_get_name() + 4);
+			}
+			int src_size = FileSize(filepath);
+
+			if (src_size > 0 && priv_size != src_size) {
+				if (priv_size > 0) {
+					fs_unlink(priv_path);
+				}
+				CopyFile(filepath, priv_path, 0);
+			}
+		}
 	}
 
 	if(GUI_WidgetGetState(self.screenshot)) {
@@ -1327,8 +1366,7 @@ void isoLoader_DefaultPreset() {
 
 	GUI_WidgetSetState(self.irq, 0);
 	GUI_WidgetSetState(self.low, 0);
-
-	GUI_WidgetSetState(self.vmu, 0);
+	isoLoader_toggleVMU(self.vmu_disabled);
 	GUI_WidgetSetState(self.screenshot, 0);
 
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
@@ -1461,7 +1499,7 @@ int isoLoader_SavePreset() {
 
 	int vmu_num = 0;
 
-	if (GUI_WidgetGetState(self.vmu)) {
+	if (GUI_WidgetGetState(self.vmu_disabled) == 0) {
 		vmu_num = atoi(GUI_TextEntryGetText(self.vmu_number));
 	}
 
@@ -1565,14 +1603,29 @@ int isoLoader_LoadPreset() {
 	}
 	GUI_WidgetSetState(self.fastboot, fastboot);
 	GUI_WidgetSetState(self.irq, use_irq);
-	GUI_WidgetSetState(self.vmu, emu_vmu ? 1 : 0);
 	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
 	GUI_WidgetSetState(self.low, low);
 
 	if (emu_vmu) {
-		char num[8];
+		char num[8], fn[32];
 		sprintf(num, "%03d", emu_vmu);
 		GUI_TextEntrySetText(self.vmu_number, num);
+
+		snprintf(fn, sizeof(fn), "vmu%03ld.vmd", self.isoldr->emu_vmu);
+		char *dst_path = relativeFilename(fn);
+		int dst_size = FileSize(dst_path);
+
+		if (dst_size <= 0) {
+			isoLoader_toggleVMU(self.vmu_shared);
+		}
+		else if(dst_size < 256 << 10) {
+			isoLoader_toggleVMU(self.vmu_priv);
+		}
+		else {
+			isoLoader_toggleVMU(self.vmu_priv_1mb);
+		}
+	} else {
+		isoLoader_toggleVMU(self.vmu_disabled);
 	}
 
 	heap = strtoul(heap_memory, NULL, 16);
@@ -1705,9 +1758,11 @@ void isoLoader_Init(App_t *app) {
 		self.low           = APP_GET_WIDGET("low-checkbox");
 		self.fastboot      = APP_GET_WIDGET("fastboot-checkbox");
 
-		self.vmu           = APP_GET_WIDGET("vmu-checkbox");
+		self.vmu_disabled  = APP_GET_WIDGET("vmu-checkbox");
 		self.vmu_number    = APP_GET_WIDGET("vmu-number");
-		self.vmu_create    = APP_GET_WIDGET("vmu-create-checkbox");
+		self.vmu_shared    = APP_GET_WIDGET("vmu-shared-checkbox");
+		self.vmu_priv      = APP_GET_WIDGET("vmu-priv-checkbox");
+		self.vmu_priv_1mb  = APP_GET_WIDGET("vmu-priv-1mb-checkbox");
 		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
 		self.alt_boot      = APP_GET_WIDGET("alt-boot-checkbox");
 		
