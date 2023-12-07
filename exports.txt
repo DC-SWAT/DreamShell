@@ -1491,6 +1491,7 @@ jiffies
 gettimeofday
 localtime
 time
+ctime
 fabsf
 truncf
 round
@@ -1871,6 +1872,9 @@ _arch_old_sr
 _arch_old_vbr
 _arch_old_fpscr
 #
+# RTC
+#
+rtc_set_unix_secs
 #
 # JPEG, PNG and FreeType
 #
