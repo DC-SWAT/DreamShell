@@ -395,28 +395,33 @@ static void SetupBootSettings() {
 	}
 }
 
+static void update_rtc_ui() {
+	char buf[5];
+    struct tm time;
+	
+	rtc_gettimeutc(&time);
+	
+	sprintf(buf,"%04d",time.tm_year + 1900);
+	GUI_TextEntrySetText(self.sysdate[0], buf);
+	sprintf(buf,"%02d",time.tm_mon + 1);
+	GUI_TextEntrySetText(self.sysdate[1], buf);
+	sprintf(buf,"%02d",time.tm_mday);
+	GUI_TextEntrySetText(self.sysdate[2], buf);
+	sprintf(buf,"%02d",time.tm_hour);
+	GUI_TextEntrySetText(self.sysdate[3], buf);
+	sprintf(buf,"%02d",time.tm_min);
+	GUI_TextEntrySetText(self.sysdate[4], buf);
+}
+
 void SettingsApp_TimeChange(GUI_Widget *widget)
 {
     struct tm time;
-	
-	if(strcmp(GUI_ObjectGetName(widget),"get-time") == 0)
+
+	if(strcmp(GUI_ObjectGetName(widget), "get-time") == 0)
 	{
-		char buf[5];
-		
-		rtc_gettimeutc(&time);
-		
-		sprintf(buf,"%04d",time.tm_year + 1900);
-		GUI_TextEntrySetText(self.sysdate[0], buf);
-		sprintf(buf,"%02d",time.tm_mon + 1);
-		GUI_TextEntrySetText(self.sysdate[1], buf);
-		sprintf(buf,"%02d",time.tm_mday);
-		GUI_TextEntrySetText(self.sysdate[2], buf);
-		sprintf(buf,"%02d",time.tm_hour);
-		GUI_TextEntrySetText(self.sysdate[3], buf);
-		sprintf(buf,"%02d",time.tm_min);
-		GUI_TextEntrySetText(self.sysdate[4], buf);
+		update_rtc_ui();
 	}
-	else if(strcmp(GUI_ObjectGetName(widget),"set-time") == 0)
+	else if(strcmp(GUI_ObjectGetName(widget), "set-time") == 0)
 	{
 		time.tm_sec = 0;
 		time.tm_min = atoi(GUI_TextEntryGetText(self.sysdate[4]));
@@ -424,8 +429,15 @@ void SettingsApp_TimeChange(GUI_Widget *widget)
 		time.tm_mday = atoi(GUI_TextEntryGetText(self.sysdate[2]));
 		time.tm_mon = atoi(GUI_TextEntryGetText(self.sysdate[1])) - 1;
 		time.tm_year = atoi(GUI_TextEntryGetText(self.sysdate[0])) - 1900;
-		
 		rtc_settimeutc(&time);
+	}
+	else if(strcmp(GUI_ObjectGetName(widget), "sync-time") == 0)
+	{
+		ShowConsole();
+		dsystem("ntp --sync");
+		thd_sleep(1000);
+		update_rtc_ui();
+		HideConsole();
 	}
 }
 

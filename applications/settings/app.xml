@@ -211,10 +211,10 @@
 				</panel>
 			</panel>
 			<panel name="date-page" y="10">
-				<panel x="0" y="20" width="100%" height="50" >
-					<label font="m23" color="#000FFF" text="SYSTEM TIME" align="center" valign="center"/>
+				<panel x="0" y="20" width="100%" height="50">
+					<label font="m23" color="#777777" text="System date and time" align="center" valign="center" />
 				</panel>
-				
+
 				<panel x="32%" y="80" width="230" height="20">
 					<input  type="text" 
 						onblur="export:SettingsApp_Time()"
@@ -228,12 +228,12 @@
 						highlight="input-normal4"
 						focus="input-focus4">
 					</input>
-					
+
 					<panel x="45" width="20">
 						<label font="arial" color="#000000" text="/" align="center" />
 					</panel>
-					
-					<input  type="text" 
+
+					<input type="text" 
 						onblur="export:SettingsApp_Time()"
 						onfocus="export:SettingsApp_Time_Clr()"
 						font="arial" 
@@ -245,56 +245,55 @@
 						highlight="input-normal2"
 						focus="input-focus2">
 					</input>
-					
+
 					<panel x="90" width="20">
 						<label font="arial" color="#000000" text="/" align="center" />
 					</panel>
-					
-					<input  type="text" 
+
+					<input type="text"
 						onblur="export:SettingsApp_Time()"
 						onfocus="export:SettingsApp_Time_Clr()"
-						font="arial" 
-						fontcolor="#000000" 
-						value="18" 
+						font="arial"
+						fontcolor="#000000"
+						value="18"
 						size="3" x="110" width="25"
-						name="day" 
-						normal="input-normal2" 
+						name="day"
+						normal="input-normal2"
 						highlight="input-normal2"
 						focus="input-focus2">
 					</input>
-						
-					<input  type="text" 
+
+					<input type="text"
 						onblur="export:SettingsApp_Time()"
 						onfocus="export:SettingsApp_Time_Clr()"
-						font="arial" 
-						fontcolor="#000000" 
-						value="00" 
+						font="arial"
+						fontcolor="#000000"
+						value="00"
 						size="3" x="155" width="25"
-						name="hours" 
-						normal="input-normal2" 
+						name="hours"
+						normal="input-normal2"
 						highlight="input-normal2"
 						focus="input-focus2">
 					</input>
-					
+
 					<panel x="180" width="20">
 						<label font="arial" color="#000000" text=":" align="center" />
 					</panel>
-					
-					<input  type="text" 
+
+					<input type="text"
 						onblur="export:SettingsApp_Time()"
 						onfocus="export:SettingsApp_Time_Clr()"
-						font="arial" 
-						fontcolor="#000000" 
-						value="00" 
-						size="3" x="200" width="25" 
-						name="minute" 
-						normal="input-normal2" 
+						font="arial"
+						fontcolor="#000000"
+						value="00"
+						size="3" x="200" width="25"
+						name="minute"
+						normal="input-normal2"
 						highlight="input-normal2"
 						focus="input-focus2">
 					</input>
-					
 				</panel>
-				
+
 				<panel x="32%" y="110" width="230" height="20">
 					<panel x="5" width="45">
 						<label font="arial" color="#000000" text="YYYY" align="center"/>
@@ -312,22 +311,25 @@
 						<label font="arial" color="#000000" text="MM" align="center"/>
 					</panel>
 				</panel>
-				
+
 				<panel width="100%" height="50" />
-				
+
 				<panel height="70" width="50%">
 					<input type="button" name="get-time" width="280" height="60" onclick="export:SettingsApp_TimeChange()" align="center">
-						<label font="m23" color="#ffffff" text="Get DATE and Time" />
+						<label font="m23" color="#ffffff" text="Get values from RTC" />
 					</input>
 				</panel>
-				
 				<panel height="70" width="50%">
 					<input type="button" name="set-time" width="280" height="60" onclick="export:SettingsApp_TimeChange()" align="center">
-						<label font="m23" color="#ffffff" text="Set DATE and Time" />
+						<label font="m23" color="#ffffff" text="Set values to RTC" />
 					</input>
 				</panel>
-				
-				<panel height="60">
+				<panel height="70" width="50%">
+					<input type="button" name="sync-time" width="280" height="60" onclick="export:SettingsApp_TimeChange()" align="center">
+						<label font="m23" color="#ffffff" text="Sync RTC by NTP" />
+					</input>
+				</panel>
+				<panel height="70" width="50%">
 					<input type="button" width="280" height="60" onclick="export:SettingsApp_ShowPage()" name="main-but-clock" align="center">
 						<label font="m23" color="#ffffff" text="Back to main page" />
 					</input>
