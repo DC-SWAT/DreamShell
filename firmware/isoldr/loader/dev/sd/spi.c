@@ -100,6 +100,7 @@ void spi_send_byte(register uint8 b) {
 
 	register uint16 _pwork;
 	_pwork = pwork;
+	int old = irq_disable();
 	
 	TX_BIT();
 	CTS_ON();		/* SPI clock ON */
@@ -133,6 +134,8 @@ void spi_send_byte(register uint8 b) {
 	CTS_ON();		/* SPI clock ON */
 	b = (b << 1);
 	CTS_OFF();		/* SPI clock OFF */
+
+	irq_restore(old);
 }
 
 
@@ -148,6 +151,7 @@ uint8 spi_rec_byte() {
   
 	_pwork = pwork;
 	b = 0xff;
+	int old = irq_disable();
 	
 	TX_BIT();
 	CTS_ON();			/* SPI clock ON */
@@ -175,6 +179,7 @@ uint8 spi_rec_byte() {
 	b = (b << 1) | RX_BIT();	/* SPI data input */
 	CTS_OFF();			/* SPI clock OFF */
 
+	irq_restore(old);
 	return b;
 }
 
@@ -189,6 +194,7 @@ uint8 spi_sr_byte(register uint8 b) {
 
 	register uint16 _pwork;
 	_pwork = pwork;
+	int old = irq_disable();
 
 	TX_BIT();
 	CTS_ON();			/* SPI clock ON */
@@ -223,6 +229,7 @@ uint8 spi_sr_byte(register uint8 b) {
 	b = (b << 1) | RX_BIT();	/* SPI data input */
 	CTS_OFF();			/* SPI clock OFF */
 
+	irq_restore(old);
 	return b;
 }
 
@@ -238,6 +245,7 @@ uint8 spi_sr_byte(register uint8 b) {
 uint8 spi_slow_sr_byte(register uint8 b) {
 	
 	register int cnt;
+	int old = irq_disable();
 
 	for (cnt = 0; cnt < 8; cnt++) {
 		
@@ -253,7 +261,8 @@ uint8 spi_slow_sr_byte(register uint8 b) {
 		pwork &= ~SCSPTR2_CTSDT;
 		reg_write_16(SCSPTR2, pwork);
 	}
-	
+
+	irq_restore(old);
 	return b;
 }
 
@@ -269,16 +278,17 @@ uint8 spi_slow_sr_byte(register uint8 b) {
  */
 
 void spi_send_data(const uint8* data, uint16 len) {
-#if 0
+#ifndef HAVE_LIMIT
 	register uint8 b;
 	register uint16 _pwork;
 	_pwork = pwork;
-	
+	int old = irq_disable();
+
 	/* Used send/receive byte because only receive works unstable */
 	while(len) {
-		
+
 		b = data[0];
-		
+
 		TX_BIT();
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
@@ -311,9 +321,9 @@ void spi_send_data(const uint8* data, uint16 len) {
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
 		CTS_OFF();					/* SPI clock OFF */
-	
+
 		b = data[1];
-		
+
 		TX_BIT();
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
@@ -346,9 +356,9 @@ void spi_send_data(const uint8* data, uint16 len) {
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
 		CTS_OFF();					/* SPI clock OFF */
-		
+
 		b = data[2];
-		
+
 		TX_BIT();
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
@@ -381,9 +391,9 @@ void spi_send_data(const uint8* data, uint16 len) {
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
 		CTS_OFF();					/* SPI clock OFF */
-		
+
 		b = data[3];
-		
+
 		TX_BIT();
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
@@ -416,10 +426,11 @@ void spi_send_data(const uint8* data, uint16 len) {
 		CTS_ON_FAST();			/* SPI clock ON */
 		b = (b << 1) | RX_BIT();	/* SPI data input */
 		CTS_OFF();					/* SPI clock OFF */
-		
+
 		data += 4;
 		len -= 4;
 	}
+	irq_restore(old);
 #else
 	while(len--)
 		spi_send_byte(*data++);
@@ -439,8 +450,7 @@ void spi_rec_data(uint8* buffer, uint16 len) {
 	uint8 b = 0xff;
 	uint16 cts_off = (pwork & ~SCSPTR2_CTSDT) | SCSPTR2_SPB2DT;
 	uint16 cts_on = (pwork | SCSPTR2_CTSDT | SCSPTR2_SPB2DT);
-	uint32 *ptr = (uint32 *)buffer;
-	uint32 data;
+	int old = irq_disable();
 
 	reg_write_16(SCSPTR2, cts_off);
 
@@ -470,7 +480,7 @@ void spi_rec_data(uint8* buffer, uint16 len) {
 		b = (b << 1) | RX_BIT();		/* SPI data input */
 		reg_write_16(SCSPTR2, cts_off);	/* SPI clock OFF */
 
-		data = b;
+		buffer[0] = b;
 
 		reg_write_16(SCSPTR2, cts_on);	/* SPI clock ON */
 		b = (b << 1) | RX_BIT();		/* SPI data input */
@@ -497,7 +507,7 @@ void spi_rec_data(uint8* buffer, uint16 len) {
 		b = (b << 1) | RX_BIT();		/* SPI data input */
 		reg_write_16(SCSPTR2, cts_off);	/* SPI clock OFF */
 
-		data |= b << 8;
+		buffer[1] = b;
 
 		reg_write_16(SCSPTR2, cts_on);	/* SPI clock ON */
 		b = (b << 1) | RX_BIT();		/* SPI data input */
@@ -524,7 +534,7 @@ void spi_rec_data(uint8* buffer, uint16 len) {
 		b = (b << 1) | RX_BIT();		/* SPI data input */
 		reg_write_16(SCSPTR2, cts_off);	/* SPI clock OFF */
 
-		data |= b << 16;
+		buffer[2] = b;
 
 		reg_write_16(SCSPTR2, cts_on);	/* SPI clock ON */
 		b = (b << 1) | RX_BIT();		/* SPI data input */
@@ -551,7 +561,8 @@ void spi_rec_data(uint8* buffer, uint16 len) {
 		b = (b << 1) | RX_BIT();		/* SPI data input */
 		reg_write_16(SCSPTR2, cts_off);	/* SPI clock OFF */
 
-		data |= b << 24;
-		*ptr++ = data;
+		buffer[3] = b;
+		buffer += 4;
 	}
+	irq_restore(old);
 }
