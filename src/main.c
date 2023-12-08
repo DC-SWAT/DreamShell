@@ -12,6 +12,16 @@
 #include "profiler.h"
 #include "network/net.h"
 
+static void early_init(void) {
+	/*
+		Older KallistiOS doesn't get back the Master after working with G1 ATA.
+		But some users can use old bootloader with this KOS version.
+		So need select the Master before cdrom_init() is called.
+	*/
+	g1_ata_select_device(G1_ATA_MASTER);
+}
+
+KOS_INIT_EARLY(early_init);
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT);
 
 static uint32 ver_int = 0;
@@ -74,6 +84,7 @@ static uint8 *get_board_id() {
 int InitNet(uint32 ipl) {
 
 	if(net_inited) {
+		ds_printf("DS_OK: Network already initialized.\n");
 		return 0;
 	}
 
@@ -120,7 +131,7 @@ int InitNet(uint32 ipl) {
 			net_default_dev->ip_addr[0], net_default_dev->ip_addr[1],
 			net_default_dev->ip_addr[2], net_default_dev->ip_addr[3]);
 		setenv("NET_IPV4", ip_str, 1);
-		ds_printf("Network IPv4 address: %s\n", ip_str);
+		ds_printf("DS_OK: Network initialized, IPv4 address: %s\n", ip_str);
 	}
 	net_inited = 1;
 	return rv;
