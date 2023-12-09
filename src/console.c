@@ -177,7 +177,11 @@ static char *TabFunction(char* command) {
 
 
 static void ConsoleDrawHandler(void *ds_event, void *param, int action) {
-	
+
+	if(!ConsoleIsVisible()) {
+		return;
+	}
+
 	switch(action) {
 		case EVENT_ACTION_RENDER:
 			CON_DrawConsole(DSConsole);
@@ -215,7 +219,6 @@ static void ConsoleEventHandler(void *ds_event, void *param, int action) {
 		} 
 		
 	} else {
-		
 		switch(event->type) {
 			case SDL_KEYDOWN:
 				switch(event->key.keysym.sym) {
@@ -231,24 +234,6 @@ static void ConsoleEventHandler(void *ds_event, void *param, int action) {
 		}
 	}
 }
-
-static void SetGuiState(int state) {
-
-	Event_t *e = NULL;
-	
-	e = GetEventByName("GUI_Video");
-	
-	if(e) {
-		SetEventState(e, state);
-	}
-	
-	e = GetEventByName("GUI_Input");
-	
-	if(e) {
-		SetEventState(e, state);
-	}
-}
-
 
 int InitConsole(const char *font, const char *background, int lines, int x, int y, int w, int h, int alpha) {
 	
@@ -282,7 +267,6 @@ int InitConsole(const char *font, const char *background, int lines, int x, int 
 
 
 void ShutdownConsole() {
-	
 	RemoveEvent(con_input_event);
 	RemoveEvent(con_video_event);
 	CON_Destroy(DSConsole);
@@ -307,40 +291,45 @@ int ToggleConsole() {
 
 void ShowConsole() {
 
-	if(!ConsoleIsVisible()) {
-
-		SDL_DC_EmulateMouse(SDL_FALSE);
-		SetGuiState(EVENT_STATE_SLEEP);
-
-		CON_Show(DSConsole);
-		CON_Topmost(DSConsole);
-		CON_UpdateConsole(DSConsole);
-		SetEventState(con_video_event, EVENT_STATE_ACTIVE);
-
-		while(DSConsole->Visible != CON_OPEN) {
-			thd_sleep(100);
-		}
+	if(ConsoleIsVisible()) {
+		return;
 	}
+
+	ScreenFadeOutEx(NULL, 1);
+	GUI_Disable();
+
+	CON_Show(DSConsole);
+	CON_Topmost(DSConsole);
+	CON_UpdateConsole(DSConsole);
+	CON_DrawConsole(DSConsole);
+
+	SetEventState(con_video_event, EVENT_STATE_ACTIVE);
+	ScreenFadeIn();
 }
 
 void HideConsole() {
 
-	if(ConsoleIsVisible()) {
-
-		ScreenFadeOut();
-		CON_Hide(DSConsole);
-		CON_Topmost(NULL);
-
-		while(DSConsole->Visible != CON_CLOSED) {
-			thd_sleep(100);
-		}
-
-		SetEventState(con_video_event, EVENT_STATE_SLEEP);
-		SetGuiState(EVENT_STATE_ACTIVE);
-		SDL_DC_EmulateMouse(SDL_TRUE);
-		ProcessVideoEventsUpdate(NULL);
-		ScreenFadeIn();
+	if(!ConsoleIsVisible()) {
+		return;
 	}
+
+	ScreenFadeOutEx(NULL, 1);
+	SetEventState(con_video_event, EVENT_STATE_SLEEP);
+
+	CON_Hide(DSConsole);
+	CON_Topmost(NULL);
+
+	/* Update GUI */
+	GUI_Enable();
+	ProcessVideoEventsUpdate(NULL);
+	thd_sleep(100);
+
+	/* Update other stuff like VKB */
+	GUI_Disable();
+	ProcessVideoEventsUpdate(NULL);
+	GUI_Enable();
+
+	ScreenFadeIn();
 }
 
 ConsoleInformation *GetConsole() {

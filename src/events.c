@@ -155,7 +155,7 @@ void ProcessVideoEventsRender() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO && e->state == EVENT_STATE_ACTIVE) {
+		if(e->type == EVENT_TYPE_VIDEO && e->state == EVENT_STATE_ACTIVE && e->event != NULL) {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
 	}
@@ -166,12 +166,16 @@ void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
 	Event_t *e;
 	Item_t *i;
 
+	LockVideo();
+
 	SLIST_FOREACH(i, events, list) {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO && e->state == EVENT_STATE_ACTIVE) {
+		if(e->type == EVENT_TYPE_VIDEO && e->state == EVENT_STATE_ACTIVE && e->event != NULL) {
 			e->event(e, area, EVENT_ACTION_UPDATE);
 		}
 	}
+
+	UnlockVideo();
 }

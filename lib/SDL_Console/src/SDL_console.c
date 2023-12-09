@@ -82,10 +82,10 @@ SDL_Event* CON_Events(SDL_Event *event) {
 			return event;
 		} else {
 			/* first of all, check if the console hide key was pressed */
-			if(event->key.keysym.sym == Topmost->HideKey) {
-				CON_Hide(Topmost);
-				return NULL;
-			}
+			// if(event->key.keysym.sym == Topmost->HideKey) {
+			// 	CON_Hide(Topmost);
+			// 	return NULL;
+			// }
 			switch (event->key.keysym.sym) {
 			case SDLK_HOME:
 				if(event->key.keysym.mod & KMOD_SHIFT) {
@@ -157,10 +157,10 @@ SDL_Event* CON_Events(SDL_Event *event) {
 					Topmost->CommandScrollBack = -1;
 				}
 				break;
-			case SDLK_ESCAPE:
-				/* deactivate Console */
-				CON_Hide(Topmost);
-				return NULL;
+			// case SDLK_ESCAPE:
+			// 	/* deactivate Console */
+			// 	CON_Hide(Topmost);
+			// 	return NULL;
 			default:
 			
 				if(Topmost->InsMode)
@@ -512,7 +512,10 @@ ConsoleInformation *CON_Init(const char *FontName, SDL_Surface *DisplayScreen, i
 /* Makes the console visible */
 void CON_Show(ConsoleInformation *console) {
 	if(console) {
-		console->Visible = CON_OPENING;
+		// console->Visible = CON_OPENING;
+		console->Visible = CON_OPEN;
+		console->RaiseOffset = console->ConsoleSurface->h;
+		console->WasUnicode = 1;
 
 		// FIXME: Flag WasUnicode used for updating
 		//console->WasUnicode = SDL_EnableUNICODE(-1);
@@ -523,7 +526,8 @@ void CON_Show(ConsoleInformation *console) {
 /* Hides the console (make it invisible) */
 void CON_Hide(ConsoleInformation *console) {
 	if(console) {
-		console->Visible = CON_CLOSING;
+		// console->Visible = CON_CLOSING;
+		console->Visible = CON_CLOSED;
 		//SDL_EnableUNICODE(console->WasUnicode);
 	}
 }
