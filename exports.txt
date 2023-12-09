@@ -262,6 +262,8 @@ png_to_img
 #
 InitGUI
 ShutdownGUI
+GUI_Disable
+GUI_Enable
 #GUI_Object2Trash
 #GUI_ClearTrash
 #

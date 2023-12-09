@@ -28,6 +28,10 @@ void VirtKeyboardToggle();
 /* Main GUI */
 int InitGUI();
 void ShutdownGUI();
+
+void GUI_Disable();
+void GUI_Enable();
+
 int GUI_Object2Trash(GUI_Object *object);
 void GUI_ClearTrash();
 

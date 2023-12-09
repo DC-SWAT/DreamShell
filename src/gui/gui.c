@@ -25,14 +25,12 @@ typedef struct TrashItem {
  */
 typedef SLIST_HEAD(TrashItemList, TrashItem) TrashItem_list_t;
 
-static mutex_t gui_mutex = MUTEX_INITIALIZER;
 static TrashItem_list_t *trash_list;
 static Event_t *gui_input_event;
 static Event_t *gui_video_event;
 
 
 static void GUI_DrawHandler(void *ds_event, void *param, int action) {
-	
 	switch(action) {
 		case EVENT_ACTION_RENDER:
 			GUI_ScreenDoUpdate(GUI_GetScreen(), 0);
@@ -44,8 +42,6 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 			if(app != NULL && app->body != NULL) {
 				//GUI_WidgetErase(app->body, (SDL_Rect *)param);
 				GUI_WidgetMarkChanged(app->body);
-			} else {
-				GUI_ScreenDoUpdate(GUI_GetScreen(), 1); 
 			}
 			break;
 		}
@@ -179,8 +175,6 @@ void GUI_ClearTrash() {
 	SLIST_INIT(trash_list);
 }
 
-
-
 void ShutdownGUI() {
 
 	GUI_ClearTrash();
@@ -193,10 +187,20 @@ void ShutdownGUI() {
 	GUI_ObjectDecRef((GUI_Object *) GUI_GetScreen());
 	UnlockVideo();
 
-	mutex_destroy(&gui_mutex);
 	return; 
 }
 
+void GUI_Disable() {
+	SDL_DC_EmulateMouse(SDL_FALSE);
+	SetEventState(gui_input_event, EVENT_STATE_SLEEP);
+	SetEventState(gui_video_event, EVENT_STATE_SLEEP);
+}
+
+void GUI_Enable() {
+	SetEventState(gui_video_event, EVENT_STATE_ACTIVE);
+	SetEventState(gui_input_event, EVENT_STATE_ACTIVE);
+	SDL_DC_EmulateMouse(SDL_TRUE);
+}
 
 
 int GUI_Object2Trash(GUI_Object *object) {

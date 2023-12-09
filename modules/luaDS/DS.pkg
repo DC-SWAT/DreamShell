@@ -288,6 +288,8 @@ void ShutdownVideoThread();
 void ShowLogo();
 void HideLogo();
 
+void GUI_Disable();
+void GUI_Enable();
 
 /* Ends C function definitions when using C++ */
 
