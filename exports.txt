@@ -236,6 +236,7 @@ ScreenRotate
 ScreenTranslate
 ScreenFadeIn
 ScreenFadeOut
+ScreenFadeOutEx
 ScreenFadeStop
 ScreenChanged
 DisableScreen

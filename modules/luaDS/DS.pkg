@@ -263,6 +263,7 @@ void ScreenTranslate(float x, float y, float z);
 
 void ScreenFadeIn();
 void ScreenFadeOut();
+void ScreenFadeOutEx(const char *text, int wait);
 void ScreenFadeStop();
 
 void DisableScreen();

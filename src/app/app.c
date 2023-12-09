@@ -297,9 +297,9 @@ int OpenApp(App_t *app, const char *args) {
 	}
 
 	if(GetScreenOpacity() >= 1.0f && !ConsoleIsVisible() && !first_open) {
-		vmu_draw_string("Loading...");
-		ScreenFadeOut();
-		thd_sleep(500);
+		const char *str = "Loading...";
+		vmu_draw_string(str);
+		ScreenFadeOutEx(str, 1);
 	}
 
 	if(args != NULL) {
@@ -334,7 +334,7 @@ int OpenApp(App_t *app, const char *args) {
 	}
 
 	if(first_open && !ConsoleIsVisible()) {
-		ScreenFadeOut();
+		ScreenFadeOutEx(NULL, 0);
 	}
 
 	if((app->state & APP_STATE_LOADED) && !(app->state & APP_STATE_READY)) {
@@ -354,7 +354,9 @@ int OpenApp(App_t *app, const char *args) {
 
 			if(first_open && !ConsoleIsVisible()) {
 				first_open = 0;
-				while(GetScreenOpacity() > 0.0f) thd_sleep(100);
+				while(GetScreenOpacity() > 0.0f) {
+					thd_pass();
+				}
 			}
 
 			if(rect.w != GetScreenWidth() || rect.h != GetScreenHeight()) {
@@ -365,10 +367,9 @@ int OpenApp(App_t *app, const char *args) {
 				SetScreenMode(rect.w, rect.h, 0.0f, 0.0f, 1.0f);
 			}
 
-			//LockVideo();
+			LockVideo();
 			GUI_ScreenSetContents(GUI_GetScreen(), app->body);
-			//GUI_ScreenDoUpdate(GUI_GetScreen(), 1);
-			//UnlockVideo();
+			UnlockVideo();
 		}
 
 		vmu_draw_string(app->name);
@@ -379,7 +380,7 @@ int OpenApp(App_t *app, const char *args) {
 			CallAppBodyEvent(app, "onopen");
 		}
 
-		thd_sleep(100);
+		thd_pass();
 
 	} else {
 		ShowConsole();
@@ -391,11 +392,7 @@ int OpenApp(App_t *app, const char *args) {
 
 	ds_printf("DS_OK: App %s opened\n", app->name);
 
-	if(GetScreenOpacity() < 1.0f) {
-//		ScreenWaitUpdate();
-		ScreenFadeIn();
-	}
-
+	ScreenFadeIn();
 	return 1;
 
 error:

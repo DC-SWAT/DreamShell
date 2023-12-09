@@ -1,7 +1,7 @@
 /** 
  * \file    video.h
  * \brief   DreamShell video rendering
- * \date    2004-2014
+ * \date    2004-2023
  * \author  SWAT www.dc-swat.ru
  */
      
@@ -62,6 +62,7 @@ void ScreenTranslate(float x, float y, float z);
 
 void ScreenFadeIn();
 void ScreenFadeOut();
+void ScreenFadeOutEx(const char *text, int wait);
 void ScreenFadeStop();
 
 void DisableScreen();

@@ -2,8 +2,9 @@
  * DreamShell ##version##   *
  * video.c                  *
  * DreamShell video         *
- * Created by SWAT          *
- ****************************/ 
+ * (c)2004-2023 SWAT        *
+ * http://www.dc-swat.ru    *
+ ****************************/
 
 #include "ds.h"
 #include "console.h"
@@ -15,6 +16,7 @@ static int sdl_dc_default_60hz = 0;
 #include "../lib/SDL/src/video/dc/60hz.h"
 
 //#define DEBUG_VIDEO 1
+#define SCREEN_FADE_STEP 0.075f
 
 static SDL_Surface *DScreen = NULL; 
 static mutex_t video_mutex = MUTEX_INITIALIZER;
@@ -23,10 +25,10 @@ static int video_inited = 0;
 static int video_mode = -1;
 
 static float screen_opacity = 1.0f;
-static float plx_opacity = 1.0f;
-
-static volatile int scr_fade_act = 0, first_fade = 1;
-static volatile int screen_changed = 1, draw_screen = 1;
+static float scr_fade_text_opacity = 1.0f;
+static char *scr_fade_text = NULL;
+static volatile uint32 scr_fade_act = 0;
+static volatile uint32 screen_changed = 1, draw_screen = 1;
 
 extern int sdl_dc_width;
 extern int sdl_dc_height;
@@ -254,8 +256,22 @@ void ScreenFadeIn() {
 
 void ScreenFadeOut() {
 	LockVideo();
+	scr_fade_text = "Loading...";
 	scr_fade_act = 2;
 	UnlockVideo();
+}
+
+void ScreenFadeOutEx(const char *text, int wait) {
+	LockVideo();
+	scr_fade_text = (char *)text;
+	scr_fade_act = 2;
+	UnlockVideo();
+
+	if(wait) {
+		do {
+			thd_pass();
+		} while(scr_fade_act != 0);
+	}
 }
 
 void ScreenFadeStop() {
@@ -267,23 +283,23 @@ void ScreenFadeStop() {
 static inline void ScreenFadeStep() {
 	switch(scr_fade_act) {
 		case 1:
+			screen_opacity += SCREEN_FADE_STEP;
+			scr_fade_text_opacity -= SCREEN_FADE_STEP;
+
 			if(screen_opacity >= 1.0f) {
+				screen_opacity = 1.0f;
+				scr_fade_text_opacity = 0.0f;
 				scr_fade_act = 0;
-				if(first_fade) {
-					first_fade = 0;
-//					pvr_set_bg_color(0.85f, 0.85f, 0.85f);
-				}
-			} else {
-				screen_opacity += 0.05f;
-				plx_opacity -= 0.05f;
 			}
 			break;
 		case 2:
+			screen_opacity -= SCREEN_FADE_STEP;
+			scr_fade_text_opacity += SCREEN_FADE_STEP;
+
 			if(screen_opacity <= 0.0f) {
+				screen_opacity = 0.0f;
+				scr_fade_text_opacity = 1.0f;
 				scr_fade_act = 0;
-			} else {
-				screen_opacity -= 0.05f;
-				plx_opacity += 0.05f;
 			}
 			break;
 		default:
@@ -399,7 +415,7 @@ int InitVideo(int w, int h, int bpp) {
 	SDL_DC_SetVideoDriver(SDL_DC_TEXTURED_VIDEO);
 
 	if (SDL_Init(sdl_init_flags) < 0) {
-		ds_printf("SDL init failed: %s\n", SDL_GetError());
+		dbglog(DBG_ERROR, "SDL init failed: %s\n", SDL_GetError());
 		return 0;
 	}
 
@@ -461,7 +477,7 @@ int InitVideo(int w, int h, int bpp) {
 
 	if(plx_fnt) {
 		plx_cxt = plx_fcxt_create(plx_fnt, PVR_LIST_TR_POLY);
-		plx_fcxt_setcolor4f(plx_cxt, plx_opacity, 0.9f, 0.9f, 0.9f);
+		plx_fcxt_setcolor4f(plx_cxt, scr_fade_text_opacity, 0.9f, 0.9f, 0.9f);
 	} else {
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
 	}
@@ -520,7 +536,7 @@ void SDL_DS_Blit_Textured() {
 
 	pvr_list_begin(PVR_LIST_TR_POLY);
 
-	if(!first_fade && screen_opacity < 0.9f && plx_fnt) {
+	if(screen_opacity < 0.9f && plx_fnt && scr_fade_text) {
 
 		point_t w;
 		w.x = 255.0f;
@@ -529,8 +545,8 @@ void SDL_DS_Blit_Textured() {
 
 		plx_fcxt_begin(plx_cxt);
 		plx_fcxt_setpos_pnt(plx_cxt, &w);
-		plx_fcxt_setcolor4f(plx_cxt, plx_opacity, 0.9f, 0.9f, 0.9f);
-		plx_fcxt_draw(plx_cxt, "Loading...");
+		plx_fcxt_setcolor4f(plx_cxt, scr_fade_text_opacity, 0.9f, 0.9f, 0.9f);
+		plx_fcxt_draw(plx_cxt, scr_fade_text);
 		plx_fcxt_end(plx_cxt);
 	}
 
