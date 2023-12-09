@@ -1,7 +1,7 @@
 /** 
 * \file    vkb.c
 * \brief   DreamShell virtual keyboard
-* \date    2007-2014
+* \date    2007-2023
 * \author  SWAT www.dc-swat.ru
 */
 
@@ -111,66 +111,67 @@ static virt_kb_syms_t VirtKeyboardKeySyms[VIRT_KB_SURFACE_COUNT] =
 
 
 static int VirtKeyboardLoading(int reset) {
-	
+
 	char fn[NAME_MAX];
 	int i = 0;
-	
+	LockVideo();
+
 	if(reset) {
-	
+
 		for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
 			if(vkb.surface[i].s != NULL) {
 				SDL_FreeSurface(vkb.surface[i].s);
 			}
 		}
 	}
-	
+
 	sprintf(fn, "%s/gui/keyboard/syms.bmp", getenv("PATH"));
 	vkb.surface[VIRT_KB_SURFACE_KEYS].s = IMG_Load(fn);
-	
+
 	if(vkb.surface[VIRT_KB_SURFACE_KEYS].s == NULL) {
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
 		goto error;
 	}
-	
+
 	vkb.surface[VIRT_KB_SURFACE_KEYS].zoom = 1.0f;
-	
+
 	sprintf(fn, "%s/gui/keyboard/cap_syms.bmp", getenv("PATH"));
 	vkb.surface[VIRT_KB_SURFACE_KEYS_CAPS].s = IMG_Load(fn);
-	
+
 	if(vkb.surface[VIRT_KB_SURFACE_KEYS_CAPS].s == NULL) {
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
 		goto error;
 	}
-	
+
 	vkb.surface[VIRT_KB_SURFACE_KEYS_CAPS].zoom = 1.0f;
-	
+
 	sprintf(fn, "%s/gui/keyboard/nums.bmp", getenv("PATH"));
 	vkb.surface[VIRT_KB_SURFACE_NUMS].s = IMG_Load(fn);
-	
+
 	if(vkb.surface[VIRT_KB_SURFACE_NUMS].s == NULL) {
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
 		goto error;
 	}
-	
+
 	vkb.surface[VIRT_KB_SURFACE_NUMS].zoom = 1.0f;
+	UnlockVideo();
 	return 0;
-	
+
 error:
 	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
 		if(vkb.surface[i].s != NULL) {
 			SDL_FreeSurface(vkb.surface[i].s);
 		}
 	}
+	UnlockVideo();
 	return -1;
 }
 
 
-
-
 int VirtKeyboardInit() {
-	
+
 	memset(&vkb, 0, sizeof(vkb));
-	
+
 //	if(VirtKeyboardLoading(0) < 0) {
 //		return -1;
 //	}
@@ -227,15 +228,9 @@ void VirtKeyboardShutdown() {
 void VirtKeyboardShow() {
 	
     if(vkb.surface[0].s == NULL) {
-
-        LockVideo();
-
         if(VirtKeyboardLoading(0) < 0) {
-            UnlockVideo();
             return;
         }
-
-        UnlockVideo();
     }
 	
     vkb.visible = 1;
@@ -250,7 +245,7 @@ void VirtKeyboardHide() {
     vkb.redraw = 0;
     SetEventState(vkb.video, EVENT_STATE_SLEEP);
     VirtKeyboardUpdateWorkPlace();
-	
+
     if(!ConsoleIsVisible()) {
         SDL_DC_EmulateMouse(SDL_TRUE);
     }
@@ -285,30 +280,28 @@ static void VirtKeyboardUpdateWorkPlace() {
 	area.y = VKB_DRAW_PADDING;
 	area.w = surf->s->w;
 	area.h = surf->s->h;
-	
+
 	ProcessVideoEventsUpdate(&area);
 }
 
 
 static void VirtKeyboardResize() {
 	int i;
-	LockVideo();
-	
+
 	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
 		if(vkb.surface[i].s != NULL) {
 
-			if(vkb.surface[i].zoom < 2.0f) {
+			if(vkb.surface[i].zoom < 1.8f) {
 				vkb.surface[i].zoom += 0.2f;
 			} else {
 				VirtKeyboardLoading(1);
 				VirtKeyboardUpdateWorkPlace();
 				VirtKeyboardReDraw();
-				UnlockVideo();
 				return;
 			}
-			
+
 			SDL_Surface *s = zoomSurface(vkb.surface[i].s, 1.2f, 1.2f, 1);
-			
+
 			if(s == NULL) {
 				ds_printf("DS_ERROR: Virtual keyboard zoom error\n");
 			} else {
@@ -317,9 +310,8 @@ static void VirtKeyboardResize() {
 			}
 		}
 	}
-	
-	vkb.redraw = 1;
-	UnlockVideo();
+
+	VirtKeyboardReDraw();
 }
 
 
@@ -336,11 +328,11 @@ void VirtKeyboardReDraw() {
 static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
 	
 	if(action == EVENT_ACTION_RENDER && vkb.redraw) {
-     
+
 		ConsoleInformation *DSConsole = GetConsole();
 		SDL_Surface *DScreen = GetScreen();
 
-		SDL_Surface *dst = DSConsole->Visible != CON_CLOSED ? DSConsole->ConsoleSurface : DScreen;
+		SDL_Surface *dst = ConsoleIsVisible() ? DSConsole->ConsoleSurface : DScreen;
 		virt_kb_surface_t *surf = VirtKeyboardGetSurface();
 		
 		SDL_Rect dest;
@@ -369,28 +361,26 @@ static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
 
 		vkb.redraw = 0;
 		
-		if(DSConsole->Visible != CON_CLOSED)
+		if(ConsoleIsVisible())
 			// WasUnicode used now as async update
 			DSConsole->WasUnicode = 1; //CON_UpdateConsole(DSConsole);
 		else
 			ScreenChanged();
 		
 	} else if(action == EVENT_ACTION_UPDATE) {
-		
-		//if(param == NULL) {
-			VirtKeyboardReDraw();
+
+		// if(param == NULL) {
 			if(vkb.visible) {
-				SDL_DC_EmulateMouse(SDL_FALSE); // Console can switch on this feature.
+				vkb.redraw = 1;
+				// GUI_Enable() can switch on this feature.
+				SDL_DC_EmulateMouse(SDL_FALSE);
 			}
-			
-		//} else {
-			/*
-			VideoEventUpdate_t *area = (VideoEventUpdate_t *)param;
-			virt_kb_surface_t *surf = VirtKeyboardGetSurface();
-			x = DScreen->w - surf->s->w - VKB_DRAW_PADDING;
-			y = VKB_DRAW_PADDING;
-			*/
-		//}
+		// } else {
+		// 	VideoEventUpdate_t *area = (VideoEventUpdate_t *)param;
+		// 	virt_kb_surface_t *surf = VirtKeyboardGetSurface();
+		// 	x = DScreen->w - surf->s->w - VKB_DRAW_PADDING;
+		// 	y = VKB_DRAW_PADDING;
+		// }
 	}
 }
 
