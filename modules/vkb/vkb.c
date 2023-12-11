@@ -38,23 +38,25 @@ typedef struct virt_kb_surface {
 
 
 typedef struct virt_kb {
-	
+
 	int cur_surf;
 	int visible;
 	int redraw;
-	
+
 	int row;
 	int col;
-	
+
 	SDL_Event event;
-	
+	uint8_t last_joy_state;
+	uint8_t cur_joy_state;
+
 	uint32 clr;
-	
+
 	virt_kb_surface_t surface[VIRT_KB_SURFACE_COUNT];
-	
+
 	Event_t *input;
 	Event_t *video;
-	
+
 } virt_kb_t;
 
 
@@ -183,14 +185,26 @@ int VirtKeyboardInit() {
 	vkb.redraw = 0;
 	vkb.clr = 0x0000007F;
 	
-	vkb.input = AddEvent("VirtKeyboardInput", EVENT_TYPE_INPUT, VirtKeyboardEvent, NULL);
+	vkb.input = AddEvent(
+		"VirtKeyboardInput",
+		EVENT_TYPE_INPUT,
+		EVENT_PRIO_OVERLAY,
+		VirtKeyboardEvent,
+		NULL
+	);
 	
 	if(!vkb.input) {
 		VirtKeyboardShutdown();
 		return -1;
 	}
 	
-	vkb.video = AddEvent("VirtKeyboardVideo", EVENT_TYPE_VIDEO, VirtKeyboardDraw, NULL);
+	vkb.video = AddEvent(
+		"VirtKeyboardVideo",
+		EVENT_TYPE_VIDEO,
+		EVENT_PRIO_OVERLAY,
+		VirtKeyboardDraw,
+		NULL
+	);
 	
 	if(!vkb.video) {
 		VirtKeyboardShutdown();
@@ -291,7 +305,7 @@ static void VirtKeyboardResize() {
 	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
 		if(vkb.surface[i].s != NULL) {
 
-			if(vkb.surface[i].zoom < 1.8f) {
+			if(vkb.surface[i].zoom <= 1.8f) {
 				vkb.surface[i].zoom += 0.2f;
 			} else {
 				VirtKeyboardLoading(1);
@@ -325,62 +339,60 @@ void VirtKeyboardReDraw() {
 	}
 }
 
-static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
+static void VirtKeyboardBlit() {
+
+	ConsoleInformation *DSConsole = GetConsole();
+	SDL_Surface *DScreen = GetScreen();
+
+	SDL_Surface *dst = ConsoleIsVisible() ? DSConsole->ConsoleSurface : DScreen;
+	virt_kb_surface_t *surf = VirtKeyboardGetSurface();
 	
+	SDL_Rect dest;
+	dest.x = dst->w - surf->s->w - VKB_DRAW_PADDING;
+	dest.y = VKB_DRAW_PADDING;
+	
+	int box_w = (surf->s->h / 3) - 1;
+	int box_h = (surf->s->w / 3) - 1;
+	
+	if(surf->zoom > 1.0f) {
+		box_w += surf->zoom;
+		box_h += surf->zoom;
+	}
+	
+	//SDL_FillRect(scr, 0, SDL_MapRGBA(scr->format, 250, 250, 250, 0));
+	SDL_BlitSurface(surf->s, NULL, dst, &dest); 
+
+	boxRGBA(dst, dest.x + (box_w * vkb.col) + vkb.col, 
+				dest.y + (box_h * vkb.row) + vkb.row, 
+				dest.x + (box_w * vkb.col) + box_w, 
+				dest.y + (box_h * vkb.row) + box_h,
+				(vkb.clr >> 24) & 0xff, 
+				(vkb.clr >> 16) & 0xff, 
+				(vkb.clr >> 8) & 0xff, 
+				(vkb.clr >> 0) & 0xff);
+
+	vkb.redraw = 0;
+	
+	if(ConsoleIsVisible())
+		// FIXME: WasUnicode used now as async update
+		DSConsole->WasUnicode = 1; // CON_UpdateConsole(DSConsole);
+	else
+		ScreenChanged();
+}
+
+static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
+
 	if(action == EVENT_ACTION_RENDER && vkb.redraw) {
 
-		ConsoleInformation *DSConsole = GetConsole();
-		SDL_Surface *DScreen = GetScreen();
+		VirtKeyboardBlit();
 
-		SDL_Surface *dst = ConsoleIsVisible() ? DSConsole->ConsoleSurface : DScreen;
-		virt_kb_surface_t *surf = VirtKeyboardGetSurface();
-		
-		SDL_Rect dest;
-		dest.x = dst->w - surf->s->w - VKB_DRAW_PADDING;
-		dest.y = VKB_DRAW_PADDING;
-		
-		int box_w = (surf->s->h / 3) - 1;
-		int box_h = (surf->s->w / 3) - 1;
-		
-		if(surf->zoom > 1.0f) {
-			box_w += surf->zoom;
-			box_h += surf->zoom;
-		}
-		
-		//SDL_FillRect(scr, 0, SDL_MapRGBA(scr->format, 250, 250, 250, 0));
-		SDL_BlitSurface(surf->s, NULL, dst, &dest); 
-
-		boxRGBA(dst, dest.x + (box_w * vkb.col) + vkb.col, 
-				  dest.y + (box_h * vkb.row) + vkb.row, 
-				  dest.x + (box_w * vkb.col) + box_w, 
-				  dest.y + (box_h * vkb.row) + box_h,
-				  (vkb.clr >> 24) & 0xff, 
-				  (vkb.clr >> 16) & 0xff, 
-				  (vkb.clr >> 8) & 0xff, 
-				  (vkb.clr >> 0) & 0xff);
-
-		vkb.redraw = 0;
-		
-		if(ConsoleIsVisible())
-			// WasUnicode used now as async update
-			DSConsole->WasUnicode = 1; //CON_UpdateConsole(DSConsole);
-		else
-			ScreenChanged();
-		
 	} else if(action == EVENT_ACTION_UPDATE) {
-
-		// if(param == NULL) {
-			if(vkb.visible) {
-				vkb.redraw = 1;
-				// GUI_Enable() can switch on this feature.
-				SDL_DC_EmulateMouse(SDL_FALSE);
-			}
-		// } else {
-		// 	VideoEventUpdate_t *area = (VideoEventUpdate_t *)param;
-		// 	virt_kb_surface_t *surf = VirtKeyboardGetSurface();
-		// 	x = DScreen->w - surf->s->w - VKB_DRAW_PADDING;
-		// 	y = VKB_DRAW_PADDING;
-		// }
+		if(vkb.visible) {
+			vkb.redraw = 1;
+			// GUI_Enable() can switch on this feature.
+			SDL_DC_EmulateMouse(SDL_FALSE);
+			// VirtKeyboardBlit();
+		}
 	}
 }
 
@@ -407,6 +419,7 @@ static int ButtonToKey(int but) {
 	
 	return VirtKeyboardKeySyms[vkb.cur_surf].sections[(vkb.row*3) + vkb.col].keys[key];
 }
+
 
 
 static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
@@ -539,8 +552,10 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 					case 2: // rtrig
 					
 						if(event->jaxis.value) {
+							vkb.cur_joy_state |= 2;
 							VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS_CAPS);
 						} else {
+							vkb.cur_joy_state ^= 2;
 							VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS);
 						}
 						
@@ -548,12 +563,10 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 					case 3: //ltrig
 
 						if(event->jaxis.value) {
-							if(vkb.cur_surf == VIRT_KB_SURFACE_KEYS_CAPS) {
-								VirtKeyboardResize();
-								break;
-							}
+							vkb.cur_joy_state |= 4;
 							VirtKeyboardSetSurface(VIRT_KB_SURFACE_NUMS);
 						} else {
+							vkb.cur_joy_state ^= 4;
 							VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS);
 						}
 						
@@ -564,7 +577,13 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 				break;
 			default:
 				break;
-		} 
+		}
+
+		if(vkb.cur_joy_state != vkb.last_joy_state && vkb.last_joy_state == 6) {
+			VirtKeyboardResize();
+		}
+		vkb.last_joy_state = vkb.cur_joy_state;
+
 	} else {
 		
 		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 3) {
