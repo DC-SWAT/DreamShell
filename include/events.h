@@ -1,14 +1,12 @@
 /** 
  * \file    events.h
  * \brief   DreamShell event system
- * \date    2007-2014
+ * \date    2007-2023
  * \author  SWAT www.dc-swat.ru
  */
-
   
 #ifndef _DS_EVENTS_H
 #define _DS_EVENTS_H
-
 
 #include "video.h"
 
@@ -20,6 +18,9 @@
 
 #define EVENT_TYPE_INPUT 0
 #define EVENT_TYPE_VIDEO 1
+
+#define EVENT_PRIO_DEFAULT 0
+#define EVENT_PRIO_OVERLAY 1
 
 /**
  * Event_t, data, action
@@ -34,7 +35,8 @@ typedef struct Event {
 	void *param;
 	uint16 state;
 	uint16 type;
-       
+	uint16 prio;
+
 } Event_t;
 
 #ifdef SDL_Rect
@@ -63,7 +65,7 @@ void ShutdownEvents();
  * 
  * return NULL on error
  */
-Event_t *AddEvent(const char *name, uint16 type, Event_func *event, void *param);
+Event_t *AddEvent(const char *name, uint16 type, uint16 prio, Event_func *event, void *param);
 
 /**
  * Remove event from list

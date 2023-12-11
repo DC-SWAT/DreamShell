@@ -62,12 +62,14 @@ Event_t *GetEventByName(const char *name) {
 }
 
 
-Event_t *AddEvent(const char *name, uint16 type, Event_func *event, void *param) {
+Event_t *AddEvent(const char *name, uint16 type, uint16 prio, Event_func *event, void *param) {
 
 	Event_t *e;
 	Item_t *i;
 
-	if(name && GetEventByName(name)) return NULL;
+	if(!event || !name || GetEventByName(name)) {
+		return NULL;
+	}
 
 	e = (Event_t *)calloc(1, sizeof(Event_t)); 
 	if(e == NULL) return NULL;
@@ -132,14 +134,14 @@ int SetEventState(Event_t *e, uint16 state) {
 
 
 void ProcessInputEvents(SDL_Event *event) {
-	
+
 	Event_t *e;
 	Item_t *i;
 
 	SLIST_FOREACH(i, events, list) {
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_INPUT && e->state == EVENT_STATE_ACTIVE && e->event != NULL) {
+		if(e->type == EVENT_TYPE_INPUT && e->state == EVENT_STATE_ACTIVE) {
 			e->event(e, event, EVENT_ACTION_UPDATE);
 		}
 	}
@@ -155,11 +157,27 @@ void ProcessVideoEventsRender() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO && e->state == EVENT_STATE_ACTIVE && e->event != NULL) {
+		if(e->type == EVENT_TYPE_VIDEO
+			&& e->state == EVENT_STATE_ACTIVE
+			&& e->prio == EVENT_PRIO_DEFAULT
+		) {
+			e->event(e, e->param, EVENT_ACTION_RENDER);
+		}
+	}
+
+	SLIST_FOREACH(i, events, list) {
+
+		e = (Event_t *) i->data;
+
+		if(e->type == EVENT_TYPE_VIDEO
+			&& e->state == EVENT_STATE_ACTIVE
+			&& e->prio == EVENT_PRIO_OVERLAY
+		) {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
 	}
 }
+
 
 void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
 
@@ -172,8 +190,23 @@ void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO && e->state == EVENT_STATE_ACTIVE && e->event != NULL) {
-			e->event(e, area, EVENT_ACTION_UPDATE);
+		if(e->type == EVENT_TYPE_VIDEO
+			&& e->state == EVENT_STATE_ACTIVE
+			&& e->prio == EVENT_PRIO_DEFAULT
+		) {
+			e->event(e, e->param, EVENT_ACTION_UPDATE);
+		}
+	}
+
+	SLIST_FOREACH(i, events, list) {
+
+		e = (Event_t *) i->data;
+
+		if(e->type == EVENT_TYPE_VIDEO
+			&& e->state == EVENT_STATE_ACTIVE
+			&& e->prio == EVENT_PRIO_OVERLAY
+		) {
+			e->event(e, e->param, EVENT_ACTION_UPDATE);
 		}
 	}
 

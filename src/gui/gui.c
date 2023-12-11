@@ -38,9 +38,7 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 		case EVENT_ACTION_UPDATE:
 		{
 			App_t *app = GetCurApp();
-			// TODO optimize update area
 			if(app != NULL && app->body != NULL) {
-				//GUI_WidgetErase(app->body, (SDL_Rect *)param);
 				GUI_WidgetMarkChanged(app->body);
 			}
 			break;
@@ -128,29 +126,36 @@ int InitGUI() {
 
 	trash_list = (TrashItem_list_t *) calloc(1, sizeof(TrashItem_list_t)); 
 
-	if(trash_list == NULL) 
+	if(trash_list == NULL) {
 		return 0;
+	}
 
 	SLIST_INIT(trash_list);
 
-	LockVideo();
 	GUI_Screen *gui = GUI_RealScreenCreate("screen", GetScreen());
 
 	if(gui == NULL) {
-
 		ds_printf("DS_ERROR: GUI init RealScreen error\n");
-		UnlockVideo();
 		return 0;
 
 	} else {
 		GUI_SetScreen(gui);
 	}
 
-	UnlockVideo();
-
-	gui_input_event = AddEvent("GUI_Input", EVENT_TYPE_INPUT, GUI_EventHandler, NULL);
-	gui_video_event = AddEvent("GUI_Video", EVENT_TYPE_VIDEO, GUI_DrawHandler, NULL);
-
+	gui_input_event = AddEvent(
+		"GUI_Input",
+		EVENT_TYPE_INPUT,
+		EVENT_PRIO_DEFAULT,
+		GUI_EventHandler,
+		NULL
+	);
+	gui_video_event = AddEvent(
+		"GUI_Video",
+		EVENT_TYPE_VIDEO,
+		EVENT_PRIO_DEFAULT,
+		GUI_DrawHandler,
+		NULL
+	);
 	return 1;
 }
 

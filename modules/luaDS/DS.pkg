@@ -19,7 +19,7 @@ $	return (Event_t *) ptr;
 $}
 $
 $Cmd_t *AddCmdLua(const char *cmd, const char *helpmsg, const char *handler);
-$Event_t *AddEventLua(const char *name, int type, const char *handler);
+$Event_t *AddEventLua(const char *name, uint16 type, uint16 prio, const char *handler);
 $
 	
 module DS
@@ -152,6 +152,8 @@ App_t *VoidToApp(void *ptr);
 #define EVENT_TYPE_INPUT 0
 #define EVENT_TYPE_VIDEO 1
 
+#define EVENT_PRIO_DEFAULT 0
+#define EVENT_PRIO_OVERLAY 1
 
 typedef struct Event {
 
@@ -161,14 +163,14 @@ typedef struct Event {
 	void *param;
 	uint16 state;
 	uint16 type;
+	uint16 prio;
        
 } Event_t;
-
 
 int InitEvents();
 void ShutdownEvents();
 
-Event_t *AddEventLua(const char *name, uint16 type, const char *event);
+Event_t *AddEventLua(const char *name, uint16 type, uint16 prio, const char *event);
 int RemoveEvent(Event_t *e);
 
 int SetEventState(Event_t *e, uint16 state);

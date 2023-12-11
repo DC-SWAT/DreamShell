@@ -258,10 +258,20 @@ int InitConsole(const char *font, const char *background, int lines, int x, int 
 	CON_Alpha(DSConsole, alpha);
 	ds_printf("Enter 'help' for print command list.\n\n");
 	
-	con_input_event = AddEvent("Console_Input", EVENT_TYPE_INPUT, ConsoleEventHandler, NULL);
-	con_video_event = AddEvent("Console_Video", EVENT_TYPE_VIDEO, ConsoleDrawHandler, NULL);
-//	CON_Topmost(DSConsole);
-	
+	con_input_event = AddEvent(
+		"Console_Input",
+		EVENT_TYPE_INPUT,
+		EVENT_PRIO_DEFAULT,
+		ConsoleEventHandler,
+		NULL
+	);
+	con_video_event = AddEvent(
+		"Console_Video",
+		EVENT_TYPE_VIDEO,
+		EVENT_PRIO_DEFAULT,
+		ConsoleDrawHandler,
+		NULL
+	);
 	return 1;
 }
 
@@ -319,16 +329,8 @@ void HideConsole() {
 	CON_Hide(DSConsole);
 	CON_Topmost(NULL);
 
-	/* Update GUI */
 	GUI_Enable();
 	ProcessVideoEventsUpdate(NULL);
-	thd_sleep(100);
-
-	/* Update other stuff like VKB */
-	GUI_Disable();
-	ProcessVideoEventsUpdate(NULL);
-	GUI_Enable();
-
 	ScreenFadeIn();
 }
 
