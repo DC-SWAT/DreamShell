@@ -28,8 +28,7 @@
 
 	
 	function RegionChanger:ShowPage(index) 
-		DS.ScreenFadeOut();
-		Sleep(500);
+		DS.ScreenFadeOutEx(nil, 1);
 		GUI.CardStackShowIndex(self.pages, index); 
 		DS.ScreenFadeIn();
 	end

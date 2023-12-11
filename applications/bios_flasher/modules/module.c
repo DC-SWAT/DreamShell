@@ -495,8 +495,7 @@ void BiosFlasher_OnComparePressed(GUI_Widget *widget)
 
 void BiosFlasher_OnDetectPressed(GUI_Widget *widget)
 {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx("Detecting...", 1);
 	BiosFlasher_EnableMainPage();	// Redetect bios again
 	ScreenFadeIn();
 }
@@ -624,8 +623,7 @@ void BiosFlasher_EnableMainPage()
 	
 	if (GUI_CardStackGetIndex(self.pages) != 0)
 	{
-		ScreenFadeOut();
-		thd_sleep(200);
+		ScreenFadeOutEx(NULL, 1);
 		GUI_CardStackShowIndex(self.pages, 0);
 		ScreenFadeIn();
 	}
@@ -645,8 +643,7 @@ void BiosFlasher_EnableMainPage()
 
 void BiosFlasher_EnableChoseFilePage()
 {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 1);
 	ScreenFadeIn();
 
@@ -658,16 +655,14 @@ void BiosFlasher_EnableChoseFilePage()
 
 void BiosFlasher_EnableProgressPage()
 {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 2);
 	ScreenFadeIn();
 }
 
 void BiosFlasher_EnableResultPage(int result, const char* fileName)
 {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 3);
 	ScreenFadeIn();
 	
@@ -732,8 +727,7 @@ void BiosFlasher_EnableResultPage(int result, const char* fileName)
 
 void BiosFlasher_EnableSettingsPage()
 {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 4);
 	ScreenFadeIn();
 }

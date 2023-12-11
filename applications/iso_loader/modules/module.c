@@ -176,22 +176,23 @@ void isoLoader_ShowPage(GUI_Widget *widget) {
 }
 
 void isoLoader_ShowSettings(GUI_Widget *widget) {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx("Settings", 1);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
 
 void isoLoader_ShowExtensions(GUI_Widget *widget) {
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx("Extensions", 1);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
 
 void isoLoader_ShowGames(GUI_Widget *widget) {
-	ScreenFadeOut();
-	thd_sleep(200);
+	if (GUI_WidgetGetState(self.preset)) {
+		ScreenFadeOutEx("Saving...", 1);
+	} else {
+		ScreenFadeOutEx("Games", 1);
+	}
 	isoLoader_SavePreset();
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
@@ -213,8 +214,7 @@ static void check_link_file(void) {
 
 void isoLoader_ShowLink(GUI_Widget *widget) {
 
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx("Shortcut", 1);
 
 	GUI_WidgetSetState(self.rotate180, 0);
 	GUI_WidgetSetState(self.btn_hidetext, 0);
@@ -1029,12 +1029,10 @@ void isoLoader_Run(GUI_Widget *widget) {
 				GUI_FileManagerGetPath(self.filebrowser), 
 				self.filename);
 
-	ScreenFadeOut();
-	StopCDDATrack();
-
 	if(!GUI_WidgetGetState(self.fastboot)) {
-		thd_sleep(400);
+		ScreenFadeOutEx("Starting...", 1);
 	}
+	StopCDDATrack();
 
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
 		isoLoader_SavePreset();

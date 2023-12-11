@@ -542,8 +542,7 @@ void VMU_Manager_EnableMainPage()
 		self.direction_flag = 0;
 		GUI_LabelSetText(self.drection, "SELECT SOURCE VMU");
 		GUI_WidgetSetEnabled(self.button_home, 0);
-		ScreenFadeOut();
-		thd_sleep(200);
+		ScreenFadeOutEx(NULL, 1);
 		GUI_CardStackShowIndex(self.pages, 0);
 		ScreenFadeIn();
 		t0 = thd_create(1, maple_scan, NULL);
@@ -555,8 +554,7 @@ void VMU_Manager_vmu(GUI_Widget *widget)
 	char vpath[NAME_MAX];
 	
 	GUI_WidgetSetEnabled(self.button_home, 1);
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 1);
 	snprintf(vpath, NAME_MAX, "/vmu/%s", GUI_ObjectGetName(widget));
 	if(self.direction_flag == 0){
@@ -1313,8 +1311,7 @@ void VMU_Manager_sel_dst_vmu(GUI_Widget *widget)
 {
 	self.direction_flag = 1;
 	GUI_LabelSetText(self.drection, "SELECT DESTINATION VMU");
-	ScreenFadeOut();
-	thd_sleep(200);
+	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 0);
 	ScreenFadeIn();
 	t0 = thd_create(1, maple_scan, NULL);

@@ -113,7 +113,7 @@ void SettingsApp_ShowPage(GUI_Widget *widget) {
 	char name[64];
 	size_t size;
 	
-	ScreenFadeOut();
+	ScreenFadeOutEx(NULL, 1);
 	object_name = GUI_ObjectGetName((GUI_Object *)widget);
 	name_ptr = strchr(object_name, '-');
 	size = (name_ptr - object_name);
@@ -123,7 +123,6 @@ void SettingsApp_ShowPage(GUI_Widget *widget) {
 		strncpy(name, object_name, size);
 		strncpy(name + size, "-page", 6);
 
-		thd_sleep(200);
 		GUI_CardStackShow(self.pages, name);
 	}
 	
