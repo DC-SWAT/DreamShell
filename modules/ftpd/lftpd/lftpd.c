@@ -31,7 +31,7 @@
 // https://tools.ietf.org/html/rfc2428#section-3 EPSV
 // https://en.wikipedia.org/wiki/List_of_FTP_commands
 
-#define FILE_BUFFER_SIZE 64 * 1024
+#define FILE_BUFFER_SIZE ((64 * 1024) - 512)
 
 typedef struct {
 	char *command;
@@ -84,6 +84,7 @@ static int send_response(int socket, int code, bool include_code,
 	char* message = NULL;
 	int err = vasprintf(&message, format, args);
 	va_end(args);
+
 	if (err < 0) {
 		return -1;
 	}
@@ -124,13 +125,13 @@ static int send_list(int socket, const char* path) {
 	static const char* directory_format = "drw-rw-rw- 1 dream shell %lu Nov 27 1998 %s";
 	static const char* file_format = "-rw-rw-rw- 1 dream shell %lu Nov 27 1998 %s";
 
+	dirent_t *entry;
 	file_t fd = fs_open(path, O_RDONLY | O_DIR);
 
 	if (fd < 0) {
 		return -1;
 	}
 
-	dirent_t *entry;
 	while ((entry = fs_readdir(fd))) {
 		if (entry->attr == O_DIR) {
 			send_multiline_response_line(socket, directory_format, 0, entry->name);
@@ -161,26 +162,33 @@ static int send_nlst(int socket, const char* path) {
 }
 
 static int send_file(int socket, const char* path) {
-
+	uint8_t *p;
+	uint8_t *buffer;
+	int read_len, write_len, rv = -1;
 	file_t fd = fs_open(path, O_RDONLY);
 
 	if (fd < 0) {
 		lftpd_log_error("failed to open file for read");
-		return -1;
+		return rv;
 	}
 
-	uint8_t *buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
-	int read_len;
+	buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
+
+	if (!buffer) {
+		lftpd_log_error("no free memory");
+		return rv;
+	}
+
+	rv = 0;
 
 	while ((read_len = fs_read(fd, buffer, FILE_BUFFER_SIZE)) > 0) {
-		uint8_t *p = buffer;
+		p = buffer;
 		while (read_len > 0) {
-			int write_len = write(socket, p, read_len);
+			write_len = write(socket, p, read_len);
 			if (write_len < 0) {
 				lftpd_log_error("write error");
-				fs_close(fd);
-				free(buffer);
-				return -1;
+				rv = -1;
+				break;
 			}
 			p += write_len;
 			read_len -= write_len;
@@ -189,32 +197,40 @@ static int send_file(int socket, const char* path) {
 
 	fs_close(fd);
 	free(buffer);
-	return 0;
+	return rv;
 }
 
 static int receive_file(int socket, const char* path) {
 
+	uint8_t *buffer;
+	int read_len, rv = -1;
 	file_t fd = fs_open(path, O_WRONLY | O_TRUNC);
 
 	if (fd < 0) {
 		lftpd_log_error("failed to open file for read");
-		return -1;
+		return rv;
 	}
 
-	uint8_t *buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
-	int read_len;
+	buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
+
+	if (!buffer) {
+		lftpd_log_error("no free memory");
+		return rv;
+	}
+
+	rv = 0;
 
 	while ((read_len = read(socket, buffer, FILE_BUFFER_SIZE)) > 0) {
 		if (fs_write(fd, buffer, read_len) < 0) {
-			fs_close(fd);
-			free(buffer);
-			return -1;
+			lftpd_log_error("write error");
+			rv = -1;
+			break;
 		}
 	}
 
 	fs_close(fd);
 	free(buffer);
-	return 0;
+	return rv;
 }
 
 static int cmd_cwd(lftpd_client_t* client, const char* arg) {
@@ -284,6 +300,10 @@ static int cmd_epsv(lftpd_client_t* client, const char* arg) {
 
 	// close the listener
 	close(listener_socket);
+
+	uint32_t new_buf_sz = FILE_BUFFER_SIZE;
+	setsockopt(client_socket, SOL_SOCKET, SO_SNDBUF, &new_buf_sz, sizeof(new_buf_sz));
+	setsockopt(client_socket, SOL_SOCKET, SO_RCVBUF, &new_buf_sz, sizeof(new_buf_sz));
 
 	client->data_socket = client_socket;
 
@@ -482,6 +502,7 @@ static int handle_control_channel(lftpd_client_t* client) {
 	size_t read_buffer_len = 512;
 	char _read_buffer[read_buffer_len];
 	char *read_buffer = _read_buffer;
+	char command_tmp[4 + 1];
 	int err = send_simple_response(client->socket, 220, STATUS_220);
 
 	if (err != 0) {
@@ -490,7 +511,9 @@ static int handle_control_channel(lftpd_client_t* client) {
 	}
 
 	while (err == 0) {
+		memset(read_buffer, 0, read_buffer_len);
 		int line_len = lftpd_inet_read_line(client->socket, read_buffer, read_buffer_len);
+
 		if (line_len != 0) {
 			lftpd_log_error("error reading next command");
 			goto cleanup;
@@ -514,7 +537,6 @@ static int handle_control_channel(lftpd_client_t* client) {
 		}
 
 		// copy the command into a temporary buffer
-		char command_tmp[4 + 1];
 		memset(command_tmp, 0, sizeof(command_tmp));
 		memcpy(command_tmp, read_buffer, index);
 
