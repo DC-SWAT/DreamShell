@@ -617,7 +617,10 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 					if(flags & WIDGET_PRESSED) {
 
 						int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-						int sp = (scroll_height / 2) + ((event->jaxis.value / (256 / 100)) * (scroll_height / 100));
+						int sp = scrollbar->GetVerticalPosition();
+						int step = event->jaxis.value;
+
+						sp += step / 8;
 
 						if(sp > scroll_height) {
 							sp = scroll_height;
@@ -625,10 +628,9 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 						if(sp < 0) {
 							sp = 0;
 						}
-						if (abs(scrollbar->GetVerticalPosition() - sp) > 2) {
-							scrollbar->SetVerticalPosition(sp);
-							AdjustScrollbar(NULL);
-						}
+
+						scrollbar->SetVerticalPosition(sp);
+						AdjustScrollbar(NULL);
 					}
 					break;
 				default:
