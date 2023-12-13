@@ -796,8 +796,11 @@ FRESULT move_window (
 	if (sector != fs->winsect) {	/* Changed current window */
 
 #ifdef DEV_TYPE_IDE
-		int old_dma = fs_dma_enabled();
+	int old_dma = fs_dma_enabled();
+	if (old_dma != FS_DMA_DISABLED) {
 		fs_enable_dma(FS_DMA_DISABLED);
+		g1_dma_set_irq_mask(0);
+	}
 #endif
 
 #if !_FS_READONLY
@@ -811,7 +814,10 @@ FRESULT move_window (
 		int rs = disk_read(fs->drv, fs->win, sector, 1);
 
 #ifdef DEV_TYPE_IDE
+	if (old_dma != FS_DMA_DISABLED) {
 		fs_enable_dma(old_dma);
+		g1_dma_set_irq_mask(1);
+	}
 #endif
 		if (rs) {
 			return FR_DISK_ERR;
@@ -836,7 +842,10 @@ FRESULT sync_fs (	/* FR_OK: successful, FR_DISK_ERR: failed */
 
 #ifdef DEV_TYPE_IDE
 	int old_dma = fs_dma_enabled();
-	fs_enable_dma(FS_DMA_DISABLED);
+	if (old_dma != FS_DMA_DISABLED) {
+		fs_enable_dma(FS_DMA_DISABLED);
+		g1_dma_set_irq_mask(0);
+	}
 #endif
 
 	res = sync_window(fs);
@@ -861,7 +870,10 @@ FRESULT sync_fs (	/* FR_OK: successful, FR_DISK_ERR: failed */
 	}
 
 #ifdef DEV_TYPE_IDE
-	fs_enable_dma(old_dma);
+	if (old_dma != FS_DMA_DISABLED) {
+		fs_enable_dma(old_dma);
+		g1_dma_set_irq_mask(1);
+	}
 #endif
 	return res;
 }
@@ -2947,7 +2959,8 @@ FRESULT f_pre_read (
 )
 {
 	FRESULT res;
-	DWORD sect;
+	DWORD sect, clst;
+	BYTE csect;
 
 	res = validate(fp);							/* Check validity */
 	if (res != FR_OK) 
@@ -2959,17 +2972,30 @@ FRESULT f_pre_read (
 	if (!(fp->flag & FA_READ)) 					/* Check access mode */
 		LEAVE_FF(fp->fs, FR_DENIED);
 
-#ifdef DEV_TYPE_IDE
-	g1_dma_set_irq_mask(1);
+	csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));	/* Sector offset in the cluster */
+
+	if (!csect) {						/* On the cluster boundary? */
+		if (fp->fptr == 0) {			/* On the top of the file? */
+			clst = fp->sclust;			/* Follow from the origin */
+		} else {						/* Middle or end of the file */
+#if _USE_FASTSEEK
+			if (fp->cltbl)
+				clst = clmt_clust(fp, fp->fptr);	/* Get cluster# from the CLMT */
+			else
 #endif
+				clst = get_fat(fp->fs, fp->clust);	/* Follow cluster chain on the FAT */
+		}
+		if (clst < 2) ABORT(fp->fs, FR_INT_ERR);
+		if (clst == 0xFFFFFFFF) ABORT(fp->fs, FR_DISK_ERR);
+		fp->clust = clst;				/* Update current cluster */
+	}
 
 	sect = clust2sect(fp->fs, fp->clust);	/* Get current sector */
 
 	if (!sect)
 		ABORT(fp->fs, FR_INT_ERR);
 
-	sect += (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));
-	fp->dsect = sect;
+	sect += csect;
 
 	/* Start the pre-reading */
 	if (disk_pre_read(fp->fs->drv, sect, btr / SS(fp->fs))) {
@@ -2977,7 +3003,15 @@ FRESULT f_pre_read (
 	}
 
 	fp->fptr += btr;
-	fp->clust = clmt_clust(fp, fp->fptr);
+	fp->dsect = sect;
+
+#if _USE_FASTSEEK
+	clst = clmt_clust(fp, fp->fptr);
+
+	if (clst >= 2 && clst != 0xFFFFFFFF) {
+		fp->clust = clst;
+	}
+#endif
 	LEAVE_FF(fp->fs, res);
 }
 
