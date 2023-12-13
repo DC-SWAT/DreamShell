@@ -318,6 +318,7 @@ int abort_async(int fd) {
 	}
 
 	file->poll_cb = NULL;
+	file->state = FILE_STATE_USED;
 	rc = f_abort(&file->fp);
 
 	if(rc != FR_OK) {
@@ -338,8 +339,7 @@ int poll(int fd) {
 
 	CHECK_FD();
 
-	if(!file->poll_cb || file->state == FILE_STATE_POLL) {
-		LOGFF("Error, not async fd\n");
+	if(!file->poll_cb) {
 		return 0;
 	}
 
@@ -357,22 +357,24 @@ int poll(int fd) {
 		case FR_OK:
 			cb = file->poll_cb;
 			file->poll_cb = NULL;
+			file->state = FILE_STATE_USED;
 			cb(bp);
 			rv = 0;
 			break;
 		case FR_NOT_READY:
 			rv = bp;
+			file->state = FILE_STATE_USED;
 			break;
 		default:
 			LOGFF("ERROR, fd %d code %d bytes %d\n", fd, rc, bp);
 			cb = file->poll_cb;
 			file->poll_cb = NULL;
+			file->state = FILE_STATE_USED;
 			cb(-1);
 			rv = -1;
 			break;
 	}
 
-	file->state = FILE_STATE_USED;
 	return rv;
 }
 

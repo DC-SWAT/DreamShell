@@ -434,9 +434,9 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
 #else
     uint32 code = *REG_INTEVT;
 
-    if (((*ASIC_IRQ11_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT11)
-        || ((*ASIC_IRQ9_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT9)
-        || ((*ASIC_IRQ13_MASK & ASIC_NRM_AICA_DMA) && code == EXP_CODE_INT13)
+    if (((*ASIC_IRQ11_MASK & ASIC_NRM_MAPLE_DMA) && code == EXP_CODE_INT11)
+        || ((*ASIC_IRQ9_MASK & ASIC_NRM_MAPLE_DMA) && code == EXP_CODE_INT9)
+        || ((*ASIC_IRQ13_MASK & ASIC_NRM_MAPLE_DMA) && code == EXP_CODE_INT13)
     ) {
         maple_dma_proc();
     }
