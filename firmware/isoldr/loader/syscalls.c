@@ -365,23 +365,6 @@ static void get_ver_str() {
 	GDS->status = CMD_STAT_COMPLETED;
 }
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-static void g1_ata_data_wait(gd_state_t *GDS) {
-	GDS->ata_status = CMD_WAIT_DRQ_0;
-
-	do {
-		gdcExitToGame();
-		if (pre_read_xfer_done()) {
-			break;
-		}
-	} while(GDS->cmd_abort == 0);
-
-	GDS->ata_status = CMD_WAIT_IRQ;
-	GDS->status = CMD_STAT_STREAMING;
-	pre_read_xfer_end();
-}
-#endif
-
 #ifdef _FS_ASYNC
 
 static void data_transfer_cb(size_t size) {
@@ -396,14 +379,6 @@ void data_transfer_true_async() {
 	fs_enable_dma(IsoInfo->emu_async);
 #elif defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	fs_enable_dma(FS_DMA_SHARED);
-#endif
-
-#if 0//defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	// Simulate packet command interrupt.
-	uint32 lba = 0;
-	ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
-	g1_ata_raise_interrupt(lba);
-	g1_ata_data_wait(GDS);
 #endif
 
 	GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], data_transfer_cb);
@@ -427,10 +402,10 @@ void data_transfer_true_async() {
 			GDS->transfered = ps;
 		} else if(ps == 0 && pre_read_xfer_done()) {
 			break;
+		} else if (GDS->cmd_abort) {
+			break;
 		}
 	}
-
-	gdcExitToGame();
 
 	pre_read_xfer_end();
 	GDS->requested = 0;
@@ -444,6 +419,7 @@ void data_transfer_true_async() {
 		GDS->transfered = GDS->param[1] * GDS->gdc.sec_size;
 		GDS->status = CMD_STAT_COMPLETED;
 	}
+
 	GDS->drv_stat = CD_STATUS_PAUSED;
 
 #ifdef DEV_TYPE_SD
@@ -514,7 +490,6 @@ void data_transfer_emu_async() {
 void data_transfer() {
 
 	gd_state_t *GDS = get_GDS();
-
 	GDS->ata_status = CMD_WAIT_IRQ;
 
 #ifdef _FS_ASYNC
@@ -574,16 +549,8 @@ void data_transfer() {
 static void data_transfer_dma_stream() {
 
 	gd_state_t *GDS = get_GDS();
-
 	fs_enable_dma(FS_DMA_SHARED);
 
-#if 0//defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	// Simulate packet command interrupt.
-	uint32 lba = 0;
-	ioctl(iso_fd, FS_IOCTL_GET_LBA, &lba);
-	g1_ata_raise_interrupt(lba);
-	g1_ata_data_wait(GDS);
-#endif
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
@@ -628,8 +595,8 @@ static void data_transfer_dma_stream() {
 static void data_transfer_pio_stream() {
 
 	gd_state_t *GDS = get_GDS();
-
 	fs_enable_dma(FS_DMA_DISABLED);
+
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
@@ -637,9 +604,7 @@ static void data_transfer_pio_stream() {
 		return;
 	}
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	g1_ata_data_wait(GDS);
-#endif
+	GDS->status = CMD_STAT_STREAMING;
 
 	while(1) {
 
@@ -694,17 +659,16 @@ static int init_cmd() {
 		/* Injection to exception handling */
 		if (!exception_init(0)) {
 
-			/* Use ASIC interrupts */
+			/* Use ASIC IRQ's */
 			asic_init();
 
 # if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
-			/* Initialize G1 DMA interrupt */
-			if (IsoInfo->use_dma) {
+			if (IsoInfo->use_dma || IsoInfo->emu_cdda) {
 				g1_dma_init_irq();
 			}
 # endif
 # ifdef HAVE_MAPLE
-			if(IsoInfo->emu_vmu) {
+			if(IsoInfo->emu_vmu || IsoInfo->scr_hotkey) {
 				maple_init_irq();
 			}
 # endif
@@ -1105,16 +1069,16 @@ void gdcInitSystem(void) {
 
 	OpenLog();
 	LOGFF(NULL);
+	gd_state_t *GDS = get_GDS();
 
 #ifdef HAVE_CDDA
 	/* Some games re-init syscalls without CDDA stopping */
-	gd_state_t *GDS = get_GDS();
 	if(IsoInfo->emu_cdda && GDS->cdda_stat != SCD_AUDIO_STATUS_NO_INFO) {
 		CDDA_Stop();
 	}
 #endif
 
-	reset_GDS(get_GDS());
+	reset_GDS(GDS);
 	gdcMainLoop();
 }
 
@@ -1136,8 +1100,8 @@ void gdcReset(void) {
  */
 int gdcReadAbort(int gd_chn) {
 
-	LOGFF("%d\n", gd_chn);
 	gd_state_t *GDS = get_GDS();
+	LOGFF("%d %d %d\n", gd_chn, GDS->cmd, GDS->status);
 
 	if(gd_chn != GDS->req_count) {
 		return -1;
@@ -1147,13 +1111,13 @@ int gdcReadAbort(int gd_chn) {
 	}
 
 	switch(GDS->cmd) {
-#ifdef HAVE_CDDA
 		case CMD_PLAY:
 		case CMD_PLAY2:
 		case CMD_PAUSE:
+#ifdef HAVE_CDDA
 			CDDA_Stop();
-			return 0;
 #endif
+			return 0;
 		case CMD_PIOREAD:
 		case CMD_DMAREAD:
 		case CMD_SEEK:
