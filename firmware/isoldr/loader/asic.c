@@ -44,21 +44,21 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	void *back_vector = current_vector;
 	const uint32 status = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
 
-# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	const uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
-	const uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
-
-	if ((status & ASIC_NRM_GD_DMA) ||
-		(statusExt & ASIC_EXT_GD_CMD) ||
-		(statusErr & (ASIC_ERR_G1DMA_ILLEGAL
-					| ASIC_ERR_G1DMA_OVERRUN
-					| ASIC_ERR_G1DMA_ROM_FLASH))
-	) {
-		back_vector = g1_dma_handler(NULL, stack, current_vector);
-	}
-# endif
-
 	if (code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
+
+# if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		const uint32 statusExt = ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT];
+		const uint32 statusErr = ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT];
+
+		if ((status & ASIC_NRM_GD_DMA) ||
+			(statusExt & ASIC_EXT_GD_CMD) ||
+			(statusErr & (ASIC_ERR_G1DMA_ILLEGAL
+						| ASIC_ERR_G1DMA_OVERRUN
+						| ASIC_ERR_G1DMA_ROM_FLASH))
+		) {
+			back_vector = g1_dma_handler(NULL, stack, current_vector);
+		}
+# endif
 
 # ifdef HAVE_CDDA
 		if(status & ASIC_NRM_AICA_DMA) {

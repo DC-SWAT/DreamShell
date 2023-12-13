@@ -156,16 +156,14 @@ static u32 device_count = 0;
 #ifndef DEV_TYPE_IDE
 static u32 g1_dma_part_avail = 0;
 #endif
+static u32 g1_dma_irq_inited = 0;
 static u32 g1_dma_irq_visible = 1;
 static u32 g1_dma_irq_code_game = 0;
+static u32 g1_dma_irq_code_internal = 0;
 
 static u32 g1_pio_total = 0;
 static u32 g1_pio_avail = 0;
 static u32 g1_pio_trans = 0;
-
-#ifdef HAVE_EXPT
-static u32 g1_dma_irq_code_internal = 0;
-#endif
 
 
 #define g1_ata_wait_status(n) \
@@ -216,27 +214,42 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	(void)stack;
 	(void)code;
 
-	DBGF("G1_IRQ: %03lx %08lx %08lx %08lx\n",
-		code, status, statusExt, statusErr);
+	if (!g1_dma_irq_inited) {
+		return current_vector;
+	}
+
+	// LOGF("G1_IRQ: %03lx %08lx %08lx %08lx\n",
+	// 	code, status, statusExt, statusErr);
+
+	if ((statusErr & errFlags)) {
+		// LOGF("G1_ERROR_IRQ: %03lx %08lx\n", code, statusErr);
+		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_ERROR;
+		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+		g1_ata_ack_irq();
+		poll_all(-1);
+		return my_exception_finish;
+	}
 
 	if (g1_dma_irq_visible) {
+		if (g1_dma_irq_code_game == *REG_INTEVT) {
+			// LOGF("G1_IRQ_VISIBLE: %03lx %03lx %08lx %08lx %08lx\n",
+			// 	code, g1_dma_irq_code_game, status, statusExt, statusErr);
+			if (status & ASIC_NRM_GD_DMA) {
+				poll_all(0);
+			}
+		}
+		return current_vector;
+	}
+
+	if (g1_dma_irq_code_internal != *REG_INTEVT) {
 		return current_vector;
 	}
 
 	if (statusExt & ASIC_EXT_GD_CMD) {
-		DBGF("G1_ATA_IRQ: %03lx %08lx\n", code, statusExt);
+		// LOGF("G1_ATA_IRQ: %03lx %08lx\n", code, statusExt);
 		g1_ata_ack_irq();
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_EXTERNAL;
-	}
-	if (status & ASIC_NRM_GD_DMA) {
-		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
-	}
-	if ((statusErr & errFlags)) {
-		LOGFF("G1_ERROR_IRQ: %03lx %08lx\n", code, statusErr);
-		ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT] = errFlags;
-		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_ERROR;
-		poll_all(-1);
-		return current_vector;
 	}
 
 	if (status & ASIC_NRM_GD_DMA) {
@@ -245,27 +258,25 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 
 		/* Processing filesystem */
 		poll_all(0);
-
-		uint32 st = status & ~ASIC_NRM_GD_DMA;
-
-		if (g1_dma_irq_code_internal == EXP_CODE_INT9) {
-			st = ((*ASIC_IRQ9_MASK) & st);
-		} else if(g1_dma_irq_code_internal == EXP_CODE_INT11) {
-			st = ((*ASIC_IRQ11_MASK) & st);
-		}
-		if (st == 0) {
-			return my_exception_finish;
-		}
 	}
-	return current_vector;
+
+	uint32 st = status & ~(ASIC_NRM_GD_DMA | ASIC_NRM_EXTERNAL);
+	st = ((*ASIC_IRQ9_MASK) & st);
+
+	// LOGF("G1_IRQ_HIDDEN: %03lx %08lx %08lx %08lx %08lx\n",
+	// 	code, status, statusExt, statusErr, st);
+
+	if (st) {
+		return current_vector;
+	}
+
+	return my_exception_finish;
 }
 
 
 s32 g1_dma_init_irq() {
 
-	g1_dma_irq_code_game = 0;
-	g1_dma_irq_code_internal = 0;
-	g1_dma_irq_visible = 1;
+	g1_dma_irq_inited = 1;
 
 #ifdef NO_ASIC_LT
 	return 0;
@@ -287,9 +298,7 @@ s32 g1_dma_init_irq() {
 
 void g1_dma_abort(void) {
 	OUT8(G1_ATA_DMA_ENABLE, 0);
-	if (g1_dma_in_progress()) {
-		g1_ata_wait_dma();
-	}
+	g1_ata_wait_dma();
 }
 
 void g1_dma_start(u32 addr, size_t bytes) {
@@ -306,51 +315,48 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	OUT8(G1_ATA_DMA_STATUS, 1);
 }
 
-void g1_dma_irq_hide(s32 all) {
 
-	g1_dma_irq_visible = 0;
+static void g1_dma_irq_hide(void) {
+
 	g1_dma_irq_code_game = g1_dma_has_irq_mask();
-	OUT8(G1_ATA_CTL, 2);
+	g1_dma_irq_code_internal = EXP_CODE_INT9;
 
-#ifdef HAVE_EXPT
-	if (!all && exception_inited()) {
-		if (g1_dma_irq_code_game == EXP_CODE_INT9) {
-			*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
-			g1_dma_irq_code_internal = EXP_CODE_INT11;
-		} else {
-			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
-			g1_dma_irq_code_internal = EXP_CODE_INT9;
+	if (g1_dma_irq_code_game == EXP_CODE_INT9) {
+		if (!g1_dma_irq_inited) {
+			*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
 		}
-	} else {
-		g1_dma_irq_code_internal = 0;
+	} else if (g1_dma_irq_code_game == EXP_CODE_INT11) {
+		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
+	} else if(g1_dma_irq_code_game == EXP_CODE_INT13) {
+		*ASIC_IRQ13_MASK &= ~ASIC_NRM_GD_DMA;
 	}
-#else
-	(void)all;
-#endif
+
+	if (g1_dma_irq_code_game != EXP_CODE_INT9 && g1_dma_irq_inited) {
+		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+	}
+
+	OUT8(G1_ATA_CTL, 2);
+	g1_dma_irq_visible = 0;
 }
 
-void g1_dma_irq_restore(void) {
+static void g1_dma_irq_restore(void) {
 
-#ifdef HAVE_EXPT
-	if (g1_dma_irq_code_internal == EXP_CODE_INT9) {
-		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
-	} else if(g1_dma_irq_code_internal == EXP_CODE_INT11) {
-		*ASIC_IRQ11_MASK &= ~ASIC_NRM_GD_DMA;
-	}
-	// g1_dma_irq_code_internal = 0;
-#endif
-
-	if(g1_dma_irq_code_game == EXP_CODE_INT9) {
-		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
-	} else if(g1_dma_irq_code_game == EXP_CODE_INT11) {
+	if (g1_dma_irq_code_game == EXP_CODE_INT9) {
+		if (!g1_dma_irq_inited) {
+			*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
+		}
+	} else if (g1_dma_irq_code_game == EXP_CODE_INT11) {
 		*ASIC_IRQ11_MASK |= ASIC_NRM_GD_DMA;
 	} else if(g1_dma_irq_code_game == EXP_CODE_INT13) {
 		*ASIC_IRQ13_MASK |= ASIC_NRM_GD_DMA;
 	}
 
-	// g1_dma_irq_code_game = 0;
-	g1_dma_irq_visible = 1;
+	if (g1_dma_irq_code_game != EXP_CODE_INT9 && g1_dma_irq_inited) {
+		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
+	}
+
 	OUT8(G1_ATA_CTL, 0);
+	g1_dma_irq_visible = 1;
 }
 
 
@@ -369,7 +375,7 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		if (g1_dma_irq_visible) {
-			g1_dma_irq_hide(0);
+			g1_dma_irq_hide();
 		}
 
 	} else if (dma_mode == FS_DMA_SHARED) {
@@ -377,7 +383,7 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 		if (last_transfer && !g1_dma_irq_visible) {
 			g1_dma_irq_restore();
 		} else if (!last_transfer && g1_dma_irq_visible) {
-			g1_dma_irq_hide(0);
+			g1_dma_irq_hide();
 		} else if(!g1_dma_irq_code_game) {
 			g1_dma_irq_code_game = g1_dma_has_irq_mask();
 		}
@@ -385,20 +391,14 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 
 	irq_restore(old);
 
-#ifdef DEBUG
-	LOGFF("%03lx %03lx %03lx (mode=%d last=%d game=%03lx int=%03lx)\n",
+	DBGFF("%03lx %03lx %03lx (dmode=%d last=%d game=%03lx int=%03lx)\n",
 		(*ASIC_IRQ9_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT9 : 0, 
 		(*ASIC_IRQ11_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT11 : 0, 
 		(*ASIC_IRQ13_MASK & ASIC_NRM_GD_DMA) ? EXP_CODE_INT13 : 0,
 		dma_mode, last_transfer,
 		g1_dma_irq_code_game,
-# ifdef HAVE_EXPT
 		g1_dma_irq_code_internal
-# else
-		0
-# endif
 	);
-#endif
 }
 
 u32 g1_dma_has_irq_mask() {
@@ -1084,6 +1084,7 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
 
 	g1_ata_wait_bsydrq();
+	g1_dma_set_irq_mask(1);
 
 	if (fs_dma_enabled()) {
 		// g1_dma_part_avail = 0;
@@ -1095,54 +1096,6 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	return 0;
 }
 
-void g1_ata_raise_interrupt(u64 sector) {
-
-	const size_t count = 1;
-	const u8 drive = 1; // TODO
-	struct ide_device *dev = &ide_devices[drive & 1];
-	u8 lba_io[6];
-	u8 status = 0;
-
-	LOGF("G1_ATA_IRQ_RAISE: %ld 0x%lx\n", sector, IN8(G1_ATA_ALTSTATUS));
-
-	// LBA48 only
-	lba_io[0] = (sector & 0x000000FF) >> 0;
-	lba_io[1] = (sector & 0x0000FF00) >> 8;
-	lba_io[2] = (sector & 0x00FF0000) >> 16;
-	lba_io[3] = (sector & 0xFF000000) >> 24;
-	lba_io[4] = 0;
-	lba_io[5] = 0;
-
-	g1_ata_wait_bsydrq();
-	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4)));
-
-	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
-	OUT8(G1_ATA_LBA_LOW, lba_io[3]);
-	OUT8(G1_ATA_LBA_MID, lba_io[4]);
-	OUT8(G1_ATA_LBA_HIGH, lba_io[5]);
-
-	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count & 0xff));
-	OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
-	OUT8(G1_ATA_LBA_MID,  lba_io[1]);
-	OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
-
-	g1_ata_wait_bsydrq();
-
-	OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_PIO_EXT);
-	// OUT8(G1_ATA_CTL, 2);
-
-	do {
-		status = IN8(G1_ATA_ALTSTATUS);
-	} while(!(status & ATA_SR_DRQ));
-
-	// g1_ata_ack_irq();
-	// OUT8(G1_ATA_CTL, 0);
-
-	for (u32 w = 0; w < 256; ++w) {
-		u16 d = IN16(G1_ATA_DATA);
-		d++; // Prevent gcc optimization on register reading.
-	}
-}
 
 s32 g1_ata_poll(void) {
 	int rv = 0;

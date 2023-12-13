@@ -83,8 +83,6 @@ s32 g1_bus_init(void);
 void g1_dma_set_irq_mask(s32 last_transfer);
 u32 g1_dma_has_irq_mask();
 s32 g1_dma_init_irq(void);
-void g1_dma_irq_hide(s32 all);
-void g1_dma_irq_restore(void);
 
 void g1_dma_start(u32 addr, size_t bytes);
 void g1_dma_abort(void);
@@ -101,7 +99,6 @@ void g1_ata_xfer(u32 addr, size_t bytes);
 void g1_ata_abort(void);
 u32 g1_ata_in_progress(void);
 u32 g1_ata_transfered(void);
-void g1_ata_raise_interrupt(u64 sector);
 
 void cdrom_spin_down(u8 drive);
 s32 cdrom_get_status(s32 *status, u8 *disc_type, u8 drive);
