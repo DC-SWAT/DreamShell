@@ -600,10 +600,8 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 				case 5: // Y
 				case 6: // X
 					ClearFlags(WIDGET_PRESSED);
-					thd_sleep(150);
 					SDL_DC_EmulateMouse(SDL_TRUE);
 					GUI_GetScreen()->SetJoySelectState(1);
-					MarkChanged();
 					break;
 				default:
 					break;
@@ -617,20 +615,30 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 					if(flags & WIDGET_PRESSED) {
 
 						int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-						int sp = scrollbar->GetVerticalPosition();
-						int step = event->jaxis.value;
+						int sp_old = scrollbar->GetVerticalPosition();
+						int sp = sp_old;
+						int val = event->jaxis.value;
+						int step = (scroll_height / panel->GetWidgetCount());
+						step += abs(val) / 8;
 
-						sp += step / 8;
+						if (val < 0) {
+							sp -= step;
+						} else if(val > 0) {
+							sp += step;
+						} else {
+							break;
+						}
 
 						if(sp > scroll_height) {
 							sp = scroll_height;
-						}
-						if(sp < 0) {
+						} else if(sp < 0) {
 							sp = 0;
 						}
 
-						scrollbar->SetVerticalPosition(sp);
-						AdjustScrollbar(NULL);
+						if(sp_old != sp) {
+							scrollbar->SetVerticalPosition(sp);
+							AdjustScrollbar(NULL);
+						}
 					}
 					break;
 				default:

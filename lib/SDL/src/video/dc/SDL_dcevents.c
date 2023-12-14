@@ -47,6 +47,8 @@ static char rcsid =
 
 #define MIN_FRAME_UPDATE 16
 
+#if SDL_JOYSTICK_DISABLED
+
 extern int __sdl_dc_mouse_shift;
 
 const static unsigned short sdl_key[]= {
@@ -194,6 +196,15 @@ void DC_PumpEvents(_THIS)
 		last_time=now;
 	}
 }
+
+#else
+
+void DC_PumpEvents(_THIS)
+{
+	/* do nothing. */
+}
+
+#endif
 
 void DC_InitOSKeymap(_THIS)
 {
