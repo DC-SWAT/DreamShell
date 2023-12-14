@@ -98,13 +98,13 @@ static struct {
 	GUI_Surface *stdico;
 
 	GUI_Widget *linktext;
-	GUI_Widget  *btn_hidetext;
-	GUI_Widget  *save_link_btn;
-	GUI_Widget  *save_link_txt;
-	GUI_Widget  *rotate180;
+	GUI_Widget *btn_hidetext;
+	GUI_Widget *save_link_btn;
+	GUI_Widget *save_link_txt;
+	GUI_Widget *rotate180;
 
-	GUI_Widget  *wpa[2];
-	GUI_Widget  *wpv[2];
+	GUI_Widget *wpa[2];
+	GUI_Widget *wpv[2];
 
 	uint32_t pa[2];
 	uint32_t pv[2];
@@ -727,6 +727,13 @@ void isoLoader_toggleDMA(GUI_Widget *widget) {
 	}
 }
 
+void isoLoader_toggleIRQ(GUI_Widget *widget) {
+	if (GUI_WidgetGetState(widget) && GUI_WidgetGetState(self.memory_chk[2])) {
+		GUI_WidgetSetState(self.memory_chk[1], 1);
+		isoLoader_toggleMemory(self.memory_chk[1]);
+	}
+}
+
 void isoLoader_toggleCDDA(GUI_Widget *widget) {
 
 	int mode = CDDA_MODE_DISABLED;
@@ -797,6 +804,11 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 		}
 		GUI_WidgetSetState(self.cdda_mode[mode], 1);
 		GUI_WidgetSetState(self.cdda_mode[CDDA_MODE_EXTENDED], 0);
+	}
+
+	if (GUI_WidgetGetState(self.memory_chk[2])) {
+		GUI_WidgetSetState(self.memory_chk[1], 1);
+		isoLoader_toggleMemory(self.memory_chk[1]);
 	}
 }
 
@@ -961,6 +973,8 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 	for(i = 0; self.memory_chk[i]; i++) {
 		if(widget != self.memory_chk[i]) {
 			GUI_WidgetSetState(self.memory_chk[i], 0);
+		} else {
+			GUI_WidgetSetState(widget, 1);
 		}
 	}
 	
@@ -996,6 +1010,10 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 void isoLoader_toggleExtension(GUI_Widget *widget) {
 	if (GUI_WidgetGetState(widget)) {
 		GUI_WidgetSetState(self.irq, 1);
+		if (GUI_WidgetGetState(self.memory_chk[2])) {
+			GUI_WidgetSetState(self.memory_chk[0], 1);
+			isoLoader_toggleMemory(self.memory_chk[0]);
+		}
 	}
 }
 
@@ -1005,6 +1023,7 @@ void isoLoader_toggleVMU(GUI_Widget *widget) {
 	if (widget != self.vmu_disabled) {
 		GUI_WidgetSetState(self.vmu_disabled, 0);
 		GUI_WidgetSetState(self.irq, 1);
+		isoLoader_toggleIRQ(self.irq);
 	}
 	if (widget != self.vmu_shared) {
 		GUI_WidgetSetState(self.vmu_shared, 0);
@@ -1370,8 +1389,8 @@ void isoLoader_DefaultPreset() {
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 
-	GUI_WidgetSetState(self.memory_chk[0], 1);
-	isoLoader_toggleMemory(self.memory_chk[0]);
+	GUI_WidgetSetState(self.memory_chk[2], 1);
+	isoLoader_toggleMemory(self.memory_chk[2]);
 
 	GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
 	isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);

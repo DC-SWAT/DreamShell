@@ -282,7 +282,7 @@
 						<input height="25" name="cdda-checkbox" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="Emulate CDDA audio" x="9%" />
 						</input>
-						<input height="25" name="irq-checkbox" type="checkbox" width="100%">
+						<input height="25" name="irq-checkbox" onclick="export:isoLoader_toggleIRQ()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="IRQ hooking" x="9%" />
 						</input>
 					</panel>

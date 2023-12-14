@@ -54,6 +54,8 @@ void isoLoader_toggleAsync(GUI_Widget *widget);
 
 void isoLoader_toggleDMA(GUI_Widget *widget);
 
+void isoLoader_toggleIRQ(GUI_Widget *widget);
+
 void isoLoader_toggleCDDA(GUI_Widget *widget);
 
 void isoLoader_toggleCDDA_Source(GUI_Widget *widget);

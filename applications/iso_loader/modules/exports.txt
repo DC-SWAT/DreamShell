@@ -12,6 +12,7 @@ isoLoader_Run
 isoLoader_ItemClick
 isoLoader_ItemContextClick
 isoLoader_toggleDMA
+isoLoader_toggleIRQ
 isoLoader_toggleAsync
 isoLoader_toggleCDDA
 isoLoader_toggleCDDA_Source
