@@ -247,6 +247,6 @@ static void LuaEvent(void *ds_event, void *sdl_event, int action) {
 }
 
 
-Event_t *AddEventLua(const char *name, int type, const char *handler) {
-	return AddEvent(name, type, LuaEvent, (void *)handler);
+Event_t *AddEventLua(const char *name, uint16_t type, uint16_t prio, const char *handler) {
+	return AddEvent(name, type, prio, LuaEvent, (void *)handler);
 }
