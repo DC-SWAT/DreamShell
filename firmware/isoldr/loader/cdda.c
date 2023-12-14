@@ -441,7 +441,7 @@ static void aica_check_cdda(void) {
 		// LOGF("CDDA: R CON %04lx != %04lx\n", val, cdda->check_status);
 	}
 
-	if (val) {
+	if (invalid_level) {
 		goto pass_checks;
 	}
 
@@ -456,7 +456,7 @@ static void aica_check_cdda(void) {
 		// LOGF("CDDA: R FRQ %04lx != %04lx\n", val, cdda->aica_freq);
 	}
 
-	if (val) {
+	if (invalid_level) {
 		goto pass_checks;
 	}
 
@@ -471,7 +471,7 @@ static void aica_check_cdda(void) {
 		// LOGF("CDDA: R POS %04lx != %04lx\n", val, cdda->end_pos & 0xffff);
 	}
 
-	if (val) {
+	if (invalid_level) {
 		goto pass_checks;
 	}
 
@@ -502,7 +502,7 @@ static void aica_check_cdda(void) {
 pass_checks:
 	g2_unlock();
 
-	if ((invalid_level >> 4) == 0) {
+	if (invalid_level == 0) {
 		return;
 	}
 

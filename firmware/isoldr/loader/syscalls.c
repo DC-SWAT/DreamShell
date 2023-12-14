@@ -1470,9 +1470,11 @@ void disable_syscalls(int all) {
 void restore_syscalls(void) {
 	if (IsoInfo->syscalls == 0 && loader_addr >= ISOLDR_DEFAULT_ADDR_LOW) {
 		disable_syscalls(0);
-	} else if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||
-			(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW))
-	{
+	}
+	/* TODO: loader can be rewrited here, need execute this in another place. */
+	else if(/*loader_addr < ISOLDR_DEFAULT_ADDR_LOW ||*/
+		(IsoInfo->heap >= HEAP_MODE_SPECIFY && IsoInfo->heap < ISOLDR_DEFAULT_ADDR_LOW)) {
+		disable_syscalls(1);
 		size_t size = (SYSCALLS_RESERVED_ADDR - SYSCALLS_INFO_ADDR);
 		uint8 *src = (uint8 *)CACHED_ADDR(BIOS_ROM_SYSCALLS_ADDR);
 		uint8 *dst = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_ADDR);
