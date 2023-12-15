@@ -1332,8 +1332,9 @@ void menu_exit(void) {
 
 int menu_check_disc(void) {
 	LOGFF(NULL);
-	gd_state_t *GDS = get_GDS();
-	return GDS->drv_media;
+	fs_enable_dma(FS_DMA_SHARED);
+	ReadSectors((uint8 *)CACHED_ADDR(IP_BIN_ADDR + 0x100), 45150, 7, NULL);
+	return 0;
 }
 
 /**
