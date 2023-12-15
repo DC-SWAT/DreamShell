@@ -7,9 +7,9 @@ include Makefile.cfg
 
 DEFS = ENABLE_CISO=1
 DEFS_CDDA = ENABLE_CDDA=1 ENABLE_IRQ=1 ENABLE_LIMIT=1
-DEFS_VMU = ENABLE_WRITE=1 ENABLE_MAPLE=1
-DEFS_FEATURED = ENABLE_CDDA=1 ENABLE_IRQ=1 $(DEFS_VMU)
-DEFS_FULL = $(DEFS_FEATURED) ENABLE_ESC=1 ENABLE_SCR=1
+DEFS_VMU = ENABLE_WRITE=1 ENABLE_MAPLE=1 ENABLE_LIMIT=1
+DEFS_FEAT = ENABLE_CDDA=1 ENABLE_MAPLE=1 ENABLE_IRQ=1 ENABLE_WRITE=1
+DEFS_FULL = $(DEFS_FEAT) ENABLE_ESC=1 ENABLE_SCR=1
 
 TARGETS_CD = cd_full cd_feat cd_vmu cd_cdda cd
 TARGETS_SD = sd_full sd_feat sd_vmu sd_cdda sd
@@ -35,7 +35,7 @@ $(BUILD)/sd_vmu.bin:
 
 sd_feat: $(BUILD)/sd_feat.bin
 $(BUILD)/sd_feat.bin:
-	make -f Makefile.sd $(DEFS_FEATURED)
+	make -f Makefile.sd $(DEFS_FEAT)
 	mv $(BUILD)/sd.bin $(BUILD)/sd_feat.bin
 
 sd_full: $(BUILD)/sd_full.bin
@@ -59,7 +59,7 @@ $(BUILD)/ide_vmu.bin:
 
 ide_feat: $(BUILD)/ide_feat.bin
 $(BUILD)/ide_feat.bin:
-	make -f Makefile.ide $(DEFS_FEATURED)
+	make -f Makefile.ide $(DEFS_FEAT)
 	mv $(BUILD)/ide.bin $(BUILD)/ide_feat.bin
 
 ide_full: $(BUILD)/ide_full.bin
@@ -83,7 +83,7 @@ $(BUILD)/cd_vmu.bin:
 
 cd_feat: $(BUILD)/cd_feat.bin
 $(BUILD)/cd_feat.bin:
-	make -f Makefile.cd $(DEFS_FEATURED)
+	make -f Makefile.cd $(DEFS_FEAT)
 	mv $(BUILD)/cd.bin $(BUILD)/cd_feat.bin
 
 cd_full: $(BUILD)/cd_full.bin

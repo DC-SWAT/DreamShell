@@ -242,6 +242,7 @@ static uint8 scd_all[100] = {
 //	0x00, 0x96
 //};
 
+#ifndef HAVE_LIMIT
 static uint8 scd_media[24] = {
 	0x00, 0x15, 0x00, 0x18, 0x02, 0x00, 0x00, 0x00, 0x00, 0x30, 0x30, 0x30,
 	0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x00, 0x00
@@ -251,6 +252,7 @@ static uint8 scd_isrc[24] = {
 	0x00, 0x15, 0x00, 0x18, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x00, 0x00, 0x00
 };
+#endif
 
 //static uint32 scd_delay = 0;
 
@@ -299,7 +301,7 @@ static void get_scd() {
 
 			GDS->transfered = buf[SCD_DATA_SIZE_INDEX];
 			break;
-
+#ifndef HAVE_LIMIT
 		case SCD_REQ_MEDIA_CATALOG:
 
 			memcpy(buf, &scd_media, scd_media[SCD_DATA_SIZE_INDEX]);
@@ -321,7 +323,7 @@ static void get_scd() {
 //			buf[4] = 0x03;                      // Format Code
 			GDS->transfered = scd_isrc[SCD_DATA_SIZE_INDEX];
 			break;
-
+#endif
 		default:
 			break;
 	}
@@ -401,7 +403,6 @@ void data_transfer_true_async() {
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		LOGFF("ERROR, status %d\n", GDS->status);
-		GDS->ata_status = CMD_WAIT_INTERNAL;
 		return;
 	}
 
@@ -425,7 +426,6 @@ void data_transfer_true_async() {
 
 	pre_read_xfer_end();
 	GDS->requested = 0;
-	GDS->ata_status = CMD_WAIT_INTERNAL;
 
 	if (GDS->cmd_abort) {
 		abort_data_cmd();
@@ -545,7 +545,6 @@ void data_transfer() {
 
 		GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
 		GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
-		GDS->ata_status = CMD_WAIT_INTERNAL;
 		GDS->requested -= GDS->transfered;
 
 		if(GDS->cmd != CMD_PIOREAD
@@ -573,7 +572,6 @@ static void data_transfer_dma_stream() {
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
-		GDS->ata_status = CMD_WAIT_INTERNAL;
 		GDS->drv_stat = CD_STATUS_PAUSED;
 		return;
 	}

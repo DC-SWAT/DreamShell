@@ -70,7 +70,7 @@ static void g2_lock(void) {
 	AICA_DMA_SUSPEND = 1;
 	BBA_DMA_SUSPEND  = 1;
 	EXT2_DMA_SUSPEND = 1;
-	DEV_DMA_SUSPEND  = 1;
+	// DEV_DMA_SUSPEND  = 1;
 	do { } while(FIFO_STATUS & (FIFO_SH4 | FIFO_G2 | FIFO_AICA));
 }
 
@@ -78,7 +78,7 @@ static void g2_unlock(void) {
 	AICA_DMA_SUSPEND = 0;
 	BBA_DMA_SUSPEND  = 0;
 	EXT2_DMA_SUSPEND = 0;
-	DEV_DMA_SUSPEND  = 0;
+	// DEV_DMA_SUSPEND  = 0;
 	irq_restore(cdda->g2_lock);
 }
 

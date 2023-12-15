@@ -49,10 +49,12 @@ int main(int argc, char *argv[]) {
 		enable_syscalls(emu_all_sc);
 	}
 
+#ifndef HAVE_LIMIT
 	if(IsoInfo->magic[0] != 'D' || IsoInfo->magic[1] != 'S' || IsoInfo->magic[2] != 'I') {
 		LOGF("Magic is incorrect!\n");
 		goto error;
 	}
+#endif
 
 #if 0//ndef HAVE_LIMIT
 	if(IsoInfo->gdtex > 0) {
@@ -103,6 +105,7 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
+#ifndef HAVE_LIMIT
 	if(IsoInfo->exec.type == BIN_TYPE_KOS) {
 
 		uint8 *src = (uint8 *)NONCACHED_ADDR(IsoInfo->exec.addr);
@@ -119,7 +122,6 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-#ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT
 		|| (loader_end < CACHED_ADDR(IP_BIN_ADDR) && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq))
 		|| (loader_addr > CACHED_ADDR(APP_BIN_ADDR))
