@@ -160,6 +160,7 @@ static u32 g1_dma_irq_inited = 0;
 static u32 g1_dma_irq_visible = 1;
 static u32 g1_dma_irq_code_game = 0;
 static u32 g1_dma_irq_code_internal = 0;
+static u32 g1_dma_aborted = 0;
 
 static u32 g1_pio_total = 0;
 static u32 g1_pio_avail = 0;
@@ -299,6 +300,7 @@ s32 g1_dma_init_irq() {
 void g1_dma_abort(void) {
 	OUT8(G1_ATA_DMA_ENABLE, 0);
 	g1_ata_wait_dma();
+	g1_dma_aborted = 1;
 }
 
 void g1_dma_start(u32 addr, size_t bytes) {
@@ -313,6 +315,8 @@ void g1_dma_start(u32 addr, size_t bytes) {
 	OUT8(G1_ATA_DMA_ENABLE, 1);
 	/* Start the DMA transfer. */
 	OUT8(G1_ATA_DMA_STATUS, 1);
+
+	g1_dma_aborted = 0;
 }
 
 
@@ -763,9 +767,7 @@ static s32 g1_ata_access(struct ide_req *req)
 		OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
 		
 		if ((req->cmd & 2))
-		{
-			g1_dma_abort();
-			
+		{			
 			if (req->cmd == G1_READ_DMA) {
 				 /* Invalidate the dcache over the range of the data. */
 				if((u32)buff & 0xF0000000) {
@@ -794,6 +796,11 @@ static s32 g1_ata_access(struct ide_req *req)
 
 		OUT8(G1_ATA_COMMAND_REG, cmd);
 
+		if (g1_dma_aborted) {
+			do {} while(IN8(G1_ATA_ALTSTATUS) & ATA_SR_ERR);
+			g1_dma_aborted = 0;
+		}
+
 		if (req->cmd == G1_READ_PIO)
 		{
 			OUT8(G1_ATA_CTL, 2);
@@ -803,7 +810,13 @@ static s32 g1_ata_access(struct ide_req *req)
 
 			for (u32 i = 0; i < len; ++i){
 				if (g1_ata_wait_drq()) {
-					LOGFF("Error, status=%02x\n", IN8(G1_ATA_ALTSTATUS));
+#ifdef LOG
+					u8 st = IN8(G1_ATA_ALTSTATUS);
+					LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+						(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
+						(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
+						(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+#endif
 					break;
 				}
 				for (u32 w = 0; w < (sector_size >> 1); ++w) {
@@ -858,7 +871,7 @@ static s32 g1_ata_access(struct ide_req *req)
 			g1_ata_wait_bsydrq();
 		}
 	}
-	
+
 	return 0;
 }
 
@@ -1052,10 +1065,6 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 
 	DBGF("G1_ATA_PRE_READ: s=%ld c=%ld\n", (uint32)sector, count);
 
-	if (fs_dma_enabled()) {
-		g1_dma_abort();
-	}
-
 	// LBA48 only
 	lba_io[0] = (sector & 0x000000FF) >> 0;
 	lba_io[1] = (sector & 0x0000FF00) >> 8;
@@ -1230,6 +1239,7 @@ void g1_ata_abort(void) {
 		g1_dma_abort();
 	} else {
 		g1_pio_abort();
+		g1_dma_aborted = 1;
 	}
 
 	OUT8(G1_ATA_DEVICE_SELECT, 0x10);
@@ -1238,7 +1248,7 @@ void g1_ata_abort(void) {
 	g1_ata_wait_nbsy();
 	OUT8(G1_ATA_COMMAND_REG, 0);
 
-	g1_ata_wait_bsydrq();
+	// g1_ata_wait_bsydrq();
 }
 
 s32 g1_ata_ack_irq(void) {
@@ -1246,12 +1256,15 @@ s32 g1_ata_ack_irq(void) {
 	u8 st = IN8(G1_ATA_STATUS_REG);
 	DBGF("G1_ATA_ACK_IRQ: %02lx\n", st);
 
-	if(st & ATA_SR_ERR || st & ATA_SR_DF) {
-		LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
-				(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
-				(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
-				(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
-		return -1;
+	if(st & (ATA_SR_ERR | ATA_SR_DF)) {
+		/* Ignore some errors here because commands can be aborted */
+		if (!g1_dma_aborted) {
+			LOGFF("ERR=%d DRQ=%d DSC=%d DF=%d DRDY=%d BSY=%d\n",
+					(st & ATA_SR_ERR ? 1 : 0), (st & ATA_SR_DRQ ? 1 : 0), 
+					(st & ATA_SR_DSC ? 1 : 0), (st & ATA_SR_DF ? 1 : 0), 
+					(st & ATA_SR_DRDY ? 1 : 0), (st & ATA_SR_BSY ? 1 : 0));
+			return -1;
+		}
 	}
 	return 0;
 }

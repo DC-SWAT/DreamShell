@@ -367,6 +367,22 @@ static void get_ver_str() {
 
 #ifdef _FS_ASYNC
 
+static void abort_data_cmd() {
+	gd_state_t *GDS = get_GDS();
+
+	abort_async(iso_fd);
+	GDS->ata_status = CMD_WAIT_IRQ;
+
+	while(!pre_read_xfer_done()) {
+		gdcExitToGame();
+	}
+
+	pre_read_xfer_end();
+	GDS->transfered = 0;
+	GDS->status = CMD_STAT_IDLE;
+	GDS->ata_status = CMD_WAIT_INTERNAL;
+}
+
 static void data_transfer_cb(size_t size) {
 	(void)size;
 }
@@ -412,9 +428,7 @@ void data_transfer_true_async() {
 	GDS->ata_status = CMD_WAIT_INTERNAL;
 
 	if (GDS->cmd_abort) {
-		abort_async(iso_fd);
-		GDS->transfered = 0;
-		GDS->status = CMD_STAT_IDLE;
+		abort_data_cmd();
 	} else {
 		GDS->transfered = GDS->param[1] * GDS->gdc.sec_size;
 		GDS->status = CMD_STAT_COMPLETED;
@@ -480,6 +494,11 @@ void data_transfer_emu_async() {
 		DBGFF("%s %d %d\n", stat_name[GDS->status + 1], GDS->req_count, GDS->transfered);
 
 		gdcExitToGame();
+	}
+
+	if(GDS->cmd_abort) {
+		GDS->transfered = 0;
+		GDS->status = CMD_STAT_IDLE;
 	}
 }
 
@@ -582,9 +601,7 @@ static void data_transfer_dma_stream() {
 		}
 
 		if(GDS->cmd_abort) {
-			GDS->ata_status = CMD_WAIT_INTERNAL;
-			GDS->status = CMD_STAT_IDLE;
-			pre_read_xfer_abort();
+			abort_data_cmd();
 			break;
 		}
 	}
@@ -637,9 +654,7 @@ static void data_transfer_pio_stream() {
 		}
 
 		if(GDS->cmd_abort) {
-			GDS->ata_status = CMD_WAIT_INTERNAL;
-			GDS->status = CMD_STAT_IDLE;
-			pre_read_xfer_abort();
+			abort_data_cmd();
 			break;
 		}
 		gdcExitToGame();

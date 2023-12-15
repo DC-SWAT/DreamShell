@@ -435,7 +435,7 @@ int abort_async(int fd) {
 	if(fh[fd].async > 0) {
 		fh[fd].async = 0;
 		fh[fd].poll_cb = NULL;
-		g1_dma_abort();
+		g1_ata_abort();
 	}
 
 	return 0;

@@ -311,20 +311,10 @@ int read_async(int fd, void *ptr, unsigned int size, fs_callback_f *cb) {
 int abort_async(int fd) {
 
 	CHECK_FD();
-	FRESULT rc;
-
-	if(!file->poll_cb) {
-		return FS_ERR_PARAM;
-	}
 
 	file->poll_cb = NULL;
 	file->state = FILE_STATE_USED;
-	rc = f_abort(&file->fp);
-
-	if(rc != FR_OK) {
-		LOGFF("ERROR, fd %d code %d\n", fd, rc);
-		return FS_ERR_SYSERR;
-	}
+	f_abort(&file->fp);
 
 	return 0;
 }

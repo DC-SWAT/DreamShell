@@ -2911,7 +2911,8 @@ _continue:
 FRESULT f_abort(FIL* fp) {
 	disk_abort(fp->fs->drv);
 	fp->rbuff = NULL;
-	fp->cur = fp->btr = 0;
+	fp->cur = fp->btr = fp->fptr = 0;
+	fp->clust = fp->sclust;
 	ABORT(fp->fs, FR_OK);
 }
 
@@ -3002,13 +3003,13 @@ FRESULT f_pre_read (
 		ABORT(fp->fs, FR_DISK_ERR);
 	}
 
-	fp->fptr += btr;
 	fp->dsect = sect;
 
 #if _USE_FASTSEEK
 	clst = clmt_clust(fp, fp->fptr);
 
 	if (clst >= 2 && clst != 0xFFFFFFFF) {
+		fp->fptr += btr;
 		fp->clust = clst;
 	}
 #endif
