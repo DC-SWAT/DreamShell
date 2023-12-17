@@ -174,7 +174,6 @@ gd_state_t *get_GDS(void);
  */
 int lock_gdsys(void);
 int unlock_gdsys(void);
-extern volatile int gdc_lock_state;
 
 void gdcExitToGame(void);
 

@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C)2009-2020 SWAT
+!   Copyright (C)2009-2023 SWAT
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -21,7 +21,6 @@
 	.globl _gdc_redir
 	.globl _lock_gdsys
 	.globl _unlock_gdsys
-	.globl _gdc_lock_state
 	.globl _gdcExitToGame
 .align 2
 	
@@ -57,7 +56,7 @@ _gdc_syscall_enable:
 	nop
 
 _lock_gdsys:
-	mova    gdc_lock, r0
+	mov.l   gdc_lock, r0
 	tas.b   @r0
 	bt      lock_success
 	rts
@@ -67,13 +66,13 @@ lock_success:
 	mov     #0, r0
 	
 _unlock_gdsys:
-	mova    gdc_lock, r0
+	mov.l   gdc_lock, r0
 	mov     #0, r2
 	rts
-	mov.l   r2, @r0
+	mov.b   r2, @r0
 
 gdcExecServerInternal:
-	mova    gdc_lock, r0
+	mov.l   gdc_lock, r0
 	tas.b   @r0
 	bt      es_save_regs
 	rts
@@ -122,9 +121,9 @@ es_restore_regs:
 	nop
 
 gdcInitSystemInternal:
-	mova    gdc_lock, r0
+	mov.l   gdc_lock, r0
 	mov     #1, r2
-	mov.l   r2, @r0
+	mov.b   r2, @r0
 	sts.l   pr, @-r15
 	sts.l   mach, @-r15
 	sts.l   macl, @-r15
@@ -186,10 +185,10 @@ eg_restore_regs:
 	lds.l   @r15+, macl
 	lds.l   @r15+, mach
 	lds.l   @r15+, pr
-	mova    gdc_lock, r0
+	mov.l   gdc_lock, r0
 	mov     #0, r2
 	rts
-	mov.l   r2, @r0
+	mov.b   r2, @r0
 
 gdc_redir_bc:
 	mov     #-1, r1
@@ -215,9 +214,8 @@ nop_syscall:
 	.align 4
 gdcInitSystemExternal:
 	.long _gdcInitSystem
-_gdc_lock_state:
 gdc_lock:
-	.long 0
+	.long 0x8c00002d
 gdc_entry_bc_k:
 	.long 0xac0000bc
 gdc_entry_c0_k:
