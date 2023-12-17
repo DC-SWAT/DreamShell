@@ -94,7 +94,7 @@ int printf(const char *fmt, ...);
 #endif
 
 uint Load_BootBin();
-uint Load_IPBin();
+uint Load_IPBin(int header_only);
 int Load_DS();
 void Load_Syscalls();
 

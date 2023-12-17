@@ -3006,7 +3006,7 @@ FRESULT f_pre_read (
 	fp->dsect = sect;
 
 #if _USE_FASTSEEK
-	clst = clmt_clust(fp, fp->fptr);
+	clst = clmt_clust(fp, fp->fptr + btr);
 
 	if (clst >= 2 && clst != 0xFFFFFFFF) {
 		fp->fptr += btr;

@@ -403,6 +403,7 @@ void data_transfer_true_async() {
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		LOGFF("ERROR, status %d\n", GDS->status);
+		GDS->ata_status = CMD_WAIT_INTERNAL;
 		return;
 	}
 
@@ -432,6 +433,7 @@ void data_transfer_true_async() {
 	} else {
 		GDS->transfered = GDS->param[1] * GDS->gdc.sec_size;
 		GDS->status = CMD_STAT_COMPLETED;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
 	}
 
 	GDS->drv_stat = CD_STATUS_PAUSED;
@@ -573,6 +575,7 @@ static void data_transfer_dma_stream() {
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		GDS->drv_stat = CD_STATUS_PAUSED;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
 		return;
 	}
 
@@ -616,6 +619,7 @@ static void data_transfer_pio_stream() {
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		GDS->drv_stat = CD_STATUS_PAUSED;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
 		return;
 	}
 
