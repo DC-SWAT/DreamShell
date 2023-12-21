@@ -1,4 +1,8 @@
 include kos/exports.h
 include drivers/dreameye.h
 
+dreameye_get_param
+dreameye_set_param
+dreameye_queue_param
 dreameye_get_video_frame
+dreameye_setup_video_camera

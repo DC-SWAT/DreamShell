@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - dreameye module
-   Copyright (C)2009-2016 SWAT 
+   Copyright (C) 2015, 2023 SWAT
 
 */          
 
@@ -35,18 +35,20 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 					" -g, --grab    -Grab images from dreameye and save to file\n"
 					" -e, --erase   -Erase images from dreameye\n"
 					" -c, --count   -Get images count\n"
+					" -v, --video   -Setup video camera\n"
 					" -p, --param   -Get param\n\n"
 					"Arguments: \n"
 					" -f, --file    -File for save image\n"
 					" -d, --dir     -Directory for save all images\n"
 					" -n, --num     -Image number for grab or erase (doesn't set it for all)\n\n"
 					"Example: %s -g -n 2 -f /sd/photo.jpg\n"
-					"         %s -g -d /sd", argv[0], argv[0], argv[0]);
+					"         %s -g -n 0 -f /sd/frame0.raw\n"
+					"         %s -g -d /sd", argv[0], argv[0], argv[0], argv[0]);
 		return CMD_NO_ARG; 
     } 
 
 	/* Arguments */
-	int grab = 0, count = 0, erase = 0, param = 0;
+	int grab = 0, count = 0, erase = 0, param = 0, video = 0;
 	char *file = NULL, *dir = NULL;
 	int num = -1;
 	
@@ -67,6 +69,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		{"file",  'f', NULL, CFG_STR,  (void *) &file,  0},
 		{"num",   'n', NULL, CFG_INT,  (void *) &num,   0},
 		{"dir",   'd', NULL, CFG_STR,  (void *) &dir,   0},
+		{"video", 'v', NULL, CFG_BOOL, (void *) &video, 0},
 		CFG_END_OF_LIST
 	};
   
@@ -80,6 +83,12 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	}
 
 	state = (dreameye_state_t *)maple_dev_status(dreameye);
+
+	if(video) {
+		dreameye_setup_video_camera(dreameye);
+		ds_printf("DS_OK: Complete.\n");
+		return CMD_OK;
+	}
 	
 	if(param) {
 		
@@ -109,8 +118,14 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	/* Grap data option */
 	if(grab) {
 
-		ds_printf("DS_PROCESS: Attempting to grab the %s...\n", (num > -1 ? "image" : "all images"));
-		
+		if (num > 1) {
+			ds_printf("DS_PROCESS: Attempting to grab image: %d\n", num);
+		} else if(num < 0) {
+			ds_printf("DS_PROCESS: Attempting to grab all images\n");
+		} else {
+			ds_printf("DS_PROCESS: Attempting to grab video frame: %d\n", num);
+		}
+
 		if(num < 0) {
 
 			dreameye_get_image_count(dreameye, 1);
@@ -130,10 +145,10 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 				}
 
 				sprintf(fn, "%s/photo_%d.jpg", dir, i);
-				ds_printf("DS_OK: Image received successfully. Writing %d bytes to %s\n", size, fn);
+				ds_printf("DS_PROCESS: Writing %d bytes to %s\n", size, fn);
 
 				if(save_image(fn, buf, size) < 0) {
-					ds_printf("DS_ERROR: Couldn't save image to %s\n", fn);
+					ds_printf("DS_ERROR: Couldn't write to %s\n", fn);
 				}
 
 				free(buf);
@@ -152,10 +167,10 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 				return CMD_ERROR;
 			}
 
-			ds_printf("DS_OK: Image received successfully. Writing %d bytes to %s\n", size, file);
+			ds_printf("DS_PROCESS: Writing %d bytes to %s\n", size, file);
 
 			if(save_image(file, buf, size) < 0) {
-				ds_printf("DS_ERROR: Couldn't save image to %s\n", file);
+				ds_printf("DS_ERROR: Couldn't write to %s\n", file);
 				free(buf);
 				return CMD_ERROR;
 			}

@@ -1,7 +1,7 @@
 /** 
  * \file    dreameye.h
  * \brief   Dreameye driver extension
- * \date    2015
+ * \date    2015, 2023
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -90,7 +90,7 @@ typedef struct dreameye_state_ext {
     Dreameye as the dev parameter.
 
     \param  dev             The device to get an image from.
-    \param  image           The image number to download.
+    \param  fb_num          The frame buffer number to download.
     \param  data            A pointer to a buffer to store things in. This
                             will be allocated by the function and you are
                             responsible for freeing the data when you are done.
@@ -99,7 +99,7 @@ typedef struct dreameye_state_ext {
     \retval MAPLE_EOK       On success.
     \retval MAPLE_EFAIL     On error.
 */
-int dreameye_get_video_frame(maple_device_t *dev, uint8 image, uint8 **data, int *img_sz);
+int dreameye_get_video_frame(maple_device_t *dev, uint8 fb_num, uint8 **data, int *img_sz);
 
 
 /** \brief  Get params from any subsystem
@@ -111,6 +111,16 @@ int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *valu
  * TODO
  */
 int dreameye_set_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value);
+
+/** \brief  Add to queue params for any subsystem
+ * TODO
+ */
+int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value);
+
+/** \brief  Setup CIS and ISP regs for video capturing
+ * TODO
+ */
+void dreameye_setup_video_camera(maple_device_t *dev);
 
 __END_DECLS
 
