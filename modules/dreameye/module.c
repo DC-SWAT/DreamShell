@@ -11,10 +11,10 @@
 DEFAULT_MODULE_EXPORTS_CMD(dreameye, "Dreameye camera");
 
 static int save_image(const char *fn, uint8 *buf, int size) {
-	
+
 	file_t fd;
 
-	fd = fs_open(fn, O_CREAT | O_WRONLY);
+	fd = fs_open(fn, O_CREAT | O_TRUNC | O_WRONLY);
 
 	if(fd == FILEHND_INVALID) {
 		ds_printf("DS_ERROR: Can't open file for write: %s\n", fn);

@@ -46,6 +46,9 @@ typedef struct dreameye_state_ext {
 	
     /** \brief  The value from/to subsystems. */
     int             value;
+
+    /** \brief  Compressing. */
+    int             compressed;
 } dreameye_state_ext_t;
 
 
