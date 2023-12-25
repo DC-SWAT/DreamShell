@@ -11,6 +11,14 @@
 #include <drivers/dreameye.h>
 #include "cis_isp_regs.h"
 
+#define DREAMEYE_JANGGU_FRAME_HEADER_SIZE 4
+#define DREAMEYE_JANGGU_FRAME_DATA_SIZE 960
+
+// #define MAPLE_SPEED_2MBPS 0x0000
+#define MAPLE_SPEED_1MBPS 0x0100
+#define MAPLE_SPEED_4MBPS 0x0200
+#define MAPLE_SPEED_8MBPS 0x0300
+
 typedef struct dreameye_register {
     uint8_t reg;
     uint8_t param;
@@ -21,8 +29,8 @@ static dreameye_state_ext_t *first_state = NULL;
 static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext_t *state);
 
 /* Regs dump from Visual Park */
-static dreameye_register_t ic_regs[102] = {
-    { DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0 },
+static dreameye_register_t ic_regs[85] = {
+    // { DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0 },
     { DREAMEYE_COND_REG_CIS, CIS_MODE_B, 0x05 },
     { DREAMEYE_COND_REG_CIS, CIS_THBU, 0 },
     { DREAMEYE_COND_REG_CIS, CIS_THBL, 10 },
@@ -92,20 +100,20 @@ static dreameye_register_t ic_regs[102] = {
     { DREAMEYE_COND_REG_CIS, CIS_FWHL, 0xE2 },
     { DREAMEYE_COND_REG_CIS, CIS_FWWU, 2 },
     { DREAMEYE_COND_REG_CIS, CIS_FWWL, 128 },
-    { DREAMEYE_COND_REG_ISP, ISP_OP_MODE, 0 },
-    { DREAMEYE_COND_REG_ISP, ISP_SCALE_UPPER, 1 },
-    { DREAMEYE_COND_REG_ISP, ISP_SCALE_LOWER, 64 },
-    { DREAMEYE_COND_REG_JANGGU, 4, 0x78 },
-    { DREAMEYE_COND_REG_JANGGU, 5, 0 },
+    // { DREAMEYE_COND_REG_ISP, ISP_OP_MODE, 0 },
+    // { DREAMEYE_COND_REG_ISP, ISP_SCALE_UPPER, 1 },
+    // { DREAMEYE_COND_REG_ISP, ISP_SCALE_LOWER, 64 },
+    // { DREAMEYE_COND_REG_JANGGU, 4, 0x78 },
+    // { DREAMEYE_COND_REG_JANGGU, 5, 0 },
     { DREAMEYE_COND_REG_ISP, ISP_WIN_H_START, 0x1E },
     { DREAMEYE_COND_REG_ISP, ISP_WIN_H_SIDE, 0x78 },
     { DREAMEYE_COND_REG_ISP, ISP_WIN_H_CENTER, 20 },
     { DREAMEYE_COND_REG_ISP, ISP_WIN_V_START, 20 },
     { DREAMEYE_COND_REG_ISP, ISP_WIN_V_SIDE, 35 },
     { DREAMEYE_COND_REG_ISP, ISP_WIN_V_CENTER, 10 },
-    { DREAMEYE_COND_REG_ISP, ISP_OUT_FORM, 0x39 },
-    { DREAMEYE_COND_REG_JANGGU, 0, 0xC1 },
-    { DREAMEYE_COND_REG_JANGGU, 1, 0x33 },
+    // { DREAMEYE_COND_REG_ISP, ISP_OUT_FORM, 0x39 },
+    // { DREAMEYE_COND_REG_JANGGU, 0, 0xC1 },
+    // { DREAMEYE_COND_REG_JANGGU, 1, 0x33 },
     { DREAMEYE_COND_REG_ISP, ISP_AF_UT_UPPER, 0 },
     { DREAMEYE_COND_REG_ISP, ISP_AF_UT_MIDDLE, 0 },
     { DREAMEYE_COND_REG_ISP, ISP_AF_UT_LOWER, 48 },
@@ -115,14 +123,14 @@ static dreameye_register_t ic_regs[102] = {
     { DREAMEYE_COND_REG_CIS, CIS_TITU, 9 },
     { DREAMEYE_COND_REG_CIS, CIS_TITM, 0x27 },
     { DREAMEYE_COND_REG_CIS, CIS_TITL, 0xC0 },
-    { DREAMEYE_COND_REG_JANGGU, 2, 1 },
-    { DREAMEYE_COND_REG_JANGGU, 2, 2 },
-    { DREAMEYE_COND_REG_JANGGU, 2, 16 },
-    { DREAMEYE_COND_REG_JANGGU, 6, 4 },
-    { DREAMEYE_COND_REG_JANGGU, 7, 0 },
-    { DREAMEYE_COND_MAPLE_BITRATE, 0x90, 0x0FA0 },
-    { DREAMEYE_COND_MAPLE_BITRATE, 0x90, 64 },
-    { DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0xB3 },
+    // { DREAMEYE_COND_REG_JANGGU, 2, 1 },
+    // { DREAMEYE_COND_REG_JANGGU, 2, 2 },
+    // { DREAMEYE_COND_REG_JANGGU, 2, 16 },
+    // { DREAMEYE_COND_REG_JANGGU, 6, 4 },
+    // { DREAMEYE_COND_REG_JANGGU, 7, 0 },
+    // { DREAMEYE_COND_MAPLE_BITRATE, 0x90, 0x0FA0 },
+    // { DREAMEYE_COND_MAPLE_BITRATE, 0x90, 64 },
+    // { DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0xB3 },
     { DREAMEYE_COND_REG_ISP, ISP_Y_TARGET, 0x80 }
 };
 
@@ -168,6 +176,23 @@ void hexDump(char *desc, void *addr, int len) {
 
     // And print the final ASCII bit.
     dbglog(DBG_DEBUG, "  %s\n", buff);
+}
+
+static void yuvde_to_yuv420p(uint8_t *dest, const uint8_t *src, int width, int height) {
+    int w, h;
+
+    for (h = 0; h < height / 2; h++) {
+
+        memcpy(&dest[h * 2 * width], &src[h * width * 3], width);
+
+        for (w = 0; w < width; w++) {
+            dest[(h * 2 + 1) * width + w] = src[(h * 3 + 1) * width + w * 2];
+        }
+
+        for (w = 0; w < width; w++) {
+            dest[(height + h) * width + w] = src[(h * 3 + 1) * width + w * 2 + 1];
+        }
+    }
 }
 
 static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
@@ -228,32 +253,36 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
         return;
     }
 
-    if(first_state->compressed) {
-        // TODO
-    } else {
-        /* Copy only YUV data without header */
-        len -= 4;
-        memcpy(first_state->img_buf + first_state->img_size, packet + 4, len);
-        first_state->img_size += len;
-    }
+    /* Copy only YUV data without header */
+    len -= DREAMEYE_JANGGU_FRAME_HEADER_SIZE;
+    memcpy(first_state->img_buf + first_state->img_size, packet + DREAMEYE_JANGGU_FRAME_HEADER_SIZE, len);
+    first_state->img_size += len;
 
     /* Check if we're done. */
     if(part == 0x40) {
         first_state->img_transferring = 0;
+        if(first_state->transfer_count > 0) {
+            dbglog(DBG_ERROR, "%s: Unexpected end of transfer, missing %d packets.\n",
+                __func__, first_state->transfer_count);
+        }
         return;
     }
 
-    if(++first_state->transfer_count + dev->unit < 29) {
-        dreameye_send_get_video_frame(dev, first_state);
-    }
+    dreameye_send_get_video_frame(dev, first_state);
 }
 
 static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext_t *state) {
     uint32 *send_buf;
 
+    if(first_state->transfer_count == 0) {
+        return MAPLE_EOK;
+    }
+
     /* Lock the frame */
     if(maple_frame_lock(&dev->frame) < 0)
         return MAPLE_EAGAIN;
+
+    --first_state->transfer_count;
 
     /* Reset the frame */
     maple_frame_init(&dev->frame);
@@ -275,6 +304,7 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8 fb_num, uint8 **data,
                        int *img_sz) {
     dreameye_state_ext_t *de;
     maple_device_t *dev2, *dev3, *dev4, *dev5;
+    size_t frame_size;
 
     assert(dev != NULL);
     assert(dev->unit == 1);
@@ -287,17 +317,17 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8 fb_num, uint8 **data,
     de = (dreameye_state_ext_t *)dev->status;
 
     first_state = de;
+    frame_size = de->width * de->height * 3 / 2;
+
     de->img_transferring = 1;
     de->img_buf = NULL;
     de->img_size = 0;
     de->img_number = fb_num;
-    de->transfer_count = 0;
-    de->value = 0;
-    de->compressed = 0;
+    de->transfer_count = frame_size / DREAMEYE_JANGGU_FRAME_DATA_SIZE;
 
     /* Allocate space for the largest possible image that could fit in that
        number of transfers. */
-    de->img_buf = (uint8 *)malloc(964 * 30); /* Frame packet size * transfers count */
+    de->img_buf = (uint8 *)malloc(frame_size);
 
     if(!de->img_buf)
         goto fail;
@@ -313,13 +343,18 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8 fb_num, uint8 **data,
         thd_pass();
     }
 
+    uint8_t *buf = (uint8 *)malloc(frame_size);
+
+    if (buf) {
+        // TODO: Do this when parsing packets
+        yuvde_to_yuv420p(buf, de->img_buf, de->width, de->height);
+        free(de->img_buf);
+        de->img_buf = buf;
+    }
+
     if(de->img_transferring == 0) {
         *data = de->img_buf;
         *img_sz = de->img_size;
-
-        // dbglog(DBG_DEBUG, "dreameye_get_video_frame: %d received in "
-        //        "%d transfers\n", de->img_size, de->transfer_count + 1);
-
         first_state = NULL;
         de->img_buf = NULL;
         de->img_size = 0;
@@ -422,10 +457,10 @@ int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *valu
             return MAPLE_ETIMEOUT;
         }
     }
-	
+    
     if(value) {
-		de = (dreameye_state_ext_t *)dev->status;
-		*value = de->value;
+        de = (dreameye_state_ext_t *)dev->status;
+        *value = de->value;
     }
 
     return MAPLE_EOK;
@@ -446,7 +481,7 @@ static void dreameye_queue_param_cb(maple_frame_t *frame) {
     if(resp->response == MAPLE_COMMAND_CAMCONTROL && respbuf8[4] == DREAMEYE_SUBCOMMAND_ERROR) {
         dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X\n", 
                 __func__, respbuf8[5], respbuf8[6], respbuf8[7]);
-		return;
+        return;
     }
 
     if(resp->response != MAPLE_RESPONSE_OK) {
@@ -529,19 +564,73 @@ int dreameye_set_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value
     return MAPLE_EOK;
 }
 
-void dreameye_setup_video_camera(maple_device_t *dev) {
+static void dreameye_set_format(maple_device_t **devs, int isp_mode) {
+
+    dreameye_state_ext_t *de = (dreameye_state_ext_t *)devs[0]->status;
+
+    switch(isp_mode) {
+        case DREAMEYE_ISP_MODE_QSIF:
+            de->width = 160;
+            de->height = 120;
+            break;
+        case DREAMEYE_ISP_MODE_QCIF:
+            de->width = 176;
+            de->height = 144;
+            break;
+        case DREAMEYE_ISP_MODE_SIF:
+            de->width = 320;
+            de->height = 240;
+            break;
+        case DREAMEYE_ISP_MODE_CIF:
+            de->width = 352;
+            de->height = 288;
+            break;
+        case DREAMEYE_ISP_MODE_VGA:
+            de->width = 640;
+            de->height = 480;
+            break;
+        default:
+            dbglog(DBG_ERROR, "%s: unknown ISP mode: %d\n", __func__, isp_mode);
+            return;
+    }
+
+    /* Set ISP operation mode */
+    dreameye_set_param(devs[0], DREAMEYE_COND_REG_ISP, ISP_OP_MODE, isp_mode);
+
+    if(isp_mode != DREAMEYE_ISP_MODE_VGA) {
+        dreameye_queue_param(devs[1], DREAMEYE_COND_REG_ISP, ISP_SCALE_UPPER, 320 >> 8);
+        dreameye_queue_param(devs[2], DREAMEYE_COND_REG_ISP, ISP_SCALE_LOWER, 320 & 0xff);
+    }
+
+    /* Set output format */
+    dreameye_set_param(devs[3], DREAMEYE_COND_REG_ISP, ISP_OUT_FORM, 0x39);
+
+    /* Setup JangGu compressor engine */
+    dreameye_queue_param(devs[0], DREAMEYE_COND_REG_JANGGU, 4, de->height);
+    dreameye_queue_param(devs[1], DREAMEYE_COND_REG_JANGGU, 5, 0);
+    dreameye_queue_param(devs[2], DREAMEYE_COND_REG_JANGGU, 0, 0xC1);
+    dreameye_queue_param(devs[3], DREAMEYE_COND_REG_JANGGU, 1, 0x33);
+    dreameye_set_param(devs[4], DREAMEYE_COND_REG_JANGGU, 2, 16);
+    dreameye_queue_param(devs[0], DREAMEYE_COND_REG_JANGGU, 6, 4);
+    dreameye_set_param(devs[1], DREAMEYE_COND_REG_JANGGU, 7, 0);
+}
+
+void dreameye_setup_video_camera(maple_device_t *dev, int isp_mode) {
     const int dev_count = 5;
     maple_device_t *devs[dev_count];
     dreameye_register_t *dr;
+    int i, j;
 
-    devs[0] = dev;
-    devs[1] = maple_enum_dev(dev->port, 2);
-    devs[2] = maple_enum_dev(dev->port, 3);
-    devs[3] = maple_enum_dev(dev->port, 4);
-    devs[4] = maple_enum_dev(dev->port, 5);
+    for(i = 0; i < dev_count; ++i) {
+        devs[i] = maple_enum_dev(dev->port, i + 1);
+    }
 
-    for (int i = 0; i < 100; i += dev_count) {
-        for (int j = 0; j < dev_count; ++j) {
+    /* Disable Auto Function */
+    dreameye_set_param(dev, DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0);
+
+    /* Setup CMOS Image Sensor and Image Signal Processor */
+    for (i = 0; i < 85; i += dev_count) {
+        for (j = 0; j < dev_count; ++j) {
 
             dr = &ic_regs[i + j];
 
@@ -553,8 +642,22 @@ void dreameye_setup_video_camera(maple_device_t *dev) {
         }
     }
 
-    dr = &ic_regs[100];
-    dreameye_queue_param(devs[0], dr->reg, dr->param, dr->val);
-    dr = &ic_regs[101];
-    dreameye_set_param(devs[dev_count - 1], dr->reg, dr->param, dr->val);
+    /* Setup frame format */
+    dreameye_set_format(devs, isp_mode);
+
+    /* Setup maple bus speed */
+    dreameye_set_param(dev, DREAMEYE_COND_MAPLE_BITRATE, 0x90, 64);
+
+    /*
+     * Camera works. Gamepad works too, but has some artifacts (fixable I guess).
+     * VMU doesn't work. Graphics issues.
+     */
+    // int old = irq_disable();
+    // maple_write(MAPLE_ENABLE, MAPLE_ENABLE_DISABLED);
+    // maple_write(MAPLE_SPEED, MAPLE_SPEED_4MBPS | MAPLE_SPEED_TIMEOUT(50000));
+    // maple_write(MAPLE_ENABLE, MAPLE_ENABLE_ENABLED);
+    // irq_restore(old);
+
+    /* Enable Auto Function */
+    dreameye_set_param(dev, DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0xB3);
 }

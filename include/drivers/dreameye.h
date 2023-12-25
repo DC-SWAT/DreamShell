@@ -47,8 +47,9 @@ typedef struct dreameye_state_ext {
     /** \brief  The value from/to subsystems. */
     int             value;
 
-    /** \brief  Compressing. */
-    int             compressed;
+    /** \brief  Frame size in capture mode. */
+    int             width;
+    int             height;
 } dreameye_state_ext_t;
 
 
@@ -77,12 +78,11 @@ typedef struct dreameye_state_ext {
 #define DREAMEYE_DATA_IMAGE   0x00
 #define DREAMEYE_DATA_PROGRAM 0xC1
 
-#define DREAMEYE_IMAGE_SIZE_QSIF 0x00
-#define DREAMEYE_IMAGE_SIZE_QCIF 0x01
-#define DREAMEYE_IMAGE_SIZE_SIF  0x02
-#define DREAMEYE_IMAGE_SIZE_CIF  0x03
-#define DREAMEYE_IMAGE_SIZE_VGA  0x04 // Only this supported by Dreameye???
-#define DREAMEYE_IMAGE_SIZE_SVGA 0x05
+#define DREAMEYE_ISP_MODE_QSIF 0x00 /* 160x120 */
+#define DREAMEYE_ISP_MODE_QCIF 0x01 /* 176x144 */
+#define DREAMEYE_ISP_MODE_SIF  0x02 /* 320x240 */
+#define DREAMEYE_ISP_MODE_CIF  0x03 /* 352x288 */
+#define DREAMEYE_ISP_MODE_VGA  0x04 /* 640x480 */
 
 
 /** \brief  Transfer an image from the Dreameye.
@@ -123,7 +123,7 @@ int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 val
 /** \brief  Setup CIS and ISP regs for video capturing
  * TODO
  */
-void dreameye_setup_video_camera(maple_device_t *dev);
+void dreameye_setup_video_camera(maple_device_t *dev, int isp_mode);
 
 __END_DECLS
 

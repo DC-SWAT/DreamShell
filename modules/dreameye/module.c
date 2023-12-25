@@ -40,7 +40,8 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 					"Arguments: \n"
 					" -f, --file    -File for save image\n"
 					" -d, --dir     -Directory for save all images\n"
-					" -n, --num     -Image number for grab or erase (doesn't set it for all)\n\n"
+					" -n, --num     -Image number (unset for all, 0 and 1 is video fb's)\n"
+					" -i, --isp     -ISP mode for video camera (0-4), default 2 (320x240)\n\n"
 					"Example: %s -g -n 2 -f /sd/photo.jpg\n"
 					"         %s -g -n 0 -f /sd/frame0.raw\n"
 					"         %s -g -d /sd", argv[0], argv[0], argv[0], argv[0]);
@@ -48,7 +49,8 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
     } 
 
 	/* Arguments */
-	int grab = 0, count = 0, erase = 0, param = 0, video = 0;
+	int grab = 0, count = 0, erase = 0, param = 0;
+	int video = 0, isp = DREAMEYE_ISP_MODE_SIF;
 	char *file = NULL, *dir = NULL;
 	int num = -1;
 	
@@ -70,6 +72,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		{"num",   'n', NULL, CFG_INT,  (void *) &num,   0},
 		{"dir",   'd', NULL, CFG_STR,  (void *) &dir,   0},
 		{"video", 'v', NULL, CFG_BOOL, (void *) &video, 0},
+		{"isp",   'i', NULL, CFG_INT,  (void *) &isp,   0},
 		CFG_END_OF_LIST
 	};
   
@@ -85,7 +88,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	state = (dreameye_state_t *)maple_dev_status(dreameye);
 
 	if(video) {
-		dreameye_setup_video_camera(dreameye);
+		dreameye_setup_video_camera(dreameye, isp);
 		ds_printf("DS_OK: Complete.\n");
 		return CMD_OK;
 	}
@@ -123,7 +126,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		} else if(num < 0) {
 			ds_printf("DS_PROCESS: Attempting to grab all images\n");
 		} else {
-			ds_printf("DS_PROCESS: Attempting to grab video frame: %d\n", num);
+			ds_printf("DS_PROCESS: Attempting to capture video frame: %d\n", num);
 		}
 
 		if(num < 0) {
