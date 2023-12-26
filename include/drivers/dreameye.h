@@ -50,6 +50,9 @@ typedef struct dreameye_state_ext {
     /** \brief  Frame size in capture mode. */
     int             width;
     int             height;
+
+    /** \brief  Frame pixel format. */
+    int             format;
 } dreameye_state_ext_t;
 
 
@@ -84,6 +87,9 @@ typedef struct dreameye_state_ext {
 #define DREAMEYE_ISP_MODE_CIF  0x03 /* 352x288 */
 #define DREAMEYE_ISP_MODE_VGA  0x04 /* 640x480 */
 
+#define DREAMEYE_FRAME_FMT_YUV420DE 0
+#define DREAMEYE_FRAME_FMT_YUV420P  1
+#define DREAMEYE_FRAME_FMT_YUYV422  2
 
 /** \brief  Transfer an image from the Dreameye.
 
@@ -123,7 +129,7 @@ int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 val
 /** \brief  Setup CIS and ISP regs for video capturing
  * TODO
  */
-void dreameye_setup_video_camera(maple_device_t *dev, int isp_mode);
+void dreameye_setup_video_camera(maple_device_t *dev, int isp_mode, int format);
 
 __END_DECLS
 

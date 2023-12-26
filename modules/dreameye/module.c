@@ -28,37 +28,38 @@ static int save_image(const char *fn, uint8 *buf, int size) {
 
 
 int builtin_dreameye_cmd(int argc, char *argv[]) {
-    
+
     if(argc < 2) {
 		ds_printf("Usage: %s options args...\n"
 					"Options: \n"
 					" -g, --grab    -Grab images from dreameye and save to file\n"
 					" -e, --erase   -Erase images from dreameye\n"
 					" -c, --count   -Get images count\n"
-					" -v, --video   -Setup video camera\n"
-					" -p, --param   -Get param\n\n"
-					"Arguments: \n"
+					" -v, --video   -Setup video camera for capturing\n"
+					" -p, --param   -Get param\n\n");
+		ds_printf("Arguments: \n"
 					" -f, --file    -File for save image\n"
 					" -d, --dir     -Directory for save all images\n"
 					" -n, --num     -Image number (unset for all, 0 and 1 is video fb's)\n"
-					" -i, --isp     -ISP mode for video camera (0-4), default 2 (320x240)\n\n"
-					"Example: %s -g -n 2 -f /sd/photo.jpg\n"
+					" -i, --isp     -ISP mode for capture (0-4), default 2 (320x240)\n"
+					" -t, --fmt     -Pixel format for capture (0-3), default 1 (yuv420p)\n\n");
+		ds_printf("Example: %s -g -n 2 -f /sd/photo.jpg\n"
 					"         %s -g -n 0 -f /sd/frame0.raw\n"
 					"         %s -g -d /sd", argv[0], argv[0], argv[0], argv[0]);
 		return CMD_NO_ARG; 
-    } 
+    }
 
 	/* Arguments */
 	int grab = 0, count = 0, erase = 0, param = 0;
-	int video = 0, isp = DREAMEYE_ISP_MODE_SIF;
+	int video = 0, isp = DREAMEYE_ISP_MODE_SIF, fmt = DREAMEYE_FRAME_FMT_YUV420P;
 	char *file = NULL, *dir = NULL;
 	int num = -1;
-	
+
 	/* Buffers */
 	char fn[NAME_MAX];
 	uint8 *buf;
 	int size, err, i;
-	
+
 	/* Device state */
 	maple_device_t *dreameye;
 	dreameye_state_t *state;
@@ -73,11 +74,12 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		{"dir",   'd', NULL, CFG_STR,  (void *) &dir,   0},
 		{"video", 'v', NULL, CFG_BOOL, (void *) &video, 0},
 		{"isp",   'i', NULL, CFG_INT,  (void *) &isp,   0},
+		{"fmt",   't', NULL, CFG_INT,  (void *) &fmt,   0},
 		CFG_END_OF_LIST
 	};
-  
+
   	CMD_DEFAULT_ARGS_PARSER(options);
-	
+
 	dreameye = maple_enum_type(0, MAPLE_FUNC_CAMERA);
 
 	if(!dreameye) {
@@ -88,13 +90,13 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	state = (dreameye_state_t *)maple_dev_status(dreameye);
 
 	if(video) {
-		dreameye_setup_video_camera(dreameye, isp);
+		dreameye_setup_video_camera(dreameye, isp, fmt);
 		ds_printf("DS_OK: Complete.\n");
 		return CMD_OK;
 	}
-	
+
 	if(param) {
-		
+
 		uint16 val;
 
 		while(++num < 0x20) {
