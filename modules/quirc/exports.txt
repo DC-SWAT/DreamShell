@@ -1,0 +1,14 @@
+include kos/exports.h
+include quirc.h
+
+quirc_version
+quirc_new
+quirc_destroy
+quirc_resize
+quirc_begin
+quirc_end
+quirc_strerror
+quirc_count
+quirc_extract
+quirc_decode
+quirc_flip

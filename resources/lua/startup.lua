@@ -70,7 +70,8 @@ local DreamShell = {
 		--"ini",
 		--"bflash",
 		--"openssl",
-		--"bitcoin"
+		--"bitcoin",
+		--"quirc"
 	},
 
 	Initialize = function(self)

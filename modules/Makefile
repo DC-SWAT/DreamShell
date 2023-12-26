@@ -10,7 +10,7 @@ _SUBDIRS = minilzo isofs isoldr ppp bflash dreameye \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
 		SDL_net http httpd telnetd mongoose gumbo \
 		adx s3m mp3 ogg wav xvid ffmpeg \
-		bitcoin openssl ftpd
+		bitcoin openssl ftpd quirc
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
