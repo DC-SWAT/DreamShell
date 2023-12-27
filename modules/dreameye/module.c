@@ -36,6 +36,8 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 					" -e, --erase   -Erase images from dreameye\n"
 					" -c, --count   -Get images count\n"
 					" -v, --video   -Setup video camera for capturing\n"
+					" -s, --stop    -Stop video camera capturing\n"
+					" -w, --preview -Show preview\n"
 					" -p, --param   -Get param\n\n");
 		ds_printf("Arguments: \n"
 					" -f, --file    -File for save image\n"
@@ -50,7 +52,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
     }
 
 	/* Arguments */
-	int grab = 0, count = 0, erase = 0, param = 0;
+	int grab = 0, count = 0, erase = 0, param = 0, show = 0, hide = 0, stop = 0;
 	int video = 0, isp = DREAMEYE_ISP_MODE_SIF, fmt = DREAMEYE_FRAME_FMT_YUV420P;
 	char *file = NULL, *dir = NULL;
 	int num = -1;
@@ -75,6 +77,8 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		{"video", 'v', NULL, CFG_BOOL, (void *) &video, 0},
 		{"isp",   'i', NULL, CFG_INT,  (void *) &isp,   0},
 		{"fmt",   't', NULL, CFG_INT,  (void *) &fmt,   0},
+		{"show",  's', NULL, CFG_BOOL, (void *) &show,  0},
+		{"hide",  'h', NULL, CFG_BOOL, (void *) &hide,  0},
 		CFG_END_OF_LIST
 	};
 
@@ -90,8 +94,28 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	state = (dreameye_state_t *)maple_dev_status(dreameye);
 
 	if(video) {
+		ds_printf("DS_PROCESS: Setting up video mode: isp=%d fmt=%d\n", isp, fmt);
 		dreameye_setup_video_camera(dreameye, isp, fmt);
-		ds_printf("DS_OK: Complete.\n");
+		return CMD_OK;
+	}
+
+	if(stop) {
+		ds_printf("DS_PROCESS: Stop video capture\n");
+		dreameye_stop_video_camera(dreameye);
+		return CMD_OK;
+	}
+
+	if(show) {
+		ds_printf("DS_PROCESS: Initializing preview\n");
+		if (dreameye_preview_init(dreameye) < 0) {
+			return CMD_ERROR;
+		}
+		return CMD_OK;
+	}
+
+	if(hide) {
+		ds_printf("DS_PROCESS: Shutting down preview\n");
+		dreameye_preview_shutdown();
 		return CMD_OK;
 	}
 

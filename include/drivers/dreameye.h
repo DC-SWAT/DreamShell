@@ -87,9 +87,10 @@ typedef struct dreameye_state_ext {
 #define DREAMEYE_ISP_MODE_CIF  0x03 /* 352x288 */
 #define DREAMEYE_ISP_MODE_VGA  0x04 /* 640x480 */
 
-#define DREAMEYE_FRAME_FMT_YUV420DE 0
-#define DREAMEYE_FRAME_FMT_YUV420P  1
-#define DREAMEYE_FRAME_FMT_YUYV422  2
+#define DREAMEYE_FRAME_FMT_YUV420DE 0 /* JangGu native 12bpp */
+#define DREAMEYE_FRAME_FMT_YUYV422  1 /* JangGu native 16bpp */
+#define DREAMEYE_FRAME_FMT_YUV420P  2 /* Converted from yuv420de */
+#define DREAMEYE_FRAME_FMT_NV21     3 /* Converted from yuv420de */
 
 /** \brief  Transfer an image from the Dreameye.
 
@@ -126,10 +127,25 @@ int dreameye_set_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value
  */
 int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value);
 
-/** \brief  Setup CIS and ISP regs for video capturing
+/** \brief  Setup CIS and ISP regs and speed up maple bus for video capturing
  * TODO
  */
-void dreameye_setup_video_camera(maple_device_t *dev, int isp_mode, int format);
+int dreameye_setup_video_camera(maple_device_t *dev, int isp_mode, int format);
+
+/** \brief  Stop video capture and set back default maple bus speed
+ * TODO
+ */
+int dreameye_stop_video_camera(maple_device_t *dev);
+
+/** \brief  Initialize preview
+ * TODO
+ */
+int dreameye_preview_init(maple_device_t *dev);
+
+/** \brief  Shutdown preview
+ * TODO
+ */
+void dreameye_preview_shutdown(void);
 
 __END_DECLS
 
