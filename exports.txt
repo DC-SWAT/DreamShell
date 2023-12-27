@@ -1333,6 +1333,7 @@ plx_txr_setfilter
 plx_txr_setuvclamp
 plx_txr_flush_hdrs
 plx_txr_send_hdr
+plx_fill_contexts
 #
 #
 # Stdio

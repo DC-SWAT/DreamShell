@@ -357,7 +357,6 @@ void LockVideo() {
 	mutex_lock(&video_mutex);
 }
 
-
 void UnlockVideo() {
 	if(!VideoMustLock()) {
 		return;
@@ -556,12 +555,9 @@ void SDL_DS_Blit_Textured() {
 			__func__, (unsigned)sdl_dc_buftex,
 			sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
 #endif
-		// if(wait_dma_ready() < 0) {
-			sq_cpy_pvr(sdl_dc_memtex, sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-		// } else {
-		// 	dcache_flush_range((unsigned)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-		// 	pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2, -1, NULL, 0);
-		// }
+		pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+		// dcache_flush_range((unsigned)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+		// pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2, -1, NULL, 0);
 		screen_changed = 0;
 	}
 
@@ -591,15 +587,15 @@ void SDL_DS_Blit_Textured() {
 	plx_vert_ifpm3(PLX_VERT, sdl_dc_x, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v2);
 	plx_vert_ifpm3(PLX_VERT_EOS, sdl_dc_x + native_width, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v2);
 
-	plx_cxt_texture(plx_cursor_txr);
-	plx_cxt_culling(PLX_CULL_NONE);
-	plx_cxt_send(PLX_LIST_TR_POLY);
-
 	if (!ConsoleIsVisible()) {
 		int mouse_cursor_x = 0;
 		int mouse_cursor_y = 0;
 
 		SDL_GetMouseState(&mouse_cursor_x, &mouse_cursor_y);
+
+		plx_cxt_texture(plx_cursor_txr);
+		plx_cxt_culling(PLX_CULL_NONE);
+		plx_cxt_send(PLX_LIST_TR_POLY);
 
 		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x, mouse_cursor_y, 1.0f, color, 0.0f, 0.0f);
 		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y, 1.0f, color, 1.0f, 0.0f);
@@ -612,16 +608,15 @@ void SDL_DS_Blit_Textured() {
 static void *VideoThread(void *ptr) {
 
 	while(video_inited) {
-		/*
-		plx_mat3d_identity();
-		plx_mat_identity();
-		plx_mat3d_apply_all();
-		*/
 
-		pvr_wait_ready();
-		pvr_scene_begin();
+		if(pvr_wait_ready() < 0) {
+			dbglog(DBG_ERROR, "VideoThread: pvr_wait_ready() failed\n");
+			continue;
+		}
 
 		LockVideo();
+		pvr_scene_begin();
+
 		if(draw_screen) {
 
 			ScreenFadeStep();
@@ -631,10 +626,10 @@ static void *VideoThread(void *ptr) {
 		} else {
 			ProcessVideoEventsRender();
 		}
-		UnlockVideo();
 
 		pvr_list_finish();
 		pvr_scene_finish();
+		UnlockVideo();
 	}
 
 	//dbglog(DBG_DEBUG, "Exiting from video thread\n");
