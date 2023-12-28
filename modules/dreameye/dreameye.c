@@ -30,8 +30,13 @@
 #define MAPLE_SPEED_4MBPS 0x0200
 #define MAPLE_SPEED_8MBPS 0x0300
 
-#define DREAMEYE_MAPLE_SPEED_2MBPS 0x07D0
-#define DREAMEYE_MAPLE_SPEED_4MBPS 0x0FA0
+#define DREAMEYE_MAPLE_SPEED_2MBPS 0xD007
+#define DREAMEYE_MAPLE_SPEED_4MBPS 0xA00F
+
+#define DREAMEYE_DEVS_PER_FRAME_2MBPS 3
+#define DREAMEYE_DEVS_PER_FRAME_4MBPS 5
+
+#define DREAMEYE_DEVS_PER_FRAME DREAMEYE_DEVS_PER_FRAME_4MBPS
 
 typedef struct dreameye_register {
     uint8_t reg;
@@ -213,9 +218,9 @@ static void yuv420de_to_yuv420p(uint8_t *dest, const uint8_t *src, int width, in
     int i, n;
 
     for (i = 0; i < height; i += 2) {
-        for (n = 0; n < width; n++) {
-            *destY++ = *src++;
-        }
+        memcpy(destY, src, width);
+        destY += width;
+        src += width;
         for (n = 0; n < width / 2; n++) {
             *destY++ = *src++;
             *destU++ = *src++;
@@ -225,26 +230,78 @@ static void yuv420de_to_yuv420p(uint8_t *dest, const uint8_t *src, int width, in
     }
 }
 
+static void convert_frame(dreameye_state_ext_t *de) {
+    uint8_t *buf;
+
+    // TODO: Conversion when parsing packets
+    if(de->format == DREAMEYE_FRAME_FMT_YUV420P) {
+        buf = (uint8_t *)malloc(de->frame_size);
+        if (buf) {
+            yuv420de_to_yuv420p(buf, de->img_buf, de->width, de->height);
+            free(de->img_buf);
+            de->img_buf = buf;
+        }
+    }
+    else if(de->format == DREAMEYE_FRAME_FMT_NV21) {
+        buf = (uint8_t *)malloc(de->frame_size);
+        if (buf) {
+            yuv420de_to_nv21(buf, de->img_buf, de->width, de->height);
+            free(de->img_buf);
+            de->img_buf = buf;
+        }
+    }
+}
+
+static int dreameye_get_video_frame_part(maple_device_t *dev) {
+    maple_device_t *subdev;
+    int i, rv, try_cnt = 0;
+    const int offset = (DREAMEYE_DEVS_PER_FRAME == 5 ? 0 : 1);
+
+    do {
+        /* Send out requests to devices. */
+        for(i = 0; i < DREAMEYE_DEVS_PER_FRAME; ++i) {
+
+            subdev = maple_enum_dev(dev->port, i + offset);
+            rv = dreameye_send_get_video_frame(subdev, first_state);
+
+            if(rv == MAPLE_EOK) {
+                ++first_state->img_transferring;
+            }
+        }
+
+        if(first_state->img_transferring == 1) {
+            thd_pass();
+        }
+
+    } while(first_state->img_transferring == 1 && ++try_cnt < 20);
+
+    if(first_state->img_transferring == 1) {
+        first_state->img_transferring = -1;
+        return MAPLE_EFAIL;
+    }
+
+    return MAPLE_EOK;
+}
+
 static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
-    maple_device_t *dev;
     maple_response_t *resp;
-    uint32 *respbuf32;
-    uint8 *respbuf8, *packet;
+    uint32_t *respbuf32;
+    uint8_t *respbuf8, *packet;
     int len, part;
     int bits, pixels, info, packet_len;
 
     /* Unlock the frame */
     maple_frame_unlock(frame);
 
-    if(frame->dev == NULL)
+    if(frame->dev == NULL || first_state == NULL
+        || first_state->img_transferring <= 0) {
         return;
-
-    dev = frame->dev;
+    }
 
     /* Make sure we got a valid response */
     resp = (maple_response_t *)frame->recv_buf;
-    respbuf32 = (uint32 *)resp->data;
-    respbuf8 = (uint8 *)resp->data;
+    respbuf32 = (uint32_t *)resp->data;
+    respbuf8 = (uint8_t *)resp->data;
 
     // hexDump("resp", resp->data, resp->data_len * 4);
 
@@ -275,6 +332,9 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
     info = (packet[0] & 0xc0) >> 6;
     packet_len = ((bits + 47) >> 4) << 1;
 
+    // dbglog(DBG_DEBUG, "%s: len=%d part=0x%02X | bits=%d pixels=%d bpp=%d info=%d plen=%d\n",
+    //     __func__, len, part, bits, pixels, bits / pixels, info, packet_len);
+
     if(len != packet_len || (part == 0x80 && info != 2) ||
         (part == 0x00 && info != part) || (part == 0x40 && info != 1)) {
         dbglog(DBG_ERROR, "%s: len=%d part=0x%02X | bits=%d pixels=%d bpp=%d info=%d plen=%d\n",
@@ -290,15 +350,19 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
 
     /* Check if we're done. */
     if(part == 0x40) {
-        first_state->img_transferring = 0;
         if(first_state->transfer_count > 0) {
             dbglog(DBG_ERROR, "%s: Unexpected end of transfer, missing %d packets.\n",
                 __func__, first_state->transfer_count);
+            first_state->img_transferring = -1;
+        } else {
+            first_state->img_transferring = 0;
         }
         return;
     }
 
-    dreameye_send_get_video_frame(dev, first_state);
+    if(--first_state->img_transferring == 1) {
+        dreameye_get_video_frame_part(frame->dev);
+    }
 }
 
 static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext_t *state) {
@@ -316,7 +380,7 @@ static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext
 
     /* Reset the frame */
     maple_frame_init(&dev->frame);
-    send_buf = (uint32 *)dev->frame.recv_buf;
+    send_buf = (uint32_t *)dev->frame.recv_buf;
     send_buf[0] = MAPLE_FUNC_CAMERA;
     send_buf[1] = DREAMEYE_SUBCOMMAND_IMAGEREQ | (state->img_number << 8);
     dev->frame.cmd = MAPLE_COMMAND_CAMCONTROL;
@@ -330,76 +394,36 @@ static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext
     return MAPLE_EOK;
 }
 
-int dreameye_get_video_frame(maple_device_t *dev, uint8 fb_num, uint8 **data,
+int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data,
                        int *img_sz) {
     dreameye_state_ext_t *de;
-    maple_device_t *dev2, *dev3, *dev4, *dev5;
-    size_t frame_size;
 
     assert(dev != NULL);
     assert(dev->unit == 1);
 
-    dev2 = maple_enum_dev(dev->port, 2);
-    dev3 = maple_enum_dev(dev->port, 3);
-    dev4 = maple_enum_dev(dev->port, 4);
-    dev5 = maple_enum_dev(dev->port, 5);
-
     de = (dreameye_state_ext_t *)dev->status;
     first_state = de;
 
-    switch(de->format) {
-        case DREAMEYE_FRAME_FMT_YUYV422:
-            frame_size = de->width * de->height * 2;
-            break;
-        case DREAMEYE_FRAME_FMT_YUV420DE:
-        case DREAMEYE_FRAME_FMT_YUV420P:
-        case DREAMEYE_FRAME_FMT_NV21:
-        default:
-            frame_size = de->width * de->height * 3 / 2;
-            break;
-    }
-
     de->img_transferring = 1;
-    de->img_buf = NULL;
     de->img_size = 0;
     de->img_number = fb_num;
-    de->transfer_count = frame_size / JANGGU_FRAME_DATA_SIZE;
+    de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
 
     /* Allocate space for the largest possible image that could fit in that
        number of transfers. */
-    de->img_buf = (uint8 *)malloc(frame_size);
+    de->img_buf = (uint8_t *)memalign(32, de->frame_size);
 
-    if(!de->img_buf)
+    if(!de->img_buf) {
         goto fail;
+    }
 
-    /* Send out the image requests to all sub devices. */
-    dreameye_send_get_video_frame(dev, de);
-    dreameye_send_get_video_frame(dev2, de);
-    dreameye_send_get_video_frame(dev3, de);
-    dreameye_send_get_video_frame(dev4, de);
-    dreameye_send_get_video_frame(dev5, de);
+    dreameye_get_video_frame_part(dev);
 
-    while(de->img_transferring == 1) {
+    while(de->img_transferring > 0) {
         thd_pass();
     }
 
-     // TODO: Conversion when parsing packets
-    if(de->format == DREAMEYE_FRAME_FMT_YUV420P) {
-        uint8_t *buf = (uint8 *)malloc(frame_size);
-        if (buf) {
-            yuv420de_to_yuv420p(buf, de->img_buf, de->width, de->height);
-            free(de->img_buf);
-            de->img_buf = buf;
-        }
-    }
-    else if(de->format == DREAMEYE_FRAME_FMT_NV21) {
-        uint8_t *buf = (uint8 *)malloc(frame_size);
-        if (buf) {
-            yuv420de_to_nv21(buf, de->img_buf, de->width, de->height);
-            free(de->img_buf);
-            de->img_buf = buf;
-        }
-    }
+    convert_frame(de);
 
     if(de->img_transferring == 0) {
         *data = de->img_buf;
@@ -428,20 +452,19 @@ fail:
     return MAPLE_EFAIL;
 }
 
-
 static void dreameye_get_param_cb(maple_frame_t *frame) {
     dreameye_state_ext_t *de;
     maple_response_t *resp;
-    uint32 *respbuf32;
-    uint8 *respbuf8;
+    uint32_t *respbuf32;
+    uint8_t *respbuf8;
 
     /* Unlock the frame */
     maple_frame_unlock(frame);
 
     /* Make sure we got a valid response */
     resp = (maple_response_t *)frame->recv_buf;
-    respbuf32 = (uint32 *)resp->data;
-    respbuf8 = (uint8 *)resp->data;
+    respbuf32 = (uint32_t *)resp->data;
+    respbuf8 = (uint8_t *)resp->data;
 
     if(resp->response != MAPLE_RESPONSE_DATATRF) {
 //        dbglog(DBG_ERROR, "%s: bad response: %d\n", __func__, resp->response);
@@ -453,8 +476,9 @@ static void dreameye_get_param_cb(maple_frame_t *frame) {
     }
 
     if(resp->response == MAPLE_COMMAND_CAMCONTROL && respbuf8[4] == DREAMEYE_SUBCOMMAND_ERROR) {
-        dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X\n", 
-                __func__, respbuf8[5], respbuf8[6], respbuf8[7]);
+        dreameye_state_ext_t *de = (dreameye_state_ext_t *)frame->dev->status;
+        dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X value 0x%04X\n", 
+                __func__, respbuf8[5], respbuf8[6], respbuf8[7], de->value);
     }
 
     /* Update the status that was requested. */
@@ -474,8 +498,8 @@ static void dreameye_get_param_cb(maple_frame_t *frame) {
     genwait_wake_all(frame);
 }
 
-int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *value) {
-    uint32 *send_buf;
+int dreameye_get_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t *value) {
+    uint32_t *send_buf;
     dreameye_state_ext_t *de;
 
     assert(dev != NULL);
@@ -486,7 +510,7 @@ int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *valu
 
     /* Reset the frame */
     maple_frame_init(&dev->frame);
-    send_buf = (uint32 *)dev->frame.recv_buf;
+    send_buf = (uint32_t *)dev->frame.recv_buf;
     send_buf[0] = MAPLE_FUNC_CAMERA;
     send_buf[1] = param | (arg << 8);
     dev->frame.cmd = MAPLE_COMMAND_GETCOND;
@@ -508,7 +532,7 @@ int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *valu
             return MAPLE_ETIMEOUT;
         }
     }
-    
+
     if(value) {
         de = (dreameye_state_ext_t *)dev->status;
         *value = de->value;
@@ -520,18 +544,19 @@ int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *valu
 static void dreameye_queue_param_cb(maple_frame_t *frame) {
 //    dreameye_state_ext_t *de;
     maple_response_t *resp;
-    uint8 *respbuf8;
+    uint8_t *respbuf8;
 
     /* Unlock the frame */
     maple_frame_unlock(frame);
 
     /* Make sure we got a valid response */
     resp = (maple_response_t *)frame->recv_buf;
-    respbuf8 = (uint8 *)resp->data;
+    respbuf8 = (uint8_t *)resp->data;
 
     if(resp->response == MAPLE_COMMAND_CAMCONTROL && respbuf8[4] == DREAMEYE_SUBCOMMAND_ERROR) {
-        dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X\n", 
-                __func__, respbuf8[5], respbuf8[6], respbuf8[7]);
+        dreameye_state_ext_t *de = (dreameye_state_ext_t *)frame->dev->status;
+        dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X value 0x%04X\n", 
+                __func__, respbuf8[5], respbuf8[6], respbuf8[7], de->value);
         return;
     }
 
@@ -543,8 +568,8 @@ static void dreameye_queue_param_cb(maple_frame_t *frame) {
     // hexDump("setparam", respbuf8, 12);
 }
 
-int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value) {
-    uint32 *send_buf;
+int dreameye_queue_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value) {
+    uint32_t *send_buf;
 
     assert(dev != NULL);
 
@@ -552,9 +577,12 @@ int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 val
     if(maple_frame_lock(&dev->frame) < 0)
         return MAPLE_EAGAIN;
 
+    dreameye_state_ext_t *de = (dreameye_state_ext_t *)dev->status;
+    de->value = value;
+
     /* Reset the frame */
     maple_frame_init(&dev->frame);
-    send_buf = (uint32 *)dev->frame.recv_buf;
+    send_buf = (uint32_t *)dev->frame.recv_buf;
     send_buf[0] = MAPLE_FUNC_CAMERA;
     send_buf[1] = param | (arg << 8) | (value << 16);
     dev->frame.cmd = MAPLE_COMMAND_SETCOND;
@@ -578,8 +606,8 @@ static void dreameye_set_param_cb(maple_frame_t *frame) {
 }
 
 
-int dreameye_set_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value) {
-    uint32 *send_buf;
+int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value) {
+    uint32_t *send_buf;
 
     assert(dev != NULL);
 
@@ -587,9 +615,12 @@ int dreameye_set_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value
     if(maple_frame_lock(&dev->frame) < 0)
         return MAPLE_EAGAIN;
 
+    dreameye_state_ext_t *de = (dreameye_state_ext_t *)dev->status;
+    de->value = value;
+
     /* Reset the frame */
     maple_frame_init(&dev->frame);
-    send_buf = (uint32 *)dev->frame.recv_buf;
+    send_buf = (uint32_t *)dev->frame.recv_buf;
     send_buf[0] = MAPLE_FUNC_CAMERA;
     send_buf[1] = param | (arg << 8) | (value << 16);
     dev->frame.cmd = MAPLE_COMMAND_SETCOND;
@@ -662,6 +693,18 @@ static int dreameye_set_format(maple_device_t **devs, int isp_mode, int format) 
             return MAPLE_EFAIL;
     }
 
+    switch(de->format) {
+        case DREAMEYE_FRAME_FMT_YUYV422:
+            de->frame_size = de->width * de->height * 2;
+            break;
+        case DREAMEYE_FRAME_FMT_YUV420DE:
+        case DREAMEYE_FRAME_FMT_YUV420P:
+        case DREAMEYE_FRAME_FMT_NV21:
+        default:
+            de->frame_size = de->width * de->height * 3 / 2;
+            break;
+    }
+
     /* Set ISP operation mode */
     dreameye_set_param(devs[0], DREAMEYE_COND_REG_ISP, ISP_OP_MODE, isp_mode);
 
@@ -714,33 +757,145 @@ int dreameye_setup_video_camera(maple_device_t *dev, int isp_mode, int format) {
     dreameye_set_format(devs, isp_mode, format);
 
     /* Setup maple bus speed */
-#if 0 /* FIXME: Doesn't affected on real speed. */
-    dreameye_set_param(dev, DREAMEYE_COND_MAPLE_BITRATE, 0x90, DREAMEYE_MAPLE_SPEED_4MBPS);
+    if (DREAMEYE_DEVS_PER_FRAME > 3) {
+        dreameye_set_param(dev, DREAMEYE_COND_MAPLE_BITRATE, 0x90, DREAMEYE_MAPLE_SPEED_4MBPS);
+    } else {
+        dreameye_set_param(dev, DREAMEYE_COND_MAPLE_BITRATE, 0x90, DREAMEYE_MAPLE_SPEED_2MBPS);
+    }
+
+#if 0
     int old = irq_disable();
     maple_write(MAPLE_ENABLE, MAPLE_ENABLE_DISABLED);
     maple_write(MAPLE_SPEED, MAPLE_SPEED_4MBPS | MAPLE_SPEED_TIMEOUT(50000));
     maple_write(MAPLE_ENABLE, MAPLE_ENABLE_ENABLED);
     irq_restore(old);
-#else
-    dreameye_set_param(dev, DREAMEYE_COND_MAPLE_BITRATE, 0x90, DREAMEYE_MAPLE_SPEED_2MBPS);
 #endif
-
     /* Enable Auto Function */
     return dreameye_set_param(dev, DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0xB3);
 }
 
 int dreameye_stop_video_camera(maple_device_t *dev) {
     /* Disable Auto Function */
-    dreameye_set_param(dev, DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0);
-#if 0
-    /* Set default maple bus speed */
-    dreameye_set_param(dev, DREAMEYE_COND_MAPLE_BITRATE, 0x90, DREAMEYE_MAPLE_SPEED_2MBPS);
+    int rv = dreameye_set_param(dev, DREAMEYE_COND_REG_ISP, ISP_AUTO_ENB, 0);
 
+#if 0
     int old = irq_disable();
     maple_write(MAPLE_ENABLE, MAPLE_ENABLE_DISABLED);
     maple_write(MAPLE_SPEED, MAPLE_SPEED_2MBPS | MAPLE_SPEED_TIMEOUT(50000));
     maple_write(MAPLE_ENABLE, MAPLE_ENABLE_ENABLED);
     irq_restore(old);
 #endif
+    return rv;
+}
+
+int dreameye_start_capturing(maple_device_t *dev, dreameye_frame_cb cb) {
+    dreameye_state_ext_t *de;
+
+    assert(dev != NULL);
+    assert(dev->unit == 1);
+
+    de = (dreameye_state_ext_t *)dev->status;
+
+    if(de->is_capturing || !cb) {
+        return MAPLE_EFAIL;
+    }
+
+    /* Allocate space for the largest possible image that could fit in that
+       number of transfers. */
+    de->img_buf = (uint8_t *)memalign(32, de->frame_size);
+
+    if(!de->img_buf) {
+        return MAPLE_EFAIL;
+    }
+
+    de->img_transferring = 1;
+    de->img_size = 0;
+    de->img_number = 0;
+    de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+    de->callback = cb;
+
+    first_state = de;
+
+    return dreameye_get_video_frame_part(dev);
+}
+
+int dreameye_stop_capturing(maple_device_t *dev) {
+    dreameye_state_ext_t *de;
+
+    assert(dev != NULL);
+
+    de = (dreameye_state_ext_t *)dev->status;
+
+    if(!de->is_capturing) {
+        return MAPLE_EFAIL;
+    }
+
+    de->is_capturing = 0;
+    de->img_transferring = 0;
+    de->transfer_count = 0;
+    de->callback = NULL;
+
+    free(de->img_buf);
+    de->img_buf = NULL;
+
+    first_state = NULL;
+
+    return MAPLE_EOK;
+}
+
+int dreameye_poll(maple_device_t *dev) {
+    dreameye_state_ext_t *de = first_state;
+
+    if(!de || !de->is_capturing || !de->callback) {
+        dev->status_valid = 1;
+        return 0;
+    }
+
+    if(de->img_transferring == 0) {
+        /* Send out complete frame */
+        de->callback(dev, de->img_buf, de->img_size);
+        /* Request next frame */
+        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+        de->img_transferring = 1;
+        de->img_size = 0;
+        de->img_number ^= 1;
+    }
+    else if(de->img_transferring == -1) {
+        /* Retry the same frame */
+        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+        de->img_transferring = 1;
+    }
+
+    if(de->transfer_count > 0) {
+        dreameye_get_video_frame_part(dev);
+    }
+
+    dev->status_valid = 1;
     return 0;
 }
+
+#if 0
+static void dreameye_periodic(maple_driver_t *drv) {
+    maple_driver_foreach(drv, dreameye_poll);
+}
+
+static int dreameye_attach(maple_driver_t *drv, maple_device_t *dev) {
+    dreameye_state_ext_t *de;
+
+    (void)drv;
+
+    de = (dreameye_state_ext_t *)dev->status;
+    de->image_count = 0;
+    de->image_count_valid = 0;
+    de->transfer_count = 0;
+    de->img_transferring = 0;
+    de->img_buf = NULL;
+    de->img_size = 0;
+    de->img_number = 0;
+    de->is_capturing = 0;
+    de->callback = NULL;
+
+    dev->status_valid = 1;
+    return 0;
+}
+#endif

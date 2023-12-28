@@ -8,20 +8,34 @@
 #include "ds.h"
 #include "drivers/dreameye.h"
 
-#define PVR_TEXTURE_WIDTH 512
-#define PVR_TEXTURE_HEIGHT 256
-
 /* The image dimensions can be different than the dimensions of the pvr
    texture BUT the dimensions have to be a multiple of 16 */
 #define FRAME_TEXTURE_WIDTH 320
 #define FRAME_TEXTURE_HEIGHT 240
+// #define FRAME_TEXTURE_WIDTH 160
+// #define FRAME_TEXTURE_HEIGHT 120
+
+#if FRAME_TEXTURE_WIDTH == 320
+#   define PVR_TEXTURE_WIDTH 512
+#   define PVR_TEXTURE_HEIGHT 256
+#else
+#   define PVR_TEXTURE_WIDTH 256
+#   define PVR_TEXTURE_HEIGHT 128
+#endif
 
 /* u_block + v_block + y_block = 64 + 64 + 256 = 384 */
 #define BYTE_SIZE_FOR_16x16_BLOCK 384
 
+#define PVR_YUV_FORMAT_YUV420 0
+#define PVR_YUV_FORMAT_YUV422 1
+
+#define PVR_YUV_MODE_SINGLE 0
+#define PVR_YUV_MODE_MULTI 1
+
 static pvr_ptr_t pvr_txr;
 static plx_texture_t *plx_txr;
 static maple_device_t *dreameye;
+// static semaphore_t yuv_done = SEM_INITIALIZER(0);
 
 static int capturing = 0;
 static kthread_t *thread = NULL;
@@ -111,8 +125,8 @@ static int setup_pvr(void) {
     /* Setup YUV converter. */
     PVR_SET(PVR_YUV_ADDR, (((unsigned int)pvr_txr) & 0xffffff));
     /* Divide PVR texture width and texture height by 16 and subtract 1. */
-    PVR_SET(PVR_YUV_CFG, (0x00 << 24) | /* Set bit to specify 420 data format 
-                         (default value is 0) */
+    PVR_SET(PVR_YUV_CFG, (PVR_YUV_FORMAT_YUV420 << 24) |
+                         (PVR_YUV_MODE_SINGLE << 16) |
                          (((PVR_TEXTURE_HEIGHT / 16) - 1) << 8) | 
                          ((PVR_TEXTURE_WIDTH / 16) - 1));
     /* Need to read once */
@@ -190,6 +204,7 @@ static void yuv420p_to_yuv422(uint8_t *src) {
     }
 
     sq_unlock();
+    // sem_wait(&yuv_done);
 }
 
 
@@ -213,9 +228,15 @@ static void *capture_thread(void *param) {
     }
     return NULL;
 }
+/*
+static void asic_yuv_evt_handler(uint32 code) {
+    (void)code;
+    sem_signal(&yuv_done);
+    dbglog(DBG_DEBUG, "%s: %d\n", __func__, sem_count(&yuv_done));
+}*/
 
 int dreameye_preview_init(maple_device_t *dev) {
-    int rs;
+    int rs, isp_mode;
 
     if(dreameye) {
         return 0;
@@ -228,7 +249,8 @@ int dreameye_preview_init(maple_device_t *dev) {
 		return -1;
 	}
 
-    rs = dreameye_setup_video_camera(dreameye, DREAMEYE_ISP_MODE_SIF, DREAMEYE_FRAME_FMT_YUV420P);
+    isp_mode = (FRAME_TEXTURE_WIDTH == 320 ? DREAMEYE_ISP_MODE_SIF : DREAMEYE_ISP_MODE_QSIF);
+    rs = dreameye_setup_video_camera(dreameye, isp_mode, DREAMEYE_FRAME_FMT_YUV420P);
 
     if (rs != MAPLE_EOK) {
         ds_printf("DS_ERROR: Camera setup failed\n");
@@ -241,6 +263,9 @@ int dreameye_preview_init(maple_device_t *dev) {
         ds_printf("DS_ERROR: PVR setup failed\n");
         return -1;
     }
+
+	// asic_evt_set_handler(ASIC_EVT_PVR_YUV_DONE, asic_yuv_evt_handler);
+	// asic_evt_enable(ASIC_EVT_PVR_YUV_DONE, ASIC_IRQ_DEFAULT);
 
     input_event = AddEvent(
         "DreamEye_Input",
@@ -271,6 +296,9 @@ void dreameye_preview_shutdown(void) {
     }
     capturing = 0;
     thd_join(thread, NULL);
+
+	// asic_evt_disable(ASIC_EVT_PVR_YUV_DONE, ASIC_IRQ_DEFAULT);
+	// asic_evt_set_handler(ASIC_EVT_PVR_YUV_DONE, NULL);
 
     dreameye_stop_video_camera(dreameye);
     dreameye = NULL;

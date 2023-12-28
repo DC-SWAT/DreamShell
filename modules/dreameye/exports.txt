@@ -6,3 +6,9 @@ dreameye_set_param
 dreameye_queue_param
 dreameye_get_video_frame
 dreameye_setup_video_camera
+dreameye_stop_video_camera
+dreameye_preview_init
+dreameye_preview_shutdown
+dreameye_start_capturing
+dreameye_stop_capturing
+dreameye_poll

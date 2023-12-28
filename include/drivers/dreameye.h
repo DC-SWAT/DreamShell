@@ -11,9 +11,27 @@
 #include <sys/cdefs.h>
 __BEGIN_DECLS
 
+#include <stdint.h>
 #include <arch/types.h>
 #include <dc/maple.h>
 #include <dc/maple/dreameye.h>
+
+/** \brief  Type for a dreameye capture callback.
+
+    This is the signature that is required for a function to accept frames
+    from the dreameye as it is capturing. This function will be called about
+    once per frame, and in an interrupt context (so it should be pretty quick
+    to execute). Basically, all you should do in one of these is copy the
+    frame out to your own buffer -- do not do any processing on the frames
+    in your callback other than to copy them out!
+
+    \param  dev             The device the frames are coming from.
+    \param  frame           Pointer to the frame buffer.
+    \param  len             The number of bytes in the frame buffer.
+
+    \headerfile dc/maple/dreameye.h
+*/
+typedef void (*dreameye_frame_cb)(maple_device_t *dev, uint8_t *frame, size_t len);
 
 /** \brief  Dreameye status structure.
 
@@ -36,13 +54,13 @@ typedef struct dreameye_state_ext {
     int             img_transferring;
 
     /** \brief  Storage for image data. */
-    uint8          *img_buf;
+    uint8_t         *img_buf;
 
     /** \brief  The size of the image in bytes. */
     int             img_size;
 
     /** \brief  The image number currently being transferred. */
-    uint8           img_number;
+    uint8_t          img_number;
 	
     /** \brief  The value from/to subsystems. */
     int             value;
@@ -50,9 +68,17 @@ typedef struct dreameye_state_ext {
     /** \brief  Frame size in capture mode. */
     int             width;
     int             height;
+    int             frame_size;
 
     /** \brief  Frame pixel format. */
     int             format;
+
+    /** \brief  Capturing is in progress. */
+    int             is_capturing;
+
+    /** \brief  Frame capture callback. */
+    dreameye_frame_cb callback;
+
 } dreameye_state_ext_t;
 
 
@@ -92,7 +118,7 @@ typedef struct dreameye_state_ext {
 #define DREAMEYE_FRAME_FMT_YUV420P  2 /* Converted from yuv420de */
 #define DREAMEYE_FRAME_FMT_NV21     3 /* Converted from yuv420de */
 
-/** \brief  Transfer an image from the Dreameye.
+/** \brief  Transfer a captured frame from the Dreameye.
 
     This function fetches a single image from the specified Dreameye device.
     This function will block, and can take a little while to execute. You must
@@ -109,30 +135,30 @@ typedef struct dreameye_state_ext {
     \retval MAPLE_EOK       On success.
     \retval MAPLE_EFAIL     On error.
 */
-int dreameye_get_video_frame(maple_device_t *dev, uint8 fb_num, uint8 **data, int *img_sz);
+int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data, int *img_sz);
 
 
 /** \brief  Get params from any subsystem
  * TODO
  */
-int dreameye_get_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 *value);
+int dreameye_get_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t *value);
 
 /** \brief  Set params for any subsystem
  * TODO
  */
-int dreameye_set_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value);
+int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value);
 
 /** \brief  Add to queue params for any subsystem
  * TODO
  */
-int dreameye_queue_param(maple_device_t *dev, uint8 param, uint8 arg, uint16 value);
+int dreameye_queue_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value);
 
-/** \brief  Setup CIS and ISP regs and speed up maple bus for video capturing
+/** \brief  Setup CIS and ISP regs for video capturing
  * TODO
  */
 int dreameye_setup_video_camera(maple_device_t *dev, int isp_mode, int format);
 
-/** \brief  Stop video capture and set back default maple bus speed
+/** \brief  Stop video capture
  * TODO
  */
 int dreameye_stop_video_camera(maple_device_t *dev);
@@ -146,6 +172,21 @@ int dreameye_preview_init(maple_device_t *dev);
  * TODO
  */
 void dreameye_preview_shutdown(void);
+
+/** \brief  Start frames capturing
+ * TODO
+ */
+int dreameye_start_capturing(maple_device_t *dev, dreameye_frame_cb cb);
+
+/** \brief  Stop frames capturing
+ * TODO
+ */
+int dreameye_stop_capturing(maple_device_t *dev);
+
+/** \brief  Polling device
+ * TODO
+ */
+int dreameye_poll(maple_device_t *dev);
 
 __END_DECLS
 
