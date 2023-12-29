@@ -73,6 +73,9 @@ typedef struct dreameye_state_ext {
     /** \brief  Frame pixel format. */
     int             format;
 
+    /** \brief  Is a frame compressed. */
+    int             compressed;
+
     /** \brief  Capturing is in progress. */
     int             is_capturing;
 
@@ -114,9 +117,11 @@ typedef struct dreameye_state_ext {
 #define DREAMEYE_ISP_MODE_VGA  0x04 /* 640x480 */
 
 #define DREAMEYE_FRAME_FMT_YUV420DE 0 /* JangGu native 12bpp */
-#define DREAMEYE_FRAME_FMT_YUYV422  1 /* JangGu native 16bpp */
-#define DREAMEYE_FRAME_FMT_YUV420P  2 /* Converted from yuv420de */
-#define DREAMEYE_FRAME_FMT_NV21     3 /* Converted from yuv420de */
+#define DREAMEYE_FRAME_FMT_YUYV422 1 /* JangGu native 16bpp */
+#define DREAMEYE_FRAME_FMT_YUV420P 2 /* Converted from yuv420de */
+#define DREAMEYE_FRAME_FMT_NV21 3 /* Converted from yuv420de */
+#define DREAMEYE_FRAME_FMT_YUV420DE_COMPRESSED 10 /* Unknown compressed format */
+#define DREAMEYE_FRAME_FMT_YUYV422_COMPRESSED 11 /* Unknown compressed format */
 
 /** \brief  Transfer a captured frame from the Dreameye.
 
@@ -166,7 +171,7 @@ int dreameye_stop_video_camera(maple_device_t *dev);
 /** \brief  Initialize preview
  * TODO
  */
-int dreameye_preview_init(maple_device_t *dev);
+int dreameye_preview_init(maple_device_t *dev, int isp_mode);
 
 /** \brief  Shutdown preview
  * TODO

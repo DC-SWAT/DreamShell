@@ -8,21 +8,6 @@
 #include "ds.h"
 #include "drivers/dreameye.h"
 
-/* The image dimensions can be different than the dimensions of the pvr
-   texture BUT the dimensions have to be a multiple of 16 */
-#define FRAME_TEXTURE_WIDTH 320
-#define FRAME_TEXTURE_HEIGHT 240
-// #define FRAME_TEXTURE_WIDTH 160
-// #define FRAME_TEXTURE_HEIGHT 120
-
-#if FRAME_TEXTURE_WIDTH == 320
-#   define PVR_TEXTURE_WIDTH 512
-#   define PVR_TEXTURE_HEIGHT 256
-#else
-#   define PVR_TEXTURE_WIDTH 256
-#   define PVR_TEXTURE_HEIGHT 128
-#endif
-
 /* u_block + v_block + y_block = 64 + 64 + 256 = 384 */
 #define BYTE_SIZE_FOR_16x16_BLOCK 384
 
@@ -32,12 +17,20 @@
 #define PVR_YUV_MODE_SINGLE 0
 #define PVR_YUV_MODE_MULTI 1
 
+/* The frame dimensions can be different than the dimensions of the pvr
+   texture BUT the dimensions have to be a multiple of 16 */
+static int frame_txr_width = 320;
+static int frame_txr_height = 240;
+static int pvr_txr_width = 512;
+static int pvr_txr_height = 256;
+
 static pvr_ptr_t pvr_txr;
 static plx_texture_t *plx_txr;
 static maple_device_t *dreameye;
 // static semaphore_t yuv_done = SEM_INITIALIZER(0);
 
 static int capturing = 0;
+static int got_frame = 0;
 static kthread_t *thread = NULL;
 static Event_t *input_event = NULL;
 static Event_t *video_event = NULL;
@@ -46,13 +39,18 @@ static Event_t *video_event = NULL;
 static void dreameye_preview_frame() {
 
     const uint32_t color = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
-    const float width_ratio = (float)FRAME_TEXTURE_WIDTH / PVR_TEXTURE_WIDTH;
-    const float height_ratio = (float)FRAME_TEXTURE_HEIGHT / PVR_TEXTURE_HEIGHT;
+    const float width_ratio = (float)frame_txr_width / pvr_txr_width;
+    const float height_ratio = (float)frame_txr_height / pvr_txr_height;
     const float native_width = 640.0f;
     const float native_height = 480.0f;
     const float z = 1.0f;
 
     pvr_list_begin(PVR_LIST_TR_POLY);
+
+    if(!got_frame) {
+        // TODO: Show waiting picture
+        return;
+    }
 
     plx_mat3d_identity();
     plx_mat_identity();
@@ -93,10 +91,10 @@ static void EventHandler(void *ds_event, void *param, int action) {
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
             switch(event->jbutton.button) {
-                // case 1:
-                // case 2:
+                case 1:
+                case 2:
                 case 5:
-                // case 6:
+                case 6:
                 // case 3:
                     dreameye_preview_shutdown();
                     break;
@@ -115,7 +113,7 @@ static int setup_pvr(void) {
         return -1;
     }
 
-    pvr_txr = pvr_mem_malloc(PVR_TEXTURE_WIDTH * PVR_TEXTURE_HEIGHT * 2);
+    pvr_txr = pvr_mem_malloc(pvr_txr_width * pvr_txr_height * 2);
 
     if(!pvr_txr) {
         ds_printf("Failed to allocate PVR memory!\n");
@@ -127,14 +125,14 @@ static int setup_pvr(void) {
     /* Divide PVR texture width and texture height by 16 and subtract 1. */
     PVR_SET(PVR_YUV_CFG, (PVR_YUV_FORMAT_YUV420 << 24) |
                          (PVR_YUV_MODE_SINGLE << 16) |
-                         (((PVR_TEXTURE_HEIGHT / 16) - 1) << 8) | 
-                         ((PVR_TEXTURE_WIDTH / 16) - 1));
+                         (((pvr_txr_height / 16) - 1) << 8) |
+                         ((pvr_txr_width / 16) - 1));
     /* Need to read once */
     PVR_GET(PVR_YUV_CFG);
 
     plx_txr->ptr = pvr_txr;
-    plx_txr->w = PVR_TEXTURE_WIDTH;
-    plx_txr->h = PVR_TEXTURE_HEIGHT;
+    plx_txr->w = pvr_txr_width;
+    plx_txr->h = pvr_txr_height;
     plx_txr->fmt = PVR_TXRFMT_YUV422 | PVR_TXRFMT_NONTWIDDLED;
     plx_fill_contexts(plx_txr);
     plx_txr_setfilter(plx_txr, PVR_FILTER_BILINEAR);
@@ -145,7 +143,7 @@ static int setup_pvr(void) {
 static void yuv420p_to_yuv422(uint8_t *src) {
     int i, j, index, x_blk, y_blk;
     size_t dummies = (BYTE_SIZE_FOR_16x16_BLOCK *
-        ((PVR_TEXTURE_WIDTH >> 4) - (FRAME_TEXTURE_WIDTH >> 4))) >> 5;
+        ((pvr_txr_width >> 4) - (frame_txr_width >> 4))) >> 5;
 
     uint32_t *db = (uint32_t *)SQ_MASK_DEST_ADDR(PVR_TA_YUV_CONV);
     uint8_t *u_block = (uint8_t *)SQ_MASK_DEST_ADDR(PVR_TA_YUV_CONV);
@@ -153,18 +151,18 @@ static void yuv420p_to_yuv422(uint8_t *src) {
     uint8_t *y_block = (uint8_t *)SQ_MASK_DEST_ADDR(PVR_TA_YUV_CONV + 128);
 
     uint8_t *y_plane = src;
-    uint8_t *u_plane = src + (FRAME_TEXTURE_WIDTH * FRAME_TEXTURE_HEIGHT);
-    uint8_t *v_plane = src + (FRAME_TEXTURE_WIDTH * FRAME_TEXTURE_HEIGHT) +
-        (FRAME_TEXTURE_WIDTH * FRAME_TEXTURE_HEIGHT / 4);
+    uint8_t *u_plane = src + (frame_txr_width * frame_txr_height);
+    uint8_t *v_plane = src + (frame_txr_width * frame_txr_height) +
+        (frame_txr_width * frame_txr_height / 4);
 
     sq_lock((void *)PVR_TA_YUV_CONV);
 
-    for(y_blk = 0; y_blk < FRAME_TEXTURE_HEIGHT; y_blk += 16) {
-        for(x_blk = 0; x_blk < FRAME_TEXTURE_WIDTH; x_blk += 16) {
+    for(y_blk = 0; y_blk < frame_txr_height; y_blk += 16) {
+        for(x_blk = 0; x_blk < frame_txr_width; x_blk += 16) {
 
             /* U data for 16x16 pixels */
             for(i = 0; i < 8; ++i) {
-                index = (y_blk / 2 + i) * (FRAME_TEXTURE_WIDTH / 2) + 
+                index = (y_blk / 2 + i) * (frame_txr_width / 2) + 
                         (x_blk / 2);
                 *((uint64_t*)&u_block[i * 8]) = *((uint64_t*)&u_plane[index]);
                 if((i + 1) % 4 == 0) {
@@ -174,7 +172,7 @@ static void yuv420p_to_yuv422(uint8_t *src) {
 
             /* V data for 16x16 pixels */
             for(i = 0; i < 8; ++i) {
-                index = (y_blk / 2 + i) * (FRAME_TEXTURE_WIDTH / 2) + 
+                index = (y_blk / 2 + i) * (frame_txr_width / 2) + 
                         (x_blk / 2);
                 *((uint64_t*)&v_block[i * 8]) = *((uint64_t*)&v_plane[index]);
                 if((i + 1) % 4 == 0) {
@@ -185,7 +183,7 @@ static void yuv420p_to_yuv422(uint8_t *src) {
             /* Y data for 4 (8x8 pixels) */
             for(i = 0; i < 4; ++i) {
                 for(j = 0; j < 8; ++j) {
-                    index = (y_blk + j + (i / 2 * 8)) * FRAME_TEXTURE_WIDTH + 
+                    index = (y_blk + j + (i / 2 * 8)) * frame_txr_width + 
                              x_blk + (i % 2 * 8);
                     *((uint64_t*)&y_block[i * 64 + j * 8]) = 
                         *((uint64_t*)&y_plane[index]);
@@ -222,6 +220,9 @@ static void *capture_thread(void *param) {
         if(frame) {
             LockVideo();
             yuv420p_to_yuv422(frame);
+            if(!got_frame) {
+                got_frame = 1;
+            }
             UnlockVideo();
             free(frame);
         }
@@ -235,21 +236,45 @@ static void asic_yuv_evt_handler(uint32 code) {
     dbglog(DBG_DEBUG, "%s: %d\n", __func__, sem_count(&yuv_done));
 }*/
 
-int dreameye_preview_init(maple_device_t *dev) {
-    int rs, isp_mode;
+int dreameye_preview_init(maple_device_t *dev, int isp_mode) {
+    int rs;
 
     if(dreameye) {
         return 0;
     }
 
     dreameye = dev;
+    got_frame = 0;
 
 	if(!dreameye) {
 		ds_printf("DS_ERROR: Couldn't find any attached devices, bailing out.\n");
 		return -1;
 	}
 
-    isp_mode = (FRAME_TEXTURE_WIDTH == 320 ? DREAMEYE_ISP_MODE_SIF : DREAMEYE_ISP_MODE_QSIF);
+    switch(isp_mode) {
+        case DREAMEYE_ISP_MODE_QSIF:
+            frame_txr_width = 160;
+            frame_txr_height = 120;
+            pvr_txr_width = 256;
+            pvr_txr_height = 128;
+            break;
+        case DREAMEYE_ISP_MODE_SIF:
+            frame_txr_width = 320;
+            frame_txr_height = 240;
+            pvr_txr_width = 512;
+            pvr_txr_height = 256;
+            break;
+        case DREAMEYE_ISP_MODE_VGA:
+            frame_txr_width = 640;
+            frame_txr_height = 480;
+            pvr_txr_width = 1024;
+            pvr_txr_height = 512;
+            break;
+        default:
+            ds_printf("DS_ERROR: Unsupported ISP mode: %d\n", isp_mode);
+            return -1;
+    }
+
     rs = dreameye_setup_video_camera(dreameye, isp_mode, DREAMEYE_FRAME_FMT_YUV420P);
 
     if (rs != MAPLE_EOK) {
@@ -304,9 +329,7 @@ void dreameye_preview_shutdown(void) {
     dreameye = NULL;
 
     RemoveEvent(video_event);
-    video_event = NULL;
     RemoveEvent(input_event);
-    input_event = NULL;
 
     EnableScreen();
     GUI_Enable();

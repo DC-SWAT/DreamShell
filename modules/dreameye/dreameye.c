@@ -235,7 +235,7 @@ static void convert_frame(dreameye_state_ext_t *de) {
 
     // TODO: Conversion when parsing packets
     if(de->format == DREAMEYE_FRAME_FMT_YUV420P) {
-        buf = (uint8_t *)malloc(de->frame_size);
+        buf = (uint8_t *)memalign(32, de->frame_size);
         if (buf) {
             yuv420de_to_yuv420p(buf, de->img_buf, de->width, de->height);
             free(de->img_buf);
@@ -243,7 +243,7 @@ static void convert_frame(dreameye_state_ext_t *de) {
         }
     }
     else if(de->format == DREAMEYE_FRAME_FMT_NV21) {
-        buf = (uint8_t *)malloc(de->frame_size);
+        buf = (uint8_t *)memalign(32, de->frame_size);
         if (buf) {
             yuv420de_to_nv21(buf, de->img_buf, de->width, de->height);
             free(de->img_buf);
@@ -326,31 +326,40 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
     part = respbuf8[4];
     packet = respbuf8 + 12;
 
-    /* Parsing JangGu packet header */
-    bits = packet[3] + (packet[2] << 8);
-    pixels = packet[1] + ((packet[0] & 0x3f) << 8);
-    info = (packet[0] & 0xc0) >> 6;
-    packet_len = ((bits + 47) >> 4) << 1;
+    if(!first_state->compressed) {
+        /* Parsing JangGu packet header */
+        bits = packet[3] + (packet[2] << 8);
+        pixels = packet[1] + ((packet[0] & 0x3f) << 8);
+        info = (packet[0] & 0xc0) >> 6;
+        packet_len = ((bits + 47) >> 4) << 1;
 
-    // dbglog(DBG_DEBUG, "%s: len=%d part=0x%02X | bits=%d pixels=%d bpp=%d info=%d plen=%d\n",
-    //     __func__, len, part, bits, pixels, bits / pixels, info, packet_len);
+        if(len != packet_len || (part == 0x80 && info != 2) ||
+            (part == 0x00 && info != part) || (part == 0x40 && info != 1)) {
+            dbglog(DBG_ERROR, "%s: len=%d part=0x%02X | bits=%d pixels=%d bpp=%d info=%d plen=%d\n",
+                __func__, len, part, bits, pixels, bits / pixels, info, packet_len);
+            first_state->img_transferring = -1;
+            return;
+        }
 
-    if(len != packet_len || (part == 0x80 && info != 2) ||
-        (part == 0x00 && info != part) || (part == 0x40 && info != 1)) {
-        dbglog(DBG_ERROR, "%s: len=%d part=0x%02X | bits=%d pixels=%d bpp=%d info=%d plen=%d\n",
-            __func__, len, part, bits, pixels, bits / pixels, info, packet_len);
+        /* Copy only YUV data without header */
+        len -= JANGGU_FRAME_HEADER_SIZE;
+        packet += JANGGU_FRAME_HEADER_SIZE;
+    }
+
+    if(first_state->img_size + len > first_state->frame_size) {
+        dbglog(DBG_ERROR, "%s: Unexpected frame size, received %d, but expected %d\n",
+                __func__, first_state->img_size + len,
+                first_state->frame_size);
         first_state->img_transferring = -1;
         return;
     }
 
-    /* Copy only YUV data without header */
-    len -= JANGGU_FRAME_HEADER_SIZE;
-    memcpy(first_state->img_buf + first_state->img_size, packet + JANGGU_FRAME_HEADER_SIZE, len);
+    memcpy(first_state->img_buf + first_state->img_size, packet, len);
     first_state->img_size += len;
 
     /* Check if we're done. */
     if(part == 0x40) {
-        if(first_state->transfer_count > 0) {
+        if(!first_state->compressed && first_state->transfer_count > 0) {
             dbglog(DBG_ERROR, "%s: Unexpected end of transfer, missing %d packets.\n",
                 __func__, first_state->transfer_count);
             first_state->img_transferring = -1;
@@ -359,6 +368,13 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
         }
         return;
     }
+
+    /* FIXME: Very stupid things right here, but it's sync frames */
+    if(first_state->width == 320)
+        timer_spin_sleep(1);
+    else
+        timer_spin_sleep(2);
+    /* End of FIXME */
 
     if(--first_state->img_transferring == 1) {
         dreameye_get_video_frame_part(frame->dev);
@@ -649,23 +665,7 @@ int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
 static int dreameye_set_format(maple_device_t **devs, int isp_mode, int format) {
 
     dreameye_state_ext_t *de = (dreameye_state_ext_t *)devs[0]->status;
-    uint8_t pix_fmt = JANGGU_FMT_UNCOMPRESSED | JANGGU_FMT_UNK7;
-
-    switch(format) {
-        case DREAMEYE_FRAME_FMT_YUV420DE:
-        case DREAMEYE_FRAME_FMT_YUV420P:
-        case DREAMEYE_FRAME_FMT_NV21:
-            pix_fmt |= JANGGU_FMT_YUV420DE;
-            break;
-        case DREAMEYE_FRAME_FMT_YUYV422:
-            pix_fmt |= JANGGU_FMT_YUYV422;
-            break;
-        default:
-            dbglog(DBG_ERROR, "%s: unknown format: %d\n", __func__, format);
-            return MAPLE_EFAIL;
-    }
-
-    de->format = format;
+    uint8_t pix_fmt = JANGGU_FMT_UNK7;
 
     switch(isp_mode) {
         case DREAMEYE_ISP_MODE_QSIF:
@@ -693,17 +693,32 @@ static int dreameye_set_format(maple_device_t **devs, int isp_mode, int format) 
             return MAPLE_EFAIL;
     }
 
-    switch(de->format) {
-        case DREAMEYE_FRAME_FMT_YUYV422:
-            de->frame_size = de->width * de->height * 2;
-            break;
+    switch(format) {
         case DREAMEYE_FRAME_FMT_YUV420DE:
         case DREAMEYE_FRAME_FMT_YUV420P:
         case DREAMEYE_FRAME_FMT_NV21:
-        default:
+            pix_fmt |= (JANGGU_FMT_UNCOMPRESSED | JANGGU_FMT_YUV420DE);
             de->frame_size = de->width * de->height * 3 / 2;
             break;
+        case DREAMEYE_FRAME_FMT_YUYV422:
+            pix_fmt |= (JANGGU_FMT_UNCOMPRESSED | JANGGU_FMT_YUYV422);
+            de->frame_size = de->width * de->height * 2;
+            break;
+        case DREAMEYE_FRAME_FMT_YUV420DE_COMPRESSED:
+            pix_fmt |= (JANGGU_FMT_COMPRESSED | JANGGU_FMT_YUV420DE);
+            de->frame_size = de->width * de->height;
+            break;
+        case DREAMEYE_FRAME_FMT_YUYV422_COMPRESSED:
+            pix_fmt |= (JANGGU_FMT_COMPRESSED | JANGGU_FMT_YUYV422);
+            de->frame_size = de->width * de->height;
+            break;
+        default:
+            dbglog(DBG_ERROR, "%s: unknown format: %d\n", __func__, format);
+            return MAPLE_EFAIL;
     }
+
+    de->format = format;
+    de->compressed = (pix_fmt & JANGGU_FMT_UNCOMPRESSED) ? 0 : 1;
 
     /* Set ISP operation mode */
     dreameye_set_param(devs[0], DREAMEYE_COND_REG_ISP, ISP_OP_MODE, isp_mode);

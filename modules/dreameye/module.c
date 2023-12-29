@@ -29,6 +29,12 @@ static int save_image(const char *fn, uint8 *buf, int size) {
 
 int builtin_dreameye_cmd(int argc, char *argv[]) {
 
+	/* Arguments */
+	int grab = 0, count = 0, erase = 0, show = 0, hide = 0, stop = 0;
+	int video = 0, isp = DREAMEYE_ISP_MODE_SIF, fmt = DREAMEYE_FRAME_FMT_YUV420P;
+	char *file = NULL, *dir = NULL;
+	int num = -1;
+
     if(argc < 2) {
 		ds_printf("Usage: %s options args...\n"
 					"Options: \n"
@@ -37,25 +43,19 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 					" -c, --count   -Get images count\n"
 					" -v, --video   -Setup video camera for capturing\n"
 					" -s, --stop    -Stop video camera capturing\n"
-					" -w, --preview -Show preview\n"
-					" -p, --param   -Get param\n\n");
+					" -w, --show    -Show preview\n"
+					" -h, --hide    -Hide preview\n\n", argv[0]);
 		ds_printf("Arguments: \n"
 					" -f, --file    -File for save image\n"
 					" -d, --dir     -Directory for save all images\n"
 					" -n, --num     -Image number (unset for all, 0 and 1 is video fb's)\n"
-					" -i, --isp     -ISP mode for capture (0-4), default 2 (320x240)\n"
-					" -t, --fmt     -Pixel format for capture (0-3), default 1 (yuv420p)\n\n");
+					" -i, --isp     -ISP mode for capture (0-4), default %d (320x240)\n"
+					" -t, --fmt     -Pixel format for capture (0-3), default %d (yuv420p)\n\n", isp, fmt);
 		ds_printf("Example: %s -g -n 2 -f /sd/photo.jpg\n"
 					"         %s -g -n 0 -f /sd/frame0.raw\n"
-					"         %s -g -d /sd", argv[0], argv[0], argv[0], argv[0]);
+					"         %s -g -d /sd", argv[0], argv[0], argv[0]);
 		return CMD_NO_ARG; 
     }
-
-	/* Arguments */
-	int grab = 0, count = 0, erase = 0, param = 0, show = 0, hide = 0, stop = 0;
-	int video = 0, isp = DREAMEYE_ISP_MODE_SIF, fmt = DREAMEYE_FRAME_FMT_YUV420P;
-	char *file = NULL, *dir = NULL;
-	int num = -1;
 
 	/* Buffers */
 	char fn[NAME_MAX];
@@ -70,14 +70,14 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		{"grab",  'g', NULL, CFG_BOOL, (void *) &grab,  0},
 		{"count", 'c', NULL, CFG_BOOL, (void *) &count, 0},
 		{"erase", 'e', NULL, CFG_BOOL, (void *) &erase, 0},
-		{"param", 'p', NULL, CFG_BOOL, (void *) &param, 0},
 		{"file",  'f', NULL, CFG_STR,  (void *) &file,  0},
 		{"num",   'n', NULL, CFG_INT,  (void *) &num,   0},
 		{"dir",   'd', NULL, CFG_STR,  (void *) &dir,   0},
 		{"video", 'v', NULL, CFG_BOOL, (void *) &video, 0},
+		{"stop",  's', NULL, CFG_BOOL, (void *) &stop,  0},
 		{"isp",   'i', NULL, CFG_INT,  (void *) &isp,   0},
 		{"fmt",   't', NULL, CFG_INT,  (void *) &fmt,   0},
-		{"show",  's', NULL, CFG_BOOL, (void *) &show,  0},
+		{"show",  'w', NULL, CFG_BOOL, (void *) &show,  0},
 		{"hide",  'h', NULL, CFG_BOOL, (void *) &hide,  0},
 		CFG_END_OF_LIST
 	};
@@ -107,7 +107,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 
 	if(show) {
 		ds_printf("DS_PROCESS: Initializing preview\n");
-		if (dreameye_preview_init(dreameye) < 0) {
+		if (dreameye_preview_init(dreameye, isp) < 0) {
 			return CMD_ERROR;
 		}
 		return CMD_OK;
@@ -116,18 +116,6 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	if(hide) {
 		ds_printf("DS_PROCESS: Shutting down preview\n");
 		dreameye_preview_shutdown();
-		return CMD_OK;
-	}
-
-	if(param) {
-
-		uint16 val;
-
-		while(++num < 0x20) {
-			dreameye_get_param(dreameye, DREAMEYE_COND_REG_JANGGU, num & 0xff, &val);
-			ds_printf("0x%02x = 0x%02x\n", num & 0xff, val & 0xff);
-		}
-
 		return CMD_OK;
 	}
 
