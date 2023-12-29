@@ -1,0 +1,7 @@
+include kos/exports.h
+include app_module.h
+
+# Main
+DreamEyeApp_Init
+DreamEyeApp_ShowPage
+DreamEyeApp_ShowPreview

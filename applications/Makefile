@@ -1,12 +1,12 @@
 #
 # DreamShell applications Makefile
-# Copyright (C) 2009-2016 SWAT
+# Copyright (C) 2009-2023 SWAT
 # http://www.dc-swat.ru
 #
 
 _SUBDIRS = main filemanager region_changer iso_loader \
 			bios_flasher gd_ripper speedtest vmu_manager \
-			settings gdplay
+			settings gdplay dreameye
 
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
