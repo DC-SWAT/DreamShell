@@ -27,7 +27,7 @@ typedef pvr_vertex_t plx_vertex_t;
 #define PLX_VERT	PVR_CMD_VERTEX
 #define PLX_VERT_EOS	PVR_CMD_VERTEX_EOL
 
-#define plx_dr_init(a) pvr_dr_init(*a)
+#define plx_dr_init(a) pvr_dr_init(a)
 #define plx_dr_target(a) pvr_dr_target(*a)
 #define plx_dr_commit(a) pvr_dr_commit(a)
 

@@ -42,7 +42,7 @@ void plx_cxt_init() {
 
 void plx_cxt_texture(plx_texture_t * txr) {
 	if (txr) {
-		memcpy_sh4(&cxt_working.txr, &txr->cxt_opaque.txr, sizeof(cxt_working.txr));
+		memcpy(&cxt_working.txr, &txr->cxt_opaque.txr, sizeof(cxt_working.txr));
 		cxt_working.txr.enable = PVR_TEXTURE_ENABLE;
 	} else {
 		cxt_working.txr.enable = PVR_TEXTURE_DISABLE;
