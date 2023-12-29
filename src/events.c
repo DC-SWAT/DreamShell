@@ -136,14 +136,19 @@ int SetEventState(Event_t *e, uint16 state) {
 void ProcessInputEvents(SDL_Event *event) {
 
 	Event_t *e;
-	Item_t *i;
+	Item_t *c, *n;
 
-	SLIST_FOREACH(i, events, list) {
-		e = (Event_t *) i->data;
+	c = listGetItemFirst(events);
+
+	while(c != NULL) {
+		n = listGetItemNext(c);
+		e = (Event_t *)c->data;
 
 		if(e->type == EVENT_TYPE_INPUT && e->state == EVENT_STATE_ACTIVE) {
 			e->event(e, event, EVENT_ACTION_UPDATE);
 		}
+
+		c = n;
 	}
 }
 
