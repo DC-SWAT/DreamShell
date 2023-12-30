@@ -21,7 +21,7 @@ static int builtin_help(int argc, char *argv[]) {
 	Cmd_t *c;
 	Item_t *i;
 
-	char ac[512];
+	char ac[1024];
 	int cnt = 0;
 
 	if (argc > 1) {
@@ -36,7 +36,6 @@ static int builtin_help(int argc, char *argv[]) {
 		ds_printf("\n Internal commands:\n");
 		SLIST_FOREACH(i, cmds, list) {
 
-			//ds_printf("%s, ", b->command);
 			c = (Cmd_t *) i->data;
 
 			if(!cnt) {
@@ -58,7 +57,6 @@ static int builtin_help(int argc, char *argv[]) {
 
 			strcat(ac, c->command);
 			cnt++;
-			//ds_printf("%s, ", c->command);
 		}
 
 		ds_printf("%s\n", ac);
@@ -97,7 +95,6 @@ static int builtin_help(int argc, char *argv[]) {
 
 					strcat(ac, ent->name);
 					cnt++;
-					//ds_printf("%s, ", ent->name);
 				}
 
 			}
@@ -162,8 +159,6 @@ int CheckExtCmdType(const char *fn) {
 		return CMD_TYPE_UKNOWN;
 	}
 }
-
-
 
 int CallExtCmd(int argc, char *argv[]) {
 
@@ -274,17 +269,13 @@ int CallCmdFile(const char *fn, int argc, char *argv[]) {
 	return r;
 }
 
-
 static void FreeCmd(void *cmd) {
 	free(cmd);
 }
 
-
 void ShutdownCmd() {
 	listDestroy(cmds, (listFreeItemFunc *) FreeCmd);
 }
-
-
 
 Cmd_t *AddCmd(const char *cmd, const char *helpmsg, CmdHandler *handler) {
 
@@ -294,8 +285,6 @@ Cmd_t *AddCmd(const char *cmd, const char *helpmsg, CmdHandler *handler) {
 	c = (Cmd_t *) calloc(1, sizeof(Cmd_t));
 	if(c == NULL)
 		return NULL;
-
-	//ds_printf("Adding cmd %s %s\n", cmd, helpmsg);
 
 	c->command = cmd;
 	c->desc = helpmsg;
@@ -308,8 +297,6 @@ Cmd_t *AddCmd(const char *cmd, const char *helpmsg, CmdHandler *handler) {
 	return c;
 }
 
-
-
 void RemoveCmd(Cmd_t *cmd) {
 
 	if(cmd == NULL) {
@@ -319,12 +306,9 @@ void RemoveCmd(Cmd_t *cmd) {
 	listRemoveItem(cmds, listGetItemByName(cmds, cmd->command), (listFreeItemFunc *) FreeCmd);
 }
 
-
-
 Item_list_t *GetCmdList() {
 	return cmds;
 }
-
 
 Cmd_t *GetCmdByName(const char *name) {
 
@@ -332,9 +316,7 @@ Cmd_t *GetCmdByName(const char *name) {
 		return NULL;
 	}
 
-	//SemWait(cmd_mutex);
 	Item_t *i = listGetItemByName(cmds, name);
-	//SemSignal(cmd_mutex);
 
 	if(i != NULL) {
 		return (Cmd_t *) i->data;
@@ -343,51 +325,51 @@ Cmd_t *GetCmdByName(const char *name) {
 	return NULL;
 }
 
-static char *fix_spaces(char *str)
-{
+static char *fix_spaces(char *str) {
 	if(!str) return NULL;
-	
+
 	int i, len = (int) strlen(str);
-	
-	for(i=0; i<len; i++)
-	{
+
+	for(i = 0; i < len; ++i) {
 		if(str[i] == '\\') str[i] = ' ';
 	}
-	
+
 	return str;
 }
 
 /* Execute a single command input by the user or a script */
 int dsystem(const char *buff) {
 	int argc, ret = 0;
-	char *argv[16];
-	char *str = (char*)buff;
+	char *argv[32];
+	char *str;
 
 	/* we don't care if the user just hit enter */
 	if (buff[0] == '\0') return 0;
 
+	str = strdup(buff);
+
 	/* seperate the string into args */
-	for (argc = 0; argc < 16;) {
+	for (argc = 0; argc < 32;) {
 		if ((argv[argc] = fix_spaces(strsep(&str, " \t\n"))) == NULL)
 			break;
 		if (*argv[argc] != '\0')
 			argc++;
 	}
-	/* try to run the command as a builtin */
 
+	/* try to run the command as a builtin */
 	ret = CallCmd(argc, argv);
 
 	if(ret == CMD_NOT_EXISTS) {
-		ds_printf("DS_ERROR: '%s' - Command not found\n", buff);
+		ds_printf("DS_ERROR: '%s' - Command not found\n", argv[0]);
 	}
 
+	free(str);
 	return ret;
 }
 
 int system(const char *buff) {
 	return dsystem(buff);
 }
-
 
 int dsystemf(const char *fmt, ...) {
 	char buff[512];
@@ -397,7 +379,6 @@ int dsystemf(const char *fmt, ...) {
 	va_end(args);
 	return dsystem(buff);
 }
-
 
 int dsystem_script(const char *fn) {
 	char buff[512];
@@ -427,18 +408,18 @@ int dsystem_script(const char *fn) {
 	return r;
 }
 
-
 int dsystem_buff(const char *buff) {
 	char *b, *bf;
 	int r = CMD_OK;
 
-	bf = (char*)buff;
+	bf = strdup(buff);
 
 	while((b = strsep(&bf, "\n")) != NULL) {
 		if (b[0] == 0 || b[0] == '#') continue;
 		r = dsystem(b);
 	}
 
+	free(bf);
 	return r;
 }
 
@@ -572,32 +553,6 @@ static int builtin_cp(int argc, char *argv[]) {
 		verbose = atoi(argv[3]);
 	}
 
-//	struct	stat st;
-//
-//	if (fs_stat(argv[1], &st, 0) < 0) {
-//		ds_printf("DS_ERROR: Can't open %s\n", argv[1]);
-//		return CMD_ERROR;
-//	}
-//
-//	if(st.st_mode & S_IFDIR) {
-//
-//		if(CopyDirectory(argv[1], argv[2]))
-//			return CMD_OK;
-//		else
-//			return CMD_ERROR;
-//
-//	} else if(st.st_mode & S_IFREG) {
-//
-//		if(CopyFile(argv[1], argv[2]))
-//			return CMD_OK;
-//		else
-//			return CMD_ERROR;
-//
-//	} else {
-//		ds_printf("DS_ERROR: Allow copy only files and directories\n");
-//		return CMD_ERROR;
-//	}
-
 	if(FileExists(argv[1])) {
 
 		if(CopyFile(argv[1], argv[2], verbose))
@@ -626,8 +581,12 @@ static int builtin_cp(int argc, char *argv[]) {
 static int builtin_rm(int argc, char *argv[]) {
 
 	if (argc == 1) {
-		ds_printf("Usage: rm file\n");
+		ds_printf("Usage: %s filename\n", argv[0]);
 		return CMD_NO_ARG;
+	}
+
+	if (!FileExists(argv[1])) {
+		return CMD_OK;
 	}
 
 	if (fs_unlink(argv[1]) == -1) {
@@ -647,14 +606,17 @@ static int builtin_mkdir(int argc, char *argv[]) {
 		return CMD_NO_ARG;
 	}
 
+	if (DirExists(argv[1])) {
+		return CMD_OK;
+	}
+
 	if (fs_mkdir(argv[1]) < 0) {
-		ds_printf("DS_ERROR: Error making directory %s (maybe not supported)\n", argv[1]);
+		ds_printf("DS_ERROR: Failed making directory '%s'\n", argv[1]);
 		return CMD_ERROR;
 	}
 
 	return CMD_OK;
 }
-
 
 
 static int builtin_rmdir(int argc, char *argv[]) {
@@ -664,8 +626,12 @@ static int builtin_rmdir(int argc, char *argv[]) {
 		return CMD_NO_ARG;
 	}
 
+	if (!DirExists(argv[1])) {
+		return CMD_OK;
+	}
+
 	if (fs_rmdir(argv[1]) < 0) {
-		ds_printf("DS_ERROR: Error deleting directory %s (maybe not supported)\n", argv[1]);
+		ds_printf("DS_ERROR: Failed removing directory '%s'\n", argv[1]);
 		return CMD_ERROR;
 	}
 
@@ -698,9 +664,8 @@ static int builtin_cat(int argc, char *argv[]) {
 		return CMD_NO_ARG;
 	}
 
-
 	FILE *f;
-	char buff[128];
+	char buff[256];
 
 	f = fopen(argv[1], "rt");
 	if (!f) {
@@ -708,7 +673,7 @@ static int builtin_cat(int argc, char *argv[]) {
 		return CMD_ERROR;
 	}
 
-	while (fgets(buff, 128, f)) {
+	while (fgets(buff, sizeof(buff), f)) {
 		ds_printf(buff);
 	}
 
@@ -1089,12 +1054,9 @@ static int builtin_dc(int argc, char *argv[]) {
 
 
 static void ctaddr(uint32 ad) {
-	//uint32 *mem = ad;
 	int irqd;
 	irqd = irq_disable();
 	void (*ctm)() = (void (*)())ad;
-	//void (*ctm)()((uint32*)ctm) = (uint32 *)ad;
-	//{ void (*ctm)(); ((uint32*)ctm) = (uint32 *)ad; ctm(); }
 	ctm();
 	irq_restore(irqd);
 }
@@ -1114,7 +1076,7 @@ static int builtin_addr(int argc, char *argv[]) {
 	}
 
 	file_t fd;
-	int irqd, len;
+	int len;
 	uint32 ad = strtoul(argv[2], NULL, 16);
 
 	if(!strncmp(argv[1], "-c", 2)) {
@@ -1175,10 +1137,7 @@ static int builtin_addr(int argc, char *argv[]) {
 
 		ds_printf("DS_PROCESS: Loading %s (%i bytes) at 0x%x\n", argv[3], len, (uint32)ad);
 
-		irqd = irq_disable();
-		//flush_icache_range((uint32)ad, len);
-		dcache_flush_range((uint32)ad, len);
-		irq_restore(irqd);
+		icache_flush_range((uint32)ad, len);
 
 		ds_printf("DS_OK: Complete.\n");
 		return CMD_ERROR;
