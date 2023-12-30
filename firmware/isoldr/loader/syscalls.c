@@ -32,7 +32,8 @@ gd_state_t *get_GDS(void) {
 }
 
 static void reset_GDS(gd_state_t *GDS) {
-	GDS->cmd = GDS->status = GDS->requested = GDS->transfered = GDS->ata_status = 0;
+	GDS->cmd = GDS->status = GDS->ata_status = GDS->err = 0;
+	GDS->requested = GDS->transfered = 0;
 	memset(&GDS->param, 0, sizeof(GDS->param));
 //	memset(GDS, 0, sizeof(int) * 12);
 	GDS->lba = 150;
@@ -42,7 +43,7 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
 	GDS->cdda_track = 0;
 	GDS->disc_change = 0;
-	GDS->disc_num = 0;
+//	GDS->disc_num = 0;
 
 	GDS->gdc.sec_size = 2048;
 	GDS->gdc.mode = 2048;
@@ -372,6 +373,7 @@ static void get_ver_str() {
 static void abort_data_cmd() {
 	gd_state_t *GDS = get_GDS();
 
+	LOGFF(NULL);
 	abort_async(iso_fd);
 	GDS->ata_status = CMD_WAIT_IRQ;
 
@@ -839,6 +841,14 @@ void gdcMainLoop(void) {
 
 		if(GDS->status == CMD_STAT_PROCESSING) {
 
+			if (GDS->disc_change > 5 && GDS->cmd != CMD_INIT) {
+				GDS->cmd_abort = 1;
+				GDS->status = CMD_STAT_IDLE;
+				GDS->err = CMD_ERR_UNITATTENTION;
+				gdcExitToGame();
+				return;
+			}
+
 			switch (GDS->cmd) {
 				case CMD_PIOREAD:
 				case CMD_DMAREAD:
@@ -959,6 +969,10 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 		return rv;
 	}
 
+	if(GDS->err) {
+		status[0] = GDS->err;
+	}
+
 	switch(GDS->status) {
 		case CMD_STAT_PROCESSING:
 
@@ -1015,36 +1029,31 @@ int gdcGetDrvStat(uint32 *status) {
 
  	DBGFF(NULL);
 	gd_state_t *GDS = get_GDS();
+	int rv = 0;
 
 	if (GDS->disc_change) {
 
-		GDS->disc_change++;
-
-		if (GDS->disc_change == 2) {
-
+		if (++GDS->disc_change == 5) {
+			LOGF("DISC_CHANGE: opened\n");
 			GDS->drv_media = CD_CDDA;
 			GDS->drv_stat = CD_STATUS_OPEN;
-
-		} else if (GDS->disc_change > 30) {
-
+		}
+		else if (GDS->disc_change > 50) {
+			LOGF("DISC_CHANGE: closed\n");
 			GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 			GDS->drv_stat = CD_STATUS_PAUSED;
 			GDS->disc_change = 0;
-			unlock_gdsys();
-			return 2;
-
-		} else {
-			status[0] = GDS->drv_stat;
-			status[1] = GDS->drv_media;
-			unlock_gdsys();
-			return 1;
+			rv = 2;
+		}
+		else {
+			rv = 1;
 		}
 	}
 
 	status[0] = GDS->drv_stat;
 	status[1] = GDS->drv_media;
 	unlock_gdsys();
-	return 0;
+	return rv;
 }
 
 
@@ -1108,6 +1117,7 @@ void gdcReset(void) {
 	LOGFF(NULL);
 	gd_state_t *GDS = get_GDS();
 	reset_GDS(GDS);
+	GDS->disc_num = 0;
 	unlock_gdsys();
 }
 

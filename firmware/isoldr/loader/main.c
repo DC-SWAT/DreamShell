@@ -90,6 +90,7 @@ int main(int argc, char *argv[]) {
 	);
 
 	printf("Initializing "DEV_NAME"...\n");
+	gdcReset();
 
 	if(!InitReader()) {
 		goto error;

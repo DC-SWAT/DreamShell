@@ -479,10 +479,6 @@ int maple_init_vmu(int num, int full_featured) {
     char *filename = relative_filename("vmu001.vmd");
     set_file_number(filename, num);
 
-    if (vmu_fd > FILEHND_INVALID) {
-        close(vmu_fd);
-    }
-
     vmu_fd = open(filename, flags);
     free(filename);
 

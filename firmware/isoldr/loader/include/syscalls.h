@@ -140,6 +140,7 @@ typedef struct gd_state {
 
 	int req_count;
 	int cmd;
+	int err;
 	int status;
 	int ata_status;
 	int cmd_abort;
@@ -176,6 +177,7 @@ int lock_gdsys(void);
 int unlock_gdsys(void);
 
 void gdcExitToGame(void);
+void gdcReset(void);
 
 extern uint8 bios_patch_base[];
 extern void *bios_patch_handler;

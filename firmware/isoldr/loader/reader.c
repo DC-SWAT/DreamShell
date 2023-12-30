@@ -88,11 +88,15 @@ int InitReader() {
 		return 0;
 	}
 
+	int len = strlen(IsoInfo->image_file);
 	gd_state_t *GDS = get_GDS();
-	GDS->lba = 150;
 
-	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
-		int len = strlen(IsoInfo->image_file);
+	if (GDS->disc_num) {
+		IsoInfo->image_file[len - 6] = GDS->disc_num + '0';
+		memcpy(&IsoInfo->image_file[len - 5], "03.iso\0", 7);
+		GDS->data_track = 3;
+	}
+	else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 		IsoInfo->image_file[len - 6] = '0';
 		IsoInfo->image_file[len - 5] = '3';
 		GDS->data_track = 3;
