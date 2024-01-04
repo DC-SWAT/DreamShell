@@ -52,7 +52,7 @@ int ds_printf(const char *fmt, ...) {
 		ptemp = printf_buf;
 
 		if(ConsoleIsVisible()) {
-			SetEventState(con_video_event, EVENT_STATE_SLEEP);
+			SetEventActive(con_video_event, 0);
 		}
 
 		while((b = strsep(&ptemp, "\n")) != NULL) {
@@ -81,7 +81,7 @@ int ds_printf(const char *fmt, ...) {
 
 		if(ConsoleIsVisible()) {
 			CON_UpdateConsole(DSConsole);
-			SetEventState(con_video_event, EVENT_STATE_ACTIVE);
+			SetEventActive(con_video_event, 1);
 		}
 	}
 
@@ -313,7 +313,7 @@ void ShowConsole() {
 	CON_UpdateConsole(DSConsole);
 	CON_DrawConsole(DSConsole);
 
-	SetEventState(con_video_event, EVENT_STATE_ACTIVE);
+	SetEventActive(con_video_event, 1);
 	ScreenFadeIn();
 }
 
@@ -324,7 +324,7 @@ void HideConsole() {
 	}
 
 	ScreenFadeOutEx(NULL, 1);
-	SetEventState(con_video_event, EVENT_STATE_SLEEP);
+	SetEventActive(con_video_event, 0);
 
 	CON_Hide(DSConsole);
 	CON_Topmost(NULL);

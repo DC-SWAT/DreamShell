@@ -10,9 +10,6 @@
 
 #include "video.h"
 
-#define EVENT_STATE_ACTIVE 0
-#define EVENT_STATE_SLEEP 1
-
 /**
  * SDL render (sofware) event
  */
@@ -40,12 +37,12 @@ typedef void Event_func(void *, void *, int);
 typedef struct Event {
 
 	const char *name;
-	uint32 id;
+	uint32_t id;
 	Event_func *event;
 	void *param;
-	uint16 state;
-	uint16 type;
-	uint16 prio;
+	int active;
+	int type;
+	int prio;
 
 } Event_t;
 
@@ -56,10 +53,10 @@ typedef struct Event {
 #else
 
 typedef struct VideoEventUpdate {
-	int16 x;
-	int16 y;
-	uint16 w;
-	uint16 h;
+	int16_t x;
+	int16_t y;
+	uint16_t w;
+	uint16_t h;
 } VideoEventUpdate_t;
 
 #endif
@@ -75,7 +72,7 @@ void ShutdownEvents();
  * 
  * return NULL on error
  */
-Event_t *AddEvent(const char *name, uint16 type, uint16 prio, Event_func *event, void *param);
+Event_t *AddEvent(const char *name, int type, int prio, Event_func *event, void *param);
 
 /**
  * Remove event from list
@@ -83,15 +80,15 @@ Event_t *AddEvent(const char *name, uint16 type, uint16 prio, Event_func *event,
 int RemoveEvent(Event_t *e);
 
 /**
- * Setup event state
+ * Set event active state
  */
-int SetEventState(Event_t *e, uint16 state);
+int SetEventActive(Event_t *e, int is_active);
 
 /**
  * Events list utils
  */
 Item_list_t *GetEventList();
-Event_t *GetEventById(uint32 id);
+Event_t *GetEventById(uint32_t id);
 Event_t *GetEventByName(const char *name);
 
 /**

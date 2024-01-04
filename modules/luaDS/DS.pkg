@@ -142,10 +142,6 @@ void *getAppElement(App_t *app, const char *name, ListItemType type);
 
 App_t *VoidToApp(void *ptr);
 
-
-#define EVENT_STATE_ACTIVE 0
-#define EVENT_STATE_SLEEP 1
-
 #define EVENT_ACTION_RENDER 0
 #define EVENT_ACTION_UPDATE 1
 #define EVENT_ACTION_RENDER_HW 2
@@ -159,22 +155,22 @@ App_t *VoidToApp(void *ptr);
 typedef struct Event {
 
 	const char *name;
-	uint32 id;
+	uint32_t id;
 	void *event;
 	void *param;
-	uint16 state;
-	uint16 type;
-	uint16 prio;
+	int active;
+	int type;
+	int prio;
        
 } Event_t;
 
 int InitEvents();
 void ShutdownEvents();
 
-Event_t *AddEventLua(const char *name, uint16 type, uint16 prio, const char *event);
+Event_t *AddEventLua(const char *name, int type, int prio, const char *event);
 int RemoveEvent(Event_t *e);
 
-int SetEventState(Event_t *e, uint16 state);
+int SetEventActive(Event_t *e, int is_active);
 
 Item_list_t *GetEventList();
 Event_t *GetEventById(uint32 id);

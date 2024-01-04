@@ -197,13 +197,13 @@ void ShutdownGUI() {
 
 void GUI_Disable() {
 	SDL_DC_EmulateMouse(SDL_FALSE);
-	SetEventState(gui_input_event, EVENT_STATE_SLEEP);
-	SetEventState(gui_video_event, EVENT_STATE_SLEEP);
+	SetEventActive(gui_input_event, 0);
+	SetEventActive(gui_video_event, 0);
 }
 
 void GUI_Enable() {
-	SetEventState(gui_video_event, EVENT_STATE_ACTIVE);
-	SetEventState(gui_input_event, EVENT_STATE_ACTIVE);
+	SetEventActive(gui_video_event, 1);
+	SetEventActive(gui_input_event, 1);
 	SDL_DC_EmulateMouse(SDL_TRUE);
 }
 

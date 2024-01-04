@@ -1335,7 +1335,7 @@ static int builtin_event(int argc, char *argv[]) {
 		ds_printf("Usage: event option args...\n\n"
 		          "Options: \n"
 		          " -r, --remove        -Remove event\n"
-		          " -s, --state         -Set event state (0 or 1)\n"
+		          " -s, --state         -Set event active (0 or 1)\n"
 		          " -p, --printlist     -Print list of events\n\n"
 		          "Arguments: \n"
 		          " -m, --name          -Event name\n\n"
@@ -1373,13 +1373,13 @@ static int builtin_event(int argc, char *argv[]) {
 		Event_t *e;
 		Item_t *i;
 
-		ds_printf("\n Name     State    Type\n");
+		ds_printf("\n Name     Active    Type\n");
 		ds_printf("-------------------------\n\n");
 
 		SLIST_FOREACH(i, events, list) {
 
 			e = (Event_t *) i->data;
-			ds_printf(" %s     %s     %s\n", e->name, e->state ? "Sleep" : "Active", e->type == EVENT_TYPE_INPUT ? "Input" : "Video");
+			ds_printf(" %s     %s     %s\n", e->name, e->active ? "Active" : "Sleep", e->type == EVENT_TYPE_INPUT ? "Input" : "Video");
 		}
 
 		ds_printf("\n-------------------------\n");
@@ -1394,7 +1394,7 @@ static int builtin_event(int argc, char *argv[]) {
 			return CMD_NO_ARG;
 		}
 
-		SetEventState(GetEventByName(name), state);
+		SetEventActive(GetEventByName(name), state);
 		return CMD_OK;
 	}
 

@@ -250,14 +250,14 @@ void VirtKeyboardShow() {
     vkb.visible = 1;
     vkb.redraw = 1;
     SDL_DC_EmulateMouse(SDL_FALSE);
-    SetEventState(vkb.video, EVENT_STATE_ACTIVE);
+    SetEventActive(vkb.video, 1);
 }
 
 
 void VirtKeyboardHide() {
     vkb.visible = 0;
     vkb.redraw = 0;
-    SetEventState(vkb.video, EVENT_STATE_SLEEP);
+    SetEventActive(vkb.video, 0);
     VirtKeyboardUpdateWorkPlace();
 
     if(!ConsoleIsVisible()) {

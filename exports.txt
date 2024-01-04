@@ -129,12 +129,10 @@ InitEvents
 ShutdownEvents
 AddEvent
 RemoveEvent
-SetEventState
+SetEventActive
 GetEventList
 GetEventById
 GetEventByName
-ProcessInputEvents
-ProcessVideoEventsRender
 ProcessVideoEventsUpdate
 #
 CallCmd

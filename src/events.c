@@ -62,7 +62,7 @@ Event_t *GetEventByName(const char *name) {
 }
 
 
-Event_t *AddEvent(const char *name, uint16 type, uint16 prio, Event_func *event, void *param) {
+Event_t *AddEvent(const char *name, int type, int prio, Event_func *event, void *param) {
 
 	Event_t *e;
 	Item_t *i;
@@ -76,7 +76,7 @@ Event_t *AddEvent(const char *name, uint16 type, uint16 prio, Event_func *event,
 
 	e->name = name;
 	e->event = event;
-	e->state = EVENT_STATE_ACTIVE;
+	e->active = 1;
 	e->type = type;
 	e->param = param;
 
@@ -119,17 +119,17 @@ int RemoveEvent(Event_t *e) {
 }
 
 
-int SetEventState(Event_t *e, uint16 state) {
+int SetEventActive(Event_t *e, int is_active) {
 	if(e->type == EVENT_TYPE_VIDEO) {
 		LockVideo();
 	}
 
-	e->state = state;
+	e->active = is_active;
 
 	if(e->type == EVENT_TYPE_VIDEO) {
 		UnlockVideo();
 	}
-	return state;
+	return is_active;
 }
 
 
@@ -144,7 +144,7 @@ void ProcessInputEvents(SDL_Event *event) {
 		n = listGetItemNext(c);
 		e = (Event_t *)c->data;
 
-		if(e->type == EVENT_TYPE_INPUT && e->state == EVENT_STATE_ACTIVE) {
+		if(e->type == EVENT_TYPE_INPUT && e->active) {
 			e->event(e, event, EVENT_ACTION_UPDATE);
 		}
 
@@ -162,10 +162,7 @@ void ProcessVideoEventsSDL() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO
-			&& e->state == EVENT_STATE_ACTIVE
-			&& e->prio == EVENT_PRIO_DEFAULT
-		) {
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
 	}
@@ -174,9 +171,7 @@ void ProcessVideoEventsSDL() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO
-			&& e->state == EVENT_STATE_ACTIVE
-			&& e->prio == EVENT_PRIO_OVERLAY
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY
 		) {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
@@ -192,10 +187,7 @@ void ProcessVideoEventsPVR() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO
-			&& e->state == EVENT_STATE_ACTIVE
-			&& e->prio == EVENT_PRIO_DEFAULT
-		) {
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
 			e->event(e, e->param, EVENT_ACTION_RENDER_HW);
 		}
 	}
@@ -204,10 +196,7 @@ void ProcessVideoEventsPVR() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO
-			&& e->state == EVENT_STATE_ACTIVE
-			&& e->prio == EVENT_PRIO_OVERLAY
-		) {
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
 			e->event(e, e->param, EVENT_ACTION_RENDER_HW);
 		}
 	}
@@ -225,10 +214,7 @@ void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO
-			&& e->state == EVENT_STATE_ACTIVE
-			&& e->prio == EVENT_PRIO_DEFAULT
-		) {
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
 			e->event(e, e->param, EVENT_ACTION_UPDATE);
 		}
 	}
@@ -237,10 +223,7 @@ void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO
-			&& e->state == EVENT_STATE_ACTIVE
-			&& e->prio == EVENT_PRIO_OVERLAY
-		) {
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
 			e->event(e, e->param, EVENT_ACTION_UPDATE);
 		}
 	}
