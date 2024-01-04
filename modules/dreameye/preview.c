@@ -23,6 +23,11 @@ static int frame_txr_width = 320;
 static int frame_txr_height = 240;
 static int pvr_txr_width = 512;
 static int pvr_txr_height = 256;
+static float frame_scale = 1.0f;
+static float frame_x = 0.0f;
+static float frame_y = 0.0f;
+static float frame_x_old = 0.0f;
+static float frame_y_old = 0.0f;
 
 static pvr_ptr_t pvr_txr;
 static plx_texture_t *plx_txr;
@@ -31,6 +36,8 @@ static maple_device_t *dreameye;
 
 static int capturing = 0;
 static int got_frame = 0;
+static int is_fullscreen;
+static int back_to_window;
 static kthread_t *thread = NULL;
 static Event_t *input_event = NULL;
 static Event_t *video_event = NULL;
@@ -41,8 +48,8 @@ static void dreameye_preview_frame() {
     const uint32_t color = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
     const float width_ratio = (float)frame_txr_width / pvr_txr_width;
     const float height_ratio = (float)frame_txr_height / pvr_txr_height;
-    const float native_width = 640.0f;
-    const float native_height = 480.0f;
+    const float native_width = (is_fullscreen ? 640.0f : (float)frame_txr_width * frame_scale);
+    const float native_height = (is_fullscreen ? 480.0f : (float)frame_txr_height * frame_scale);
     const float z = 1.0f;
 
     if(!got_frame) {
@@ -50,23 +57,27 @@ static void dreameye_preview_frame() {
         return;
     }
 
-    plx_mat3d_identity();
-    plx_mat_identity();
-    plx_mat3d_apply_all();
+    if(is_fullscreen) {
+        plx_mat3d_identity();
+        plx_mat_identity();
+        plx_mat3d_apply_all();
 
-    plx_mat3d_rotate(0.0f, 1.0f, 0.0f, 0.0f);
-    plx_mat3d_rotate(0.0f, 0.0f, 1.0f, 0.0f);
-    plx_mat3d_rotate(0.0f, 0.0f, 0.0f, 1.0f);
-    plx_mat3d_translate(0, 0, 0);
+        plx_mat3d_rotate(0.0f, 1.0f, 0.0f, 0.0f);
+        plx_mat3d_rotate(0.0f, 0.0f, 1.0f, 0.0f);
+        plx_mat3d_rotate(0.0f, 0.0f, 0.0f, 1.0f);
+        plx_mat3d_translate(0, 0, 0);
+    } else if(GetScreenOpacity() < 0.9f) {
+        return;
+    }
 
 	plx_cxt_texture(plx_txr);
 	plx_cxt_culling(PLX_CULL_NONE);
 	plx_cxt_send(PLX_LIST_TR_POLY);
 
-	plx_vert_ifpm3(PLX_VERT, 0.0f, 0.0f, z, color, 0.0f, 0.0f);
-	plx_vert_ifpm3(PLX_VERT, native_width, 0.0f, z, color, width_ratio, 0.0f);
-	plx_vert_ifpm3(PLX_VERT, 0.0f, native_height, z, color, 0.0f, height_ratio);
-	plx_vert_ifpm3(PLX_VERT_EOS, native_width, native_height, z, color, width_ratio, height_ratio);
+	plx_vert_ifpm3(PLX_VERT, frame_x, frame_y, z, color, 0.0f, 0.0f);
+	plx_vert_ifpm3(PLX_VERT, frame_x + native_width, frame_y, z, color, width_ratio, 0.0f);
+	plx_vert_ifpm3(PLX_VERT, frame_x, frame_y + native_height, z, color, 0.0f, height_ratio);
+	plx_vert_ifpm3(PLX_VERT_EOS, frame_x + native_width, frame_y + native_height, z, color, width_ratio, height_ratio);
 }
 
 static void DrawHandler(void *ds_event, void *param, int action) {
@@ -75,14 +86,50 @@ static void DrawHandler(void *ds_event, void *param, int action) {
         case EVENT_ACTION_RENDER:
             break;
         case EVENT_ACTION_RENDER_HW:
-            pvr_list_begin(PVR_LIST_TR_POLY);
+            if(is_fullscreen) {
+                pvr_list_begin(PVR_LIST_TR_POLY);
+            }
             dreameye_preview_frame();
-            pvr_list_finish();
+            if(is_fullscreen) {
+                pvr_list_finish();
+            }
             break;
         case EVENT_ACTION_UPDATE:
             break;
         default:
             break;
+    }
+}
+
+static void onPreviewClick(void) {
+    if(is_fullscreen) {
+        if(back_to_window) {
+            is_fullscreen = 0;
+            frame_x = frame_x_old;
+            frame_y = frame_y_old;
+            EnableScreen();
+            GUI_Enable();
+        } else {
+            dreameye_preview_shutdown();
+        }
+    } else {
+
+        int mx = 0;
+        int my = 0;
+
+        SDL_GetMouseState(&mx, &my);
+
+        if(mx >= frame_x && mx <= frame_x + (frame_txr_width * frame_scale) &&
+            my >= frame_y && my <= frame_y + (frame_txr_height * frame_scale)) {
+            is_fullscreen = 1;
+            back_to_window = 1;
+            frame_x_old = frame_x;
+            frame_y_old = frame_y;
+            frame_x = 0.0f;
+            frame_y = 0.0f;
+            DisableScreen();
+            GUI_Disable();
+        }
     }
 }
 
@@ -98,7 +145,7 @@ static void EventHandler(void *ds_event, void *param, int action) {
                 case 5:
                 case 6:
                 // case 3:
-                    dreameye_preview_shutdown();
+                    onPreviewClick();
                     break;
             }
         default:
@@ -238,7 +285,7 @@ static void asic_yuv_evt_handler(uint32 code) {
     dbglog(DBG_DEBUG, "%s: %d\n", __func__, sem_count(&yuv_done));
 }*/
 
-int dreameye_preview_init(maple_device_t *dev, int isp_mode) {
+int dreameye_preview_init(maple_device_t *dev, int isp_mode, int fullscreen, int scale, int x, int y) {
     int rs;
 
     if(dreameye) {
@@ -247,6 +294,11 @@ int dreameye_preview_init(maple_device_t *dev, int isp_mode) {
 
     dreameye = dev;
     got_frame = 0;
+    back_to_window = 0;
+    is_fullscreen = fullscreen;
+    frame_scale = (float)scale;
+    frame_x = (float)x;
+    frame_y = (float)y;
 
 	if(!dreameye) {
 		ds_printf("DS_ERROR: Couldn't find any attached devices, bailing out.\n");
@@ -311,8 +363,11 @@ int dreameye_preview_init(maple_device_t *dev, int isp_mode) {
 
     capturing = 1;
     thread = thd_create(0, capture_thread, NULL);
-    DisableScreen();
-    GUI_Disable();
+
+    if(is_fullscreen) {
+        DisableScreen();
+        GUI_Disable();
+    }
 
     return 0;
 }
@@ -333,8 +388,10 @@ void dreameye_preview_shutdown(void) {
     RemoveEvent(video_event);
     RemoveEvent(input_event);
 
-    EnableScreen();
-    GUI_Enable();
+    if(is_fullscreen) {
+        EnableScreen();
+        GUI_Enable();
+    }
 
     pvr_mem_free(pvr_txr);
     free(plx_txr);

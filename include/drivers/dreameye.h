@@ -1,7 +1,7 @@
 /** 
  * \file    dreameye.h
  * \brief   Dreameye driver extension
- * \date    2015, 2023
+ * \date    2015, 2023, 2024
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -171,7 +171,7 @@ int dreameye_stop_video_camera(maple_device_t *dev);
 /** \brief  Initialize preview
  * TODO
  */
-int dreameye_preview_init(maple_device_t *dev, int isp_mode);
+int dreameye_preview_init(maple_device_t *dev, int isp_mode, int fullscreen, int scale, int x, int y);
 
 /** \brief  Shutdown preview
  * TODO

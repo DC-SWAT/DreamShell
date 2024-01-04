@@ -107,7 +107,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 
 	if(show) {
 		ds_printf("DS_PROCESS: Initializing preview\n");
-		if (dreameye_preview_init(dreameye, isp) < 0) {
+		if (dreameye_preview_init(dreameye, isp, 1, 1, 0, 0) < 0) {
 			return CMD_ERROR;
 		}
 		return CMD_OK;
