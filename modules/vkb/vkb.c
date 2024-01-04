@@ -586,7 +586,7 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 
 	} else {
 		
-		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 3) {
+		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 3 && ScreenIsEnabled()) {
 			VirtKeyboardToggle();
 		}
 	}
