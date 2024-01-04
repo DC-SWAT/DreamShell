@@ -1,5 +1,5 @@
 /** 
- * \file    list.h
+ * \file    settings.h
  * \brief   DreamShell settings
  * \date    2016
  * \author  SWAT www.dc-swat.ru

@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * video.c                  *
  * DreamShell video         *
- * (c)2004-2023 SWAT        *
+ * (c)2004-2024 SWAT        *
  * http://www.dc-swat.ru    *
  ****************************/
 
@@ -56,7 +56,6 @@ static int logo_h = 512;
 
 pvr_ptr_t sdl_dc_memtex;
 unsigned short *sdl_dc_buftex;
-
 
 static plx_font_t *plx_fnt;
 static plx_fcxt_t *plx_cxt;
@@ -533,8 +532,6 @@ void SDL_DS_SetWindow(int width, int height) {
 
 void SDL_DS_Blit_Textured() {
 
-	pvr_list_begin(PVR_LIST_TR_POLY);
-
 	if(screen_opacity < 0.9f && plx_fnt && scr_fade_text) {
 
 		point_t w;
@@ -618,16 +615,18 @@ static void *VideoThread(void *ptr) {
 		pvr_scene_begin();
 
 		if(draw_screen) {
-
+			pvr_list_begin(PVR_LIST_TR_POLY);
 			ScreenFadeStep();
-			ProcessVideoEventsRender();
-			SDL_DS_Blit_Textured();
 
+			ProcessVideoEventsSDL();
+			SDL_DS_Blit_Textured();
+			ProcessVideoEventsPVR();
+
+			pvr_list_finish();
 		} else {
-			ProcessVideoEventsRender();
+			ProcessVideoEventsPVR();
 		}
 
-		pvr_list_finish();
 		pvr_scene_finish();
 		UnlockVideo();
 	}
@@ -886,21 +885,20 @@ void ShowLogo() {
 	screen_opacity = 0.0f;
 
 	if(gzip_kmg_to_img("/rd/logo.kmg.gz", &img)) {
-	//if(png_to_img(fn, &img)) {
 		dbglog(DBG_ERROR, "%s: error in gzip_kmg_to_img\n", __func__);
 		return;
 	}
 
 	logo_txr = pvr_mem_malloc(img.byte_count);
-	
+
 	if(!logo_txr) {
 		kos_img_free(&img, 0);
 		return;
 	}
-	
+
 	if(img.w)
 		logo_w = img.w;
-		
+
 	if(img.h)
 		logo_h = img.h;
 
@@ -911,11 +909,11 @@ void ShowLogo() {
 
 	pvr_txr_load_kimg(&img, logo_txr, 0);
 	kos_img_free(&img, 0);
-	
+
 	if(video_inited) {
 		ShutdownVideoThread();
 	}
-	
+
 	while(opacity < 1.0f) {
 		pvr_wait_ready();
 		pvr_scene_begin();
@@ -924,7 +922,7 @@ void ShowLogo() {
 		pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_RGB565, logo_w, logo_h, logo_txr, PVR_FILTER_BILINEAR);
 		pvr_poly_compile(&hdr, &cxt);
 		pvr_prim(&hdr, sizeof(hdr));
-		
+
 		vert.argb = PVR_PACK_COLOR(opacity, 1.0f, 1.0f, 1.0f);
 		vert.oargb = 0;
 		vert.flags = PVR_CMD_VERTEX;
@@ -957,7 +955,7 @@ void ShowLogo() {
 		vert.v = v2;
 		vert.flags = PVR_CMD_VERTEX_EOL;
 		pvr_prim(&vert, sizeof(vert));
-		
+
 		pvr_list_finish();
 		pvr_scene_finish();
 		opacity += 0.04f;
@@ -977,7 +975,7 @@ void HideLogo() {
 	pvr_poly_cxt_t cxt;
 	pvr_poly_hdr_t hdr;
 	pvr_vertex_t vert;
-	
+
 	if(!logo_txr) {
 		scr_fade_act = 1;
 		if(!video_inited) {
@@ -985,7 +983,7 @@ void HideLogo() {
 		}
 		return;
 	}
-	
+
 	while(opacity > 0.0f) {
 		pvr_wait_ready();
 		pvr_scene_begin();
@@ -994,7 +992,7 @@ void HideLogo() {
 		pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY, PVR_TXRFMT_RGB565, logo_w, logo_h, logo_txr, PVR_FILTER_BILINEAR);
 		pvr_poly_compile(&hdr, &cxt);
 		pvr_prim(&hdr, sizeof(hdr));
-		
+
 		vert.argb = PVR_PACK_COLOR(opacity, 1.0f, 1.0f, 1.0f);
 		vert.oargb = 0;
 		vert.flags = PVR_CMD_VERTEX;
@@ -1027,15 +1025,15 @@ void HideLogo() {
 		vert.v = v2;
 		vert.flags = PVR_CMD_VERTEX_EOL;
 		pvr_prim(&vert, sizeof(vert));
-		
+
 		pvr_list_finish();
 		pvr_scene_finish();
 		opacity -= 0.05f;
 	}
-	
+
 	pvr_mem_free(logo_txr);
 	scr_fade_act = 1;
-	
+
 	if(!video_inited) {
 		InitVideoThread();
 	}

@@ -148,6 +148,7 @@ App_t *VoidToApp(void *ptr);
 
 #define EVENT_ACTION_RENDER 0
 #define EVENT_ACTION_UPDATE 1
+#define EVENT_ACTION_RENDER_HW 2
 
 #define EVENT_TYPE_INPUT 0
 #define EVENT_TYPE_VIDEO 1

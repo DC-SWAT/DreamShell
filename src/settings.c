@@ -231,7 +231,7 @@ static int SaveSettingsFile(const char *filename) {
 	file_t fd;
 	ssize_t res;
 
-	fd = fs_open(filename, O_WRONLY | O_TRUNC);
+	fd = fs_open(filename, O_WRONLY | O_TRUNC | O_CREAT);
 
 	if(fd == FILEHND_INVALID) {
 		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, filename);
@@ -253,5 +253,9 @@ int SaveSettings() {
 	}
 
 	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
-	return SaveSettingsVMU() || SaveSettingsFile(fn);
+
+	if(SaveSettingsVMU()) {
+		return 1;
+	}
+	return SaveSettingsFile(fn);
 }

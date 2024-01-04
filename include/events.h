@@ -1,7 +1,7 @@
 /** 
  * \file    events.h
  * \brief   DreamShell event system
- * \date    2007-2023
+ * \date    2007-2024
  * \author  SWAT www.dc-swat.ru
  */
   
@@ -13,8 +13,18 @@
 #define EVENT_STATE_ACTIVE 0
 #define EVENT_STATE_SLEEP 1
 
+/**
+ * SDL render (sofware) event
+ */
 #define EVENT_ACTION_RENDER 0
+/**
+ * Event update (SDL or input)
+ */
 #define EVENT_ACTION_UPDATE 1
+/**
+ * PVR render (hardware) event
+ */
+#define EVENT_ACTION_RENDER_HW 2
 
 #define EVENT_TYPE_INPUT 0
 #define EVENT_TYPE_VIDEO 1
@@ -90,12 +100,17 @@ Event_t *GetEventByName(const char *name);
 void ProcessInputEvents(SDL_Event *event);
 
 /**
- * Processing video rendering events in video thread
+ * Processing software (SDL) video rendering events in video thread
  */
-void ProcessVideoEventsRender();
+void ProcessVideoEventsSDL();
 
 /**
- * Manual processing for forcing screen update in another video events
+ * Processing hardware (PVR) video rendering events in video thread
+ */
+void ProcessVideoEventsPVR();
+
+/**
+ * Forcing SDL screen update
  */
 void ProcessVideoEventsUpdate(VideoEventUpdate_t *area);
 

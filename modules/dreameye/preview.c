@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    preview.c - dreameye preview
-   Copyright (C) 2023 SWAT
+   Copyright (C) 2023, 2024 SWAT
 
 */          
 
@@ -45,8 +45,6 @@ static void dreameye_preview_frame() {
     const float native_height = 480.0f;
     const float z = 1.0f;
 
-    pvr_list_begin(PVR_LIST_TR_POLY);
-
     if(!got_frame) {
         // TODO: Show waiting picture
         return;
@@ -75,7 +73,11 @@ static void DrawHandler(void *ds_event, void *param, int action) {
 
     switch(action) {
         case EVENT_ACTION_RENDER:
+            break;
+        case EVENT_ACTION_RENDER_HW:
+            pvr_list_begin(PVR_LIST_TR_POLY);
             dreameye_preview_frame();
+            pvr_list_finish();
             break;
         case EVENT_ACTION_UPDATE:
             break;

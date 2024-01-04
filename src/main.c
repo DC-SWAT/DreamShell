@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * main.c                   *
  * DreamShell main          *
- * (c)2004-2023 SWAT        *
+ * (c)2004-2024 SWAT        *
  * http://www.dc-swat.ru    *
  ***************************/
 
@@ -166,6 +166,9 @@ int InitDS() {
 	expt_init();
 #endif
 
+	InitVideoHardware();
+	ShowLogo();
+
 #ifdef DS_DEBUG
 	uint64 t_start = timer_ms_gettime64();
 	dbglog_set_level(DBG_KDEBUG);
@@ -184,9 +187,6 @@ int InitDS() {
 
 	SearchRoot();
 	settings = GetSettings();
-
-	InitVideoHardware();
-	ShowLogo();
 
 	if(settings->root[0] != 0 && DirExists(settings->root)) {
 		setenv("PATH", settings->root, 1);
