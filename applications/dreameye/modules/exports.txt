@@ -3,5 +3,7 @@ include app_module.h
 
 # Main
 DreamEyeApp_Init
+DreamEyeApp_Shutdown
+DreamEyeApp_Open
 DreamEyeApp_ShowPage
 DreamEyeApp_ShowPreview
