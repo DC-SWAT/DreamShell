@@ -11,17 +11,17 @@
 #include "video.h"
 
 /**
- * SDL render (sofware) event
+ * Before SDL screen render
  */
 #define EVENT_ACTION_RENDER 0
 /**
- * Event update (SDL or input)
+ * Updating input or request update for SDL
  */
 #define EVENT_ACTION_UPDATE 1
 /**
- * PVR render (hardware) event
+ * After SDL screen render
  */
-#define EVENT_ACTION_RENDER_HW 2
+#define EVENT_ACTION_RENDER_POST 2
 
 #define EVENT_TYPE_INPUT 0
 #define EVENT_TYPE_VIDEO 1
@@ -99,12 +99,12 @@ void ProcessInputEvents(SDL_Event *event);
 /**
  * Processing software (SDL) video rendering events in video thread
  */
-void ProcessVideoEventsSDL();
+void ProcessVideoEventsRender();
 
 /**
  * Processing hardware (PVR) video rendering events in video thread
  */
-void ProcessVideoEventsPVR();
+void ProcessVideoEventsRenderPost();
 
 /**
  * Forcing SDL screen update

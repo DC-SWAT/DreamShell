@@ -153,7 +153,7 @@ void ProcessInputEvents(SDL_Event *event) {
 }
 
 
-void ProcessVideoEventsSDL() {
+void ProcessVideoEventsRender() {
 
 	Event_t *e;
 	Item_t *i;
@@ -178,7 +178,7 @@ void ProcessVideoEventsSDL() {
 	}
 }
 
-void ProcessVideoEventsPVR() {
+void ProcessVideoEventsRenderPost() {
 
 	Event_t *e;
 	Item_t *i;
@@ -188,7 +188,7 @@ void ProcessVideoEventsPVR() {
 		e = (Event_t *) i->data;
 
 		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
-			e->event(e, e->param, EVENT_ACTION_RENDER_HW);
+			e->event(e, e->param, EVENT_ACTION_RENDER_POST);
 		}
 	}
 
@@ -197,7 +197,7 @@ void ProcessVideoEventsPVR() {
 		e = (Event_t *) i->data;
 
 		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
-			e->event(e, e->param, EVENT_ACTION_RENDER_HW);
+			e->event(e, e->param, EVENT_ACTION_RENDER_POST);
 		}
 	}
 }

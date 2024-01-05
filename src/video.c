@@ -618,13 +618,13 @@ static void *VideoThread(void *ptr) {
 			pvr_list_begin(PVR_LIST_TR_POLY);
 			ScreenFadeStep();
 
-			ProcessVideoEventsSDL();
+			ProcessVideoEventsRender();
 			SDL_DS_Blit_Textured();
-			ProcessVideoEventsPVR();
+			ProcessVideoEventsRenderPost();
 
 			pvr_list_finish();
 		} else {
-			ProcessVideoEventsPVR();
+			ProcessVideoEventsRender();
 		}
 
 		pvr_scene_finish();
