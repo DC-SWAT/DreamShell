@@ -166,9 +166,6 @@ int InitDS() {
 	expt_init();
 #endif
 
-	InitVideoHardware();
-	ShowLogo();
-
 #ifdef DS_DEBUG
 	uint64 t_start = timer_ms_gettime64();
 	dbglog_set_level(DBG_KDEBUG);
@@ -207,6 +204,9 @@ int InitDS() {
 
 	setenv("SDL_DEBUG", "0", 1);
 	setenv("SDL_VIDEODRIVER", "dcvideo", 1);
+
+	InitVideoHardware();
+	ShowLogo();
 
 	vmu_draw_string(getenv("HOST"));
 	dbglog(DBG_INFO, "Initializing DreamShell Core...\n");

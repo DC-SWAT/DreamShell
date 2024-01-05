@@ -177,8 +177,12 @@ int LoadSettings() {
 		loaded = LoadSettingsFile(fn);
 	}
 
-	if(loaded && current_set.version != GetVersion()) {
-		dbglog(DBG_DEBUG, "%s: Settings file version is different from current version\n", __func__);
+	if(loaded) {
+		if(current_set.version != GetVersion()) {
+			dbglog(DBG_DEBUG, "%s: Settings file found with different version\n", __func__);
+		} else {
+			dbglog(DBG_DEBUG, "%s: Settings file found\n", __func__);
+		}
 	}
 	return loaded;
 }
@@ -191,7 +195,7 @@ static int SaveSettingsVMU() {
 	int pkg_size;
 	file_t fd;
 
-	fd = fs_open(vmu_file, O_WRONLY | O_TRUNC);
+	fd = fs_open(vmu_file, O_WRONLY | O_TRUNC | O_CREAT);
 
 	if(fd == FILEHND_INVALID) {
 		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, vmu_file);
