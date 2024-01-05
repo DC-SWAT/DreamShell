@@ -84,15 +84,14 @@ static void DrawHandler(void *ds_event, void *param, int action) {
 
     switch(action) {
         case EVENT_ACTION_RENDER:
-            break;
-        case EVENT_ACTION_RENDER_HW:
             if(is_fullscreen) {
                 pvr_list_begin(PVR_LIST_TR_POLY);
-            }
-            dreameye_preview_frame();
-            if(is_fullscreen) {
+                dreameye_preview_frame();
                 pvr_list_finish();
             }
+            break;
+        case EVENT_ACTION_RENDER_POST:
+            dreameye_preview_frame();
             break;
         case EVENT_ACTION_UPDATE:
             break;

@@ -13,6 +13,7 @@
 
 #define JANGGU_FRAME_HEADER_SIZE 4
 #define JANGGU_FRAME_DATA_SIZE 960
+#define JANGGU_FRAME_DATA_SIZE_COMPRESSED 1004
 
 #define JANGGU_REG_FORMAT 0
 #define JANGGU_REG_HEIGHT 4
@@ -233,7 +234,7 @@ static void yuv420de_to_yuv420p(uint8_t *dest, const uint8_t *src, int width, in
 static void convert_frame(dreameye_state_ext_t *de) {
     uint8_t *buf;
 
-    // TODO: Conversion when parsing packets
+    /* TODO: Conversion when parsing packets */
     if(de->format == DREAMEYE_FRAME_FMT_YUV420P) {
         buf = (uint8_t *)memalign(32, de->frame_size);
         if (buf) {
@@ -423,7 +424,12 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data
     de->img_transferring = 1;
     de->img_size = 0;
     de->img_number = fb_num;
-    de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+
+    if(de->compressed) {
+        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE_COMPRESSED;
+    } else {
+        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+    }
 
     /* Allocate space for the largest possible image that could fit in that
        number of transfers. */
@@ -706,11 +712,11 @@ static int dreameye_set_format(maple_device_t **devs, int isp_mode, int format) 
             break;
         case DREAMEYE_FRAME_FMT_YUV420DE_COMPRESSED:
             pix_fmt |= (JANGGU_FMT_COMPRESSED | JANGGU_FMT_YUV420DE);
-            de->frame_size = de->width * de->height;
+            de->frame_size = de->width * de->height; /* FIXME: better calc */
             break;
         case DREAMEYE_FRAME_FMT_YUYV422_COMPRESSED:
             pix_fmt |= (JANGGU_FMT_COMPRESSED | JANGGU_FMT_YUYV422);
-            de->frame_size = de->width * de->height;
+            de->frame_size = de->width * de->height; /* FIXME: better calc */
             break;
         default:
             dbglog(DBG_ERROR, "%s: unknown format: %d\n", __func__, format);
@@ -826,8 +832,13 @@ int dreameye_start_capturing(maple_device_t *dev, dreameye_frame_cb cb) {
     de->img_transferring = 1;
     de->img_size = 0;
     de->img_number = 0;
-    de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
     de->callback = cb;
+
+    if(de->compressed) {
+        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE_COMPRESSED;
+    } else {
+        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+    }
 
     first_state = de;
 
@@ -868,16 +879,25 @@ int dreameye_poll(maple_device_t *dev) {
 
     if(de->img_transferring == 0) {
         /* Send out complete frame */
+        convert_frame(de);
         de->callback(dev, de->img_buf, de->img_size);
         /* Request next frame */
-        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+        if(de->compressed) {
+            de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE_COMPRESSED;
+        } else {
+            de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+        }
         de->img_transferring = 1;
         de->img_size = 0;
         de->img_number ^= 1;
     }
     else if(de->img_transferring == -1) {
         /* Retry the same frame */
-        de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+        if(de->compressed) {
+            de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE_COMPRESSED;
+        } else {
+            de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
+        }
         de->img_transferring = 1;
     }
 
