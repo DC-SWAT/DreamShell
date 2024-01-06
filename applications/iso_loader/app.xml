@@ -113,8 +113,8 @@
 		<image name="iRunHigh" src="images/btn_launch_over.png" />
 		<image name="iRunDisabled" src="images/btn_launch_disabled.png" />
 
-		<image src="images/check.png" name="iCheck" />
-		<image src="images/check_over.png" name="iCheckHigh" />
+		<image src="../../gui/buttons/checkbox2/check.png" name="iCheck" />
+		<image src="../../gui/buttons/checkbox2/check_hl.png" name="iCheckHigh" />
 		<surface width="18" height="17" name="iUncheck">
 			<fill color="#FFFFFF" />
 		</surface>

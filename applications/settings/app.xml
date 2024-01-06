@@ -30,8 +30,8 @@
 			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
 			<fill x="5" y="5" width="270" height="50" color="#CCCCCC" />
 		</surface>
-		<image src="images/check.png" name="check-on" />
-		<image src="images/check_hl.png" name="check-on-hl" />
+		<image src="../../gui/buttons/checkbox2/check.png" name="check-on" />
+		<image src="../../gui/buttons/checkbox2/check_hl.png" name="check-on-hl" />
 		<surface width="18" height="17" name="check-off">
 			<fill color="#FFFFFF" />
 		</surface>

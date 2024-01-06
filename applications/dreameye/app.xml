@@ -31,13 +31,22 @@
 			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
 			<fill x="5" y="5" width="270" height="50" color="#CCCCCC" />
 		</surface>
+		<image src="../../gui/buttons/checkbox2/check.png" name="check-on" />
+		<image src="../../gui/buttons/checkbox2/check_hl.png" name="check-on-hl" />
+		<surface width="18" height="17" name="check-off">
+			<fill color="#FFFFFF" />
+		</surface>
 		<theme>
 			<input type="button" normal="but-normal" highlight="but-hl"
 				pressed="but-pressed" disabled="but-disabled" />
+			<input type="checkbox" onnormal="check-on" onhighlight="check-on-hl"
+				offnormal="check-off" offhighlight="check-off-hl" />
 		</theme>
 	</resources>
 	<body width="100%" height="100%" background="#DDDDDD"
-		onload="export:DreamEyeApp_Init()" onunload="export:DreamEyeApp_Shutdown()" onopen="export:DreamEyeApp_Open()">
+		onload="export:DreamEyeApp_Init()"
+		onunload="export:DreamEyeApp_Shutdown()"
+		onopen="export:DreamEyeApp_Open()">
 		<panel height="45" background="header-bg">
 			<label font="comic" color="#666666" text="DreamEye Manager" />
 		</panel>
