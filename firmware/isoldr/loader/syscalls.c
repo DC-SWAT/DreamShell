@@ -776,6 +776,9 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		GDS->transfered = 0;
 		GDS->ata_status = CMD_WAIT_INTERNAL;
 		GDS->cmd_abort = 0;
+		if(!GDS->disc_change) {
+			GDS->err = 0;
+		}
 		gd_chn = GDS->req_count;
 		
 		LOGFF("%d %s %d", cmd, (cmd_name[cmd] ? cmd_name[cmd] : "UNKNOWN"), gd_chn);
@@ -842,11 +845,7 @@ void gdcMainLoop(void) {
 		if(GDS->status == CMD_STAT_PROCESSING) {
 
 			if (GDS->disc_change > 5 && GDS->cmd != CMD_INIT) {
-				GDS->cmd_abort = 1;
-				GDS->status = CMD_STAT_IDLE;
 				GDS->err = CMD_ERR_UNITATTENTION;
-				gdcExitToGame();
-				return;
 			}
 
 			switch (GDS->cmd) {
@@ -1008,7 +1007,8 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 	}
 
 	unlock_gdsys();
-	DBGFF("%d %s\n", gd_chn, stat_name[rv + 1]);
+	DBGFF("%d %s %d %d %d %d\n", gd_chn, stat_name[rv + 1],
+		status[0], status[1], status[2], status[3]);
 	return rv;
 }
 

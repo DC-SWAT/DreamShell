@@ -614,11 +614,11 @@ static void aica_dma_init(void) {
 
 static int aica_suitable_pos() {
 	uint32 tm = timer_count(cdda->timer);
-	uint32 ta = cdda->end_tm >> 1;
+	uint32 ta = (cdda->end_tm / 2) - 1;
 	// uint32 pos = aica_get_pos();
 	// LOGF("CDDA: POS %ld %ld\n", pos, tm);
-	// if((cdda->cur_buff == 0 && pos >= (cdda->end_pos >> 1)) || 
-	// 	(cdda->cur_buff == 1 && pos < (cdda->end_pos >> 1))) {
+	// if((cdda->cur_buff == 0 && pos >= (cdda->end_pos / 2)) || 
+	// 	(cdda->cur_buff == 1 && pos < (cdda->end_pos / 2))) {
 	if((cdda->cur_buff == 0 && tm < ta) || (cdda->cur_buff == 1 && tm > ta)) {
 		return 1;
 	}
@@ -803,7 +803,9 @@ void *aica_vsync_handler(void *passer, register_stack *stack, void *current_vect
 	(void)passer;
 	(void)stack;
 
-	CDDA_MainLoop();
+	if(*REG_INTEVT == EXP_CODE_INT11) {
+		CDDA_MainLoop();
+	}
 	return current_vector;
 }
 

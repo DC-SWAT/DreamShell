@@ -28,7 +28,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	
 	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
 		LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-					*REG_INTEVT & 0x0fff, st, 
+					code & 0x0fff, st, 
 					ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
 					ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
 	}
@@ -63,7 +63,7 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 # ifdef HAVE_CDDA
 		if(status & ASIC_NRM_AICA_DMA) {
 			back_vector = aica_dma_handler(NULL, stack, back_vector);
-		} else if ((status & (ASIC_NRM_VSYNC | ASIC_NRM_MAPLE_DMA | ASIC_NRM_GD_DMA))) {
+		} else if ((status & (ASIC_NRM_VSYNC | ASIC_NRM_GD_DMA | ASIC_NRM_RASTER_TOP))) {
 			back_vector = aica_vsync_handler(NULL, stack, back_vector);
 		}
 # endif
