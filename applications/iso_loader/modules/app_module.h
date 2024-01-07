@@ -90,5 +90,5 @@ void isoLoader_Shutdown(App_t *app);
 
 void isoLoader_Exit(GUI_Widget *widget);
 
-uint32 getExtModeCDDA();
-void setExtModeCDDA(uint32 mode);
+uint32 getModeCDDA();
+void setModeCDDA(uint32 mode);
