@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2024 SWAT <http://www.dc-swat.ru>
  * (c)2024 megavolt85
  */
 
@@ -36,7 +36,6 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->cmd = GDS->status = GDS->ata_status = GDS->err = 0;
 	GDS->requested = GDS->transfered = 0;
 	memset(&GDS->param, 0, sizeof(GDS->param));
-//	memset(GDS, 0, sizeof(int) * 12);
 	GDS->lba = 150;
 	GDS->req_count = 0;
 	GDS->drv_stat = CD_STATUS_PAUSED;
@@ -127,65 +126,64 @@ static inline int get_params_count(int cmd) {
  * Get TOC syscall
  */
 static void GetTOC() {
-	
+
 	gd_state_t *GDS = get_GDS();
 	CDROM_TOC *toc = (CDROM_TOC*)GDS->param[1];
 	GDS->transfered = sizeof(CDROM_TOC);
-	
-	DBGF("%s: ", __func__);
+
 	memcpy(toc, &IsoInfo->toc, sizeof(CDROM_TOC));
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI || IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI || IsoInfo->track_lba[0] == 45150) {
 
-		LOGF("Get TOC from %cDI image and prepare for session %d\n", 
+		LOGF("Get TOC from %cDI and prepare for session %d\n", 
 				(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI ? 'C' : 'G'), GDS->param[0] + 1);
 
 		if(GDS->param[0] == 0) { /* Session 1 */
-		
+
 			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI || IsoInfo->track_lba[0] == 45150) {
-				
+
 				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
 				toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
-				
+
 				for(int i = 2; i < 99; i++) {
 					toc->entry[i] = (uint32)-1;
 				}
-				
+
 				toc->leadout_sector = 0x01001A2C;
-				
+
 			} else {
-				
+
 				for(int i = 99; i > 0; i--) {
-					
+
 					if(TOC_CTRL(toc->entry[i - 1]) == 4) {
 						toc->entry[i - 1] = (uint32)-1;
 					}
 				}
-				
+
 				int lt = (toc->last & 0x000f0000) >> 16;
 				toc->last = (toc->last & 0xfff0ffff) | (--lt << 16);
 			}
-			
+
 		} else { /* Session 2 */
-			
+
 			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
-				
+
 				toc->entry[0] = (uint32)-1;
-				
+
 				for(int i = 99; i > 0; i--) {
-					
+
 					if(TOC_CTRL(toc->entry[i - 1]) == 4) {
 						toc->first = (toc->first & 0xfff0ffff) | (i << 16);
 					}
 				}
-				
+
 			} else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI || IsoInfo->track_lba[0] == 45150) {
-				
+
 				toc->entry[0] = (uint32)-1;
 				toc->entry[1] = (uint32)-1;
 			}
 		}
-		
+
 	} else {
 		LOGF("Custom TOC with LBA %d\n", IsoInfo->track_lba[0]);
 	}
@@ -202,7 +200,7 @@ static void get_session_info() {
 	gd_state_t *GDS = get_GDS();
 	uint8 *buf = (uint8 *)GDS->param[2];
 	uint32 lba = IsoInfo->toc.leadout_sector;
-	
+
 	buf[0] = CD_STATUS_PAUSED;
 	buf[1] = 0;
 	buf[2] = 1;
@@ -256,8 +254,6 @@ static uint8 scd_isrc[24] = {
 	0x00, 0x00, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x00, 0x00, 0x00
 };
 #endif
-
-//static uint32 scd_delay = 0;
 
 /**
  * Get sub channel data syscall
@@ -317,7 +313,7 @@ static void get_scd() {
 			break;
 
 		case SCD_REQ_ISRC:
-			
+
 			memcpy(buf, &scd_isrc, scd_isrc[SCD_DATA_SIZE_INDEX]);
 //			buf[0] = 0x00;                      // Reserved
 			buf[1] = GDS->cdda_stat;            // Audio Status
@@ -331,9 +327,8 @@ static void get_scd() {
 			break;
 	}
 	GDS->status = CMD_STAT_COMPLETED;
-	
-	if (GDS->disc_change > 2)
-	{
+
+	if (GDS->disc_change > 2) {
 		GDS->err = CMD_ERR_UNITATTENTION;
 	}
 }
@@ -932,7 +927,6 @@ void gdcMainLoop(void) {
 						break;
 				}
 			}
-			
 			if (GDS->err == CMD_ERR_UNITATTENTION) {
 				GDS->need_reinit = 1;
 			}
@@ -1039,22 +1033,21 @@ int gdcGetDrvStat(uint32 *status) {
 	}
 
  	DBGFF(NULL);
- 	
+
 	gd_state_t *GDS = get_GDS();
 	int rv = 0;
 
 	if (GDS->disc_change) {
 
 		if (++GDS->disc_change == 2) {
-			LOGF("DISC_CHANGE: opened\n");
+			DBGF("DISC_CHANGE: open\n");
 			GDS->drv_media = CD_CDDA;
 			GDS->drv_stat = CD_STATUS_OPEN;
 		}
-		else  if (GDS->disc_change > 30) {
-			LOGF("DISC_CHANGE: close\n");
+		else if (GDS->disc_change > 30) {
+			DBGF("DISC_CHANGE: close\n");
 			GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 			GDS->drv_stat = CD_STATUS_PAUSED;
-			//GDS->disc_change = 0;
 			rv = 2;
 		}
 		else if(GDS->disc_change < 10) {
@@ -1092,7 +1085,7 @@ int gdcChangeDataType(int *param) {
 		param[3] = GDS->gdc.sec_size;
 	}
 	
-	LOGFF("%s: unknown=%d mode=%d sector_size=%d\n",
+	LOGFF("%s: unk=%d mode=%d sector_size=%d\n",
 		(param[0] == 0 ? "SET" : "GET"), param[1], param[2], param[3]);
 
 	unlock_gdsys();
@@ -1355,14 +1348,14 @@ void menu_exit(void) {
 
 int menu_check_disc(void) {
 	LOGFF(NULL);
-	
+
 	gd_state_t *GDS = get_GDS();
 	reset_GDS(GDS);
 	init_cmd();
-	
+
 	fs_enable_dma(FS_DMA_SHARED);
 	ReadSectors((uint8 *)CACHED_ADDR(IP_BIN_ADDR + 0x100), 45150, 7, NULL);
-	
+
 	return 0;
 }
 
