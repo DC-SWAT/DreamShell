@@ -1169,7 +1169,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	}
 
 	if(GUI_WidgetGetState(self.alt_boot)) {
-		isoldr_set_boot_file(self.isoldr, filepath, "2ST_READ.BIN");
+		isoldr_set_boot_file(self.isoldr, filepath, "MAIN.BIN");
 	}
 
 	isoldr_exec(self.isoldr, addr);
@@ -1660,6 +1660,7 @@ void isoLoader_Init(App_t *app) {
 
 	GUI_Widget *w, *b;
 	GUI_Callback *cb;
+	char *default_dir = NULL;
 
 	if(app != NULL) {
 		
@@ -1848,6 +1849,10 @@ void isoLoader_Init(App_t *app) {
 			}
 			
 			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_SD], 1);
+
+			if(DirExists("/sd/games")) {
+				default_dir = "/sd/games";
+			}
 		}
 		
 		if(DirExists("/ide")) {
@@ -1860,6 +1865,10 @@ void isoLoader_Init(App_t *app) {
 			}
 			
 			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_IDE], 1);
+
+			if(DirExists("/ide/games")) {
+				default_dir = "/ide/games";
+			}
 		}
 		
 		if(DirExists("/pc")) {
@@ -1880,20 +1889,23 @@ void isoLoader_Init(App_t *app) {
 			char *name = getFilePath(app->args);
 			
 			if(name) {
-				
-				GUI_FileManagerSetPath(self.filebrowser, name);
+				isoLoader_SwitchVolume(name);
 				free(name);
 			}
-			
+
 			self.have_args = true;
-			
+
 		} else {
 			self.have_args = false;
+
+			if(default_dir) {
+				isoLoader_SwitchVolume(default_dir);
+			}
 		}
-		
+
 		isoLoader_DefaultPreset();
 		w =  APP_GET_WIDGET("version");
-		
+
 		if(w) {
 			char vers[32];
 			snprintf(vers, sizeof(vers), "v%s", app->ver);

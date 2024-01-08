@@ -536,7 +536,7 @@
 
 					<panel height="30" width="86%" x="12%" y="45">
 						<input height="25" name="alt-boot-checkbox" type="checkbox">
-							<label align="left" color="#000000" font="arial" height="20" text="Boot from 2ST_READ.BIN" x="9%" />
+							<label align="left" color="#000000" font="arial" height="20" text="Boot from MAIN.BIN" x="9%" />
 						</input>
 					</panel>
 					<panel height="30" width="86%" x="12%" y="75">
