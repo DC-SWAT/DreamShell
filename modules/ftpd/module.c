@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - FTP server module
-   Copyright (C)2023 SWAT 
+   Copyright (C) 2023, 2024 SWAT 
 */
 
 #include <ds.h>
@@ -63,36 +63,37 @@ int builtin_ftpd_cmd(int argc, char *argv[]) {
 
     if(start_srv) {
 
-        if (dir == NULL) {
-            dir = strdup("/");
+        if(dir == NULL) {
+            dir = "/";
         }
-
         item = listGetItemByName(servers, dir);
 
         if(item != NULL) {
             srv = (ftpd_t *)item->data;
-            ds_printf("DS_ERROR: FTP server on port %d, root %s already running\n",
+            ds_printf("DS_PROCESS: Stopping FTP server on port %d, root %s\n",
                 srv->port, srv->dir);
-            return CMD_ERROR;
+            listRemoveItem(servers, item, (listFreeItemFunc *)ftpd_free);
         }
 
-        ds_printf("DS_PROCESS: Starting FTP server on port %d, root %s\n",
-            port, dir);
+        ds_printf("DS_PROCESS: Starting FTP server on port %d, root %s\n", port, dir);
         srv = (ftpd_t *)malloc(sizeof(ftpd_t));
 
-        if (srv == NULL) {
+        if(srv == NULL) {
             ds_printf("DS_ERROR: Out of memory\n");
             return CMD_ERROR;
         }
 
         srv->port = port;
-        srv->dir = dir;
+        srv->dir = strdup(dir);
         srv->thread = thd_create(0, ftpd_thread, (void *)srv);
-        listAddItem(servers, LIST_ITEM_USERDATA, dir, srv, sizeof(ftpd_t));
+        listAddItem(servers, LIST_ITEM_USERDATA, srv->dir, srv, sizeof(ftpd_t));
         return CMD_OK;
     }
     if(stop_srv) {
 
+        if(dir == NULL) {
+            dir = "/";
+        }
 	    item = listGetItemByName(servers, dir);
 
         if(item != NULL) {
