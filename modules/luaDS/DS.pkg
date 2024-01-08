@@ -264,6 +264,7 @@ void ScreenFadeIn();
 void ScreenFadeOut();
 void ScreenFadeOutEx(const char *text, int wait);
 void ScreenFadeStop();
+int ScreenIsHidden();
 
 void DisableScreen();
 void EnableScreen();

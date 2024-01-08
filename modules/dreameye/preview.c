@@ -66,7 +66,7 @@ static void dreameye_preview_frame() {
         plx_mat3d_rotate(0.0f, 0.0f, 1.0f, 0.0f);
         plx_mat3d_rotate(0.0f, 0.0f, 0.0f, 1.0f);
         plx_mat3d_translate(0, 0, 0);
-    } else if(GetScreenOpacity() < 0.9f) {
+    } else if(ScreenIsHidden()) {
         return;
     }
 
@@ -259,6 +259,11 @@ static void *capture_thread(void *param) {
 	int size = 0, res, num = 1;
 
     while(capturing) {
+
+        if(!is_fullscreen && ScreenIsHidden()) {
+            thd_sleep(50);
+            continue;
+        }
 
         do {
             num ^= 1;

@@ -2,7 +2,7 @@
  * DreamShell ##version##    *
  * app.c                     *
  * DreamShell App            *
- * Created by SWAT           *
+ * (c)2007-2024 SWAT         *
  * http://www.dc-swat.ru     *
  ****************************/
 
@@ -153,9 +153,6 @@ void UnLoadOldApps() {
 		a = (App_t *) i->data;
 		if(a && a->state & APP_STATE_WAIT_UNLOAD) {
 			UnLoadApp(a);
-			//if(a->lua != NULL && curOpenedApp == 0) {
-			//ResetLua();
-			//}
 		}
 	}
 }
@@ -225,7 +222,6 @@ App_t *AddApp(const char *fn) {
 	} else {
 		memset_sh4(file, 0, NAME_MAX);
 		relativeFilePath_wb(file, a->fn, icon);
-//		file[strlen(file)] = '\0';
 		strncpy((char*)a->icon, file, sizeof(a->icon));
 	}
 
@@ -240,7 +236,7 @@ App_t *AddApp(const char *fn) {
 	if(tree)
 		mxmlDelete(tree);
 
-	//ds_printf("App: %s %s %s %s", a->fn, a->name, a->ver, a->icon);
+	// ds_printf("App: %s %s %s %s", a->fn, a->name, a->ver, a->icon);
 
 	if((i = listAddItem(apps, LIST_ITEM_APP, a->name, a, sizeof(App_t))) == NULL) {
 		goto error;
@@ -268,8 +264,6 @@ int RemoveApp(App_t *app) {
 	if(app->state & APP_STATE_OPENED) CloseApp(app, 1);
 	if(app->state & APP_STATE_LOADED) UnLoadApp(app);
 
-	//mxmlDelete(app->xml);
-
 	listRemoveItem(apps, listGetItemById(apps, app->id), (listFreeItemFunc *) FreeApp);
 	return 1;
 }
@@ -296,7 +290,7 @@ int OpenApp(App_t *app, const char *args) {
 		return 1;
 	}
 
-	if(GetScreenOpacity() >= 1.0f && !ConsoleIsVisible() && !first_open) {
+	if(!ScreenIsHidden() && !ConsoleIsVisible() && !first_open) {
 		const char *str = "Loading...";
 		vmu_draw_string(str);
 		ScreenFadeOutEx(str, 1);
@@ -306,14 +300,14 @@ int OpenApp(App_t *app, const char *args) {
 		app->args = args;
 	}
 
-	//ds_printf("DS_DEBUG: Cur opened app: %d\n", curOpenedApp);
+	// ds_printf("DS_DEBUG: Cur opened app: %d\n", curOpenedApp);
 
 	if(curOpenedApp) {
 
 		App_t *cur = GetCurApp();
 
 		if(cur != NULL && cur->state & APP_STATE_OPENED) {
-			CloseApp(cur, (cur->state & APP_STATE_LOADED));
+			CloseApp(cur, (cur->state & APP_STATE_LOADED) ? 1 : 0);
 		}
 
 		curOpenedApp = 0;
@@ -396,8 +390,10 @@ int OpenApp(App_t *app, const char *args) {
 	return 1;
 
 error:
-	if(args != NULL) app->args = NULL;
-	if(GetScreenOpacity() < 1.0f) {
+	if(args != NULL) {
+		app->args = NULL;
+	}
+	if(ScreenIsHidden()) {
 		ScreenFadeIn();
 	}
 	vmu_draw_string("Error");
@@ -413,33 +409,20 @@ int CloseApp(App_t *app, int unload) {
 		return 0;
 	}
 
-	//ds_printf("DS_PROCESS: Closing app %s", app->name);
+	// ds_printf("DS_PROCESS: Closing app %s", app->name);
 
-	if(!(app->state & APP_STATE_OPENED))
+	if(!(app->state & APP_STATE_OPENED)) {
 		return 1;
-
-	//if(GetScreenOpacity() >= 0.9f && !ConsoleIsVisible())
-	//ScreenFadeOut();
+	}
 
 	app->state &= ~APP_STATE_OPENED;
-
 	WaitApp(app);
 
-	//LockVideo();
-	//GUI_ScreenSetContents(GUI_GetScreen(), NULL);
-	//UnLockVideo();
-	
 	if(prev_width && (prev_width != GetScreenWidth() || prev_height != GetScreenHeight())) {
 		SetScreenMode(prev_width, prev_height, 0.0f, 0.0f, 1.0f);
 	}
 
 	if(unload && (app->state & APP_STATE_LOADED)) {
-		/*
-		if(!UnLoadApp(app)) {
-		    ds_printf("DS_ERROR: CloseApp: App unloading error (id=%d)\n", app->id);
-		    //ShowConsole();
-		    return 0;
-		}*/
 		app->state |= APP_STATE_WAIT_UNLOAD;
 	}
 
@@ -454,8 +437,6 @@ int CloseApp(App_t *app, int unload) {
 
 	app->state &= ~APP_STATE_OPENED;
 
-	// UnLoadApp(app);
-
 	ds_printf("DS_OK: App %s closed%s\n", app->name, (unload ? " and unloaded." : "."));
 	return 1;
 }
@@ -469,15 +450,9 @@ int SetAppSleep(App_t *app, int sleep) {
 	}
 
 	if(sleep && (app->state & APP_STATE_SLEEP) == 0) {
-
 		app->state |= APP_STATE_SLEEP;
-		//CallAppBodyEvent(app, "onsleep");
-
 	} else if(!sleep && (app->state & APP_STATE_SLEEP)) {
-
 		app->state &= ~APP_STATE_SLEEP;
-		//CallAppBodyEvent(app, "onwakeup");
-
 	} else  {
 		return 0;
 	}
@@ -493,8 +468,9 @@ int AddToAppBody(App_t *app, GUI_Widget *widget) {
 		return 0;
 	}
 
-	if(app->body && widget) GUI_ContainerAdd(app->body, widget);
-	//GUI_ObjectDecRef((GUI_Object *) widget);
+	if(app->body && widget) {
+		GUI_ContainerAdd(app->body, widget);
+	}
 	return 1;
 }
 
@@ -540,6 +516,8 @@ int CallAppBodyEvent(App_t *app, char *event) {
 
 void WaitApp(App_t *app) {
 	if(app->state & APP_STATE_PROCESS) {
-		while(app->state & APP_STATE_PROCESS) thd_sleep(50);
+		while(app->state & APP_STATE_PROCESS) {
+			thd_sleep(50);
+		}
 	}
 }

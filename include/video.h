@@ -1,7 +1,7 @@
 /** 
  * \file    video.h
  * \brief   DreamShell video rendering
- * \date    2004-2023
+ * \date    2004-2024
  * \author  SWAT www.dc-swat.ru
  */
      
@@ -64,6 +64,7 @@ void ScreenFadeIn();
 void ScreenFadeOut();
 void ScreenFadeOutEx(const char *text, int wait);
 void ScreenFadeStop();
+int ScreenIsHidden();
 
 void DisableScreen();
 void EnableScreen();

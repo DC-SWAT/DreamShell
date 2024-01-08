@@ -2,7 +2,7 @@
  * DreamShell ##version##    *
  * load.c                    *
  * DreamShell App loader     *
- * Created by SWAT           *
+ * (c)2007-2014 SWAT         *
  * http://www.dc-swat.ru     *
  ****************************/
 

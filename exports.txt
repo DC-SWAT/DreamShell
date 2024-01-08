@@ -236,6 +236,7 @@ ScreenFadeIn
 ScreenFadeOut
 ScreenFadeOutEx
 ScreenFadeStop
+ScreenIsHidden
 ScreenChanged
 DisableScreen
 EnableScreen

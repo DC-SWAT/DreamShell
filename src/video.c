@@ -275,8 +275,13 @@ void ScreenFadeOutEx(const char *text, int wait) {
 
 void ScreenFadeStop() {
 	LockVideo();
+	screen_opacity = scr_fade_act == 1 ? 1.0f : 0.0f;
 	scr_fade_act = 0;
 	UnlockVideo();
+}
+
+int ScreenIsHidden() {
+	return scr_fade_act != 0 || screen_opacity == 0.0f;
 }
 
 static inline void ScreenFadeStep() {
