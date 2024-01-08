@@ -2,6 +2,7 @@
  * DreamShell ISO Loader
  * BIOS syscalls emulation
  * (c)2009-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2024 megavolt85
  */
 
 #include <main.h>
@@ -43,6 +44,7 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
 	GDS->cdda_track = 0;
 	GDS->disc_change = 0;
+	GDS->need_reinit = 0;
 //	GDS->disc_num = 0;
 
 	GDS->gdc.sec_size = 2048;
@@ -329,6 +331,11 @@ static void get_scd() {
 			break;
 	}
 	GDS->status = CMD_STAT_COMPLETED;
+	
+	if (GDS->disc_change > 2)
+	{
+		GDS->err = CMD_ERR_UNITATTENTION;
+	}
 }
 
 /**
@@ -668,7 +675,6 @@ static void data_transfer_pio_stream() {
 }
 
 static int init_cmd() {
-
 #ifdef HAVE_EXPT
 
 	if(IsoInfo->use_irq) {
@@ -776,9 +782,8 @@ int gdcReqCmd(int cmd, uint32 *param) {
 		GDS->transfered = 0;
 		GDS->ata_status = CMD_WAIT_INTERNAL;
 		GDS->cmd_abort = 0;
-		if(!GDS->disc_change) {
-			GDS->err = 0;
-		}
+		GDS->err = 0;
+		
 		gd_chn = GDS->req_count;
 		
 		LOGFF("%d %s %d", cmd, (cmd_name[cmd] ? cmd_name[cmd] : "UNKNOWN"), gd_chn);
@@ -843,92 +848,94 @@ void gdcMainLoop(void) {
 #endif
 
 		if(GDS->status == CMD_STAT_PROCESSING) {
-
-			if (GDS->disc_change > 5 && GDS->cmd != CMD_INIT) {
+			if (GDS->need_reinit == 1 && GDS->cmd != CMD_INIT) {
 				GDS->err = CMD_ERR_UNITATTENTION;
-			}
-
-			switch (GDS->cmd) {
-				case CMD_PIOREAD:
-				case CMD_DMAREAD:
-					data_transfer();
-					break;
-				case CMD_DMAREAD_STREAM:
-				case CMD_DMAREAD_STREAM_EX:
-					data_transfer_dma_stream();
-					break;
-				case CMD_PIOREAD_STREAM:
-				case CMD_PIOREAD_STREAM_EX:
-					data_transfer_pio_stream();
-					break;
-				//case CMD_GETTOC:
-				case CMD_GETTOC2:
-					GetTOC();
-					break;
-				case CMD_INIT:
-					GDS->status = init_cmd();
-					break;
-				case CMD_GET_VERS:
-					get_ver_str();
-					break;
-				case CMD_GETSES:
-					get_session_info();
-					break;
-				case CMD_GETSCD:
-					get_scd();
-					break;
+			} else {
+				switch (GDS->cmd) {
+					case CMD_PIOREAD:
+					case CMD_DMAREAD:
+						data_transfer();
+						break;
+					case CMD_DMAREAD_STREAM:
+					case CMD_DMAREAD_STREAM_EX:
+						data_transfer_dma_stream();
+						break;
+					case CMD_PIOREAD_STREAM:
+					case CMD_PIOREAD_STREAM_EX:
+						data_transfer_pio_stream();
+						break;
+					//case CMD_GETTOC:
+					case CMD_GETTOC2:
+						GetTOC();
+						break;
+					case CMD_INIT:
+						GDS->status = init_cmd();
+						break;
+					case CMD_GET_VERS:
+						get_ver_str();
+						break;
+					case CMD_GETSES:
+						get_session_info();
+						break;
+					case CMD_GETSCD:
+						get_scd();
+						break;
 #ifdef HAVE_CDDA
-				case CMD_PLAY:
-					GDS->status = CDDA_Play(GDS->param[0], GDS->param[1], GDS->param[2]);
-					break;
-				case CMD_PLAY2:
-					GDS->status = CDDA_Play2(GDS->param[0], GDS->param[1], GDS->param[2]);
-					break;
-				case CMD_RELEASE:
-					GDS->status = CDDA_Release();
-					break;
-				case CMD_PAUSE:
-					GDS->status = CDDA_Pause();
-					break;
-				case CMD_SEEK:
-					GDS->status = CDDA_Seek(GDS->param[0]);
-					break;
-				case CMD_STOP:
-					GDS->status = CDDA_Stop();
-					break;
+					case CMD_PLAY:
+						GDS->status = CDDA_Play(GDS->param[0], GDS->param[1], GDS->param[2]);
+						break;
+					case CMD_PLAY2:
+						GDS->status = CDDA_Play2(GDS->param[0], GDS->param[1], GDS->param[2]);
+						break;
+					case CMD_RELEASE:
+						GDS->status = CDDA_Release();
+						break;
+					case CMD_PAUSE:
+						GDS->status = CDDA_Pause();
+						break;
+					case CMD_SEEK:
+						GDS->status = CDDA_Seek(GDS->param[0]);
+						break;
+					case CMD_STOP:
+						GDS->status = CDDA_Stop();
+						break;
 #else
-				case CMD_PLAY:
-				case CMD_PLAY2:
-				case CMD_RELEASE:
-					GDS->status = CMD_STAT_COMPLETED;
-					GDS->drv_stat = CD_STATUS_PLAYING;
-					GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
-					break;
-				case CMD_PAUSE:
-				case CMD_STOP:
-					GDS->status = CMD_STAT_COMPLETED;
-					GDS->drv_stat = CD_STATUS_PAUSED;
-					GDS->cdda_stat = SCD_AUDIO_STATUS_PAUSED;
-					break;
-				case CMD_SEEK:
-					GDS->status = CMD_STAT_COMPLETED;
-					break;
+					case CMD_PLAY:
+					case CMD_PLAY2:
+					case CMD_RELEASE:
+						GDS->status = CMD_STAT_COMPLETED;
+						GDS->drv_stat = CD_STATUS_PLAYING;
+						GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
+						break;
+					case CMD_PAUSE:
+					case CMD_STOP:
+						GDS->status = CMD_STAT_COMPLETED;
+						GDS->drv_stat = CD_STATUS_PAUSED;
+						GDS->cdda_stat = SCD_AUDIO_STATUS_PAUSED;
+						break;
+					case CMD_SEEK:
+						GDS->status = CMD_STAT_COMPLETED;
+						break;
 #endif
-				case CMD_REQ_MODE:
-				case CMD_SET_MODE:
-					// TODO param[0]
-					GDS->status = CMD_STAT_COMPLETED;
-					break;
-				case CMD_REQ_STAT:
-					get_stat();
-					break;
-				default:
-					LOGF("Unhandled command %d %s, force complete status\n", 
-							GDS->cmd, (cmd_name[GDS->cmd] ? cmd_name[GDS->cmd] : "UNKNOWN"));
-					GDS->status = CMD_STAT_COMPLETED;
-					break;
+					case CMD_REQ_MODE:
+					case CMD_SET_MODE:
+						// TODO param[0]
+						GDS->status = CMD_STAT_COMPLETED;
+						break;
+					case CMD_REQ_STAT:
+						get_stat();
+						break;
+					default:
+						LOGF("Unhandled command %d %s, force complete status\n", 
+								GDS->cmd, (cmd_name[GDS->cmd] ? cmd_name[GDS->cmd] : "UNKNOWN"));
+						GDS->status = CMD_STAT_COMPLETED;
+						break;
+				}
 			}
-
+			
+			if (GDS->err == CMD_ERR_UNITATTENTION) {
+				GDS->need_reinit = 1;
+			}
 		}
 		gdcExitToGame();
 	}
@@ -981,13 +988,17 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 			break;
 
 		case CMD_STAT_COMPLETED:
-
-			GDS->ata_status = CMD_WAIT_INTERNAL;
-			GDS->status = CMD_STAT_IDLE;
+			if (GDS->err) {
+				rv = CMD_STAT_FAILED;
+			}
+			else {
+				rv = CMD_STAT_COMPLETED;
+				GDS->ata_status = CMD_WAIT_INTERNAL;
+				GDS->status = CMD_STAT_IDLE;
+			}
 
 			status[2] = GDS->transfered;
 			status[3] = GDS->ata_status;
-			rv = CMD_STAT_COMPLETED;
 			break;
 
 		case CMD_STAT_STREAMING:
@@ -1028,24 +1039,25 @@ int gdcGetDrvStat(uint32 *status) {
 	}
 
  	DBGFF(NULL);
+ 	
 	gd_state_t *GDS = get_GDS();
 	int rv = 0;
 
 	if (GDS->disc_change) {
 
-		if (++GDS->disc_change == 5) {
+		if (++GDS->disc_change == 2) {
 			LOGF("DISC_CHANGE: opened\n");
 			GDS->drv_media = CD_CDDA;
 			GDS->drv_stat = CD_STATUS_OPEN;
 		}
-		else if (GDS->disc_change > 50) {
-			LOGF("DISC_CHANGE: closed\n");
+		else  if (GDS->disc_change > 30) {
+			LOGF("DISC_CHANGE: close\n");
 			GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 			GDS->drv_stat = CD_STATUS_PAUSED;
-			GDS->disc_change = 0;
+			//GDS->disc_change = 0;
 			rv = 2;
 		}
-		else {
+		else if(GDS->disc_change < 10) {
 			rv = 1;
 		}
 	}
@@ -1107,7 +1119,6 @@ void gdcInitSystem(void) {
 	reset_GDS(GDS);
 	gdcMainLoop();
 }
-
 
 /**
  * Reset syscall
@@ -1316,7 +1327,7 @@ void gdGdcChangeDisc(int disc_num) {
 	LOGFF("%d\n", disc_num);
 	gd_state_t *GDS = get_GDS();
 	GDS->disc_change = 1;
-	GDS->disc_num = disc_num;
+	GDS->disc_num = disc_num - 1;
 }
 
 void gdcDummy(int gd_chn, int *arg2) {
@@ -1344,8 +1355,14 @@ void menu_exit(void) {
 
 int menu_check_disc(void) {
 	LOGFF(NULL);
+	
+	gd_state_t *GDS = get_GDS();
+	reset_GDS(GDS);
+	init_cmd();
+	
 	fs_enable_dma(FS_DMA_SHARED);
 	ReadSectors((uint8 *)CACHED_ADDR(IP_BIN_ADDR + 0x100), 45150, 7, NULL);
+	
 	return 0;
 }
 

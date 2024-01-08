@@ -164,6 +164,7 @@ typedef struct gd_state {
 	int drv_media;
 	int disc_change;
 	int disc_num;
+	int need_reinit;
 	disk_format_t gdc;
 
 } gd_state_t;

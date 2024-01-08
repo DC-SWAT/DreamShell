@@ -92,13 +92,23 @@ int InitReader() {
 	gd_state_t *GDS = get_GDS();
 
 	if (GDS->disc_num) {
+		
+		if (IsoInfo->image_file[len - 7] != 'k') {
+			len--;
+		}
+		
 		IsoInfo->image_file[len - 6] = GDS->disc_num + '0';
 		memcpy(&IsoInfo->image_file[len - 5], "03.iso\0", 7);
+		
 		GDS->data_track = 3;
 	}
 	else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
-		IsoInfo->image_file[len - 6] = '0';
-		IsoInfo->image_file[len - 5] = '3';
+		if (IsoInfo->image_file[len - 7] != 'k') {
+			memcpy(&IsoInfo->image_file[len - 7], "03.iso\0", 7);
+		} else {
+			IsoInfo->image_file[len - 6] = '0';
+			IsoInfo->image_file[len - 5] = '3';
+		}
 		GDS->data_track = 3;
 	} else {
 		GDS->data_track = 1;
@@ -166,6 +176,7 @@ void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 	} else if((IsoInfo->track_lba[0] == IsoInfo->track_lba[1] || lba < IsoInfo->track_lba[1]) && GDS->data_track != 3) {
 
 		int len = strlen(IsoInfo->image_file);
+		
 		IsoInfo->image_file[len - 6] = '0';
 		IsoInfo->image_file[len - 5] = '3';
 		GDS->data_track = 3;
