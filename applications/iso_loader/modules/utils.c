@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    utils.c - ISO Loader app utils
-   Copyright (C) 2022-2023 SWAT
+   Copyright (C) 2022-2024 SWAT
 
 */
 
@@ -14,26 +14,38 @@
 void trim_spaces(char *input, char *output, int size) {
 	char *p;
 	char *o;
+	int s = 0;
 
 	p = input;
 	o = output;
-	
-	while(*p == ' ' && input + size > p) {
-		p++;
+
+	if(*p == '\0') {
+		*o = '\0';
+		return;
 	}
 
-	while(input + size > p) { 
-		*o = *p;
-		p++; 
-		o++; 
+	while(*p == ' ' && s > 0) {
+		p++;
+		size--;
 	}
-	
+
+	if(!size) {
+		*o = '\0';
+		return;
+	}
+
+	while(size--) { 
+		*o++ = *p++;
+		s++;
+	}
+
 	*o = '\0';
 	o--;
 
-	while(*o == ' ' && o > output) {
-		*o='\0';
+	while(*o == ' ' && s > 0) {
+		*o = '\0';
 		o--;
+		s--;
 	}
 }
 

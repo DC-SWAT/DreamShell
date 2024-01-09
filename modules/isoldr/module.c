@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    DreamShell ISO Loader module
-   Copyright (C)2009-2023 SWAT
+   Copyright (C)2009-2024 SWAT
 
 */
 
@@ -695,11 +695,12 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
 	} else if(emu_cdda) {
-		info->emu_cdda  = CDDA_MODE_DMA_TMU2;
+		info->emu_cdda  = (CDDA_MODE_EXTENDED | CDDA_MODE_SRC_DMA |
+			CDDA_MODE_DST_DMA | CDDA_MODE_POS_TMU2 | CDDA_MODE_CH_FIXED);
 	} else {
 		info->emu_cdda  = CDDA_MODE_DISABLED;
 	}
-	
+
 	info->patch_addr[0]  = p_addr[0];
 	info->patch_addr[1]  = p_addr[1];
 	info->patch_value[0] = p_value[0];

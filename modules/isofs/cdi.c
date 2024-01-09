@@ -104,8 +104,8 @@ CDI_header_t *cdi_open(file_t fd) {
     fs_read(fd, &hdr->session_count, sizeof(hdr->session_count));
     
     if(!hdr->session_count || hdr->session_count > CDI_MAX_SESSIONS) {
-        free(hdr);
         ds_printf("DS_ERROR: Bad sessions count in CDI image: %d\n", hdr->session_count);
+        free(hdr);
         return NULL;
     }
     

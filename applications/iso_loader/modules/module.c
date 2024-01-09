@@ -2,7 +2,7 @@
 
    module.c - ISO Loader app module
    Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2023 SWAT
+   Copyright (C) 2011-2024 SWAT
 
 */
 
@@ -19,6 +19,7 @@
 DEFAULT_MODULE_EXPORTS(app_iso_loader);
 
 #define SCREENSHOT_HOTKEY (CONT_START | CONT_A | CONT_B)
+#define ALT_BOOT_FILE "2ND_READ.BIN"
 
 static struct {
 
@@ -280,6 +281,7 @@ static void showCover() {
 	GUI_Surface *s = NULL;
 	char path[NAME_MAX];
 	char noext[128];
+	char title[128];
 	ipbin_meta_t *ipbin;
 	int use_cover = 0;
 
@@ -292,14 +294,21 @@ static void showCover() {
 		return;
 	}
 
+	memset(title, 0, sizeof(title));
 	memset(noext, 0, sizeof(noext));
+
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
 	get_md5_hash("/isocover");
 	ipbin = (ipbin_meta_t *)self.boot_sector;
-	trim_spaces(ipbin->title, noext, sizeof(ipbin->title));
-	GUI_LabelSetText(self.title, noext);
+	trim_spaces(ipbin->title, title, sizeof(ipbin->title));
+
+	if(strlen(title) > 0) {
+		GUI_LabelSetText(self.title, title);
+	} else {
+		GUI_LabelSetText(self.title, noext);
+	}
 
 	snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
 	if(FileExists(path)) {
@@ -335,8 +344,7 @@ static void showCover() {
 	vmu_draw_string(noext);
 }
 
-void isoLoader_MakeShortcut(GUI_Widget *widget) 
-{
+void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	(void)widget;
 	FILE *fd;
 	char *env = getenv("PATH");
@@ -350,8 +358,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 
 	fd = fopen(save_file, "w");
 
-	if(!fd)
-	{
+	if(!fd) {
 		ds_printf("DS_ERROR: Can't save shortcut\n");
 		return;
 	}
@@ -363,27 +370,21 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	strcpy(cmd, "isoldr");
 	strcat(cmd, GUI_WidgetGetState(self.fastboot) ? " -s" : " -i" );
 
-	if(GUI_WidgetGetState(self.dma)) 
-	{
+	if(GUI_WidgetGetState(self.dma)) {
 		strcat(cmd, " -a");
 	}
 
-	if(GUI_WidgetGetState(self.irq)) 
-	{
+	if(GUI_WidgetGetState(self.irq)) {
 		strcat(cmd, " -q");
 	}
 
-	if(GUI_WidgetGetState(self.low)) 
-	{
+	if(GUI_WidgetGetState(self.low)) {
 		strcat(cmd, " -l");
 	}
 
-	for(i = 0; i < sizeof(self.async) >> 2; i++) 
-	{
-		if(GUI_WidgetGetState(self.async[i])) 
-		{
-			if(i)
-			{
+	for(i = 0; i < sizeof(self.async) >> 2; i++) {
+		if(GUI_WidgetGetState(self.async[i])) {
+			if(i) {
 				char async[8];
 				int val = atoi(GUI_LabelGetText(GUI_ButtonGetCaption(self.async[i])));
 				snprintf(async, sizeof(async), " -e %d", val);
@@ -395,20 +396,16 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 
 	tmpval = GUI_TextEntryGetText(self.device);
 
-	if(strncmp(tmpval, "auto", 4) != 0)
-	{
+	if(strncmp(tmpval, "auto", 4) != 0) {
 		strcat(cmd, " -d ");
 		strcat(cmd, tmpval);
 	}
 
-	for(i = 0; self.memory_chk[i]; i++)
-	{
-		if(GUI_WidgetGetState(self.memory_chk[i]))
-		{
+	for(i = 0; self.memory_chk[i]; i++) {
+		if(GUI_WidgetGetState(self.memory_chk[i])) {
 			tmpval = GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
 			
-			if(strlen(tmpval) < 8) 
-			{
+			if(strlen(tmpval) < 8) {
 				char text[24];
 				memset(text, 0, sizeof(text));
 				strncpy(text, tmpval, 10);
@@ -426,10 +423,8 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	strcat(cmd, " -f ");
 	strcat(cmd, fix_spaces(fpath));
 
-	for(i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) 
-	{
-		if(i && GUI_WidgetGetState(self.boot_mode_chk[i])) 
-		{
+	for(i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) {
+		if(i && GUI_WidgetGetState(self.boot_mode_chk[i])) {
 			char boot_mode[8];
 			sprintf(boot_mode, "%d", i);
 			strcat(cmd, " -j ");
@@ -438,10 +433,8 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		}
 	}
 
-	for(i = 0; i < sizeof(self.os_chk) >> 2; i++) 
-	{
-		if(i && GUI_WidgetGetState(self.os_chk[i])) 
-		{
+	for(i = 0; i < sizeof(self.os_chk) >> 2; i++) {
+		if(i && GUI_WidgetGetState(self.os_chk[i])) {
 			char os[8];
 			sprintf(os, "%d", i);
 			strcat(cmd, " -o ");
@@ -451,10 +444,8 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	}
 
 	char patchstr[24];
-	for(i = 0; i < sizeof(self.pa) >> 2; ++i)
-	{
-		if(self.pa[i] & 0xffffff)
-		{
+	for(i = 0; i < sizeof(self.pa) >> 2; ++i) {
+		if(self.pa[i] & 0xffffff) {
 			sprintf(patchstr," --pa%d 0x%s", i + 1, GUI_TextEntryGetText(self.wpa[i]));
 			strcat(cmd, patchstr);
 			sprintf(patchstr," --pv%d 0x%s", i + 1, GUI_TextEntryGetText(self.wpv[i]));
@@ -503,6 +494,12 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 		strcat(cmd, hotkey);
 	}
 
+	if(GUI_WidgetGetState(self.alt_boot)) {
+		char boot_file[24];
+		sprintf(boot_file, " -b %s", ALT_BOOT_FILE);
+		strcat(cmd, boot_file);
+	}
+
 	fprintf(fd, "%s\n", cmd);
 	fprintf(fd, "console --show\n");
 	fclose(fd);
@@ -511,8 +508,8 @@ void isoLoader_MakeShortcut(GUI_Widget *widget)
 	if(FileExists(save_file)) {
 		fs_unlink(save_file);
 	}
-	GUI_SurfaceSavePNG(self.slnkico, save_file);
 
+	GUI_SurfaceSavePNG(self.slnkico, save_file);
 	isoLoader_ShowGames(self.settings);
 }
 
@@ -583,43 +580,35 @@ void isoLoader_toggleIconSize(GUI_Widget *widget) {
 	setIcon(size);
 }
 
-void isoLoader_toggleLinkName(GUI_Widget *widget)
-{
+void isoLoader_toggleLinkName(GUI_Widget *widget) {
 	char curtext[33];
-	
 	snprintf(curtext, 33, "%s", GUI_TextEntryGetText(widget));
-	
 	int state = !(curtext[0] != '_');
-	
-	if(strlen(curtext) < 3)
-	{
+
+	if(strlen(curtext) < 3) {
 		ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 		ipbin->title[sizeof(ipbin->title)-1] = '\0';
 		GUI_TextEntrySetText(self.linktext, trim_spaces2(ipbin->title));
 	}
-	
+
 	GUI_WidgetSetState(self.btn_hidetext, state);
-	
 	check_link_file();	
 }
 
-void isoLoader_toggleHideName(GUI_Widget *widget)
-{
+void isoLoader_toggleHideName(GUI_Widget *widget) {
 	int state = GUI_WidgetGetState(widget);
 	char *curtext = (char *)GUI_TextEntryGetText(self.linktext);
 	char text[NAME_MAX];
-	
-	if(state && curtext[0] != '_')
-	{
+
+	if(state && curtext[0] != '_') {
 		snprintf(text, NAME_MAX, "_%s", curtext);
 		GUI_TextEntrySetText(self.linktext, text);
 	}
-	else if(!state && curtext[0] == '_')
-	{
+	else if(!state && curtext[0] == '_') {
 		snprintf(text, NAME_MAX, "%s", &curtext[1]);
 		GUI_TextEntrySetText(self.linktext, text);
 	}
-	
+
 	check_link_file();
 }
 
@@ -637,28 +626,23 @@ void isoLoader_toggleOptions(GUI_Widget *widget)
 	GUI_WidgetMarkChanged(self.run_pane);
 }
 
-void isoLoader_togglePatchAddr(GUI_Widget *widget)
-{
+void isoLoader_togglePatchAddr(GUI_Widget *widget) {
 	const char *name = GUI_ObjectGetName((GUI_Object *)widget);
 	const char *text = GUI_TextEntryGetText(widget);
 	uint32_t temp = strtoul(text, NULL, 16);
-	
+
 	if( (strlen(text) != 8) || (name[1] == 'a' && (!(temp & 0xffffff) 
 							|| ((temp >> 24 != 0x0c) 
 							&&  (temp >> 24 != 0x8c) 
 							&&  (temp >> 24 != 0xac)))) 
-							|| (name[1] == 'v' && !temp))
-	{
+							|| (name[1] == 'v' && !temp)) {
 		GUI_TextEntrySetText(widget, (name[1] == 'a') ? "0c000000" : "00000000");
 	}
-	else
-	{
-		switch(name[1])
-		{
+	else {
+		switch(name[1]) {
 			case 'a':
 				self.pa[name[2]-'1'] = strtoul(text, NULL, 16);
 				break;
-			
 			case 'v':
 				self.pv[name[2]-'1'] = strtoul(text, NULL, 16);
 				break;
@@ -860,25 +844,25 @@ void setModeCDDA(uint32 mode) {
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
 				break;
 			case CDDA_MODE_DMA_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
 				break;
 			case CDDA_MODE_SQ_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
 				break;
 			case CDDA_MODE_SQ_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
 				break;
 			default:
 				break;
@@ -1169,7 +1153,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	}
 
 	if(GUI_WidgetGetState(self.alt_boot)) {
-		isoldr_set_boot_file(self.isoldr, filepath, "MAIN.BIN");
+		isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
 	}
 
 	isoldr_exec(self.isoldr, addr);
@@ -1474,6 +1458,10 @@ int isoLoader_SavePreset() {
 			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
+	if(GUI_WidgetGetState(self.alt_boot)) {
+		strcat(result, "file = " ALT_BOOT_FILE "\n");
+	}
+
 	fs_write(fd, result, strlen(result));
 	fs_close(fd);
 
@@ -1503,6 +1491,7 @@ int isoLoader_LoadPreset() {
 	char device[8] = "";
 	char memory[12] = "0x8c000100";
 	char heap_memory[12] = "";
+	char bin_file[12] = "";
 	char patch_a[2][10];
 	char patch_v[2][10];
 	int i, len;
@@ -1522,6 +1511,7 @@ int isoLoader_LoadPreset() {
 		{ "async",    CONF_INT,   (void *) &emu_async  },
 		{ "mode",     CONF_INT,   (void *) &boot_mode  },
 		{ "type",     CONF_INT,   (void *) &bin_type   },
+		{ "file",     CONF_STR,   (void *) bin_file    },
 		{ "title",    CONF_STR,   (void *) title       },
 		{ "device",   CONF_STR,   (void *) device      },
 		{ "fastboot", CONF_INT,   (void *) &fastboot   },
@@ -1612,6 +1602,10 @@ int isoLoader_LoadPreset() {
 	
 	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
 	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
+
+	if (strlen(bin_file) > 0) {
+		GUI_WidgetSetState(self.alt_boot, 1);
+	}
 
 	if (strlen(title) > 0) {
 		GUI_LabelSetText(self.title, title);
