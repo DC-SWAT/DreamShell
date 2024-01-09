@@ -328,7 +328,7 @@ static void get_scd() {
 	}
 	GDS->status = CMD_STAT_COMPLETED;
 
-	if (GDS->disc_change > 2) {
+	if (GDS->disc_change > 60) {
 		GDS->err = CMD_ERR_UNITATTENTION;
 	}
 }
