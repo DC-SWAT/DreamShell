@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2024 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -122,18 +122,15 @@ int main(int argc, char *argv[]) {
 			memcpy(src, dest, IsoInfo->exec.size);
 		}
 	}
+#endif
 
-	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT
-		|| (loader_end < CACHED_ADDR(IP_BIN_ADDR) && (IsoInfo->emu_cdda == 0 || IsoInfo->use_irq))
-		|| (loader_addr > CACHED_ADDR(APP_BIN_ADDR))
-	) {
+	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
 		printf("Loading IP.BIN...\n");
 
 		if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT)) {
 			goto error;
 		}
 	}
-#endif
 
 	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
 		/* Patch GDC driver entry */
@@ -172,7 +169,6 @@ int main(int argc, char *argv[]) {
 
 	setup_machine();
 
-#ifndef HAVE_LIMIT
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
 		launch(IsoInfo->exec.addr);
@@ -183,19 +179,7 @@ int main(int argc, char *argv[]) {
 
 error:
 	printf("Failed!\n");
-	timer_spin_sleep_bios(3000);
 	Load_DS();
 	launch(IsoInfo->exec.addr);
-	*(vuint32 *)0xA05F6890 = 0x7611;
-
-#else
-	printf("Executing...\n");
-	launch(IsoInfo->exec.addr);
-error:
-	printf("Failed!\n");
-	*(vuint32 *)0xA05F6890 = 0x7611;
-	do {} while (1);
-#endif /* HAVE_LIMIT */
-
 	return -1;
 }

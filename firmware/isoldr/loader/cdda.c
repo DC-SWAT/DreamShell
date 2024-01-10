@@ -726,7 +726,7 @@ static void switch_cdda_track(uint8 track) {
 
 		LOGF("Not found, opening: %s\n", cdda->filename);
 		cdda->fd = open(cdda->filename, O_RDONLY);
-#ifndef HAVE_LIMIT
+
 		if(cdda->fd < 0) {
 
 			cdda->filename[cdda->fn_len - 3] = 'r';
@@ -740,7 +740,6 @@ static void switch_cdda_track(uint8 track) {
 
 			cdda->fd = open(cdda->filename, O_RDONLY);
 		}
-#endif
 	}
 #ifdef LOG
 	if(cdda->fd < 0) {
