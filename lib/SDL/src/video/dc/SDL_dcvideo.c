@@ -657,7 +657,7 @@ void SDL_DC_SetWindow(int width, int height)
 		__sdl_dc_is_60hz=1;
 		if (width==320 && height==240) disp_mode=DM_320x240_VGA;
 		else if (width==640 && height==480) disp_mode=DM_640x480_VGA;
-		else if (width==800 && height==600) disp_mode=DM_800x608_VGA;
+		// else if (width==800 && height==600) disp_mode=DM_800x608_VGA;
 		else if (width==768 && height==480) disp_mode=DM_768x480_PAL_IL;
 		else if (width==768 && height==576) disp_mode=DM_768x576_PAL_IL;
 		else if (width==256 && height==256) disp_mode=DM_256x256_PAL_IL;
@@ -672,7 +672,7 @@ void SDL_DC_SetWindow(int width, int height)
 		__sdl_dc_is_60hz=0;
 		if (width==320 && height==240) disp_mode=DM_320x240_PAL;
 		else if (width==640 && height==480) disp_mode=DM_640x480_PAL_IL;
-		else if (width==800 && height==600) disp_mode=DM_800x608;
+		// else if (width==800 && height==600) disp_mode=DM_800x608;
 		else if (width==768 && height==480) disp_mode=DM_768x480_PAL_IL;
 		else if (width==768 && height==576) disp_mode=DM_768x576_PAL_IL;
 		else if (width==256 && height==256) disp_mode=DM_256x256_PAL_IL;
@@ -686,7 +686,7 @@ void SDL_DC_SetWindow(int width, int height)
 		__sdl_dc_is_60hz=1;
 		if (width==320 && height==240) disp_mode=DM_320x240;
 		else if (width==640 && height==480) disp_mode=DM_640x480;
-		else if (width==800 && height==600) disp_mode=DM_800x608;
+		// else if (width==800 && height==600) disp_mode=DM_800x608;
 		else if (width==768 && height==480) disp_mode=DM_768x480;
 		else if (width==768 && height==576) disp_mode=DM_768x576_PAL_IL;
 		else if (width==256 && height==256) disp_mode=DM_256x256_PAL_IL;

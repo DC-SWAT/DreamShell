@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2023 SWAT
+# Copyright (C) 2004-2024 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -167,6 +167,7 @@ build: $(TARGET)
 clean-all: clean
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
 	@-rm -rf $(DS_BASE)/release
+	@-rm -rf $(DS_BASE)/build
 	cd $(DS_BASE)/lib && make clean
 	cd $(DS_BASE)/modules && make clean
 	cd $(DS_BASE)/commands && make clean
