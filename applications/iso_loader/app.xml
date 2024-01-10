@@ -462,7 +462,7 @@
 
 						<panel name="cdda-panel">
 							<panel height="250" width="80%">
-								<panel name="cdda-mode-panel" width="100%" height="100">
+								<panel name="cdda-mode-panel" width="100%">
 									<panel width="100%" height="25" name="cdda-mode-src-panel">
 										<label align="left" color="#31799F" font="arial" height="20" text="Source:" width="30%" />
 										<input height="25" onclick="export:isoLoader_toggleCDDA_Source()" type="checkbox" width="31%">
@@ -498,6 +498,10 @@
 										<input height="25" onclick="export:isoLoader_toggleCDDA_Chan()" type="checkbox" width="39%">
 											<label align="left" color="#000000" font="arial" height="20" text="Adaptive" x="25" />
 										</input>
+									</panel>
+									<panel width="100%" height="25" name="cdda-counter-panel">
+										<label align="left" color="#31799F" font="arial" height="20" text="Counter:" width="30%" />
+										<input font="arial" fontcolor="#000000" height="18" name="cdda-counter-text" size="10" type="text" value="0" width="50%" />
 									</panel>
 								</panel>
 							</panel>

@@ -201,14 +201,9 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 #endif
 }
 
-static void setup_pcm_buffer() {
+static void setup_pcm_buffer(uint32 timer_value) {
 
-	/* 
-	 * SH4 timer counter value for polling playback position.
-	 * Base timer value for one channel of 16-bit PCM at 44100 Hz
-	 * and 16 KB of AICA memory.
-	 */
-	cdda->end_tm = 36187;
+	cdda->end_tm = timer_value;
 	size_t old_size = cdda->size;
 	cdda->size = 0x8000;
 
@@ -216,8 +211,8 @@ static void setup_pcm_buffer() {
 #ifdef HAVE_CDDA_ADPCM
 		case 4:
 			cdda->size >>= 1;
-			cdda->end_tm <<= 1;  /* 4-bit decoded to 16-bit */
-			cdda->end_tm += 10;  /* Fixup timer value for ADPCM */
+			cdda->end_tm *= 2;  /* 4-bit decoded to 16-bit */
+			cdda->end_tm += 10; /* Fixup timer value for ADPCM */
 			break;
 #endif
 		case 16:
@@ -225,12 +220,12 @@ static void setup_pcm_buffer() {
 			if(exception_inited()) {
 				/* Save some memory because we can polling faster */
 				cdda->size >>= 1;
-				cdda->end_tm >>= 1;
+				cdda->end_tm = cdda->end_tm / 2;
 #ifdef LOG
 				if (malloc_heap_pos() < CACHED_ADDR(APP_BIN_ADDR)) {
 					/* Need some memory for logging in this case */
 					cdda->size >>= 1;
-					cdda->end_tm >>= 1;
+					cdda->end_tm = cdda->end_tm / 2;
 				}
 #endif
 			}
@@ -1037,7 +1032,9 @@ static void play_track(uint32 track) {
 	GDS->drv_stat = CD_STATUS_PLAYING;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
 
-	setup_pcm_buffer();
+	uint32 tmv = (IsoInfo->cdda_tm_val ?
+		IsoInfo->cdda_tm_val : CDDA_TIMER_COUNTER_VALUE);
+	setup_pcm_buffer(tmv);
 	aica_setup_cdda(1);
 }
 

@@ -59,6 +59,7 @@ static struct {
 	GUI_Widget *cdda_mode_dst[2];
 	GUI_Widget *cdda_mode_pos[2];
 	GUI_Widget *cdda_mode_ch[2];
+	GUI_Widget *cdda_counter_text;
 	GUI_Widget *irq;
 	GUI_Widget *low;
 	GUI_Widget *heap[20];
@@ -1028,6 +1029,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 
 	if(GUI_WidgetGetState(self.cdda)) {
 		self.isoldr->emu_cdda = getModeCDDA();
+		self.isoldr->cdda_tm_val = atol(GUI_TextEntryGetText(self.cdda_counter_text));
 	}
 
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
@@ -1655,6 +1657,7 @@ void isoLoader_Init(App_t *app) {
 	GUI_Widget *w, *b;
 	GUI_Callback *cb;
 	char *default_dir = NULL;
+	char val[24] = {0};
 
 	if(app != NULL) {
 		
@@ -1734,6 +1737,13 @@ void isoLoader_Init(App_t *app) {
 		self.save_link_txt    = APP_GET_WIDGET("save-link-txt");
 		self.wlnkico	      = APP_GET_WIDGET("link-icon");
 		self.stdico           = APP_GET_SURFACE("stdico");
+
+		self.memory_text = APP_GET_WIDGET("boot-memory-text");
+		self.heap_memory_text = APP_GET_WIDGET("heap-memory-text");
+		self.cdda_counter_text = APP_GET_WIDGET("cdda-counter-text");
+
+		sprintf(val, "%d", CDDA_TIMER_COUNTER_VALUE);
+		GUI_TextEntrySetText(self.cdda_counter_text, val);
 
 		w = APP_GET_WIDGET("async-panel");
 		self.async[0] = GUI_ContainerGetChild(w, 1);
@@ -1817,9 +1827,6 @@ void isoLoader_Init(App_t *app) {
 				}
 			}
 		}
-
-		self.memory_text = APP_GET_WIDGET("boot-memory-text");
-		self.heap_memory_text = APP_GET_WIDGET("heap-memory-text");
 
 		if(!is_custom_bios()/*DirExists("/cd")*/) {
 			

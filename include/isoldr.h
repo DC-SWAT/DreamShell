@@ -1,7 +1,7 @@
 /** 
  * \file    isoldr.h
  * \brief   DreamShell ISO loader
- * \date    2009-2023
+ * \date    2009-2024
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -21,22 +21,26 @@
 
 
 /**
- * Maximum memory usage by loader and params
+ * Desired maximum memory usage by loader and params
  */
 #define ISOLDR_MAX_MEM_USAGE 32768
 
 
 /**
  * It's a default loader addresses
- * 
- * 0x8c004000 - Can't be used with dcl loader
  *
  * You can find more suitable by own experience.
  */
-#define ISOLDR_DEFAULT_ADDR      0x8ce00000
-#define ISOLDR_DEFAULT_ADDR_LOW  0x8c004000
-#define ISOLDR_DEFAULT_ADDR_HIGH 0x8cfe8000
-#define ISOLDR_DEFAULT_ADDR_MIN  0x8c000100
+/* All loaders compiled for this address */
+#define ISOLDR_DEFAULT_ADDR              0x8ce00000
+/* Default address for base loader */
+#define ISOLDR_DEFAULT_ADDR_LOW          0x8c004000
+/* Default address at end of memory */
+#define ISOLDR_DEFAULT_ADDR_HIGH         0x8cfe8000
+/* Minimum possible address */
+#define ISOLDR_DEFAULT_ADDR_MIN          0x8c000100
+/* Minimum possible address if the GINSU are used */
+#define ISOLDR_DEFAULT_ADDR_MIN_GINSU    0x8c001100
 
 
 /**
@@ -54,7 +58,7 @@
 #define ISOLDR_TYPE_DEFAULT  ""
 #define ISOLDR_TYPE_CDDA     "cdda"
 #define ISOLDR_TYPE_VMU      "vmu"
-#define ISOLDR_TYPE_FEATURED "feat"
+#define ISOLDR_TYPE_FEAT     "feat"
 #define ISOLDR_TYPE_FULL     "full"
 
 
@@ -129,6 +133,12 @@ typedef enum isoldr_cdda_mode {
 	CDDA_MODE_CH_FIXED = 0x00020000
 } isoldr_cdda_mode_t;
 
+/* 
+ * SH4 timer counter value for polling playback position.
+ * This is a base timer value for 16 KB of one channel 16-bit PCM at 44100Hz.
+*/
+#define CDDA_TIMER_COUNTER_VALUE 36187
+
 
 typedef struct isoldr_info {
 
@@ -157,15 +167,16 @@ typedef struct isoldr_info {
 	isoldr_exec_info_t exec;            /* Executable info */
 
 	uint32 gdtex;                       /* Memory address for GD texture (draw it on screen) */
-	uint32 patch_addr[2];               /* Memory addresses for patching every frame */
+	uint32 patch_addr[2];               /* Memory addresses for patching every frame or interrupt */
 	uint32 patch_value[2];              /* Values for patching */
 	uint32 heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
 	uint32 use_irq;                     /* Use IRQ hooking */
 	uint32 emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
 	uint32 syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
 	uint32 scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
+	uint32 cdda_tm_val;                 /* Timer counter value for CDDA playback (see CDDA_TIMER_COUNTER_VALUE). */
 
-	uint32 cdda_offset[45];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[44];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 
