@@ -25,7 +25,8 @@ void *ftpd_thread(void *param) {
 static void ftpd_free(void *ptr) {
     ftpd_t *srv = (ftpd_t *)ptr;
     lftpd_stop(&srv->lftpd);
-    thd_join(srv->thread, NULL);
+    /* FIXME: "accept" is not aborted on socket close */
+    // thd_join(srv->thread, NULL);
     free(srv->dir);
     free(srv);
 }

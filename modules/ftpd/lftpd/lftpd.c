@@ -204,7 +204,7 @@ static int receive_file(int socket, const char* path) {
 
 	uint8_t *buffer;
 	int read_len, rv = -1;
-	file_t fd = fs_open(path, O_WRONLY | O_TRUNC);
+	file_t fd = fs_open(path, O_WRONLY | O_TRUNC | O_CREAT);
 
 	if (fd < 0) {
 		lftpd_log_error("failed to open file for read");
@@ -599,30 +599,36 @@ int lftpd_start(const char* directory, int port, lftpd_t* lftpd) {
 		int client_socket = accept(lftpd->server_socket, NULL, NULL);
 		if (client_socket < 0) {
 			lftpd_log_error("error accepting client socket");
+			close(lftpd->server_socket);
+			lftpd->server_socket = -1;
 			break;
 		}
 
 		lftpd_log_info("connection received.");
 
 		lftpd_client_t client = {
-				.directory = strdup(directory),
-				.socket = client_socket,
-				.data_socket = -1,
+			.directory = strdup(directory),
+			.socket = client_socket,
+			.data_socket = -1,
 		};
 		lftpd->client = &client;
 		handle_control_channel(&client);
 		free(client.directory);
 		lftpd->client = NULL;
 	}
-
-	close(lftpd->server_socket);
-
 	return 0;
 }
 
 int lftpd_stop(lftpd_t* lftpd) {
+	if (lftpd->server_socket < 0) {
+		return -1;
+	}
+	shutdown(lftpd->server_socket, SHUT_RDWR);
 	close(lftpd->server_socket);
+	lftpd->server_socket = -1;
+
 	if (lftpd->client) {
+		shutdown(lftpd->client->socket, SHUT_RDWR);
 		close(lftpd->client->socket);
 	}
 	return 0;

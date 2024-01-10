@@ -19,26 +19,28 @@ int lftpd_inet_listen(int port) {
 	int s = socket(AF_INET6, SOCK_STREAM, 0);
 
 	if (s < 0) {
-	  lftpd_log_error("error creating listener socket");
-	  return -1;
+		lftpd_log_error("error creating listener socket");
+		return -1;
 	}
 
 	struct sockaddr_in6 server_addr = {
-		   .sin6_family = AF_INET6,
-		   .sin6_addr = in6addr_any,
-		   .sin6_port = htons(port),
+		.sin6_family = AF_INET6,
+		.sin6_addr = in6addr_any,
+		.sin6_port = htons(port),
 	};
 
 	int err = bind(s, (struct sockaddr *) &server_addr, sizeof(server_addr));
 	if (err < 0) {
-	  lftpd_log_error("error binding listener port %d", port);
-	  return -1;
+		lftpd_log_error("error binding listener port %d", port);
+		close(s);
+		return -1;
 	}
 
-	err = listen(s, 10);
+	err = listen(s, SOMAXCONN);
 	if (err < 0) {
-	   lftpd_log_error("error listening on socket");
-	   return -1;
+		lftpd_log_error("error listening on socket");
+		close(s);
+		return -1;
 	}
 
 	return s;
