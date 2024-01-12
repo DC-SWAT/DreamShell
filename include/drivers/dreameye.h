@@ -82,7 +82,24 @@ typedef struct dreameye_state_ext {
     /** \brief  Frame capture callback. */
     dreameye_frame_cb callback;
 
+    /** \brief  Last frame request time in NS */
+    uint64_t last_request;
+
 } dreameye_state_ext_t;
+
+typedef struct dreameye_preview {
+
+    int isp_mode;
+    int bpp;
+
+    int fullscreen;
+    int scale;
+    int x;
+    int y;
+
+    dreameye_frame_cb callback;
+
+} dreameye_preview_t;
 
 
 /** \brief  Read/write CMOS Image Sensor registers. */
@@ -131,7 +148,6 @@ typedef struct dreameye_state_ext {
     Dreameye as the dev parameter.
 
     \param  dev             The device to get an image from.
-    \param  fb_num          The frame buffer number to download.
     \param  data            A pointer to a buffer to store things in. This
                             will be allocated by the function and you are
                             responsible for freeing the data when you are done.
@@ -140,8 +156,12 @@ typedef struct dreameye_state_ext {
     \retval MAPLE_EOK       On success.
     \retval MAPLE_EFAIL     On error.
 */
-int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data, int *img_sz);
+int dreameye_get_video_frame(maple_device_t *dev, uint8_t **data, int *img_sz);
 
+/** \brief  Request a captured frame from the Dreameye.
+ * 
+ */
+int dreameye_req_video_frame(maple_device_t *dev);
 
 /** \brief  Get params from any subsystem
  * TODO
@@ -149,47 +169,47 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data
 int dreameye_get_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t *value);
 
 /** \brief  Set params for any subsystem
- * TODO
+ * 
  */
 int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value);
 
 /** \brief  Add to queue params for any subsystem
- * TODO
+ * 
  */
 int dreameye_queue_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value);
 
 /** \brief  Setup CIS and ISP regs for video capturing
- * TODO
+ * 
  */
 int dreameye_setup_video_camera(maple_device_t *dev, int isp_mode, int format);
 
 /** \brief  Stop video capture
- * TODO
+ * 
  */
 int dreameye_stop_video_camera(maple_device_t *dev);
 
 /** \brief  Initialize preview
- * TODO
+ * 
  */
-int dreameye_preview_init(maple_device_t *dev, int isp_mode, int fullscreen, int scale, int x, int y);
+int dreameye_preview_init(maple_device_t *dev, dreameye_preview_t *params);
 
 /** \brief  Shutdown preview
- * TODO
+ * 
  */
-void dreameye_preview_shutdown(void);
+void dreameye_preview_shutdown(maple_device_t *dev);
 
 /** \brief  Start frames capturing
- * TODO
+ * 
  */
 int dreameye_start_capturing(maple_device_t *dev, dreameye_frame_cb cb);
 
 /** \brief  Stop frames capturing
- * TODO
+ * 
  */
 int dreameye_stop_capturing(maple_device_t *dev);
 
 /** \brief  Polling device
- * TODO
+ * 
  */
 int dreameye_poll(maple_device_t *dev);
 

@@ -28,19 +28,23 @@ static float frame_x = 0.0f;
 static float frame_y = 0.0f;
 static float frame_x_old = 0.0f;
 static float frame_y_old = 0.0f;
+static int frame_format = DREAMEYE_FRAME_FMT_YUV420P;
 
 static pvr_ptr_t pvr_txr;
 static plx_texture_t *plx_txr;
-static maple_device_t *dreameye;
 // static semaphore_t yuv_done = SEM_INITIALIZER(0);
 
 static int capturing = 0;
 static int got_frame = 0;
 static int is_fullscreen;
 static int back_to_window;
-static kthread_t *thread = NULL;
-static Event_t *input_event = NULL;
-static Event_t *video_event = NULL;
+
+static kthread_t *thread;
+static Event_t *input_event;
+static Event_t *video_event;
+
+static maple_device_t *dreameye;
+static dreameye_frame_cb frame_callback;
 
 
 static void dreameye_preview_frame() {
@@ -109,7 +113,7 @@ static void onPreviewClick(void) {
             EnableScreen();
             GUI_Enable();
         } else {
-            dreameye_preview_shutdown();
+            dreameye_preview_shutdown(dreameye);
         }
     } else {
 
@@ -256,7 +260,7 @@ static void yuv420p_to_yuv422(uint8_t *src) {
 
 static void *capture_thread(void *param) {
     uint8_t *frame = NULL;
-	int size = 0, res, num = 1;
+	int size = 0, res;
 
     while(capturing) {
 
@@ -265,19 +269,47 @@ static void *capture_thread(void *param) {
             continue;
         }
 
-        do {
-            num ^= 1;
-            res = dreameye_get_video_frame(dreameye, num, &frame, &size);
-        } while(res != MAPLE_EOK && capturing);
+        res = dreameye_req_video_frame(dreameye);
+
+        if(frame_callback && frame) {
+            frame_callback(dreameye, frame, size);
+            free(frame);
+        }
+
+        if(res != MAPLE_EOK) {
+            thd_pass();
+            continue;
+        }
+
+        res = dreameye_get_video_frame(dreameye, &frame, &size);
+
+        if(res != MAPLE_EOK) {
+            thd_pass();
+            continue;
+        }
 
         if(frame) {
             LockVideo();
-            yuv420p_to_yuv422(frame);
+
             if(!got_frame) {
                 got_frame = 1;
             }
+            switch(frame_format) {
+                case DREAMEYE_FRAME_FMT_YUV420P:
+                    yuv420p_to_yuv422(frame);
+                    break;
+                case DREAMEYE_FRAME_FMT_YUYV422:
+                    // TODO: yuyv422_to_yuv422(frame);
+                    break;
+                default:
+                    got_frame = 0;
+                    break;
+            }
             UnlockVideo();
-            free(frame);
+
+            if(!frame_callback) {
+                free(frame);
+            }
         }
     }
     return NULL;
@@ -289,27 +321,31 @@ static void asic_yuv_evt_handler(uint32 code) {
     dbglog(DBG_DEBUG, "%s: %d\n", __func__, sem_count(&yuv_done));
 }*/
 
-int dreameye_preview_init(maple_device_t *dev, int isp_mode, int fullscreen, int scale, int x, int y) {
+int dreameye_preview_init(maple_device_t *dev, dreameye_preview_t *params) {
     int rs;
 
     if(dreameye) {
-        return 0;
+        dreameye_preview_shutdown(dreameye);
+    }
+	if(!dev) {
+		ds_printf("DS_ERROR: Couldn't find any attached devices.\n");
+		return -1;
+	}
+    if(!params) {
+        ds_printf("DS_ERROR: Params is required.\n");
+        return -1;
     }
 
     dreameye = dev;
+    frame_callback = params->callback;
     got_frame = 0;
     back_to_window = 0;
-    is_fullscreen = fullscreen;
-    frame_scale = (float)scale;
-    frame_x = (float)x;
-    frame_y = (float)y;
+    is_fullscreen = params->fullscreen;
+    frame_scale = (float)params->scale;
+    frame_x = (float)params->x;
+    frame_y = (float)params->y;
 
-	if(!dreameye) {
-		ds_printf("DS_ERROR: Couldn't find any attached devices, bailing out.\n");
-		return -1;
-	}
-
-    switch(isp_mode) {
+    switch(params->isp_mode) {
         case DREAMEYE_ISP_MODE_QSIF:
             frame_txr_width = 160;
             frame_txr_height = 120;
@@ -329,11 +365,23 @@ int dreameye_preview_init(maple_device_t *dev, int isp_mode, int fullscreen, int
             pvr_txr_height = 512;
             break;
         default:
-            ds_printf("DS_ERROR: Unsupported ISP mode: %d\n", isp_mode);
+            ds_printf("DS_ERROR: Unsupported ISP mode: %d\n", params->isp_mode);
             return -1;
     }
 
-    rs = dreameye_setup_video_camera(dreameye, isp_mode, DREAMEYE_FRAME_FMT_YUV420P);
+    switch(params->bpp) {
+        case 12:
+            frame_format = DREAMEYE_FRAME_FMT_YUV420P;
+            break;
+        case 16:
+            frame_format = DREAMEYE_FRAME_FMT_YUYV422;
+            break;
+        default:
+            ds_printf("DS_ERROR: Unsupported bits per pixel: %d\n", params->bpp);
+            return -1;
+    }
+
+    rs = dreameye_setup_video_camera(dreameye, params->isp_mode, frame_format);
 
     if (rs != MAPLE_EOK) {
         ds_printf("DS_ERROR: Camera setup failed\n");
@@ -376,7 +424,7 @@ int dreameye_preview_init(maple_device_t *dev, int isp_mode, int fullscreen, int
     return 0;
 }
 
-void dreameye_preview_shutdown(void) {
+void dreameye_preview_shutdown(maple_device_t *dev) {
     if(!dreameye) {
         return;
     }
@@ -386,7 +434,7 @@ void dreameye_preview_shutdown(void) {
 	// asic_evt_disable(ASIC_EVT_PVR_YUV_DONE, ASIC_IRQ_DEFAULT);
 	// asic_evt_set_handler(ASIC_EVT_PVR_YUV_DONE, NULL);
 
-    dreameye_stop_video_camera(dreameye);
+    dreameye_stop_video_camera(dev ? dev : dreameye);
     dreameye = NULL;
 
     RemoveEvent(video_event);

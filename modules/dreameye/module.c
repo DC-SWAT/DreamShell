@@ -107,7 +107,16 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 
 	if(show) {
 		ds_printf("DS_PROCESS: Initializing preview\n");
-		if (dreameye_preview_init(dreameye, isp, 1, 1, 0, 0) < 0) {
+		dreameye_preview_t p = {
+			.isp_mode = isp,
+    		.bpp = 12,
+			.fullscreen = 1,
+			.scale = 1,
+			.x = 0,
+			.y = 0,
+			.callback = NULL
+		};
+		if (dreameye_preview_init(dreameye, &p) < 0) {
 			return CMD_ERROR;
 		}
 		return CMD_OK;
@@ -115,7 +124,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 
 	if(hide) {
 		ds_printf("DS_PROCESS: Shutting down preview\n");
-		dreameye_preview_shutdown();
+		dreameye_preview_shutdown(dreameye);
 		return CMD_OK;
 	}
 

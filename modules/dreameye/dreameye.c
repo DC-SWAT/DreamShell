@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    dreameye.c - dreameye driver addons
-   Copyright (C) 2015, 2023 SWAT
+   Copyright (C) 2015, 2023, 2024 SWAT
 
 */          
 
@@ -24,7 +24,7 @@
 #define JANGGU_FMT_YUYV422      ((0 << 1) | (0 << 6))
 #define JANGGU_FMT_UNK24BPP     ((1 << 1) | (1 << 6))
 #define JANGGU_FMT_UNK32BPP     ((1 << 1) | (0 << 6))
-#define JANGGU_FMT_UNK7         ((1 << 7))
+#define JANGGU_FMT_UNK7         (1 << 7)
 
 // #define MAPLE_SPEED_2MBPS 0x0000
 #define MAPLE_SPEED_1MBPS 0x0100
@@ -155,49 +155,6 @@ static dreameye_register_t ic_regs[85] = {
 };
 
 
-void hexDump(char *desc, void *addr, int len) {
-    int i;
-    unsigned char buff[17];
-    unsigned char *pc = (unsigned char*)addr;
-
-    // Output description if given.
-    if (desc != NULL)
-        dbglog(DBG_DEBUG, "%s:\n", desc);
-
-    // Process every byte in the data.
-    for (i = 0; i < len; i++) {
-        // Multiple of 16 means new line (with line offset).
-
-        if ((i % 16) == 0) {
-            // Just don't print ASCII for the zeroth line.
-            if (i != 0)
-                dbglog(DBG_DEBUG, "  %s\n", buff);
-
-            // Output the offset.
-            dbglog(DBG_DEBUG, "  %04x ", i);
-        }
-
-        // Now the hex code for the specific character.
-        dbglog(DBG_DEBUG, " %02x", pc[i]);
-
-        // And store a printable ASCII character for later.
-        if ((pc[i] < 0x20) || (pc[i] > 0x7e))
-            buff[i % 16] = '.';
-        else
-            buff[i % 16] = pc[i];
-        buff[(i % 16) + 1] = '\0';
-    }
-
-    // Pad out last line if not exactly 16 characters.
-    while ((i % 16) != 0) {
-        dbglog(DBG_DEBUG, "   ");
-        i++;
-    }
-
-    // And print the final ASCII bit.
-    dbglog(DBG_DEBUG, "  %s\n", buff);
-}
-
 static void yuv420de_to_nv21(uint8_t *dest, const uint8_t *src, int width, int height) {
     int w, h;
 
@@ -304,8 +261,6 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
     respbuf32 = (uint32_t *)resp->data;
     respbuf8 = (uint8_t *)resp->data;
 
-    // hexDump("resp", resp->data, resp->data_len * 4);
-
     if(resp->response != MAPLE_RESPONSE_DATATRF) {
         first_state->img_transferring = -1;
         return;
@@ -366,16 +321,17 @@ static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
             first_state->img_transferring = -1;
         } else {
             first_state->img_transferring = 0;
+            first_state->last_request = timer_ns_gettime64();
+             /* FIXME: Better framebuffers sync */
+            if(first_state->width >= 320) {
+                timer_spin_sleep(10);
+            }
+            else {
+                timer_spin_sleep(2);
+            }
         }
         return;
     }
-
-    /* FIXME: Very stupid things right here, but it's sync frames */
-    if(first_state->width == 320)
-        timer_spin_sleep(1);
-    else
-        timer_spin_sleep(2);
-    /* End of FIXME */
 
     if(--first_state->img_transferring == 1) {
         dreameye_get_video_frame_part(frame->dev);
@@ -411,19 +367,18 @@ static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext
     return MAPLE_EOK;
 }
 
-int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data,
-                       int *img_sz) {
-    dreameye_state_ext_t *de;
+int dreameye_req_video_frame(maple_device_t *dev) {
 
     assert(dev != NULL);
     assert(dev->unit == 1);
 
+    dreameye_state_ext_t *de;
     de = (dreameye_state_ext_t *)dev->status;
     first_state = de;
 
     de->img_transferring = 1;
     de->img_size = 0;
-    de->img_number = fb_num;
+    de->img_number ^= 1;
 
     if(de->compressed) {
         de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE_COMPRESSED;
@@ -439,7 +394,30 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data
         goto fail;
     }
 
-    dreameye_get_video_frame_part(dev);
+    if(dreameye_get_video_frame_part(dev) != MAPLE_EOK) {
+        goto fail;
+    }
+
+    return MAPLE_EOK;
+
+fail:
+    first_state = NULL;
+    de->img_transferring = 0;
+    de->img_buf = NULL;
+    de->img_size = 0;
+    de->transfer_count = 0;
+
+    return MAPLE_EFAIL;
+}
+
+int dreameye_get_video_frame(maple_device_t *dev, uint8_t **data, int *img_sz) {
+
+    dreameye_state_ext_t *de;
+    de = (dreameye_state_ext_t *)dev->status;
+
+    if(!de->img_transferring) {
+        dreameye_req_video_frame(dev);
+    }
 
     while(de->img_transferring > 0) {
         thd_pass();
@@ -462,7 +440,6 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t fb_num, uint8_t **data
         free(de->img_buf);
     }
 
-fail:
     *data = NULL;
     *img_sz = 0;
     first_state = NULL;
@@ -508,11 +485,9 @@ static void dreameye_get_param_cb(maple_frame_t *frame) {
         assert((resp->data_len) == 3);
         assert(respbuf8[4] == 0xD0);
         assert(respbuf8[5] == 0x00);
-//        assert(respbuf8[8] == DREAMEYE_GETCOND_***);
 
         /* Update the data in the status. */
         de = (dreameye_state_ext_t *)frame->dev->status;
-//        hexDump("getparam", respbuf8, 12);
         de->value = respbuf8[10] | respbuf8[11] << 8;
     }
 
@@ -586,8 +561,6 @@ static void dreameye_queue_param_cb(maple_frame_t *frame) {
         dbglog(DBG_ERROR, "%s: bad response: %d\n", __func__, resp->response);
         return;
     }
-
-    // hexDump("setparam", respbuf8, 12);
 }
 
 int dreameye_queue_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t value) {
@@ -725,6 +698,8 @@ static int dreameye_set_format(maple_device_t **devs, int isp_mode, int format) 
 
     de->format = format;
     de->compressed = (pix_fmt & JANGGU_FMT_UNCOMPRESSED) ? 0 : 1;
+    de->img_number = 1;
+    de->last_request = 0;
 
     /* Set ISP operation mode */
     dreameye_set_param(devs[0], DREAMEYE_COND_REG_ISP, ISP_OP_MODE, isp_mode);
