@@ -57,6 +57,7 @@ dbgio_set_dev_ds
 dbgio_set_dev_scif
 dbgio_set_dev_fb
 dbgio_set_dev_sd
+dbgio_hex_dump
 InitSDCard
 InitIDE
 InitRomdisk
@@ -1908,3 +1909,16 @@ png_set_gamma
 png_set_gray_to_rgb
 png_set_tRNS_to_alpha
 png_set_strip_16
+#
+# Timers
+#
+timer_ns_gettime64
+perf_cntr_config
+perf_cntr_start
+perf_cntr_stop
+perf_cntr_clear
+perf_cntr_count
+perf_cntr_timer_enable
+perf_cntr_timer_disable
+perf_cntr_timer_enabled
+perf_cntr_timer_ns

@@ -1,7 +1,7 @@
 /** 
  * \file    utils.h
  * \brief   DreamShell utils
- * \date    2004-2023
+ * \date    2004-2024
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -58,6 +58,7 @@ void dbgio_set_dev_scif();
 void dbgio_set_dev_fb();
 void dbgio_set_dev_sd();
 
+void dbgio_hex_dump(char *desc, void *addr, int len);
 
 char *realpath(const char *path, char *resolved);
 int makeabspath_wd(char *buff, char *path, char *dir, size_t size);
