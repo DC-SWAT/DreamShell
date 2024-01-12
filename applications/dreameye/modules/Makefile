@@ -1,17 +1,17 @@
 #
 # DreamEye app module for DreamShell
-# Copyright (C) 2023 SWAT
+# Copyright (C) 2023, 2024 SWAT
 # http://www.dc-swat.ru
 #
 
 APP_NAME = dreameye
 TARGET_NAME = app_$(APP_NAME)
-OBJS = module.o
-DBG_LIBS = -lds -ldreameye
+OBJS = module.o qr_code.o
+DBG_LIBS = -lds -ldreameye -lquirc
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
-VER_MINOR = 1
+VER_MINOR = 2
 VER_MICRO = 0
 
 KOS_CFLAGS += -I./

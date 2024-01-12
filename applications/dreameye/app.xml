@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="DreamEye" version="0.1.0" icon="images/icon.png">
+<app name="DreamEye" version="0.2.0" icon="images/icon.png">
 	<resources>
+		<module src="../../modules/quirc.klf" />
 		<module src="../../modules/dreameye.klf" />
 		<module src="modules/app_dreameye.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
@@ -64,10 +65,16 @@
 						<label font="m23" color="#ffffff" text="Preview 160x120" />
 					</input>
 				</panel>
-				<panel height="70" width="100%">
+				<panel height="65" width="100%">
 					<input type="button" width="280" height="60" onclick="console:app -o -n Main" align="center">
 						<label font="m23" color="#ffffff" text="Exit" />
 					</input>
+				</panel>
+				<panel height="20" width="100%">
+					<panel x="25">
+						<label align="left" color="#333333" font="arial" width="100%" height="20"
+							text="No QR Code"  name="qr-data" />
+					</panel>
 				</panel>
 			</panel>
 		</cardstack>
