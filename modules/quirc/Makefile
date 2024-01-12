@@ -1,6 +1,6 @@
 #
 # QR-code module for DreamShell
-# Copyright (C)2023 SWAT
+# Copyright (C)2023, 2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -15,6 +15,7 @@ OBJS = module.o \
 
 DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt
+KOS_CFLAGS += -DQUIRC_FLOAT_TYPE=float -O3 -funroll-all-loops -ffast-math
 
 VER_MAJOR = 1
 VER_MINOR = 2
