@@ -25,6 +25,7 @@ static struct {
     dreameye_preview_t preview;
     bool preview_visible;
     bool qr_exec;
+    bool qr_detected;
     size_t photo_count;
     app_action_t action;
 
@@ -86,18 +87,19 @@ static void frame_callback(maple_device_t *dev, uint8_t *frame, size_t len) {
     (void)dev;
 
     /* Max payload is 8896, but Dreameye can max 400-500 at 320x240. */
-    char qr_label_str[1024];
     char qr_str[1024];
+    char qr_label_str[sizeof(qr_str) + 8];
     char *qr_str_p = qr_str;
     size_t qr_len;
     int qr_count;
 
     memset(qr_str, 0, sizeof(qr_str));
-    memset(qr_label_str, 0, sizeof(qr_label_str));
-
     qr_count = qr_scan_frame(self.preview.bpp, frame, len, qr_str);
 
     if(qr_count > 0) {
+
+        memset(qr_label_str, 0, sizeof(qr_label_str));
+        self.qr_detected = true;
 
         while(qr_count--) {
             if(self.qr_exec) {
@@ -117,8 +119,11 @@ static void frame_callback(maple_device_t *dev, uint8_t *frame, size_t len) {
             GUI_LabelSetText(self.qr_data, qr_label_str);
         }
     }
-    else if(strncmp(GUI_LabelGetText(self.qr_data), NO_QR_CODE_TEXT, sizeof(NO_QR_CODE_TEXT))) {
-        GUI_LabelSetText(self.qr_data, NO_QR_CODE_TEXT);
+    else {
+        if(self.qr_detected == true) {
+             GUI_LabelSetText(self.qr_data, NO_QR_CODE_TEXT);
+        }
+        self.qr_detected = false;
     }
 }
 
@@ -156,6 +161,7 @@ void DreamEyeApp_Init(App_t *app) {
     self.preview.callback = frame_callback;
 
     self.qr_exec = true;
+    self.qr_detected = false;
     self.photo_count = get_photo_count(self.dev);
     UpdatePhotoCount();
 }

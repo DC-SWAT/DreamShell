@@ -79,6 +79,11 @@
 		</surface>
 		<image name="progressbar-back" src="../../gui/bars/progressbar_back.png" />
 		<image name="progressbar-fore" src="../../gui/bars/progressbar_fore.png" />
+		<surface width="328" height="248" name="preview-back">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="320" height="240" color="#BBBBBB" />
+			<fill x="5" y="5" width="318" height="238" color="#31799F" />
+		</surface>
 		<theme>
 			<input type="button" normal="but-large-normal" highlight="but-large-hl"
 				pressed="but-large-pressed" disabled="but-large-disabled" />
@@ -145,6 +150,13 @@
 						</panel>
 					</panel>
 				</panel>
+				<panel width="328" height="248" x="156" y="141">
+					<input type="button" width="328" height="248"
+						normal="preview-back" highlight="preview-back"
+						pressed="preview-back" disabled="preview-back">
+						<label font="comic-22" color="#EEEEEE" text="Camera preview" />
+					</input>
+				</panel>
 			</panel>
 			<panel name="photo-page" y="30">
 				<panel height="70" width="50%">
@@ -163,6 +175,13 @@
 					<input type="button" width="280" height="60"
 						onclick="export:DreamEyeApp_ShowMainPage()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Back" />
+					</input>
+				</panel>
+				<panel width="328" height="248" x="156" y="141">
+					<input type="button" width="328" height="248"
+						normal="preview-back" highlight="preview-back"
+						pressed="preview-back" disabled="preview-back">
+						<label font="comic-22" color="#EEEEEE" text="Camera preview" />
 					</input>
 				</panel>
 			</panel>
