@@ -2,15 +2,11 @@
 
    app_module.h - Bios flasher app module header
    Copyright (C)2013 Yev
-   Copyright (C)2013-2023 SWAT
+   Copyright (C)2013, 2014, 2023, 2024 SWAT
 
 */
 
 #include "ds.h"
-
-void BiosFlasher_OnLeftScrollPressed(GUI_Widget *widget);
-
-void BiosFlasher_OnRightScrollPressed(GUI_Widget *widget);
 
 void BiosFlasher_ItemClick(dirent_fm_t *fm_ent);
 

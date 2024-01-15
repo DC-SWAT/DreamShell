@@ -2,7 +2,7 @@
 
    module.c - Bios flasher app module
    Copyright (C)2013 Yev
-   Copyright (C)2013-2014 SWAT
+   Copyright (C)2013, 2014, 2024 SWAT
 
 */
 
@@ -59,15 +59,13 @@ struct
 	GUI_Widget *m_ProgressBar;
 	GUI_Widget *filebrowser;
 	GUI_Widget *pages;
-	
+
 	GUI_Surface *m_ItemNormal;
 	GUI_Surface *m_ItemSelected;
 
 	char* m_SelectedBiosFile;
 	OperationState_t m_CurrentOperation;
-	unsigned int m_ScrollPos;
-	unsigned int m_MaxScroll;
-	
+
 	bool have_args;
 }self;
 
@@ -400,33 +398,6 @@ int BiosFlasher_GetNumFilesCurrentDir()
 }
 
 // HANDLERS
-void BiosFlasher_ActivateScrollButtons(int currScrollPos, int maxScroll)
-{
-	GUI_WidgetSetEnabled(BiosFlasher_GetWidget("btn_scroll_left"), 0);
-	GUI_WidgetSetEnabled(BiosFlasher_GetWidget("btn_scroll_right"), 0);
-	if (currScrollPos > 0)
-	{
-		GUI_WidgetSetEnabled(BiosFlasher_GetWidget("btn_scroll_left"), 1);
-	}
-	if (currScrollPos < maxScroll)
-	{
-		GUI_WidgetSetEnabled(BiosFlasher_GetWidget("btn_scroll_right"), 1);
-	}
-}
-
-void BiosFlasher_OnLeftScrollPressed(GUI_Widget *widget)
-{
-	if (--self.m_ScrollPos < 0) self.m_ScrollPos = 0;
-	GUI_PanelSetYOffset(GUI_FileManagerGetItemPanel(self.filebrowser), self.m_ScrollPos * 300);
-	BiosFlasher_ActivateScrollButtons(self.m_ScrollPos, self.m_MaxScroll);
-}
-
-void BiosFlasher_OnRightScrollPressed(GUI_Widget *widget)
-{
-	if (++self.m_ScrollPos > self.m_MaxScroll) self.m_ScrollPos = self.m_MaxScroll;
-	GUI_PanelSetYOffset(GUI_FileManagerGetItemPanel(self.filebrowser), self.m_ScrollPos * 300);
-	BiosFlasher_ActivateScrollButtons(self.m_ScrollPos, self.m_MaxScroll);
-}
 
 void BiosFlasher_ItemClick(dirent_fm_t *fm_ent) 
 {
@@ -436,12 +407,6 @@ void BiosFlasher_ItemClick(dirent_fm_t *fm_ent)
 	if(ent->attr == O_DIR) 
 	{
 		GUI_FileManagerChangeDir(fmw, ent->name, ent->size);
-
-		self.m_ScrollPos = 0;
-		self.m_MaxScroll = BiosFlasher_GetNumFilesCurrentDir() / 10;
-		GUI_PanelSetYOffset(GUI_FileManagerGetItemPanel(fmw), self.m_ScrollPos * 300);
-		BiosFlasher_ActivateScrollButtons(self.m_ScrollPos, self.m_MaxScroll);
-
 		return;
 	}
 
@@ -646,11 +611,6 @@ void BiosFlasher_EnableChoseFilePage()
 	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 1);
 	ScreenFadeIn();
-
-	self.m_ScrollPos = 0;
-	self.m_MaxScroll = BiosFlasher_GetNumFilesCurrentDir() / 10;
-	GUI_PanelSetYOffset(GUI_FileManagerGetItemPanel(self.filebrowser), self.m_ScrollPos * 300);
-	BiosFlasher_ActivateScrollButtons(self.m_ScrollPos, self.m_MaxScroll);
 }
 
 void BiosFlasher_EnableProgressPage()
@@ -667,7 +627,7 @@ void BiosFlasher_EnableResultPage(int result, const char* fileName)
 	ScreenFadeIn();
 	
 	char title[32];
-	char msg[64];	// TODO: Check overflow
+	char msg[128];
 	memset(title, 0, sizeof(title));
 	memset(msg, 0, sizeof(msg));
 	switch(self.m_CurrentOperation)
@@ -676,12 +636,12 @@ void BiosFlasher_EnableResultPage(int result, const char* fileName)
 			if (result == eSuccess)
 			{
 				sprintf(title, "Done");
-				sprintf(msg, "Writing successful");
+				snprintf(msg, sizeof(msg), "Writing successful");
 			}
 			else
 			{
 				sprintf(title, "Error");
-				sprintf(msg, "Writing fail. Status code: %d", result);
+				snprintf(msg, sizeof(msg), "Writing fail. Status code: %d", result);
 			}
 		break;
 
@@ -689,12 +649,12 @@ void BiosFlasher_EnableResultPage(int result, const char* fileName)
 			if (result == eSuccess)
 			{
 				sprintf(title, "Done");
-				sprintf(msg, "Reading successful. File stored at file %s", fileName);
+				snprintf(msg, sizeof(msg), "Reading successful.");
 			}
 			else
 			{
 				sprintf(title, "Error");
-				sprintf(msg, "Reading fail. Status code: %d", result);
+				snprintf(msg, sizeof(msg), "Reading fail. Status code: %d", result);
 			}
 		break;
 
@@ -702,17 +662,17 @@ void BiosFlasher_EnableResultPage(int result, const char* fileName)
 			if (result == eSuccess)
 			{
 				sprintf(title, "Done");
-				sprintf(msg, "Comare successful. Flash data match");
+				snprintf(msg, sizeof(msg), "Comare successful. Flash data match");
 			}
 			else if (result == eDataMissmatch)
 			{
 				sprintf(title, "Done");
-				sprintf(msg, "Comare successful. Flash data missmatch");
+				snprintf(msg, sizeof(msg), "Comare successful. Flash data missmatch");
 			}
 			else
 			{
 				sprintf(title, "Error");
-				sprintf(msg, "Comaring fail. Status code: %d", result);
+				snprintf(msg, sizeof(msg), "Comaring fail. Status code: %d", result);
 			}
 		break;
 
