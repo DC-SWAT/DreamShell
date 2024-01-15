@@ -5,6 +5,7 @@
 */
 
 #include <ds.h>
+#include <drivers/dreameye.h>
 #include <quirc.h>
 
 static struct quirc *qr = NULL;
@@ -30,7 +31,8 @@ static void yuyv_to_luma(const uint8_t *src, int src_pitch,
 
 int qr_scan_frame(int bpp, uint8_t *frame, size_t len, char *qr_data) {
 
-    int i, w, h, count, rv = -1;
+    int i, w, h, count, rv = 0;
+    size_t qr_data_len;
     uint8_t *buf;
     uint64_t begin, end;
 
@@ -76,17 +78,39 @@ int qr_scan_frame(int bpp, uint8_t *frame, size_t len, char *qr_data) {
 
             ds_printf("QR data: \"%s\", time %d ms\n",
                 data.payload, (end - begin) / 1000000);
-            rv = 0;
+            rv++;
 
             if(qr_data) {
-                memcpy(qr_data, data.payload, strlen((char *)data.payload) + 1);
+                qr_data_len = strlen((char *)data.payload);
+                memcpy(qr_data, data.payload, qr_data_len + 1);
+                qr_data += qr_data_len + 1;
             }
         }
     }
     return rv;
 }
 
-int qr_scan_resize(int w, int h) {
+int qr_scan_resize(int isp_mode) {
+    int w, h;
+    if (!qr) {
+        return -1;
+    }
+    switch(isp_mode) {
+        case DREAMEYE_ISP_MODE_QSIF:
+            w = 160;
+            h = 120;
+            break;
+        case DREAMEYE_ISP_MODE_SIF:
+            w = 320;
+            h = 240;
+            break;
+        case DREAMEYE_ISP_MODE_VGA:
+            w = 640;
+            h = 480;
+            break;
+        default:
+            return -1;
+    }
     if (quirc_resize(qr, w, h) < 0) {
         ds_printf("DS_ERROR: Couldn't allocate QR buffer\n");
         return -1;
@@ -110,4 +134,5 @@ void qr_scan_shutdown() {
         return;
     }
     quirc_destroy(qr);
+    qr = NULL;
 }

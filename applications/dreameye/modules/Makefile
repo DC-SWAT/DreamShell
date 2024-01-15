@@ -6,12 +6,12 @@
 
 APP_NAME = dreameye
 TARGET_NAME = app_$(APP_NAME)
-OBJS = module.o qr_code.o
+OBJS = module.o qr_code.o photo.o
 DBG_LIBS = -lds -ldreameye -lquirc
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
-VER_MINOR = 2
+VER_MINOR = 3
 VER_MICRO = 0
 
 KOS_CFLAGS += -I./

@@ -5,5 +5,13 @@ include app_module.h
 DreamEyeApp_Init
 DreamEyeApp_Shutdown
 DreamEyeApp_Open
-DreamEyeApp_ShowPage
-DreamEyeApp_ShowPreview
+DreamEyeApp_ShowMainPage
+DreamEyeApp_ShowPhotoPage
+DreamEyeApp_ExportPhoto
+DreamEyeApp_ErasePhoto
+DreamEyeApp_FileBrowserItemClick
+DreamEyeApp_FileBrowserConfirm
+DreamEyeApp_ChangeResolution
+DreamEyeApp_ToggleDetectQR
+DreamEyeApp_ToggleExecQR
+DreamEyeApp_Abort
