@@ -271,7 +271,7 @@ static void *capture_thread(void *param) {
 
         res = dreameye_req_video_frame(dreameye);
 
-        if(frame_callback && frame) {
+        if(frame_callback != NULL && frame) {
             frame_callback(dreameye, frame, size);
             free(frame);
         }
@@ -307,7 +307,7 @@ static void *capture_thread(void *param) {
             }
             UnlockVideo();
 
-            if(!frame_callback) {
+            if(frame_callback == NULL) {
                 free(frame);
             }
         }

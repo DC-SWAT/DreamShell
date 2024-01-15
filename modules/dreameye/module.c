@@ -183,7 +183,7 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 		} else {
 
 			if(num < 2) {
-				err = dreameye_get_video_frame(dreameye, num, &buf, &size);
+				err = dreameye_get_video_frame(dreameye, &buf, &size);
 			} else {
 				err = dreameye_get_image(dreameye, num, &buf, &size);
 			}
