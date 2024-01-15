@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="VMU Manager" version="1.0.0" icon="images/icon.png">
+<app name="VMU Manager" version="1.0.1" icon="images/icon.png" extensions=".vmd .vmu .dci">
 	<resources>
 		<module src="modules/app_vmu_manager.klf" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="30" name="m23_30" />
 		<font src="../../fonts/ttf/arial.ttf" type="ttf" size="16" name="arial" />
 		<surface width="640" height="400" name="back">
-		<blit x="0" y="0" width="640" height="400" surface="images/background.jpg" />
+			<blit x="0" y="0" width="640" height="400" surface="images/background.jpg" />
 		</surface>
 		<image src="../../gui/bars/black_bar_640x37.png" name="iBarTop" />
 		<image src="images/black_bar_down_640x48.png" name="iBarDown" />
@@ -28,6 +28,7 @@
 		<image src="images/lightgun.png" name="lightgun" />
 		<image src="images/keyboard.png" name="keyboard" />
 		<image src="images/mouse.png" name="mouse" />
+		<image src="images/dreameye.png" name="dreameye" />
 		<image src="images/confirm.png" name="confirmimg" />
 		<image src="images/confirm0.png" name="confirmimg0" />
 		<image src="images/confirm1.png" name="confirmimg1" />
@@ -115,8 +116,7 @@
 				x="28" y="15" width="48" height="48" name="home_but"
 				onclick="export:VMU_Manager_EnableMainPage" />	
 		</panel>
-		
-				
+
 		<cardstack x="0" y="40" width="640" height="400" name="pages">
 			
 			<panel background="back" x="0" y="0" width="640" height="400" name="main_page">
@@ -215,31 +215,30 @@
 				</panel>
 				
 				<panel x="20" y="350" width="300" height="40">
-					<label width="300" height="40" x="0" y="0" font="m23" color="#FFFFFF" text="SELECT SOURCE VMU" name="drection" />
+					<label width="300" height="40" font="m23" color="#FFFFFF" text="SELECT SOURCE VMU" name="drection" />
 				</panel>
 
 			</panel>
 			
-			<panel x="0" y="0" width="640" height="400" name="vmu_page" background="vmu_frame" >
-				
+			<panel width="640" height="400" name="vmu_page" background="vmu_frame" >
+
 				<panel x="220" y="25" width="200" height="350" name="progressbar_container">	
-					<progressbar width="200" height="350" x="0" y="0" name="progressbar" pos="0.0" bimage="progressbar_back" pimage="progressbar" />
+					<progressbar width="200" height="350" name="progressbar" pos="0.0" bimage="progressbar_back" pimage="progressbar" />
 				</panel>
-				
-				<panel x="150" y="100" width="400" height="126" name="confirm" >
-					
-					<panel x="0" y="86" width="400" height="40" background="confirmimg1" >
+
+				<panel x="115" y="100" width="400" height="180" name="confirm" background="confirmimg1" >
+					<panel x="0" y="30" width="400" height="40">
 						<label width="380" height="35" x="10" y="0" font="arial" color="#FF260F" name="confirm-text" text="   " align="center"/>
 					</panel>
-					
-					<image src="confirmimg" x="0" y="0" width="400" height="86" name="image-confirm"/>
-					
+					<panel x="0" y="75" width="400" height="86">
+						<image src="confirmimg" width="400" height="86" name="image-confirm" />
+					</panel>
 				</panel>
-				
+
 				<panel x="220" y="0" width="100" height="280" >
-					<image src="help" x="0" y="0" width="100" height="280" />
+					<image src="help" width="100" height="280" />
 				</panel>
-				
+
 				<input type="button" 
 							normal="dump" 
 							highlight="dump_h" 
@@ -255,10 +254,8 @@
 					item_highlight="item-focus" 
 					item_pressed="item-focus" 
 					item_disabled="item-normal"
-					item_font="arial" 
-					item_font_r="255" 
-					item_font_g="255" 
-					item_font_b="255"
+					item_font="arial"
+					item_font_color="#FFFFFF"
 					onclick="export:VMU_Manager_ItemClick()" />
 				</panel>
 					
@@ -268,10 +265,8 @@
 					item_highlight="item-focus2" 
 					item_pressed="item-focus2" 
 					item_disabled="item-normal2"
-					item_font="arial" 
-					item_font_r="255" 
-					item_font_g="255" 
-					item_font_b="255"
+					item_font="arial"
+					item_font_color="#FFFFFF"
 					onclick="export:VMU_Manager_ItemClick()" />
 					
 					<input type="button" 

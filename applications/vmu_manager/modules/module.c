@@ -2,18 +2,19 @@
 
    module.c - VMU Manager app module
    Copyright (C)2014-2015 megavolt85
+   Copyright (C)2024 SWAT
 
 */
 
 #include "ds.h"
 #include "fs_vmd.h"
+#include <stdbool.h>
 
 DEFAULT_MODULE_EXPORTS(app_vmu_manager);
 
 #define MAPLE_FUNC_GUN     0x81000000
-#define PACK_NYBBLE_RGB565(nybble) ((((nybble & 0x0f00)>>8)*2)<<11) + ((((nybble & 0x00f0)>>4)*4)<<5) + ((((nybble & 0x000f)>>0)*2)<<0)
-
-kthread_t * t0;
+#define PACK_NYBBLE_RGB565(nybble) ((((nybble & 0x0f00)>>8)*2)<<11) + \
+	((((nybble & 0x00f0)>>4)*4)<<5) + ((((nybble & 0x000f)>>0)*2)<<0)
 
 #define VMU_ICON_WIDTH  32
 #define VMU_ICON_HEIGHT 32
@@ -61,23 +62,29 @@ static struct {
 	GUI_Surface *dump_icon;
 	GUI_Surface *vmuicon;
 	SDL_Surface *vmu_icon;
-	
+
 	GUI_Surface *controller;
 	GUI_Surface *lightgun;
 	GUI_Surface *keyboard;
 	GUI_Surface *mouse;
+	GUI_Surface *dreameye;
 
 	GUI_Widget *vmu_page;
 	GUI_Widget *vmu_container;
-	
+
 	GUI_Widget *confirm;
 	GUI_Widget *image_confirm;
 	GUI_Widget *confirm_text;
 	GUI_Widget *drection;
-	
-	volatile int thread_kill;
-	int vmu_freeblock , vmu_freeblock2 , direction_flag;
-	const char* home_path;
+
+	kthread_t *thd;
+	int thread_kill;
+	bool have_args;
+
+	int vmu_freeblock;
+	int vmu_freeblock2;
+	int direction_flag;
+	char* home_path;
 	char* m_SelectedFile;
 	char* m_SelectedPath;
 	char desc_short[17];
@@ -143,39 +150,47 @@ static void* vmu_dev(const char* path){
 	return device;
 }
 
-static void* rmdir_recursive(const char* folder){
-	
+static void *rmdir_recursive(const char* folder) {
+
 	file_t d;
 	dirent_t *de;
 	char dst[NAME_MAX];
-	
+
 	d = fs_open(folder, O_DIR);
-	
+
 	while ((de = fs_readdir(d))){
-		
-		if (strcmp(de->name ,".") == 0 || strcmp(de->name ,"..") == 0) continue;
-		sprintf(dst,"%s/%s",folder,de->name);
-		thd_sleep(200);
-		if (de->attr == 4096) rmdir_recursive(dst);
-		else fs_unlink (dst);
-		
+
+		if (strcmp(de->name ,".") == 0 || strcmp(de->name ,"..") == 0) {
+			continue;
+		}
+		snprintf(dst, sizeof(dst), "%s/%s", folder, de->name);
+
+		if (de->attr == O_DIR) {
+			rmdir_recursive(dst);
+		}
+		else {
+			fs_unlink(dst);
+		}
 	}
 	fs_close(d);
-	fs_rmdir (folder);
-	thd_sleep(200);
+	fs_rmdir(folder);
 	return NULL;
 }
 
 static void free_blocks(const char *path , int n)
 {
-	maple_device_t *vmucur = NULL;
-	
-	if((vmucur = vmu_dev(path)) == NULL) return;
+	maple_device_t *vmucur = vmu_dev(path);
 
-	if(n == 0){
-	self.vmu_freeblock = vmufs_free_blocks(vmucur);
-	}else self.vmu_freeblock2 = vmufs_free_blocks(vmucur);
-	
+	if(vmucur == NULL) {
+		return;
+	}
+
+	if(n == 0) {
+		self.vmu_freeblock = vmufs_free_blocks(vmucur);
+	}
+	else {
+		self.vmu_freeblock2 = vmufs_free_blocks(vmucur);
+	}
 	return;
 }
 
@@ -200,9 +215,9 @@ static void addbutton()
 
 static void disable_high(int fm)
 {	
-int i;
-GUI_Widget *panel, *w;
-	
+	int i;
+	GUI_Widget *panel, *w;
+
 	if(fm == RIGHT_FM){
 		panel = GUI_FileManagerGetItemPanel(self.filebrowser2);
 		for(i = 0; i < GUI_ContainerGetCount(panel); i++) {
@@ -318,6 +333,12 @@ static void *maple_scan()
 			
 			switch(maple_dev[a][0]->info.functions)
 			{
+				case MAPLE_FUNC_CAMERA:
+				
+					GUI_ProgressBarSetImage2(self.img_cont[a], self.dreameye);
+					GUI_ProgressBarSetPosition(self.img_cont[a], 1.0);
+					break;
+
 				case MAPLE_FUNC_CONTROLLER:
 				
 					GUI_ProgressBarSetImage2(self.img_cont[a], self.controller);
@@ -381,9 +402,11 @@ static void *maple_scan()
 					GUI_WidgetSetEnabled(self.vmu[a][1], 0);
 			}
 		}	
-		if (self.thread_kill != 0 || GUI_CardStackGetIndex(self.pages) != 0) break;
+		if (self.thread_kill != 0 || GUI_CardStackGetIndex(self.pages) != 0) {
+			break;
+		}
+		thd_sleep(500);
 	}
-	
 	return NULL;
 }
 
@@ -402,150 +425,160 @@ static void* GetElement(const char *name, ListItemType type, int from)
 
 void Vmu_Manager_Init(App_t* app)
 {
-	
 	self.m_App = app;
+
+	if (self.m_App == NULL) {
+		ds_printf("DS_ERROR: Can't find app named: %s\n", "Vmu Manager");
+		return;
+	}
+
+	int x,y;
+	self.direction_flag = 0;
+	self.pages	= (GUI_Widget *) GetElement("pages", LIST_ITEM_GUI_WIDGET, 1);
+	self.button_home = (GUI_Widget *) GetElement("home_but", LIST_ITEM_GUI_WIDGET, 1);
+	self.cd_c  = (GUI_Widget *) GetElement("/cd", LIST_ITEM_GUI_WIDGET, 1);
+	self.sd_c  = (GUI_Widget *) GetElement("/sd/vmu", LIST_ITEM_GUI_WIDGET, 1);
+	self.hdd_c = (GUI_Widget *) GetElement("/ide/vmu", LIST_ITEM_GUI_WIDGET, 1);
+	self.pc_c  = (GUI_Widget *) GetElement("/pc", LIST_ITEM_GUI_WIDGET, 1);
+	self.format_c  = (GUI_Widget *) GetElement("format-c", LIST_ITEM_GUI_WIDGET, 1);
+	self.dst_vmu  = (GUI_Widget *) GetElement("dst-vmu", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu_container  = (GUI_Widget *) GetElement("vmu-container", LIST_ITEM_GUI_WIDGET, 1);
+	self.folder_name  = (GUI_Widget *) GetElement("folder-name", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.vmu[0][0]  = (GUI_Widget *) GetElement("A1", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[0][1]  = (GUI_Widget *) GetElement("A2", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[1][0]  = (GUI_Widget *) GetElement("B1", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[1][1]  = (GUI_Widget *) GetElement("B2", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[2][0]  = (GUI_Widget *) GetElement("C1", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[2][1]  = (GUI_Widget *) GetElement("C2", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[3][0]  = (GUI_Widget *) GetElement("D1", LIST_ITEM_GUI_WIDGET, 1);
+	self.vmu[3][1]  = (GUI_Widget *) GetElement("D2", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.img_cont[0] = (GUI_Widget *) GetElement("contA", LIST_ITEM_GUI_WIDGET, 1);
+	self.img_cont[1] = (GUI_Widget *) GetElement("contB", LIST_ITEM_GUI_WIDGET, 1);
+	self.img_cont[2] = (GUI_Widget *) GetElement("contC", LIST_ITEM_GUI_WIDGET, 1);
+	self.img_cont[3] = (GUI_Widget *) GetElement("contD", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.save_name = (GUI_Widget *) GetElement("save-name", LIST_ITEM_GUI_WIDGET, 1);
+	self.save_size = (GUI_Widget *) GetElement("save-size", LIST_ITEM_GUI_WIDGET, 1);
+	self.save_descshort = (GUI_Widget *) GetElement("desc-short", LIST_ITEM_GUI_WIDGET, 1);
+	self.save_desclong = (GUI_Widget *) GetElement("desc-long", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.name_device = (GUI_Widget *) GetElement("name-device", LIST_ITEM_GUI_WIDGET, 1);
+	self.free_mem = (GUI_Widget *) GetElement("free-mem", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.sicon = (GUI_Widget *) GetElement("vmu-icon", LIST_ITEM_GUI_WIDGET, 1);
+	self.button_dump = (GUI_Widget *) GetElement("dump-button", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.filebrowser = (GUI_Widget *) GetElement("file_browser", LIST_ITEM_GUI_WIDGET, 1);
+	self.filebrowser2 = (GUI_Widget *) GetElement("file_browser2", LIST_ITEM_GUI_WIDGET, 1);
+	self.m_ItemNormal = (GUI_Surface *) GetElement("item-normal", LIST_ITEM_GUI_SURFACE, 0);
+	self.m_ItemSelected	= (GUI_Surface *) GetElement("item-selected", LIST_ITEM_GUI_SURFACE, 0);
+	self.m_ItemNormal2 = (GUI_Surface *) GetElement("item-normal2", LIST_ITEM_GUI_SURFACE, 0);
+	self.m_ItemSelected2	= (GUI_Surface *) GetElement("item-selected2", LIST_ITEM_GUI_SURFACE, 0);
+	self.logo = (GUI_Surface *) GetElement("logo", LIST_ITEM_GUI_SURFACE, 0);
+	self.dump_icon = (GUI_Surface *) GetElement("dump_icon", LIST_ITEM_GUI_SURFACE, 0);
+	self.controller = (GUI_Surface *) GetElement("controller", LIST_ITEM_GUI_SURFACE, 0);
+	self.lightgun = (GUI_Surface *) GetElement("lightgun", LIST_ITEM_GUI_SURFACE, 0);
+	self.keyboard = (GUI_Surface *) GetElement("keyboard", LIST_ITEM_GUI_SURFACE, 0);
+	self.mouse = (GUI_Surface *) GetElement("mouse", LIST_ITEM_GUI_SURFACE, 0);
+	self.dreameye = (GUI_Surface *) GetElement("dreameye", LIST_ITEM_GUI_SURFACE, 0);
+
+	self.progres_img = (GUI_Surface *) GetElement("progressbar", LIST_ITEM_GUI_SURFACE, 0);
+	self.progres_img_b = (GUI_Surface *) GetElement("progressbar_back", LIST_ITEM_GUI_SURFACE, 0);
+
+	self.confirmimg[0] = (GUI_Surface *) GetElement("confirmimg", LIST_ITEM_GUI_SURFACE, 0);
+	self.confirmimg[1] = (GUI_Surface *) GetElement("confirmimg0", LIST_ITEM_GUI_SURFACE, 0);
+	self.image_confirm = (GUI_Widget *) GetElement("image-confirm", LIST_ITEM_GUI_WIDGET, 1);
+	self.confirm = (GUI_Widget *) GetElement("confirm", LIST_ITEM_GUI_WIDGET, 1);
+	self.confirm_text = (GUI_Widget *) GetElement("confirm-text", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.drection = (GUI_Widget *) GetElement("drection", LIST_ITEM_GUI_WIDGET, 1);
+
+	self.progressbar = (GUI_Widget *) GetElement("progressbar", LIST_ITEM_GUI_WIDGET, 1);
+	self.progressbar_container = (GUI_Widget *) GetElement("progressbar_container", LIST_ITEM_GUI_WIDGET, 1);
+
+	Item_t *i;
+	i = listGetItemByName(self.m_App->elements, "vmu_page");
+	self.vmu_page = (GUI_Widget*) i->data;
+
+	GUI_FileManagerSetItemContextClick(self.filebrowser, (GUI_CallbackFunction*) VMU_Manager_ItemContextClick);
+	GUI_FileManagerSetItemContextClick(self.filebrowser2, (GUI_CallbackFunction*) VMU_Manager_ItemContextClick);
 	
-	if (self.m_App != 0){
-		
-		int x,y;
-		self.direction_flag = 0;
-		self.pages	= (GUI_Widget *) GetElement("pages", LIST_ITEM_GUI_WIDGET, 1);
-		self.button_home = (GUI_Widget *) GetElement("home_but", LIST_ITEM_GUI_WIDGET, 1);
-		self.cd_c  = (GUI_Widget *) GetElement("/cd", LIST_ITEM_GUI_WIDGET, 1);
-		self.sd_c  = (GUI_Widget *) GetElement("/sd/vmu", LIST_ITEM_GUI_WIDGET, 1);
-		self.hdd_c = (GUI_Widget *) GetElement("/ide/vmu", LIST_ITEM_GUI_WIDGET, 1);
-		self.pc_c  = (GUI_Widget *) GetElement("/pc", LIST_ITEM_GUI_WIDGET, 1);
-		self.format_c  = (GUI_Widget *) GetElement("format-c", LIST_ITEM_GUI_WIDGET, 1);
-		self.dst_vmu  = (GUI_Widget *) GetElement("dst-vmu", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu_container  = (GUI_Widget *) GetElement("vmu-container", LIST_ITEM_GUI_WIDGET, 1);
-		self.folder_name  = (GUI_Widget *) GetElement("folder-name", LIST_ITEM_GUI_WIDGET, 1);
-		
-		self.vmu[0][0]  = (GUI_Widget *) GetElement("A1", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[0][1]  = (GUI_Widget *) GetElement("A2", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[1][0]  = (GUI_Widget *) GetElement("B1", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[1][1]  = (GUI_Widget *) GetElement("B2", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[2][0]  = (GUI_Widget *) GetElement("C1", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[2][1]  = (GUI_Widget *) GetElement("C2", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[3][0]  = (GUI_Widget *) GetElement("D1", LIST_ITEM_GUI_WIDGET, 1);
-		self.vmu[3][1]  = (GUI_Widget *) GetElement("D2", LIST_ITEM_GUI_WIDGET, 1);
+	GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+	GUI_ContainerRemove(self.vmu_page, self.filebrowser2);
+	GUI_ContainerRemove(self.vmu_page, self.confirm);
 
-		self.img_cont[0] = (GUI_Widget *) GetElement("contA", LIST_ITEM_GUI_WIDGET, 1);
-		self.img_cont[1] = (GUI_Widget *) GetElement("contB", LIST_ITEM_GUI_WIDGET, 1);
-		self.img_cont[2] = (GUI_Widget *) GetElement("contC", LIST_ITEM_GUI_WIDGET, 1);
-		self.img_cont[3] = (GUI_Widget *) GetElement("contD", LIST_ITEM_GUI_WIDGET, 1);
-		
-		self.save_name = (GUI_Widget *) GetElement("save-name", LIST_ITEM_GUI_WIDGET, 1);
-		self.save_size = (GUI_Widget *) GetElement("save-size", LIST_ITEM_GUI_WIDGET, 1);
-		self.save_descshort = (GUI_Widget *) GetElement("desc-short", LIST_ITEM_GUI_WIDGET, 1);
-		self.save_desclong = (GUI_Widget *) GetElement("desc-long", LIST_ITEM_GUI_WIDGET, 1);
+	if(!DirExists("/pc")) GUI_WidgetSetEnabled(self.pc_c, 0);
+	if(!DirExists("/sd")) GUI_WidgetSetEnabled(self.sd_c, 0);
+	if(!DirExists("/ide")) GUI_WidgetSetEnabled(self.hdd_c, 0);
 
-		self.name_device = (GUI_Widget *) GetElement("name-device", LIST_ITEM_GUI_WIDGET, 1);
-		self.free_mem = (GUI_Widget *) GetElement("free-mem", LIST_ITEM_GUI_WIDGET, 1);
-		
-		self.sicon = (GUI_Widget *) GetElement("vmu-icon", LIST_ITEM_GUI_WIDGET, 1);
-		self.button_dump = (GUI_Widget *) GetElement("dump-button", LIST_ITEM_GUI_WIDGET, 1);
-		
-		self.filebrowser = (GUI_Widget *) GetElement("file_browser", LIST_ITEM_GUI_WIDGET, 1);
-		self.filebrowser2 = (GUI_Widget *) GetElement("file_browser2", LIST_ITEM_GUI_WIDGET, 1);
-		self.m_ItemNormal = (GUI_Surface *) GetElement("item-normal", LIST_ITEM_GUI_SURFACE, 0);
-		self.m_ItemSelected	= (GUI_Surface *) GetElement("item-selected", LIST_ITEM_GUI_SURFACE, 0);
-		self.m_ItemNormal2 = (GUI_Surface *) GetElement("item-normal2", LIST_ITEM_GUI_SURFACE, 0);
-		self.m_ItemSelected2	= (GUI_Surface *) GetElement("item-selected2", LIST_ITEM_GUI_SURFACE, 0);
-		self.logo = (GUI_Surface *) GetElement("logo", LIST_ITEM_GUI_SURFACE, 0);
-		self.dump_icon = (GUI_Surface *) GetElement("dump_icon", LIST_ITEM_GUI_SURFACE, 0);
-		self.controller = (GUI_Surface *) GetElement("controller", LIST_ITEM_GUI_SURFACE, 0);
-		self.lightgun = (GUI_Surface *) GetElement("lightgun", LIST_ITEM_GUI_SURFACE, 0);
-		self.keyboard = (GUI_Surface *) GetElement("keyboard", LIST_ITEM_GUI_SURFACE, 0);
-		self.mouse = (GUI_Surface *) GetElement("mouse", LIST_ITEM_GUI_SURFACE, 0);
-		
-		self.progres_img = (GUI_Surface *) GetElement("progressbar", LIST_ITEM_GUI_SURFACE, 0);
-		self.progres_img_b = (GUI_Surface *) GetElement("progressbar_back", LIST_ITEM_GUI_SURFACE, 0);
-		
-		self.confirmimg[0] = (GUI_Surface *) GetElement("confirmimg", LIST_ITEM_GUI_SURFACE, 0);
-		self.confirmimg[1] = (GUI_Surface *) GetElement("confirmimg0", LIST_ITEM_GUI_SURFACE, 0);
-		self.image_confirm = (GUI_Widget *) GetElement("image-confirm", LIST_ITEM_GUI_WIDGET, 1);
-		self.confirm = (GUI_Widget *) GetElement("confirm", LIST_ITEM_GUI_WIDGET, 1);
-		self.confirm_text = (GUI_Widget *) GetElement("confirm-text", LIST_ITEM_GUI_WIDGET, 1);
-		
-		self.drection = (GUI_Widget *) GetElement("drection", LIST_ITEM_GUI_WIDGET, 1);
-		
-		self.progressbar = (GUI_Widget *) GetElement("progressbar", LIST_ITEM_GUI_WIDGET, 1);
-		self.progressbar_container = (GUI_Widget *) GetElement("progressbar_container", LIST_ITEM_GUI_WIDGET, 1);
-		
-		Item_t *i;
-		i = listGetItemByName(self.m_App->elements, "vmu_page");
-		self.vmu_page = (GUI_Widget*) i->data;
-		
-		GUI_FileManagerSetItemContextClick(self.filebrowser, (GUI_CallbackFunction*) VMU_Manager_ItemContextClick);
-		GUI_FileManagerSetItemContextClick(self.filebrowser2, (GUI_CallbackFunction*) VMU_Manager_ItemContextClick);
-		
-		GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-		GUI_ContainerRemove(self.vmu_page, self.filebrowser2);
-		GUI_ContainerRemove(self.vmu_page, self.confirm);
-		
-		if(!DirExists("/pc")) GUI_WidgetSetEnabled(self.pc_c, 0);
-		if(!DirExists("/sd")) GUI_WidgetSetEnabled(self.sd_c, 0);
-		if(!DirExists("/ide")) GUI_WidgetSetEnabled(self.hdd_c, 0);
-		
-		GUI_WidgetSetEnabled(self.button_dump, 0);
-		
-		for(x=0;x<4;x++)
+	GUI_WidgetSetEnabled(self.button_dump, 0);
+
+	for(x = 0; x < 4; ++x)
+	{
+		for(y = 0; y < 2; ++y)
 		{
-			for(y=0;y<2;y++)
-			{
-				GUI_WidgetSetEnabled(self.vmu[x][y], 0);
-			}
+			GUI_WidgetSetEnabled(self.vmu[x][y], 0);
 		}
-		
-		/* Disabling scrollbar on filemanager */
-		for(x = 3; x > 0; x--) {
-			GUI_Widget *w = GUI_ContainerGetChild(self.filebrowser, x);
-			GUI_ContainerRemove(self.filebrowser, w);
+	}
+
+	/* Disabling scrollbar for file browsers */
+	GUI_FileManagerRemoveScrollbar(self.filebrowser);
+	GUI_FileManagerRemoveScrollbar(self.filebrowser2);
+
+	if (GUI_CardStackGetIndex(self.pages) == 0) {
+		GUI_WidgetSetEnabled(self.button_home, 0);
+	}
+
+	self.home_path = NULL;
+	self.thd = thd_create(1, maple_scan, NULL);
+	fs_vmd_init();
+
+	if (app->args != 0)
+	{
+		/* TODO
+		char *path = getFilePath(app->args);
+		if (path) {
+			GUI_FileManagerSetPath(self.filebrowser2, path);
+			free(path);
 		}
-		/* Disabling scrollbar on filemanager2 */
-		for(x = 3; x > 0; x--) {
-			GUI_Widget *w = GUI_ContainerGetChild(self.filebrowser2, x);
-			GUI_ContainerRemove(self.filebrowser, w);
-		}
-		
-		if (GUI_CardStackGetIndex(self.pages) == 0) GUI_WidgetSetEnabled(self.button_home, 0);
-		
-		t0 = thd_create(1, maple_scan, NULL);
-		dbgio_printf("APP Init\n");
-		fs_vmd_init();
-	} else dbgio_printf("DS_ERROR: Can't find app named: %s\n", "Vmu Manager");
-	
-	
+		*/
+		self.have_args = true;
+	}
+	else {
+		self.have_args = false;
+	}
 }
 
 void VMU_Manager_EnableMainPage()
 {
+	int x, y;
+
 	self.thread_kill = 1;
-	
-	int x,y;
-		
-		for(x=0;x<4;x++)
+
+	for(x = 0; x < 4; ++x)
+	{
+		for(y = 0; y < 2; ++y)
 		{
-			for(y=0;y<2;y++)
-			{
-				if(GUI_ContainerContains(self.vmu_container, self.vmu[x][y]) == 0){
-					GUI_ContainerAdd(self.vmu_container,self.vmu[x][y]);
-				}
+			if(GUI_ContainerContains(self.vmu_container, self.vmu[x][y]) == 0){
+				GUI_ContainerAdd(self.vmu_container,self.vmu[x][y]);
 			}
 		}
-		
-		self.m_SelectedFile = NULL;
-		self.m_SelectedPath = NULL;
-		disable_high(RIGHT_FM);
-		disable_high(LEFT_FM);
-		clr_statusbar();
-		self.direction_flag = 0;
-		GUI_LabelSetText(self.drection, "SELECT SOURCE VMU");
-		GUI_WidgetSetEnabled(self.button_home, 0);
-		ScreenFadeOutEx(NULL, 1);
-		GUI_CardStackShowIndex(self.pages, 0);
-		ScreenFadeIn();
-		t0 = thd_create(1, maple_scan, NULL);
+	}
+	
+	self.m_SelectedFile = NULL;
+	self.m_SelectedPath = NULL;
+	disable_high(RIGHT_FM);
+	disable_high(LEFT_FM);
+	clr_statusbar();
+	self.direction_flag = 0;
+	GUI_LabelSetText(self.drection, "SELECT SOURCE VMU");
+	GUI_WidgetSetEnabled(self.button_home, 0);
+	ScreenFadeOutEx(NULL, 1);
+	GUI_CardStackShowIndex(self.pages, 0);
+	ScreenFadeIn();
+	self.thd = thd_create(1, maple_scan, NULL);
 }
 
 void VMU_Manager_vmu(GUI_Widget *widget)
@@ -600,13 +633,26 @@ void VMU_Manager_info_bar_clr(GUI_Widget *widget)
 
 void VMU_Manager_Exit(GUI_Widget *widget)
 {
-	fs_vmd_shutdown();
-	self.thread_kill = 1;
-	thd_join(t0, NULL);
 	(void)widget;
-	self.m_App = NULL;
-	self.m_App = GetAppByName("Main");
-	OpenApp(self.m_App, NULL);
+	App_t *app = NULL;
+
+	self.thread_kill = 1;
+	thd_join(self.thd, NULL);
+	fs_vmd_shutdown();
+
+	if(self.have_args == true) {
+
+		app = GetAppByName("File Manager");
+
+		if(!app || !(app->state & APP_STATE_LOADED)) {
+			app = NULL;
+		}
+	}
+	if(!app) {
+		app = GetAppByName("Main");
+	}
+
+	OpenApp(app, NULL);
 }
 
 void VMU_Manager_ItemClick(dirent_fm_t *fm_ent)
@@ -684,7 +730,7 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent)
 			}
 			else if (flag == CMD_NO_ARG){
 				
-				self.home_path = (const char *) "/vmd";
+				self.home_path = "/vmd";
 				sprintf(src,"%s/%s",GUI_FileManagerGetPath(fmw),ent->name);
 				
 				fs_vmd_vmdfile(src);
@@ -1033,7 +1079,7 @@ void VMU_Manager_addfileman(GUI_Widget *widget)
 {
 	
 	file_t f;
-	char path[NAME_MAX];
+	static char path[NAME_MAX];
 	
 	if(strcmp(GUI_ObjectGetName(widget),"/cd") != 0 && strlen(GUI_ObjectGetName(widget)) > 2){
 		if((f = fs_open(GUI_ObjectGetName(widget),O_DIR)) == FILEHND_INVALID) {
@@ -1049,8 +1095,8 @@ void VMU_Manager_addfileman(GUI_Widget *widget)
 	
 	if(self.direction_flag == 1){
 		sprintf(path,"/vmu/%s", GUI_ObjectGetName(widget));
-		self.home_path = (const char *) path;
-	}else self.home_path = GUI_ObjectGetName(widget);
+		self.home_path = path;
+	}else self.home_path = (char *)GUI_ObjectGetName(widget);
 	
 	self.m_SelectedFile = NULL;
 	self.m_SelectedPath = NULL;
@@ -1314,7 +1360,7 @@ void VMU_Manager_sel_dst_vmu(GUI_Widget *widget)
 	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 0);
 	ScreenFadeIn();
-	t0 = thd_create(1, maple_scan, NULL);
+	self.thd = thd_create(1, maple_scan, NULL);
 }
 
 void VMU_Manager_make_folder(GUI_Widget *widget){
