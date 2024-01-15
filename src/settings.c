@@ -99,7 +99,14 @@ void ResetSettings() {
 
 	cur->version = GetVersion();
 
-	loaded = 1;
+	if(loaded) {
+		char fn[NAME_MAX];
+		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
+		fs_unlink(fn);
+		fs_unlink(vmu_file);
+	} else {
+		loaded = 1;
+	}
 }
 
 static int LoadSettingsVMU() {

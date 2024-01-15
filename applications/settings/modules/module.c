@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Settings app module
-   Copyright (C)2016-2022 SWAT 
+   Copyright (C)2016-2022, 2024 SWAT 
 */
 
 #include "ds.h"
@@ -129,17 +129,18 @@ void SettingsApp_ShowPage(GUI_Widget *widget) {
 	ScreenFadeIn();
 }
 
-
 void SettingsApp_ResetSettings(GUI_Widget *widget) {
-
 	ResetSettings();
 	SetupBootSettings();
 	SetupVideoSettings();
-	
 	SetScreenMode(self.settings->video.virt_width, self.settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 	SetScreenFilter(self.settings->video.tex_filter);
 }
 
+void SettingsApp_Reboot(GUI_Widget *widget) {
+	ScreenFadeOutEx("Loading...", 0);
+	dsystemf("exec -b -f %s/DS_CORE.BIN", getenv("PATH"));
+}
 
 void SettingsApp_ToggleNativeMode(GUI_Widget *widget) {
 
@@ -383,7 +384,7 @@ static void SetupBootSettings() {
 			}
 
 			GUI_Widget *l = GUI_LabelCreate(app->name, 22, 0, w, h - 5, font, app->name);
-			GUI_LabelSetTextColor(l, 0, 0, 0);
+			GUI_LabelSetTextColor(l, 51, 51, 51);
 			GUI_WidgetSetAlign(l, WIDGET_HORIZ_LEFT | WIDGET_VERT_CENTER);
 			GUI_ButtonSetCaption(b, l);
 			GUI_ObjectDecRef((GUI_Object *) l);

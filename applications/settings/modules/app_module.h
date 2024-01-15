@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    app_module.h - Settings app module header
-   Copyright (C)2016-2023 SWAT
+   Copyright (C)2016-2024 SWAT
 */
 
 #include "ds.h"
@@ -11,6 +11,8 @@ void SettingsApp_Init(App_t *app);
 void SettingsApp_ShowPage(GUI_Widget *widget);
 
 void SettingsApp_ResetSettings(GUI_Widget *widget);
+
+void SettingsApp_Reboot(GUI_Widget *widget);
 
 void SettingsApp_ToggleNativeMode(GUI_Widget *widget);
 

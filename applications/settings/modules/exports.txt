@@ -5,6 +5,7 @@ include app_module.h
 SettingsApp_Init
 SettingsApp_ShowPage
 SettingsApp_ResetSettings
+SettingsApp_Reboot
 # Video
 SettingsApp_ToggleNativeMode
 SettingsApp_ToggleScreenMode
