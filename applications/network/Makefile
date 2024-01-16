@@ -1,14 +1,16 @@
 #
-# Main App for DreamShell
-# Copyright (C) 2009-2016, 2024 SWAT
+# Network App for DreamShell
+# Copyright (C) 2024 SWAT
 # http://www.dc-swat.ru
 #
+
+include ../../sdk/Makefile.cfg
 
 SUBDIRS = modules
 
 include ../../sdk/Makefile.cfg
 
-APP_NAME = main
+APP_NAME = network
 APP_DIR = $(DS_BUILD)/apps/$(APP_NAME)
 DEPS = modules/app_$(APP_NAME).klf
 
@@ -23,8 +25,6 @@ clean:
 install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
-	-mkdir -p $(APP_DIR)/scripts
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp -R images $(APP_DIR)
-	cp -R scripts $(APP_DIR)
 	cp app.xml $(APP_DIR)/app.xml

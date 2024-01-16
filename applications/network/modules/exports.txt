@@ -1,0 +1,11 @@
+include kos/exports.h
+include app_module.h
+
+# Main
+NetworkApp_Init
+NetworkApp_Shutdown
+NetworkApp_Open
+NetworkApp_ConnectBBA
+NetworkApp_ConnectModem
+NetworkApp_FTP
+NetworkApp_HTTP
