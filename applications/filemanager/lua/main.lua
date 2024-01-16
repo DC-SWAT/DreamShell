@@ -1,14 +1,11 @@
 -------------------------------------------
 --                                       --
 -- @name:    File Manager                --
--- @version: 0.6.6                       --
+-- @version: 0.7.0                       --
 -- @author:  SWAT                        --
 -- @url:     http://www.dc-swat.ru       --
 --                                       --
 -------------------------------------------
-
-
---if not FileManager then
 
 
 FileManager = {
@@ -104,8 +101,6 @@ function FileManager:ShowModal(mode, label, func, input)
 	if self.modal.visible then 
 		self:HideModal(); 
 	end
-	
-	--print("FileManager: " .. label .. "\n");
 	
 	if mode == "alert" then
 	
@@ -250,9 +245,9 @@ function FileManager:toolbarCopy()
 	end
 	
 	if f.attr ~= 0 or f.size > 8192*1024 then
-		self:execConsole("cp " .. f.file .. " " .. to .. " 1")
+		self:execConsole("cp " .. string.gsub(f.file, " ", "\\ ") .. " " .. to .. " 1")
 	else
-		if os.execute("cp " .. f.file .. " " .. to) ~= DS.CMD_OK then
+		if os.execute("cp " .. string.gsub(f.file, " ", "\\ ") .. " " .. to) ~= DS.CMD_OK then
 			self:showConsole();
 			return;
 		end
@@ -272,14 +267,15 @@ function FileManager:toolbarRename()
 	else
 		self:HideModal();
 	end
-	
+
 	local dst = f.path .. "/" .. GUI.TextEntryGetText(self.modal.input);
-	
-	if os.execute("rename " .. f.file .. " " .. dst) ~= DS.CMD_OK then
+	dst = string.gsub(dst, " ", "\\ ");
+
+	if os.execute("rename " .. string.gsub(f.file, " ", "\\ ") .. " " .. dst) ~= DS.CMD_OK then
 		self:showConsole();
 		return;
 	end
-	
+
 	local mgr = self:getFocusedManager();
 	GUI.FileManagerScan(mgr.widget);
 end
@@ -290,18 +286,18 @@ end
 function FileManager:toolbarDelete()
 
 	local f = self:getFile();
-	
+
 	if not self.modal.visible then 
 		return self:ShowModal("confirm", 'Delete "' .. f.name .. '"?', "delete");
 	else
 		self:HideModal();
 	end
-	
-	if os.execute("rm " .. f.file) ~= DS.CMD_OK then
+
+	if os.execute("rm " .. string.gsub(f.file, " ", "\\ ")) ~= DS.CMD_OK then
 		self:showConsole();
 		return false;
 	end
-	
+
 	local mgr = self:getFocusedManager();
 	GUI.FileManagerScan(mgr.widget);
 end
@@ -312,7 +308,7 @@ function FileManager:toolbarArchive()
 
 	local f = self:getFile();
 	local ext = string.lower(string.sub(f.name, -4));
-	local file = f.file;
+	local file = string.gsub(f.file, " ", "\\ ");
 	local name = f.name;
 	
 	local mgr = self:getUnfocusedManager();
@@ -403,7 +399,7 @@ function FileManager:toolbarMountISO()
 		 end
 	end
 	
-	if os.execute("isofs -m -f " .. f.file .. " -d /iso") ~= DS.CMD_OK then
+	if os.execute("isofs -m -f " .. string.gsub(f.file, " ", "\\ ") .. " -d /iso") ~= DS.CMD_OK then
 		self:showConsole();
 	end
 end
@@ -452,7 +448,7 @@ function FileManager:openFile()
 
 	local f = self:getFile();
 	local ext = string.lower(string.sub(f.name, -4));
-	local file = f.file;
+	local file = string.gsub(f.file, " ", "\\ ");
 	local name = f.name;
 
 	if ext == ".bin" or ext == ".elf" then
@@ -617,7 +613,7 @@ function FileManager:openFile()
 				self:HideModal();
 			end
 
-			self:openApp(app.name, file, 0); -- Unload filemanager?
+			self:openApp(app.name, f.file, 0); -- Unload filemanager?
 			return file;
 		end
 
@@ -666,13 +662,20 @@ end
 function FileManager:getFile() 
 
 	local mgr = self:getFocusedManager();
-	--local path = "";
-	
-	--if mgr ~= nil then
-		local path = GUI.FileManagerGetPath(mgr.widget);
-	--end
-	
-	return {file = path .. "/" .. mgr.ent.name, name = mgr.ent.name, path = path, attr = mgr.ent.attr, size = mgr.ent.size};
+	local path = GUI.FileManagerGetPath(mgr.widget);
+	local file = path .. "/";
+
+	if mgr.ent.name ~= nil then
+		file = file .. mgr.ent.name
+	end
+
+	return {
+		file = file,
+		name = mgr.ent.name,
+		path = path,
+		attr = mgr.ent.attr,
+		size = mgr.ent.size
+	};
 end
 
 
@@ -933,6 +936,3 @@ end
 function FileManager:Shutdown()
 	self:unloadModules();
 end
-
-
---end

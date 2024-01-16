@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="File Manager" version="0.6.6" icon="../../gui/icons/normal/file_manager.png">
+<app name="File Manager" version="0.7.0" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/tolua.klf" />
 		<module src="../../modules/luaDS.klf" />
