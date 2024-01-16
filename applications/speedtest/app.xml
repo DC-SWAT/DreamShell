@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Speedtest" version="0.3" icon="images/icon.png">
+<app name="Speedtest" version="0.4.0" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_speedtest.klf" />
 		<font src="fonts/dinnext.ttf" type="ttf" size="24" name="dinnext" />
@@ -72,14 +72,17 @@
 						name="/cd" />
 			</panel>
 		</panel>
-		<panel y="250" height="50">
-			<label height="40" font="dinnext" color="#1ce346" name="speedw_text" />
+		<panel y="200" height="50">
+			<label height="40" font="dinnext" color="#eeeeee" name="speedw_text" />
 		</panel>
 		<panel height="60">
-			<label height="40" font="dinnext" color="#1ce346" name="speedr_text" />
+			<label height="40" font="dinnext" color="#eeeeee" name="speedr_text" />
+		</panel>
+		<panel height="60">
+			<label height="40" font="dinnext" color="#eeeeee" name="speedrd_text" />
 		</panel>
 		<panel height="50">
-			<label height="40" font="dinnext" color="#1ce346" text="Select a device" name="status_text" />
+			<label height="40" font="dinnext" color="#eeeeee" text="Select a device" name="status_text" />
 		</panel>
 		<input type="button" 
 				normal="iExitNorm" 
