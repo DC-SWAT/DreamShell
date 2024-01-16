@@ -252,157 +252,113 @@ static int Confirm_Window()
 	maple_device_t *cont;
 	cont_state_t *state;
 	int y, flag = CMD_ERROR;
-	
-		SDL_GetMouseState(NULL, &y);
-		SDL_WarpMouse(0,0);
-/*		GUI_WidgetSetEnabled(self.filebrowser, 0);
-		GUI_WidgetSetEnabled(self.filebrowser2, 0);
-		GUI_WidgetSetEnabled(self.sd_c, 0);
-		GUI_WidgetSetEnabled(self.cd_c, 0);
-		GUI_WidgetSetEnabled(self.hdd_c, 0);
-		GUI_WidgetSetEnabled(self.pc_c, 0);
-		GUI_WidgetSetEnabled(self.pc_c, 0);
-		GUI_WidgetSetEnabled(self.format_c, 0);
-		GUI_WidgetSetEnabled(self.dst_vmu, 0);
-*/		GUI_ContainerAdd(self.vmu_page, self.confirm);
-		GUI_WidgetMarkChanged(self.vmu_page);
-		LockVideo();
-		
-		while(1)
-		{
-			if(!(cont = maple_enum_type(0, MAPLE_FUNC_MOUSE))){
+
+	SDL_GetMouseState(NULL, &y);
+	SDL_WarpMouse(0,0);
+	GUI_ContainerAdd(self.vmu_page, self.confirm);
+	GUI_WidgetMarkChanged(self.vmu_page);
+	LockVideo();
+
+	while(1) {
+		if(!(cont = maple_enum_type(0, MAPLE_FUNC_MOUSE))){
 			cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
-			}
-			if(!cont) continue;
-			state = (cont_state_t *)maple_dev_status(cont);
-			if(!state) continue;
-							
-			if(state->buttons & CONT_A) {
-				flag = CMD_OK;
-				break;
-			}
-			else if(state->buttons & CONT_B)
-			{
-				break;
-			}
-			else if(state->buttons & CONT_X){
-				
-				flag = CMD_NO_ARG;
-				break;
-			}
-			else thd_pass();
-		}	
+		}
+		if(!cont)
+			continue;
+
+		state = (cont_state_t *)maple_dev_status(cont);
+		if(!state)
+			continue;
+
+		if(state->buttons & CONT_A) {
+			flag = CMD_OK;
+			break;
+		}
+		else if(state->buttons & CONT_B) {
+			break;
+		}
+		else if(state->buttons & CONT_X) {
 			
-		GUI_ContainerRemove(self.vmu_page, self.confirm);
-/*		GUI_WidgetSetEnabled(self.filebrowser, 1);
-		GUI_WidgetSetEnabled(self.filebrowser2, 1);
-			
-		if(DirExists("/pc")) GUI_WidgetSetEnabled(self.pc_c, 1);
-		if(DirExists("/sd")) GUI_WidgetSetEnabled(self.sd_c, 1);
-		GUI_WidgetSetEnabled(self.cd_c, 1);
-		if(DirExists("/ide")) GUI_WidgetSetEnabled(self.hdd_c, 1);
-		GUI_WidgetSetEnabled(self.format_c, 1);
-		GUI_WidgetSetEnabled(self.dst_vmu, 1);
-*/			
-		GUI_WidgetMarkChanged(self.m_App->body);
-		if (y > 320) y = 300;
-		SDL_WarpMouse(270,y);
-		UnlockVideo();
+			flag = CMD_NO_ARG;
+			break;
+		}
+		else {
+			thd_sleep(50);
+		}
+	}	
+
+	GUI_ContainerRemove(self.vmu_page, self.confirm);	
+	GUI_WidgetMarkChanged(self.m_App->body);
+
+	if (y > 320) y = 300;
+	SDL_WarpMouse(270, y);
+	UnlockVideo();
 
 	return flag;
+}
+
+static void show_slots(int port)
+{
+	int slot;
+	maple_device_t *dev;
+
+	for(slot = 1; slot < 3; ++slot) {
+		dev = maple_enum_dev(port, slot);
+
+		if (dev == NULL || !(dev->info.functions & MAPLE_FUNC_MEMCARD)) {
+			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
+		}
+		else {
+			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 1);
+		}
+		if(dev->info.functions & MAPLE_FUNC_CAMERA) {
+			GUI_ProgressBarSetImage2(self.img_cont[port], self.dreameye);
+			GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+		}
+	}
+}
+
+static void show_port(int port, uint32_t functions)
+{
+	if(functions & (MAPLE_FUNC_LIGHTGUN | MAPLE_FUNC_ARGUN)) {
+		GUI_ProgressBarSetImage2(self.img_cont[port], self.lightgun);
+		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+		show_slots(port);
+	}
+	else if(functions & MAPLE_FUNC_KEYBOARD) {
+		GUI_ProgressBarSetImage2(self.img_cont[port], self.keyboard);
+		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+	}
+	else if(functions & MAPLE_FUNC_MOUSE) {
+		GUI_ProgressBarSetImage2(self.img_cont[port], self.mouse);
+		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+	}
+	else if(functions & MAPLE_FUNC_CONTROLLER) {
+		GUI_ProgressBarSetImage2(self.img_cont[port], self.controller);
+		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+		show_slots(port);
+	}
+	else {
+		GUI_ProgressBarSetPosition(self.img_cont[port], 0.0);	
+		GUI_WidgetSetEnabled(self.vmu[port][0], 0);
+		GUI_WidgetSetEnabled(self.vmu[port][1], 0);
+	}
 }
 
 static void *maple_scan()
 {
 	self.thread_kill = 0;
-	int a, b;
-	maple_device_t *maple_dev[4][3];
+	int port;
+	maple_device_t *dev;
 
-	while(1) {
-		
-		for(a=0;a<4;a++){
-			maple_dev[a][0] = maple_enum_dev(a, 0);
-			
-			if(maple_dev[a][0] == NULL)
-			{
-				GUI_ProgressBarSetPosition(self.img_cont[a], 0.0);	
-				GUI_WidgetSetEnabled(self.vmu[a][0], 0);
-				GUI_WidgetSetEnabled(self.vmu[a][1], 0);
-				continue;
-			}
-			
-			switch(maple_dev[a][0]->info.functions)
-			{
-				case MAPLE_FUNC_CAMERA:
-				
-					GUI_ProgressBarSetImage2(self.img_cont[a], self.dreameye);
-					GUI_ProgressBarSetPosition(self.img_cont[a], 1.0);
-					break;
+	while(self.thread_kill == 0) {
 
-				case MAPLE_FUNC_CONTROLLER:
-				
-					GUI_ProgressBarSetImage2(self.img_cont[a], self.controller);
-					GUI_ProgressBarSetPosition(self.img_cont[a], 1.0);
-					
-					for(b=1;b<3;b++){
-						
-						maple_dev[a][b] = maple_enum_dev(a, b);
-					
-						if (maple_dev[a][b] == NULL || !(maple_dev[a][b]->info.functions & MAPLE_FUNC_MEMCARD))
-						{
-							GUI_WidgetSetEnabled(self.vmu[a][b-1], 0);
-						}
-						else
-						{
-							GUI_WidgetSetEnabled(self.vmu[a][b-1], 1);
-						}
-					}	
-					
-					break;
-					
-				case MAPLE_FUNC_GUN:
-				case MAPLE_FUNC_LIGHTGUN:
-				case MAPLE_FUNC_ARGUN:
-				
-					GUI_ProgressBarSetImage2(self.img_cont[a], self.lightgun);
-					GUI_ProgressBarSetPosition(self.img_cont[a], 1.0);
-					
-					for(b=1;b<3;b++){
-						
-						maple_dev[a][b] = maple_enum_dev(a, b);
-					
-						if (maple_dev[a][b] == NULL || !(maple_dev[a][b]->info.functions & MAPLE_FUNC_MEMCARD))
-						{
-							GUI_WidgetSetEnabled(self.vmu[a][b-1], 0);
-						}
-						else
-						{
-							GUI_WidgetSetEnabled(self.vmu[a][b-1], 1);
-						}
-					}
-					
-					break;
-				
-				case MAPLE_FUNC_KEYBOARD:
-				
-					GUI_ProgressBarSetImage2(self.img_cont[a], self.keyboard);
-					GUI_ProgressBarSetPosition(self.img_cont[a], 1.0);
-					break;
-				
-				case MAPLE_FUNC_MOUSE:
-				
-					GUI_ProgressBarSetImage2(self.img_cont[a], self.mouse);
-					GUI_ProgressBarSetPosition(self.img_cont[a], 1.0);
-					break;
-				
-				default:
-				
-					GUI_ProgressBarSetPosition(self.img_cont[a], 0.0);	
-					GUI_WidgetSetEnabled(self.vmu[a][0], 0);
-					GUI_WidgetSetEnabled(self.vmu[a][1], 0);
-			}
+		for(port = 0; port < 4; ++port) {
+
+			dev = maple_enum_dev(port, 0);
+			show_port(port, dev != NULL ? dev->info.functions : 0);
 		}	
-		if (self.thread_kill != 0 || GUI_CardStackGetIndex(self.pages) != 0) {
+		if(GUI_CardStackGetIndex(self.pages) != 0) {
 			break;
 		}
 		thd_sleep(500);
@@ -437,8 +393,8 @@ void Vmu_Manager_Init(App_t* app)
 	self.pages	= (GUI_Widget *) GetElement("pages", LIST_ITEM_GUI_WIDGET, 1);
 	self.button_home = (GUI_Widget *) GetElement("home_but", LIST_ITEM_GUI_WIDGET, 1);
 	self.cd_c  = (GUI_Widget *) GetElement("/cd", LIST_ITEM_GUI_WIDGET, 1);
-	self.sd_c  = (GUI_Widget *) GetElement("/sd/vmu", LIST_ITEM_GUI_WIDGET, 1);
-	self.hdd_c = (GUI_Widget *) GetElement("/ide/vmu", LIST_ITEM_GUI_WIDGET, 1);
+	self.sd_c  = (GUI_Widget *) GetElement("/sd", LIST_ITEM_GUI_WIDGET, 1);
+	self.hdd_c = (GUI_Widget *) GetElement("/ide", LIST_ITEM_GUI_WIDGET, 1);
 	self.pc_c  = (GUI_Widget *) GetElement("/pc", LIST_ITEM_GUI_WIDGET, 1);
 	self.format_c  = (GUI_Widget *) GetElement("format-c", LIST_ITEM_GUI_WIDGET, 1);
 	self.dst_vmu  = (GUI_Widget *) GetElement("dst-vmu", LIST_ITEM_GUI_WIDGET, 1);
@@ -585,16 +541,19 @@ void VMU_Manager_vmu(GUI_Widget *widget)
 {
 	
 	char vpath[NAME_MAX];
-	
-	GUI_WidgetSetEnabled(self.button_home, 1);
+
 	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 1);
+	GUI_WidgetSetEnabled(self.button_home, 1);
+
 	snprintf(vpath, NAME_MAX, "/vmu/%s", GUI_ObjectGetName(widget));
+
 	if(self.direction_flag == 0){
-	GUI_FileManagerSetPath(self.filebrowser, vpath);
-	GUI_ContainerRemove(self.vmu_container, widget);
-	addbutton();
-	}else{
+		GUI_FileManagerSetPath(self.filebrowser, vpath);
+		GUI_ContainerRemove(self.vmu_container, widget);
+		addbutton();
+	}
+	else {
 		GUI_WidgetSetEnabled(self.button_dump, 0);
 		VMU_Manager_addfileman(widget);	
 	}
@@ -604,21 +563,23 @@ void VMU_Manager_vmu(GUI_Widget *widget)
 
 void VMU_Manager_info_bar(GUI_Widget *widget)
 {
-	char str[16], path[8];
+	char str[16], path[16];
 
 	GUI_LabelSetText(self.name_device, GUI_ObjectGetName( (GUI_Object *)widget));
-	
-	sprintf(path,"/vmu/%s", GUI_ObjectGetName((GUI_Object *) widget));
+	snprintf(path, sizeof(path), "/vmu/%s", GUI_ObjectGetName((GUI_Object *) widget));
 
-	if(self.direction_flag == 0){
+	if(self.direction_flag == 0) {
 		self.vmu_freeblock = vmufs_free_blocks(vmu_dev(path));
-		sprintf (str, "%s %d %s", "free", self.vmu_freeblock, "blocks");
-	}else{
-		self.vmu_freeblock2 = vmufs_free_blocks(vmu_dev(path));
-		sprintf (str, "%s %d %s", "free", self.vmu_freeblock2, "blocks");
+		snprintf(str, sizeof(str), "%s %d %s", "free", self.vmu_freeblock, "blocks");
 	}
-	
-	if (self.vmu_freeblock >= 0) GUI_LabelSetText(self.free_mem, str);
+	else {
+		self.vmu_freeblock2 = vmufs_free_blocks(vmu_dev(path));
+		snprintf(str, sizeof(str), "%s %d %s", "free", self.vmu_freeblock2, "blocks");
+	}
+
+	if(self.vmu_freeblock >= 0) {
+		GUI_LabelSetText(self.free_mem, str);
+	}
 }
 
 void VMU_Manager_info_bar_clr(GUI_Widget *widget)
