@@ -8,6 +8,7 @@
 */
 
 #include "ds.h"
+#include "drivers/sd.h"
 
 DEFAULT_MODULE_EXPORTS(app_speedtest);
 
@@ -32,13 +33,13 @@ static void show_status_ok(char *msg) {
 }
 
 static void show_status_error(char *msg) {
-	GUI_LabelSetTextColor(self.status, 255, 0, 0);
+	GUI_LabelSetTextColor(self.status, 255, 20, 20);
 	GUI_LabelSetText(self.status, msg);
 }
 
-int test_ide_dma(void) {
-	kos_blockdev_t bd_dma;
-	uint64 sdma, edma;
+int test_ide_dma_io(void) {
+	kos_blockdev_t bdev;
+	uint64 st, et;
 	uint32_t tm;
 	uint8_t pt;
 	uint8_t *buf;
@@ -52,8 +53,8 @@ int test_ide_dma(void) {
 	if(!buf) {
 		return -1;
 	}
-	if(g1_ata_blockdev_for_partition(0, 1, &bd_dma, &pt)) {
-		dbglog(DBG_DEBUG, "Couldn't get DMA blockdev for partition!\n");
+	if(g1_ata_blockdev_for_partition(0, 1, &bdev, &pt)) {
+		dbglog(DBG_DEBUG, "Couldn't get blockdev for partition!\n");
 		free(buf);
 		return -1;
 	}
@@ -61,28 +62,84 @@ int test_ide_dma(void) {
 	GUI_LabelSetText(self.dma_read_text, "...");
 
 	ShutdownVideoThread();
-	sdma = timer_ns_gettime64();
+	st = timer_ns_gettime64();
 
-	if(bd_dma.read_blocks(&bd_dma, 0, blocks, buf)) {
-		dbglog(DBG_DEBUG, "couldn't read block by DMA: %s\n", strerror(errno));
+	if(bdev.read_blocks(&bdev, 0, blocks, buf)) {
+		dbglog(DBG_DEBUG, "couldn't read block: %s\n", strerror(errno));
 		free(buf);
 		return -1;
 	}
-	edma = timer_ns_gettime64();
-	tm = (edma - sdma) / 1000000;
+	et = timer_ns_gettime64();
+	tm = (et - st) / 1000000;
 	InitVideoThread();
 
 	free(buf);
 	speed = buf_size / ((float)tm / 1000);
 
 	snprintf(result, sizeof(result), 
-		"DMA IO read: %.2f Kbytes/s (%.2f Mbit/s)",
+		"DMA IO read: %.2f Kbytes/s or %.2f Mbit/s",
 		speed / 1024, ((speed / 1024) / 1024) * 8);
 	GUI_LabelSetText(self.dma_read_text, result);
 	show_status_ok("Complete!"); 
 
 	ds_printf("DS_OK: Complete!\n"
 		" Test: DMA IO read\n Time: %ld ms\n"
+		" Speed: %.2f Kbytes/s (%.2f Mbit/s)\n"
+		" Size: %d Kb\n",
+		tm, speed / 1024, 
+		((speed / 1024) / 1024) * 8, 
+		buf_size / 1024);
+
+	return 0;
+}
+
+int test_sd_io(void) {
+	kos_blockdev_t bdev;
+	uint64 st, et;
+	uint32_t tm;
+	uint8_t pt;
+	uint8_t *buf;
+	const size_t blocks = 1024;
+	const size_t buf_size = blocks * 512;
+	double speed;
+	char result[256];
+
+	buf = memalign(32, buf_size);
+
+	if(!buf) {
+		return -1;
+	}
+	if(sdc_blockdev_for_partition(0, &bdev, &pt)) {
+		dbglog(DBG_DEBUG, "Couldn't get blockdev for partition!\n");
+		free(buf);
+		return -1;
+	}
+	show_status_ok("Testing SD IO read speed...");
+	GUI_LabelSetText(self.dma_read_text, "...");
+
+	ShutdownVideoThread();
+	st = timer_ns_gettime64();
+
+	if(bdev.read_blocks(&bdev, 0, blocks, buf)) {
+		dbglog(DBG_DEBUG, "couldn't read block: %s\n", strerror(errno));
+		free(buf);
+		return -1;
+	}
+	et = timer_ns_gettime64();
+	tm = (et - st) / 1000000;
+	InitVideoThread();
+
+	free(buf);
+	speed = buf_size / ((float)tm / 1000);
+
+	snprintf(result, sizeof(result), 
+		"SD IO read: %.2f Kbytes/s or %.2f Mbit/s",
+		speed / 1024, ((speed / 1024) / 1024) * 8);
+	GUI_LabelSetText(self.dma_read_text, result);
+	show_status_ok("Complete!"); 
+
+	ds_printf("DS_OK: Complete!\n"
+		" Test: SD IO read\n Time: %ld ms\n"
 		" Speed: %.2f Kbytes/s (%.2f Mbit/s)\n"
 		" Size: %d Kb\n",
 		tm, speed / 1024, 
@@ -101,7 +158,7 @@ void Speedtest_Run(GUI_Widget *widget) {
 	uint32 t;
 	double speed;
 	file_t fd;
-	int read_only = 0, is_ide = 0;
+	int read_only = 0, is_ide = 0, is_sd = 0;
 	
 	char name[64];
 	char result[256];
@@ -114,8 +171,11 @@ void Speedtest_Run(GUI_Widget *widget) {
 	if(!strncmp(wname, "/ide", 4)) {
 		is_ide = 1;
 	}
-	if(!strncmp(wname, "/cd", 3)) {
-		
+	else if(!strncmp(wname, "/sd", 3)) {
+		is_sd = 1;
+		size >>= 2;
+	}
+	else if(!strncmp(wname, "/cd", 3)) {
 		read_only = 1;
 		snprintf(name, sizeof(name), "%s/1DS_CORE.BIN", wname);
 
@@ -126,19 +186,19 @@ void Speedtest_Run(GUI_Widget *widget) {
 			goto readtest;
 		}
 	}
-	
-	show_status_ok("Testing PIO FS wite speed...");
+
+	show_status_ok("Testing PIO FS write speed...");
 	GUI_LabelSetText(self.pio_write_text, "...");
-	
+
 	snprintf(name, sizeof(name), "%s/%s.tst", wname, lib_get_name());
-	
+
 	if(FileExists(name)) {
 		fs_unlink(name);
 	}
-	
+
 	/* WRITE TEST */
 	fd = fs_open(name, O_WRONLY | O_CREAT | O_TRUNC);
-	
+
 	if (fd == FILEHND_INVALID) {
 		ds_printf("DS_ERROR: Can't open %s for write: %d\n", name, errno);
 		show_status_error("Can't open file for write");
@@ -147,11 +207,11 @@ void Speedtest_Run(GUI_Widget *widget) {
 
 	ShutdownVideoThread(); 
 	time_before = timer_ns_gettime64();
-	
+
 	while(cnt < size) {
-		
+
 		rs = fs_write(fd, buff, buff_size);
-		
+
 		if(rs <= 0) {
 			fs_close(fd);
 			InitVideoThread(); 
@@ -159,7 +219,6 @@ void Speedtest_Run(GUI_Widget *widget) {
 			show_status_error("Can't write to file");
 			return;
 		}
-		
 		buff += rs;
 		cnt += rs;
 	}
@@ -167,12 +226,12 @@ void Speedtest_Run(GUI_Widget *widget) {
 	time_after = timer_ns_gettime64();
 	InitVideoThread();
 
-	t = (uint32)(time_after - time_before) / 1000000;
+	t = (time_after - time_before) / 1000000;
 	speed = size / ((float)t / 1000);
 	fs_close(fd);
 
 	snprintf(result, sizeof(result), 
-		"PIO FS write: %.2f Kbytes/s (%.2f Mbit/s)",
+		"PIO FS write: %.2f Kbytes/s or %.2f Mbit/s",
 		speed / 1024, ((speed / 1024) / 1024) * 8);
 
 	GUI_LabelSetText(self.pio_write_text, result);
@@ -242,7 +301,7 @@ readtest:
 	}
 
 	snprintf(result, sizeof(result), 
-		"PIO FS read: %.2f Kbytes/s (%.2f Mbit/s)",
+		"PIO FS read: %.2f Kbytes/s or %.2f Mbit/s",
 		speed / 1024, ((speed / 1024) / 1024) * 8);
 
 	InitVideoThread();
@@ -259,7 +318,10 @@ readtest:
 	show_status_ok("Complete!"); 
 
 	if(is_ide) {
-		test_ide_dma();
+		test_ide_dma_io();
+	}
+	else if(is_sd) {
+		test_sd_io();
 	}
 }
 
