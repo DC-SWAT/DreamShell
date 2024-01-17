@@ -84,7 +84,6 @@ FileManager = {
 	
 }
 
-
 function FileManager:ext_supported(tbl, ext)
 	for i = 1, table.getn(tbl) do
 		if tbl[i] == ext then
@@ -92,6 +91,10 @@ function FileManager:ext_supported(tbl, ext)
 		end
 	end
 	return false;
+end
+
+function FileManager:replace_spaces(str)
+	return string.gsub(str, " ", "\\");
 end
 
 
@@ -228,6 +231,10 @@ end
 function FileManager:toolbarCopy()
 
 	local f = self:getFile();
+
+	if f.name == nil then
+		return;
+	end
 	
 	local mgr = self:getUnfocusedManager();
 	local to = GUI.FileManagerGetPath(mgr.widget);
@@ -245,9 +252,9 @@ function FileManager:toolbarCopy()
 	end
 	
 	if f.attr ~= 0 or f.size > 8192*1024 then
-		self:execConsole("cp " .. string.gsub(f.file, " ", "\\ ") .. " " .. to .. " 1")
+		self:execConsole("cp " .. self:replace_spaces(f.file) .. " " .. to .. " 1")
 	else
-		if os.execute("cp " .. string.gsub(f.file, " ", "\\ ") .. " " .. to) ~= DS.CMD_OK then
+		if os.execute("cp " .. self:replace_spaces(f.file) .. " " .. to) ~= DS.CMD_OK then
 			self:showConsole();
 			return;
 		end
@@ -257,10 +264,13 @@ function FileManager:toolbarCopy()
 end
 
 
-
 function FileManager:toolbarRename()
 
 	local f = self:getFile();
+
+	if f.name == nil then
+		return;
+	end
 
 	if not self.modal.visible then 
 		return self:ShowModal("prompt", "Enter new name:", "rename", f.name);
@@ -269,9 +279,9 @@ function FileManager:toolbarRename()
 	end
 
 	local dst = f.path .. "/" .. GUI.TextEntryGetText(self.modal.input);
-	dst = string.gsub(dst, " ", "\\ ");
+	dst = self:replace_spaces(dst);
 
-	if os.execute("rename " .. string.gsub(f.file, " ", "\\ ") .. " " .. dst) ~= DS.CMD_OK then
+	if os.execute("rename " .. self:replace_spaces(f.file) .. " " .. dst) ~= DS.CMD_OK then
 		self:showConsole();
 		return;
 	end
@@ -281,11 +291,14 @@ function FileManager:toolbarRename()
 end
 
 
-
-
 function FileManager:toolbarDelete()
 
 	local f = self:getFile();
+	local cmd = "rm";
+
+	if f.name == nil then
+		return;
+	end
 
 	if not self.modal.visible then 
 		return self:ShowModal("confirm", 'Delete "' .. f.name .. '"?', "delete");
@@ -293,9 +306,13 @@ function FileManager:toolbarDelete()
 		self:HideModal();
 	end
 
-	if os.execute("rm " .. string.gsub(f.file, " ", "\\ ")) ~= DS.CMD_OK then
+	if f.attr ~= 0 then
+		cmd = cmd .. "dir";
+	end
+
+	if os.execute(cmd .. " " .. self:replace_spaces(f.file)) ~= DS.CMD_OK then
 		self:showConsole();
-		return false;
+		return;
 	end
 
 	local mgr = self:getFocusedManager();
@@ -303,12 +320,16 @@ function FileManager:toolbarDelete()
 end
 
 
-
 function FileManager:toolbarArchive()
 
 	local f = self:getFile();
+
+	if f.name == nil then
+		return;
+	end
+
 	local ext = string.lower(string.sub(f.name, -4));
-	local file = string.gsub(f.file, " ", "\\ ");
+	local file = self:replace_spaces(f.file);
 	local name = f.name;
 	
 	local mgr = self:getUnfocusedManager();
@@ -385,6 +406,10 @@ end
 function FileManager:toolbarMountISO()
 
 	local f = self:getFile();
+
+	if f.name == nil then
+		return;
+	end
 	
 	if not self.modal.visible then 
 		return self:ShowModal("confirm", 'Mount selected ISO as VFS?', "mount_iso");
@@ -399,7 +424,7 @@ function FileManager:toolbarMountISO()
 		 end
 	end
 	
-	if os.execute("isofs -m -f " .. string.gsub(f.file, " ", "\\ ") .. " -d /iso") ~= DS.CMD_OK then
+	if os.execute("isofs -m -f " .. self:replace_spaces(f.file) .. " -d /iso") ~= DS.CMD_OK then
 		self:showConsole();
 	end
 end
@@ -447,8 +472,13 @@ end
 function FileManager:openFile()
 
 	local f = self:getFile();
+
+	if f.name == nil then
+		return;
+	end
+
 	local ext = string.lower(string.sub(f.name, -4));
-	local file = string.gsub(f.file, " ", "\\ ");
+	local file = self:replace_spaces(f.file);
 	local name = f.name;
 
 	if ext == ".bin" or ext == ".elf" then
