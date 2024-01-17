@@ -17,9 +17,9 @@ static struct {
 	GUI_Widget *sd_c;
 	GUI_Widget *hdd_c;
 	GUI_Widget *pc_c;
-	GUI_Widget *speedwr;
-	GUI_Widget *speedrd;
-	GUI_Widget *speedrdd;
+	GUI_Widget *pio_write_text;
+	GUI_Widget *pio_read_text;
+	GUI_Widget *dma_read_text;
 	GUI_Widget *status;
 } self;
 
@@ -42,7 +42,8 @@ int test_ide_dma(void) {
 	uint32_t tm;
 	uint8_t pt;
 	uint8_t *buf;
-	size_t buf_size = 512 * 1024;
+	const size_t blocks = 4096;
+	const size_t buf_size = blocks * 512;
 	double speed;
 	char result[256];
 
@@ -57,12 +58,12 @@ int test_ide_dma(void) {
 		return -1;
 	}
 	show_status_ok("Testing DMA IO read speed...");
-	GUI_LabelSetText(self.speedrdd, "...");
+	GUI_LabelSetText(self.dma_read_text, "...");
 
 	ShutdownVideoThread();
 	sdma = timer_ns_gettime64();
 
-	if(bd_dma.read_blocks(&bd_dma, 0, 1024, buf)) {
+	if(bd_dma.read_blocks(&bd_dma, 0, blocks, buf)) {
 		dbglog(DBG_DEBUG, "couldn't read block by DMA: %s\n", strerror(errno));
 		free(buf);
 		return -1;
@@ -77,7 +78,7 @@ int test_ide_dma(void) {
 	snprintf(result, sizeof(result), 
 		"DMA IO read: %.2f Kbytes/s (%.2f Mbit/s)",
 		speed / 1024, ((speed / 1024) / 1024) * 8);
-	GUI_LabelSetText(self.speedrdd, result);
+	GUI_LabelSetText(self.dma_read_text, result);
 	show_status_ok("Complete!"); 
 
 	ds_printf("DS_OK: Complete!\n"
@@ -106,9 +107,9 @@ void Speedtest_Run(GUI_Widget *widget) {
 	char result[256];
 	const char *wname = GUI_ObjectGetName((GUI_Object *)widget);
 
-	GUI_LabelSetText(self.speedwr, "   ");
-	GUI_LabelSetText(self.speedrd, "   ");
-	GUI_LabelSetText(self.speedrdd, "   ");
+	GUI_LabelSetText(self.pio_write_text, " ");
+	GUI_LabelSetText(self.pio_read_text, " ");
+	GUI_LabelSetText(self.dma_read_text, " ");
 
 	if(!strncmp(wname, "/ide", 4)) {
 		is_ide = 1;
@@ -127,7 +128,7 @@ void Speedtest_Run(GUI_Widget *widget) {
 	}
 	
 	show_status_ok("Testing PIO FS wite speed...");
-	GUI_LabelSetText(self.speedwr, "...");
+	GUI_LabelSetText(self.pio_write_text, "...");
 	
 	snprintf(name, sizeof(name), "%s/%s.tst", wname, lib_get_name());
 	
@@ -174,7 +175,7 @@ void Speedtest_Run(GUI_Widget *widget) {
 		"PIO FS write: %.2f Kbytes/s (%.2f Mbit/s)",
 		speed / 1024, ((speed / 1024) / 1024) * 8);
 
-	GUI_LabelSetText(self.speedwr, result);
+	GUI_LabelSetText(self.pio_write_text, result);
 	show_status_ok("Complete!");
 
 	ds_printf("DS_OK: Complete!\n"
@@ -188,7 +189,7 @@ void Speedtest_Run(GUI_Widget *widget) {
 readtest:
 
 	show_status_ok("Testing PIO FS read speed...");
-	GUI_LabelSetText(self.speedrd, "...");
+	GUI_LabelSetText(self.pio_read_text, "...");
 
 	/* READ TEST */
 	fd = fs_open(name, O_RDONLY);
@@ -199,7 +200,7 @@ readtest:
 		return;
 	}
 	if(read_only) {
-		GUI_LabelSetText(self.speedwr, "Write test passed");
+		GUI_LabelSetText(self.pio_write_text, "Write test passed");
 		/* Reset ISO9660 filesystem cache */
 		fs_ioctl(fd, 0, NULL);
 		fs_close(fd);
@@ -254,7 +255,7 @@ readtest:
 		((speed / 1024) / 1024) * 8, 
 		size / 1024, buff_size / 1024);
 
-	GUI_LabelSetText(self.speedrd, result);
+	GUI_LabelSetText(self.pio_read_text, result);
 	show_status_ok("Complete!"); 
 
 	if(is_ide) {
@@ -271,10 +272,10 @@ void Speedtest_Init(App_t *app) {
 
 		self.app = app;
 
-		self.speedrd = APP_GET_WIDGET("speedr_text");
-		self.speedrdd = APP_GET_WIDGET("speedrd_text");
-		self.speedwr = APP_GET_WIDGET("speedw_text");
-		self.status  = APP_GET_WIDGET("status_text");
+		self.pio_read_text = APP_GET_WIDGET("pio-read-text");
+		self.dma_read_text = APP_GET_WIDGET("dma-read-text");
+		self.pio_write_text = APP_GET_WIDGET("pio-write-text");
+		self.status  = APP_GET_WIDGET("status-text");
 
 		self.cd_c  = APP_GET_WIDGET("/cd");
 		self.sd_c  = APP_GET_WIDGET("/sd");

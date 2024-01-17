@@ -3,8 +3,12 @@
 	<resources>
 		<module src="modules/app_speedtest.klf" />
 		<font src="fonts/dinnext.ttf" type="ttf" size="24" name="dinnext" />
-		<surface width="640" height="480" name="back">
+		<surface width="100%" height="100%" name="back">
 			<blit surface="../../gui/back/nautilus.jpg" />
+		</surface>
+		<surface width="90%" height="210" name="result_bg">
+			<fill color="#EEEEEE" />
+			<fill x="1%" y="2%" width="98%" height="96%" color="#3E6BA4" />
 		</surface>
 		<image src="images/hdd.png" name="hdd" />
 		<image src="images/hdd_high.png" name="hdd_h" />
@@ -72,17 +76,22 @@
 						name="/cd" />
 			</panel>
 		</panel>
-		<panel y="200" height="50">
-			<label height="40" font="dinnext" color="#eeeeee" name="speedw_text" />
-		</panel>
-		<panel height="60">
-			<label height="40" font="dinnext" color="#eeeeee" name="speedr_text" />
-		</panel>
-		<panel height="60">
-			<label height="40" font="dinnext" color="#eeeeee" name="speedrd_text" />
-		</panel>
-		<panel height="50">
-			<label height="40" font="dinnext" color="#eeeeee" text="Select a device" name="status_text" />
+		<panel x="5%" y="205" width="90%" height="210">
+			<panel background="result_bg">
+				<panel height="50" y="5">
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="pio-write-text" />
+				</panel>
+				<panel height="50">
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="pio-read-text" />
+				</panel>
+				<panel height="60">
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="dma-read-text" />
+				</panel>
+				<panel height="50">
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE"
+						text="Select a device" name="status-text" />
+				</panel>
+			</panel>
 		</panel>
 		<input type="button" 
 				normal="iExitNorm" 
