@@ -691,3 +691,15 @@ void dbgio_hex_dump(char *desc, void *addr, int len) {
     // And print the final ASCII bit.
     dbglog(DBG_DEBUG, "  %s\n", buff);
 }
+
+char *fix_path_spaces(char *str) {
+	if(!str) return NULL;
+
+	int i, len = (int) strlen(str);
+
+	for(i = 0; i < len; ++i) {
+		if(str[i] == '\\') str[i] = ' ';
+	}
+
+	return str;
+}

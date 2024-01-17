@@ -99,7 +99,7 @@ static void *CommandThread(void *command) {
 	char *str = (char *)command;
 
 	for (argc = 0; argc < 32;) {
-		if ((argv[argc] = strsep(&str, " \t\n")) == NULL)
+		if ((argv[argc] = fix_path_spaces(strsep(&str, " \t\n"))) == NULL)
 			break;
 		if (*argv[argc] != '\0')
 			argc++;
@@ -132,11 +132,11 @@ static void Command_Handler(ConsoleInformation *console, char* command) {
 
 
 static char *TabFunction(char* command) {
-	
-	if(strcasestr(command, " ") != NULL) {
+
+	if(strstr(command, " ") != NULL) {
 		return command;
 	}
-	
+
 	Item_list_t *cmds = GetCmdList();
 	Cmd_t *c;
 	Item_t *i;

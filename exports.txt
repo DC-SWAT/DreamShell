@@ -296,6 +296,7 @@ hex_to_int
 strtolower
 substring
 isdigit
+fix_path_spaces
 memcpy_sh4
 memset_sh4
 memmove_sh4

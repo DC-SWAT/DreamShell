@@ -74,6 +74,7 @@ int hex_to_int(char c);
 char *strtolower(char *str);
 char *strsep(char **stringp, const char *delim);
 char* substring(const char* str, size_t begin, size_t len);
+char *fix_path_spaces(char *str);
 
 #if defined(__STRICT_ANSI__)
 char *strndup(const char *, size_t);
