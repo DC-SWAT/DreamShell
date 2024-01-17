@@ -469,7 +469,7 @@ static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
 		} else {
 
 			tmp = ((float)parent_w / 100);
-			*w = tmp * (float)atoi(width);
+			*w = tmp * atof(width);
 		}
 
 	} else {
@@ -485,7 +485,7 @@ static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
 		} else {
 			
 			tmp = ((float)parent_h / 100);
-			*h = tmp * (float)atoi(height);
+			*h = tmp * atof(height);
 		}
 
 	} else {
@@ -516,7 +516,7 @@ static void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *
 	} else if(xp[strlen(xp)-1] == '%') {
 		
 		tmp = ((float)parent_w / 100);
-		*x = tmp * (float)atoi(xp);
+		*x = tmp * atof(xp);
 
 	} else {
 
@@ -530,7 +530,7 @@ static void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *
 	} else if(yp[strlen(yp)-1] == '%') {
 
 		tmp = ((float)parent_h / 100);
-		*y = tmp * (float)atoi(yp);
+		*y = tmp * atof(yp);
 
 	} else {
 
