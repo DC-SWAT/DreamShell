@@ -570,14 +570,17 @@ void GUI_FileManager::Update(int force) {
 }
 
 int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
-	
-	if (flags & WIDGET_DISABLED) return 0;
-	
-	int i;
-	
+	int i, rv;
+
+	rv = GUI_Drawable::Event(event, xoffset, yoffset);
+
+	if ((flags & WIDGET_DISABLED) || !(flags & WIDGET_INSIDE)) {
+		return rv;
+	}
+
 	xoffset += area.x - x_offset;
 	yoffset += area.y - y_offset;
-	
+
 	switch (event->type) {
 		
 		case SDL_JOYBUTTONDOWN:
@@ -685,11 +688,12 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 	}
 
 	for (i = 0; i < n_widgets; i++) {
-		if (widgets[i]->Event(event, xoffset, yoffset))
-			return 1;
+		if (widgets[i]->Event(event, xoffset, yoffset)) {
+			rv = 1;
+			break;
+		}
 	}
-
-	return GUI_Drawable::Event(event, xoffset, yoffset);
+	return rv;
 }
 
 extern "C"

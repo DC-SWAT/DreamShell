@@ -115,22 +115,17 @@ void GUI_Drawable::ClearFlags(int mask)
 int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 {
 	
-	GUI_Screen *screen = GUI_GetScreen(); /*  FIXME GUI_GetScreen(); */
-	GUI_Drawable *focus = screen->GetFocusWidget(); /* FIXME screen->GetFocusWidget(); */
+	GUI_Screen *screen = GUI_GetScreen();
+	GUI_Drawable *focus = screen->GetFocusWidget();
 
 	switch (event->type)
 	{
-/*		
-		case SDL_KEYDOWN:
-			return GUI_DrawableKeyPressed(object, event->key.keysym.sym, event->key.keysym.unicode);
-		case SDL_KEYUP:
-			return GUI_DrawableKeyReleased(object, event->key.keysym.sym, event->key.keysym.unicode);
-*/
 		case SDL_MOUSEBUTTONDOWN:
 		{
 			int x = event->button.x - xoffset;
 			int y = event->button.y - yoffset;
-			if ((flags & WIDGET_DISABLED) == 0/* && (flags & WIDGET_HIDDEN) == 0*/) {
+			if ((flags & WIDGET_DISABLED) == 0 &&
+				(flags & WIDGET_HIDDEN) == 0) {
 				if (Inside(x, y, &area))
 					if (focus == 0 || focus == this) {
 						SetFlags(WIDGET_PRESSED);
@@ -142,12 +137,12 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 		{
 			int x = event->button.x - xoffset;
 			int y = event->button.y - yoffset;
-			if ((flags & WIDGET_DISABLED) == 0/* && (flags & WIDGET_HIDDEN) == 0*/)
+			if ((flags & WIDGET_DISABLED) == 0 &&
+				(flags & WIDGET_HIDDEN) == 0)
 			{
 				if (flags & WIDGET_PRESSED)
 					if (Inside(x, y, &area))
 						if (focus == 0 || focus == this) {
-//							ds_printf("Mouse button: %d\n", event->button.button);
 							if(event->button.button != 1) {
 								Clicked(x, y);
 							} else {
@@ -167,7 +162,9 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			int y = event->motion.y - yoffset;
 			if (focus == 0 || focus == this)
 			{
-				if ((flags & WIDGET_DISABLED) == 0/* && (flags & WIDGET_HIDDEN) == 0*/ && Inside(x, y, &area)) {
+				if ((flags & WIDGET_DISABLED) == 0 &&
+					(flags & WIDGET_HIDDEN) == 0 &&
+					Inside(x, y, &area)) {
 					
 					if(!focused) {
 						SetFlags(WIDGET_INSIDE);
