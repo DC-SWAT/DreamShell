@@ -45,7 +45,7 @@
 		<image src="images/pc_disable.png" name="pc_d" /> 
 		<image src="images/home.png" name="ihome" />
 		<image src="images/home_high.png" name="ihome_h" />
-		<image src="images/icon.png" name="dump_icon" />
+		<image src="images/dump_icon.png" name="dump_icon" />
 		<image src="images/dump.png" name="dump" />
 		<image src="images/dump_high.png" name="dump_h" />
 		<image src="images/dump_disable.png" name="dump_d" />

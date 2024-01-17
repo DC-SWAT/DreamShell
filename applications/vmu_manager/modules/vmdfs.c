@@ -1,8 +1,9 @@
 /* KallistiOS ##version##
 
-	vmdfs.c
-	Copyright (C) 2003 Dan Potter
-	Copyright (C) 2015 megavolt85
+    vmdfs.c
+    Copyright (C) 2003 Dan Potter
+    Copyright (C) 2015 megavolt85
+    Copyright (C) 2024 SWAT
 */
 
 #include <stdio.h>
@@ -80,15 +81,15 @@ static int vmdfs_dir_read(const char *vmdfile, vmd_root_t * root, vmd_dir_t * di
         else
             needsop = 1;
 
-		if(needsop) {
-			
-			if(!write){
-			
-				file_t f = fs_open(vmdfile,O_RDONLY);
-				fs_seek(f,dir_block*BLOCK_SIZE,SEEK_SET);
-				fs_read(f,(uint8 *)dir_buf,BLOCK_SIZE);
-				fs_close(f);
-			}
+        if(needsop) {
+            
+            if(!write){
+            
+                file_t f = fs_open(vmdfile,O_RDONLY);
+                fs_seek(f,dir_block*BLOCK_SIZE,SEEK_SET);
+                fs_read(f,(uint8 *)dir_buf,BLOCK_SIZE);
+                fs_close(f);
+            }
         }
       
         dir_block--;
@@ -104,7 +105,7 @@ static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16 * fat_b
     uint16  fat_block, fat_size;
 
     /* Find the FAT starting block and length */
-	fat_block = root->fat_loc;
+    fat_block = root->fat_loc;
     fat_size = root->fat_size;
 
     /* We can't reliably handle VMDs with a larger FAT... */
@@ -112,12 +113,18 @@ static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16 * fat_b
         dbglog(DBG_ERROR, "vmdfs_fat_read: VMD has >1 (%d) FAT blocks\n",(int)fat_size);
         return -1;
     }
-    
-    file_t f = fs_open(vmdfile,O_RDONLY);
-	fs_seek(f,fat_block*BLOCK_SIZE,SEEK_SET);
-	fs_read(f,(uint8 *)fat_buf,BLOCK_SIZE);
-	fs_close(f);
-    
+
+    file_t fd = fs_open(vmdfile, O_RDONLY);
+
+    if(fd < 0) {
+        dbglog(DBG_ERROR, "vmdfs_fat_read: can't open file %s\n", vmdfile);
+        return -1;
+    }
+
+    fs_seek(fd, fat_block * BLOCK_SIZE, SEEK_SET);
+    fs_read(fd, (uint8 *)fat_buf, BLOCK_SIZE);
+    fs_close(fd);
+
     if(!*fat_buf) {
         dbglog(DBG_ERROR, "vmdfs_fat_read: can't read block %d\n",(int)fat_block);
         return -2;
@@ -167,14 +174,18 @@ static int vmdfs_file_read(const char *vmdfile, uint16 * fat, vmd_dir_t * dirent
             dbglog(DBG_ERROR, "vmdfs_file_read: file '%s' ends prematurely in fat\n",fn);
             return -1;
         }
-        
-		/* Read the block */
-		
-		file_t f = fs_open(vmdfile,O_RDONLY);
-		fs_seek(f,curblk*BLOCK_SIZE,SEEK_SET);
-		int rv = fs_read(f,(uint8 *)out,BLOCK_SIZE);
-		fs_close(f);
-        
+
+        /* Read the block */
+        file_t fd = fs_open(vmdfile, O_RDONLY);
+
+        if(fd < 0) {
+            dbglog(DBG_ERROR, "vmdfs_fat_read: can't open file %s\n", vmdfile);
+            return -1;
+        }
+        fs_seek(fd, curblk * BLOCK_SIZE, SEEK_SET);
+        int rv = fs_read(fd, (uint8 *)out, BLOCK_SIZE);
+        fs_close(fd);
+
         if(rv != BLOCK_SIZE) {
             dbglog(DBG_ERROR, "vmdfs_file_read: can't read block %d\n",curblk);
             return -2;
@@ -210,32 +221,31 @@ static int vmdfs_mutex_unlock() {
 /* Internal function gets everything setup for you */
 static int vmdfs_setup(const char *vmdfile, vmd_root_t * root, vmd_dir_t ** dir, int * dirsize,
                        uint16 ** fat, int * fatsize) {
-    /* Check to make sure this is a valid device right now */
-    if(!FileExists(vmdfile)) {
-
-		dbglog(DBG_ERROR, "vmdfs_setup: vmd file is invalid\n");
-
+    if(!root) {
         return -1;
     }
+    /* Read root block */
+    file_t fd = fs_open(vmdfile, O_RDONLY);
 
+    if(fd < 0) {
+        dbglog(DBG_ERROR, "vmdfs_setup: can't open file %s\n", vmdfile);
+        return -1;
+    }
     vmdfs_mutex_lock();
 
-    /* Read its root block */
-    file_t f = fs_open(vmdfile,O_RDONLY);
-    fs_seek(f,255*BLOCK_SIZE,SEEK_SET);
-    fs_read(f,(uint8 *)root,BLOCK_SIZE);
-    fs_close(f);
-    
-    if(!root)
-        goto dead;
+    fs_seek(fd, -BLOCK_SIZE, SEEK_END);
+    size_t rd = fs_read(fd, (uint8 *)root, BLOCK_SIZE);
+    fs_close(fd);
+
+    dbglog(DBG_DEBUG, "vmdfs_setup: read %s %d\n", vmdfile, rd);
 
     if(dir) {
         /* Alloc enough space for the whole dir */
         *dirsize = vmdfs_dir_blocks(root);
-        *dir = (vmd_dir_t *)malloc(*dirsize);
+        *dir = (vmd_dir_t *)memalign(32, *dirsize);
 
         if(!*dir) {
-            dbglog(DBG_ERROR, "vmdfs_setup: can't alloc %d bytes for dir\n",*dirsize);
+            dbglog(DBG_ERROR, "vmdfs_setup: can't alloc %d bytes for dir\n", *dirsize);
             goto dead;
         }
 
@@ -250,10 +260,10 @@ static int vmdfs_setup(const char *vmdfile, vmd_root_t * root, vmd_dir_t ** dir,
     if(fat) {
         /* Alloc enough space for the fat */
         *fatsize = vmdfs_fat_blocks(root);
-        *fat = (uint16 *)malloc(*fatsize);
+        *fat = (uint16 *)memalign(32, *fatsize);
 
         if(!*fat) {
-            dbglog(DBG_ERROR, "vmdfs_setup: can't alloc %d bytes for FAT\n",*fatsize);
+            dbglog(DBG_ERROR, "vmdfs_setup: can't alloc %d bytes for FAT\n", *fatsize);
             goto dead;
         }
 
@@ -336,7 +346,7 @@ ex:
 static int vmdfs_read_common(const char *vmdfile, vmd_dir_t * dirent, uint16 * fat, void ** outbuf, int * outsize) {
     /* Allocate the output space */
     *outsize = dirent->filesize * 512;
-    *outbuf = malloc(*outsize);
+    *outbuf = memalign(32, *outsize);
 
     if(!*outbuf) {
         dbglog(DBG_ERROR, "vmdfs_read: can't alloc %d bytes for reading a file\n",*outsize);
