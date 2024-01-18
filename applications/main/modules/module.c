@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Main app module
-   Copyright (C)2011-2016 SWAT 
+   Copyright (C)2011-2016, 2024 SWAT 
 
 */
 
@@ -10,7 +10,9 @@
 
 DEFAULT_MODULE_EXPORTS(app_main);
 
-#define ICON_CELL_PADDING 10
+#define ICON_CELL_PADDING_X 30
+#define ICON_CELL_PADDING_Y 15
+#define ICON_HIGHLIGHT_PADDING 8
 
 static struct {
 
@@ -24,7 +26,8 @@ static struct {
 	int y;
 	int cur_x;
 	int col_width;
-	
+	int pages;
+
 	struct tm datetime;
 	GUI_Widget *dateWidget;
 	GUI_Widget *timeWidget;
@@ -41,24 +44,25 @@ typedef struct script_item {
 
 static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
 
-	SDL_Surface *screen = GetScreen();
-	GUI_Surface *s = GUI_SurfaceCreate("icon", 
-										screen->flags, 
-										w + 4, h + 4, 
-										screen->format->BitsPerPixel, 
-										screen->format->Rmask, 
-										screen->format->Gmask, 
-										screen->format->Bmask, 
-										screen->format->Amask);
-	
-	GUI_SurfaceSetAlpha(s,  SDL_SRCALPHA, 100);
-	GUI_SurfaceFill(s, NULL, GUI_SurfaceMapRGB(s, 0, 0, 0));
-	//GUI_SurfaceBoxRouded(s, 0, 0, w, h, 10, 0xEEEEEE44);
 	SDL_Rect dst;
-	dst.x = dst.y = 2;
-	dst.w = w;
-	dst.h = h;
-	GUI_SurfaceBlit(src, NULL, s, &dst);
+	SDL_Surface *sdl = GUI_SurfaceGet(src);
+	GUI_Surface *s = GUI_SurfaceCreate("app-icon-hl",
+		sdl->flags,
+		w,
+		h,
+		sdl->format->BitsPerPixel,
+		sdl->format->Rmask,
+		sdl->format->Gmask,
+		sdl->format->Bmask,
+		sdl->format->Amask);
+
+	GUI_SurfaceBoxRouded(s, 0, 0, w - 1, h - 1, 10, GUI_SurfaceMapRGBA(s, 212, 241, 21, 220));
+	GUI_SurfaceRectagleRouded(s, 1, 1, w - 2, h - 2, 10, GUI_SurfaceMapRGBA(s, 212, 241, 41, 255));
+
+	dst.x = dst.y = ICON_HIGHLIGHT_PADDING / 2;
+	dst.w = GUI_SurfaceGetWidth(src);
+	dst.h = GUI_SurfaceGetHeight(src);
+	GUI_SurfaceBlitRGBA(src, NULL, s, &dst);
 
 	return s;
 }
@@ -96,34 +100,41 @@ static void AddToList(const char *name, const char *icon,
 						void *callback_data) {
 
 	SDL_Rect ts;
+	int pad_x;
 
 	if(name) {
 		ts = GUI_FontGetTextSize(self.font, name);
-		ts.w += 4;
+		ts.w += 6;
+		pad_x = ICON_CELL_PADDING_X;
 	} else {
 		ts.w = 0;
+		pad_x -= 10;
 	}
 
 	GUI_Surface *s = GUI_SurfaceLoad(icon);
 	int w = ts.w + GUI_SurfaceGetWidth(s);
 	int h = GUI_SurfaceGetHeight(s);
-	int dpad = ICON_CELL_PADDING * 2;
-	
-	if((self.y + h + dpad) > self.panel_area.h) {
 
-		self.x += self.col_width + ICON_CELL_PADDING;
-		self.y = dpad;
-		self.col_width = 0;
-		
-		if((self.x % self.panel_area.w) + w + ICON_CELL_PADDING > self.panel_area.w) {
-			self.x += (self.panel_area.w - (self.x % self.panel_area.w)) + dpad;
+	if((self.y + h) > self.panel_area.h) {
+
+		self.x += self.col_width + pad_x;
+		self.y = ICON_CELL_PADDING_Y;
+		self.col_width = w;
+
+		if(self.x + w + (pad_x / 2) > (self.pages * self.panel_area.w)) {
+			self.x = (self.pages * self.panel_area.w) + (ICON_CELL_PADDING_X / 2);
+			self.pages++;
 		}
 	}
-	
-	GUI_Widget *b = GUI_ButtonCreate(name ? name : "icon", self.x, self.y, w + 4, h + 4);
+
+	GUI_Widget *b = GUI_ButtonCreate(name ? name : "icon",
+		self.x,
+		self.y,
+		w + ICON_HIGHLIGHT_PADDING,
+		h + ICON_HIGHLIGHT_PADDING);
 
 	if(s != NULL) {
-		GUI_Surface *sh = CreateHighlight(s, w, h);
+		GUI_Surface *sh = CreateHighlight(s, w + ICON_HIGHLIGHT_PADDING, h + ICON_HIGHLIGHT_PADDING);
 
 		GUI_ButtonSetNormalImage(b, s);
 		GUI_ButtonSetHighlightImage(b, sh);
@@ -140,7 +151,7 @@ static void AddToList(const char *name, const char *icon,
 
 	if(name) {
 		GUI_Widget *l = GUI_LabelCreate(name, 0, 0, w, h, self.font, name);
-		GUI_LabelSetTextColor(l, 0, 0, 0);
+		GUI_LabelSetTextColor(l, 51, 41, 90);
 		GUI_WidgetSetAlign(l, WIDGET_HORIZ_RIGHT | WIDGET_VERT_CENTER);
 		GUI_ButtonSetCaption(b, l);
 		GUI_ObjectDecRef((GUI_Object *) l);
@@ -149,8 +160,8 @@ static void AddToList(const char *name, const char *icon,
 	GUI_ContainerAdd(self.panel, b);
 	GUI_ObjectDecRef((GUI_Object *) b);
 
-	self.y += (h + ICON_CELL_PADDING);
-	
+	self.y += (h + ICON_CELL_PADDING_Y);
+
 	if(self.col_width < w) {
 		self.col_width = w;
 	}
@@ -166,21 +177,26 @@ static void BuildAppList() {
 	App_t *app;
 	Item_list_t *applist = GetAppList();
 	const char *app_name = lib_get_name() + 4;
-	
+
 	if(applist != NULL) {
-	
 		Item_t *item = listGetItemFirst(applist);
 
 		while(item != NULL) {
-			
+
 			app = (App_t*)item->data;
-			
+
 			if(strncasecmp(app->name, app_name, sizeof(app->name))) {
 				AddToList(app->name, app->icon, (GUI_CallbackFunction *)OpenAppCB, NULL, (void*)app->id);
 			}
-			
 			item = listGetItemNext(item);
 		}
+	}
+
+	if(self.pages == 1) {
+		self.x += (self.panel_area.w - (self.x % self.panel_area.w)) + (ICON_CELL_PADDING_X / 2);
+		self.y = ICON_CELL_PADDING_Y;
+		self.col_width = 0;
+		self.pages++;
 	}
 	
 	snprintf(path, NAME_MAX, "%s/apps/%s/scripts", getenv("PATH"), app_name);
@@ -293,7 +309,7 @@ static void ShowDateTime(int force) {
 }
 
 static void *ClockThread() {
-	
+
 	while(self.app->state & APP_STATE_OPENED) {
 		ShowDateTime(0);
 		thd_sleep(250);
@@ -325,12 +341,15 @@ void MainApp_Init(App_t *app) {
 	if(app != NULL) {
 		
 		memset(&self, 0, sizeof(self));
-		self.x = self.y = (ICON_CELL_PADDING * 2);
 		self.app = app;
 
-		self.font = APP_GET_FONT("arial");
+		self.x = ICON_CELL_PADDING_X / 2;
+		self.y = ICON_CELL_PADDING_Y;
+		self.pages = 1;
+
+		self.font = APP_GET_FONT("comic");
 		self.panel = APP_GET_WIDGET("app-list");
-		
+
 		if(self.font && self.panel) {
 			self.panel_area = GUI_WidgetGetArea(self.panel);
 			BuildAppList();
@@ -338,12 +357,12 @@ void MainApp_Init(App_t *app) {
 			ds_printf("DS_ERROR: Couldt'n find font and app-list panel\n");
 			return;
 		}
-		
+
 		ShowVersion(APP_GET_WIDGET("version"));
-		
+
 		self.dateWidget = APP_GET_WIDGET("date");
 		self.timeWidget = APP_GET_WIDGET("time");
-		
+
 		if(self.dateWidget && self.timeWidget) {
 			ShowDateTime(1);
 			self.app->thd = thd_create(0, ClockThread, NULL);
