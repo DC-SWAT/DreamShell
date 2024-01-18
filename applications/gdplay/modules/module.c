@@ -1,7 +1,8 @@
 /* DreamShell ##version##
 
    module.c - GDPlay app module
-   Copyright (C)2014 megavolt85 
+   Copyright (C)2014 megavolt85
+   Copyright (C)2024 SWAT
 
 */
 
@@ -70,10 +71,9 @@ static struct self
 	GUI_Surface *play;
 	
 	void *bios_patch;
+	int kill_gdrom_thd;
+	kthread_t *check_gdrom_thd;
 } self;
-
-kthread_t *check_gdrom_thd;
-int kill_gdrom_thd = 0;
 
 void gdplay_run_game(void *param);
 
@@ -114,21 +114,20 @@ static void set_img(GUI_Surface *surface, int enable)
 	GUI_ButtonSetHighlightImage(self.play_btn, self.play);
 	GUI_ButtonSetPressedImage(self.play_btn, surface);
 	GUI_ButtonSetDisabledImage(self.play_btn, surface);
-	
 	GUI_WidgetSetEnabled(self.play_btn, enable);
-	
-//	self.rotate = surface;
 }
 
 static void set_info(int disc_type)
 {
 	int lba = 45150;
-	char pbuff[2048];
-	
+	char tmp[NAME_MAX];
+	static char pbuff[2048];
+
 	if(FileExists("/cd/0gdtex.pvr"))
 	{
 		self.gdtex[SURF_ONCD] = GUI_SurfaceLoad("/cd/0gdtex.pvr");
 		set_img(self.gdtex[SURF_ONCD], 1);
+		GUI_ObjectDecRef((GUI_Object *)self.gdtex[SURF_ONCD]);
 	}
 	else
 	{
@@ -152,23 +151,21 @@ static void set_info(int disc_type)
 			return;
 		}
 	}
-	
-	if (cdrom_read_sectors(pbuff,lba , 1)) 
+
+	if (cdrom_read_sectors(pbuff, lba , 1))
 	{
 		ds_printf("DS_ERROR: CD read error %d\n",lba); 
 		set_img(self.gdtex[SURF_CDROM], 0);
 		return;
 	}
-	
+
 	self.info = (ip_meta_t *) pbuff;
-	
+
 	if(strncmp(self.info->hardware_ID, "SEGA", 4))
 	{
 		set_img(self.gdtex[SURF_CDROM], 0);
 		return;
 	}
-	
-	char tmp[NAME_MAX];
 	
 	if(strlen(trim_spaces(self.info->country_codes, sizeof(self.info->country_codes))) > 1)
 	{
@@ -283,7 +280,7 @@ static void *check_gdrom()
 {
 	int status, disc_type, cd_status;
 	
-	while(!kill_gdrom_thd)
+	while(!self.kill_gdrom_thd)
 	{
 		cd_status = cdrom_get_status(&status, &disc_type);
 		
@@ -297,13 +294,15 @@ static void *check_gdrom()
 				{
 					case CD_STATUS_OPEN:
 					case CD_STATUS_NO_DISC:
-						if(self.info)
+						if(self.info) {
 							clear_text();
-							set_img(self.gdtex[SURF_NODISC], 0);
+						}
+						set_img(self.gdtex[SURF_NODISC], 0);
 						break;
 					default:
-						if(!self.info)
+						if(!self.info) {
 							check_cd();
+						}
 						break;
 				}
 		}
@@ -313,50 +312,12 @@ static void *check_gdrom()
 	return NULL;
 }
 
-/*
-int rotate_en = 0;
-kthread_t *rotate_thd;
-
-static void *rotate_gdtex()
-{
-	SDL_Surface *surf;
-	rotate_en = 1;
-	
-	while(rotate_en)
-	{
-		surf = GUI_SurfaceGet(self.rotate);
-		GUI_Surface *s = GUI_SurfaceFrom("rotated-surface", rotozoomSurface(surf, 1.0, 1.0, 1));
-		GUI_ButtonSetHighlightImage(self.play_btn, s);
-		self.rotate = s;
-		GUI_WidgetMarkChanged(self.app->body);
-	}
-	
-	return NULL;
-}
-
-void gdplay_rotate_on(GUI_Widget *widget)
-{
-	(void) widget;
-	ds_printf("gdplay_rotate_on\n");
-	if(!rotate_en)
-		rotate_thd = thd_create(1, rotate_gdtex, NULL);
-}
-
-void gdplay_rotate_off(GUI_Widget *widget)
-{
-	(void) widget;
-	ds_printf("gdplay_rotate_off\n");
-	rotate_en = 0;
-	thd_join(rotate_thd, NULL);
-}
-*/
-
 void gdplay_play(GUI_Widget *widget)
 {
 	(void) widget;
 	
-	kill_gdrom_thd = 1;
-	thd_join(check_gdrom_thd, NULL);
+	self.kill_gdrom_thd = 1;
+	thd_join(self.check_gdrom_thd, NULL);
 
 	ShutdownDS();
     arch_shutdown();
@@ -369,9 +330,8 @@ void gdplay_Init(App_t *app)
 	if(app != NULL) 
 	{
 		memset(&self, 0, sizeof(self));
-		
 		self.app = app;
-		
+
 		self.play_btn 			= APP_GET_WIDGET("play-btn");
 		self.text[TXT_REGION] 	= APP_GET_WIDGET("region-txt");
 		self.text[TXT_VGA] 		= APP_GET_WIDGET("vga-txt");
@@ -383,36 +343,38 @@ void gdplay_Init(App_t *app)
 		self.text[TXT_TITLE3] 	= APP_GET_WIDGET("title3-txt");
 		self.text[TXT_TITLE4] 	= APP_GET_WIDGET("title4-txt");
 		self.text[TXT_TITLE5] 	= APP_GET_WIDGET("title5-txt");
-		
+
 		self.gdtex[SURF_GDROM] 	= APP_GET_SURFACE("gdrom");
 		self.gdtex[SURF_MILCD] 	= APP_GET_SURFACE("milcd");
 		self.gdtex[SURF_AUDIOCD]= APP_GET_SURFACE("cdaudio");
 		self.gdtex[SURF_CDROM] 	= APP_GET_SURFACE("cdrom");
 		self.gdtex[SURF_NODISC] = APP_GET_SURFACE("nodisc");
 		self.play 				= APP_GET_SURFACE("play");
-		
+
 		char path[NAME_MAX];
-		
 		snprintf(path, NAME_MAX, "%s/firmware/rungd.bin", getenv("PATH"));
-		
-		FILE *f = fopen(path, "rb");
-		
-		if(!f)
+
+		file_t fd = fs_open(path, O_RDONLY);
+
+		if(fd < 0)
 		{
 			ds_printf("DS_ERROR: Can't open %s\n", path);
 			ShowConsole();
 			return;
 		}
-		
-		self.bios_patch = memalign(32, 65280);
-		
-		fread(self.bios_patch, 65280, 1, f);
-		
-		fclose(f);
-		
+		size_t size = fs_total(fd);
+		self.bios_patch = memalign(32, size);
+
+		if(self.bios_patch == NULL)
+		{
+			fs_close(fd);
+			return;
+		}
+		fs_read(fd, self.bios_patch, size);
+		fs_close(fd);
+
 		check_cd();
-		
-		check_gdrom_thd = thd_create(1, check_gdrom, NULL);
+		self.check_gdrom_thd = thd_create(1, check_gdrom, NULL);
 	} 
 	else 
 	{
@@ -423,13 +385,9 @@ void gdplay_Init(App_t *app)
 
 void gdplay_Exit() 
 {
-/*	rotate_en = 0;
-	thd_join(rotate_thd, NULL);
-*/	
-	kill_gdrom_thd = 1;
-	thd_join(check_gdrom_thd, NULL);
+	self.kill_gdrom_thd = 1;
+	thd_join(self.check_gdrom_thd, NULL);
 	
 	if(self.bios_patch)
 		free(self.bios_patch);
 }
-
