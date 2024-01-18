@@ -87,127 +87,127 @@ void GUI_Surface::BlitRGBA(SDL_Rect * srcrect, GUI_Surface * dst, SDL_Rect * dst
 
 void GUI_Surface::Pixel(Sint16 x, Sint16 y, Uint32 c)
 {
-	pixelColor(surface, x, y, c);
+	pixelColor(surface, x, y, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Line(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 {
-	lineColor(surface, x1, y1, x2, y2, c);
+	lineColor(surface, x1, y1, x2, y2, __builtin_bswap32(c));
 }
 
 void GUI_Surface::LineAA(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 {
-	aalineColor(surface, x1, y1, x2, y2, c);
+	aalineColor(surface, x1, y1, x2, y2, __builtin_bswap32(c));
 }
 
 void GUI_Surface::LineH(Sint16 x1, Sint16 x2, Sint16 y, Uint32 c)
 {
-	hlineColor(surface, x1, x2, y, c);
+	hlineColor(surface, x1, x2, y, __builtin_bswap32(c));
 }
 
 void GUI_Surface::LineV(Sint16 x1, Sint16 y1, Sint16 y2, Uint32 c)
 {
-	vlineColor(surface, x1, y1, y2, c);
+	vlineColor(surface, x1, y1, y2, __builtin_bswap32(c));
 }
 
 void GUI_Surface::ThickLine(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint8 width, Uint32 c)
 {
-	thickLineColor(surface, x1, y1, x2, y2, width, c);
+	thickLineColor(surface, x1, y1, x2, y2, width, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Rectagle(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 {
-	rectangleColor(surface, x1, y1, x2, y2, c);
+	rectangleColor(surface, x1, y1, x2, y2, __builtin_bswap32(c));
 }
 
 void GUI_Surface::RectagleRouded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
 {
-	roundedRectangleColor(surface, x1, y1, x2, y2, rad, c);
+	roundedRectangleColor(surface, x1, y1, x2, y2, rad, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Box(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 {
-	boxColor(surface, x1, y1, x2, y2, c);
+	boxColor(surface, x1, y1, x2, y2, __builtin_bswap32(c));
 }
 
 void GUI_Surface::BoxRouded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
 {
-	roundedBoxColor(surface, x1, y1, x2, y2, rad, c);
+	roundedBoxColor(surface, x1, y1, x2, y2, rad, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Circle(Sint16 x, Sint16 y, Sint16 rad, Uint32 c)
 {
-	circleColor(surface, x, y, rad, c);
+	circleColor(surface, x, y, rad, __builtin_bswap32(c));
 }
 
 void GUI_Surface::CircleAA(Sint16 x, Sint16 y, Sint16 rad, Uint32 c)
 {
-	aacircleColor(surface, x, y, rad, c);
+	aacircleColor(surface, x, y, rad, __builtin_bswap32(c));
 }
 
 void GUI_Surface::CircleFill(Sint16 x, Sint16 y, Sint16 rad, Uint32 c)
 {
-	filledCircleColor(surface, x, y, rad, c);
+	filledCircleColor(surface, x, y, rad, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Arc(Sint16 x, Sint16 y, Sint16 rad, Sint16 start, Sint16 end, Uint32 c)
 {
-	arcColor(surface, x, y, rad, start, end, c);
+	arcColor(surface, x, y, rad, start, end, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Ellipse(Sint16 x, Sint16 y, Sint16 rx, Sint16 ry, Uint32 c)
 {
-	ellipseColor(surface, x, y, rx, ry, c);
+	ellipseColor(surface, x, y, rx, ry, __builtin_bswap32(c));
 }
 
 void GUI_Surface::EllipseAA(Sint16 x, Sint16 y, Sint16 rx, Sint16 ry, Uint32 c)
 {
-	aaellipseColor(surface, x, y, rx, ry, c);
+	aaellipseColor(surface, x, y, rx, ry, __builtin_bswap32(c));
 }
 
 void GUI_Surface::EllipseFill(Sint16 x, Sint16 y, Sint16 rx, Sint16 ry, Uint32 c)
 {
-	filledEllipseColor(surface, x, y, rx, ry, c);
+	filledEllipseColor(surface, x, y, rx, ry, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Pie(Sint16 x, Sint16 y, Sint16 rad, Sint16 start, Sint16 end, Uint32 c)
 {
-	pieColor(surface, x, y, rad, start, end, c);
+	pieColor(surface, x, y, rad, start, end, __builtin_bswap32(c));
 }
 
 void GUI_Surface::PieFill(Sint16 x, Sint16 y, Sint16 rad, Sint16 start, Sint16 end, Uint32 c)
 {
-	filledPieColor(surface, x, y, rad, start, end, c);
+	filledPieColor(surface, x, y, rad, start, end, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Trigon(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 x3, Sint16 y3, Uint32 c)
 {
-	trigonColor(surface, x1, y1, x2, y2, x3, y3, c);
+	trigonColor(surface, x1, y1, x2, y2, x3, y3, __builtin_bswap32(c));
 }
 
 void GUI_Surface::TrigonAA(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 x3, Sint16 y3, Uint32 c)
 {
-	aatrigonColor(surface, x1, y1, x2, y2, x3, y3, c);
+	aatrigonColor(surface, x1, y1, x2, y2, x3, y3, __builtin_bswap32(c));
 }
 
 void GUI_Surface::TrigonFill(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 x3, Sint16 y3, Uint32 c)
 {
-	filledTrigonColor(surface, x1, y1, x2, y2, x3, y3, c);
+	filledTrigonColor(surface, x1, y1, x2, y2, x3, y3, __builtin_bswap32(c));
 }
 
 void GUI_Surface::Polygon(const Sint16 * vx, const Sint16 * vy, int n, Uint32 c)
 {
-	polygonColor(surface, vx, vy, n, c);
+	polygonColor(surface, vx, vy, n, __builtin_bswap32(c));
 }
 
 void GUI_Surface::PolygonAA(const Sint16 * vx, const Sint16 * vy, int n, Uint32 c)
 {
-	aapolygonColor(surface, vx, vy, n, c);
+	aapolygonColor(surface, vx, vy, n, __builtin_bswap32(c));
 }
 
 void GUI_Surface::PolygonFill(const Sint16 * vx, const Sint16 * vy, int n, Uint32 c)
 {
-	filledPolygonColor(surface, vx, vy, n, c);
+	filledPolygonColor(surface, vx, vy, n, __builtin_bswap32(c));
 }
 
 void GUI_Surface::PolygonTextured(const Sint16 * vx, const Sint16 * vy, int n, GUI_Surface *texture, int texture_dx, int texture_dy)
@@ -217,7 +217,7 @@ void GUI_Surface::PolygonTextured(const Sint16 * vx, const Sint16 * vy, int n, G
 
 void GUI_Surface::Bezier(const Sint16 * vx, const Sint16 * vy, int n, int s, Uint32 c)
 {
-	bezierColor(surface, vx, vy, n, s, c);
+	bezierColor(surface, vx, vy, n, s, __builtin_bswap32(c));
 }
 
 int GUI_Surface::GetWidth(void)
