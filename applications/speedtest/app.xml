@@ -2,7 +2,7 @@
 <app name="Speedtest" version="0.4.0" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_speedtest.klf" />
-		<font src="fonts/dinnext.ttf" type="ttf" size="24" name="dinnext" />
+		<font src="../../fonts/ttf/dinnext.ttf" type="ttf" size="24" name="dinnext" />
 		<surface width="100%" height="100%" name="back">
 			<blit surface="../../gui/back/nautilus.jpg" />
 		</surface>
