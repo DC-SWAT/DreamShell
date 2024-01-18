@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="GD Ripper" version="1.0.1" icon="images/icon.png">
+<app name="GD Ripper" version="1.0.2" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_gd_ripper.klf" />
-		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
+		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="16" name="arial" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
 		<surface width="640" height="480" name="bg">
 			<blit surface="images/background.jpg" />
@@ -43,7 +43,7 @@
 		<label width="160" height="90" y="25" font="m23" color="#2439da" name="track-label" text=" " />
 
 		<panel x="40" y="115" width="170" height="80">
-			<label height="20" font="arial" color="#000000" text="Enter name image:" align="left" />
+			<label height="25" font="arial" color="#000000" text="Enter name image:" align="left" />
 			<input type="text"
 				onfocus="export:gd_ripper_Delname()"
 				onblur="export:gd_ripper_Gamename()"
@@ -63,7 +63,7 @@
 				highlight="bNormh"
 				pressed="bNorm"
 				disabled="bNorm"
-				width="100"
+				width="111"
 				height="30"
 				y="50"
 				name="Read-name" />
@@ -101,7 +101,7 @@
 					normal="inputsmall-normal"
 					highlight="inputsmall-normal"
 					focus="inputsmall-focus" />
-				<label width="280" height="20" x="50" font="arial" color="#000000" text="Attempts of reading bad sectors" align="left" />
+				<label width="280" height="20" x="42" font="arial" color="#000000" text="Attempts of reading bad sectors" align="left" />
 			</panel>
 		</panel>
 		
