@@ -2,7 +2,7 @@
  * DreamShell ##version##    *
  * load.c                    *
  * DreamShell App loader     *
- * (c)2007-2014 SWAT         *
+ * (c)2007-2014, 2024 SWAT   *
  * http://www.dc-swat.ru     *
  ****************************/
 
@@ -790,32 +790,33 @@ static void parseAppSurfaceFill(App_t *app, mxml_node_t *node, GUI_Surface *surf
 
 static void parseAppSurfaceBlit(App_t *app, mxml_node_t *node, GUI_Surface *surface) {
 
-	char *src = NULL;
+	char *src, *rgba;
 	SDL_Rect area, rect, surf_area;
 	int xr, yr, wr, hr;
-	
+
 	area.x = area.y = 0;
-	
+
 	surf_area.w = GUI_SurfaceGetWidth(surface);
 	surf_area.h = GUI_SurfaceGetHeight(surface);
 
 	parseNodeSize(node, &surf_area, &wr, &hr);
 	parseNodePosition(node, &surf_area, &xr, &yr);
-	
+
 	if(wr == surf_area.w && xr) {
 		wr -= xr;
 	}
-	
+
 	if(hr == surf_area.h && yr) {
 		hr -= yr;
 	}
-	
+
 	rect.x = xr;
 	rect.y = yr;
 	rect.w = wr;
 	rect.h = hr;
 	
 	src = FindXmlAttr("surface", node, NULL);
+	rgba = FindXmlAttr("rgba", node, "false");
 
 	if(src != NULL) {
 
@@ -837,43 +838,47 @@ static void parseAppSurfaceBlit(App_t *app, mxml_node_t *node, GUI_Surface *surf
 		}
 
 		if(surf != NULL) {
-			
+
 			wr = GUI_SurfaceGetWidth(surf);
 			hr = GUI_SurfaceGetHeight(surf);
 
 			if(rect.w > wr) {
 				rect.w = wr;
 			}
-			
+
 			if(rect.h > hr) {
 				rect.h = hr;
 			}
-			
+
 			parseAppSurfaceAlign(node, &rect, &surf_area);
-			
+
 #ifdef APP_LOAD_DEBUG
 			ds_printf("Blit surface: x=%d y=%d w=%d h=%d surface=%s\n", rect.x, rect.y, rect.w, rect.h, decref ? file : src);
 #endif
-							
+	
 			if(wr > surf_area.w) {
 				area.x = (wr - surf_area.w) / 2;
 			}
-			
+
 			if(hr > surf_area.h) {
 				area.y = (hr - surf_area.h) / 2;
 			}
-			
+
 			area.w = rect.w;
 			area.h = rect.h;
 
-			GUI_SurfaceBlit(surf, &area, surface, &rect);
+			if(!strncmp(rgba, "true", 4)) {
+				GUI_SurfaceBlitRGBA(surf, &area, surface, &rect);
+			}
+			else {
+				GUI_SurfaceBlit(surf, &area, surface, &rect);
+			}
 
 			if(decref)
 				GUI_ObjectDecRef((GUI_Object*)surf);
 		}
 	}
 }
-
 
 
 static void parseAppSurfaceRect(App_t *app, mxml_node_t *node, GUI_Surface *surface, Uint32 c) {
@@ -927,7 +932,7 @@ static void parseAppSurfaceCircle(App_t *app, mxml_node_t *node, GUI_Surface *su
 	y = atoi(FindXmlAttr("y1", node, "0"));
 	rad = atoi(FindXmlAttr("rad", node, "0"));
 	aa = FindXmlAttr("aa", node, "false");
-	fill = FindXmlAttr("aa", node, "false");
+	fill = FindXmlAttr("fill", node, "false");
 
 #ifdef APP_LOAD_DEBUG
 	ds_printf("Circle surface: x=%d y=%d rad=%d color=%08x\n", x, y, rad, c);
@@ -954,7 +959,7 @@ static void parseAppSurfaceTrigon(App_t *app, mxml_node_t *node, GUI_Surface *su
 	x3 = atoi(FindXmlAttr("x3", node, "0"));
 	y3 = atoi(FindXmlAttr("y3", node, "0"));
 	aa = FindXmlAttr("aa", node, "false");
-	fill = FindXmlAttr("aa", node, "false");
+	fill = FindXmlAttr("fill", node, "false");
 
 #ifdef APP_LOAD_DEBUG
 	ds_printf("Trigon surface: x1=%d y1=%d x2=%d y2=%d x3=%d y3=%d color=%08x\n", x1, y1, x2, y2, x3, y3, c);
@@ -1068,11 +1073,11 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 
 static int parseAppSurfaceRes(App_t *app, mxml_node_t *node, char *name) {
 
-	GUI_Surface *surface = NULL;
+	GUI_Surface *surface;
 	mxml_node_t *n;
-	int alpha, w, h;//, flags = 0;
+	int w, h;
 	Uint32 c = 0xFFFFFFFF;
-	char *color = NULL;
+	char *color, *bpp;
 	
 #ifdef APP_LOAD_DEBUG
 	ds_printf("DS_PROCESS: Creating %s \"%s\"\n", node->value.element.name, name);
@@ -1081,23 +1086,29 @@ static int parseAppSurfaceRes(App_t *app, mxml_node_t *node, char *name) {
 	SDL_Rect parent_area = GUI_WidgetGetArea(app->body);
 	parseNodeSize(node, &parent_area, &w, &h);
 
-	alpha = atoi(FindXmlAttr("alpha", node, "-1"));
-	SDL_Surface *screen = GetScreen();
-	/*
-	flags = screen->flags;
+	bpp = FindXmlAttr("bpp", node, NULL);
 
-	if(alpha > -1) {
-		flags |= SDL_SRCALPHA;
-	}*/
-
-	surface = GUI_SurfaceCreate(name,
-	                            screen->flags | SDL_SRCALPHA,
-	                            w, h,
-	                            screen->format->BitsPerPixel,
-	                            screen->format->Rmask,
-	                            screen->format->Gmask,
-	                            screen->format->Bmask,
-	                            screen->format->Amask);
+	if(bpp && atoi(bpp) == 32) {
+		surface = GUI_SurfaceCreate(name,
+			SDL_SWSURFACE | SDL_SRCALPHA,
+			w, h,
+			32,
+			0x000000FF,
+			0x0000FF00,
+			0x00FF0000,
+			0xFF000000);
+	}
+	else {
+		SDL_Surface *screen = GetScreen();
+		surface = GUI_SurfaceCreate(name,
+			SDL_SWSURFACE | SDL_SRCALPHA,
+			w, h,
+			screen->format->BitsPerPixel,
+			screen->format->Rmask,
+			screen->format->Gmask,
+			screen->format->Bmask,
+			screen->format->Amask);
+	}
 
 	if(surface == NULL) {
 		ds_printf("DS_ERROR: Can't create surface \"%s\"\n", name);
@@ -1110,7 +1121,7 @@ static int parseAppSurfaceRes(App_t *app, mxml_node_t *node, char *name) {
 
 		if(n->type == MXML_ELEMENT) {
 
-			color = FindXmlAttr("color", n, "#FFFFFF");
+			color = FindXmlAttr("color", n, NULL);
 
 			if(color != NULL) {
 				c = parseAppSurfColor(surface, color);
@@ -1134,10 +1145,6 @@ static int parseAppSurfaceRes(App_t *app, mxml_node_t *node, char *name) {
 
 		}
 		n = n->next;
-	}
-
-	if(alpha >= 0) {
-		GUI_SurfaceSetAlpha(surface, SDL_SRCALPHA|SDL_ALPHA_TRANSPARENT, alpha);
 	}
 		
 	listAddItem(app->resources, LIST_ITEM_GUI_SURFACE, name, (void *)surface, 0);
