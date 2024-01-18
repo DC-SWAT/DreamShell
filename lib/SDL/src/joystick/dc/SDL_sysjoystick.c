@@ -229,12 +229,20 @@ static void joyUpdate(SDL_Joystick *joystick)
 	
 	//Check buttons
 	//"buttons" is zero based: so invert the PRESSED/RELEASED way.
-	for(i=0,max=0;i<sizeof(sdl_buttons)/sizeof(sdl_buttons[0]);i++) {
-		if (changed & sdl_buttons[i]) {
+	for(i=0,max=0;i<sizeof(sdl_buttons)/sizeof(sdl_buttons[0]);i++)
+	{
+		if (changed & sdl_buttons[i])
+		{
 			int act=(buttons & sdl_buttons[i]);
 			SDL_PrivateJoystickButton(joystick, i, act?SDL_PRESSED:SDL_RELEASED);
 			if (__sdl_dc_emulate_mouse)
-				SDL_PrivateMouseButton(act?SDL_PRESSED:SDL_RELEASED,i,0,0);
+			{
+				if(sdl_buttons[i] != CONT_START &&
+					sdl_buttons[i] != CONT_X &&
+					sdl_buttons[i] != CONT_Y) {
+					SDL_PrivateMouseButton(act?SDL_PRESSED:SDL_RELEASED,i,0,0);
+				}
+			}
 			if (__sdl_dc_emulate_keyboard)
 			{
 				if (act)
