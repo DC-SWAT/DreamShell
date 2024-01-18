@@ -219,7 +219,7 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 	ScreenFadeOutEx("Shortcut", 1);
 
 	GUI_WidgetSetState(self.rotate180, 0);
-	GUI_WidgetSetState(self.btn_hidetext, 0);
+	GUI_WidgetSetState(self.btn_hidetext, 1);
 
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	ipbin->title[sizeof(ipbin->title)-1] = '\0';
@@ -227,7 +227,8 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 	check_link_file();
 
 	isoLoader_ShowPage(widget);
-	isoLoader_toggleIconSize(self.icosizebtn[0]);
+	isoLoader_toggleIconSize(self.icosizebtn[3]);
+	isoLoader_toggleHideName(self.btn_hidetext);
 	ScreenFadeIn();
 }
 

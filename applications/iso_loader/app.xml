@@ -580,8 +580,8 @@
 
 						<label y="0" align="left" color="#31799F" font="arial" height="25" text="Icon size:" width="100%" />
 
-						<input height="22" name="48x48" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%" checked="true">
-							<label align="left" color="#000000" font="arial" height="20" text="48x48 (Default)" x="9%" />
+						<input height="22" name="48x48" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="48x48" x="9%" />
 						</input>
 						<input height="22" name="64x64" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="64x64" x="9%" />
@@ -590,7 +590,7 @@
 							<label align="left" color="#000000" font="arial" height="20" text="96x96" x="9%" />
 						</input>
 						<input height="22" name="128x128" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="128x128" x="9%" />
+							<label align="left" color="#000000" font="arial" height="20" text="128x128 (Default)" x="9%" checked="true" />
 						</input>
 						<input height="22" name="256x256" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="256x256" x="9%" />
@@ -605,15 +605,21 @@
 						<panel width="100%" height="25">
 							<label align="left" color="#31799F" font="arial" height="25" text="Icon name:" width="100%" />
 						</panel>
-						<input font="arial" fontcolor="#000000" height="18" name="link-text" onblur="export:isoLoader_toggleLinkName()" size="30" type="text" value="game name" width="59%" />
+						<input font="arial" fontcolor="#000000" height="18" name="link-text"
+							onblur="export:isoLoader_toggleLinkName()" size="30" type="text" value="Game name" width="59%" />
 						<panel width="100%" height="6"/>
-						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="Don't show name on desktop" x="9%" />
+						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()"
+							type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20"
+								text="Don't show name on desktop" x="9%" checked="true" />
 						</input>
 
 						<panel width="100%" height="8"/>
-						<input name="save-link-btn" disabled="iGamesDis" height="36" width="250" highlight="iGamesHigh" normal="iGamesNorm" onclick="export:isoLoader_MakeShortcut()" pressed="iGamesNorm" type="button" >
-							<label align="left" color="#31799F" font="m23" height="36" name="save-link-txt" text="create shortcut" x="45" />
+						<input name="save-link-btn" disabled="iGamesDis" height="36" width="250"
+							highlight="iGamesHigh" normal="iGamesNorm" onclick="export:isoLoader_MakeShortcut()"
+							pressed="iGamesNorm" type="button" >
+							<label align="left" color="#31799F" font="m23" height="36"
+								name="save-link-txt" text="Create shortcut" x="45" />
 						</input>
 					</panel>
 				</panel>
