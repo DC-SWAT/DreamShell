@@ -72,7 +72,6 @@ static struct self
 	
 	void *bios_patch;
 	int kill_gdrom_thd;
-	kthread_t *check_gdrom_thd;
 } self;
 
 void gdplay_run_game(void *param);
@@ -279,8 +278,9 @@ getstatus:
 static void *check_gdrom()
 {
 	int status, disc_type, cd_status;
-	
-	while(!self.kill_gdrom_thd)
+	self.kill_gdrom_thd = 0;
+
+	while(self.kill_gdrom_thd == 0)
 	{
 		cd_status = cdrom_get_status(&status, &disc_type);
 		
@@ -306,7 +306,7 @@ static void *check_gdrom()
 						break;
 				}
 		}
-		thd_pass();
+		thd_sleep(100);
 	}
 	
 	return NULL;
@@ -315,9 +315,9 @@ static void *check_gdrom()
 void gdplay_play(GUI_Widget *widget)
 {
 	(void) widget;
-	
+
 	self.kill_gdrom_thd = 1;
-	thd_join(self.check_gdrom_thd, NULL);
+	thd_join(self.app->thd, NULL);
 
 	ShutdownDS();
     arch_shutdown();
@@ -374,7 +374,7 @@ void gdplay_Init(App_t *app)
 		fs_close(fd);
 
 		check_cd();
-		self.check_gdrom_thd = thd_create(1, check_gdrom, NULL);
+		self.app->thd = thd_create(0, check_gdrom, NULL);
 	} 
 	else 
 	{
@@ -383,11 +383,11 @@ void gdplay_Init(App_t *app)
 	}
 }
 
-void gdplay_Exit() 
+void gdplay_Shutdown() 
 {
 	self.kill_gdrom_thd = 1;
-	thd_join(self.check_gdrom_thd, NULL);
-	
 	if(self.bios_patch)
+	{
 		free(self.bios_patch);
+	}
 }

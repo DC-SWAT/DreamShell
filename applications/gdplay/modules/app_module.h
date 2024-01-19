@@ -11,4 +11,4 @@ void gdplay_play(GUI_Widget *widget);
 
 void gdplay_Init(App_t *app);
 
-void gdplay_Exit();
+void gdplay_Shutdown(App_t *app);
