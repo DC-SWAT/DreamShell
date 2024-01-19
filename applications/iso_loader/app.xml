@@ -499,10 +499,6 @@
 											<label align="left" color="#000000" font="arial" height="20" text="Adaptive" x="25" />
 										</input>
 									</panel>
-									<panel width="100%" height="25" name="cdda-counter-panel">
-										<label align="left" color="#31799F" font="arial" height="20" text="Counter:" width="30%" />
-										<input font="arial" fontcolor="#000000" height="18" name="cdda-counter-text" size="10" type="text" value="0" width="50%" />
-									</panel>
 								</panel>
 							</panel>
 						</panel>
@@ -584,13 +580,13 @@
 							<label align="left" color="#000000" font="arial" height="20" text="48x48" x="9%" />
 						</input>
 						<input height="22" name="64x64" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="64x64" x="9%" />
+							<label align="left" color="#000000" font="arial" height="20" text="64x64 (as apps)" x="9%" />
 						</input>
 						<input height="22" name="96x96" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="96x96" x="9%" />
 						</input>
 						<input height="22" name="128x128" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="128x128 (Default)" x="9%" checked="true" />
+							<label align="left" color="#000000" font="arial" height="20" text="128x128 (default)" x="9%" checked="true" />
 						</input>
 						<input height="22" name="256x256" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="256x256" x="9%" />
@@ -611,7 +607,7 @@
 						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()"
 							type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20"
-								text="Don't show name on desktop" x="9%" checked="true" />
+								text="Don't show name" x="9%" checked="true" />
 						</input>
 
 						<panel width="100%" height="8"/>

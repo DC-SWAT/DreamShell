@@ -201,9 +201,13 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 #endif
 }
 
-static void setup_pcm_buffer(uint32 timer_value) {
+static void setup_pcm_buffer(void) {
+	/* 
+	* SH4 timer counter value for polling playback position.
+	* This is a base timer value for 16 KB of one channel 16-bit PCM at 44100Hz.
+	*/
+	cdda->end_tm = 36187;
 
-	cdda->end_tm = timer_value;
 	size_t old_size = cdda->size;
 	cdda->size = 0x8000;
 
@@ -1032,9 +1036,7 @@ static void play_track(uint32 track) {
 	GDS->drv_stat = CD_STATUS_PLAYING;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_PLAYING;
 
-	uint32 tmv = (IsoInfo->cdda_tm_val ?
-		IsoInfo->cdda_tm_val : CDDA_TIMER_COUNTER_VALUE);
-	setup_pcm_buffer(tmv);
+	setup_pcm_buffer();
 	aica_setup_cdda(1);
 }
 

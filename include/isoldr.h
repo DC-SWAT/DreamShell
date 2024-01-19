@@ -133,12 +133,6 @@ typedef enum isoldr_cdda_mode {
 	CDDA_MODE_CH_FIXED = 0x00020000
 } isoldr_cdda_mode_t;
 
-/* 
- * SH4 timer counter value for polling playback position.
- * This is a base timer value for 16 KB of one channel 16-bit PCM at 44100Hz.
-*/
-#define CDDA_TIMER_COUNTER_VALUE 36187
-
 
 typedef struct isoldr_info {
 
@@ -174,9 +168,8 @@ typedef struct isoldr_info {
 	uint32 emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
 	uint32 syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
 	uint32 scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
-	uint32 cdda_tm_val;                 /* Timer counter value for CDDA playback (see CDDA_TIMER_COUNTER_VALUE). */
 
-	uint32 cdda_offset[44];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[45];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

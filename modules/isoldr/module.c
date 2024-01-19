@@ -596,7 +596,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
-	uint32 low_level = 0, scr_hotkey = 0, cdda_tval = 0;
+	uint32 low_level = 0, scr_hotkey = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -612,7 +612,6 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"async",     'e', NULL, CFG_ULONG, (void *) &emu_async,   0},
 		{"cdda",      'c', NULL, CFG_BOOL,  (void *) &emu_cdda,    0},
 		{"cddamode",  'g', NULL, CFG_ULONG, (void *) &cdda_mode,   0},
-		{"cddatval",  'w', NULL, CFG_ULONG, (void *) &cdda_tval,   0},
 		{"heap",      'h', NULL, CFG_ULONG, (void *) &heap,        0},
 		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
 		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
@@ -692,7 +691,6 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->emu_vmu   = emu_vmu;
 	info->syscalls  = low_level;
 	info->scr_hotkey = scr_hotkey;
-	info->cdda_tm_val = cdda_tval;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
@@ -754,12 +752,11 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          info->use_irq,
 		          info->heap);
 		ds_printf("Emu async: %d\n"
-		          "Emu CDDA: 0x%08lx %d\n"
+		          "Emu CDDA: 0x%08lx\n"
 		          "Emu VMU: %d\n"
 		          "Syscalls: %lx\n\n",
 		          info->emu_async,
 		          info->emu_cdda,
-				  info->cdda_tm_val,
 		          info->emu_vmu,
 		          info->syscalls);
 	}
