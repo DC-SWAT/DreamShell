@@ -20,7 +20,7 @@ $(DEPS): modules/module.c
 clean:
 	cd modules && make clean && cd ../
 
-install: $(DEPS)
+install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf

@@ -1,6 +1,6 @@
 #
 # Settings App for DreamShell
-# Copyright (C) 2016 SWAT
+# Copyright (C) 2016, 2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -24,5 +24,5 @@ install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
-	cp -R images $(APP_DIR)
 	cp app.xml $(APP_DIR)/app.xml
+	cp -R images $(APP_DIR)

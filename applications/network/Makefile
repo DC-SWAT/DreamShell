@@ -4,8 +4,6 @@
 # http://www.dc-swat.ru
 #
 
-include ../../sdk/Makefile.cfg
-
 SUBDIRS = modules
 
 include ../../sdk/Makefile.cfg
@@ -26,5 +24,5 @@ install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
-	cp -R images $(APP_DIR)
 	cp app.xml $(APP_DIR)/app.xml
+	cp -R images $(APP_DIR)

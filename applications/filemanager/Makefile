@@ -15,7 +15,7 @@ all: install
 clean:
 	@echo Nothing clean
 
-install: $(DEPS)
+install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)

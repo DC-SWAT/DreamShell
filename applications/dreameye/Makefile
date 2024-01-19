@@ -1,10 +1,8 @@
 #
 # DreamEye App for DreamShell
-# Copyright (C) 2023 SWAT
+# Copyright (C) 2023, 2024 SWAT
 # http://www.dc-swat.ru
 #
-
-include ../../sdk/Makefile.cfg
 
 SUBDIRS = modules
 
