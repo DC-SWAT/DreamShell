@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Region Changer" version="1.8.5" icon="images/icon.png">
+<app name="Region Changer" version="1.8.6" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/tolua.klf" />
 		<module src="../../modules/luaDS.klf" />
@@ -7,7 +7,7 @@
 		<module src="../../modules/luaKOS.klf" />
 		<module src="modules/app_region_changer.klf" />
 		<script type="text/lua" src="lua/main.lua" />
-		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="18" name="arial" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="18" name="comic-18" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="14" name="comic" />
 		<image src="../../gui/back/grey.png" name="back" />
 		<image src="../../gui/buttons/big_green/normal.png" name="mNorm" />
@@ -42,31 +42,31 @@
 				<image src="logo" height="100" name="logo" />
 				<panel height="50">
 					<image src="label" width="262" height="23" x="189">
-						  <label font="comic" color="#ffffff" text="Region Changer v1.8.5" />
+						  <label font="comic" color="#EEEEEE" text="Region Changer" />
 					</image>
 				</panel>
 				<panel x="233" y="180" width="181" height="250">
 					<input type="button" onclick="RegionChanger:ShowPage(1)" theme="bBut" height="40">
-						<label font="arial" color="#ffffff" text="Change Region" />
+						<label font="comic-18" color="#EEEEEE" text="Change Region" />
 					</input>
 					<input type="button" onclick="RegionChanger:ShowPage(2)" theme="bBut" y="50" height="40">
-						<label font="arial" color="#ffffff" text="Backup Flash" />
+						<label font="comic-18" color="#EEEEEE" text="Backup Flash" />
 					</input>
 					<input type="button" onclick="RegionChanger:ShowPage(3)" theme="bBut" y="100" height="40">
-						<label font="arial" color="#ffffff" text="Clear Flash" />
+						<label font="comic-18" color="#EEEEEE" text="Clear Flash" />
 					</input>
 					<input type="button" onclick="RegionChanger:ShowPage(4)" theme="bBut" y="150" height="40">
-						<label font="arial" color="#ffffff" text="About" />
+						<label font="comic-18" color="#EEEEEE" text="About" />
 					</input>
 					<input type="button" onclick="console:app -o -n Main" theme="bBut" y="200" height="40">
-						<label font="arial" color="#ffffff" text="Exit" />
+						<label font="comic-18" color="#EEEEEE" text="Exit" />
 					</input>
 				</panel>
 			</panel>
 			<panel name="change-page">
 				<panel height="40">
 					<image src="label" width="262" height="23" x="189">
-						  <label font="comic" color="#ffffff" text="Change region code" />
+						  <label font="comic" color="#EEEEEE" text="Change region code" />
 					</image>
 				</panel>
 				<panel height="30">
@@ -115,22 +115,22 @@
 					<label x="25" height="20" font="comic" color="#000000" text="Italian" align="left" />
 				</input>
 				<input type="button" onclick="RegionChanger:Read()" theme="mBut" x="115" y="380" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Read" />
+					<label font="comic-18" color="#EEEEEE" text="Read" />
 				</input>
 				<input type="button" onclick="RegionChanger:Write()" theme="mBut" x="251" y="380" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Write" />
+					<label font="comic-18" color="#EEEEEE" text="Write" />
 				</input>
 				<input type="button" onclick="console:dc -reboot" theme="mBut" x="389" y="380" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Reboot" />
+					<label font="comic-18" color="#EEEEEE" text="Reboot" />
 				</input>
 				<input type="button" onclick="RegionChanger:ShowPage(0)" theme="mBut" x="251" y="430" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Back" />
+					<label font="comic-18" color="#EEEEEE" text="Back" />
 				</input>
 			</panel>
 			<panel name="backup-page">
 				<panel height="50">
 					<image src="label" width="262" height="23" x="189">
-						<label font="comic" color="#ffffff" text="Flash factory settings backup" />
+						<label font="comic" color="#EEEEEE" text="Flash factory settings backup" />
 					</image>
 				</panel>
 				<panel x="258" y="170" width="110" height="30">
@@ -138,19 +138,19 @@
 				</panel>
 				<progressbar width="270" height="30" x="185" y="200" name="backup-progress" pos="0.0" bimage="pb-b" pimage="pb-p" />
 				<input type="button" onclick="RegionChanger:CreateBackup()" theme="mBut" x="185" y="275" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Create" />
+					<label font="comic-18" color="#EEEEEE" text="Create" />
 				</input>
 				<input type="button" onclick="RegionChanger:RestoreBackup()" theme="mBut" x="320" y="275" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Restore" />
+					<label font="comic-18" color="#EEEEEE" text="Restore" />
 				</input>
 				<input type="button" onclick="RegionChanger:ShowPage(0)" theme="mBut" x="251" y="350" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Back" />
+					<label font="comic-18" color="#EEEEEE" text="Back" />
 				</input>
 			</panel>
 			<panel name="clear-page">
 				<panel height="50">
 					<image src="label" width="262" height="23" x="189">
-						<label font="comic" color="#ffffff" text="Clear flashrom" />
+						<label font="comic" color="#EEEEEE" text="Clear flashrom" />
 					</image>
 				</panel>
 				<input type="checkbox" x="50" y="130" width="180" height="30" name="clear-game-checkbox">
@@ -160,16 +160,16 @@
 					<label x="25" height="20" font="comic" color="#000000" text="ISP/SYS Settings" align="left" />
 				</input>
 				<input type="button" onclick="RegionChanger:ClearFlashrom()" theme="mBut" x="251" y="300" width="135" height="40">
-					<label width="135" height="40" font="arial" color="#ffffff" text="Clear" />
+					<label width="135" height="40" font="comic-18" color="#EEEEEE" text="Clear" />
 				</input>
 				<input type="button" onclick="RegionChanger:ShowPage(0)" theme="mBut" x="251" y="350" width="135" height="40">
-					<label width="135" height="40" font="arial" color="#ffffff" text="Back" />
+					<label width="135" height="40" font="comic-18" color="#EEEEEE" text="Back" />
 				</input>
 			</panel>
 			<panel name="about-page">
 				<image src="about" height="300" align="center" valign="top" />
 				<input type="button" onclick="RegionChanger:ShowPage(0)" theme="mBut" x="251" y="350" width="135" height="40">
-					<label font="arial" color="#ffffff" text="Back" />
+					<label font="comic-18" color="#EEEEEE" text="Back" />
 				</input>
 			</panel>
 		</cardstack>
