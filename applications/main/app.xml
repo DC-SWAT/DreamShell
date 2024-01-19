@@ -4,7 +4,7 @@
 		<module src="modules/app_main.klf" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="comic" />
 		<surface width="100%" height="450" name="main-bg">
-			<fill color="#61BDEC" />
+			<fill color="#70C9DB" />
 			<blit align="center" valign="center" surface="images/logo.png" />
 		</surface>
 		<image src="images/taskbar.png" name="taskbar-bg" />
@@ -14,22 +14,28 @@
 		<image src="images/right_hover.png" name="right-hover" />
 	</resources>
 	<body width="100%" height="100%" onload="export:MainApp_Init()" background="main-bg">
-		<panel width="100%" height="450" name="app-list" />
-		<panel width="100%" height="30" background="taskbar-bg">
+		<panel width="100%" height="443" name="app-list" />
+		<panel width="100%" height="30">
 			<panel width="13%">
-				<input type="button" align="left" width="71" onclick="export:MainApp_SlideLeft()" normal="left" highlight="left-hover" pressed="left" disabled="left" />
+				<input type="button" align="right" width="71" onclick="export:MainApp_SlideLeft()"
+					normal="left" highlight="left-hover" pressed="left" disabled="left" />
 			</panel>
-			<panel width="14%">
-				<label name="date" text="00.00.0000" color="#33295A" align="left" valign="center" font="comic" />
-			</panel>
-			<panel width="51%">
-				<label name="version" text="DreamShell" color="#33295A" align="center" valign="center" font="comic" />
-			</panel>
-			<panel width="9%">
-				<label name="time" text="00:00" color="#33295A" align="right" valign="center" font="comic" />
+			<panel x="13%" background="taskbar-bg" width="73%">
+				<panel x="2%" width="96%">
+					<panel width="22%">
+						<label name="date" text="00.00.0000" color="#33295A" align="left" valign="center" font="comic" />
+					</panel>
+					<panel width="66%">
+						<label name="version" text="DreamShell" color="#33295A" align="center" valign="center" font="comic" />
+					</panel>
+					<panel width="12%">
+						<label name="time" text="00:00" color="#33295A" align="right" valign="center" font="comic" />
+					</panel>
+				</panel>
 			</panel>
 			<panel width="13%">
-				<input type="button" align="right" width="71" onclick="export:MainApp_SlideRight()" normal="right" highlight="right-hover" pressed="right" disabled="right" />
+				<input type="button" align="left" width="71" onclick="export:MainApp_SlideRight()"
+					normal="right" highlight="right-hover" pressed="right" disabled="right" />
 			</panel>
 		</panel>
 	</body>

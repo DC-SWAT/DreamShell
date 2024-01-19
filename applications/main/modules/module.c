@@ -11,7 +11,7 @@
 DEFAULT_MODULE_EXPORTS(app_main);
 
 #define ICON_CELL_PADDING_X 30
-#define ICON_CELL_PADDING_Y 15
+#define ICON_CELL_PADDING_Y 20
 #define ICON_HIGHLIGHT_PADDING 8
 
 static struct {
@@ -101,24 +101,31 @@ static void AddToList(const char *name, const char *icon,
 
 	SDL_Rect ts;
 	int pad_x;
+	int pad_y = ICON_CELL_PADDING_Y;
+
+	GUI_Surface *s = GUI_SurfaceLoad(icon);
+	int h = GUI_SurfaceGetHeight(s);
 
 	if(name) {
 		ts = GUI_FontGetTextSize(self.font, name);
 		ts.w += 6;
 		pad_x = ICON_CELL_PADDING_X;
-	} else {
+	}
+	else {
 		ts.w = 0;
 		pad_x -= 10;
+
+		if(h >= 96) {
+			pad_y -= 5;
+		}
 	}
 
-	GUI_Surface *s = GUI_SurfaceLoad(icon);
 	int w = ts.w + GUI_SurfaceGetWidth(s);
-	int h = GUI_SurfaceGetHeight(s);
 
 	if((self.y + h) > self.panel_area.h) {
 
 		self.x += self.col_width + pad_x;
-		self.y = ICON_CELL_PADDING_Y;
+		self.y = pad_y;
 		self.col_width = w;
 
 		if(self.x + w + (pad_x / 2) > (self.pages * self.panel_area.w)) {
@@ -160,7 +167,7 @@ static void AddToList(const char *name, const char *icon,
 	GUI_ContainerAdd(self.panel, b);
 	GUI_ObjectDecRef((GUI_Object *) b);
 
-	self.y += (h + ICON_CELL_PADDING_Y);
+	self.y += (h + pad_y);
 
 	if(self.col_width < w) {
 		self.col_width = w;
