@@ -11,6 +11,7 @@
 #include "vmu.h"
 #include "profiler.h"
 #include "network/net.h"
+#include "sfx.h"
 
 static void early_init(void) {
 	/*
@@ -205,6 +206,9 @@ int InitDS() {
 	setenv("SDL_DEBUG", "0", 1);
 	setenv("SDL_VIDEODRIVER", "dcvideo", 1);
 
+	snd_stream_init();
+	ds_sfx_play(DS_SFX_STARTUP);
+
 	InitVideoHardware();
 	ShowLogo();
 
@@ -255,7 +259,6 @@ int InitDS() {
 
 	TTF_Init();
 	InitGUI();
-	snd_stream_init();
 
 	snprintf(fn, NAME_MAX, "%s/fonts/bitmap/console.png", getenv("PATH"));
 	InitCmd(); 

@@ -101,7 +101,8 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/app/app.o $(SRC_DIR)/app/load.o $(SRC_DIR)/list.o \
 		$(SRC_DIR)/img/pvr.o $(SRC_DIR)/cmd_elf.o $(SRC_DIR)/vmu/vmu.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \
-		$(SRC_DIR)/settings.o $(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
+		$(SRC_DIR)/settings.o $(SRC_DIR)/sfx.o \
+		$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
 		$(UTILS_OBJ) $(FATFS) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o
 
@@ -125,12 +126,19 @@ $(SRC_DIR)/exports_gcc.c: exports_gcc.txt
 	$(KOS_BASE)/utils/genexports/genexportstubs.sh exports_gcc.txt $(SRC_DIR)/exports_gcc_stubs.c
 	$(KOS_MAKE) -f Makefile.gcc_stubs
 
-logo: romdisk/logo.kmg.gz
-romdisk/logo.kmg.gz: $(DS_RES)/logo_sq.png
+logo: $(KOS_ROMDISK_DIR)/logo.kmg.gz
+$(KOS_ROMDISK_DIR)/logo.kmg.gz: $(DS_RES)/logo_sq.png
 	$(KOS_BASE)/utils/kmgenc/kmgenc -v $(DS_RES)/logo_sq.png
 	mv $(DS_RES)/logo_sq.kmg logo.kmg
 	gzip -9 logo.kmg
-	mv logo.kmg.gz romdisk/logo.kmg.gz
+	mv logo.kmg.gz $(KOS_ROMDISK_DIR)/logo.kmg.gz
+
+sfx: $(KOS_ROMDISK_DIR)/startup.raw.gz
+$(KOS_ROMDISK_DIR)/startup.raw.gz: $(DS_RES)/sfx/startup.wav
+	ffmpeg -i $(DS_RES)/sfx/startup.wav -af "apad=pad_dur=2" $(DS_RES)/sfx/startup_pad.wav
+	ffmpeg -i $(DS_RES)/sfx/startup_pad.wav -acodec adpcm_yamaha -fs 327680 -f s16le $(KOS_ROMDISK_DIR)/startup.raw
+	rm -f $(DS_RES)/sfx/startup_pad.wav
+	gzip -9 $(KOS_ROMDISK_DIR)/startup.raw
 
 make-build: $(DS_BUILD)/lua/startup.lua
 
@@ -272,6 +280,9 @@ gprof:
 	@-rm -rf gprof.out
 	@echo "\033[42m Profiling data saved to $(TARGET)-*.png \033[0m"
 
+core: $(TARGET_BIN)
+	cp $(DS_BASE)/$(TARGET_BIN) $(DS_BUILD)
+
 TARGET_CLEAN_BIN = 1$(TARGET)_CORE.BIN $(TARGET)_CORE.BIN $(TARGET).elf $(TARGET).cdi
 
 clean:
@@ -280,3 +291,4 @@ clean:
 rm-elf:
 	-rm -f $(TARGET_CLEAN_BIN)
 	-rm -f $(SRC_DIR)/main.o
+	-rm -f romdisk.*
