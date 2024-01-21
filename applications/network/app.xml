@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Network" version="0.1.0" icon="images/icon.png">
+<app name="Network" version="0.2.0" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/ppp.klf" />
 		<module src="../../modules/ftpd.klf" />
 		<module src="../../modules/httpd.klf" />
 		<module src="modules/app_network.klf" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="22" name="comic-22" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="20" name="comic-20" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="comic-16" />
 		<surface height="45" name="header-bg">
 			<fill color="#C9DADE" />
@@ -52,7 +53,7 @@
 		onunload="export:NetworkApp_Shutdown()"
 		onopen="export:NetworkApp_Open()">
 		<panel height="45" background="header-bg">
-			<label font="comic-22" color="#666666" text="DreamShell Network" />
+			<label font="comic-22" color="#31799F" text="DreamShell Network" />
 		</panel>
 		<cardstack name="pages">
 			<panel name="main-page" y="30">
@@ -64,14 +65,14 @@
 				</panel>
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:NetworkApp_ConnectModem()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="Connect Modem" />
+						onclick="export:NetworkApp_FTP()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="FTP Server" />
 					</input>
 				</panel>
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:NetworkApp_FTP()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="FTP Server" />
+						onclick="export:NetworkApp_ConnectModem()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Connect Modem" />
 					</input>
 				</panel>
 				<panel height="65" width="50%">
@@ -85,6 +86,50 @@
 						onclick="console:app -o -n Main" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Exit" />
 					</input>
+				</panel>
+				<panel height="80" width="100%">
+					<panel x="20" y="10">
+						<panel width="50%" height="35">
+							<panel width="130" height="30">
+								<label font="comic-20" color="#31799F" align="left"
+									text="Status:" />
+							</panel>
+							<panel width="150" height="30">
+								<label font="comic-20" color="#CF3311" align="left"
+									text="disconnected" name="net-status" />
+							</panel>
+						</panel>
+						<panel width="50%" height="35">
+							<panel width="140" height="30">
+								<label font="comic-20" color="#31799F" align="left"
+									text="FTP Server:" />
+							</panel>
+							<panel width="160" height="30">
+								<label font="comic-20" color="#CF3311" align="left"
+									text="stopped" name="ftpd-status" />
+							</panel>
+						</panel>
+						<panel width="50%" height="35">
+							<panel width="130" height="30">
+								<label font="comic-20" color="#31799F" align="left"
+									text="IP address:" />
+							</panel>
+							<panel width="150" height="30">
+								<label font="comic-20" color="#CF3311" align="left"
+									text="0.0.0.0" name="ip-addr" />
+							</panel>
+						</panel>
+						<panel width="50%" height="35">
+							<panel width="140" height="30">
+								<label font="comic-20" color="#31799F" align="left"
+									text="HTTP Server:" />
+							</panel>
+							<panel width="160" height="30">
+								<label font="comic-20" color="#CF3311" align="left"
+									text="stopped" name="httpd-status" />
+							</panel>
+						</panel>
+					</panel>
 				</panel>
 			</panel>
 		</cardstack>

@@ -11,7 +11,7 @@ DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
-VER_MINOR = 1
+VER_MINOR = 2
 VER_MICRO = 0
 
 KOS_CFLAGS += -I./
