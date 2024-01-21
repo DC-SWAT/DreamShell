@@ -91,6 +91,7 @@ static struct {
 	GUI_Surface *current_cover;
 	GUI_Widget *cover_widget;
 	GUI_Widget *title;
+	GUI_Widget *title2;
 	GUI_Widget *options_panel;
 
 	GUI_Widget *icosizebtn[5];
@@ -276,6 +277,36 @@ static void get_md5_hash(const char *mountpoint) {
 	}
 }
 
+static void setTitle(const char *text) {
+
+	const size_t line_size = 22;
+	char lines[2][line_size + 1];
+	char *p = &lines[0][line_size - 1];
+	int len = strlen(text);
+
+	memset(&lines[0][0], 0, sizeof(lines));
+
+	if(len > line_size) {
+		len = line_size;
+		strncpy(lines[0], text, len);
+
+		while(*p-- != ' ') {
+			if(--len == 0) {
+				len = line_size;
+				break;
+			}
+		}
+		lines[0][len] = '\0';
+		strncpy(lines[1], text + len, line_size);
+	}
+	else {
+		strncpy(lines[0], text, len);
+		lines[1][0] = ' ';
+	}
+	GUI_LabelSetText(self.title, lines[0]);
+	GUI_LabelSetText(self.title2, lines[1]);
+}
+
 /* Try to get cover image from ISO */
 static void showCover() {
 
@@ -289,7 +320,7 @@ static void showCover() {
 	snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 
 	if(fs_iso_mount("/isocover", path)) {
-		GUI_LabelSetText(self.title, "None");
+		setTitle("None");
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
 		return;
@@ -306,9 +337,9 @@ static void showCover() {
 	trim_spaces(ipbin->title, title, sizeof(ipbin->title));
 
 	if(strlen(title) > 0) {
-		GUI_LabelSetText(self.title, title);
+		setTitle(title);
 	} else {
-		GUI_LabelSetText(self.title, noext);
+		setTitle(noext);
 	}
 
 	snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
@@ -1609,7 +1640,7 @@ int isoLoader_LoadPreset() {
 	}
 
 	if (strlen(title) > 0) {
-		GUI_LabelSetText(self.title, title);
+		setTitle(title);
 		vmu_draw_string(title);
 	}
 
@@ -1699,6 +1730,7 @@ void isoLoader_Init(App_t *app) {
 		self.filebrowser  = APP_GET_WIDGET("file_browser");
 		self.cover_widget = APP_GET_WIDGET("cover_image");
 		self.title        = APP_GET_WIDGET("game_title");
+		self.title2       = APP_GET_WIDGET("game_title2");
 		self.btn_run      = APP_GET_WIDGET("run_iso");
 		self.run_pane     = APP_GET_WIDGET("run-panel");
 		

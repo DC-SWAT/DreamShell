@@ -9,9 +9,10 @@
 
 		<font name="m23" size="14" src="../../fonts/ttf/m23.ttf" type="ttf" />
 		<font name="arial" size="15" src="../../fonts/ttf/arial_lite.ttf" type="ttf" />
+		<font name="arial-18" size="18" src="../../fonts/ttf/arial_lite.ttf" type="ttf" />
 
 		<image name="logo" src="images/logo.png" />
-		<image name="stdico" src="../../gui/icons/normal/games.png" />
+		<image name="stdico" src="images/gd.png" />
 	
 		<surface height="104" name="head_bg" width="100%">
 			<fill color="#B2E2F9" height="366" />
@@ -148,6 +149,11 @@
 			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
 		</surface>
 
+		<surface height="50" width="50%" name="menu_bg">
+			<fill color="#FFFFFF" />
+			<fill color="#85C4E2" height="48" x="1" y="1" />
+		</surface>
+
 		<theme>
 			<input offhighlight="iUncheckHigh" offnormal="iUncheck" onhighlight="iCheckHigh" onnormal="iCheck" type="checkbox" />
 			<input focus="input-text-focus" highlight="input-text-normal" normal="input-text-normal" type="text" />
@@ -162,12 +168,16 @@
 				<input disabled="btn_hdd_disabled" height="23" highlight="btn_hdd_over" inactive="true" name="btn_hdd" normal="btn_hdd_norm" pressed="btn_hdd_over" type="button" width="28%" />
 				<input disabled="btn_pc_disabled" height="23" highlight="btn_pc_over" inactive="true" name="btn_pc" normal="btn_pc_norm" pressed="btn_pc_over" type="button" width="26%" />
 			</panel>
-			<panel height="50" width="50%" x="55%" y="20">
-				<input disabled="iLinkDis" height="36" highlight="iLinkHigh" inactive="true" name="link" normal="iLinkNorm" onclick="export:isoLoader_ShowLink()" pressed="iLinkNorm" type="button" width="18%" x="0%"/>
-				<input disabled="iExtDis" height="36" highlight="iExtHigh" inactive="true" name="extensions" normal="iExtNorm" onclick="export:isoLoader_ShowExtensions()" pressed="iExtNorm" type="button" width="18%" x="18%"/>
-				<input disabled="iSetDis" height="36" highlight="iSetHigh" inactive="true" name="settings" normal="iSetNorm" onclick="export:isoLoader_ShowSettings()" pressed="iSetNorm" type="button" width="18%" x="36%" />
-				<input disabled="iGamesDis" height="36" highlight="iGamesHigh" inactive="true" name="games" normal="iGamesNorm" onclick="export:isoLoader_ShowGames()" pressed="iGamesNorm" type="button" width="18%" x="54%" y="1" />
-				<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="18%" x="72%" />
+			<panel height="50" width="50%" x="55%" y="15">
+				<panel background="menu_bg">
+					<panel x="10" y="6">
+						<input disabled="iGamesDis" height="36" highlight="iGamesHigh" inactive="true" name="games" normal="iGamesNorm" onclick="export:isoLoader_ShowGames()" pressed="iGamesNorm" type="button" width="18%" x="0%" y="1" />
+						<input disabled="iSetDis" height="36" highlight="iSetHigh" inactive="true" name="settings" normal="iSetNorm" onclick="export:isoLoader_ShowSettings()" pressed="iSetNorm" type="button" width="18%" x="18%" />
+						<input disabled="iExtDis" height="36" highlight="iExtHigh" inactive="true" name="extensions" normal="iExtNorm" onclick="export:isoLoader_ShowExtensions()" pressed="iExtNorm" type="button" width="18%" x="36%"/>
+						<input disabled="iLinkDis" height="36" highlight="iLinkHigh" inactive="true" name="link" normal="iLinkNorm" onclick="export:isoLoader_ShowLink()" pressed="iLinkNorm" type="button" width="18%" x="54%"/>
+						<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="18%" x="72%" />
+					</panel>
+				</panel>
 			</panel>
 		</panel>
 
@@ -201,8 +211,13 @@
 					</panel>
 				</panel>
 
-				<panel height="50" width="256" x="56%" y="8" name="title_panel">
-					<label align="center" color="#3278A0" font="m23" height="50" width="256" name="game_title" text="Select a game" />
+				<panel height="46" width="256" x="56%" y="8" name="title_panel">
+					<panel height="23">
+						<label align="center" color="#3278A0" font="arial-18" name="game_title" text="Select a game" />
+					</panel>
+					<panel height="23">
+						<label align="center" color="#3278A0" font="arial-18" name="game_title2" text=" " />
+					</panel>
 				</panel>
 				<panel height="269" width="269" x="56%" y="55" name="cover_bg">
 					<panel background="overlay_bg">
