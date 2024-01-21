@@ -43,12 +43,14 @@ static int cmd_dele();
 static int cmd_epsv();
 static int cmd_feat();
 static int cmd_list();
+static int cmd_mkd();
 static int cmd_nlst();
 static int cmd_noop();
 static int cmd_pass();
 static int cmd_pasv();
 static int cmd_pwd();
 static int cmd_quit();
+static int cmd_rmd();
 static int cmd_retr();
 static int cmd_size();
 static int cmd_stor();
@@ -57,17 +59,19 @@ static int cmd_type();
 static int cmd_user();
 
 static command_t commands[] = {
-	{ "CWD", cmd_cwd },
+	{ "CWD",  cmd_cwd },
 	{ "DELE", cmd_dele },
 	{ "EPSV", cmd_epsv },
 	{ "FEAT", cmd_feat },
 	{ "LIST", cmd_list },
+	{ "MKD",  cmd_mkd },
 	{ "NLST", cmd_nlst },
 	{ "NOOP", cmd_noop },
 	{ "PASS", cmd_pass },
 	{ "PASV", cmd_pasv },
-	{ "PWD", cmd_pwd },
+	{ "PWD",  cmd_pwd },
 	{ "QUIT", cmd_quit },
+	{ "RMD",  cmd_rmd },
 	{ "RETR", cmd_retr },
 	{ "SIZE", cmd_size },
 	{ "STOR", cmd_stor },
@@ -135,7 +139,8 @@ static int send_list(int socket, const char* path) {
 	while ((entry = fs_readdir(fd))) {
 		if (entry->attr == O_DIR) {
 			send_multiline_response_line(socket, directory_format, 0, entry->name);
-		} else {
+		}
+		else {
 			send_multiline_response_line(socket, file_format, entry->size, entry->name);
 		}
 	}
@@ -244,7 +249,7 @@ static int cmd_cwd(lftpd_client_t* client, const char* arg) {
 	if (fd < 0) {
 		send_simple_response(client->socket, 550, STATUS_550);
 		free(path);
-		return -1;
+		return 0;
 	}
 
 	fs_close(fd);
@@ -264,13 +269,12 @@ static int cmd_dele(lftpd_client_t* client, const char* arg) {
 
 	if (fs_unlink(path) < 0) {
 		send_simple_response(client->socket, 550, STATUS_550);
-		free(path);
-		return -1;
+	}
+	else {
+		send_simple_response(client->socket, 250, STATUS_250);
 	}
 
 	free(path);
-	send_simple_response(client->socket, 250, STATUS_250);
-
 	return 0;
 }
 
@@ -336,6 +340,25 @@ static int cmd_list(lftpd_client_t* client, const char* arg) {
 	else {
 		send_simple_response(client->socket, 550, STATUS_550);
 	}
+	return 0;
+}
+
+
+static int cmd_mkd(lftpd_client_t* client, const char* arg) {
+	if (arg == NULL || strlen(arg) == 0) {
+		send_simple_response(client->socket, 550, STATUS_550);
+	}
+
+	char* path = lftpd_io_canonicalize_path(client->directory, arg);
+
+	if (fs_mkdir(path) < 0) {
+		send_simple_response(client->socket, 550, STATUS_550);
+	}
+	else {
+		send_simple_response(client->socket, 250, STATUS_250);
+	}
+
+	free(path);
 	return 0;
 }
 
@@ -441,6 +464,24 @@ static int cmd_retr(lftpd_client_t* client, const char* arg) {
 	return 0;
 }
 
+static int cmd_rmd(lftpd_client_t* client, const char* arg) {
+	if (arg == NULL || strlen(arg) == 0) {
+		send_simple_response(client->socket, 550, STATUS_550);
+	}
+
+	char* path = lftpd_io_canonicalize_path(client->directory, arg);
+
+	if (fs_rmdir(path) < 0) {
+		send_simple_response(client->socket, 550, STATUS_550);
+	}
+	else {
+		send_simple_response(client->socket, 250, STATUS_250);
+	}
+
+	free(path);
+	return 0;
+}
+
 static int cmd_size(lftpd_client_t* client, const char* arg) {
 	if (!arg) {
 		send_simple_response(client->socket, 550, STATUS_550);
@@ -453,7 +494,8 @@ static int cmd_size(lftpd_client_t* client, const char* arg) {
 	int fd = fs_open(path, O_RDONLY);
 	if (fd < 0) {
 		send_simple_response(client->socket, 550, STATUS_550);
-	} else {
+	}
+	else {
 		send_simple_response(client->socket, 213, "%lu", fs_total(fd));
 		fs_close(fd);
 	}
