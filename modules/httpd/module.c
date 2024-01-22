@@ -1,14 +1,14 @@
 /* DreamShell ##version##
 
    module.c - httpd module
-   Copyright (C)2012-2013 SWAT 
+   Copyright (C)2012-2013, 2024 SWAT 
 
 */
 
 #include "ds.h"
 #include "network/http.h"
 
-DEFAULT_MODULE_EXPORTS_CMD(httpd, "DreamShell http server");
+DEFAULT_MODULE_HEADER(httpd);
 
 int builtin_httpd_cmd(int argc, char *argv[]) { 
 	
@@ -45,4 +45,15 @@ int builtin_httpd_cmd(int argc, char *argv[]) {
 	}
 	
 	return CMD_NO_ARG;
+}
+
+int lib_open(klibrary_t * lib) {
+    AddCmd(lib_get_name(), "HTTP server", (CmdHandler *) builtin_httpd_cmd);
+    return nmmgr_handler_add(&ds_httpd_hnd.nmmgr);
+}
+
+int lib_close(klibrary_t * lib) {
+    httpd_shutdown();
+    RemoveCmd(GetCmdByName(lib_get_name()));
+    return nmmgr_handler_remove(&ds_httpd_hnd.nmmgr);
 }

@@ -2,40 +2,47 @@
 
    httpd.c
    Copyright (C)2003 Dan Potter
+   Copyright (C)2024 SWAT
 */
 
 #include <kos.h>
 #include <sys/socket.h>
-#include <sys/select.h>
 #include <stdio.h>
 #include <sys/queue.h>
 
-struct http_state;
-typedef TAILQ_HEAD(http_state_list, http_state) http_state_list_t;
+#define BUFSIZE ((64 << 10) - 512)
 
-typedef struct http_state {
-    TAILQ_ENTRY(http_state)     list;
+struct httpd_state;
+typedef TAILQ_HEAD(httpd_state_list, httpd_state) httpd_state_list_t;
 
-    int         socket;
-    struct sockaddr_in  client;
-    socklen_t       client_size;
-    kthread_t       * thd;
-    
-} http_state_t;
+typedef struct httpd_state {
+    TAILQ_ENTRY(httpd_state) list;
 
-static http_state_list_t states;
-#define st_foreach(var) TAILQ_FOREACH(var, &states, list)
+    int socket;
+    struct sockaddr_in client;
+    socklen_t client_size;
+    kthread_t *thd;
+
+} httpd_state_t;
+
+static int server_state = 0;
+static kthread_t *server_thd = NULL;
+static int server_socket = -1;
+
+#if 0
 static mutex_t list_mutex = MUTEX_INITIALIZER;
+static httpd_state_list_t states;
+#define st_foreach(var) TAILQ_FOREACH(var, &states, list)
 
 static int st_init() {
     TAILQ_INIT(&states);
     return 0;
 }
 
-static http_state_t * st_create() {
-    http_state_t * ns;
+static httpd_state_t *st_create() {
+    httpd_state_t *ns;
 
-    ns = calloc(1, sizeof(http_state_t));
+    ns = calloc(1, sizeof(httpd_state_t));
     mutex_lock(&list_mutex);
     TAILQ_INSERT_TAIL(&states, ns, list);
     mutex_unlock(&list_mutex);
@@ -43,35 +50,24 @@ static http_state_t * st_create() {
     return ns;
 }
 
-static void st_destroy(http_state_t *st) {
+static void st_destroy(httpd_state_t *st) {
     mutex_lock(&list_mutex);
     TAILQ_REMOVE(&states, st, list);
+    if(st->thd != NULL && thd_current != st->thd) {
+        thd_join(st->thd, NULL);
+    }
     mutex_unlock(&list_mutex);
     free(st);
 }
-/*
+
 static void st_destroy_all() {
+    httpd_state_t *hs;
 	st_foreach(hs) {
 		close(hs->socket);
 		st_destroy(hs);
 	}
-}*/
-
-/*
-static int st_add_fds(fd_set * fds, int maxfd) {
-    http_state_t * st;
-
-    mutex_lock(&list_mutex);
-    st_foreach(st) {
-        FD_SET(st->socket, fds);
-
-        if(maxfd < (st->socket + 1))
-            maxfd = st->socket + 1;
-    }
-    mutex_unlock(&list_mutex);
-    return maxfd;
-}*/
-
+}
+#endif
 
 /**********************************************************************/
 
@@ -101,7 +97,7 @@ static int readline(int sock, char *buf, int bufsize) {
     return 0;
 }
 
-static int read_headers(http_state_t * hs, char * buffer, int bufsize) {
+static int read_headers(httpd_state_t * hs, char * buffer, int bufsize) {
     char fn[256];
     int i, j;
 
@@ -138,11 +134,11 @@ static int read_headers(http_state_t * hs, char * buffer, int bufsize) {
 /**********************************************************************/
 
 static const char * errmsg1 = "<html><head><title>";
-static const char * errmsg2 = "</title></head><body bgcolor=\"white\"><h4>";
+static const char * errmsg2 = "</title></head><body bgcolor=\"#cccccc\" style=\"font-size: 1.5em;\"><h4>";
 static const char * errmsg3 = "</h4>\n<hr>\nDreamShell http/1.0 server\n</body></html>";
 
-static int send_error(http_state_t * hs, int errcode, const char * str) {
-    char * buffer = malloc(65536);
+static int send_error(httpd_state_t * hs, int errcode, const char * str) {
+    char * buffer = malloc(BUFSIZE);
 
     sprintf(buffer, "HTTP/1.0 %d %s\r\nContent-type: text/html\r\n\r\n", errcode, str);
     write(hs->socket, buffer, strlen(buffer));
@@ -164,7 +160,7 @@ static int send_error(http_state_t * hs, int errcode, const char * str) {
     return 0;
 }
 
-static int send_ok(http_state_t * hs, const char * ct) {
+static int send_ok(httpd_state_t * hs, const char * ct) {
     char buffer[512];
 
     sprintf(buffer, "HTTP/1.0 200 OK\r\nContent-type: %s\r\nConnection: close\r\n\r\n", ct);
@@ -175,18 +171,18 @@ static int send_ok(http_state_t * hs, const char * ct) {
 
 /**********************************************************************/
 
-static int do_dirlist(const char * name, http_state_t * hs, file_t f) {
+static int do_dirlist(const char * name, httpd_state_t * hs, file_t f) {
     char * dl, *dlout;
     dirent_t * d;
     int dlsize, r;
 
-    dl = malloc(65536);
+    dl = memalign(32, BUFSIZE);
     dlout = dl;
 
-    sprintf(dlout, "<html><head><title>Listing of %s</title></head></html>\n<body bgcolor=\"white\">\n", name);
+    sprintf(dlout, "<html><head><title>Listing of %s</title></head></html>\n<body bgcolor=\"#cccccc\" style=\"font-size: 1.5em;\">\n", name);
     dlout += strlen(dlout);
 
-    sprintf(dlout, "<h4>Listing of %s</h4>\n<hr>\n<table>\n", name);
+    sprintf(dlout, "<h4>Listing of %s</h4>\n<hr>\n<table style=\"font-size: 0.8em;\">\n", name);
     dlout += strlen(dlout);
 
     while((d = fs_readdir(f))) {
@@ -219,31 +215,27 @@ static int do_dirlist(const char * name, http_state_t * hs, file_t f) {
     }
 
     free(dl);
-
     return 0;
 }
 
 /**********************************************************************/
 
-#define BUFSIZE (256*1024)
-
 static void *client_thread(void *p) {
-    http_state_t * hs = (http_state_t *)p;
+    httpd_state_t * hs = (httpd_state_t *)p;
     char * buf, * ext;
     const char * ct;
     file_t f = -1;
     int r, o, cnt;
-    //stat_t st;
 
-    //dbglog(DBG_INFO, "httpd: client thread started, sock %d\n", hs->socket);
+    // dbglog(DBG_INFO, "httpd: client thread started, sock %d\n", hs->socket);
 
-    buf = malloc(BUFSIZE);
+    buf = memalign(32, BUFSIZE);
 
     if(read_headers(hs, buf, BUFSIZE) < 0) {
         goto out;
     }
 
-    //dbglog(DBG_INFO, "httpd: client requested '%s'\n", buf);
+    // dbglog(DBG_INFO, "httpd: client requested '%s'\n", buf);
 
     // Is it a directory or a file?
     f = fs_open(buf, O_RDONLY | O_DIR);
@@ -265,20 +257,28 @@ static void *client_thread(void *p) {
         if(ext) {
             ext++;
 
-            if(!strcasecmp(ext, "jpg"))
+            if(!strcasecmp(ext, "jpg") || !strcasecmp(ext, "jpeg"))
                 ct = "image/jpeg";
             else if(!strcasecmp(ext, "png"))
                 ct = "image/png";
             else if(!strcasecmp(ext, "gif"))
                 ct = "image/gif";
-            else if(!strcasecmp(ext, "txt"))
+            else if(!strcasecmp(ext, "ppm"))
+                ct = "image/ppm";
+            else if(!strcasecmp(ext, "bmp"))
+                ct = "image/bmp";
+            else if(!strcasecmp(ext, "txt") || !strcasecmp(ext, "dsc") || !strcasecmp(ext, "lua"))
                 ct = "text/plain";
             else if(!strcasecmp(ext, "mp3"))
                 ct = "audio/mpeg";
             else if(!strcasecmp(ext, "ogg"))
-                ct = "application/ogg";
+                ct = "audio/ogg";
+            else if(!strcasecmp(ext, "wav"))
+                ct = "audio/wav";
             else if(!strcasecmp(ext, "html"))
                 ct = "text/html";
+            else if(!strcasecmp(ext, "xml"))
+                ct = "text/xml";
         }
 
         send_ok(hs, ct);
@@ -302,9 +302,9 @@ static void *client_thread(void *p) {
 
 out:
     free(buf);
-    //dbglog(DBG_INFO, "httpd: closed client connection %d\n", hs->socket);
+    // dbglog(DBG_INFO, "httpd: closed client connection %d\n", hs->socket);
     close(hs->socket);
-    st_destroy(hs);
+    // st_destroy(hs);
 
     if(f >= 0)
         fs_close(f);
@@ -312,149 +312,119 @@ out:
     return NULL;
 }
 
-/**********************************************************************/
 
-/*
-int handle_read(http_state_t * hs) {
-    char buffer[80];
-    int rc;
+static void *httpd(void *p) {
+    (void)p;
+    httpd_state_t *hs = NULL;
+    uint32_t new_buf_sz = BUFSIZ;
+    httpd_state_t st;
 
-    for ( ; ; ) {
-        rc = read(hs->socket, buffer, 80);
-        if (rc == 0)
-            return -1;
-        write(hs->socket, buffer, rc);
-        if (rc < 80)
-            return 0;
+    memset(&st, 0, sizeof(st));
+
+    while(server_state > 0) {
+
+        hs = &st; // st_create();
+        hs->client_size = sizeof(hs->client);
+        hs->socket = accept(server_socket,
+                            (struct sockaddr *)&hs->client,
+                            &hs->client_size);
+
+        if(hs->socket >= 0 && server_state == 0) {
+            close(hs->socket);
+            // st_destroy(hs);
+            break;
+        }
+
+        if(hs->socket < 0) {
+            dbglog(DBG_INFO, "httpd: error accepting client socket.\n");
+            // st_destroy(hs);
+			close(server_socket);
+			server_socket = -1;
+            server_state = 0;
+			break;
+        }
+
+        // dbglog(DBG_INFO, "httpd: connect from %08lx, port %d, socket %d\n",
+        //      hs->client.sin_addr.s_addr, hs->client.sin_port, hs->socket);
+
+	    setsockopt(hs->socket, SOL_SOCKET, SO_SNDBUF, &new_buf_sz, sizeof(new_buf_sz));
+	    setsockopt(hs->socket, SOL_SOCKET, SO_RCVBUF, &new_buf_sz, sizeof(new_buf_sz));
+
+        // hs->thd = thd_create(0, client_thread, hs);
+        client_thread(hs);
     }
+
+	// st_destroy_all();
+	server_state = 0;
+
+    if(server_socket >= 0) {
+        close(server_socket);
+        server_socket = -1;
+    }
+	return NULL;
 }
-*/
-
-/**********************************************************************/
-
-void *httpd(void *p);
-
-typedef struct httpd_params {
-	int port;
-	int state;
-} httpd_params_t;
-
-static httpd_params_t hdp;
-
 
 void httpd_shutdown() {
-	
-	hdp.state = 0;
-	/*
-	if(wait) {
-		while(hdp.state > -1) thd_sleep(100);
-	}*/
+	server_state = 0;
+
+    if(server_socket >= 0) {
+        shutdown(server_socket, SHUT_RDWR);
+        close(server_socket);
+        server_socket = -1;
+    }
+    if(server_thd) {
+        /* FIXME: "accept" is not aborted on socket close */
+	    // thd_join(server_thd, NULL);
+        server_thd = NULL;
+    }
+    // st_destroy_all();
 }
 
 int httpd_init(int port) {
-	hdp.port = port ? port : 80;
-	hdp.state = 1;
-	thd_create(1, httpd, NULL);
-	return 0;
-}
+    if(server_state) {
+        httpd_shutdown();
+    }
 
-void *httpd(void *p) {
-    int listenfd;
     struct sockaddr_in saddr;
-    fd_set readset;
-    fd_set writeset;
-    int i, maxfdp1;
-    http_state_t *hs;
+    server_socket = socket(AF_INET, SOCK_STREAM, 0);
 
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
-
-    if(listenfd < 0) {
+    if(server_socket < 0) {
         dbglog(DBG_INFO, "httpd: socket create failed\n");
-        return NULL;
+        return -1;
+    }
+
+    if(!port) {
+        port = 80;
     }
 
     memset(&saddr, 0, sizeof(saddr));
     saddr.sin_family = AF_INET;
     saddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    saddr.sin_port = htons(hdp.port);
+    saddr.sin_port = htons(port);
 
-    if(bind(listenfd, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
+    if(bind(server_socket, (struct sockaddr *)&saddr, sizeof(saddr)) < 0) {
         dbglog(DBG_INFO, "httpd: bind failed\n");
-        close(listenfd);
-        return NULL;
+        close(server_socket);
+        return -1;
     }
 
-    if(listen(listenfd, 10) < 0) {
+    if(listen(server_socket, 10) < 0) {
         dbglog(DBG_INFO, "httpd: listen failed\n");
-        close(listenfd);
-        return NULL;
+        close(server_socket);
+        return -1;
     }
 
-    st_init();
-    dbglog(DBG_INFO, "httpd: listening for connections on socket %d\n", listenfd);
-	
-    while(hdp.state > 0) {
-        maxfdp1 = listenfd + 1;
+    // st_init();
+	server_state = 1;
 
-        FD_ZERO(&readset);
-        FD_ZERO(&writeset);
-        FD_SET(listenfd, &readset);
-        // maxfdp1 = st_add_fds(&readset, maxfdp1);
-        // st_add_fds(&writeset);
+	dbglog(DBG_INFO, "httpd: listening on %d.%d.%d.%d:%d...\n",
+		net_default_dev->ip_addr[0],
+		net_default_dev->ip_addr[1],
+		net_default_dev->ip_addr[2],
+		net_default_dev->ip_addr[3],
+		port
+	);
 
-        i = select(maxfdp1, &readset, &writeset, 0, 0);
-
-        if(i == 0)
-            continue;
-
-        // Check for new incoming connections
-        if(FD_ISSET(listenfd, &readset)) {
-            //int tmp = 1;
-
-            hs = st_create();
-            hs->client_size = sizeof(hs->client);
-            hs->socket = accept(listenfd,
-                                (struct sockaddr *)&hs->client,
-                                &hs->client_size);
-								
-            //dbglog(DBG_INFO, "httpd: connect from %08lx, port %d, socket %d\n",
-			//      hs->client.sin_addr.s_addr, hs->client.sin_port, hs->socket);
-
-            if(hs->socket < 0) {
-                st_destroy(hs);
-            }
-            else {
-                hs->thd = thd_create(1, client_thread, hs);
-            }
-
-            /* else if (ioctl(hs->socket, FIONBIO, &tmp) < 0) {
-                dbglog(DBG_INFO, "httpd: failed to set non-blocking\n");
-                st_destroy(hs);
-            } */
-        }
-
-#if 0
-        // Process data from connected clients
-        st_foreach(hs) {
-            if(FD_ISSET(hs->socket, &readset)) {
-                if(handle_read(hs) < 0) {
-                    dbglog(DBG_INFO, "httpd: disconnected socket %d\n", hs->socket);
-                    close(hs->socket);
-                    st_destroy(hs);
-                    break;
-                }
-            }
-
-            /* if (FD_ISSET(hs->socket, &writeset)) {
-            } */
-        }
-#endif
-    }
-	
-	//st_destroy_all();
-	close(listenfd);
-	//hdp.state = -1;
-	
-	return NULL;
+	server_thd = thd_create(1, httpd, NULL);
+	return 0;
 }
-
