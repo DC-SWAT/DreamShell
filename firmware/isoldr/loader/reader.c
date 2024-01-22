@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ISO, CSO, CDI and GDI reader
- * (c)2009-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2024 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -16,12 +16,12 @@ static int _iso_fd[MAX_OPEN_TRACKS] = {FILEHND_INVALID, FILEHND_INVALID, FILEHND
 static uint16 b_seek = 0, a_seek = 0;
 
 #ifdef HAVE_LZO
-static int _open_ciso();
-static int _read_ciso_sectors(uint8 *buff, uint sector, uint cnt);
+static int open_ciso();
+static int read_ciso_sectors(uint8 *buff, uint sector, uint cnt);
 #endif
-static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb);
+static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb);
 
-static void _open_iso() {
+static void open_iso() {
 		
 	gd_state_t *GDS = get_GDS();
 	
@@ -92,14 +92,12 @@ int InitReader() {
 	gd_state_t *GDS = get_GDS();
 
 	if (GDS->disc_num) {
-		
+
 		if (IsoInfo->image_file[len - 7] != 'k') {
 			len--;
 		}
-		
 		IsoInfo->image_file[len - 6] = GDS->disc_num + '0';
 		memcpy(&IsoInfo->image_file[len - 5], "03.iso\0", 7);
-		
 		GDS->data_track = 3;
 	}
 	else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
@@ -114,7 +112,7 @@ int InitReader() {
 		GDS->data_track = 1;
 	}
 
-	_open_iso();
+	open_iso();
 
 	if(iso_fd < 0) {
 #ifdef LOG
@@ -132,7 +130,7 @@ int InitReader() {
 
 		LOGF("Opening CISO...\n");
 
-		if(_open_ciso() < 0) {
+		if(open_ciso() < 0) {
 			printf("Error, can't open CISO image\n");
 			return 0;
 		}
@@ -165,24 +163,27 @@ int InitReader() {
 
 void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 
-	if(lba < IsoInfo->track_lba[0] && GDS->data_track != 1) {
+	if(lba < IsoInfo->track_lba[0]) {
 
-		int len = strlen(IsoInfo->image_file);
-		IsoInfo->image_file[len - 6] = '0';
-		IsoInfo->image_file[len - 5] = '1';
-		GDS->data_track = 1;
-		_open_iso();
-
-	} else if((IsoInfo->track_lba[0] == IsoInfo->track_lba[1] || lba < IsoInfo->track_lba[1]) && GDS->data_track != 3) {
+		if(GDS->data_track != 1) {
+			int len = strlen(IsoInfo->image_file);
+			IsoInfo->image_file[len - 6] = '0';
+			IsoInfo->image_file[len - 5] = '1';
+			GDS->data_track = 1;
+			open_iso();
+		}
+	}
+	else if((IsoInfo->track_lba[0] == IsoInfo->track_lba[1] ||
+		lba < IsoInfo->track_lba[1]) && GDS->data_track != 3) {
 
 		int len = strlen(IsoInfo->image_file);
 		
 		IsoInfo->image_file[len - 6] = '0';
 		IsoInfo->image_file[len - 5] = '3';
 		GDS->data_track = 3;
-		_open_iso();
-
-	} else if(lba >= IsoInfo->track_lba[1] && GDS->data_track <= 3) {
+		open_iso();
+	}
+	else if(lba >= IsoInfo->track_lba[1] && GDS->data_track <= 3) {
 
 		int len = strlen(IsoInfo->image_file);
 		IsoInfo->image_file[len - 6] = IsoInfo->image_second[5];
@@ -192,7 +193,7 @@ void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 		GDS->data_track = n * 10;
 		n = (IsoInfo->image_second[6] - '0');
 		GDS->data_track += n;
-		_open_iso();
+		open_iso();
 	}
 
 	DBGFF("%d\n", GDS->data_track);
@@ -211,12 +212,12 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 #ifdef HAVE_LZO
 		case ISOFS_IMAGE_TYPE_CSO:
 		case ISOFS_IMAGE_TYPE_ZSO:
-			rv = _read_ciso_sectors(buf, sec - IsoInfo->track_lba[0], num);
+			rv = read_ciso_sectors(buf, sec - IsoInfo->track_lba[0], num);
 			break;
 #endif /* HAVE_LZO */
 		case ISOFS_IMAGE_TYPE_CDI:
 
-			rv = _read_data_sectors(buf, sec - IsoInfo->track_lba[0], num, cb);
+			rv = read_data_sectors(buf, sec - IsoInfo->track_lba[0], num, cb);
 			break;
 
 		case ISOFS_IMAGE_TYPE_GDI:
@@ -235,7 +236,7 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 				}
 			}
 
-			rv = _read_data_sectors(buf, lba, num, cb);
+			rv = read_data_sectors(buf, lba, num, cb);
 			break;
 		}
 		case ISOFS_IMAGE_TYPE_ISO:
@@ -322,7 +323,7 @@ static int _read_sector_by_sector(uint8 *buff, uint cnt, uint sec_size
 }
 
 
-static int _read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb) {
+static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb) {
 
 	const uint sec_size = 2048;
 	int tmps = sec_size * cnt;
@@ -414,7 +415,7 @@ static struct {
 	
 } cst;
 
-static int _open_ciso() {
+static int open_ciso() {
 	
 	DBGF("Magic: %c%c%c%c\n", 
 				IsoInfo->ciso.magic[0], 
@@ -534,7 +535,7 @@ static int ciso_read_init(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb)
 }
 
 
-static int _read_ciso_sectors(uint8 *buff, uint sector, uint cnt) {
+static int read_ciso_sectors(uint8 *buff, uint sector, uint cnt) {
 	
 	if(ciso_read_init(buff, sector, cnt, NULL) < 0) {
 		return FAILED;

@@ -1085,7 +1085,7 @@ int gdcChangeDataType(int *param) {
 		param[3] = GDS->gdc.sec_size;
 	}
 	
-	LOGFF("%s: unk=%d mode=%d sector_size=%d\n",
+	LOGFF("%s: flags=%d mode=%d sector_size=%d\n",
 		(param[0] == 0 ? "SET" : "GET"), param[1], param[2], param[3]);
 
 	unlock_gdsys();
