@@ -94,7 +94,7 @@ int ds_sfx_play(ds_sfx_t sfx) {
 	}
 
 	snd_stream_start_adpcm(snd_stream_hnd, 44100, 1);
-	snd_stream_volume(snd_stream_hnd, 240);
+	snd_stream_volume(snd_stream_hnd, 230);
 
 	thd_create(1, snd_stream_thread, (void *)snd_stream_hnd);
 	return 0;

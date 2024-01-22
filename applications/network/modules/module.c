@@ -86,7 +86,6 @@ static void *app_thread(void *params) {
                 break;
         }
     }
-    ds_printf("NETWORK: Exit thread\n");
     return NULL;
 }
 

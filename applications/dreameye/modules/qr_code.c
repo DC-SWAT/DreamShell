@@ -52,7 +52,6 @@ int qr_scan_frame(int bpp, uint8_t *frame, size_t len, char *qr_data) {
             yuyv_to_luma(frame, w * 2, w, h, buf, w);
             break;
         default:
-            quirc_end(qr);
             return rv;
     }
 

@@ -1688,6 +1688,7 @@ kthread_tls_shutdown
 kthread_once
 thd_add_to_runnable
 thd_remove_from_runnable
+thd_current
 #
 rwsem_create
 rwsem_destroy

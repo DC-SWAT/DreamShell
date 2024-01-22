@@ -635,7 +635,6 @@ error:
 }
 
 
-
 static int fat_unlink(struct vfs_handler * vfs, const char *fn) {
     
 	FAT_GET_MNT();
@@ -960,7 +959,13 @@ DRESULT disk_write (
 
 	if(rc < 0) {
 		DBG((DBG_ERROR, "FATFS: %s[%d]%s error: %d\n", 
-			__func__, pdrv, (mnt->dma ? " dma" : ""), errno));
+			__func__, pdrv,
+#ifdef FATFS_DMA
+			(mnt->dma ? " dma" : ""),
+#else
+			"",
+#endif
+			errno));
 		return errno == EOVERFLOW ? RES_PARERR : RES_ERROR;
 	}
 	return RES_OK;
