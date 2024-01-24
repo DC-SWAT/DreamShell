@@ -328,9 +328,11 @@ static void get_scd() {
 	}
 	GDS->status = CMD_STAT_COMPLETED;
 
+#ifdef HAVE_MULTI_DISC
 	if (GDS->disc_change > 60) {
 		GDS->err = CMD_ERR_UNITATTENTION;
 	}
+#endif
 }
 
 /**
@@ -824,12 +826,11 @@ void gdcMainLoop(void) {
 		DBGFF(NULL);
 
 		if(!exception_inited()) {
+#ifdef HAVE_CDDA
+			CDDA_MainLoop();
+#endif
 			apply_patch_list();
 		}
-
-#ifdef HAVE_CDDA
-		CDDA_MainLoop();
-#endif
 
 #ifdef HAVE_SCREENSHOT
 		if(IsoInfo->scr_hotkey
@@ -1024,7 +1025,9 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 int gdcGetDrvStat(uint32 *status) {
 
 #ifdef HAVE_CDDA
-	CDDA_MainLoop();
+	if(!exception_inited()) {
+		CDDA_MainLoop();
+	}
 #endif
 
 	if(lock_gdsys()) {
@@ -1037,6 +1040,7 @@ int gdcGetDrvStat(uint32 *status) {
 	gd_state_t *GDS = get_GDS();
 	int rv = 0;
 
+#ifdef HAVE_MULTI_DISC
 	if (GDS->disc_change) {
 
 		if (++GDS->disc_change == 2) {
@@ -1054,6 +1058,7 @@ int gdcGetDrvStat(uint32 *status) {
 			rv = 1;
 		}
 	}
+#endif
 
 	status[0] = GDS->drv_stat;
 	status[1] = GDS->drv_media;

@@ -159,6 +159,9 @@ int main(int argc, char *argv[]) {
 #ifdef HAVE_CDDA
 	if(IsoInfo->emu_cdda) {
 		CDDA_Init();
+# ifdef HAVE_CDDA_TEST
+		CDDA_Test();
+# endif
 	}
 #endif
 #ifdef HAVE_MAPLE

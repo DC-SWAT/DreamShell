@@ -91,6 +91,7 @@ int InitReader() {
 	int len = strlen(IsoInfo->image_file);
 	gd_state_t *GDS = get_GDS();
 
+#ifdef HAVE_MULTI_DISC
 	if (GDS->disc_num) {
 
 		if (IsoInfo->image_file[len - 7] != 'k') {
@@ -111,6 +112,15 @@ int InitReader() {
 	} else {
 		GDS->data_track = 1;
 	}
+#else
+	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
+		IsoInfo->image_file[len - 6] = '0';
+		IsoInfo->image_file[len - 5] = '3';
+		GDS->data_track = 3;
+	} else {
+		GDS->data_track = 1;
+	}
+#endif
 
 	open_iso();
 

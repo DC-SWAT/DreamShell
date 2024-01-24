@@ -4,8 +4,6 @@
  * (c)2014-2024 SWAT <http://www.dc-swat.ru>
  */
 
-//#define DEBUG 1
-
 #include <main.h>
 #include <mmu.h>
 #include <asic.h>
@@ -43,6 +41,7 @@
 
 #define aica_dma_in_progress() AICA_DMA_ADST
 #define aica_dma_disable() AICA_DMA_ADEN = 0
+#define aica_dma_enabled() AICA_DMA_ADEN
 
 #define AICA_DMA_SUSPEND AICA_DMA_ADSUSP
 #define BBA_DMA_SUSPEND  *((vuint32 *)0xa05f783c)
@@ -203,42 +202,45 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 static void setup_pcm_buffer(void) {
 	/* 
-	* SH4 timer counter value for polling playback position.
-	* This is a base timer value for 16 KB of one channel 16-bit PCM at 44100Hz.
-	*/
-	cdda->end_tm = 36187;
-
-	size_t old_size = cdda->size;
+	 * SH4 timer counter value for polling playback position.
+	 *
+	 * Measured values for PCM 16-bit 44100 Hz:
+	 * 
+	 * 32KB - 36185  (small cumulative error)
+	 * 16KB - 18090  (no error)
+	 * 8KB  - 9042   (small error)
+	 *
+	 * Measured values for ADPCM 4-bit 44100 Hz:
+	 * 
+	 * 32KB - 144758 (no error)
+	 * 16KB - 72376  (no error)
+	 * 8KB  - 36185  (small error)
+	 */
+	cdda->end_tm = 36185;
 	cdda->size = 0x8000;
 
 	switch(cdda->bitsize) {
 #ifdef HAVE_CDDA_ADPCM
 		case 4:
+			/* 4-bit decoded to 16-bit */
 			cdda->size >>= 1;
-			cdda->end_tm *= 2;  /* 4-bit decoded to 16-bit */
-			cdda->end_tm += 10; /* Fixup timer value for ADPCM */
+			cdda->end_tm = 72376;
 			break;
 #endif
 		case 16:
 		default:
 			if(exception_inited()) {
-				/* Save some memory because we can polling faster */
 				cdda->size >>= 1;
-				cdda->end_tm = cdda->end_tm / 2;
-#ifdef LOG
+				cdda->end_tm = 18090;
+#if defined(LOG) && !defined(HAVE_CDDA_TEST)
 				if (malloc_heap_pos() < CACHED_ADDR(APP_BIN_ADDR)) {
 					/* Need some memory for logging in this case */
 					cdda->size >>= 1;
-					cdda->end_tm = cdda->end_tm / 2;
+					cdda->end_tm = 9042;
 				}
 #endif
 			}
 			break;
-	}
-
-	if (cdda->alloc_buff && old_size != cdda->size) {
-		free(cdda->alloc_buff);
-		cdda->alloc_buff = NULL;
 	}
 
 	if (cdda->alloc_buff == NULL) {
@@ -249,11 +251,6 @@ static void setup_pcm_buffer(void) {
 		} else {
 			cdda->alloc_buff = malloc(cdda->size + 32);
 		}
-	}
-
-	if (cdda->alloc_buff == NULL) {
-		LOGFF("Failed malloc\n");
-		return;
 	}
 
 	cdda->buff[PCM_TMP_BUFF] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
@@ -548,10 +545,10 @@ pass_checks:
 	aica_setup_cdda(0);
 }
 
-#if 0 // For debugging
+#ifdef HAVE_CDDA_TEST
 
 /* Get channel position */
-static uint32 aica_get_pos(void) {
+uint32 aica_get_pos(void) {
 	uint32 p;
 
 	/* Observe channel ch */
@@ -611,14 +608,20 @@ static void aica_dma_init(void) {
 
 #endif
 
-static int aica_suitable_pos() {
-	uint32 tm = timer_count(cdda->timer);
-	uint32 ta = (cdda->end_tm / 2) - 1;
-	// uint32 pos = aica_get_pos();
-	// LOGF("CDDA: POS %ld %ld\n", pos, tm);
-	// if((cdda->cur_buff == 0 && pos >= (cdda->end_pos / 2)) || 
-	// 	(cdda->cur_buff == 1 && pos < (cdda->end_pos / 2))) {
-	if((cdda->cur_buff == 0 && tm < ta) || (cdda->cur_buff == 1 && tm > ta)) {
+static inline uint32 aica_get_pseudo_pos() {
+	const uint32 tm = cdda->end_tm - timer_count(cdda->timer);
+	return ((tm * 10000) / 44165);
+}
+
+static inline int aica_suitable_pos() {
+#ifdef HAVE_CDDA_TEST
+	const uint32 pos = aica_get_pos();
+#else
+	const uint32 pos = aica_get_pseudo_pos();
+#endif
+	const uint32 ph = (cdda->end_pos / 2);
+	if((cdda->cur_buff == 0 && pos >= ph) ||
+		(cdda->cur_buff == 1 && pos < ph)) {
 		return 1;
 	}
 	return 0;
@@ -869,8 +872,7 @@ int CDDA_Init() {
 		cdda->adapt_channels = 1;
 	}
 
-#if 0
-	/* It's not need for games (they do it), only for local test */
+#ifdef HAVE_CDDA_TEST
 	aica_init();
 	aica_dma_init();
 #endif
@@ -1200,15 +1202,7 @@ static void end_playback() {
 
 static void play_next_track() {
 
-	if (cdda->stat != CDDA_STAT_END) {
-		end_playback();
-	}
-
-	if (exception_inside_int() && IsoInfo->exec.type == BIN_TYPE_WINCE) {
-		cdda->stat = CDDA_STAT_END;
-		return;
-	}
-
+	end_playback();
 	LOGFF(NULL);
 
 	if(cdda->first_track < cdda->last_track) {
@@ -1318,10 +1312,6 @@ void CDDA_MainLoop(void) {
 
 	DBGFF("0x%08lx %d\n", IsoInfo->emu_cdda, cdda->stat);
 
-	if(cdda->stat == CDDA_STAT_END && !exception_inside_int()) {
-		play_next_track();
-	}
-
 #ifdef _FS_ASYNC
 	if(cdda->stat == CDDA_STAT_WAIT) {
 		/* Polling async data transfer */
@@ -1368,12 +1358,17 @@ void CDDA_MainLoop(void) {
 	}
 
 	/* Wait suitable channels position */
-	if(cdda->stat == CDDA_STAT_POS && aica_suitable_pos()) {
-		cdda->stat = CDDA_STAT_SNDL;
+	if(cdda->stat == CDDA_STAT_POS) {
+		if(aica_suitable_pos()) {
+			cdda->stat = CDDA_STAT_SNDL;
+		} else {
+			unlock_cdda();
+			return;
+		}
 	}
 
 	/* Send data to AICA */
-	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_in_progress() == 0) {
+	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_enabled() == 0) {
 		if (cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
 					cdda->aica_left[cdda->cur_buff],
@@ -1387,7 +1382,7 @@ void CDDA_MainLoop(void) {
 		}
 	}
 	/* If transfer of left channel is done, start for right channel */
-	else if(cdda->stat == CDDA_STAT_SNDR && aica_dma_in_progress() == 0) {
+	else if(cdda->stat == CDDA_STAT_SNDR && aica_dma_enabled() == 0) {
 		uint32 size = cdda->size >> 2;
 		aica_transfer(cdda->buff[PCM_DMA_BUFF] + size, cdda->aica_right[cdda->cur_buff], size);
 		cdda->cur_buff = !cdda->cur_buff;
@@ -1397,23 +1392,44 @@ void CDDA_MainLoop(void) {
 	unlock_cdda();
 }
 
-#ifdef DEBUG
-void CDDA_Test() {
-	/* Internal CDDA test */
-//	uint32 next = loader_addr;
-	int i = 0, track = 4;
-	
+#ifdef HAVE_CDDA_TEST
+
+void aica_test_pos(void) {
+	const uint32 pos = aica_get_pos();
+	const uint32 tm = cdda->end_tm - timer_count(cdda->timer);
+	static int old_pos = 0, old_tm = 0;
+	int smp = pos - old_pos;
+	int tmc = tm - old_tm;
+
+	if(smp < 0) {
+		smp = -smp;
+		smp = cdda->end_pos - smp;
+	}
+	if(tmc < 0) {
+		tmc = -tmc;
+		tmc = cdda->end_tm - tmc;
+	}
+	old_tm = tm;
+	old_pos = pos;
+
+	if(smp && tmc) {
+		float cps = (float)tmc / (float)smp;
+		uint32 ppos = (uint32)((float)tm / cps);
+		LOGF("CDDA: ppos=%05ld rpos=%05ld diff=%03d tm=%05ld, smp=%04d tmc=%04d, cps=%ld.%ld\n",
+			ppos, pos, pos - ppos, tm, smp, tmc, tmc / smp, tmc % smp);
+	}
+}
+
+void CDDA_Test(void) {
+
 	while(1) {
-		
-		i = 0;
-//		next = next * 1103515245 + 12345;
-//		track = (((uint)(next / 65536) % 32768) % 32) + 4;
-		track++;
-		CDDA_Play(track, track, 15);
-		
-		while(i++ < 400000) {
+
+		CDDA_Play(5, 15, 0);
+
+		while(cdda->stat != CDDA_STAT_IDLE) {
 			CDDA_MainLoop();
-			timer_spin_sleep(15);
+			aica_test_pos();
+			// timer_spin_sleep_bios(10);
 		}
 	}
 }

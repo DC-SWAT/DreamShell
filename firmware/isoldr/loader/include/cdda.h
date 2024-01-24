@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback
- * (c)2014-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2024 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _CDDA_H
@@ -16,8 +16,7 @@ typedef enum CDDA_status {
 	CDDA_STAT_POS,
 	CDDA_STAT_SNDL,
 	CDDA_STAT_SNDR,
-	CDDA_STAT_WAIT,
-	CDDA_STAT_END
+	CDDA_STAT_WAIT
 } CDDA_status_t;
 
 typedef enum PCM_buff {
