@@ -162,9 +162,12 @@ typedef struct gd_state {
 	int cdda_stat;
 	int drv_stat;
 	int drv_media;
+
+#ifdef HAVE_MULTI_DISC
 	int disc_change;
 	int disc_num;
 	int need_reinit;
+#endif
 	disk_format_t gdc;
 
 } gd_state_t;

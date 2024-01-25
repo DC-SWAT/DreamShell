@@ -42,9 +42,11 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->drv_media = IsoInfo->exec.type == BIN_TYPE_KOS ? CD_CDROM_XA : CD_GDROM;
 	GDS->cdda_stat = SCD_AUDIO_STATUS_NO_INFO;
 	GDS->cdda_track = 0;
+#ifdef HAVE_MULTI_DISC
 	GDS->disc_change = 0;
 	GDS->need_reinit = 0;
 //	GDS->disc_num = 0;
+#endif
 
 	GDS->gdc.sec_size = 2048;
 	GDS->gdc.mode = 2048;
@@ -541,16 +543,16 @@ void data_transfer() {
 	/**
 	 * Read if emu async is disabled or if requested 1/100 sector(s)
 	 * 
-	 * 100 sectors is additional optimization.
+	 * 100 sectors is additional optimization for SD card only.
 	 * It's looks like the game in loading state (request big data),
-	 * so we can increase general loading speed if load it for one frame
+	 * so we can increase general loading speed if load it for one frame.
 	 */
-	if(!IsoInfo->emu_async
+	if(IsoInfo->emu_async == 0 || GDS->param[1] == 1
 #ifdef DEV_TYPE_SD
-		|| GDS->param[1] == 1 || GDS->param[1] >= 100
+		 || GDS->param[1] >= 100
 #endif
 	) {
-
+		gdcExitToGame();
 		GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
 		GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
 		GDS->requested -= GDS->transfered;
@@ -844,9 +846,11 @@ void gdcMainLoop(void) {
 #endif
 
 		if(GDS->status == CMD_STAT_PROCESSING) {
+#ifdef HAVE_MULTI_DISC
 			if (GDS->need_reinit == 1 && GDS->cmd != CMD_INIT) {
 				GDS->err = CMD_ERR_UNITATTENTION;
 			} else {
+#endif
 				switch (GDS->cmd) {
 					case CMD_PIOREAD:
 					case CMD_DMAREAD:
@@ -927,10 +931,12 @@ void gdcMainLoop(void) {
 						GDS->status = CMD_STAT_COMPLETED;
 						break;
 				}
+#ifdef HAVE_MULTI_DISC
 			}
 			if (GDS->err == CMD_ERR_UNITATTENTION) {
 				GDS->need_reinit = 1;
 			}
+#endif
 		}
 		gdcExitToGame();
 	}
@@ -951,28 +957,18 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 	gd_state_t *GDS = get_GDS();
 	memset(status, 0, sizeof(uint32) * 4);
 
-	if(gd_chn == 0) {
-
-		LOGFF("WARNING: id = %d\n", gd_chn);
-
-		if(GDS->status != CMD_STAT_IDLE) {
-			rv = CMD_STAT_PROCESSING;
-		}
-		unlock_gdsys();
-		return rv;
-
-	} else if(gd_chn != GDS->req_count) {
-
-		LOGFF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
+	if(gd_chn == 0 || gd_chn != GDS->req_count) {
+		LOGFF("ERROR: chn=%d, cnt=%d\n", gd_chn, GDS->req_count);
 		status[0] = CMD_ERR_ILLEGALREQUEST;
-		rv = CMD_STAT_FAILED;
 		unlock_gdsys();
-		return rv;
+		return CMD_STAT_FAILED;
 	}
 
+#ifdef HAVE_MULTI_DISC
 	if(GDS->err) {
 		status[0] = GDS->err;
 	}
+#endif
 
 	switch(GDS->status) {
 		case CMD_STAT_PROCESSING:
@@ -1075,23 +1071,28 @@ int gdcChangeDataType(int *param) {
 	if(lock_gdsys()) {
 		return CMD_STAT_BUSY;
 	}
-	
+
 	gd_state_t *GDS = get_GDS();
 
 	if(param[0] == 0) {
-		
+
 		GDS->gdc.flags = param[1];
 		GDS->gdc.mode = param[2];
 		GDS->gdc.sec_size = param[3];
+
+		/* Bleem! mode */
+		if(GDS->gdc.flags == 0xe000 && GDS->gdc.sec_size == 2368) {
+			GDS->gdc.sec_size = 2340;
+		}
 
 	} else {
 		param[1] = GDS->gdc.flags; 
 		param[2] = GDS->gdc.mode;
 		param[3] = GDS->gdc.sec_size;
 	}
-	
-	LOGFF("%s: flags=%d mode=%d sector_size=%d\n",
-		(param[0] == 0 ? "SET" : "GET"), param[1], param[2], param[3]);
+
+	LOGFF("%s: flags=%lx mode=%0lx full_size=%d data_size=%d\n",
+		(param[0] == 0 ? "SET" : "GET"), param[1], param[2], param[3], GDS->gdc.sec_size);
 
 	unlock_gdsys();
 	return 0;
@@ -1126,7 +1127,9 @@ void gdcReset(void) {
 	LOGFF(NULL);
 	gd_state_t *GDS = get_GDS();
 	reset_GDS(GDS);
+#ifdef HAVE_MULTI_DISC
 	GDS->disc_num = 0;
+#endif
 	unlock_gdsys();
 }
 
@@ -1322,10 +1325,14 @@ int gdcCheckPioTrans(int gd_chn, int *size) {
 }
 
 void gdGdcChangeDisc(int disc_num) {
+#ifdef HAVE_MULTI_DISC
 	LOGFF("%d\n", disc_num);
 	gd_state_t *GDS = get_GDS();
 	GDS->disc_change = 1;
 	GDS->disc_num = disc_num - 1;
+#else
+	(void)disc_num;
+#endif
 }
 
 void gdcDummy(int gd_chn, int *arg2) {

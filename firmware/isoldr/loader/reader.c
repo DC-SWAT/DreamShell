@@ -13,7 +13,7 @@
 #define MAX_OPEN_TRACKS 3
 int iso_fd = FILEHND_INVALID;
 static int _iso_fd[MAX_OPEN_TRACKS] = {FILEHND_INVALID, FILEHND_INVALID, FILEHND_INVALID};
-static uint16 b_seek = 0, a_seek = 0;
+static uint16 b_seek = 0, a_seek = 0, sec_size = 2048;
 
 #ifdef HAVE_LZO
 static int open_ciso();
@@ -21,10 +21,8 @@ static int read_ciso_sectors(uint8 *buff, uint sector, uint cnt);
 #endif
 static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb);
 
-static void open_iso() {
-		
-	gd_state_t *GDS = get_GDS();
-	
+static void open_iso(gd_state_t *GDS) {
+
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 		
 		DBGFF("track=%d fd=%d fd[0]=%d fd[1]=%d fd[2]=%d\n",
@@ -76,6 +74,50 @@ static void open_iso() {
 	}
 }
 
+static void switch_sector_size(gd_state_t *GDS) {
+	sec_size = GDS->gdc.sec_size;
+
+	/* Regular data mode */
+	if(sec_size == 2048) {
+		switch(IsoInfo->sector_size) {
+			case 2324: /* MODE2_FORM2 */
+				b_seek = 16;
+				a_seek = 260;
+				break;
+			case 2336: /* SEMIRAW_MODE2 */
+				b_seek = 8;
+				a_seek = 280;
+				break;
+			case 2352:
+				if(GDS->data_track == 3) {
+					/* RAW_XA */
+					b_seek = 16;
+					a_seek = 288;
+				}
+				else {
+					/* RAW_XA_MODE2 */
+					b_seek = 24;
+					a_seek = 280;
+				}
+				break;
+			default:
+				b_seek = 0;
+				a_seek = 0;
+				break;
+		}
+	}
+	/* Bleem! mode */
+	else if(sec_size == 2340) {
+		b_seek = 12;
+		a_seek = 0;
+	}
+	/* RAW mode */
+	else {
+		b_seek = 0;
+		a_seek = 0;
+	}
+}
+
 
 int InitReader() {
 
@@ -122,7 +164,7 @@ int InitReader() {
 	}
 #endif
 
-	open_iso();
+	open_iso(GDS);
 
 	if(iso_fd < 0) {
 #ifdef LOG
@@ -148,25 +190,7 @@ int InitReader() {
 #endif
 
 	/* Setup sector info of image */
-	switch(IsoInfo->sector_size) {
-		case 2324: /* MODE2_FORM2 */
-			b_seek = 16;
-			a_seek = 260;
-			break;
-		case 2336: /* SEMIRAW_MODE2 */
-			b_seek = 8;
-			a_seek = 280;
-			break;
-		case 2352: /* RAW_XA */
-			b_seek = 16;
-			a_seek = 288;
-			break;
-		default:
-			b_seek = 0;
-			a_seek = 0;
-			break;
-	}
-
+	switch_sector_size(GDS);
 	return 1;
 }
 
@@ -180,7 +204,7 @@ void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 			IsoInfo->image_file[len - 6] = '0';
 			IsoInfo->image_file[len - 5] = '1';
 			GDS->data_track = 1;
-			open_iso();
+			open_iso(GDS);
 		}
 	}
 	else if((IsoInfo->track_lba[0] == IsoInfo->track_lba[1] ||
@@ -191,7 +215,7 @@ void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 		IsoInfo->image_file[len - 6] = '0';
 		IsoInfo->image_file[len - 5] = '3';
 		GDS->data_track = 3;
-		open_iso();
+		open_iso(GDS);
 	}
 	else if(lba >= IsoInfo->track_lba[1] && GDS->data_track <= 3) {
 
@@ -203,9 +227,10 @@ void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 		GDS->data_track = n * 10;
 		n = (IsoInfo->image_second[6] - '0');
 		GDS->data_track += n;
-		open_iso();
+		open_iso(GDS);
 	}
 
+	switch_sector_size(GDS);
 	DBGFF("%d\n", GDS->data_track);
 }
 
@@ -320,12 +345,12 @@ static int _read_sector_by_sector(uint8 *buff, uint cnt, uint sec_size
 			fs_enable_dma(old_dma);
 		}
 #endif
-
 		if(read(iso_fd, buff, sec_size) < 0) {
 			return FAILED;
 		}
-
-		lseek(iso_fd, a_seek, SEEK_CUR);
+		if(a_seek) {
+			lseek(iso_fd, a_seek, SEEK_CUR);
+		}
 		buff += sec_size;
 	}
 
@@ -335,12 +360,11 @@ static int _read_sector_by_sector(uint8 *buff, uint cnt, uint sec_size
 
 static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb) {
 
-	const uint sec_size = 2048;
 	int tmps = sec_size * cnt;
 
 	lseek(iso_fd, IsoInfo->track_offset + (sector * IsoInfo->sector_size), SEEK_SET);
 
-	/* Reading normal data sectors (2048) */
+	/* Reading normal data sectors */
 	if(IsoInfo->sector_size == sec_size) {
 		if(cb != NULL) {
 #ifdef _FS_ASYNC

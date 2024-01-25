@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Memory allocation
- * (c)2022-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2022-2024 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -13,11 +13,15 @@ enum malloc_types {
 };
 static int malloc_type = MALLOC_TYPE_INTERNAL;
 
+#ifndef HAVE_LIMIT
+#   define HAVE_KATANA_MEMORY 1
+#endif
 
+
+#ifdef HAVE_KATANA_MEMORY
 /**
  * @brief KATANA ingame memory allocation
  */
-
 // FIXME: Can be different
 #define KATANA_MALLOC_INDEX  0x84
 #define KATANA_FREE_INDEX    0x152
@@ -69,6 +73,8 @@ static void *katana_realloc(void *data, uint32 size) {
     }
     return mem;
 }
+
+#endif
 
 
 /**
@@ -149,11 +155,14 @@ static int internal_malloc_init(int first) {
 
         internal_malloc_base = (void *)IsoInfo->heap;
 
-    } else if (IsoInfo->heap == HEAP_MODE_AUTO) {
+    }
+    else if (IsoInfo->heap == HEAP_MODE_AUTO) {
 
         internal_malloc_init_auto();
 
-    } else if (IsoInfo->heap == HEAP_MODE_INGAME) {
+    }
+#ifdef HAVE_KATANA_MEMORY
+    else if (IsoInfo->heap == HEAP_MODE_INGAME) {
 
         /**
          * Temporary place before executing
@@ -161,7 +170,9 @@ static int internal_malloc_init(int first) {
          */
         internal_malloc_init_auto();
 
-    } else if(IsoInfo->heap == HEAP_MODE_MAPLE) {
+    }
+#endif
+    else if(IsoInfo->heap == HEAP_MODE_MAPLE) {
 
         internal_malloc_init_maple(first);
     }
@@ -293,7 +304,7 @@ void *internal_realloc(void *ptr, size_t size) {
 }
 
 int malloc_init(int first) {
-
+#ifdef HAVE_KATANA_MEMORY
     if (IsoInfo->heap == HEAP_MODE_INGAME
         && IsoInfo->exec.type == BIN_TYPE_KATANA
         && first == 0
@@ -306,26 +317,36 @@ int malloc_init(int first) {
         }
         return 0;
     }
+#endif
     return internal_malloc_init(first);
 }
 
 void malloc_stat(uint32 *free_size, uint32 *max_free_size) {
+#ifdef HAVE_KATANA_MEMORY
     if (malloc_type == MALLOC_TYPE_KATANA) {
         katana_malloc_stat(free_size, max_free_size);
-    } else {
+    }
+    else
+#endif
+    {
         internal_malloc_stat(free_size, max_free_size);
     }
 }
 
 uint32 malloc_heap_pos() {
+#ifdef HAVE_KATANA_MEMORY
     if (malloc_type == MALLOC_TYPE_KATANA) {
         return 0; // Not used
-    } else {
+    }
+    else
+#endif
+    {
         return (uint32)internal_malloc_pos;
     }
 }
 
 void *malloc(uint32 size) {
+#ifdef HAVE_KATANA_MEMORY
     if (malloc_type == MALLOC_TYPE_KATANA) {
         void *ptr = katana_malloc(size);
         if (ptr == NULL) {
@@ -336,23 +357,34 @@ void *malloc(uint32 size) {
             return internal_malloc(size);
         }
         return ptr;
-    } else {
+    }
+    else
+#endif
+    {
         return internal_malloc(size);
     }
 }
 
 void free(void *data) {
+#ifdef HAVE_KATANA_MEMORY
     if (malloc_type == MALLOC_TYPE_KATANA) {
         katana_free(data);
-    } else {
+    }
+    else
+#endif
+    {
         internal_free(data);
     }
 }
 
 void *realloc(void *data, uint32 size) {
+#ifdef HAVE_KATANA_MEMORY
     if (malloc_type == MALLOC_TYPE_KATANA) {
         return katana_realloc(data, size);
-    } else {
+    }
+    else
+#endif
+    {
         return internal_realloc(data, size);
     }
 }
