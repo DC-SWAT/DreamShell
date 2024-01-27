@@ -63,11 +63,14 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 # ifdef HAVE_CDDA
 		if(status & ASIC_NRM_AICA_DMA) {
 			back_vector = aica_dma_handler(NULL, stack, back_vector);
-		} else if ((status & (ASIC_NRM_MAPLE_DMA | ASIC_NRM_GD_DMA))) {
-			back_vector = aica_vsync_handler(NULL, stack, back_vector);
+		}
+		else if((code == EXP_CODE_INT9 && (status & ASIC_NRM_VSYNC)) ||
+				(code == EXP_CODE_INT11 && (status & ASIC_NRM_GD_DMA))) {
+			// back_vector = aica_vsync_handler(NULL, stack, back_vector);
+			CDDA_MainLoop();
 		}
 # endif
-		if (status & ASIC_NRM_VSYNC) {
+		if (status & ASIC_NRM_MAPLE_DMA && code == EXP_CODE_INT11) {
 			apply_patch_list();
 		}
 

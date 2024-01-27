@@ -132,4 +132,10 @@ int pre_read(int fd, unsigned int size);
 #	define pre_read_xfer_abort() do { } while(0)
 #endif
 
+#if defined(DEV_TYPE_GD)
+#	define FS_SECTOR_SIZE 2048
+#else
+#	define FS_SECTOR_SIZE 512
+#endif
+
 #endif /* __FS_H__ */
