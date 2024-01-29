@@ -754,7 +754,7 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
 	isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 	isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
-	isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
+	isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 
 	if (GUI_WidgetGetState(self.memory_chk[2])) {
 		GUI_WidgetSetState(self.memory_chk[1], 1);
@@ -870,31 +870,32 @@ void setModeCDDA(uint32 mode) {
 		isoLoader_toggleCDDA(self.cdda);
 	}
 
+	/* Backward compatibility for v0.8 beta and some 0.6.x */
 	if (!(mode & CDDA_MODE_EXTENDED)) {
 		switch (mode) {
 			case CDDA_MODE_DMA_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_DMA_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_SQ_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_SQ_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
 				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
-				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[0]);
+				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			default:
 				break;

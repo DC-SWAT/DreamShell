@@ -472,7 +472,7 @@ static int open_ciso() {
 			return -1;
 		}
 
-		cst.c_buff_size = 0x4000;
+		cst.c_buff_size = 0x2000;
 		cst.c_buff_alloc = malloc(cst.c_buff_size);
 
 		if (!cst.c_buff_alloc) {
@@ -544,7 +544,7 @@ static int ciso_read_init(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb)
 	cst.cnt = cnt;
 	cst.pkg = 0;
 	cst.c_buff_addr = (uint32)cst.c_buff_alloc;
-	cst.c_buff_size = 0x4000;
+	cst.c_buff_size = 0x2000;
 	cst.p_buff_size = cnt << 2;
 
 	uint blocks_size = cnt * sizeof(uint);

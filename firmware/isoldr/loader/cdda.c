@@ -219,43 +219,56 @@ static void setup_pcm_buffer(void) {
 	cdda->end_tm = 36185;
 	cdda->size = 0x8000;
 
+	size_t ram_usage = cdda->size >> (cdda->trans_method == PCM_TRANS_SQ_SPLIT);
+	uint32 avail_mem = cdda->size;
+	malloc_stat(&avail_mem, &avail_mem);
+
 	switch(cdda->bitsize) {
 #ifdef HAVE_CDDA_ADPCM
 		case 4:
-			/* 4-bit decoded to 16-bit */
+			/**
+			 * ADPCM 4-bit decoded to 16-bit in AICA.
+			 * So we can easy save 16KB without IRQ.
+			 */
+			ram_usage >>= 1;
 			cdda->size >>= 1;
 			cdda->end_tm = 72376;
+
+			if(avail_mem < cdda->size) {
+				ram_usage >>= 1;
+				cdda->size >>= 1;
+				cdda->end_tm = 36185;
+			}
 			break;
 #endif
 		case 16:
 		default:
 			if(exception_inited()) {
+				/**
+				 * Can polling faster, save 16KB or 24KB.
+				 */
+				ram_usage >>= 1;
 				cdda->size >>= 1;
 				cdda->end_tm = 18090;
-#if defined(LOG) && !defined(HAVE_CDDA_TEST)
-				if (malloc_heap_pos() < CACHED_ADDR(APP_BIN_ADDR)) {
-					/* Need some memory for logging in this case */
-					cdda->size >>= 1;
-					cdda->end_tm = 9042;
-				}
-#endif
+			}
+			if(avail_mem < cdda->size) {
+				uint32 s = (exception_inited() ? 1 : 2);
+				ram_usage >>= s;
+				cdda->size >>= s;
+				cdda->end_tm = 9042;
 			}
 			break;
 	}
 
-	if (cdda->alloc_buff == NULL) {
-		if (cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
-			/* DMA buffer not is used in this case */
-			cdda->alloc_buff = malloc((cdda->size >> 1) + 32);
-			cdda->buff[PCM_DMA_BUFF] = NULL;
-		} else {
-			cdda->alloc_buff = malloc(cdda->size + 32);
-		}
+	if(cdda->alloc_buff == NULL) {
+		cdda->alloc_buff = malloc(ram_usage + 32);
 	}
 
 	cdda->buff[PCM_TMP_BUFF] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
-	if (cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
+	if(cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
 		cdda->buff[PCM_DMA_BUFF] = cdda->buff[0] + (cdda->size >> 1);
+	} else {
+		cdda->buff[PCM_DMA_BUFF] = NULL;
 	}
 
 	/* Setup buffer at end of sound memory */
@@ -272,8 +285,8 @@ static void setup_pcm_buffer(void) {
 		cdda->end_pos = ((cdda->size >> 1) / (cdda->bitsize >> 3)) - 1;
 	}
 
-	LOGFF("0x%08lx 0x%08lx %d\n",
-		(uint32)cdda->buff[0], (uint32)cdda->aica_left[0], cdda->size);
+	LOGFF("0x%08lx 0x%08lx %d/%d %d\n",
+		(uint32)cdda->buff[0], (uint32)cdda->aica_left[0], cdda->size, ram_usage, avail_mem);
 }
 
 static void aica_set_volume(int volume, int lock) {
@@ -316,8 +329,9 @@ static void aica_stop_cdda(void) {
 	timer_stop(cdda->timer);
 	timer_clear(cdda->timer);
 
-	/* Very important delay! Before setup channels again. */
-	timer_spin_sleep_bios(5);
+	/* Need wait a bit before setup channels again,
+	 * otherwise it doesn't stop and playback will be out of sync. */
+	timer_spin_sleep_bios(1);
 }
 
 static void aica_stop_clean_cdda() {
@@ -526,7 +540,7 @@ pass_checks:
 		if (val <= 3) {
 			aica_set_volume(0, 1);
 			return val;
-		} else if(cdda->adapt_channels == 0) {
+		} else {
 			aica_setup_cdda(0);
 			return val;
 		}
@@ -1352,7 +1366,7 @@ void CDDA_MainLoop(void) {
 
 	/* Wait suitable channels position */
 	if(cdda->stat == CDDA_STAT_POS) {
-		if(aica_suitable_pos() == 0 || aica_dma_enabled()) {
+		if(aica_suitable_pos() == 0 || aica_dma_in_progress()) {
 			unlock_cdda();
 			return;
 		}
@@ -1366,7 +1380,7 @@ void CDDA_MainLoop(void) {
 	}
 
 	/* Send data to AICA */
-	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_enabled() == 0) {
+	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_in_progress() == 0) {
 		if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
 					cdda->aica_left[cdda->cur_buff],
@@ -1381,7 +1395,7 @@ void CDDA_MainLoop(void) {
 			cdda->stat = CDDA_STAT_SNDR;
 
 			if(cdda->restore) {
-				do { } while(aica_dma_enabled());
+				do { } while(aica_dma_in_progress());
 			} else {
 				unlock_cdda();
 				return;
@@ -1389,7 +1403,7 @@ void CDDA_MainLoop(void) {
 		}
 	}
 	/* If transfer of left channel is done, start for right channel */
-	if(cdda->stat == CDDA_STAT_SNDR && aica_dma_enabled() == 0) {
+	if(cdda->stat == CDDA_STAT_SNDR && aica_dma_in_progress() == 0) {
 		uint32 size = cdda->size >> 2;
 		aica_transfer(cdda->buff[PCM_DMA_BUFF] + size, cdda->aica_right[cdda->cur_buff], size);
 		cdda->cur_buff = !cdda->cur_buff;

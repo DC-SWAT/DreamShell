@@ -102,8 +102,6 @@ static void internal_malloc_init_auto() {
         if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda)
             || (IsoInfo->emu_cdda && IsoInfo->use_irq == 0)
             || IsoInfo->boot_mode != BOOT_MODE_DIRECT
-            || (loader_end > (CACHED_ADDR(IP_BIN_ADDR) + 0x2000)
-                && (IsoInfo->emu_cdda || IsoInfo->image_type == ISOFS_IMAGE_TYPE_ZSO))
         ) {
             internal_malloc_base = (void *)ISOLDR_DEFAULT_ADDR_HIGH - 0x8000;
         } else if (loader_end < CACHED_ADDR(IP_BIN_ADDR)
@@ -192,18 +190,18 @@ static int internal_malloc_init(int first) {
 
 static void internal_malloc_stat(uint32 *free_size, uint32 *max_free_size) {
 
-    uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
+    uint32 exec_addr = CACHED_ADDR(APP_BIN_ADDR);
 
     if ((uint32)internal_malloc_base < exec_addr) {
-
-        *free_size = exec_addr - (uint32)internal_malloc_pos;
-        *max_free_size = exec_addr - (uint32)internal_malloc_base;
-
+        if(IsoInfo->exec.type == BIN_TYPE_KATANA) {
+            *free_size = CACHED_ADDR(IP_BIN_BOOTSTRAP_2_ADDR) - (uint32)internal_malloc_pos;
+        } else {
+            *free_size = exec_addr - (uint32)internal_malloc_pos;
+        }
     } else {
-
-        *free_size = CACHED_ADDR(RAM_END_ADDR) - (uint32)internal_malloc_pos;
         *max_free_size = CACHED_ADDR(RAM_END_ADDR) - (uint32)internal_malloc_base;
     }
+    *max_free_size = *free_size;
 }
 
 Chunk internal_malloc_chunk_find(size_t s, Chunk *heap) {
