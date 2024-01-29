@@ -100,29 +100,20 @@ int main(int argc, char *argv[]) {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
 
-	printf("Loading executable...\n");
-
-	if(!Load_BootBin()) {
-		goto error;
+#ifdef HAVE_BLEEM
+	if(IsoInfo->bleem) {
+		printf("Loading Bleem!...\n");
+		Load_Bleem();
 	}
+	else 
+#endif
+	{
+		printf("Loading executable...\n");
 
-#ifndef HAVE_LIMIT
-	if(IsoInfo->exec.type == BIN_TYPE_KOS) {
-
-		uint8 *src = (uint8 *)NONCACHED_ADDR(IsoInfo->exec.addr);
-
-		if(src[1] != 0xD0) {
-
-			LOGF("Descrambling...\n");
-
-			uint32 exec_addr = NONCACHED_ADDR(IsoInfo->exec.addr);
-			uint8 *dest = (uint8 *)(exec_addr + (IsoInfo->exec.size * 3));
-
-			descramble(src, dest, IsoInfo->exec.size);
-			memcpy(src, dest, IsoInfo->exec.size);
+		if(!Load_BootBin()) {
+			goto error;
 		}
 	}
-#endif
 
 	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
 		printf("Loading IP.BIN...\n");

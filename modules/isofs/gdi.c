@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014-2015 by SWAT <swat@211.ru> www.dc-swat.ru
+ * Copyright (c) 2014, 2015, 2024 SWAT <www.dc-swat.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -263,6 +263,15 @@ GDI_track_t *gdi_get_track(GDI_header_t *hdr, uint32 lba) {
 	return NULL;
 }
 
+GDI_track_t *gdi_get_last_data_track(GDI_header_t *hdr) {
+	int i;
+	for(i = hdr->track_count - 1; i > -1; i--) {
+		if((hdr->tracks[i]->flags & 0x0F) == 4) {
+			return hdr->tracks[i];
+		}
+	}
+	return NULL;
+}
 
 uint32 gdi_get_offset(GDI_header_t *hdr, uint32 lba, uint16 *sector_size) {
 	

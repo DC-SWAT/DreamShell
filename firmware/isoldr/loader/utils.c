@@ -144,6 +144,24 @@ uint Load_BootBin() {
 		rv = ReadSectors(buff, IsoInfo->exec.lba, bsec, NULL);
 	}
 
+#ifndef HAVE_LIMIT
+	if(rv == COMPLETED && IsoInfo->exec.type == BIN_TYPE_KOS) {
+
+		uint8 *src = (uint8 *)NONCACHED_ADDR(IsoInfo->exec.addr);
+
+		if(src[1] != 0xD0) {
+
+			LOGF("Descrambling...\n");
+
+			uint32 exec_addr = NONCACHED_ADDR(IsoInfo->exec.addr);
+			uint8 *dest = (uint8 *)(exec_addr + (IsoInfo->exec.size * 3));
+
+			descramble(src, dest, IsoInfo->exec.size);
+			memcpy(src, dest, IsoInfo->exec.size);
+		}
+	}
+#endif
+
 	return rv == COMPLETED ? 1 : 0;
 }
 
@@ -333,6 +351,15 @@ void Load_Syscalls() {
 }
 #endif
 
+
+#ifdef HAVE_BLEEM
+void Load_Bleem() {
+	uint8_t *dst = (uint8_t *)NONCACHED_ADDR(IsoInfo->exec.addr);
+	uint8_t *src = (uint8_t *)IsoInfo->bleem;
+	memcpy(dst, src, 1 << 20);
+}
+#endif
+
 void *search_memory(const uint8 *key, uint32 key_size) {
 
 	uint32 start_loc = CACHED_ADDR(IsoInfo->exec.addr);
@@ -374,16 +401,17 @@ int patch_memory(const uint32 key, const uint32 val) {
 
 
 void apply_patch_list() {
-
 	if(!IsoInfo->patch_addr[0]) {
 		return;
 	}
-
-	for(uint i = 0; i < sizeof(IsoInfo->patch_addr) >> 2; ++i) {
-
-		if(*(uint32 *)IsoInfo->patch_addr[i] != IsoInfo->patch_value[i]) {
-			*(uint32 *)IsoInfo->patch_addr[i] = IsoInfo->patch_value[i];
-		}
+	if(*(uint32 *)IsoInfo->patch_addr[0] != IsoInfo->patch_value[0]) {
+		*(uint32 *)IsoInfo->patch_addr[0] = IsoInfo->patch_value[0];
+	}
+	if(!IsoInfo->patch_addr[1]) {
+		return;
+	}
+	if(*(uint32 *)IsoInfo->patch_addr[1] != IsoInfo->patch_value[1]) {
+		*(uint32 *)IsoInfo->patch_addr[1] = IsoInfo->patch_value[1];
 	}
 }
 

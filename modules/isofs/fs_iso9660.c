@@ -1060,7 +1060,6 @@ static int virt_iso_reset(isofs_t *ifs) {
 	return 0;
 }
 
-
 /** 
  * Needed for isoldr module 
  */
@@ -1098,14 +1097,14 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 		case ISOFS_IOCTL_GET_DATA_TRACK_FILENAME2:
 		{
 			if(fh[fd].ifs->gdi != NULL) {
-				
-				GDI_track_t *trk = gdi_get_track(fh[fd].ifs->gdi, fh[fd].first_extent);
+
+				GDI_track_t *trk = gdi_get_last_data_track(fh[fd].ifs->gdi);
 				char *p = strrchr(trk->filename, '/');
 				char *fn = (char*)data;
-				
+
 				strncpy(fn, p + 1, 11);
 				fn[11] = 0;
-				
+
 			} else {
 				return -1;
 			}
@@ -1119,11 +1118,11 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 		case ISOFS_IOCTL_GET_DATA_TRACK_LBA2:
 		{
 			if(fh[fd].ifs->gdi != NULL) {
-				
-				GDI_track_t *trk = gdi_get_track(fh[fd].ifs->gdi, fh[fd].first_extent);
+
+				GDI_track_t *trk = gdi_get_last_data_track(fh[fd].ifs->gdi);
 				uint32 lba = trk->start_lba + 150;
 				memcpy_sh4(data, &lba, sizeof(uint32));
-				
+
 			} else {
 				return -1;
 			}

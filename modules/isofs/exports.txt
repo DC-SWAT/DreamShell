@@ -38,3 +38,4 @@ gdi_get_track
 gdi_get_offset
 gdi_get_toc
 gdi_read_sectors
+gdi_get_last_data_track

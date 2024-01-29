@@ -216,6 +216,11 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 		fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_FILENAME2, info->image_second);
 		fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_LBA2, &info->track_lba[1]);
 
+		if(info->track_lba[1] == 50150 &&
+			!strcasecmp(info->image_second, "track04.bin")) {
+			info->bleem = 1;
+		}
+
 		psec = strchr(psec + 1, '/');
 
 	} else {
@@ -316,6 +321,7 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	memset_sh4(info, 0, sizeof(*info));
 
 	info->track_lba[0] = 150;
+	info->track_lba[1] = info->track_lba[0];
 	info->sector_size = 2048;
 
 	if(get_image_info(info, file, use_gdtex) < 0) {
@@ -414,7 +420,7 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 }
 
 static void set_loader_type(isoldr_info_t *info) {
-	if (info->syscalls != 0 || info->scr_hotkey != 0) {
+	if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0) {
 		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
 		info->fs_type[4] = '\0';
 	} else if ((info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0) && info->emu_vmu == 0) {
@@ -458,9 +464,10 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
 	size_t sc_len = 0;
 	size_t len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
+	size_t buf_size = len < 0x20000 ? 0x25000 : len + 0x5000;
 
-	ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, len);
-	uint8 *loader = (uint8 *) malloc(len < 0x20000 ? 0x20000 : len);
+	ds_printf("DS_PROCESS: Loading %s %d bytes...\n", fn, len - ISOLDR_PARAMS_SIZE);
+	uint8 *loader = (uint8 *) memalign(32, buf_size);
 
 	if(loader == NULL) {
 		fs_close(fd);
@@ -468,7 +475,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		return;
 	}
 
-	memset_sh4(loader, 0, len < 0x20000 ? 0x20000 : len);
+	memset_sh4(loader, 0, buf_size);
 
 	if(fs_read(fd, loader + ISOLDR_PARAMS_SIZE, len) != (len - ISOLDR_PARAMS_SIZE)) {
 		fs_close(fd);
@@ -487,14 +494,13 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 			info->syscalls = 0;
 		} else {
 			sc_len = fs_total(fd);
-			ds_printf("DS_PROCESS: Loading %s (%d) ...\n", fn, sc_len);
+			ds_printf("DS_PROCESS: Loading %s %d bytes...\n", fn, sc_len);
 			uint8 *buff = loader + len + 0x1000; // Keep some for a loader heap
 
 			if (fs_read(fd, buff, sc_len) != sc_len) {
 				ds_printf("DS_ERROR: Can't load %s\n", fn);
 				info->syscalls = 0;
 			} else {
-				dcache_flush_range((uint32)buff, sc_len);
 				addr = ISOLDR_DEFAULT_ADDR;
 
 				info->syscalls = (uint32)buff;
@@ -508,6 +514,37 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 				} else {
 					sc_len += 0x1000;
 				}
+			}
+			fs_close(fd);
+		}
+	}
+
+	if (info->bleem == 1) {
+
+		snprintf(fn, NAME_MAX, "%s/firmware/emu/bleem.bin", getenv("PATH"));
+		fd = fs_open(fn, O_RDONLY);
+
+		if (fd < 0) {
+			info->bleem = 0;
+		} else {
+			size_t blen = fs_total(fd);
+			uint8 *buff = memalign(32, blen);
+
+			if(buff == NULL) {
+				fs_close(fd);
+				ds_printf("DS_ERROR: No free memory, needed %d bytes\n", blen);
+				return;
+			}
+			ds_printf("DS_PROCESS: Loading %s %d bytes...\n", fn, blen);
+
+			if (fs_read(fd, buff, blen) != blen) {
+				ds_printf("DS_ERROR: Can't load %s\n", fn);
+				info->bleem = 0;
+			} else {
+				dcache_flush_range((uint32)buff, blen);
+				addr = ISOLDR_DEFAULT_ADDR_HIGH - 8000;
+				info->bleem = (uint32)buff;
+				info->heap = HEAP_MODE_BEHIND;
 			}
 			fs_close(fd);
 		}
@@ -596,7 +633,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
-	uint32 low_level = 0, scr_hotkey = 0;
+	uint32 low_level = 0, scr_hotkey = 0, bleem = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -621,6 +658,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"vmu",       'v', NULL, CFG_ULONG, (void *) &emu_vmu,     0},
 		{"low",       'l', NULL, CFG_BOOL,  (void *) &low_level,   0},
 		{"scrhot",    'k', NULL, CFG_ULONG, (void *) &scr_hotkey,  0},
+		{"bleem",     'u', NULL, CFG_ULONG, (void *) &bleem,       0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -684,13 +722,14 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 
 	info->boot_mode = boot_mode;
 	info->emu_async = emu_async;
-	info->use_dma   = use_dma;
+	info->use_dma = use_dma;
 	info->fast_boot = fast_boot;
-	info->heap      = heap;
-	info->use_irq   = use_irq;
-	info->emu_vmu   = emu_vmu;
-	info->syscalls  = low_level;
+	info->heap = heap;
+	info->use_irq = use_irq;
+	info->emu_vmu = emu_vmu;
+	info->syscalls = low_level;
 	info->scr_hotkey = scr_hotkey;
+	info->bleem = bleem;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
@@ -754,11 +793,13 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf("Emu async: %d\n"
 		          "Emu CDDA: 0x%08lx\n"
 		          "Emu VMU: %d\n"
-		          "Syscalls: %lx\n\n",
+		          "Syscalls: %lx\n",
+		          "Bleem: %lx\n\n",
 		          info->emu_async,
 		          info->emu_cdda,
 		          info->emu_vmu,
-		          info->syscalls);
+		          info->syscalls,
+		          info->bleem);
 	}
 
 	isoldr_exec(info, lex);

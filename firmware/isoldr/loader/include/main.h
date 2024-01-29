@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2024 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _ISO_LOADER_H
@@ -97,6 +97,7 @@ uint Load_BootBin();
 uint Load_IPBin(int header_only);
 int Load_DS();
 void Load_Syscalls();
+void Load_Bleem();
 
 #ifdef LOG
 

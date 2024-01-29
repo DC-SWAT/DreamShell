@@ -89,15 +89,16 @@ static void switch_sector_size(gd_state_t *GDS) {
 				a_seek = 280;
 				break;
 			case 2352:
-				if(GDS->data_track == 3) {
-					/* RAW_XA */
-					b_seek = 16;
-					a_seek = 288;
-				}
-				else {
+				/* Bleem! mode */
+				if(GDS->data_track == 4) {
 					/* RAW_XA_MODE2 */
 					b_seek = 24;
 					a_seek = 280;
+				}
+				else {
+					/* RAW_XA */
+					b_seek = 16;
+					a_seek = 288;
 				}
 				break;
 			default:
