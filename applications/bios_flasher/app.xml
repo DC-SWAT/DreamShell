@@ -117,16 +117,16 @@
 				</input>
 
 				<panel height="50" width="40%" x="56%" y="130">	
-					<label color="#333333" font="comic-22" name="label_flash_name" text="Macronix" y="3" />
+					<label color="#FFFFFF" font="comic-22" name="label_flash_name" text="Macronix" y="3" />
 				</panel>
 				<panel height="50" width="40%" x="56%" y="175">	
-					<label color="#333333" font="comic-22" name="label_flash_size" text="Size: 1024Kb" y="3" />
+					<label color="#FFFFFF" font="comic-22" name="label_flash_size" text="Size: 1024Kb" y="3" />
 				</panel>
 				<panel height="50" width="40%" x="56%" y="220">	
-					<label color="#333333" font="comic-22" name="label_flash_voltage" text="Voltage: 3V" y="3" />
+					<label color="#FFFFFF" font="comic-22" name="label_flash_voltage" text="Voltage: 3V" y="3" />
 				</panel>
 				<panel height="50" width="40%" x="56%" y="265">	
-					<label color="#333333" font="comic-22" name="label_flash_access" text="Read/Write" y="3" />
+					<label color="#FFFFFF" font="comic-22" name="label_flash_access" text="Read/Write" y="3" />
 				</panel>
 			</panel> 
 
@@ -190,12 +190,12 @@
 
 			<panel background="page3" name="settings_page">	
 				<panel height="50" width="31%" x="9%" y="150">
-					<label align="left" color="#333333" font="comic-16" height="20" text="Start address, 0 to default" width="100%" />
+					<label align="left" color="#FFFFFF" font="comic-16" height="20" text="Start address, 0 to default" width="100%" />
 					<input focus="text_edit_focus" font="arial" fontcolor="#333333" height="20" highlight="text_edit_high" name="start_addresss" normal="text_edit_normal" size="30" type="text" value="0" width="75%" y="20" />
 				</panel>
 
 				<panel height="50" width="31%" x="9%" y="200">
-					<label align="left" color="#333333" font="comic-16" height="20" text="Data length, 0 to default" width="100%" />
+					<label align="left" color="#FFFFFF" font="comic-16" height="20" text="Data length, 0 to default" width="100%" />
 					<input focus="text_edit_focus" font="arial" fontcolor="#333333" height="20" highlight="text_edit_high" name="data_length" normal="text_edit_normal" size="30" type="text" value="0" width="75%" y="20" />
 				</panel>
 				
