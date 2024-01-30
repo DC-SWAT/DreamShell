@@ -36,15 +36,16 @@
 		<surface width="305" height="110" name="blue-bg">
 			<fill color="#EEFBFF" />
 		</surface>
-		<surface width="320" height="150" name="modal-bg" alpha="150">
-			<fill color="#EEEEEE" />
+		<surface width="320" height="150" name="modal-bg">
+			<fill color="#BBBBBB" />
+			<fill x="1%" y="2%" width="98%" height="96%" color="#EEEEEE" />
 		</surface>
 		<surface width="310" height="30" name="input-normal">
-			<fill width="310" height="30" color="#444444" />
+			<fill width="310" height="30" color="#555555" />
 			<fill x="1" y="1" width="308" height="28" color="#F5F5F5" />
 		</surface>
 		<surface width="310" height="30" name="input-focus">
-			<fill color="#666666" />
+			<fill color="#AAAAAA" />
 			<fill x="1" y="1" width="308" height="28" color="#D9F5FF" />
 		</surface>
 		<surface width="590" height="28" name="item-normal">
@@ -85,7 +86,7 @@
 	</resources>
 	<body width="640" height="480" background="background" onload="FileManager:Initialize()" onunload="FileManager:Shutdown()">
 		<label width="340" height="25" x="20" y="2" font="arial" color="#000000" name="title" text="File Manager" align="left" />
-		<panel x="365" y="2" width="280" height="22">
+		<panel x="365" y="2" width="280" height="22" name="toolbar-panel">
 			<input type="button" 
 					onclick="FileManager:openFile()" 
 					onmouseover="FileManager:tooltip('Open selected file')" 
@@ -193,22 +194,24 @@
 				onclick="FileManagerItemClickBottom"
 				oncontextclick="FileManagerItemContextClickBottom"
 				onmouseover="FileManagerItemMouseover" />
-		<panel x="160" y="165" width="320" height="150" name="modal-win" background="modal-bg"> 
-			<label width="310" height="45" x="5" y="15" font="arial" color="#000000" name="modal-label" text="Please wait..." />
-			<input type="text" font="arial" fontcolor="#000000" size="20" x="5" y="55" width="310" height="30" 
-					name="modal-input" normal="input-normal" highlight="input-normal" focus="input-focus" />
-			<input type="button" 
-					onclick="FileManager:ModalClick(true)" 
-					normal="but-ok" 
-					highlight="but-ok-high" 
-					pressed="but-ok" 
-					x="110" y="116" width="32" height="32" name="modal-ok" />
-			<input type="button" 
-					onclick="FileManager:ModalClick(false)" 
-					normal="but-cancel" 
-					highlight="but-cancel-high" 
-					pressed="but-cancel" 
-					x="190" y="115" width="32" height="32" name="modal-cancel" />
+		<panel x="160" y="165" width="320" height="150" name="modal-win">
+			<panel background="modal-bg" name="modal-content">
+				<label width="310" height="50" x="5" y="5" font="arial" color="#000000" name="modal-label" text="Please wait..." />
+				<input type="text" font="arial" fontcolor="#000000" size="20" x="5" y="55" width="310" height="30" 
+						name="modal-input" normal="input-normal" highlight="input-normal" focus="input-focus" />
+				<input type="button" 
+						onclick="FileManager:ModalClick(true)" 
+						normal="but-ok" 
+						highlight="but-ok-high" 
+						pressed="but-ok" 
+						x="110" y="111" width="32" height="32" name="modal-ok" />
+				<input type="button" 
+						onclick="FileManager:ModalClick(false)" 
+						normal="but-cancel" 
+						highlight="but-cancel-high" 
+						pressed="but-cancel" 
+						x="190" y="110" width="32" height="32" name="modal-cancel" />
+			</panel>
 		</panel>
 	</body>
 </app>

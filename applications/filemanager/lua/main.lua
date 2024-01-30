@@ -73,6 +73,7 @@ FileManager = {
 	modal = {
 	
 		widget = nil,
+		window = nil,
 		label = nil,
 		input = nil,
 		ok = nil,
@@ -80,6 +81,10 @@ FileManager = {
 		visible = true,
 		func = nil,
 		mode = "prompt"
+	},
+
+	toolbar = {
+		widget = nil
 	}
 	
 }
@@ -100,33 +105,32 @@ end
 
 function FileManager:ShowModal(mode, label, func, input)
 
-	
 	if self.modal.visible then 
 		self:HideModal(); 
 	end
-	
+
 	if mode == "alert" then
-	
+
 		GUI.LabelSetText(self.modal.label, label);
-		
+
 		if self.modal.mode ~= "alert" then
 			GUI.WidgetSetEnabled(self.modal.cancel, 0);
-			GUI.WidgetSetPosition(self.modal.ok, 145, 116);
+			GUI.WidgetSetPosition(self.modal.ok, 145, 111);
 		end
-		
+
 		if self.modal.mode == "prompt" then
 			GUI.ContainerRemove(self.modal.widget, self.modal.input);
 		end	
-	
+
 	elseif mode == "confirm" then
-	
+
 		if self.modal.mode == "prompt" then
 			GUI.ContainerRemove(self.modal.widget, self.modal.input);
 		end
-		
+
 		GUI.LabelSetText(self.modal.label, label);
 
-		GUI.WidgetSetPosition(self.modal.ok, 110, 116);
+		GUI.WidgetSetPosition(self.modal.ok, 110, 111);
 		GUI.WidgetSetEnabled(self.modal.cancel, 1);
 		
 	
@@ -140,23 +144,24 @@ function FileManager:ShowModal(mode, label, func, input)
 		GUI.TextEntrySetText(self.modal.input, input);
 		
 		if self.modal.mode == "alert" then
-			GUI.WidgetSetPosition(self.modal.ok, 110, 116);
+			GUI.WidgetSetPosition(self.modal.ok, 110, 111);
 			GUI.WidgetSetEnabled(self.modal.cancel, 1);
 		end
-	
+
 	else
 		return false;
 	end
-	
+
 	GUI.ContainerSetEnabled(self.mgr.top.widget, 0);
 	GUI.ContainerSetEnabled(self.mgr.bottom.widget, 0);
-	GUI.ContainerAdd(self.app.body, self.modal.widget);
-	GUI.WidgetMarkChanged(self.modal.widget);
-	
+	GUI.ContainerSetEnabled(self.toolbar.widget, 0);
+	GUI.ContainerAdd(self.app.body, self.modal.window);
+	GUI.WidgetMarkChanged(self.modal.window);
+
 	self.modal.func = func;
 	self.modal.visible = true;
 	self.modal.mode = mode;
-	
+
 	return true;
 end
 
@@ -164,12 +169,13 @@ end
 function FileManager:HideModal()
 
 	if self.modal.visible then
-	
-		GUI.ContainerRemove(self.app.body, self.modal.widget);
-		
+
+		GUI.ContainerRemove(self.app.body, self.modal.window);
+
 		GUI.ContainerSetEnabled(self.mgr.top.widget, 1);
 		GUI.ContainerSetEnabled(self.mgr.bottom.widget, 1);
-	
+		GUI.ContainerSetEnabled(self.toolbar.widget, 1);
+
 		self.modal.visible = false;
 		self.modal.func = nil;
 	end
@@ -273,7 +279,7 @@ function FileManager:toolbarRename()
 	end
 
 	if not self.modal.visible then 
-		return self:ShowModal("prompt", "Enter new name:", "rename", f.name);
+		return self:ShowModal("prompt", "Enter a new name:", "rename", f.name);
 	else
 		self:HideModal();
 	end
@@ -924,7 +930,13 @@ function FileManager:Initialize()
 				return false;
 			end
 
-			self.modal.widget = self:getElement("modal-win");
+			self.modal.window = self:getElement("modal-win");
+	
+			if not self.modal.window then
+				return false;
+			end
+
+			self.modal.widget = self:getElement("modal-content");
 	
 			if not self.modal.widget then
 				return false;
@@ -951,6 +963,12 @@ function FileManager:Initialize()
 			self.modal.cancel = self:getElement("modal-cancel");
 	
 			if not self.modal.cancel then
+				return false;
+			end
+
+			self.toolbar.widget = self:getElement("toolbar-panel");
+	
+			if not self.toolbar.widget then
 				return false;
 			end
 			
