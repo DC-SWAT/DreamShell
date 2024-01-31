@@ -319,12 +319,9 @@ int OpenApp(App_t *app, const char *args) {
 	}
 
 	if(!(app->state & APP_STATE_LOADED)) {
-		LockVideo();
 		if(!LoadApp(app, 1)) {
-			UnlockVideo();
 			goto error;
 		}
-		UnlockVideo();
 	}
 
 	if(first_open && !ConsoleIsVisible()) {
@@ -374,8 +371,6 @@ int OpenApp(App_t *app, const char *args) {
 			CallAppBodyEvent(app, "onopen");
 		}
 
-		thd_pass();
-
 	} else {
 		ShowConsole();
 	}
@@ -386,6 +381,7 @@ int OpenApp(App_t *app, const char *args) {
 
 	ds_printf("DS_OK: App %s opened\n", app->name);
 
+	thd_sleep(50);
 	ScreenFadeIn();
 	return 1;
 

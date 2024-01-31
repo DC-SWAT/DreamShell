@@ -591,7 +591,7 @@ static void *VideoThread(void *ptr) {
 	while(video_inited) {
 
 		if(pvr_wait_ready() < 0) {
-			dbglog(DBG_ERROR, "VideoThread: pvr_wait_ready() failed\n");
+			// dbglog(DBG_ERROR, "VideoThread: pvr_wait_ready() failed\n");
 			continue;
 		}
 

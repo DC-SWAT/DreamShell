@@ -105,23 +105,6 @@ int CallAppExportFunc(App_t *app, const char *fstr) {
 }
 
 
-/*
-static int parse_pos_size(char *num) {
-
-	int len = strlen(num);
-
-	if(num[len-1] == '%') {
-
-		char n[4];
-		strncpy(n, num, len-1);
-		int i = atoi(n);
-
-	} else {
-		return atoi(num);
-	}
-}*/
-
-
 int LoadApp(App_t *app, int build) {
 
 	mxml_node_t *node;
@@ -287,13 +270,9 @@ int BuildAppBody(App_t *app) {
 			} else {
 
 				SetupAppLua(app);
-				//lua_checkstack(app->lua, 2048);
-				//LockVideo();
 				LuaDo(LUA_DO_STRING, onload, app->lua);
-				//UnlockVideo();
 			}
 		}
-		//return 1;
 	} else {
 		app->state &= ~APP_STATE_PROCESS;
 		app->state |= APP_STATE_READY;
@@ -320,19 +299,8 @@ int UnLoadApp(App_t *app) {
 #endif
 
 	if(app->body != NULL) {
-
-		//App_t *a = GetCurApp();
-		/*
-		if(a->id == app->id) {
-			//LockVideo();
-		}
-		*/
 		GUI_ObjectDecRef((GUI_Object *) app->body);
 		app->body = NULL;
-		/*
-		if(a->id == app->id) {
-			//UnlockVideo();
-		}*/
 	}
 
 #ifdef APP_LOAD_DEBUG
@@ -382,7 +350,7 @@ int UnLoadApp(App_t *app) {
 #ifdef APP_LOAD_DEBUG
 	ds_printf("DS_DEBUG: Clear flags...\n");
 #endif
-	app->state = 0; //&= ~(APP_STATE_LOADED | APP_STATE_READY | APP_STATE_PROCESS | APP_STATE_WAIT_UNLOAD);
+	app->state = 0;
 
 #ifdef APP_LOAD_DEBUG
 	ds_printf("DS_DEBUG: App unload complete.\n");
@@ -420,8 +388,6 @@ void UnloadAppResources(Item_list_t *lst) {
 				ds_printf("DS_DEBUG: Unloading: %s\n", GUI_ObjectGetName((GUI_Object *) c->data));
 #endif
 				GUI_ObjectDecRef((GUI_Object *) c->data);
-
-				//ds_printf("DS_DEBUG: Unloaded: %8x\n", (uint32)c->data);
 			}
 
 		} else {
@@ -1471,9 +1437,9 @@ static GUI_Widget *parseAppImageElement(App_t *app, mxml_node_t *node, char *nam
 			}
 		}
 	}
-//#ifdef APP_LOAD_DEBUG
-//	ds_printf("Image: %s x=%d y=%d w=%d h=%d\n", name, x, y, w, h);
-//#endif
+#if 0//def APP_LOAD_DEBUG
+	ds_printf("Image: %s x=%d y=%d w=%d h=%d\n", name, x, y, w, h);
+#endif
 	return img;
 }
 
@@ -1499,14 +1465,12 @@ static GUI_Widget *parseAppLabelElement(App_t *app, mxml_node_t *node, char *nam
 	label = GUI_LabelCreate(name, x, y, w, h, font, FindXmlAttr("text", node, " "));
 	if(label == NULL) return NULL;
 
-	//Uint32 c = colorHexToRGB(FindXmlAttr("color", node, "#ffffff"), &clr);
 	char *color = FindXmlAttr("color", node, NULL);
 	unsigned int r = 0, g = 0, b = 0;
 
 	if(color != NULL) {
 		sscanf(color, "#%02x%02x%02x", &r, &g, &b);
 	}
-
 
 #ifdef APP_LOAD_DEBUG
 	ds_printf("Label (%s): %s  |  Color: %d.%d.%d  |  font: %s\n", name, FindXmlAttr("text", node, " "), r, g, b, src);
@@ -1796,9 +1760,6 @@ static GUI_Widget *parseAppButtonElement(App_t *app, mxml_node_t *node, char *na
 
 	return button;
 }
-
-
-
 
 
 static GUI_Widget *parseAppToggleButtonElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h) {
