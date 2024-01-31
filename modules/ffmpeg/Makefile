@@ -5,8 +5,7 @@
 #
 
 TARGET_NAME = ffmpeg
-OBJS = module.o player.o block8x8.o aica.o mpg123.o oggvorbis.o #xvid.o
-#OBJS += sdl_player.o SDL_ffmpeg/src/SDL_ffmpeg.o
+OBJS = module.o player.o aica.o mpg123.o oggvorbis.o #xvid.o
 DBG_LIBS = -lds -lbzip2 -loggvorbis -lmpg123 #-lxvidcore
 LIBS = -lavcodec -lavformat -lavutil #-lswscale
 EXPORTS_FILE = exports.txt
