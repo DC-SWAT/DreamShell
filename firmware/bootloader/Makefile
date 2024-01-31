@@ -1,12 +1,13 @@
 #
 # DreamShell boot loader
-# (c)2011-2023 SWAT
+# (c)2011-2024 SWAT
 #
 
 TARGET = bootloader
-VERSION = 2.5
+VERSION = 2.6
 TARGET_NAME = DreamShell_boot_$(TARGET)_v$(VERSION)
 TARGET_CD = cd/1DS_BOOT.BIN
+KOS_ROMDISK_DIR = romdisk
 
 all: rm-elf $(TARGET).elf
 
@@ -17,8 +18,7 @@ clean: rm-elf
 rm-elf:
 	-rm -f $(TARGET).elf $(TARGET_NAME).elf $(TARGET).bin $(TARGET_NAME).bin \
 		$(TARGET_CD) $(TARGET_NAME).cdi romdisk.*
-
-KOS_ROMDISK_DIR = romdisk
+	-rm -rf $(KOS_ROMDISK_DIR)/.* 2> /dev/null || true
 
 include ../../sdk/Makefile.cfg
 
@@ -82,6 +82,9 @@ lxdream: all cdi
 
 lxdelf: $(TARGET).elf
 	lxdream -u -p -e $(TARGET).elf
+
+flycast: cdi
+	Flycast -config config:Debug.SerialConsoleEnabled=yes
 
 run: $(TARGET).elf
 	$(DS_SDK)/bin/dc-tool-ip -t $(DC_LAN_IP) -x $(TARGET).elf

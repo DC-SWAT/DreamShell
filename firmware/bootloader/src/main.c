@@ -1,7 +1,7 @@
 /**
  * DreamShell boot loader
  * Main
- * (c)2011-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2024 SWAT <http://www.dc-swat.ru>
  */
 
 #include "main.h"
@@ -14,12 +14,33 @@
 extern uint8 romdisk[];
 KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
 #else
+static void early_init(void) {
+	/*
+		Older KallistiOS doesn't get back the Master after working with G1 ATA.
+		But some users can use old bootloader with this KOS version.
+		So need select the Master before cdrom_init() is called.
+	*/
+	g1_ata_select_device(G1_ATA_MASTER);
+}
+KOS_INIT_EARLY(early_init);
 KOS_INIT_FLAGS(INIT_DEFAULT);
 #endif
 
 pvr_init_params_t params = {
 	{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
-	512 * 1024
+	512 * 1024,
+
+    /* No DMA */
+    0,
+
+    /* No FSAA */
+    0,
+
+    /* Translucent Autosort enabled. */
+    0,
+
+    /* Extra Tile Bins */
+    1
 };
 
 const char	title[28] = "DreamShell boot loader v"VERSION;
@@ -111,17 +132,15 @@ static int setup_syscalls() {
 	file_t fd;
 	size_t fd_size;
 	int (*sc)(int, int, int, int);
-	
+
 	dbglog(DBG_INFO, "Loading and setup syscalls...\n");
 
 	fd = fs_open(RES_PATH"/syscalls.bin", O_RDONLY);
-	
+
 	if(fd != FILEHND_INVALID) {
 
 		fd_size = fs_total(fd);
 		dbgio_dev_select("null");
-		dcache_flush_range(0x8c000000, fd_size);
-		icache_flush_range(0x8c000000, fd_size);
 
 		if(fs_read(fd, (uint8*)0x8c000000, fd_size) < 0) {
 			
@@ -131,26 +150,25 @@ static int setup_syscalls() {
 			return -1;
 			
 		} else {
-		
+
 			fs_close(fd);
-			dcache_flush_range(0x8c000000, fd_size);
 			icache_flush_range(0x8c000000, fd_size);
-			
+
 			dbgio_dev_select("fb");
 			*((uint32 *)&sc) = *((uint32 *)0x8c0000b0);
-			
+
 			if(sc(0, 0, 0, 0)) {
 				dbglog(DBG_ERROR, "Error in sysinfo syscall\n");
 				return -1;
 			}
-			
+
 			dbglog(DBG_INFO, "Syscalls successfully installed\n");
 			return 0;
 		}
 	} else {
 		dbglog(DBG_ERROR, "Can't open file with syscalls\n");
 	}
-	
+
 	return -1;
 }
 #endif

@@ -338,7 +338,7 @@ static int read_directory() {
 static void update_progress(float per) {
 
 	lock_video();
-	progress_w = (460.0f / 100.0f) * per;
+	progress_w = (465.0f / 100.0f) * per;
 	
 	if(old_per != per) {
 		old_per = per;
@@ -650,28 +650,30 @@ static void check_input() {
 }
 
 int menu_init() {
-	
+
 	alpha = 0.0f;
 	frame = 0;
-	selected = 0;
 	progress_w = 0.0f;
 	curs_alpha = 0.5f;
 	curs_alpha_dir = 0;
-	
-	if(start_pressed)
+	items_cnt = 0;
+
+	if(start_pressed) {
 		init_menu_txr();
-		
+	}
+
 	search_root();
-	
-	while(selected < items_cnt) {
+	selected = items_cnt > 1 ? items_cnt - 1 : 0;
+
+	while(selected > 0) {
 		menu_item_t *item = get_selected();
 
 		if(item->path[0] != 0) {
 			return 0;
 		}
-		selected++;
+		selected--;
 	}
-	
+
 	selected = 0;
 	return 0;
 }
