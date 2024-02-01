@@ -11,10 +11,10 @@
 #
 
 TARGET = DS
-TARGET_NAME = DreamShell_v4.0.0_RC5
+TARGET_NAME = DreamShell_v4.0.0_Release
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
-TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x25 #RC 5
+TRAGET_VERSION = -DVER_MAJOR=4 -DVER_MINOR=0 -DVER_MICRO=0 -DVER_BUILD=0x30
 # TARGET_DEBUG = 1 # or 2 for GDB
 # TARGET_EMU = 1
 # TARGET_PROF = 1
@@ -185,8 +185,8 @@ clean-all: clean
 
 release: build cdi
 	@echo Creating a full release...
-	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
-	@-rm -rf $(DS_BASE)/release
+	@-rm -rf $(DS_BUILD)/.* 2> /dev/null || true
+	@-rm -rf $(DS_BASE)/release || true
 	@mkdir -p $(DS_BASE)/release/$(TARGET)
 	@cp -R $(DS_BUILD)/* $(DS_BASE)/release/$(TARGET)
 	@cp $(TARGET_BIN) $(DS_BASE)/release/$(TARGET)
@@ -246,6 +246,9 @@ nulldcl: $(TARGET).cdi
 run: $(TARGET).elf
 	sudo $(DS_SDK)/bin/dc-tool-ip -c $(DS_BUILD) -t $(DC_LAN_IP) -x $(TARGET).elf
 
+run-ns: $(TARGET).elf
+	$(DS_SDK)/bin/dc-tool-ip -t $(DC_LAN_IP) -x $(TARGET).elf
+
 run-serial: $(TARGET).elf
 	sudo $(DS_SDK)/bin/dc-tool-ser -c $(DS_BUILD) -t $(DC_SERIAL_PORT) -b $(DC_SERIAL_BAUD) -x $(TARGET).elf
 	
@@ -292,3 +295,4 @@ rm-elf:
 	-rm -f $(TARGET_CLEAN_BIN)
 	-rm -f $(SRC_DIR)/main.o
 	-rm -f romdisk.*
+	-rm -rf $(KOS_ROMDISK_DIR)/.* 2> /dev/null || true
