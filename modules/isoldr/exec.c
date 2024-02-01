@@ -64,7 +64,7 @@ static void isoldr_arch_shutdown() {
     dbglog(DBG_CRITICAL, "arch: shutting down kernel\n");
 
     /* Turn off UBC breakpoints, if any */
-    ubc_disable_all();
+    ubc_shutdown();
 
     /* Do auto-shutdown */
     isoldr_arch_auto_shutdown();

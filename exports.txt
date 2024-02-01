@@ -1873,6 +1873,7 @@ fs_pty_shutdown
 fs_shutdown
 thd_shutdown
 rtc_shutdown
+ubc_shutdown
 _arch_old_stack
 _arch_old_sr
 _arch_old_vbr

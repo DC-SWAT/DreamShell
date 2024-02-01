@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    rtc.c
-   Copyright (C) 2015-2016 SWAT
+   Copyright (C) 2015-2016, 2024 SWAT
    Copyright (C) 2016 Megavolt85
 */
 
@@ -19,6 +19,7 @@
 #define AICA_RTC_SECS_H   0xa0710000
 #define AICA_RTC_SECS_L   0xa0710004
 #define AICA_RTC_WRITE_EN 0xa0710008
+#define AICA_RTC_CTRL_ADDR 0xa0710008
 
 #define AICA_RTC_ATTEMPTS_COUNT 10
 
@@ -48,11 +49,12 @@ int rtc_settime(time_t time) {
 	time_t secs = time + TWENTY_YEARS;
 	int i = 0;
 
+	g2_write_32(AICA_RTC_WRITE_EN, 1);
+
 	do {
 
-		g2_write_32(1, AICA_RTC_WRITE_EN);
-		g2_write_32((secs & 0xffff0000) >> 16, AICA_RTC_SECS_H);
-		g2_write_32((secs & 0xffff), AICA_RTC_SECS_L);
+		g2_write_32(AICA_RTC_SECS_H, (secs & 0xffff0000) >> 16);
+		g2_write_32(AICA_RTC_SECS_L, (secs & 0xffff));
 
 		val1 = ((g2_read_32(AICA_RTC_SECS_H) & 0xffff) << 16) | (g2_read_32(AICA_RTC_SECS_L) & 0xffff);
 		val2 = ((g2_read_32(AICA_RTC_SECS_H) & 0xffff) << 16) | (g2_read_32(AICA_RTC_SECS_L) & 0xffff);
@@ -63,6 +65,7 @@ int rtc_settime(time_t time) {
 
 	} while ((val1 != val2) && ((val1 & 0xffffff80) != (secs & 0xffffff80)));
 
+	g2_write_32(AICA_RTC_CTRL_ADDR, 0);
 	return 0;
 }
 

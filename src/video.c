@@ -484,8 +484,8 @@ void ShutdownVideo() {
 	}
 
 	if(plx_cursor_txr) {
-		plx_txr_destroy(plx_screen_txr);
-		plx_screen_txr = NULL;
+		plx_txr_destroy(plx_cursor_txr);
+		plx_cursor_txr = NULL;
 	}
 
 	if (plx_cxt) {
