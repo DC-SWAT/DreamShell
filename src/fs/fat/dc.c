@@ -52,10 +52,15 @@ typedef struct fatfs {
 
 } fatfs_t;
 
-/* Mutex for file handles */
-static mutex_t fat_mutex;
-static int initted = 0;
+/* Mutex for file handle.
+ * For some reason, the mutex is not always blocked here;
+ * this is especially noticeable on an SD card when reading data from multiple threads.
+ */
+static spinlock_t fat_mutex = SPINLOCK_INITIALIZER;
+#define FAT_LOCK() spinlock_lock(&fat_mutex);
+#define FAT_UNLOCK() spinlock_unlock(&fat_mutex);
 
+static int initted = 0;
 static fatfs_t fh[MAX_FAT_FILES] __attribute__((aligned(32)));
 static fatfs_mnt_t fat_mnt[MAX_FAT_MOUNTS];
 
@@ -171,14 +176,12 @@ static void fatfs_set_errno(FRESULT rc) {
 #define FAT_GET_HND(hnd, rv)              \
     file_t fd = ((file_t)hnd) - 1;        \
     fatfs_t *sf = NULL;                   \
-                                          \
-    mutex_lock(&fat_mutex);               \
-                                          \
+    FAT_LOCK();                           \
     if(fd > -1 && fd < MAX_FAT_FILES) {   \
         sf = &fh[fd];                     \
     } else {                              \
         errno = ENFILE;                   \
-        mutex_unlock(&fat_mutex);         \
+        FAT_UNLOCK();                     \
         return rv;                        \
     }
 
@@ -192,11 +195,11 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 	FRESULT rc;
 	int fat_flags = 0, mode = (flags & O_MODE_MASK);
 	
-	mutex_lock(&fat_mutex);
+	FAT_LOCK();
 	mnt = (fatfs_mnt_t*)vfs->privdata;
 	
 	if(mnt == NULL) {
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		dbglog(DBG_ERROR, "FATFS: Error, not mounted.\n");
 		errno = ENOMEM;
 		return NULL;
@@ -211,7 +214,7 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 
     if(fd >= MAX_FAT_FILES) {
 		errno = ENFILE;
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		dbglog(DBG_ERROR, "FATFS: The maximum number of opened files exceeded.\n");
 		return NULL;
     }
@@ -223,7 +226,7 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 		dbglog(DBG_ERROR, "FATFS: Error change drive to - %s\n", mnt->dev_path);
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return NULL;
 	}
 
@@ -240,13 +243,13 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 			DBG((DBG_ERROR, "FATFS: Can't open directory - %s%s\n", mnt->dev_path, fn));
 			put_rc(rc, __func__);
 			fatfs_set_errno(rc);
-			mutex_unlock(&fat_mutex);
+			FAT_UNLOCK();
 			return NULL;
 		}
 
 		sf->used = 1;
 		sf->type = STAT_TYPE_DIR;
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 
 		return (void *)(fd + 1);
 	}
@@ -271,7 +274,7 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 		default:
 			DBG((DBG_ERROR, "FATFS: Uknown flags\n"));
 			errno = EINVAL;
-			mutex_unlock(&fat_mutex);
+			FAT_UNLOCK();
 			return NULL;
 	}
 
@@ -285,7 +288,7 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 		DBG((DBG_ERROR, "FATFS: Can't open file - %s%s\n", mnt->dev_path, fn));
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return NULL;
 	}
 	
@@ -299,7 +302,7 @@ static void *fat_open(vfs_handler_t * vfs, const char *fn, int flags) {
 	}
 
 	sf->used = 1;
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return (void *)(fd + 1);
 }
 
@@ -326,7 +329,7 @@ static int fat_close(void *hnd) {
 			rc = f_closedir(&sf->dir);
 			break;
 		default:
-			mutex_unlock(&fat_mutex);
+			FAT_UNLOCK();
 			return -1;
 	}
 	
@@ -334,11 +337,11 @@ static int fat_close(void *hnd) {
 		DBG((DBG_ERROR, "FATFS: Closing error\n"));
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return -1;
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return 0;
 }
 
@@ -392,13 +395,12 @@ static ssize_t fat_read(void *hnd, void *buffer, size_t size) {
 	if(rc != FR_OK) {
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return -1;
 	}
 
 //	DBG((DBG_DEBUG, "FATFS: Read %d %d\n", size, rs));
-
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return (ssize_t) rs;
 }
 
@@ -414,13 +416,13 @@ static ssize_t fat_write(void * hnd, const void *buffer, size_t cnt) {
 	if(rc != FR_OK) {
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return -1;
 	}
 
 //	DBG((DBG_DEBUG, "FATFS: Write %d %d\n", cnt, bw));
 //	f_sync(&sf->fil);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return (ssize_t)bw;
 }
 
@@ -428,7 +430,7 @@ static ssize_t fat_write(void * hnd, const void *buffer, size_t cnt) {
 static off_t fat_tell(void * hnd) {
 	FAT_GET_HND(hnd, -1);
 	off_t off = (off_t)f_tell(&sf->fil);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return off;
 }
 
@@ -451,7 +453,7 @@ static off_t fat_seek(void * hnd, off_t offset, int whence) {
     		break;
     	default:
 			errno = EINVAL;
-			mutex_unlock(&fat_mutex);
+			FAT_UNLOCK();
     		return -1;
     }
 	
@@ -462,11 +464,11 @@ static off_t fat_seek(void * hnd, off_t offset, int whence) {
 	if(rc != FR_OK) {
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return -1;
 	}
     
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return (off_t) sf->fil.fptr;
 }
 
@@ -474,7 +476,7 @@ static off_t fat_seek(void * hnd, off_t offset, int whence) {
 static size_t fat_total(void * hnd) {
 	FAT_GET_HND(hnd, -1);
 	size_t sz = (off_t)f_size(&sf->fil);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return sz;
 }
 
@@ -498,12 +500,12 @@ static dirent_t *fat_readdir(void * hnd) {
 		DBG((DBG_ERROR, "FATFS: Error reading directory entry\n"));
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return NULL; 
 	}
 	
 	if(inf.fname[0] == 0) {
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return NULL; 
 	}
     
@@ -536,7 +538,7 @@ static dirent_t *fat_readdir(void * hnd) {
 //		sf->dent.attr |= O_RDWR;
 //	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return &sf->dent;
 }
 
@@ -552,11 +554,11 @@ static int fat_rewinddir(void * hnd) {
 		DBG((DBG_ERROR, "FATFS: Error rewind directory\n"));
 		put_rc(rc, __func__);
 		fatfs_set_errno(rc);
-		mutex_unlock(&fat_mutex);
+		FAT_UNLOCK();
 		return -1; 
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
     return 0;
 }
 
@@ -599,7 +601,7 @@ static int fat_ioctl(void * hnd, int cmd, va_list ap) {
 			break;
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return rc == RES_OK ? 0 : -1;
 }
 
@@ -608,7 +610,7 @@ static int fat_ioctl(void * hnd, int cmd, va_list ap) {
 #define FAT_GET_MNT()                      \
     FRESULT rc = FR_OK;                    \
     fatfs_mnt_t *mnt;                      \
-    mutex_lock(&fat_mutex);                \
+    FAT_LOCK();                            \
     mnt = (fatfs_mnt_t*)vfs->privdata;     \
     if(mnt == NULL)                        \
         goto error;                        \
@@ -624,13 +626,13 @@ static int fat_rename(struct vfs_handler * vfs, const char *fn1, const char *fn2
 		goto error;
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return 0;
 	
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -643,13 +645,13 @@ static int fat_unlink(struct vfs_handler * vfs, const char *fn) {
 		goto error;
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return 0;
 	
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -691,13 +693,13 @@ static int fat_complete(void * hnd, ssize_t * rv) {
 		goto error;
 	}
 	
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return 0;
 	
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -710,13 +712,13 @@ static int fat_mkdir(struct vfs_handler * vfs, const char * fn) {
 		goto error;
 	}
 	
-	mutex_unlock(&fat_mutex); 
+	FAT_UNLOCK(); 
 	return 0;
 	
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -729,13 +731,13 @@ static int fat_rmdir(struct vfs_handler * vfs, const char * fn) {
 		goto error;
 	}
 	
-	mutex_unlock(&fat_mutex); 
+	FAT_UNLOCK(); 
 	return 0;
 	
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -760,7 +762,7 @@ static int fat_fcntl(void *hnd, int cmd, va_list ap) {
             errno = EINVAL;
     }
 
-    mutex_unlock(&fat_mutex); 
+    FAT_UNLOCK(); 
     return rv;
 }
 
@@ -802,13 +804,13 @@ static int fat_stat(struct vfs_handler *vfs, const char *fn, struct stat *st, in
 		}
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return 0;
 	
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -838,7 +840,7 @@ static int fat_fstat(void *hnd, struct stat *st) {
 		}
     }
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return 0;
 }
 
@@ -919,12 +921,14 @@ DRESULT disk_read (
 		__func__, pdrv, sector, (int)count, (uint32)buff, (uint32)dest));
 
 	if(mnt->dev->read_blocks(mnt->dev, sector, count, dest) < 0) {
-		DBG((DBG_ERROR, "FATFS: %s[%d] dma error: %d\n", __func__, pdrv, errno));
+		DBG((DBG_ERROR, "FATFS: %s[%d] error: %d\n", __func__, pdrv, errno));
 		return (errno == EOVERFLOW ? RES_PARERR : RES_ERROR);
 	}
+#ifdef FATFS_DMA
 	if (dest != buff) {
 		memcpy_sh4(buff, dest, count << mnt->dev->l_block_size);
 	}
+#endif
 	return RES_OK;
 }
 
@@ -1063,7 +1067,7 @@ int fs_fat_mount(const char *mp, kos_blockdev_t *dev, int dma, int partition) {
 		return -1;
 	}
 
-	mutex_lock(&fat_mutex);
+	FAT_LOCK();
 
 	for(i = 0; i < MAX_FAT_MOUNTS; i++) {
 		if(fat_mnt[i].dev == NULL) {
@@ -1168,7 +1172,7 @@ int fs_fat_mount(const char *mp, kos_blockdev_t *dev, int dma, int partition) {
 		goto error;
     }
 
-    mutex_unlock(&fat_mutex);
+    FAT_UNLOCK();
     return 0;
 
 error:
@@ -1192,7 +1196,7 @@ error:
 	if(dev) {
 		dev->shutdown(dev);
 	}
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return -1;
 }
 
@@ -1202,7 +1206,7 @@ int fs_fat_unmount(const char *mp) {
 	fatfs_mnt_t *mnt;
 	int found = 0, rv = 0, i;
 
-	mutex_lock(&fat_mutex);
+	FAT_LOCK();
 
 	for(i = 0; i < MAX_FAT_MOUNTS; i++) {
 		if(fat_mnt[i].vfsh != NULL && !strcmp(mp, fat_mnt[i].vfsh->nmmgr.pathname)) {
@@ -1238,7 +1242,7 @@ int fs_fat_unmount(const char *mp) {
 		rv = -1;
 	}
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return rv;
 }
 
@@ -1247,7 +1251,7 @@ int fs_fat_is_mounted(const char *mp) {
 
 	int i, found = 0;
 
-	mutex_lock(&fat_mutex);
+	FAT_LOCK();
 
 	for(i = 0; i < MAX_FAT_MOUNTS; i++) {
 		if(fat_mnt[i].vfsh != NULL && !strcmp(mp, fat_mnt[i].vfsh->nmmgr.pathname)) {
@@ -1256,7 +1260,7 @@ int fs_fat_is_mounted(const char *mp) {
 		}
     }
 
-	mutex_unlock(&fat_mutex);
+	FAT_UNLOCK();
 	return found;
 }
 
@@ -1272,9 +1276,6 @@ int fs_fat_init(void) {
 
 	/* Reset fd's */
 	memset_sh4(fh, 0, sizeof(fh));
-
-	/* Init thread mutex */
-	mutex_init(&fat_mutex, MUTEX_TYPE_NORMAL);
 
 	initted = 1;
 	return 0;
@@ -1314,7 +1315,6 @@ int fs_fat_shutdown(void) {
 		}
     }
 
-    mutex_destroy(&fat_mutex);
     initted = 0;
     return 0;
 }
