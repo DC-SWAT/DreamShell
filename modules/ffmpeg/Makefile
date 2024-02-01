@@ -9,6 +9,7 @@ OBJS = module.o player.o aica.o mpg123.o oggvorbis.o #xvid.o
 DBG_LIBS = -lds -lbzip2 -loggvorbis -lmpg123 #-lxvidcore
 LIBS = -lavcodec -lavformat -lavutil #-lswscale
 EXPORTS_FILE = exports.txt
+GCC_LIB =
 
 VER_MAJOR = 0
 VER_MINOR = 6

@@ -90,9 +90,7 @@ static URLProtocol fs_protocol = {
 	file_get_file_handle
 };
 
-
 int ffplay(const char *filename, const char *force_format);
-//int sdl_ffplay(const char *filename);
 
 int builtin_ffplay_cmd(int argc, char *argv[]) { 
 
@@ -100,7 +98,6 @@ int builtin_ffplay_cmd(int argc, char *argv[]) {
 		ds_printf("Usage: %s option args...\n\n"
 					"Options: \n"
 					" -v, --version  -Show ffmpeg version\n"
-					//" -s, --sdl      -Use SDL_ffmpeg (slow)\n"
 					" -p, --play     -Start playing\n\n"
 					"Arguments: \n"
 					" -i  --format   -Force format detection\n"
@@ -109,12 +106,11 @@ int builtin_ffplay_cmd(int argc, char *argv[]) {
 		return CMD_NO_ARG; 
 	} 
 
-	int play = 0, /*use_sdl = 0, */ver = 0;
+	int play = 0, ver = 0;
 	char *file = NULL, *format = NULL;
 
 	struct cfg_option options[] = {
 		{"play",   		'p', NULL, CFG_BOOL, (void *) &play,  	0},
-		//{"sdl",   		's', NULL, CFG_BOOL, (void *) &use_sdl, 0},
 		{"version",   	'v', NULL, CFG_BOOL, (void *) &ver,  	0},
 		{"file",   		'f', NULL, CFG_STR,  (void *) &file,   	0},
 		{"format",   	'i', NULL, CFG_STR,  (void *) &format,  0},
@@ -128,11 +124,7 @@ int builtin_ffplay_cmd(int argc, char *argv[]) {
 	}
 
 	if(play) {
-		//if(use_sdl) {
-		//	sdl_ffplay(file);
-		//} else {
-			ffplay(file, format);
-		//}
+		ffplay(file, format);
 	}
 	
 	return CMD_OK; 

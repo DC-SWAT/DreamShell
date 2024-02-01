@@ -35,6 +35,7 @@ __eqdf2
 __ashldi3
 __unordsf2
 __lshrdi3
+__ashrdi3
 _Unwind_Resume
 _Unwind_DeleteException
 _Unwind_GetRegionStart

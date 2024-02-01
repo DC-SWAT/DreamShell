@@ -1,11 +1,13 @@
 #ifndef _AICA_H_
 #define _AICA_H_
 
-#define	AICA_MEM	0xa0800000
+#define	AICA_MEM 0xa0800000
+#define AICA_MEM_SIZE 0x00200000
 
-#define SM_8BIT		1
 #define SM_16BIT	0
+#define SM_8BIT		1
 #define SM_ADPCM	2
+#define SM_ADPCM_LS	3
 
 void aica_play(int ch,int mode,unsigned long smpptr,int looptst,int loopend,int freq,int vol,int pan,int loopflag);
 void aica_stop(int ch);

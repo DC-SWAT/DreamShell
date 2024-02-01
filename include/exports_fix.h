@@ -74,6 +74,7 @@ extern uint32 __eqdf2;
 extern uint32 __ashldi3;
 extern uint32 __unordsf2;
 extern uint32 __lshrdi3;
+extern uint32 __ashrdi3;
 extern uint32 _Unwind_Resume;
 extern uint32 _Unwind_DeleteException;
 extern uint32 _Unwind_GetRegionStart;
