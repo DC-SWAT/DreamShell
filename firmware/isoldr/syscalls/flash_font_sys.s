@@ -121,7 +121,7 @@ _sysinfo_syscall:
 	mova	.flashrom_off, r0
 	mov.l	@(4, r0), r0
 	mov.l	.dc_id, r5
-	add		#2, r5
+	add		#8, r5
 	mov.l	.dc_id_offset, r4
 	jsr		@r0
 	mov		#5, r6
