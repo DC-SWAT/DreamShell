@@ -127,7 +127,7 @@ _sysinfo_syscall:
 	mov		#5, r6
 	
 	mov.l	.dc_id, r4
-	add		#7, r4
+	add		#23, r4
 	mov		#0, r5
 	mov		#10, r0
 	
@@ -135,11 +135,11 @@ _sysinfo_syscall:
 	mov.b	r5, @(r0, r4)
 	dt		r0
 	bt		.sysinfo_syscall_cp_loop
-	add		#-21, r4
+	add		#-31, r4
 	ocbwb	@r4
 	lds.l   @r15+, pr
 	rts
-	nop
+	mov		#0, r0
 	
 .align 2
 .dc_id:
