@@ -28,7 +28,8 @@
 #define BIOS_ROM_APP_BIN_ADDR        (BIOS_ROM_ADDR + 0x10000)
 #define BIOS_ROM_FONT_ADDR           (BIOS_ROM_ADDR + 0x100020)
 #define FLASH_ROM_ADDR               0x00200000
-#define FLASH_ROM_REGION_ADDR        (FLASH_ROM_ADDR + 0x1a000)
+#define FLASH_ROM_SYS_ID_ADDR        (FLASH_ROM_ADDR + 0x1a000)
+#define FLASH_ROM_REGION_ADDR        FLASH_ROM_SYS_ID_ADDR
 #define FLASH_ROM_ICON_ADDR          (FLASH_ROM_ADDR + 0x1a480)
 #define RAM_START_ADDR               0x0c000000
 #define RAM_END_ADDR                 0x0d000000

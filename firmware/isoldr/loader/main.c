@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 
 	(void)argc;
 	(void)argv;
-	
+
 	if(is_custom_bios() && is_no_syscalls()) {
 		bfont_saved_addr = 0xa0001000;
 	}
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
 #endif
 #ifdef HAVE_MAPLE
 	if(IsoInfo->emu_vmu) {
-		maple_init_vmu(IsoInfo->emu_vmu, IsoInfo->exec.type != BIN_TYPE_KOS);
+		maple_init_vmu(IsoInfo->emu_vmu, IsoInfo->exec.type == BIN_TYPE_KATANA);
 	}
 #endif
 

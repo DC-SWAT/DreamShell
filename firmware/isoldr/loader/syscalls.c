@@ -92,8 +92,9 @@ static inline void lock_gdsys_wait(void) {
 #ifdef LOG
 
 static const char cmd_name[48][18] = {
-	{0}, {0}, {"CHECK_LICENSE"}, {0}, {"REQ_SPI_CMD"}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0},
-	{"PIOREAD"}, {"DMAREAD"}, {"GETTOC"}, {"GETTOC2"}, 
+	{0}, {0}, {"CHECK_LICENSE"}, {0}, {"REQ_SPI_CMD"},
+	{0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0}, {0},
+	{"PIOREAD"}, {"DMAREAD"}, {"GETTOC"}, {"GETTOC2"},
 	{"PLAY"}, {"PLAY2"}, {"PAUSE"}, {"RELEASE"}, {"INIT"}, {"DMA_ABORT"}, {"OPEN_TRAY"},
 	{"SEEK"}, {"DMAREAD_STREAM"}, {"NOP"}, {"REQ_MODE"}, {"SET_MODE"}, {"SCAN_CD"},
 	{"STOP"}, {"GETSCD"}, {"GETSES"}, {"REQ_STAT"}, {"PIOREAD_STREAM"},
@@ -135,14 +136,18 @@ static void GetTOC() {
 
 	memcpy(toc, &IsoInfo->toc, sizeof(CDROM_TOC));
 
-	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI || IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI || IsoInfo->track_lba[0] == 45150) {
+	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI ||
+		IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ||
+		IsoInfo->track_lba[0] == 45150) {
 
 		LOGF("Get TOC from %cDI and prepare for session %d\n", 
-				(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI ? 'C' : 'G'), GDS->param[0] + 1);
+				(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI ? 'C' : 'G'),
+				GDS->param[0] + 1);
 
 		if(GDS->param[0] == 0) { /* Session 1 */
 
-			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI || IsoInfo->track_lba[0] == 45150) {
+			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ||
+				IsoInfo->track_lba[0] == 45150) {
 
 				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
 				toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
@@ -179,7 +184,8 @@ static void GetTOC() {
 					}
 				}
 
-			} else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI || IsoInfo->track_lba[0] == 45150) {
+			} else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ||
+				IsoInfo->track_lba[0] == 45150) {
 
 				toc->entry[0] = (uint32)-1;
 				toc->entry[1] = (uint32)-1;
@@ -729,7 +735,7 @@ static int init_cmd() {
 #endif
 #ifdef HAVE_MAPLE
 		if(IsoInfo->emu_vmu) {
-			maple_init_vmu(IsoInfo->emu_vmu, IsoInfo->exec.type != BIN_TYPE_KOS);
+			maple_init_vmu(IsoInfo->emu_vmu, IsoInfo->exec.type == BIN_TYPE_KATANA);
 		}
 #endif
 	}
@@ -1455,7 +1461,16 @@ int flashrom_delete(int offset) {
  */
 int sys_misc_init(void) {
 	LOGFF(NULL);
-	// It's done by BIOS at startup.
+
+	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
+	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	rom_memcpy(dst, src, 8);
+
+	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
+		src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_REGION_ADDR);
+		dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
+		rom_memcpy(dst, src, 5);
+	}
 	return 0;
 }
 
