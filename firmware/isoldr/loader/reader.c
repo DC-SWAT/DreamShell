@@ -135,35 +135,28 @@ int InitReader() {
 	gd_state_t *GDS = get_GDS();
 
 #ifdef HAVE_MULTI_DISC
-	if (GDS->disc_num) {
-
-		if (IsoInfo->image_file[len - 7] != 'k') {
+	if(GDS->disc_num) {
+		if(IsoInfo->image_file[len - 7] != 'k') {
 			len--;
 		}
 		IsoInfo->image_file[len - 6] = GDS->disc_num + '0';
 		memcpy(&IsoInfo->image_file[len - 5], "03.iso\0", 7);
 		GDS->data_track = 3;
 	}
-	else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
-		if (IsoInfo->image_file[len - 7] != 'k') {
-			memcpy(&IsoInfo->image_file[len - 7], "03.iso\0", 7);
+	else
+#endif
+	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
+		len -= (IsoInfo->image_file[len - 7] != 'k' ? 7 : 6);
+		if(IsoInfo->sector_size == 2048) {
+			memcpy(&IsoInfo->image_file[len], "03.iso\0", 7);
 		} else {
-			IsoInfo->image_file[len - 6] = '0';
-			IsoInfo->image_file[len - 5] = '3';
+			memcpy(&IsoInfo->image_file[len], "03.bin\0", 7);
 		}
 		GDS->data_track = 3;
-	} else {
+	}
+	else {
 		GDS->data_track = 1;
 	}
-#else
-	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
-		IsoInfo->image_file[len - 6] = '0';
-		IsoInfo->image_file[len - 5] = '3';
-		GDS->data_track = 3;
-	} else {
-		GDS->data_track = 1;
-	}
-#endif
 
 	open_iso(GDS);
 
@@ -197,42 +190,47 @@ int InitReader() {
 
 
 void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
+	uint32 req_track, is_raw = 0;
+#ifdef LOG
+	uint32 old_track = GDS->data_track;
+#endif
 
-	if(lba < IsoInfo->track_lba[0]) {
-
-		if(GDS->data_track != 1) {
-			int len = strlen(IsoInfo->image_file);
-			IsoInfo->image_file[len - 6] = '0';
-			IsoInfo->image_file[len - 5] = '1';
-			GDS->data_track = 1;
-			open_iso(GDS);
+	for(req_track = TOC_TRACK(IsoInfo->toc.last); req_track > 0; --req_track) {
+		if(lba >= TOC_LBA(IsoInfo->toc.entry[req_track - 1]) - 150) {
+			is_raw = TOC_CTRL(IsoInfo->toc.entry[req_track - 1]) == 0;
+			break;
 		}
 	}
-	else if((IsoInfo->track_lba[0] == IsoInfo->track_lba[1] ||
-		lba < IsoInfo->track_lba[1]) && GDS->data_track != 3) {
-
+	if(GDS->data_track != req_track) {
+		if(is_raw || GDS->data_track == 4) {
+			if(_iso_fd[2] != -1) {
+				/* Need close second data track to prevent fd optimization. */
+				close(_iso_fd[2]);
+				_iso_fd[2] = -1;
+			}
+		}
 		int len = strlen(IsoInfo->image_file);
-		
-		IsoInfo->image_file[len - 6] = '0';
-		IsoInfo->image_file[len - 5] = '3';
-		GDS->data_track = 3;
-		open_iso(GDS);
-	}
-	else if(lba >= IsoInfo->track_lba[1] && GDS->data_track <= 3) {
+		IsoInfo->image_file[len - 6] = (req_track / 10) + '0';
+		IsoInfo->image_file[len - 5] = (req_track % 10) + '0';
 
-		int len = strlen(IsoInfo->image_file);
-		IsoInfo->image_file[len - 6] = IsoInfo->image_second[5];
-		IsoInfo->image_file[len - 5] = IsoInfo->image_second[6];
+		if(is_raw) {
+			memcpy(&IsoInfo->image_file[len - 3], "raw", 3);
+		} else if(IsoInfo->sector_size == 2048) {
+			memcpy(&IsoInfo->image_file[len - 3], "iso", 3);
+		} else {
+			memcpy(&IsoInfo->image_file[len - 3], "bin", 3);
+		}
 
-		uint8 n = (IsoInfo->image_second[5] - '0') & 0xf;
-		GDS->data_track = n * 10;
-		n = (IsoInfo->image_second[6] - '0');
-		GDS->data_track += n;
+		GDS->data_track = req_track;
 		open_iso(GDS);
 	}
 
 	switch_sector_size(GDS);
-	DBGFF("%d\n", GDS->data_track);
+#ifdef LOG
+	if(old_track != req_track) {
+		LOGFF("t=%ld s=%d b=%d a=%d\n", GDS->data_track, sec_size, b_seek, a_seek);
+	}
+#endif
 }
 
 
@@ -283,24 +281,26 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 
 			lseek(iso_fd, offset, SEEK_SET);
 
-			if(cb != NULL) {
 #ifdef _FS_ASYNC
+			if(cb != NULL) {
+
 				if(read_async(iso_fd, buf, len, cb) < 0) {
 					rv = FAILED;
 				} else {
 					rv = PROCESSING;
 				}
-#else
-				rv = FAILED;
-#endif /* _FS_ASYNC */
 
-			} else {
+			}
+			else
+#endif
+			{
 				if(read(iso_fd, buf, len) < 0) {
 					rv = FAILED;
 				} else {
 					rv = COMPLETED;
 				}
 			}
+
 			break;
 		}
 	}
@@ -331,20 +331,19 @@ int PreReadSectors(int sec, int num) {
 }
 
 
-static int _read_sector_by_sector(uint8 *buff, uint cnt, uint sec_size
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-, int old_dma
-#endif
-) {
+static int _read_sector_by_sector(uint8 *buff, uint cnt, int old_dma) {
 
 	while(cnt-- > 0) {
 
-		lseek(iso_fd, b_seek, SEEK_CUR);
-
+		if(b_seek) {
+			lseek(iso_fd, b_seek, SEEK_CUR);
+		}
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if(!cnt && old_dma) {
 			fs_enable_dma(old_dma);
 		}
+#else
+		(void)old_dma;
 #endif
 		if(read(iso_fd, buff, sec_size) < 0) {
 			return FAILED;
@@ -362,22 +361,26 @@ static int _read_sector_by_sector(uint8 *buff, uint cnt, uint sec_size
 static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb) {
 
 	int tmps = sec_size * cnt;
+	int old_dma = 0;
+	uint8 *tmpb;
 
-	lseek(iso_fd, IsoInfo->track_offset + (sector * IsoInfo->sector_size), SEEK_SET);
+	if(sector) {
+		lseek(iso_fd, IsoInfo->track_offset + (sector * IsoInfo->sector_size), SEEK_SET);
+	}
 
 	/* Reading normal data sectors */
-	if(IsoInfo->sector_size == sec_size) {
-		if(cb != NULL) {
+	if(IsoInfo->sector_size <= sec_size) {
 #ifdef _FS_ASYNC
+		if(cb != NULL) {
+
 			if(read_async(iso_fd, buff, tmps, cb) < 0) {
 				return FAILED;
 			}
 			return PROCESSING;
-#else
-			return FAILED;
+		}
+		else
 #endif
-
-		} else {
+		{
 			if(read(iso_fd, buff, tmps) < 0) {
 				return FAILED;
 			}
@@ -386,10 +389,8 @@ static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *
 	}
 
 	/* Reading not optimized GDI or CDI */
-	uint8 *tmpb;
-
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	int old_dma = fs_dma_enabled();
+	old_dma = fs_dma_enabled();
 
 	if(old_dma) {
 		fs_enable_dma(FS_DMA_HIDDEN);
@@ -419,11 +420,7 @@ static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *
 		tmps = sec_size * cnt;
 	}
 
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	return _read_sector_by_sector(buff, cnt, sec_size, old_dma);
-#else
-	return _read_sector_by_sector(buff, cnt, sec_size);
-#endif
+	return _read_sector_by_sector(buff, cnt, old_dma);
 }
 
 
