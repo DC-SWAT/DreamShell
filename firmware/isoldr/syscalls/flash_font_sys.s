@@ -1,6 +1,6 @@
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !   This file is part of DreamShell ISO Loader								!
-!   Copyright (C)2019 megavolt85											!
+!   Copyright (C)2019-2024 megavolt85											!
 !																			!
 !   This program is free software: you can redistribute it and/or modify	!
 !   it under the terms of the GNU General Public License version 3 as		!
@@ -77,7 +77,7 @@ _sysinfo_syscall:
 	cmp/eq	#1, r0
 	bt		.sysinfo_syscall_case1
 	cmp/eq	#3, r0
-	bf		.sysinfo_syscall_case3
+	bt		.sysinfo_syscall_case3
 	
 	mov		#10, r0
 	cmp/hs	r0, r4
@@ -127,15 +127,15 @@ _sysinfo_syscall:
 	mov		#5, r6
 	
 	mov.l	.dc_id, r4
-	add		#23, r4
+	add		#12, r4
 	mov		#0, r5
-	mov		#10, r0
+	mov		#11, r0
 	
 .sysinfo_syscall_cp_loop:
 	mov.b	r5, @(r0, r4)
 	dt		r0
-	bt		.sysinfo_syscall_cp_loop
-	add		#-31, r4
+	bf		.sysinfo_syscall_cp_loop
+	add		#-20, r4
 	ocbwb	@r4
 	lds.l   @r15+, pr
 	rts
