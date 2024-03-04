@@ -208,7 +208,7 @@ static void setup_pcm_buffer(void) {
 	 * 
 	 * 32KB - 36185  (small cumulative error)
 	 * 16KB - 18090  (no error)
-	 * 8KB  - 9042   (small error)
+	 * 8KB  - 9043   (small error)
 	 *
 	 * Measured values for ADPCM 4-bit 44100 Hz:
 	 * 
@@ -255,7 +255,7 @@ static void setup_pcm_buffer(void) {
 				uint32 s = (exception_inited() ? 1 : 2);
 				ram_usage >>= s;
 				cdda->size >>= s;
-				cdda->end_tm = 9042;
+				cdda->end_tm = 9043;
 			}
 			break;
 	}
@@ -1261,13 +1261,15 @@ static void play_next_track() {
 
 #ifdef _FS_ASYNC
 static void read_callback(size_t size) {
-	DBGF("CDDA: FILL END %d\n", size);
 	if(cdda->stat > CDDA_STAT_IDLE) {
 		if(size == (size_t)-1) {
 			lseek(cdda->fd, cdda->cur_offset + cdda->offset, SEEK_SET);
 			cdda->stat = CDDA_STAT_FILL;
+			LOGF("CDDA: FILL ERR\n");
 		} else if(size < cdda->size >> 1) {
-			cdda->stat = CDDA_STAT_FILL;
+			LOGF("CDDA: FILL END %d\n", size);
+			cdda->stat = CDDA_STAT_PREP;
+			memset(cdda->buff[PCM_TMP_BUFF] + size, 0, (cdda->size >> 1) - size);
 		} else {
 			cdda->stat = CDDA_STAT_PREP;
 		}
@@ -1277,16 +1279,24 @@ static void read_callback(size_t size) {
 
 static void fill_pcm_buff() {
 
-	cdda->cur_offset = tell(cdda->fd) - cdda->offset;
+	uint32 remain_bytes;
+	uint32 read_bytes = cdda->size >> 1;
 
 	if(cdda->last_lba > 0) {
 
+		remain_bytes = (cdda->last_lba * RAW_SECTOR_SIZE) - cdda->cur_offset;
 		uint32 offset = (cdda->cur_offset / RAW_SECTOR_SIZE) + cdda->lba;
 
-		if (offset > cdda->last_lba) {
+		if(offset >= cdda->last_lba) {
 			play_next_track();
 			return;
 		}
+	} else {
+		remain_bytes = cdda->track_size - cdda->cur_offset;
+	}
+
+	if(remain_bytes < read_bytes) {
+		read_bytes = remain_bytes;
 	}
 	if(cdda->cur_offset >= cdda->track_size) {
 		play_next_track();
@@ -1297,9 +1307,9 @@ static void fill_pcm_buff() {
 
 #ifdef _FS_ASYNC
 	cdda->stat = CDDA_STAT_WAIT;
-	int rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1, read_callback);
+	int rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], read_bytes, read_callback);
 #else
-	int rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], cdda->size >> 1);
+	int rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], read_bytes);
 	cdda->stat = CDDA_STAT_PREP;
 #endif
 
@@ -1342,9 +1352,6 @@ void CDDA_MainLoop(void) {
 	/* Reading data for left or all channels */
 	if(cdda->stat == CDDA_STAT_FILL) {
 		fill_pcm_buff();
-		/* Update LBA for SCD command */
-		gd_state_t *GDS = get_GDS();
-		GDS->lba = cdda->lba + (cdda->cur_offset / RAW_SECTOR_SIZE);
 		unlock_cdda();
 		return;
 	}
@@ -1358,6 +1365,11 @@ void CDDA_MainLoop(void) {
 			}
 			aica_dma_irq_restore();
 		}
+		/* Update LBA for SCD command */
+		gd_state_t *GDS = get_GDS();
+		cdda->cur_offset = tell(cdda->fd) - cdda->offset;
+		GDS->lba = cdda->lba + (cdda->cur_offset / RAW_SECTOR_SIZE);
+
 		if(cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
 		}
