@@ -59,22 +59,20 @@ sys_redir_k:
 	.long sys_redir
 
 sys_redir:
-	mov r7,r0
-	mov #3,r1
-	cmp/hi r0,r1
-	bf badsyscall
-	mov.l sys_syscall,r1
-	shll2 r0
+	mov #4,r1
+	cmp/hs r1,r7
+	bt badsyscall
+	mov r7, r1
+	mova sys_misc_init,r0
+	shll2 r1
 	mov.l @(r0,r1),r0
 	jmp @r0
 	nop
 badsyscall:
-	mov #-1,r0
 	rts
-	nop
+	mov #-1,r0
 
-sys_syscall:
-	.long sys_misc_init
+.align 2
 sys_misc_init:
 	.long _sys_misc_init
 sys_unknown:
