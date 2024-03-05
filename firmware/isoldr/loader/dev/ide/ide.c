@@ -153,9 +153,7 @@ typedef struct ide_req {
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static u32 device_count = 0;
-#ifndef DEV_TYPE_IDE
 static u32 g1_dma_part_avail = 0;
-#endif
 static u32 g1_dma_irq_inited = 0;
 static u32 g1_dma_irq_visible = 1;
 static u32 g1_dma_irq_code_game = 0;
@@ -181,6 +179,9 @@ static u32 g1_pio_trans = 0;
 		
 #define g1_ata_wait_dma() \
     do {} while(IN32(G1_ATA_DMA_STATUS))
+
+#define g1_ata_irq_disable() OUT8(G1_ATA_CTL, 2)
+#define g1_ata_irq_enable() OUT8(G1_ATA_CTL, 0)
 
 u8 swap8(u8 n) {
 	return ((n >> 4) | (n << 4));
@@ -334,7 +335,6 @@ static void g1_dma_irq_hide(void) {
 		*ASIC_IRQ9_MASK |= ASIC_NRM_GD_DMA;
 	}
 
-	OUT8(G1_ATA_CTL, 2);
 	g1_dma_irq_visible = 0;
 }
 
@@ -354,7 +354,6 @@ static void g1_dma_irq_restore(void) {
 		*ASIC_IRQ9_MASK &= ~ASIC_NRM_GD_DMA;
 	}
 
-	OUT8(G1_ATA_CTL, 0);
 	g1_dma_irq_visible = 1;
 }
 
@@ -368,22 +367,30 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 
 		if (!g1_dma_irq_visible) {
 			g1_dma_irq_restore();
+			g1_ata_irq_enable();
 		}
-
-	} else if (dma_mode == FS_DMA_HIDDEN) {
+	}
+	else if (dma_mode == FS_DMA_HIDDEN) {
 
 		/* Hide all internal DMA transfers (CDDA, etc...) */
 		if (g1_dma_irq_visible) {
 			g1_dma_irq_hide();
+			g1_ata_irq_disable();
 		}
-
-	} else if (dma_mode == FS_DMA_SHARED) {
+	}
+	else if (dma_mode == FS_DMA_SHARED || dma_mode == FS_DMA_STREAM) {
 
 		if (last_transfer && !g1_dma_irq_visible) {
 			g1_dma_irq_restore();
-		} else if (!last_transfer && g1_dma_irq_visible) {
+			if (dma_mode == FS_DMA_SHARED) {
+				g1_ata_irq_enable();
+			}
+		}
+		else if (!last_transfer && g1_dma_irq_visible) {
 			g1_dma_irq_hide();
-		} else if(!g1_dma_irq_code_game) {
+			g1_ata_irq_disable();
+		}
+		else if(!g1_dma_irq_code_game) {
 			g1_dma_irq_code_game = g1_dma_has_irq_mask();
 		}
 	}
@@ -783,7 +790,7 @@ static s32 g1_ata_access(struct ide_req *req) {
 		}
 
 		if (req->cmd == G1_READ_PIO) {
-			OUT8(G1_ATA_CTL, 2);
+			g1_ata_irq_disable();
 			g1_pio_reset(len * sector_size);
 			// g1_pio_xfer((u32)buff, len * sector_size);
 			g1_pio_trans = 1;
@@ -809,11 +816,11 @@ static s32 g1_ata_access(struct ide_req *req) {
 			g1_ata_ack_irq();
 			g1_ata_wait_bsydrq();
 			g1_pio_reset(0);
-			OUT8(G1_ATA_CTL, 0);
+			g1_ata_irq_enable();
 		}
 #if _FS_READONLY == 0
 		else if (req->cmd == G1_WRITE_PIO) {
-			OUT8(G1_ATA_CTL, 2);
+			g1_ata_irq_disable();
 
 			for (u32 i = 0; i < len; i++) {
 				g1_ata_wait_nbsy();
@@ -826,7 +833,7 @@ static s32 g1_ata_access(struct ide_req *req) {
 			OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 			g1_ata_wait_bsydrq();
 			g1_ata_ack_irq();
-			OUT8(G1_ATA_CTL, 0);
+			g1_ata_irq_enable();
 		}
 #endif
 		else {
@@ -969,7 +976,7 @@ s32 g1_ata_read_blocks(u64 block, size_t count, u8 *buf, u8 wait_dma) {
 	req.lba = block;
 	req.async = (wait_dma || req.cmd == G1_READ_PIO) ? 0 : 1;
 
-	// g1_dma_part_avail = 0;
+	g1_dma_part_avail = 0;
 
 	DBGF("G1_ATA_READ: %ld %d 0x%08lx %s[%d] %s\n", (uint32)block, count, (uint32)buf,
 		req.cmd == G1_READ_DMA ? "DMA" : "PIO", fs_dma_enabled(),
@@ -1001,7 +1008,7 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 }
 
 #endif
-#if 0
+
 s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 
 	LOGF("G1_ATA_PART: b=%d a=%d", bytes, g1_dma_part_avail);
@@ -1032,7 +1039,7 @@ s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 	LOGF(" read c=%d a=%d\n", req.count, g1_dma_part_avail);
 	return g1_ata_access(&req);
 }
-#endif
+
 s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 
 	const u8 drive = 1; // TODO
@@ -1076,7 +1083,7 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	g1_dma_set_irq_mask(1);
 
 	if (fs_dma_enabled()) {
-		// g1_dma_part_avail = 0;
+		g1_dma_part_avail = 0;
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_DMA_EXT);
 	} else {
 		OUT8(G1_ATA_COMMAND_REG, ATA_CMD_READ_PIO_EXT);
@@ -1104,9 +1111,9 @@ s32 g1_ata_poll(void) {
 		rv = g1_ata_ack_irq();
 	}
 
-	// if(!g1_dma_part_avail) {
+	if(!g1_dma_part_avail) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
-	// }
+	}
 	return rv;
 }
 
@@ -1155,9 +1162,9 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 		u32 gd_sec_remain = (transfered % gd_sec_size);
 
 		if (gd_sec_remain == 0 || gd_sec_remain == ide_sec_size || transfered == gd_sec_size >> 1) {
-			OUT8(G1_ATA_CTL, 0);
+			g1_ata_irq_enable();
 		} else if (gd_sec_remain == (gd_sec_size - ide_sec_size) && transfered != ide_sec_size) {
-			OUT8(G1_ATA_CTL, 2);
+			g1_ata_irq_disable();
 		}
 
 		if ((transfered % ide_sec_size) == 0) {
@@ -1178,7 +1185,7 @@ void g1_pio_xfer(u32 addr, size_t bytes) {
 	g1_pio_trans = 0;
 
 	if (g1_pio_avail == 0) {
-		OUT8(G1_ATA_CTL, 0);
+		g1_ata_irq_enable();
 	}
 }
 
@@ -1222,12 +1229,15 @@ u32 g1_ata_transfered(void) {
 void g1_ata_abort(void) {
 
 	g1_ata_aborted = 1;
+	g1_dma_part_avail = 0;
 
 	if (fs_dma_enabled()) {
 		g1_dma_abort();
 	} else {
 		g1_pio_abort();
 	}
+
+	g1_dma_set_irq_mask(1);
 
 	OUT8(G1_ATA_DEVICE_SELECT, 0x10);
 	OUT8(G1_ATA_FEATURES, 0);
