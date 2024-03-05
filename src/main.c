@@ -74,6 +74,13 @@ const char *GetVersionBuildTypeString(int type) {
 	return build_str[type];
 }
 
+static int sys_info_init() {
+	int (*sc)(int, int, int, int) = NULL;
+	uint32 *scv = (uint32 *)&sc;
+	*scv = *((uint32 *)0x8c0000b0);
+	return sc(0, 0, 0, 0);
+}
+
 static uint8 *get_board_id() {
 	uint8 *(*sc)(int, int, int, int) = NULL;
 	uint32 *scv = (uint32 *)&sc;
@@ -226,10 +233,10 @@ int InitDS() {
 
 	/* If used custom BIOS and syscalls is not installed, setting up it */
 	if(is_custom_bios() && is_no_syscalls()) {
-		tmpb = (uint8 *)0x8c000068;
+		tmpb = (uint8 *)0xa021a056;
 	} else {
 
-		/* Getting board ID */
+		sys_info_init();
 		tmpb = get_board_id();
 
 		if(strncmp(getenv("PATH"), "/cd", 3)) {
