@@ -166,7 +166,7 @@ uint Load_BootBin() {
 }
 
 
-static void set_region() {
+void setup_region() {
 	char region_str[3][6] = {
 		{"00000"},
 		{"00110"},
@@ -177,9 +177,9 @@ static void set_region() {
 	uint8 *reg = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_ADDR + 0x20);
 	uint32 ipbin_reg = NONCACHED_ADDR(IP_BIN_REGION_ADDR);
 
-	if (*(uint32 *)(ipbin_reg) == 0x2045554a) {
+	if (IsoInfo->boot_mode == BOOT_MODE_DIRECT || *(uint32 *)(ipbin_reg) == 0x2045554a) {
 		*reg = 0;
-		memcpy(dst, src, 5);
+		rom_memcpy(dst, src, 5);
 	} else if(*((char *)(ipbin_reg + 2)) == 'E') {
 		*reg = 3;
 		memcpy(dst, region_str[2], 5);
@@ -213,9 +213,9 @@ uint Load_IPBin(int header_only) {
 			*((uint16 *)ipbin_addr + 0x10d8) = 0x5113;
 			*((uint16 *)ipbin_addr + 0x140a) = 0x000b;
 			*((uint16 *)ipbin_addr + 0x140c) = SH4_OPCODE_NOP;
-			set_region();
+			setup_region();
 		} else if(header_only) {
-			set_region();
+			setup_region();
 		}
 		return 1;
 	}

@@ -118,7 +118,7 @@ int main(int argc, char *argv[]) {
 	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
 		printf("Loading IP.BIN...\n");
 
-		if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT)) {
+		if(!Load_IPBin(0)) {
 			goto error;
 		}
 	}

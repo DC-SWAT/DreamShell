@@ -1460,17 +1460,18 @@ int flashrom_delete(int offset) {
  * Sysinfo syscalls
  */
 int sys_misc_init(void) {
+	uint8 *src, *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+
 	LOGFF(NULL);
+	memset(dst, 0, 32 - 8);
 
-	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
-	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
+	dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
 	rom_memcpy(dst, src, 8);
+	setup_region();
 
-	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
-		src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_REGION_ADDR);
-		dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
-		rom_memcpy(dst, src, 5);
-	}
+	dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR - 8);
+	dcache_flush_range((uint32)dst, 32);
 	return 0;
 }
 
