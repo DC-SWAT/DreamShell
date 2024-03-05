@@ -15,8 +15,6 @@
 *.d
 *.opk
 *.klf
-*.raw
-*.wav
 *.iso
 *.gdi
 *.cdi
