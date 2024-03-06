@@ -130,14 +130,8 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_EXPT
 	if(IsoInfo->exec.type == BIN_TYPE_WINCE && IsoInfo->use_irq) {
-		uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
-		uint8 wince_version = *((uint8 *)NONCACHED_ADDR(IsoInfo->exec.addr + 0x0c));
-		/* Check WinCE version and hack VBR before executing */
-		if(wince_version == 0xe0) {
-			exception_init(exec_addr + 0x2110);
-		} else {
-			exception_init(exec_addr + 0x20f0);
-		}
+		uint32 vbr_offset = *((uint32 *)NONCACHED_ADDR(IsoInfo->exec.addr + 0x0c)) + 0x30;
+		exception_init(vbr_offset);
 	}
 #endif
 
