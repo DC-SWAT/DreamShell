@@ -1386,20 +1386,22 @@ void isoLoader_DefaultPreset() {
 
 int isoLoader_SavePreset() {
 
-	if (!GUI_WidgetGetState(self.preset)) {
+	if(!GUI_WidgetGetState(self.preset)) {
 		return 0;
 	}
 
-	char *filename, *memory = NULL;
+	char *filename;
 	file_t fd;
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	char result[1024];
-	char text[24];
+	char memory[24];
+	char title[24];
 	int async = 0, type = 0, mode = 0;
 	uint32 heap = HEAP_MODE_AUTO;
 	uint32 cdda_mode = CDDA_MODE_DISABLED;
+	int vmu_num = 0;
 
-	if (!self.filename[0]) {
+	if(!self.filename[0]) {
 		return 0;
 	}
 
@@ -1411,6 +1413,10 @@ int isoLoader_SavePreset() {
 	if(fd == FILEHND_INVALID) {
 		return -1;
 	}
+
+	memset(result, 0, sizeof(result));
+	memset(title, 0, sizeof(title));
+	memset(memory, 0, sizeof(memory));
 
 	for(int i = 1; i < sizeof(self.async) >> 2; i++) {
 		if(GUI_WidgetGetState(self.async[i])) {
@@ -1438,15 +1444,14 @@ int isoLoader_SavePreset() {
 			if (i <= HEAP_MODE_MAPLE) {
 				heap = i;
 			} else {
-				char *tmpval = (char* )GUI_ObjectGetName((GUI_Object *)self.heap[i]);
+				char *tmpval = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 
 				if(strlen(tmpval) < 8) {
-					memset(text, 0, sizeof(text));
-					strncpy(text, tmpval, 10);
-					tmpval = strncat(text, GUI_TextEntryGetText(self.heap_memory_text), 10);
+					strncpy(memory, tmpval, 10);
+					tmpval = strncat(memory, GUI_TextEntryGetText(self.heap_memory_text), 10);
 				}
-
 				heap = strtoul(tmpval, NULL, 16);
+				memset(memory, 0, sizeof(memory));
 			}
 			break;
 		}
@@ -1460,23 +1465,19 @@ int isoLoader_SavePreset() {
 
 		if(GUI_WidgetGetState(self.memory_chk[i])) {
 
-			memory = (char* )GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
+			char *tmpval = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
+			strncpy(memory, tmpval, 10);
 
-			if(strlen(memory) < 8) {
-				memset(text, 0, sizeof(text));
-				strncpy(text, memory, 10);
-				memory = strncat(text, GUI_TextEntryGetText(self.memory_text), 10);
+			if(strlen(tmpval) < 8) {
+				strncat(memory, GUI_TextEntryGetText(self.memory_text), 10);
 			}
 			break;
 		}
 	}
 
-	trim_spaces(ipbin->title, text, sizeof(ipbin->title));
-	memset(result, 0, sizeof(result));
+	trim_spaces(ipbin->title, title, sizeof(ipbin->title));
 
-	int vmu_num = 0;
-
-	if (GUI_WidgetGetState(self.vmu_disabled) == 0) {
+	if(GUI_WidgetGetState(self.vmu_disabled) == 0) {
 		vmu_num = atoi(GUI_TextEntryGetText(self.vmu_number));
 	}
 
@@ -1485,7 +1486,7 @@ int isoLoader_SavePreset() {
 			"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
 			"vmu = %d\nscrhotkey = %lx\n"
 			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
-			text, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
+			title, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
 			cdda_mode, GUI_WidgetGetState(self.irq), GUI_WidgetGetState(self.low), heap,
 			GUI_WidgetGetState(self.fastboot), type, mode, memory,
 			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
