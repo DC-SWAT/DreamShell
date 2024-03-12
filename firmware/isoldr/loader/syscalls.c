@@ -386,6 +386,9 @@ static void abort_data_cmd() {
 	gd_state_t *GDS = get_GDS();
 
 	LOGFF(NULL);
+	if(fs_dma_enabled() == FS_DMA_STREAM) {
+		fs_enable_dma(FS_DMA_SHARED);
+	}
 	abort_async(iso_fd);
 	GDS->ata_status = CMD_WAIT_IRQ;
 
@@ -394,9 +397,12 @@ static void abort_data_cmd() {
 	}
 
 	pre_read_xfer_end();
-	GDS->transfered = 0;
-	GDS->status = CMD_STAT_IDLE;
-	GDS->ata_status = CMD_WAIT_INTERNAL;
+
+	if(GDS->cmd_abort) {
+		GDS->transfered = 0;
+		GDS->status = CMD_STAT_IDLE;
+		GDS->ata_status = CMD_WAIT_INTERNAL;
+	}
 }
 
 static void data_transfer_cb(size_t size) {
@@ -583,9 +589,15 @@ void data_transfer() {
 static void data_transfer_dma_stream() {
 
 	gd_state_t *GDS = get_GDS();
-	fs_enable_dma(FS_DMA_SHARED);
+	const int without_pre_read = 0; // TODO
 
-	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
+	if(without_pre_read) {
+		fs_enable_dma(FS_DMA_STREAM);
+	} else {
+		fs_enable_dma(FS_DMA_SHARED);
+	}
+
+	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], without_pre_read);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		GDS->drv_stat = CD_STATUS_PAUSED;
@@ -599,17 +611,21 @@ static void data_transfer_dma_stream() {
 
 		gdcExitToGame();
 
-		if (pre_read_xfer_busy()) {
+		if(pre_read_xfer_busy()) {
 			GDS->transfered = pre_read_xfer_size();
 		}
+		else if(pre_read_xfer_done() || without_pre_read) {
 
-		if(pre_read_xfer_done()) {
-
-			pre_read_xfer_end();
+			if(!without_pre_read) {
+				pre_read_xfer_end();
+			}
 			GDS->transfered = pre_read_xfer_size();
 			GDS->ata_status = CMD_WAIT_INTERNAL;
 
 			if(GDS->requested == 0) {
+				if(without_pre_read) {
+					abort_data_cmd();
+				}
 				GDS->status = CMD_STAT_COMPLETED;
 				break;
 			}
@@ -627,9 +643,10 @@ static void data_transfer_dma_stream() {
 static void data_transfer_pio_stream() {
 
 	gd_state_t *GDS = get_GDS();
-	fs_enable_dma(FS_DMA_DISABLED);
+	const int without_pre_read = 0; // TODO
 
-	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1]);
+	fs_enable_dma(FS_DMA_DISABLED);
+	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], without_pre_read);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		GDS->drv_stat = CD_STATUS_PAUSED;
@@ -643,7 +660,11 @@ static void data_transfer_pio_stream() {
 
 		if(GDS->param[2] != 0) {
 
-			pre_read_xfer_start(GDS->param[2], GDS->param[1]);
+			if(without_pre_read) {
+				read(iso_fd, (uint8 *)GDS->param[2], GDS->param[1]);
+			} else {
+				pre_read_xfer_start(GDS->param[2], GDS->param[1]);
+			}
 
 			GDS->ata_status = CMD_WAIT_IRQ;
 			GDS->transfered += GDS->param[1];
@@ -656,11 +677,16 @@ static void data_transfer_pio_stream() {
 			}
 		}
 
-		if(pre_read_xfer_done()) {
+		if(pre_read_xfer_done() || without_pre_read) {
 
-			pre_read_xfer_end();
+			if(!without_pre_read) {
+				pre_read_xfer_end();
+			}
 
 			if(GDS->requested == 0) {
+				if(without_pre_read) {
+					abort_data_cmd();
+				}
 				GDS->ata_status = CMD_WAIT_INTERNAL;
 				GDS->status = CMD_STAT_COMPLETED;
 				break;
@@ -1213,9 +1239,25 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 			stat_name[GDS->status + 1], GDS->requested, dmabuf[1]);
 		return -1;
 	}
-
 	GDS->requested -= dmabuf[1];
-	pre_read_xfer_start(dmabuf[0], dmabuf[1]);
+
+	if(fs_dma_enabled() == FS_DMA_STREAM) {
+#ifdef _FS_ASYNC
+		if(read_async(iso_fd, (uint8 *)dmabuf[0], dmabuf[1], data_transfer_cb) < 0) {
+			return -1;
+		}
+		if(!exception_inited() && (dmabuf[1] % 512)) {
+			do {} while(pre_read_xfer_busy());
+			poll(iso_fd);
+		}
+#else
+		if(read(iso_fd, (uint8 *)dmabuf[0], dmabuf[1]) < 0) {
+			return -1;
+		}
+#endif
+	} else {
+		pre_read_xfer_start(dmabuf[0], dmabuf[1]);
+	}
 	return 0;
 }
 
@@ -1240,7 +1282,11 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 		LOGF("ERROR: status = %s\n", stat_name[GDS->status + 1]);
 		return -1;
 	}
-
+#ifdef _FS_ASYNC
+	if(fs_dma_enabled() == FS_DMA_STREAM && !exception_inited()) {
+		poll(iso_fd);
+	}
+#endif
 	if(pre_read_xfer_busy()) {
 		*size = pre_read_xfer_size();
 		return 1;
@@ -1257,7 +1303,7 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 void gdcG1DmaEnd(uint32 func, uint32 param) {
 
 #ifdef LOG
-	if (func) {
+	if(func) {
 		LOGFF("%08lx %08lx\n", func, param);
 	}
 #endif
@@ -1460,18 +1506,17 @@ int flashrom_delete(int offset) {
  * Sysinfo syscalls
  */
 int sys_misc_init(void) {
-	uint8 *src, *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	uint8 *src, *dst = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
 
 	LOGFF(NULL);
 	memset(dst, 0, 32 - 8);
 
 	src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
-	dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	dst = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
 	rom_memcpy(dst, src, 8);
 	setup_region();
 
-	dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR - 8);
-	dcache_flush_range((uint32)dst, 32);
+	dcache_flush_range(CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR - 8), 32);
 	return 0;
 }
 

@@ -240,6 +240,7 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		// 	LOGF("G1_IRQ_VISIBLE: %03lx %03lx %08lx %08lx %08lx\n",
 		// 		code, g1_dma_irq_code_game, status, statusExt, statusErr);
 		// }
+		poll_all(0);
 		return current_vector;
 	}
 
@@ -380,18 +381,17 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 	}
 	else if (dma_mode == FS_DMA_SHARED || dma_mode == FS_DMA_STREAM) {
 
+		if(!g1_dma_irq_code_game) {
+			g1_dma_irq_code_game = g1_dma_has_irq_mask();
+		}
+
 		if (last_transfer && !g1_dma_irq_visible) {
 			g1_dma_irq_restore();
-			if (dma_mode == FS_DMA_SHARED) {
-				g1_ata_irq_enable();
-			}
+			g1_ata_irq_enable();
 		}
 		else if (!last_transfer && g1_dma_irq_visible) {
 			g1_dma_irq_hide();
 			g1_ata_irq_disable();
-		}
-		else if(!g1_dma_irq_code_game) {
-			g1_dma_irq_code_game = g1_dma_has_irq_mask();
 		}
 	}
 
@@ -1011,11 +1011,11 @@ s32 g1_ata_write_blocks(u64 block, size_t count, const u8 *buf, u8 wait_dma) {
 
 s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 
-	LOGF("G1_ATA_PART: b=%d a=%d", bytes, g1_dma_part_avail);
+	DBGF("G1_ATA_PART: bytes=%d avail=%d", bytes, g1_dma_part_avail);
 
 	if (g1_dma_part_avail > 0) {
-		LOGF(" continue\n");
 		g1_dma_part_avail -= bytes;
+		DBGF(" continue avail=%d\n", g1_dma_part_avail);
 		g1_dma_start((u32)buf, bytes);
 		return 0;
 	}
@@ -1036,7 +1036,7 @@ s32 g1_ata_read_lba_dma_part(u64 sector, size_t bytes, u8 *buf) {
 	req.lba = sector;
 	req.async = 1;
 
-	LOGF(" read c=%d a=%d\n", req.count, g1_dma_part_avail);
+	DBGF(" read count=%d avail=%d\n", req.count, g1_dma_part_avail);
 	return g1_ata_access(&req);
 }
 

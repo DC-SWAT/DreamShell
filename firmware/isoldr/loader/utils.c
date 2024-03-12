@@ -746,7 +746,9 @@ static int PutLog(char *buff) {
 #elif defined(DEV_TYPE_DCL) || defined(LOG_DCL)
 	dcload_write_buffer((uint8 *)buff, len);
 #else
-	scif_write_buffer((uint8 *)buff, len, 1);
+	if(!exception_inside_int() || IsoInfo->exec.type != BIN_TYPE_WINCE) {
+		scif_write_buffer((uint8 *)buff, len, 1);
+	}
 #endif
 	return len;
 }

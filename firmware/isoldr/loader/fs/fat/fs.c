@@ -288,7 +288,8 @@ int read_async(int fd, void *ptr, unsigned int size, fs_callback_f *cb) {
 
 	if(file->poll_cb) {
 		LOGFF("WARNING, aborting async for fd %d\n", fd);
-		abort_async(fd);
+		// abort_async(fd);
+		file->state = FILE_STATE_USED;
 	}
 
 	if (fs_dma_enabled() == FS_DMA_DISABLED) {

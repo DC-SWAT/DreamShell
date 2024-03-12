@@ -308,7 +308,7 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 }
 
 
-int PreReadSectors(int sec, int num) {
+int PreReadSectors(int sec, int num, int seek_only) {
 
 	DBGFF("%d from %d\n", num, sec);
 
@@ -324,8 +324,10 @@ int PreReadSectors(int sec, int num) {
 
 	lseek(iso_fd, (sec - lba) * IsoInfo->sector_size, SEEK_SET);
 
-	if(pre_read(iso_fd, num * IsoInfo->sector_size) < 0) {
-		return FAILED;
+	if(seek_only == 0) {
+		if(pre_read(iso_fd, num * IsoInfo->sector_size) < 0) {
+			return FAILED;
+		}
 	}
 	return PROCESSING;
 }
@@ -335,9 +337,8 @@ static int _read_sector_by_sector(uint8 *buff, uint cnt, int old_dma) {
 
 	while(cnt-- > 0) {
 
-		if(b_seek) {
-			lseek(iso_fd, b_seek, SEEK_CUR);
-		}
+		lseek(iso_fd, b_seek, SEEK_CUR);
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		if(!cnt && old_dma) {
 			fs_enable_dma(old_dma);
@@ -364,9 +365,7 @@ static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *
 	int old_dma = 0;
 	uint8 *tmpb;
 
-	if(sector) {
-		lseek(iso_fd, IsoInfo->track_offset + (sector * IsoInfo->sector_size), SEEK_SET);
-	}
+	lseek(iso_fd, IsoInfo->track_offset + (sector * IsoInfo->sector_size), SEEK_SET);
 
 	/* Reading normal data sectors */
 	if(IsoInfo->sector_size <= sec_size) {
@@ -395,10 +394,9 @@ static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *
 	if(old_dma) {
 		fs_enable_dma(FS_DMA_HIDDEN);
 	}
-
-	// if(mmu_enabled()) {
-	// 	return _read_sector_by_sector(buff, cnt, sec_size, old_dma);
-	// }
+	if(old_dma == FS_DMA_STREAM) {
+		return _read_sector_by_sector(buff, cnt, old_dma);
+	}
 #endif
 
 	while(cnt > 2) {
