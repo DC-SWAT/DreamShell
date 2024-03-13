@@ -169,8 +169,9 @@ typedef struct isoldr_info {
 	uint32 syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
 	uint32 scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
 	uint32 bleem;                       /* Memory address for Bleem! binary or 1 for auto load. */
+	uint32 alt_read;                    /* Use alternative reading without aborting. */
 
-	uint32 cdda_offset[44];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[43];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

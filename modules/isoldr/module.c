@@ -633,7 +633,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
-	uint32 low_level = 0, scr_hotkey = 0, bleem = 0;
+	uint32 low_level = 0, scr_hotkey = 0, bleem = 0, alt_read = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -659,6 +659,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"low",       'l', NULL, CFG_BOOL,  (void *) &low_level,   0},
 		{"scrhot",    'k', NULL, CFG_ULONG, (void *) &scr_hotkey,  0},
 		{"bleem",     'u', NULL, CFG_ULONG, (void *) &bleem,       0},
+		{"altrd",     'y', NULL, CFG_BOOL,  (void *) &alt_read,    0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -730,6 +731,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->syscalls = low_level;
 	info->scr_hotkey = scr_hotkey;
 	info->bleem = bleem;
+	info->alt_read = alt_read;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;
