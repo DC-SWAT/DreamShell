@@ -6,7 +6,7 @@
 TARGET = bootloader
 VERSION = 2.6
 TARGET_NAME = DreamShell_$(TARGET)_v$(VERSION)
-TARGET_CD = cd/1DS_BOOT.BIN
+TARGET_CD = cd/1DS_CORE.BIN
 KOS_ROMDISK_DIR = romdisk
 
 all: rm-elf $(TARGET).elf
