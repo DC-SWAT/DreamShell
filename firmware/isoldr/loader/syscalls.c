@@ -589,15 +589,15 @@ void data_transfer() {
 static void data_transfer_dma_stream() {
 
 	gd_state_t *GDS = get_GDS();
-	const int without_pre_read = 0; // TODO
+	const int alt_read = IsoInfo->alt_read;
 
-	if(without_pre_read) {
+	if(alt_read) {
 		fs_enable_dma(FS_DMA_STREAM);
 	} else {
 		fs_enable_dma(FS_DMA_SHARED);
 	}
 
-	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], without_pre_read);
+	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], alt_read);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		GDS->drv_stat = CD_STATUS_PAUSED;
@@ -614,16 +614,16 @@ static void data_transfer_dma_stream() {
 		if(pre_read_xfer_busy()) {
 			GDS->transfered = pre_read_xfer_size();
 		}
-		else if(pre_read_xfer_done() || without_pre_read) {
+		else if(pre_read_xfer_done() || alt_read) {
 
-			if(!without_pre_read) {
+			if(!alt_read) {
 				pre_read_xfer_end();
 			}
 			GDS->transfered = pre_read_xfer_size();
 			GDS->ata_status = CMD_WAIT_INTERNAL;
 
 			if(GDS->requested == 0) {
-				if(without_pre_read) {
+				if(alt_read) {
 					abort_data_cmd();
 				}
 				GDS->status = CMD_STAT_COMPLETED;
@@ -643,10 +643,10 @@ static void data_transfer_dma_stream() {
 static void data_transfer_pio_stream() {
 
 	gd_state_t *GDS = get_GDS();
-	const int without_pre_read = 0; // TODO
+	const int alt_read = IsoInfo->alt_read;
 
 	fs_enable_dma(FS_DMA_DISABLED);
-	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], without_pre_read);
+	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], alt_read);
 
 	if(GDS->status != CMD_STAT_PROCESSING) {
 		GDS->drv_stat = CD_STATUS_PAUSED;
@@ -660,12 +660,15 @@ static void data_transfer_pio_stream() {
 
 		if(GDS->param[2] != 0) {
 
-			if(without_pre_read) {
+			if(alt_read) {
 				read(iso_fd, (uint8 *)GDS->param[2], GDS->param[1]);
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+				/* Just for ATA IRQ from NOP command. */
+				g1_ata_abort();
+#endif
 			} else {
 				pre_read_xfer_start(GDS->param[2], GDS->param[1]);
 			}
-
 			GDS->ata_status = CMD_WAIT_IRQ;
 			GDS->transfered += GDS->param[1];
 			GDS->requested -= GDS->param[1];
@@ -677,16 +680,11 @@ static void data_transfer_pio_stream() {
 			}
 		}
 
-		if(pre_read_xfer_done() || without_pre_read) {
+		if(pre_read_xfer_done()) {
 
-			if(!without_pre_read) {
-				pre_read_xfer_end();
-			}
+			pre_read_xfer_end();
 
 			if(GDS->requested == 0) {
-				if(without_pre_read) {
-					abort_data_cmd();
-				}
 				GDS->ata_status = CMD_WAIT_INTERNAL;
 				GDS->status = CMD_STAT_COMPLETED;
 				break;
