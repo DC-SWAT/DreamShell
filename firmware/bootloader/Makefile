@@ -6,7 +6,7 @@
 TARGET = bootloader
 VERSION = 2.6
 TARGET_NAME = DreamShell_$(TARGET)_v$(VERSION)
-TARGET_CD = cd/1DS_CORE.BIN
+TARGET_CD = cd/1DS_BOOT.BIN
 KOS_ROMDISK_DIR = romdisk
 
 all: rm-elf $(TARGET).elf
@@ -49,7 +49,7 @@ $(TARGET_CD): $(TARGET).bin
 cdi: $(TARGET_CD)
 	@mkdir -p ./cd
 	@$(DS_SDK)/bin/scramble $(TARGET).bin $(TARGET_CD)
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(DS_RES)/IP_BOOT.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
