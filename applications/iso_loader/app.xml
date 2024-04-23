@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app extensions=".iso .cso .cdi .gdi" icon="images/icon.png" name="ISO Loader" version="0.8.0">
+<app extensions=".iso .cso .cdi .gdi" icon="images/icon.png" name="ISO Loader" version="0.8.1">
 	<resources>
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" />
@@ -366,7 +366,7 @@
 
 							<panel height="225" name="boot-memory-panel" width="80%">
 								<label y="0" align="left" color="#31799F" font="arial" height="25" text="Loader memory:" width="100%" />
-								
+
 								<input height="22" name="0x8c000100" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8c000100" x="19%" />
 								</input>
@@ -382,11 +382,11 @@
 								<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
 								</input>
+								<input height="22" name="0x8cef8000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8cef8000" x="19%" />
+								</input>
 								<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
-								</input>
-								<input height="22" name="0x8cfa0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8cfa0000" x="19%" />
 								</input>
 								<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />
