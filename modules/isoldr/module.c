@@ -15,6 +15,7 @@ static uint8 ron_hdr[8] = {0x1B, 0xD0, 0x1A, 0xD1, 0x1B, 0x20, 0x2B, 0x40};
 static uint8 win_hdr[4] = {0x45, 0x43, 0x45, 0x43};
 
 void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 params_len);
+void isoldr_vm2_bank_switch(const char *ipbin_info_sec);
 
 DEFAULT_MODULE_EXPORTS_CMD(isoldr, "Runs the games images");
 
@@ -45,6 +46,8 @@ static void get_ipbin_info(isoldr_info_t *info, file_t fd, uint8 *sec, char *pse
 		} else {
 			info->exec.file[0] = 0;
 		}
+
+		isoldr_vm2_bank_switch(psec);
 	}
 }
 
