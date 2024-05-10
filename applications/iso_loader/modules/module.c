@@ -1395,7 +1395,7 @@ int isoLoader_SavePreset() {
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
 	char result[1024];
 	char memory[24];
-	char title[24];
+	char title[32];
 	int async = 0, type = 0, mode = 0;
 	uint32 heap = HEAP_MODE_AUTO;
 	uint32 cdda_mode = CDDA_MODE_DISABLED;
