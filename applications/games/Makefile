@@ -31,4 +31,4 @@ install: app.xml $(DEPS)
 	cp -R covers $(APP_DIR)
 	cp -R fonts $(APP_DIR)
 	cp -R music $(APP_DIR)
-	cp -R gdis $(APP_DIR)
+	
