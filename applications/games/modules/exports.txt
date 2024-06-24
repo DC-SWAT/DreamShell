@@ -1,0 +1,7 @@
+include kos/exports.h
+include app_module.h
+
+# GAMES Loader exports
+GamesApp_Init
+GamesApp_Shutdown
+GamesApp_Open

@@ -5,7 +5,8 @@
 #
 
 _SUBDIRS = libcfg/src libparallax SDL_rtf \
-	lua SDL SDL_gfx SDL_image SDL_ttf
+	lua SDL SDL_gfx SDL_image SDL_ttf \
+	libtsunami
 
 _SUBDIRS_CLEAN = $(_SUBDIRS) freetype mxml
 

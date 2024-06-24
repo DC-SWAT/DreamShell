@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="Games" icon="images/icon.png" version="0.1.0">
+	<resources>
+		<module src="../../modules/minilzo.klf" />
+		<module src="../../modules/isofs.klf" />
+		<module src="../../modules/isoldr.klf" />
+		<module src="../../modules/wav.klf" />
+		<module src="modules/app_games.klf" />
+		<surface width="100%" height="450" name="head_bg">
+			<fill color="#000000" />
+		</surface>
+	</resources>
+	<body width="100%" height="100%" onload="export:GamesApp_Init()" onopen="export:GamesApp_Open()" onunload="export:GamesApp_Shutdown()"
+		name="main_body" background="head_bg">
+	</body>
+</app>
