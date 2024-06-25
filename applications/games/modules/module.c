@@ -91,7 +91,6 @@ static void SetTitle(const char *text)
    else {
       strcpy(titleText, text);
    }
-   // ds_printf("%s", titleText);
 
    if (self.title != NULL) { 
       TSU_LabelSetText(self.title, titleText);
@@ -107,16 +106,17 @@ static void SetTitle(const char *text)
    }      
 
    StopCDDATrack();
-   char filepath[NAME_MAX];
-   size_t track_size = GetCDDATrackFilename(5, self.games_path, text, filepath);
-   ds_printf("GAMES_PATH: %s, TITLE: %s", self.games_path, text);
+   // if (GUI_WidgetGetState(self.cdda)) {
+      char filepath[NAME_MAX];
+      size_t track_size = GetCDDATrackFilename(5, self.games_path, text, filepath);
 
-   if (track_size) {
-      do {
-         track_size = GetCDDATrackFilename((random() % 15) + 4, self.games_path, text, filepath);
-      } while(track_size == 0);
-      PlayCDDATrack(filepath, 3);
-   }
+      if (track_size) {
+         do {
+            track_size = GetCDDATrackFilename((random() % 15) + 4, self.games_path, text, filepath);
+         } while(track_size == 0);
+         PlayCDDATrack(filepath, 3);
+      }
+   // }
 }
 
 static void SetMenuType(int menu_type)
@@ -1202,7 +1202,6 @@ static int LoadPreset()
          }
 
          self.addr = strtoul(memory, NULL, 16);
-         ds_printf("memory: %s", memory);
       }
 
       if(strncmp(self.isoldr->fs_dev, "auto", 4) == 0) {

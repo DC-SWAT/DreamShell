@@ -1,0 +1,12 @@
+All this stuff isn't ported in yet... but will be shortly. Most of it is
+written but needs some cleanup and adjustment.
+
+- RefCnt: done
+- Texture object: done for now
+- Font object: partially done
+- Drawable object: partially done
+- Animation object: done
+- Trigger object: done
+- Environmental object: not started
+- Predefined objects: partially done
+
