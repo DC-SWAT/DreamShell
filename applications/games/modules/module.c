@@ -35,7 +35,7 @@ kthread_t *exit_menu_thread;
 
 static struct
 {
-	App_t *app;
+   App_t *app;
    bool have_args;
    DSMenu *dsmenu_ptr;
    Scene *scene_ptr;
@@ -195,7 +195,7 @@ static void SetMenuType(int menu_type)
 static ImageDimensionStruct* GetImageDimension(const char *image_file)
 {
    ImageDimensionStruct* image = NULL;
-	char *image_type = strrchr(image_file, '.');
+   char *image_type = strrchr(image_file, '.');
 
 	if (strcasecmp(image_type, ".png") == 0 || strcasecmp(image_type, ".bpm") == 0) { 
       // || strcasecmp(image_type, ".jpg")) {
@@ -531,10 +531,10 @@ static bool RetrieveGames()
    ent = NULL;
    file_type = NULL;
 	
-	if (self.games_array_count > 0) {
-		qsort(self.games_array, self.games_array_count, sizeof(GameItemStruct), AppCompareGames);
+   if (self.games_array_count > 0) {
+      qsort(self.games_array, self.games_array_count, sizeof(GameItemStruct), AppCompareGames);
       return true;
-	}
+   }
    else {
       return false;
    }
@@ -587,124 +587,124 @@ static bool LoadPage(bool force)
          }
 
          if (RetrieveGames()) {               
-               int column = 0;
-               int page = 0;
-               self.game_count = 0;
-               Vector vectorTranslate = {0, 480, ML_ITEM, 1};
+            int column = 0;
+            int page = 0;
+            self.game_count = 0;
+            Vector vectorTranslate = {0, 480, ML_ITEM, 1};
 
-               for(int icount = 0; icount < self.games_array_count; icount++) {
-                  fileCount++;
-                  page = ceil((float)fileCount / (float)self.menu_option.max_page_size);
+            for(int icount = 0; icount < self.games_array_count; icount++) {
+               fileCount++;
+               page = ceil((float)fileCount / (float)self.menu_option.max_page_size);
 
-                  if (page < self.current_page)
-                     continue;
-                  else if (page > self.current_page)
-                     break;
+               if (page < self.current_page)
+                  continue;
+               else if (page > self.current_page)
+                  break;
 
-                  self.game_count++;
+               self.game_count++;
 
-                  column = floor((float)(self.game_count-1) / (float)self.menu_option.size_items_column);
+               column = floor((float)(self.game_count-1) / (float)self.menu_option.size_items_column);
 
-                  if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING) {
-                     memset(game_without_extension, 0, sizeof(game_without_extension));
-                     strncpy(game_without_extension, self.games_array[icount].game, strlen(self.games_array[icount].game)-4);
+               if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING) {
+                  memset(game_without_extension, 0, sizeof(game_without_extension));
+                  strncpy(game_without_extension, self.games_array[icount].game, strlen(self.games_array[icount].game)-4);
 
-                     // memset(game_cover_path, 0, sizeof(game_cover_path));
-                     // snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game_without_extension);
-                     // if (IsValidImage(game_cover_path)) {
-                     //    self.games_array[icount].exists_cover = SC_EXISTS;
-                     //    self.games_array[icount].cover_type = IT_JPG;
-                     // }
-                              
-                     memset(game_cover_path, 0, sizeof(game_cover_path));
-                     snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game_without_extension);
-                     if (IsValidImage(game_cover_path)) {
-                        self.games_array[icount].exists_cover = SC_EXISTS;
-                        self.games_array[icount].cover_type = IT_PNG;
-                     }
-                     
-                     // DEFAULT IMAGE PNG
-                     if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING) {
-                        self.games_array[icount].exists_cover = SC_NOT_EXIST;
-                        self.games_array[icount].cover_type = IT_PNG;
-                     }
-                  }
-
-                  if (self.games_array[icount].exists_cover == SC_EXISTS) {
-                     memset(game, 0, sizeof(game));
-                     strncpy(game, self.games_array[icount].game, strlen(self.games_array[icount].game)-4);
-
-                     if (self.games_array[icount].cover_type == IT_JPG) {
-                        snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game);
-                     }
-                     else if (self.games_array[icount].cover_type == IT_PNG) {
-                        snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game);
-                     }
-                     else {
-                        // NEVER HERE!
-                     }
-                  }
-                  else {
-                     snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.png");
-                  }
-                  
-                  memset(name, 0 , sizeof(name));
-                  if(self.games_array[icount].folder[0] != '\0') {
-                     strncpy(name, self.games_array[icount].folder, strlen(self.games_array[icount].folder));
-                  }
-                  else {
-                     strncpy(name, self.games_array[icount].game, strlen(self.games_array[icount].game)-4);
-                  }                  
-
-                  if (self.menu_type == MT_IMAGE_TEXT_64_5X2) {
-
-                     memset(name_truncated, 0, sizeof(name_truncated));
-                     if (strlen(name) > sizeof(name_truncated) - 1) {
-                        strncpy(name_truncated, name, sizeof(name_truncated) - 1);
-                     }
-                     else {
-                        strcpy(name_truncated, name);
-                     }
-
-                     self.img_button[self.game_count-1] = TSU_ItemMenuCreate(game_cover_path, self.menu_option.image_size, self.menu_option.image_size, name_truncated, self.menu_font, 16);
-                  }
-                  else if (self.menu_type == MT_PLANE_TEXT) {
-                  }
-                  else {
-                     self.img_button[self.game_count-1] = TSU_ItemMenuCreateImage(game_cover_path, self.menu_option.image_size, self.menu_option.image_size);
-                  }
-
-                  ItemMenu *item_menu = self.img_button[self.game_count-1];
-
-                  TSU_ItemMenuSetItemIndex(item_menu, icount);
-                  if (self.games_array[icount].with_folder) {
-                     TSU_ItemMenuSetItemValue(item_menu, name);
-                  }
-                  else {
-                     TSU_ItemMenuSetItemValue(item_menu, name);
-                  }
-                  
-                  TSU_ItemMenuSetTranslate(item_menu, &vectorTranslate);
-                  
-                  self.img_button_animation[self.game_count-1] = (Animation *)TSU_LogXYMoverCreate(self.menu_option.init_position_x + (column * self.menu_option.padding_x), 
-                           (self.menu_option.image_size + self.menu_option.padding_y) * (self.game_count - self.menu_option.size_items_column * column) + self.menu_option.init_position_y);
+                  // memset(game_cover_path, 0, sizeof(game_cover_path));
+                  // snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game_without_extension);
+                  // if (IsValidImage(game_cover_path)) {
+                  //    self.games_array[icount].exists_cover = SC_EXISTS;
+                  //    self.games_array[icount].cover_type = IT_JPG;
+                  // }
                            
-                  TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count-1]);
-
-                  if (self.game_count == 1) {
-                     TSU_ItemMenuSetSelected(item_menu, true);
-                     SetTitle(name);
-                     SetCursor();
-                  }
-                  else {
-                     TSU_ItemMenuSetSelected(item_menu, false);
+                  memset(game_cover_path, 0, sizeof(game_cover_path));
+                  snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game_without_extension);
+                  if (IsValidImage(game_cover_path)) {
+                     self.games_array[icount].exists_cover = SC_EXISTS;
+                     self.games_array[icount].cover_type = IT_PNG;
                   }
                   
-                  TSU_MenuSubAddItemMenu(self.dsmenu_ptr, item_menu);
+                  // DEFAULT IMAGE PNG
+                  if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING) {
+                     self.games_array[icount].exists_cover = SC_NOT_EXIST;
+                     self.games_array[icount].cover_type = IT_PNG;
+                  }
                }
 
-               loaded = true;
-               FreeGames();
+               if (self.games_array[icount].exists_cover == SC_EXISTS) {
+                  memset(game, 0, sizeof(game));
+                  strncpy(game, self.games_array[icount].game, strlen(self.games_array[icount].game)-4);
+
+                  if (self.games_array[icount].cover_type == IT_JPG) {
+                     snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game);
+                  }
+                  else if (self.games_array[icount].cover_type == IT_PNG) {
+                     snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game);
+                  }
+                  else {
+                     // NEVER HERE!
+                  }
+               }
+               else {
+                  snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.png");
+               }
+               
+               memset(name, 0 , sizeof(name));
+               if(self.games_array[icount].folder[0] != '\0') {
+                  strncpy(name, self.games_array[icount].folder, strlen(self.games_array[icount].folder));
+               }
+               else {
+                  strncpy(name, self.games_array[icount].game, strlen(self.games_array[icount].game)-4);
+               }                  
+
+               if (self.menu_type == MT_IMAGE_TEXT_64_5X2) {
+
+                  memset(name_truncated, 0, sizeof(name_truncated));
+                  if (strlen(name) > sizeof(name_truncated) - 1) {
+                     strncpy(name_truncated, name, sizeof(name_truncated) - 1);
+                  }
+                  else {
+                     strcpy(name_truncated, name);
+                  }
+
+                  self.img_button[self.game_count-1] = TSU_ItemMenuCreate(game_cover_path, self.menu_option.image_size, self.menu_option.image_size, name_truncated, self.menu_font, 16);
+               }
+               else if (self.menu_type == MT_PLANE_TEXT) {
+               }
+               else {
+                  self.img_button[self.game_count-1] = TSU_ItemMenuCreateImage(game_cover_path, self.menu_option.image_size, self.menu_option.image_size);
+               }
+
+               ItemMenu *item_menu = self.img_button[self.game_count-1];
+
+               TSU_ItemMenuSetItemIndex(item_menu, icount);
+               if (self.games_array[icount].with_folder) {
+                  TSU_ItemMenuSetItemValue(item_menu, name);
+               }
+               else {
+                  TSU_ItemMenuSetItemValue(item_menu, name);
+               }
+               
+               TSU_ItemMenuSetTranslate(item_menu, &vectorTranslate);
+               
+               self.img_button_animation[self.game_count-1] = (Animation *)TSU_LogXYMoverCreate(self.menu_option.init_position_x + (column * self.menu_option.padding_x), 
+                        (self.menu_option.image_size + self.menu_option.padding_y) * (self.game_count - self.menu_option.size_items_column * column) + self.menu_option.init_position_y);
+                        
+               TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count-1]);
+
+               if (self.game_count == 1) {
+                  TSU_ItemMenuSetSelected(item_menu, true);
+                  SetTitle(name);
+                  SetCursor();
+               }
+               else {
+                  TSU_ItemMenuSetSelected(item_menu, false);
+               }
+               
+               TSU_MenuSubAddItemMenu(self.dsmenu_ptr, item_menu);
+            }
+
+            loaded = true;
+            FreeGames();
          }        
       }
    }
@@ -988,8 +988,8 @@ static void GamesApp_InputEvent(int type, int key)
 static int CanUseTrueAsyncDMA(void)
 {
 	return (self.sector_size == 2048 && 
-			(self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
-			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
+         (self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
+         (self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
 // static int GetImageType(const char *filename)
@@ -1019,8 +1019,8 @@ static void SendMessageEvent(const char* message)
 
 void DefaultPreset()
 {
-	if(CanUseTrueAsyncDMA()) {
-		self.isoldr->use_dma = 1;
+   if(CanUseTrueAsyncDMA()) {
+      self.isoldr->use_dma = 1;
       self.isoldr->emu_async = 0;
       self.addr = ISOLDR_DEFAULT_ADDR_MIN_GINSU;
    }
@@ -1032,59 +1032,59 @@ void DefaultPreset()
    
    strcpy(self.isoldr->fs_dev, "auto");
    self.isoldr->emu_cdda = CDDA_MODE_DISABLED;
-	self.isoldr->use_irq = 0;
+   self.isoldr->use_irq = 0;
    self.isoldr->syscalls = 0;
    self.isoldr->emu_vmu = 0;
-	self.isoldr->scr_hotkey = 0;
+   self.isoldr->scr_hotkey = 0;
    // self.isoldr->exec.type = BIN_TYPE_AUTO; 
    self.isoldr->boot_mode = BOOT_MODE_DIRECT;
    
-	// Enable CDDA if present
-	if (self.item_value_selected[0] != '\0') {
+   // Enable CDDA if present
+   if (self.item_value_selected[0] != '\0') {
 
-		char track_file_path[NAME_MAX];
+      char track_file_path[NAME_MAX];
       char game_with_folder[NAME_MAX];
 
       memset(game_with_folder, 0, sizeof(game_with_folder));
       strcpy(game_with_folder, self.item_value_selected + strlen(self.games_path) + 1);
 
-		size_t track_size = GetCDDATrackFilename(4, self.games_path, game_with_folder, track_file_path);
+      size_t track_size = GetCDDATrackFilename(4, self.games_path, game_with_folder, track_file_path);
 
-		if (track_size && track_size < 30 * 1024 * 1024) {
-			track_size = GetCDDATrackFilename(6, self.games_path, game_with_folder, track_file_path);
-		}
+      if (track_size && track_size < 30 * 1024 * 1024) {
+         track_size = GetCDDATrackFilename(6, self.games_path, game_with_folder, track_file_path);
+      }
 
-		if (track_size > 0) {
+      if (track_size > 0) {
          self.isoldr->use_irq = 1;
          self.isoldr->emu_cdda = 1;    
-		}
-	}
+      }
+   }
 }
 
 static void GetMD5Hash(const char *file_mount_point) {
-	file_t fd;
-	fd = fs_iso_first_file(file_mount_point);
-	
-	if(fd != FILEHND_INVALID) {
+   file_t fd;
+   fd = fs_iso_first_file(file_mount_point);
 
-		if(fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, (int) self.boot_sector) < 0) {
-			memset(self.md5, 0, sizeof(self.md5));
-			memset(self.boot_sector, 0, sizeof(self.boot_sector));
-		} else {
-			kos_md5(self.boot_sector, sizeof(self.boot_sector), self.md5);
-		}
-		
-		/* Also get image type and sector size */
-		if(fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int) &self.image_type) < 0) {
-			ds_printf("%s: Can't get image type\n", lib_get_name());
-		}
-		
-		if(fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, (int) &self.sector_size) < 0) {
-			ds_printf("%s: Can't get sector size\n", lib_get_name());
-		}
-		
-		fs_close(fd);
-	}
+   if(fd != FILEHND_INVALID) {
+
+      if(fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, (int) self.boot_sector) < 0) {
+         memset(self.md5, 0, sizeof(self.md5));
+         memset(self.boot_sector, 0, sizeof(self.boot_sector));
+      } else {
+         kos_md5(self.boot_sector, sizeof(self.boot_sector), self.md5);
+      }
+      
+      /* Also get image type and sector size */
+      if(fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int) &self.image_type) < 0) {
+         ds_printf("%s: Can't get image type\n", lib_get_name());
+      }
+      
+      if(fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, (int) &self.sector_size) < 0) {
+         ds_printf("%s: Can't get sector size\n", lib_get_name());
+      }
+      
+      fs_close(fd);
+   }
 }
 
 static int LoadPreset()
