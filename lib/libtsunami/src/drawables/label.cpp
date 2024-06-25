@@ -82,7 +82,7 @@ extern "C"
 		if (label_ptr != NULL) {
 			delete label_ptr;
 			label_ptr = NULL;
-        }
+		}
 	}
 
 	void TSU_LabelSetText(Label *label_ptr, const char *text)
@@ -103,7 +103,7 @@ extern "C"
 	{
 		if (label_ptr != NULL) {
 			// char* result_string = new char[label_ptr->getText().size() + 1];
-    		// strcpy(result_string, label_ptr->getText().c_str());
+			// strcpy(result_string, label_ptr->getText().c_str());
 			// return result_string;
 			return label_ptr->getText().c_str();
 		}
@@ -111,7 +111,7 @@ extern "C"
 			return NULL;
 		}
 	}
-	
+
 	void TSU_LabelSetSmear(Label *label_ptr, bool smear)
 	{
 		if (label_ptr != NULL) {

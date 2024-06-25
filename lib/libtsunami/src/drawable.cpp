@@ -338,5 +338,4 @@ extern "C"
 	{
 		return drawable_ptr->getParent();
 	}
-
 }

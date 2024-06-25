@@ -216,7 +216,7 @@ extern "C"
 	{
 		if (path != NULL) {
 			return new Font(path, list);
-        }
+		}
 		else {
 			return NULL;
 		}
@@ -227,7 +227,7 @@ extern "C"
 		if (font_ptr != NULL) {
 			delete font_ptr;
 			font_ptr = NULL;
-        }
+		}
 	}
 
 	bool TSU_FontLoadFromFile(Font *font_ptr, const char *path)
@@ -359,5 +359,4 @@ extern "C"
 			font_ptr->centerCoords(text, x, y);
 		}
 	}
-
 }

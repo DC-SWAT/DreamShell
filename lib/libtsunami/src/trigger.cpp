@@ -22,10 +22,10 @@ void Trigger::trigger(Drawable *t, Animation *a) {
 
 extern "C"
 {
-   void TSU_TriggerDestroy(Trigger *trigger_ptr)
-   {
-      if (trigger_ptr != NULL) {
+	void TSU_TriggerDestroy(Trigger *trigger_ptr)
+	{
+		if (trigger_ptr != NULL) {
 			delete trigger_ptr;
 		}
-   }
+	}
 }

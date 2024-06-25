@@ -185,193 +185,193 @@ Banner* ItemMenu::GetBanner()
 }
 
 extern "C"
-{
+	{
 
-    ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, const char *text, Font *font_ptr, int font_size)
-    {
-        if (font_ptr != NULL) {
-            return new ItemMenu(image_file, width, height, text, font_ptr, font_size);
-        }
-        else {
-            return NULL;
-        }
-    }
+	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, const char *text, Font *font_ptr, int font_size)
+	{
+		if (font_ptr != NULL) {
+			return new ItemMenu(image_file, width, height, text, font_ptr, font_size);
+		}
+		else {
+			return NULL;
+		}
+	}
 
-    ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height)
-    {
-        return new ItemMenu(image_file, width, height);
-    }
+	ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height)
+	{
+		return new ItemMenu(image_file, width, height);
+	}
 
-    ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size)
-    {
-        if (font_ptr != NULL) {
-            return new ItemMenu(text, font_ptr, font_size);
-        }
-        else {
-            return NULL;
-        }
-    }
+	ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size)
+	{
+		if (font_ptr != NULL) {
+			return new ItemMenu(text, font_ptr, font_size);
+		}
+		else {
+			return NULL;
+		}
+	}
 
-    void TSU_ItemMenuDestroy(ItemMenu *item_menu_ptr)
+	void TSU_ItemMenuDestroy(ItemMenu *item_menu_ptr)
 	{
 		if (item_menu_ptr != NULL) {
 			delete item_menu_ptr;
 			item_menu_ptr = NULL;
-        }
+		}
 	}
 
-    void TSU_ItemMenuSetItemValue(ItemMenu *item_menu_ptr, const char *value)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->item_value = value;
-        }
-    }
+	void TSU_ItemMenuSetItemValue(ItemMenu *item_menu_ptr, const char *value)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->item_value = value;
+		}
+	}
 
-    const char* TSU_ItemMenuGetItemValue(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            // char* result_string = new char[item_menu_ptr->item_value.size() + 1];
-    		// strcpy(result_string, item_menu_ptr->item_value.c_str());
+	const char* TSU_ItemMenuGetItemValue(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			// char* result_string = new char[item_menu_ptr->item_value.size() + 1];
+			// strcpy(result_string, item_menu_ptr->item_value.c_str());
 			// return result_string;
 
-            return item_menu_ptr->item_value.c_str();
-        }
-        else {
-            return NULL;
-        }
-    }
+			return item_menu_ptr->item_value.c_str();
+		}
+		else {
+			return NULL;
+		}
+	}
 
-    void TSU_ItemMenuSetItemIndex(ItemMenu *item_menu_ptr, int index)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->item_index = index;
-        }
-    }
+	void TSU_ItemMenuSetItemIndex(ItemMenu *item_menu_ptr, int index)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->item_index = index;
+		}
+	}
 
-    int TSU_ItemMenuGetItemIndex(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
+	int TSU_ItemMenuGetItemIndex(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
 			return item_menu_ptr->item_index;
-        }
-        else {
-            return -1;
-        }
-    }
+		}
+		else {
+			return -1;
+		}
+	}
 
-    void TSU_ItemMenuSetTranslate(ItemMenu *item_menu_ptr, const Vector *v)
+	void TSU_ItemMenuSetTranslate(ItemMenu *item_menu_ptr, const Vector *v)
 	{
 		if (item_menu_ptr != NULL) {
 			item_menu_ptr->setTranslate(*v);
 		}
 	}
 
-    void TSU_ItemMenuAnimAdd(ItemMenu *item_menu_ptr, Animation *anim_ptr)
+	void TSU_ItemMenuAnimAdd(ItemMenu *item_menu_ptr, Animation *anim_ptr)
 	{
 		if (item_menu_ptr != NULL && anim_ptr != NULL) {
 			item_menu_ptr->animAdd(anim_ptr);
 		}
 	}
 
-    void TSU_ItemMenuFreeItem(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->FreeItem();
-        }
-    }
+	void TSU_ItemMenuFreeItem(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->FreeItem();
+		}
+	}
 
-    void TSU_ItemMenuInit(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->Init();
-        }
-    }
+	void TSU_ItemMenuInit(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->Init();
+		}
+	}
 
-    bool TSU_ItemMenuIsSelected(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            return item_menu_ptr->IsSelected();
-        }
-        else {
-            return false;
-        }
-    }
+	bool TSU_ItemMenuIsSelected(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			return item_menu_ptr->IsSelected();
+		}
+		else {
+			return false;
+		}
+	}
 
-    void TSU_ItemMenuSetImageColor(ItemMenu *item_menu_ptr, const Color *color)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->SetImageColor(*color);
-        }
-    }
+	void TSU_ItemMenuSetImageColor(ItemMenu *item_menu_ptr, const Color *color)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->SetImageColor(*color);
+		}
+	}
 
-    void TSU_ItemMenuSetTextColor(ItemMenu *item_menu_ptr, const Color *color)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->SetTextColor(*color);
-        }
-    }
+	void TSU_ItemMenuSetTextColor(ItemMenu *item_menu_ptr, const Color *color)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->SetTextColor(*color);
+		}
+	}
 
-    void TSU_ItemMenuSetColorUnselected(ItemMenu *item_menu_ptr, const Color *color)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->SetColorUnselected(*color);
-        }
-    }
+	void TSU_ItemMenuSetColorUnselected(ItemMenu *item_menu_ptr, const Color *color)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->SetColorUnselected(*color);
+		}
+	}
 
-    void TSU_ItemMenuSetSelected(ItemMenu *item_menu_ptr, bool selected)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->SetSelected(selected);
-        }
-    }
+	void TSU_ItemMenuSetSelected(ItemMenu *item_menu_ptr, bool selected)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->SetSelected(selected);
+		}
+	}
 
-    bool TSU_ItemMenuHasTextAndImage(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            return item_menu_ptr->HasTextAndImage();
-        }
-        else {
-            return false;
-        }
-    }
-    
-    Banner* TSU_ItemMenuGetBanner(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            return item_menu_ptr->GetBanner();
-        }
-        else {
-            return NULL;
-        }
-    }
+	bool TSU_ItemMenuHasTextAndImage(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			return item_menu_ptr->HasTextAndImage();
+		}
+		else {
+			return false;
+		}
+	}
 
-    Label* TSU_ItemMenuGetLabel(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            return item_menu_ptr->GetLabel();
-        }
-        else {
-            return NULL;
-        }
-    }
+	Banner* TSU_ItemMenuGetBanner(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			return item_menu_ptr->GetBanner();
+		}
+		else {
+			return NULL;
+		}
+	}
 
-    void TSU_ItemMenuSetLabelText(ItemMenu *item_menu_ptr, const char *text)
-    {
-        if (item_menu_ptr != NULL) {
-            item_menu_ptr->GetLabel()->setText(text);            
-        }
-    }
+	Label* TSU_ItemMenuGetLabel(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			return item_menu_ptr->GetLabel();
+		}
+		else {
+			return NULL;
+		}
+	}
 
-    const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr)
-    {
-        if (item_menu_ptr != NULL) {
-            // char* result_string = new char[item_menu_ptr->GetLabel()->getText().size() + 1];
-    		// strcpy(result_string, item_menu_ptr->GetLabel()->getText().c_str());
+	void TSU_ItemMenuSetLabelText(ItemMenu *item_menu_ptr, const char *text)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->GetLabel()->setText(text);            
+		}
+	}
+
+	const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr)
+	{
+		if (item_menu_ptr != NULL) {
+			// char* result_string = new char[item_menu_ptr->GetLabel()->getText().size() + 1];
+			// strcpy(result_string, item_menu_ptr->GetLabel()->getText().c_str());
 			// return result_string;            
-            return item_menu_ptr->GetLabel()->getText().c_str();
-        }
-        else {
-            return NULL;
-        }
-    }
+			return item_menu_ptr->GetLabel()->getText().c_str();
+		}
+		else {
+			return NULL;
+		}
+	}
 
 }

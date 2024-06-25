@@ -108,7 +108,7 @@ void Banner::draw(int list) {
 
 
 extern "C"
-{
+	{
 	Banner* TSU_BannerCreate(int list, Texture *texture_ptr)
 	{
 		if (texture_ptr != NULL) {
@@ -124,7 +124,7 @@ extern "C"
 		if (banner_ptr != NULL) {
 			delete banner_ptr;
 			banner_ptr = NULL;
-        }
+		}
 	}
 
 	void TSU_BannerDestroyAll(Banner *banner_ptr)
