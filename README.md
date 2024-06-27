@@ -35,7 +35,7 @@ cp ds/sdk/toolchain/patches/*.diff utils/dc-chain/patches
 sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
 cd /usr/local/dc/kos/kos/utils/dc-chain
-cp config/config.mk.stable.sample config.mk
+cp Makefile.default.cfg Makefile.cfg
 make && cd ../../
 ```
 ##### SDK

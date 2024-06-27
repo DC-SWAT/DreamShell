@@ -1,12 +1,13 @@
 /** 
  * \file    exports_fix.h
  * \brief   DreamShell exports fix
- * \date    2023
+ * \date    2023, 2024
  * \author  SWAT www.dc-swat.ru
  */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <kos.h>
 #include <kos/net.h>
 

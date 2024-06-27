@@ -241,7 +241,7 @@ static int dreameye_get_video_frame_part(maple_device_t *dev) {
     return MAPLE_EOK;
 }
 
-static void dreameye_get_video_frame_cb(maple_frame_t *frame) {
+static void dreameye_get_video_frame_cb(maple_state_t *st, maple_frame_t *frame) {
     maple_response_t *resp;
     uint32_t *respbuf32;
     uint8_t *respbuf8, *packet;
@@ -451,7 +451,7 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t **data, int *img_sz) {
     return MAPLE_EFAIL;
 }
 
-static void dreameye_get_param_cb(maple_frame_t *frame) {
+static void dreameye_get_param_cb(maple_state_t *st, maple_frame_t *frame) {
     dreameye_state_ext_t *de;
     maple_response_t *resp;
     uint32_t *respbuf32;
@@ -538,7 +538,7 @@ int dreameye_get_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
     return MAPLE_EOK;
 }
 
-static void dreameye_queue_param_cb(maple_frame_t *frame) {
+static void dreameye_queue_param_cb(maple_state_t *st, maple_frame_t *frame) {
 //    dreameye_state_ext_t *de;
     maple_response_t *resp;
     uint8_t *respbuf8;
@@ -592,9 +592,9 @@ int dreameye_queue_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16
 }
 
 
-static void dreameye_set_param_cb(maple_frame_t *frame) {
+static void dreameye_set_param_cb(maple_state_t *st, maple_frame_t *frame) {
 
-    dreameye_queue_param_cb(frame);
+    dreameye_queue_param_cb(st, frame);
 
     /* Wake up! */
     genwait_wake_all(frame);

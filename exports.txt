@@ -1786,6 +1786,8 @@ library_lookup
 library_by_libid
 library_list
 #
+asic_evt_remove_handler
+#
 # CD-Rom
 cdrom_init
 cdrom_shutdown
@@ -1925,3 +1927,8 @@ perf_cntr_timer_enable
 perf_cntr_timer_disable
 perf_cntr_timer_enabled
 perf_cntr_timer_ns
+oneshot_timer_create
+oneshot_timer_setup
+oneshot_timer_start
+oneshot_timer_stop
+oneshot_timer_destroy
