@@ -156,6 +156,41 @@ int conf_parse(isoldr_conf *cfg, const char *filename)
 	return 0;
 }
 
+const char* GetLastPart(const char *source, const char separator, int option_path)
+{
+	static char path[NAME_MAX];
+	memset(path, 0, NAME_MAX);
+	
+	char *last_folder = strrchr(source, separator);
+	if (last_folder != NULL)
+	{
+		strcpy(path, last_folder + 1);
+	}
+	else 
+	{
+		strcpy(path, source);
+	}
+
+	if (option_path == 2)
+	{
+		for (char *c = path; *c = toupper(*c); ++c)
+		{
+			if (*c == 'a')
+				*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
+		}
+	}
+	else if (option_path == 1)
+	{
+		for (char *c = path; *c = tolower(*c); ++c)
+		{
+			if (*c == 'A')
+				*c = 'a'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
+		}
+	}
+	
+	return path;
+}
+
 int GetDeviceType(const char *dir)
 {
 
@@ -198,7 +233,6 @@ int GetDeviceType(const char *dir)
 
 char *MakePresetFilename(const char *dir, uint8 *md5)
 {
-
 	char dev[8];
 	static char filename[NAME_MAX];
 
@@ -229,41 +263,37 @@ char *MakePresetFilename(const char *dir, uint8 *md5)
 	return filename;
 }
 
-size_t GetCDDATrackFilename(int num, const char *fpath, const char *folder_game, char *result)
+size_t GetCDDATrackFilename(int num, const char *full_path_game, char *result)
 {
-	char path[NAME_MAX];
-	int len = 0;
+	char *path = (char *)malloc(NAME_MAX);
 	int size = 0;
 
-	if (strchr(folder_game, '/'))
-	{
-		len = strlen(strchr(folder_game, '/'));
-	}
-	else
-	{
-		// len = strlen(folder_game);
-	}
+	char *game = (char *)malloc(NAME_MAX);
+	memset(game, 0, NAME_MAX);
+	strcpy(game, GetLastPart(full_path_game, '/', 0));	
 
 	memset(result, 0, NAME_MAX);
 	memset(path, 0, NAME_MAX);
-	strncpy(path, folder_game, strlen(folder_game) - len);
-	snprintf(result, NAME_MAX, "%s/%s/track%02d.raw", fpath, path, num);
+
+	strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
+	snprintf(result, NAME_MAX, "%s/track%02d.raw", path, num);
 
 	ds_printf("TRACK RESULT: %s", result);
+	free(game);
+	free(path);
 
 	size = FileSize(result);
-
+	
 	if (size > 0)
 	{
 		return size;
 	}
 
-	len = strlen(result);
+	int len = strlen(result);
 	result[len - 3] = 'w';
 	result[len - 1] = 'v';
 
-	size = FileSize(result);
-	return size;
+	return FileSize(result);
 }
 
 static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;
