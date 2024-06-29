@@ -73,7 +73,8 @@ void Banner::draw(int list) {
 	if (list == PLX_LIST_TR_POLY) {
 		vert.argb = getColor();
 	} else {
-		Color t = getColor(); t.a = 1.0f;
+		Color t = getColor(); 
+		t.a = 1.0f;
 		vert.argb = t;
 	}
 	vert.oargb = 0;

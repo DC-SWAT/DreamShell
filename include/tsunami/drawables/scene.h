@@ -22,14 +22,8 @@
  */
 class Scene : public Drawable {
 public:
-	Scene() {
-		// Scene is always finished itself, because it doesn't draw
-		// anything. This will make it check its sub-drawables for
-		// finishedness before acquiescing.
-		setFinished();
-	}
-	virtual ~Scene() {
-	}
+	Scene();
+	virtual ~Scene();
 };
 
 #else
@@ -43,13 +37,8 @@ extern "C"
 {
 #endif
 
-// void *TSU_SceneCreate();
-
-// void *TSU_SceneCreate();
-// {
-// 	auto scene_ptr = std::make_shared<Scene>();
-// 	return reinterpret_cast<void *>(&scene_ptr);
-// }
+Scene* TSU_SceneCreate();
+void TSU_SceneDestroy(Scene *scene_ptr);
 
 #ifdef __cplusplus
 };

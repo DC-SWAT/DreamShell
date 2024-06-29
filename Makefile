@@ -66,15 +66,6 @@ TSUNAME_LIBS = -ltsunami_$(TSUNAMI_VER)
 
 CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(TSUNAME_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
 
-#TSUNAMI_DIR = $(LIB_DIR)/libtsunami/src
-#TSUNAMI_OBJS = $(TSUNAMI_DIR)/tsunamiutils.o $(TSUNAMI_DIR)/animation.o $(TSUNAMI_DIR)/drawable.o $(TSUNAMI_DIR)/font.o \
-				$(TSUNAMI_DIR)/genmenu.o $(TSUNAMI_DIR)/matrix.o $(TSUNAMI_DIR)/matrixdouble.o $(TSUNAMI_DIR)/dsmenu.o \
-				$(TSUNAMI_DIR)/sound.o $(TSUNAMI_DIR)/texture.o $(TSUNAMI_DIR)/trigger.o \
-				$(TSUNAMI_DIR)/vector.o $(TSUNAMI_DIR)/vector3.o $(TSUNAMI_DIR)/vectordouble.o \
-				$(TSUNAMI_DIR)/anims/alphafader.o $(TSUNAMI_DIR)/anims/expxymover.o $(TSUNAMI_DIR)/anims/logxymover.o $(TSUNAMI_DIR)/anims/tintfader.o \
-				$(TSUNAMI_DIR)/drawables/banner.o $(TSUNAMI_DIR)/drawables/label.o $(TSUNAMI_DIR)/drawables/itemmenu.o \
-				$(TSUNAMI_DIR)/triggers/birth.o $(TSUNAMI_DIR)/triggers/death.o
-
 SDL_GUI = $(LIB_DIR)/SDL_gui
 SDL_CONSOLE = $(LIB_DIR)/SDL_Console/src
 

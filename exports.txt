@@ -1186,6 +1186,8 @@ TSU_MenuSubRemoveItemMenu
 TSU_MenuSubRemoveBanner
 TSU_MenuSubRemoveLabel
 TSU_MenSetTranslate
+TSU_SceneCreate
+TSU_SceneDestroy
 TSU_ItemMenuCreate
 TSU_ItemMenuCreateImage
 TSU_ItemMenuCreateLabel

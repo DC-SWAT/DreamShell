@@ -214,13 +214,18 @@ char *MakePresetFilename(const char *dir, uint8 *md5)
 		dev[3] = '\0';
 	}
 
+
 	snprintf(filename, sizeof(filename),
-			 "%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-			 getenv("PATH"), "iso_loader", dev, md5[0],
-			 // getenv("PATH"), "iso_loader", "ide", md5[0],
-			 md5[1], md5[2], md5[3], md5[4], md5[5],
-			 md5[6], md5[7], md5[8], md5[9], md5[10],
-			 md5[11], md5[12], md5[13], md5[14], md5[15]);
+			"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
+#ifndef DEBUG_MENU_GAMES_CD
+			getenv("PATH"), "iso_loader", "ide", md5[0],
+#else
+			getenv("PATH"), "iso_loader", dev, md5[0],
+#endif
+			md5[1], md5[2], md5[3], md5[4], md5[5],
+			md5[6], md5[7], md5[8], md5[9], md5[10],
+			md5[11], md5[12], md5[13], md5[14], md5[15]);
+
 	return filename;
 }
 

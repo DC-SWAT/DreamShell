@@ -66,14 +66,14 @@ void ItemMenu::Init()
     image_texture = nullptr;
 }
 
-ItemMenu::ItemMenu(const char *image_file, float width, float height)
+ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type)
 {
     Init();
 
     Vector translateVector = Vector(padding_x, padding_y, 2);
     
-    image_texture = new Texture(image_file, true);        
-    image = new Banner(PVR_LIST_TR_POLY, image_texture);
+    image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY);
+    image = new Banner(pvr_type, image_texture);
     image->setSize(width, height);        
     image->setTranslate(translateVector);
     this->subAdd(image);
@@ -97,14 +97,14 @@ ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
     this->subAdd(this->text);
 }
 
-ItemMenu::ItemMenu(const char *image_file, float width, float height, const char *text, Font *font, int font_size)
+ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size)
 {
     Init();
 
     Vector translateVector = Vector(padding_x, padding_y, 2);
 
-    image_texture = new Texture(image_file, true);
-    image = new Banner(PVR_LIST_TR_POLY, image_texture);
+    image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY);
+    image = new Banner(pvr_type, image_texture);
     image->setSize(width, height);
     image->setTranslate(translateVector);
     this->subAdd(image);
@@ -185,21 +185,21 @@ Banner* ItemMenu::GetBanner()
 }
 
 extern "C"
-	{
+{
 
-	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, const char *text, Font *font_ptr, int font_size)
+	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size)
 	{
 		if (font_ptr != NULL) {
-			return new ItemMenu(image_file, width, height, text, font_ptr, font_size);
+			return new ItemMenu(image_file, width, height, pvr_type, text, font_ptr, font_size);
 		}
 		else {
 			return NULL;
 		}
 	}
 
-	ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height)
+	ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type)
 	{
-		return new ItemMenu(image_file, width, height);
+		return new ItemMenu(image_file, width, height, pvr_type);
 	}
 
 	ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size)
