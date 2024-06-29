@@ -63,8 +63,8 @@ extern "C"
 #endif
 
 Banner* TSU_BannerCreate(int list, Texture *texture_ptr);
-void TSU_BannerDestroy(Banner *banner_ptr);
-void TSU_BannerDestroyAll(Banner *banner_ptr);
+void TSU_BannerDestroy(Banner **banner_ptr);
+void TSU_BannerDestroyAll(Banner **banner_ptr);
 void TSU_BannerSetTexture(Banner *banner_ptr, Texture *texture_ptr);
 void TSU_BannerSetUV(Banner *banner_ptr, float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4);
 void TSU_BannerSetSize(Banner *banner_ptr, float w, float h);

@@ -77,11 +77,11 @@ extern "C"
 		}
 	}
 
-	void TSU_LabelDestroy(Label *label_ptr)
+	void TSU_LabelDestroy(Label **label_ptr)
 	{
-		if (label_ptr != NULL) {
-			delete label_ptr;
-			label_ptr = NULL;
+		if (*label_ptr != NULL) {
+			delete *label_ptr;
+			*label_ptr = NULL;
 		}
 	}
 

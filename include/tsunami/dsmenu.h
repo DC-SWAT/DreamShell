@@ -66,7 +66,7 @@ DSMenu* TSU_MenuCreate(InputEventPtr *input_event_callback);
 DSMenu* TSU_MenuCreateWithExit(InputEventPtr *input_event_callback, ExitDoMenuEventPtr *exit_do_menu_callback);
 void TSU_MenuDoMenu(DSMenu *dsMenu);
 void TSU_MenuDoMenuAsync(DSMenu *dsMenu);
-void TSU_MenuDestroy(DSMenu *dsMenu);
+void TSU_MenuDestroy(DSMenu **dsMenu);
 void TSU_MenuSetBg(DSMenu *dsMenu, float r, float g, float b);
 Scene* TSU_MenuGetScene(DSMenu *dsMenu);
 void TSU_MenuStartExit(DSMenu *dsMenu);

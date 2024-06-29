@@ -75,7 +75,7 @@ extern "C"
 ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size);
 ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type);
 ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size);
-void TSU_ItemMenuDestroy(ItemMenu *item_menu_ptr);
+void TSU_ItemMenuDestroy(ItemMenu **item_menu_ptr);
 void TSU_ItemMenuSetItemValue(ItemMenu *item_menu_ptr, const char *value);
 const char* TSU_ItemMenuGetItemValue(ItemMenu *item_menu_ptr);
 void TSU_ItemMenuSetTranslate(ItemMenu *item_menu_ptr, const Vector *v);

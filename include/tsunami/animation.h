@@ -62,7 +62,7 @@ extern "C"
 {
 #endif
 
-void TSU_AnimationDestroy(Animation *animation_ptr);
+void TSU_AnimationDestroy(Animation **animation_ptr);
 void TSU_TriggerAdd(Animation *animation_ptr, Trigger *trigger_ptr);
 void TSU_TriggerRemove(Animation *animation_ptr, Trigger *trigger_ptr);
 void TSU_TriggerRemoveAll(Animation *animation_ptr);

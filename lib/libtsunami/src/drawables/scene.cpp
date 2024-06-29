@@ -17,12 +17,12 @@ extern "C"
 		return new Scene();
 	}
 
-	void TSU_SceneDestroy(Scene *scene_ptr)
+	void TSU_SceneDestroy(Scene **scene_ptr)
 	{
-		if (scene_ptr != NULL)
+		if (*scene_ptr != NULL)
 		{
-			delete scene_ptr;
-			scene_ptr = NULL;
+			delete *scene_ptr;
+			*scene_ptr = NULL;
 		}
 	}
 }

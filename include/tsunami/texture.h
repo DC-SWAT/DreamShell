@@ -74,7 +74,7 @@ extern "C"
 Texture* TSU_TextureCreate(int w, int h, int fmt);
 Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, bool yflip);
 Texture* TSU_TextureCreateEmpty();
-void TSU_TextureDestroy(Texture *texture_ptr);
+void TSU_TextureDestroy(Texture **texture_ptr);
 bool TSU_TextureLoadFromFile(Texture *texture_ptr, const char *texture_path, bool use_alpha, bool yflip);
 
 #ifdef __cplusplus

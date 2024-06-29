@@ -342,20 +342,17 @@ static void SetCursor()
 	if (self.item_selector != NULL)
 	{
 		TSU_MenuSubRemoveBanner(self.dsmenu_ptr, self.item_selector);
-		TSU_BannerDestroy(self.item_selector);
-		self.item_selector = NULL;
+		TSU_BannerDestroy(&self.item_selector);
 	}
 
 	if (self.item_selector_animation != NULL)
 	{
-		TSU_AnimationDestroy(self.item_selector_animation);
-		self.item_selector_animation = NULL;
+		TSU_AnimationDestroy(&self.item_selector_animation);
 	}
 
 	if (self.item_selector_texture != NULL)
 	{
-		TSU_TextureDestroy(self.item_selector_texture);
-		self.item_selector_texture = NULL;
+		TSU_TextureDestroy(&self.item_selector_texture);
 	}
 
 	if (self.item_selector == NULL)
@@ -382,7 +379,7 @@ static void SetCursor()
 			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.7f);
 		}
 
-		if (selector_translate.x && selector_translate.y > 0)
+		if (selector_translate.x > 0 && selector_translate.y > 0)
 		{
 			TSU_DrawableSetTranslate((Drawable *)self.item_selector, &selector_translate);
 		}
@@ -437,98 +434,119 @@ static int AppCompareGames(const void *a, const void *b)
 	const GameItemStruct *right = (const GameItemStruct *)b;
 	int cmp = 0;
 
-	if (left->folder[0] != '\0' && right->folder[0] != '\0')
+	char *left_compare = malloc(MAX_SIZE_GAME_NAME);
+	char *right_compare = malloc(MAX_SIZE_GAME_NAME);
+
+	memset(left_compare, 0, MAX_SIZE_GAME_NAME);
+	memset(right_compare, 0, MAX_SIZE_GAME_NAME);
+
+	if (left->is_folder_name && right->is_folder_name)
 	{
-		cmp = strcmp(left->folder, right->folder);
+		strcpy(left_compare, GetLastPart(left->folder, '/', 0));
+		strcpy(right_compare, GetLastPart(right->folder, '/', 0));
+
+		cmp = strcmp(left_compare, right_compare);
 	}
-	else if (left->folder[0] != '\0')
+	else if (left->is_folder_name)
 	{
-		cmp = strcmp(left->folder, right->game);
+		strcpy(left_compare, GetLastPart(left->folder, '/', 0));
+		strncpy(right_compare, right->game, strlen(right->game) - 4);
+
+		cmp = strcmp(left_compare, right_compare);
 	}
-	else if (right->folder[0] != '\0')
+	else if (right->is_folder_name)
 	{
-		cmp = strcmp(left->game, right->folder);
+		strncpy(left_compare, left->game, strlen(left->game) - 4);
+		strcpy(right_compare, GetLastPart(right->folder, '/', 0));		
+		
+		cmp = strcmp(left_compare, right_compare);
 	}
 	else
 	{
-		cmp = strcmp(left->game, right->game);
+		strncpy(left_compare, left->game, strlen(left->game) - 4);
+		strncpy(right_compare, right->game, strlen(right->game) - 4);
+
+		cmp = strcmp(left_compare, right_compare);
 	}
+
+	free(left_compare);
+	free(right_compare);
 
 	return cmp > 0 ? cmp : -1;
 }
 
-static int TotalPages()
-{
-	int fileCount = 0;
-	char game_path[NAME_MAX];
-	char *file_type = NULL;
-	file_t fdg;
-	dirent_t *entg = NULL;
+// static int TotalPages()
+// {
+// 	int fileCount = 0;
+// 	char game_path[NAME_MAX];
+// 	char *file_type = NULL;
+// 	file_t fdg;
+// 	dirent_t *entg = NULL;
 
-	file_t fd = fs_open(self.games_path, O_RDONLY | O_DIR);
-	dirent_t *ent;
+// 	file_t fd = fs_open(self.games_path, O_RDONLY | O_DIR);
+// 	dirent_t *ent;
 
-	if (fd == FILEHND_INVALID)
-		return 0;
+// 	if (fd == FILEHND_INVALID)
+// 		return 0;
 
-	while ((ent = fs_readdir(fd)) != NULL)
-	{
-		if (ent->name[0] == '.')
-			continue;
+// 	while ((ent = fs_readdir(fd)) != NULL)
+// 	{
+// 		if (ent->name[0] == '.')
+// 			continue;
 
-		file_type = strrchr(ent->name, '.');
+// 		file_type = strrchr(ent->name, '.');
 
-		if (strcasecmp(file_type, ".cdi") == 0 || strcasecmp(file_type, ".cso") == 0 
-			|| (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(entg->name, "track", strlen("track")) == 0)))
-		{
-			fileCount++;
-		}
-		else
-		{
-			memset(game_path, '\0', sizeof(game_path));
-			snprintf(game_path, sizeof(game_path), "%s/%s", self.games_path, ent->name);
+// 		if (strcasecmp(file_type, ".cdi") == 0 || strcasecmp(file_type, ".cso") == 0 
+// 			|| (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(entg->name, "track", strlen("track")) == 0)))
+// 		{
+// 			fileCount++;
+// 		}
+// 		else
+// 		{
+// 			memset(game_path, '\0', sizeof(game_path));
+// 			snprintf(game_path, sizeof(game_path), "%s/%s", self.games_path, ent->name);
 
-			fdg = fs_open(game_path, O_RDONLY | O_DIR);
+// 			fdg = fs_open(game_path, O_RDONLY | O_DIR);
 
-			if (fdg == FILEHND_INVALID)
-				continue;
+// 			if (fdg == FILEHND_INVALID)
+// 				continue;
 
-			while ((entg = fs_readdir(fdg)) != NULL)
-			{
-				if (entg->name[0] == '.')
-					continue;
+// 			while ((entg = fs_readdir(fdg)) != NULL)
+// 			{
+// 				if (entg->name[0] == '.')
+// 					continue;
 
-				file_type = strrchr(entg->name, '.');
+// 				file_type = strrchr(entg->name, '.');
 
-				if (strcasecmp(file_type, ".gdi") == 0)
-				{
-					fileCount++;
-					break;
-				}
-				else if (strcasecmp(file_type, ".cdi") == 0)
-				{
-					fileCount++;
-					break;
-				}
-				else if (strcasecmp(file_type, ".cso") == 0)
-				{
-					fileCount++;
-					break;
-				}
-				else if (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(entg->name, "track", strlen("track")) == 0))
-				{
-					fileCount++;
-					break;
-				}
-			}
-			fs_close(fdg);
-		}
-	}
-	fs_close(fd);
-	file_type = NULL;
+// 				if (strcasecmp(file_type, ".gdi") == 0)
+// 				{
+// 					fileCount++;
+// 					break;
+// 				}
+// 				else if (strcasecmp(file_type, ".cdi") == 0)
+// 				{
+// 					fileCount++;
+// 					break;
+// 				}
+// 				else if (strcasecmp(file_type, ".cso") == 0)
+// 				{
+// 					fileCount++;
+// 					break;
+// 				}
+// 				else if (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(entg->name, "track", strlen("track")) == 0))
+// 				{
+// 					fileCount++;
+// 					break;
+// 				}
+// 			}
+// 			fs_close(fdg);
+// 		}
+// 	}
+// 	fs_close(fd);
+// 	file_type = NULL;
 
-	return (fileCount > 0 ? ceil((float)fileCount / (float)self.menu_option.max_page_size) : 0);
-}
+// 	return (fileCount > 0 ? ceil((float)fileCount / (float)self.menu_option.max_page_size) : 0);
+// }
 
 static bool IsUniqueFileGame(const char *full_path_folder)
 {
@@ -690,7 +708,7 @@ static bool RetrieveGames()
 	}
 }
 
-static bool LoadPage(bool force)
+static bool LoadPage(bool change_view)
 {
 	bool loaded = false;
 	char game_cover_path[NAME_MAX];
@@ -709,7 +727,7 @@ static bool LoadPage(bool force)
 	}
 	else
 	{
-		if (force)
+		if (change_view)
 		{
 			self.pages = (self.games_array_count > 0 ? ceil((float)self.games_array_count / (float)self.menu_option.max_page_size) : 0);
 		}
@@ -729,7 +747,7 @@ static bool LoadPage(bool force)
 			self.current_page = 1;
 		}
 
-		if (self.current_page != self.previous_page || force)
+		if (self.current_page != self.previous_page || change_view)
 		{
 			self.previous_page = self.current_page;
 
@@ -737,17 +755,14 @@ static bool LoadPage(bool force)
 			{
 				if (self.img_button_animation[i] != NULL)
 				{
-					TSU_AnimationDestroy(self.img_button_animation[i]);
+					TSU_AnimationDestroy(&self.img_button_animation[i]);
 				}
 
 				if (self.img_button[i] != NULL)
 				{
 					TSU_MenuSubRemoveItemMenu(self.dsmenu_ptr, self.img_button[i]);
-					TSU_ItemMenuDestroy(self.img_button[i]);
+					TSU_ItemMenuDestroy(&self.img_button[i]);
 				}
-
-				self.img_button[i] = NULL;
-				self.img_button_animation[i] = NULL;
 			}
 
 			if (self.isoldr)
@@ -1474,60 +1489,50 @@ void FreeAppData()
 	{
 		if (self.img_button_animation[i] != NULL)
 		{
-			TSU_AnimationDestroy(self.img_button_animation[i]);
+			TSU_AnimationDestroy(&self.img_button_animation[i]);
 		}
 
 		if (self.img_button[i] != NULL)
 		{
-			TSU_ItemMenuDestroy(self.img_button[i]);
+			TSU_ItemMenuDestroy(&self.img_button[i]);
 		}
 
 		if (self.exit_animation_list[i] != NULL)
 		{
-			TSU_AnimationDestroy(self.exit_animation_list[i]);
+			TSU_AnimationDestroy(&self.exit_animation_list[i]);
 		}
 
 		if (self.exit_trigger_list[i] != NULL)
 		{
-			TSU_TriggerDestroy(self.exit_trigger_list[i]);
+			TSU_TriggerDestroy(&self.exit_trigger_list[i]);
 		}
-
-		self.img_button[i] = NULL;
-		self.img_button_animation[i] = NULL;
-		self.exit_animation_list[i] = NULL;
-		self.exit_trigger_list[i] = NULL;
 	}
 
 	if (self.item_selector != NULL)
 	{
-		TSU_BannerDestroy(self.item_selector);
+		TSU_BannerDestroy(&self.item_selector);
 	}
 
 	if (self.title != NULL)
 	{
-		TSU_LabelDestroy(self.title);
+		TSU_LabelDestroy(&self.title);
 	}
 
 	if (self.item_selector_animation != NULL)
 	{
-		TSU_AnimationDestroy(self.item_selector_animation);
+		TSU_AnimationDestroy(&self.item_selector_animation);
 	}
 
 	if (self.item_selector_texture != NULL)
 	{
-		TSU_TextureDestroy(self.item_selector_texture);
+		TSU_TextureDestroy(&self.item_selector_texture);
 	}
 
-	TSU_FontDestroy(self.menu_font);
-	TSU_MenuDestroy(self.dsmenu_ptr);
+	TSU_FontDestroy(&self.menu_font);
+	TSU_MenuDestroy(&self.dsmenu_ptr);
 	FreeGamesForce();
 
-	self.item_selector = NULL;
-	self.item_selector_animation = NULL;
-	self.item_selector_texture = NULL;
-	self.dsmenu_ptr = NULL;
 	self.scene_ptr = NULL;
-	self.title = NULL;
 }
 
 bool RunGame()

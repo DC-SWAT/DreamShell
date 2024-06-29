@@ -120,21 +120,21 @@ extern "C"
 		}
 	}
 
-	void TSU_BannerDestroy(Banner *banner_ptr)
+	void TSU_BannerDestroy(Banner **banner_ptr)
 	{
-		if (banner_ptr != NULL) {
-			delete banner_ptr;
-			banner_ptr = NULL;
+		if (*banner_ptr != NULL) {
+			delete *banner_ptr;
+			*banner_ptr = NULL;
 		}
 	}
 
-	void TSU_BannerDestroyAll(Banner *banner_ptr)
+	void TSU_BannerDestroyAll(Banner **banner_ptr)
 	{
 		if (banner_ptr != NULL) {
-			Texture *texture_ptr = banner_ptr->getTexture();
+			Texture *texture_ptr = (*banner_ptr)->getTexture();
 
-			delete banner_ptr;
-			banner_ptr = NULL;
+			delete *banner_ptr;
+			*banner_ptr = NULL;
 
 			if (texture_ptr != NULL) {
 				delete texture_ptr;

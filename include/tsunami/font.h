@@ -74,7 +74,7 @@ extern "C"
 #endif
 
 Font* TSU_FontCreate(const char *path, int list);
-void TSU_FontDestroy(Font *font_ptr);
+void TSU_FontDestroy(Font **font_ptr);
 bool TSU_FontLoadFromFile(Font *font_ptr, const char *path);
 void TSU_FontSetFilter(Font *font_ptr, int type);
 

@@ -40,7 +40,7 @@ extern "C"
 {
 #endif
 
-void TSU_TriggerDestroy(Trigger *trigger_ptr);
+void TSU_TriggerDestroy(Trigger **trigger_ptr);
 
 #ifdef __cplusplus
 };

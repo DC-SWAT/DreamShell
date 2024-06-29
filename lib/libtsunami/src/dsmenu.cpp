@@ -154,11 +154,11 @@ extern "C"
 		}
 	}
 
-	void TSU_MenuDestroy(DSMenu *dsMenu)
+	void TSU_MenuDestroy(DSMenu **dsMenu)
 	{
-		if (dsMenu != nullptr) {
-			delete dsMenu;
-			dsMenu = nullptr;
+		if (*dsMenu != nullptr) {
+			delete *dsMenu;
+			*dsMenu = nullptr;
 		}
 	}
 
@@ -211,8 +211,6 @@ extern "C"
 	{
 		if (dsMenu != NULL && banner_ptr != NULL) {
 			dsMenu->removeBanner(banner_ptr);
-			// delete banner_ptr;
-			// banner_ptr = NULL;
 		}
 	}
 
@@ -220,8 +218,6 @@ extern "C"
 	{
 		if (dsMenu != NULL && label_ptr != NULL) {
 			dsMenu->removeLabel(label_ptr);
-			// delete label_ptr;
-			// label_ptr = NULL;
 		}
 	}
 
@@ -229,8 +225,6 @@ extern "C"
 	{
 		if (dsMenu != NULL && item_menu_ptr != NULL) {
 			dsMenu->removeItemMenu(item_menu_ptr);
-			// delete item_menu_ptr;
-			// item_menu_ptr = NULL;
 		}
 	}
 

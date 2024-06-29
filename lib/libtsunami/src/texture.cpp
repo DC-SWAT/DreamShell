@@ -80,11 +80,11 @@ extern "C"
 		return new Texture();
 	}
 
-	void TSU_TextureDestroy(Texture *texture_ptr)
+	void TSU_TextureDestroy(Texture **texture_ptr)
 	{
-		if (texture_ptr != NULL) {
-			delete texture_ptr;
-			texture_ptr = NULL;
+		if (*texture_ptr != NULL) {
+			delete *texture_ptr;
+			*texture_ptr = NULL;
 		}
 	}
 

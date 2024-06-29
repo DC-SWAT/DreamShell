@@ -51,7 +51,7 @@ extern "C"
 #endif
 
 Label* TSU_LabelCreate(Font *font_ptr, const char *text, int size, bool centered, bool smear);
-void TSU_LabelDestroy(Label *label_ptr);
+void TSU_LabelDestroy(Label **label_ptr);
 void TSU_LabelSetText(Label *label_ptr, const char *text);
 void TSU_LabelSetFont(Label *label_ptr, Font *font_ptr);
 const char* TSU_LabelGetText(Label *label_ptr);

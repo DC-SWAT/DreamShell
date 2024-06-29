@@ -222,11 +222,11 @@ extern "C"
 		}
 	}
 
-	void TSU_FontDestroy(Font *font_ptr)
+	void TSU_FontDestroy(Font **font_ptr)
 	{
-		if (font_ptr != NULL) {
-			delete font_ptr;
-			font_ptr = NULL;
+		if (*font_ptr != NULL) {
+			delete *font_ptr;
+			*font_ptr = NULL;
 		}
 	}
 

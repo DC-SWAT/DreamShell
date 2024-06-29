@@ -59,10 +59,10 @@ void Animation::complete(Drawable *d) {
 
 extern "C"
 {
-	void TSU_AnimationDestroy(Animation *animation_ptr) {
-		if (animation_ptr != NULL) {
-			delete animation_ptr;
-			animation_ptr = NULL;
+	void TSU_AnimationDestroy(Animation **animation_ptr) {
+		if (*animation_ptr != NULL) {
+			delete *animation_ptr;
+			*animation_ptr = NULL;
 		}
 	}
 

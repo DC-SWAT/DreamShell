@@ -38,7 +38,7 @@ extern "C"
 #endif
 
 Scene* TSU_SceneCreate();
-void TSU_SceneDestroy(Scene *scene_ptr);
+void TSU_SceneDestroy(Scene **scene_ptr);
 
 #ifdef __cplusplus
 };

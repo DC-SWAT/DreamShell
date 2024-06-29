@@ -212,11 +212,11 @@ extern "C"
 		}
 	}
 
-	void TSU_ItemMenuDestroy(ItemMenu *item_menu_ptr)
+	void TSU_ItemMenuDestroy(ItemMenu **item_menu_ptr)
 	{
-		if (item_menu_ptr != NULL) {
-			delete item_menu_ptr;
-			item_menu_ptr = NULL;
+		if (*item_menu_ptr != NULL) {
+			delete *item_menu_ptr;
+			*item_menu_ptr = NULL;
 		}
 	}
 
