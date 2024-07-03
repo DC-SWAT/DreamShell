@@ -23,16 +23,18 @@
 #include <tsunami/anims/expxymover.h>
 #include <tsunami/anims/logxymover.h>
 #include <tsunami/triggers/death.h>
+#include <tsunami/drawables/box.h>
 #include <tsunami/dsmenu.h>
 
 #define MOTOSHORT(p) ((*(p))<<8) + *(p+1)
 #define IN_CACHE_GAMES
+#define MAX_SIZE_CDDA 60000000 //60MB
 // #define DEBUG_MENU_GAMES_CD
 
 DEFAULT_MODULE_EXPORTS(app_games);
 
-kthread_t *exit_menu_thread;
-kthread_t *play_cdda_thread;
+static kthread_t *exit_menu_thread;
+static kthread_t *play_cdda_thread;
 
 static struct
 {
@@ -63,9 +65,8 @@ static struct
 	char covers_path[50];
 	char item_value_selected[NAME_MAX];
 	GameItemStruct *games_array;
-	Texture *item_selector_texture;
 	Animation *item_selector_animation;
-	Banner *item_selector;
+	Rectangle *item_selector;
 	Font *menu_font;
 	Trigger *exit_trigger_list[MAX_SIZE_ITEMS];
 	Animation *exit_animation_list[MAX_SIZE_ITEMS];
@@ -73,6 +74,9 @@ static struct
 	ItemMenu *img_button[MAX_SIZE_ITEMS];
 	Label *title;
 	MenuOptionStruct menu_option;
+
+	Box *main_box;
+	Rectangle *title_rectangle;
 } self;
 
 
@@ -97,16 +101,19 @@ static const char* GetFullGamePathByIndex(int game_index)
 
 static void* PlayCDDAThread(void *params)
 {
-	char track_file_path[NAME_MAX];
-
 	StopCDDATrack();
 	if (params != NULL) {
-		// thd_sleep(2000);
-		const char* full_path_game = (const char*)params;
-		size_t track_size = GetCDDATrackFilename(5, full_path_game, track_file_path);
+		char track_file_path[NAME_MAX];
+		const char *full_path_game = (const char*)params;
+		size_t track_size = GetCDDATrackFilename(4, full_path_game, track_file_path);
 
-		if (track_size)
-		{
+		if (track_size && track_size < 30 * 1024 * 1024) {
+			track_size = GetCDDATrackFilename(6, full_path_game, track_file_path);
+		}
+
+		if (track_size > 0 && track_size <= MAX_SIZE_CDDA) {
+			// thd_sleep(3000);
+
 			do
 			{
 				track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, track_file_path);
@@ -116,6 +123,18 @@ static void* PlayCDDAThread(void *params)
 	}
 
 	return NULL;
+}
+
+static void PlayCDDA(void *params)
+{
+	// if(play_cdda_thread != NULL)
+	// {
+	// 	thd_destroy(play_cdda_thread);
+	// 	play_cdda_thread = NULL;
+	// }
+
+	// play_cdda_thread = thd_create(0, &PlayCDDAThread, params);
+	PlayCDDAThread(params);
 }
 
 static void SetTitle(const char *text)
@@ -142,9 +161,9 @@ static void SetTitle(const char *text)
 	}
 	else
 	{
-		static Vector vector = {10, 30, ML_ITEM, 1};
-		static Color color = {1, 1.0f, 1.0f, 0.1f};
-		self.title = TSU_LabelCreate(self.menu_font, titleText, 24, false, true);
+		static Vector vector = {10, 32, ML_ITEM, 1};
+		static Color color = {1, 1.0f, 1.0f, 1.0f};
+		self.title = TSU_LabelCreate(self.menu_font, titleText, 26, false, true);
 
 		TSU_LabelSetTranslate(self.title, &vector);
 		TSU_LabelSetTint(self.title, &color);
@@ -177,7 +196,7 @@ static void SetMenuType(int menu_type)
 			self.menu_option.max_columns = 4;
 			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
 			self.menu_option.init_position_x = 55;
-			self.menu_option.init_position_y = -50;
+			self.menu_option.init_position_y = -40;
 			self.menu_option.padding_x = 163;
 			self.menu_option.padding_y = 12;
 			self.menu_option.image_size = 128.0f;
@@ -190,7 +209,7 @@ static void SetMenuType(int menu_type)
 			self.menu_option.max_columns = 3;
 			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
 			self.menu_option.init_position_x = 90;
-			self.menu_option.init_position_y = -88;
+			self.menu_option.init_position_y = -78;
 			self.menu_option.padding_x = 212.0f;
 			self.menu_option.padding_y = 12;
 			self.menu_option.image_size = 200.0f;
@@ -339,42 +358,34 @@ static void SetCursor()
 {
 	static Vector selector_translate = {0, 0, ML_CURSOR, 1};
 
-	if (self.item_selector != NULL)
-	{
-		TSU_MenuSubRemoveBanner(self.dsmenu_ptr, self.item_selector);
-		TSU_BannerDestroy(&self.item_selector);
-	}
-
 	if (self.item_selector_animation != NULL)
 	{
+		TSU_AnimationComplete(self.item_selector_animation, (Drawable *)self.item_selector);
 		TSU_AnimationDestroy(&self.item_selector_animation);
 	}
 
-	if (self.item_selector_texture != NULL)
+	if (self.item_selector != NULL)
 	{
-		TSU_TextureDestroy(&self.item_selector_texture);
+		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.item_selector);
+		TSU_RectangleDestroy(&self.item_selector);
 	}
 
 	if (self.item_selector == NULL)
 	{
-		static char selector_path[NAME_MAX];
-		memset(selector_path, 0, sizeof(selector_path));
-		snprintf(selector_path, sizeof(selector_path), "%s/%s", self.default_dir, "apps/games/images/item_selector.png");
-
 		if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
 		{
-			self.item_selector_texture = TSU_TextureCreateFromFile(selector_path, true, false);
-			self.item_selector = TSU_BannerCreate(PVR_LIST_TR_POLY, self.item_selector_texture);
-
-			Color color = {1, 1.0f, 1.0f, 0.0f};
+			Color color = {1, 1.0f, 1.0f, 0.1f};
+			Color border_color = {1, 1.0f, 1.0f, 1.0f};
+			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 1, &border_color, 0);
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
-			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.7f);
+			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.8f);
 		}
 		else
 		{
-			self.item_selector_texture = TSU_TextureCreateFromFile(selector_path, true, false);
-			self.item_selector = TSU_BannerCreate(PVR_LIST_TR_POLY, self.item_selector_texture);
-			Color color = {1, 1.0f, 1.0f, 0.1f};
+			Color color = {1, 0.0f, 0.0f, 0.0f};
+			Color border_color = {1, 1.0f, 1.0f, 0.1f};			
+			
+			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 6, &border_color, 0);			
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
 			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.7f);
 		}
@@ -384,7 +395,7 @@ static void SetCursor()
 			TSU_DrawableSetTranslate((Drawable *)self.item_selector, &selector_translate);
 		}
 
-		TSU_MenuSubAddBanner(self.dsmenu_ptr, self.item_selector);
+		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.item_selector);
 	}
 
 	static int init_position_x;
@@ -393,17 +404,24 @@ static void SetCursor()
 	if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
 	{
 
-		TSU_BannerSetSize(self.item_selector, 310, self.menu_option.image_size + 8);
-		init_position_x = 320 / self.menu_option.max_columns - 5;
-		init_position_y = 84 / self.menu_option.size_items_column + 8;
-		selector_translate.z = 1;
+		TSU_RectangleSetSize(self.item_selector, 310, self.menu_option.image_size + 8);
+		init_position_x = 4;
+		init_position_y = 60;
+		selector_translate.z = ML_CURSOR;
+	}
+	else if (self.menu_type == MT_IMAGE_128_4X3)
+	{
+		TSU_RectangleSetSize(self.item_selector, self.menu_option.image_size + 4, self.menu_option.image_size + 4);
+		init_position_x = 9;
+		init_position_y = 46;
+		selector_translate.z = ML_CURSOR;		
 	}
 	else
 	{
-		TSU_BannerSetSize(self.item_selector, self.menu_option.image_size + 14, self.menu_option.image_size + 14);
-		init_position_x = self.menu_option.init_position_x + 20;
-		init_position_y = self.menu_option.init_position_y + 20;
-		selector_translate.z = 1;
+		TSU_RectangleSetSize(self.item_selector, self.menu_option.image_size + 4, self.menu_option.image_size + 4);
+		init_position_x = 8;
+		init_position_y = 44;
+		selector_translate.z = ML_CURSOR;
 	}
 
 	selector_translate.x = self.menu_cursel / self.menu_option.size_items_column * self.menu_option.padding_x + init_position_x;
@@ -420,7 +438,9 @@ static bool IsValidImage(const char *image_file)
 	ImageDimensionStruct *image = GetImageDimension(image_file);
 	if (image != NULL)
 	{
-		isValid = (image->height == 64 && image->width == 64) || (image->height == 128 && image->width == 128) || (image->height == 256 && image->width == 256);
+		isValid = (image->height == 64 && image->width == 64) 
+			|| (image->height == 128 && image->width == 128) 
+			|| (image->height == 256 && image->width == 256);
 
 		free(image);
 	}
@@ -442,14 +462,14 @@ static int AppCompareGames(const void *a, const void *b)
 
 	if (left->is_folder_name && right->is_folder_name)
 	{
-		strcpy(left_compare, GetLastPart(left->folder, '/', 0));
-		strcpy(right_compare, GetLastPart(right->folder, '/', 0));
+		strcpy(left_compare, GetLastPart(left->folder, '/', 2));
+		strcpy(right_compare, GetLastPart(right->folder, '/', 2));
 
 		cmp = strcmp(left_compare, right_compare);
 	}
 	else if (left->is_folder_name)
 	{
-		strcpy(left_compare, GetLastPart(left->folder, '/', 0));
+		strcpy(left_compare, GetLastPart(left->folder, '/', 2));
 		strncpy(right_compare, right->game, strlen(right->game) - 4);
 
 		cmp = strcmp(left_compare, right_compare);
@@ -457,7 +477,7 @@ static int AppCompareGames(const void *a, const void *b)
 	else if (right->is_folder_name)
 	{
 		strncpy(left_compare, left->game, strlen(left->game) - 4);
-		strcpy(right_compare, GetLastPart(right->folder, '/', 0));		
+		strcpy(right_compare, GetLastPart(right->folder, '/', 2));
 		
 		cmp = strcmp(left_compare, right_compare);
 	}
@@ -570,13 +590,14 @@ static bool IsUniqueFileGame(const char *full_path_folder)
 			|| strcasecmp(file_type, ".cso") == 0)
 		{
 			file_count++;
-		}
-		
-		if (file_count > 1)
-		{
-			break;
+
+			if (file_count > 1)
+			{
+				break;
+			}
 		}
 	}
+	ent = NULL;
 	fs_close(fd);
 
 	return !(file_count > 1);
@@ -637,7 +658,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 
 			RetrieveGamesRecursive(new_folder, ent->name, level++);
 			
-			free(new_folder);					
+			free(new_folder);
 		}
 
 		if (game[0] != '\0')
@@ -680,9 +701,9 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 			self.games_array[self.games_array_count - 1].exists_cover = SC_WITHOUT_SEARCHING;
 		}
 	}
-	fs_close(fd);
 	ent = NULL;
 	file_type = NULL;
+	fs_close(fd);
 }
 
 static bool RetrieveGames()
@@ -755,6 +776,7 @@ static bool LoadPage(bool change_view)
 			{
 				if (self.img_button_animation[i] != NULL)
 				{
+					TSU_AnimationComplete(self.img_button_animation[i], (Drawable *)self.img_button[i]);
 					TSU_AnimationDestroy(&self.img_button_animation[i]);
 				}
 
@@ -762,12 +784,7 @@ static bool LoadPage(bool change_view)
 				{
 					TSU_MenuSubRemoveItemMenu(self.dsmenu_ptr, self.img_button[i]);
 					TSU_ItemMenuDestroy(&self.img_button[i]);
-				}
-			}
-
-			if (self.isoldr)
-			{
-				free(self.isoldr);
+				}				
 			}
 
 			int column = 0;
@@ -892,11 +909,10 @@ static bool LoadPage(bool change_view)
 
 				if (self.game_count == 1)
 				{
-					// self.isoldr = isoldr_get_info(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)), 0);
 					TSU_ItemMenuSetSelected(item_menu, true);
 					SetTitle(name);
 					SetCursor();
-					PlayCDDAThread((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
+					PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
 				}
 				else
 				{
@@ -911,8 +927,17 @@ static bool LoadPage(bool change_view)
 		}
 	}
 	else
-	{
+	{	
 		memset(game_cover_path, 0, sizeof(game_cover_path));
+
+		char font_path[NAME_MAX];
+		memset(font_path, 0, sizeof(font_path));
+		snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games/fonts/message.txf");
+
+		TSU_LabelDestroy(&self.title);
+		TSU_FontDestroy(&self.menu_font);
+		self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
+		
 		snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n%s\n\nand images here:\n%s", self.games_path, self.covers_path);
 		ds_printf(game_cover_path);
 		SetTitle(game_cover_path);
@@ -987,16 +1012,24 @@ static void StartExit()
 	StopCDDATrack();
 	float y = 1.0f;
 
+	if (self.main_box != NULL)
+	{
+		TSU_MenuSubRemoveBox(self.dsmenu_ptr, self.main_box);
+	}
+
+	if (self.title_rectangle != NULL)
+	{
+		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.title_rectangle);
+	}
+
 	if (self.item_selector != NULL)
 	{
-		TSU_MenuSubRemoveBanner(self.dsmenu_ptr, self.item_selector);
-		// self.item_selector = NULL;
+		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.item_selector);
 	}
 
 	if (self.title != NULL)
 	{
 		TSU_MenuSubRemoveLabel(self.dsmenu_ptr, self.title);
-		// self.title = NULL;
 	}
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
@@ -1121,6 +1154,10 @@ static void GamesApp_InputEvent(int type, int key)
 				{
 					self.menu_cursel = 0;
 				}
+				else if (self.menu_cursel >= self.game_count)
+				{
+					self.menu_cursel = self.game_count - 1;
+				}
 			}
 		}
 
@@ -1139,7 +1176,6 @@ static void GamesApp_InputEvent(int type, int key)
 			}
 			else
 			{
-
 				if (self.menu_cursel % self.menu_option.size_items_column == 0)
 				{
 					self.menu_cursel -= self.menu_option.size_items_column;
@@ -1147,7 +1183,7 @@ static void GamesApp_InputEvent(int type, int key)
 
 				if (self.menu_cursel >= self.game_count)
 				{
-					self.menu_cursel = self.game_count;
+					self.menu_cursel = self.game_count - 1;
 				}
 			}
 		}
@@ -1202,11 +1238,10 @@ static void GamesApp_InputEvent(int type, int key)
 		{
 			if (i == self.menu_cursel)
 			{
-				// self.isoldr = isoldr_get_info(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])), 0);
 				TSU_ItemMenuSetSelected(self.img_button[i], true);
 				SetTitle(TSU_ItemMenuGetItemValue(self.img_button[i]));
 				SetCursor();
-				PlayCDDAThread((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
+				PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
 			}
 			else
 			{
@@ -1326,10 +1361,10 @@ static void GetMD5Hash(const char *file_mount_point)
 static int LoadPreset()
 {
 	char *preset_file_name = NULL;
-	if (fs_iso_mount("/iso", self.item_value_selected) == 0)
+	if (fs_iso_mount("/iso_game", self.item_value_selected) == 0)
 	{
-		GetMD5Hash("/iso");
-		fs_iso_unmount("/iso");
+		GetMD5Hash("/iso_game");
+		fs_iso_unmount("/iso_game");
 		preset_file_name = MakePresetFilename(self.default_dir, self.md5);
 		ds_printf("PresetFileName: %s", preset_file_name);
 
@@ -1485,6 +1520,12 @@ static int LoadPreset()
 
 void FreeAppData()
 {
+	if(play_cdda_thread != NULL)
+	{
+		thd_destroy(play_cdda_thread);
+		play_cdda_thread = NULL;
+	}
+
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
 		if (self.img_button_animation[i] != NULL)
@@ -1508,9 +1549,21 @@ void FreeAppData()
 		}
 	}
 
+	
+
+	if (self.main_box != NULL)
+	{
+		TSU_BoxDestroy(&self.main_box);
+	}
+
+	if (self.title_rectangle != NULL)
+	{
+		TSU_RectangleDestroy(&self.title_rectangle);
+	}
+
 	if (self.item_selector != NULL)
 	{
-		TSU_BannerDestroy(&self.item_selector);
+		TSU_RectangleDestroy(&self.item_selector);
 	}
 
 	if (self.title != NULL)
@@ -1521,11 +1574,6 @@ void FreeAppData()
 	if (self.item_selector_animation != NULL)
 	{
 		TSU_AnimationDestroy(&self.item_selector_animation);
-	}
-
-	if (self.item_selector_texture != NULL)
-	{
-		TSU_TextureDestroy(&self.item_selector_texture);
 	}
 
 	TSU_FontDestroy(&self.menu_font);
@@ -1643,12 +1691,15 @@ void GamesApp_Init(App_t *app)
 	self.item_selector = NULL;
 	self.menu_font = NULL;
 	self.item_selector_animation = NULL;
-	self.title = NULL;
+	self.title = NULL;	
+	self.main_box = NULL;
+	self.title_rectangle = NULL;
+
 	memset(&self.menu_option, 0, sizeof(self.menu_option));
 	self.menu_type = MT_IMAGE_TEXT_64_5X2;
 
 	memset(self.item_value_selected, 0, sizeof(self.item_value_selected));
-
+	
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
 		self.img_button[i] = NULL;
@@ -1659,7 +1710,16 @@ void GamesApp_Init(App_t *app)
 
 	if ((self.dsmenu_ptr = TSU_MenuCreateWithExit(GamesApp_InputEvent, GamesApp_ExitMenuEvent)) != NULL)
 	{
-		InitMenu();
+		Color main_color = {1, 0.12f, 0.37f, 0.60f};
+		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 2, 480 - 8, 640 - 4, 480 - 8, 4, &main_color, ML_BACKGROUND, 0);
+		
+		Color title_color = {1, 0.12f, 0.37f, 0.60f};
+		self.title_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 0, 40, 640, 40, &title_color, ML_BACKGROUND, 0);
+
+		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.title_rectangle);
+		TSU_MenuSubAddBox(self.dsmenu_ptr, self.main_box);
+		
+		InitMenu();		
 	}
 }
 

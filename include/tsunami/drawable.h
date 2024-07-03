@@ -143,7 +143,9 @@ private:
 
 #else
 
-typedef struct drawable Drawable;
+#ifndef TYPEDEF_DRAWABLE
+	typedef struct drawable Drawable;
+#endif
 
 #endif
 

@@ -26,6 +26,7 @@ extern "C"
 	{
 		if (*trigger_ptr != NULL) {
 			delete *trigger_ptr;
+			*trigger_ptr = NULL;
 		}
 	}
 }

@@ -44,6 +44,7 @@ protected:
 	/// Trigger any triggers
 	virtual void trigger(Drawable *d);
 
+public:
 	/// Call when the animation has completed
 	virtual void complete(Drawable *t);
 
@@ -55,6 +56,10 @@ private:
 
 typedef struct animation Animation;
 
+#ifndef TYPEDEF_DRAWABLE
+	typedef struct drawable Drawable;
+#endif
+
 #endif
 
 #ifdef __cplusplus
@@ -62,6 +67,7 @@ extern "C"
 {
 #endif
 
+void TSU_AnimationComplete(Animation *animation_ptr, Drawable *drawable_ptr);
 void TSU_AnimationDestroy(Animation **animation_ptr);
 void TSU_TriggerAdd(Animation *animation_ptr, Trigger *trigger_ptr);
 void TSU_TriggerRemove(Animation *animation_ptr, Trigger *trigger_ptr);

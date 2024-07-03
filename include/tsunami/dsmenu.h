@@ -13,6 +13,8 @@
 #include <math.h>
 #include "genmenu.h"
 #include "drawables/label.h"
+#include "drawables/rectangle.h"
+#include "drawables/box.h"
 #include "drawables/banner.h"
 #include "drawables/itemmenu.h"
 
@@ -38,10 +40,14 @@ public:
     void addItemMenu(ItemMenu *item_menu);
     void addLabel(Label *label);
     void addBanner(Banner *banner);
+    void addRectangle(Rectangle *rectangle);
+    void addBox(Box *box);
 
     void removeItemMenu(ItemMenu *item_menu);
     void removeLabel(Label *label);
     void removeBanner(Banner *banner);
+    void removeRectangle(Rectangle *rectangle);
+    void removeBox(Box *box);
 
     DSMenu(InputEventPtr *input_event_callback);
     DSMenu(InputEventPtr *input_event_callback, ExitDoMenuEventPtr *exit_do_menu_callback);
@@ -72,9 +78,13 @@ Scene* TSU_MenuGetScene(DSMenu *dsMenu);
 void TSU_MenuStartExit(DSMenu *dsMenu);
 void TSU_MenuSubAddLabel(DSMenu *dsMenu, Label *label_ptr);
 void TSU_MenuSubAddBanner(DSMenu *dsMenu, Banner *banner_ptr);
+void TSU_MenuSubAddRectangle(DSMenu *dsMenu, Rectangle *rectangle_ptr);
+void TSU_MenuSubAddBox(DSMenu *dsMenu, Box *box_ptr);
 void TSU_MenuSubAddItemMenu(DSMenu *dsMenu, ItemMenu *item_menu_ptr);
 void TSU_MenuSubRemoveItemMenu(DSMenu *dsMenu, ItemMenu *item_menu_ptr);
 void TSU_MenuSubRemoveBanner(DSMenu *dsMenu, Banner *banner_ptr);
+void TSU_MenuSubRemoveRectangle(DSMenu *dsMenu, Rectangle *rectangle_ptr);
+void TSU_MenuSubRemoveBox(DSMenu *dsMenu, Box *box_ptr);
 void TSU_MenuSubRemoveLabel(DSMenu *dsMenu, Label *label_ptr);
 void TSU_MenSetTranslate(DSMenu *dsMenu, const Vector *v);
 

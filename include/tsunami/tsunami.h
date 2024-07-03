@@ -29,6 +29,8 @@
 #include "anims/expxymover.h"
 #include "anims/logxymover.h"
 #include "anims/tintfader.h"
+#include "drawables/box.h"
+#include "drawables/rectangle.h"
 #include "drawables/banner.h"
 #include "drawables/itemmenu.h"
 #include "drawables/label.h"

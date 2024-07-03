@@ -1182,8 +1182,12 @@ TSU_MenuStartExit
 TSU_MenuSubAddLabel
 TSU_MenuSubAddItemMenu
 TSU_MenuSubAddBanner
+TSU_MenuSubAddRectangle
+TSU_MenuSubAddBox
 TSU_MenuSubRemoveItemMenu
 TSU_MenuSubRemoveBanner
+TSU_MenuSubRemoveRectangle
+TSU_MenuSubRemoveBox
 TSU_MenuSubRemoveLabel
 TSU_MenSetTranslate
 TSU_SceneCreate
@@ -1254,6 +1258,13 @@ TSU_LabelGetText
 TSU_LabelSetSmear
 TSU_LabelSetTranslate
 TSU_LabelSetTint
+TSU_BoxCreate
+TSU_BoxDestroy
+TSU_BoxSetSize
+TSU_RectangleCreate
+TSU_RectangleCreateWithBorder
+TSU_RectangleDestroy
+TSU_RectangleSetSize
 TSU_BirthCreate
 TSU_DeathCreate
 TSU_DrawableAnimAdd
@@ -1284,6 +1295,7 @@ TSU_DrawableSetAlpha
 TSU_DrawableGetAlpha
 TSU_DrawableGetColor
 TSU_DrawableGetParent
+TSU_AnimationComplete
 TSU_AnimationDestroy
 TSU_TriggerAdd
 TSU_TriggerRemove

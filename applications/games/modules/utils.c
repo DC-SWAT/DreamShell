@@ -277,8 +277,6 @@ size_t GetCDDATrackFilename(int num, const char *full_path_game, char *result)
 
 	strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
 	snprintf(result, NAME_MAX, "%s/track%02d.raw", path, num);
-
-	ds_printf("TRACK RESULT: %s", result);
 	free(game);
 	free(path);
 
@@ -309,7 +307,6 @@ void StopCDDATrack()
 
 void PlayCDDATrack(const char *file, int loop)
 {
-
 	StopCDDATrack();
 	wav_inited = wav_init();
 

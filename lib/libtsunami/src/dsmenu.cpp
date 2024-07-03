@@ -74,6 +74,16 @@ void DSMenu::addBanner(Banner *banner)
     m_scene->subAdd(banner);
 }
 
+void DSMenu::addRectangle(Rectangle *rectangle)
+{
+    m_scene->subAdd(rectangle);
+}
+
+void DSMenu::addBox(Box *box)
+{
+    m_scene->subAdd(box);
+}
+
 void DSMenu::removeItemMenu(ItemMenu *item_menu)
 {
     m_scene->subRemove(item_menu);
@@ -87,6 +97,16 @@ void DSMenu::removeLabel(Label *label)
 void DSMenu::removeBanner(Banner *banner)
 {
     m_scene->subRemove(banner);
+}
+
+void DSMenu::removeRectangle(Rectangle *rectangle)
+{
+    m_scene->subRemove(rectangle);
+}
+
+void DSMenu::removeBox(Box *box)
+{
+    m_scene->subRemove(box);
 }
 
 void DSMenu::StartExitMenu()
@@ -198,7 +218,21 @@ extern "C"
 		if (dsMenu != NULL && banner_ptr != NULL) {
 			dsMenu->addBanner(banner_ptr);
 		}
-	}    
+	} 
+
+	void TSU_MenuSubAddRectangle(DSMenu *dsMenu, Rectangle *rectangle_ptr)
+	{
+		if (dsMenu != NULL && rectangle_ptr != NULL) {
+			dsMenu->addRectangle(rectangle_ptr);
+		}
+	}
+
+	void TSU_MenuSubAddBox(DSMenu *dsMenu, Box *box_ptr)
+	{
+		if (dsMenu != NULL && box_ptr != NULL) {
+			dsMenu->addBox(box_ptr);
+		}
+	}  
 
 	void TSU_MenuSubAddItemMenu(DSMenu *dsMenu, ItemMenu *item_menu_ptr)
 	{
@@ -211,6 +245,20 @@ extern "C"
 	{
 		if (dsMenu != NULL && banner_ptr != NULL) {
 			dsMenu->removeBanner(banner_ptr);
+		}
+	}
+
+	void TSU_MenuSubRemoveRectangle(DSMenu *dsMenu, Rectangle *rectangle_ptr)
+	{
+		if (dsMenu != NULL && rectangle_ptr != NULL) {
+			dsMenu->removeRectangle(rectangle_ptr);
+		}
+	}
+
+	void TSU_MenuSubRemoveBox(DSMenu *dsMenu, Box *box_ptr)
+	{
+		if (dsMenu != NULL && box_ptr != NULL) {
+			dsMenu->removeBox(box_ptr);
 		}
 	}
 
