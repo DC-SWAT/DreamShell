@@ -28,7 +28,7 @@
 
 #define MOTOSHORT(p) ((*(p))<<8) + *(p+1)
 #define IN_CACHE_GAMES
-#define MAX_SIZE_CDDA 60000000 //60MB
+#define MAX_SIZE_CDDA 40000000 //60MB
 // #define DEBUG_MENU_GAMES_CD
 
 DEFAULT_MODULE_EXPORTS(app_games);
