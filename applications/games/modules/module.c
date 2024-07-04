@@ -64,6 +64,7 @@ static struct
 	char games_path[NAME_MAX];
 	char covers_path[50];
 	char item_value_selected[NAME_MAX];
+	MenuOptionStruct menu_option;
 	GameItemStruct *games_array;
 	Animation *item_selector_animation;
 	Rectangle *item_selector;
@@ -73,10 +74,12 @@ static struct
 	Animation *img_button_animation[MAX_SIZE_ITEMS];
 	ItemMenu *img_button[MAX_SIZE_ITEMS];
 	Label *title;
-	MenuOptionStruct menu_option;
-
+	Label *title_type;
+	Animation *title_animation;
+	Animation *title_type_animation;
 	Box *main_box;
 	Rectangle *title_rectangle;
+	Rectangle *title_type_rectangle;
 } self;
 
 
@@ -155,19 +158,107 @@ static void SetTitle(const char *text)
 		strcpy(titleText, text);
 	}
 
+	static Vector vectorInit = {-50, 32, ML_ITEM, 1};
+	static Vector vector = {10, 32, ML_ITEM, 1};
+	
 	if (self.title != NULL)
 	{
 		TSU_LabelSetText(self.title, titleText);
 	}
 	else
 	{
-		static Vector vector = {10, 32, ML_ITEM, 1};
 		static Color color = {1, 1.0f, 1.0f, 1.0f};
 		self.title = TSU_LabelCreate(self.menu_font, titleText, 26, false, true);
-
-		TSU_LabelSetTranslate(self.title, &vector);
 		TSU_LabelSetTint(self.title, &color);
 		TSU_MenuSubAddLabel(self.dsmenu_ptr, self.title);
+	}
+
+	if (self.title_animation != NULL)
+	{
+		TSU_AnimationComplete(self.title_animation, (Drawable *)self.title);
+		TSU_AnimationDestroy(&self.title_animation);
+	}
+
+	TSU_LabelSetTranslate(self.title, &vectorInit);
+	self.title_animation = (Animation *)TSU_LogXYMoverCreate(vector.x, vector.y);
+	TSU_DrawableAnimAdd((Drawable *)self.title, (Animation *)self.title_animation);
+}
+
+static void SetTitleType(const char *full_path_game)
+{
+	if (full_path_game != NULL)
+	{
+		const char *file_type = strrchr(full_path_game, '.');
+
+		char title_text[4];
+		memset(title_text, 0, sizeof(title_text));
+
+		if (strcasecmp(file_type, ".cdi") == 0)
+		{
+			strncpy(title_text, "CDI", 3);
+		}
+		else if (strcasecmp(file_type, ".iso") == 0)
+		{
+			strncpy(title_text, "ISO", 3);
+		}
+		else if (strcasecmp(file_type, ".cso") == 0)
+		{
+			strncpy(title_text, "CSO", 3);
+		}
+		else if (strcasecmp(file_type, ".gdi") == 0)
+		{
+			char *result = (char *)malloc(NAME_MAX);
+			char *path = (char *)malloc(NAME_MAX);
+			int size = 0;
+
+			char *game = (char *)malloc(NAME_MAX);
+			memset(game, 0, NAME_MAX);
+			strcpy(game, GetLastPart(full_path_game, '/', 0));	
+
+			memset(result, 0, NAME_MAX);
+			memset(path, 0, NAME_MAX);
+
+			strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
+			snprintf(result, NAME_MAX, "%s/track01.iso", path);
+			free(game);
+			free(path);
+			
+			if (FileExists(result) == 1)
+			{
+				strncpy(title_text, "OPT", 3);
+			}
+			else
+			{
+				strncpy(title_text, "GDI", 3);
+			}
+
+			free(result);
+		}
+
+		static Vector vectorInit = {650, 32, ML_ITEM + 3, 1};
+		static Vector vector = {559, 32, ML_ITEM + 3, 1};
+
+		if (self.title_type != NULL)
+		{
+			TSU_LabelSetText(self.title_type, title_text);
+		}
+		else
+		{
+			static Color color = {1, 1.0f, 1.0f, 1.0f};
+			self.title_type = TSU_LabelCreate(self.menu_font, title_text, 26, false, true);
+			TSU_LabelSetTint(self.title_type, &color);
+			TSU_MenuSubAddLabel(self.dsmenu_ptr, self.title_type);
+		}
+
+		if (self.title_type_animation != NULL)
+		{
+			TSU_AnimationComplete(self.title_type_animation, (Drawable *)self.title_type);
+			TSU_AnimationDestroy(&self.title_type_animation);
+		}
+
+		TSU_LabelSetTranslate(self.title_type, &vectorInit);
+		self.title_type_animation = (Animation *)TSU_LogXYMoverCreate(vector.x, vector.y);
+		TSU_DrawableAnimAdd((Drawable *)self.title_type, (Animation *)self.title_type_animation);		
 	}
 }
 
@@ -183,9 +274,9 @@ static void SetMenuType(int menu_type)
 			self.menu_option.max_columns = 2;
 			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
 			self.menu_option.init_position_x = 20;
-			self.menu_option.init_position_y = 5;
+			self.menu_option.init_position_y = -22;
 			self.menu_option.padding_x = 320;
-			self.menu_option.padding_y = 12;
+			self.menu_option.padding_y = 22;
 			self.menu_option.image_size = 64.0f;
 		}
 		break;
@@ -196,7 +287,7 @@ static void SetMenuType(int menu_type)
 			self.menu_option.max_columns = 4;
 			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
 			self.menu_option.init_position_x = 55;
-			self.menu_option.init_position_y = -40;
+			self.menu_option.init_position_y = -45;
 			self.menu_option.padding_x = 163;
 			self.menu_option.padding_y = 12;
 			self.menu_option.image_size = 128.0f;
@@ -209,7 +300,7 @@ static void SetMenuType(int menu_type)
 			self.menu_option.max_columns = 3;
 			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
 			self.menu_option.init_position_x = 90;
-			self.menu_option.init_position_y = -78;
+			self.menu_option.init_position_y = -82;
 			self.menu_option.padding_x = 212.0f;
 			self.menu_option.padding_y = 12;
 			self.menu_option.image_size = 200.0f;
@@ -375,17 +466,27 @@ static void SetCursor()
 		if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
 		{
 			Color color = {1, 1.0f, 1.0f, 0.1f};
-			Color border_color = {1, 1.0f, 1.0f, 1.0f};
+			// Color border_color = {1, 0.34f, 0.13f, 1.0f};
+			Color border_color = {1, 0.28f, 0.06f, 0.25f};
 			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 1, &border_color, 0);
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
 			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.8f);
+		}
+		else if (self.menu_type == MT_IMAGE_128_4X3)
+		{
+			Color color = {1, 0.0f, 0.0f, 0.0f};
+			Color border_color = {1, 1.0f, 1.0f, 0.1f};			
+			
+			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 6, &border_color, 0);			
+			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
+			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.7f);
 		}
 		else
 		{
 			Color color = {1, 0.0f, 0.0f, 0.0f};
 			Color border_color = {1, 1.0f, 1.0f, 0.1f};			
 			
-			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 6, &border_color, 0);			
+			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 4, &border_color, 0);			
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
 			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.7f);
 		}
@@ -405,22 +506,22 @@ static void SetCursor()
 	{
 
 		TSU_RectangleSetSize(self.item_selector, 310, self.menu_option.image_size + 8);
-		init_position_x = 4;
-		init_position_y = 60;
+		init_position_x = 5;
+		init_position_y = 33;
 		selector_translate.z = ML_CURSOR;
 	}
 	else if (self.menu_type == MT_IMAGE_128_4X3)
 	{
 		TSU_RectangleSetSize(self.item_selector, self.menu_option.image_size + 4, self.menu_option.image_size + 4);
 		init_position_x = 9;
-		init_position_y = 46;
+		init_position_y = 41;
 		selector_translate.z = ML_CURSOR;		
 	}
 	else
 	{
 		TSU_RectangleSetSize(self.item_selector, self.menu_option.image_size + 4, self.menu_option.image_size + 4);
 		init_position_x = 8;
-		init_position_y = 44;
+		init_position_y = 40;
 		selector_translate.z = ML_CURSOR;
 	}
 
@@ -697,6 +798,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 				strcpy(self.games_array[self.games_array_count - 1].folder, folder_game);
 				free(folder_game);
 			}
+			
 			self.games_array[self.games_array_count - 1].is_folder_name = is_folder_name;
 			self.games_array[self.games_array_count - 1].exists_cover = SC_WITHOUT_SEARCHING;
 		}
@@ -736,7 +838,7 @@ static bool LoadPage(bool change_view)
 	char name[MAX_SIZE_GAME_NAME];
 	char game[MAX_SIZE_GAME_NAME];
 	char game_without_extension[MAX_SIZE_GAME_NAME];
-	char name_truncated[21];
+	char name_truncated[17];
 	int fileCount = 0;
 
 	if (self.pages == -1)
@@ -829,11 +931,9 @@ static bool LoadPage(bool change_view)
 						}
 					}
 
-					// DEFAULT IMAGE PNG
 					if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING)
 					{
 						self.games_array[icount].exists_cover = SC_NOT_EXIST;
-						self.games_array[icount].cover_type = IT_PNG;
 					}
 				}
 
@@ -857,7 +957,16 @@ static bool LoadPage(bool change_view)
 				}
 				else
 				{
-					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.png");
+					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.jpg");
+					if (FileExists(game_cover_path) == 0) 
+					{
+						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.png");
+						self.games_array[icount].cover_type = IT_PNG;
+					}
+					else 
+					{
+						self.games_array[icount].cover_type = IT_JPG;
+					}
 				}
 
 				memset(name, 0, sizeof(name));
@@ -911,6 +1020,7 @@ static bool LoadPage(bool change_view)
 				{
 					TSU_ItemMenuSetSelected(item_menu, true);
 					SetTitle(name);
+					SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
 					SetCursor();
 					PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
 				}
@@ -992,6 +1102,7 @@ static void InitMenu()
 	SetMenuType(MT_IMAGE_TEXT_64_5X2);
 	self.exit_app = false;
 	self.title = NULL;
+	self.title_type = NULL;
 
 	// Set a green background
 	// TSU_MenuSetBg(self.dsmenu_ptr, 0.06f, 0.41f, 0.81f);
@@ -1022,6 +1133,11 @@ static void StartExit()
 		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.title_rectangle);
 	}
 
+	if (self.title_type_rectangle != NULL)
+	{
+		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.title_type_rectangle);
+	}
+
 	if (self.item_selector != NULL)
 	{
 		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.item_selector);
@@ -1030,6 +1146,11 @@ static void StartExit()
 	if (self.title != NULL)
 	{
 		TSU_MenuSubRemoveLabel(self.dsmenu_ptr, self.title);
+	}
+
+	if (self.title_type != NULL)
+	{
+		TSU_MenuSubRemoveLabel(self.dsmenu_ptr, self.title_type);
 	}
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
@@ -1240,6 +1361,7 @@ static void GamesApp_InputEvent(int type, int key)
 			{
 				TSU_ItemMenuSetSelected(self.img_button[i], true);
 				SetTitle(TSU_ItemMenuGetItemValue(self.img_button[i]));
+				SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
 				SetCursor();
 				PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
 			}
@@ -1561,6 +1683,11 @@ void FreeAppData()
 		TSU_RectangleDestroy(&self.title_rectangle);
 	}
 
+	if (self.title_type_rectangle != NULL)
+	{
+		TSU_RectangleDestroy(&self.title_type_rectangle);
+	}
+
 	if (self.item_selector != NULL)
 	{
 		TSU_RectangleDestroy(&self.item_selector);
@@ -1569,6 +1696,21 @@ void FreeAppData()
 	if (self.title != NULL)
 	{
 		TSU_LabelDestroy(&self.title);
+	}
+
+	if (self.title_animation != NULL)
+	{
+		TSU_AnimationDestroy(&self.title_animation);
+	}
+
+	if (self.title_type != NULL)
+	{
+		TSU_LabelDestroy(&self.title_type);
+	}
+
+	if (self.title_type_animation != NULL)
+	{
+		TSU_AnimationDestroy(&self.title_type_animation);
 	}
 
 	if (self.item_selector_animation != NULL)
@@ -1691,9 +1833,13 @@ void GamesApp_Init(App_t *app)
 	self.item_selector = NULL;
 	self.menu_font = NULL;
 	self.item_selector_animation = NULL;
+	self.title_animation = NULL;
+	self.title_type_animation = NULL;
 	self.title = NULL;	
+	self.title_type = NULL;
 	self.main_box = NULL;
 	self.title_rectangle = NULL;
+	self.title_type_rectangle = NULL;
 
 	memset(&self.menu_option, 0, sizeof(self.menu_option));
 	self.menu_type = MT_IMAGE_TEXT_64_5X2;
@@ -1710,13 +1856,20 @@ void GamesApp_Init(App_t *app)
 
 	if ((self.dsmenu_ptr = TSU_MenuCreateWithExit(GamesApp_InputEvent, GamesApp_ExitMenuEvent)) != NULL)
 	{
-		Color main_color = {1, 0.12f, 0.37f, 0.60f};
-		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 2, 480 - 8, 640 - 4, 480 - 8, 4, &main_color, ML_BACKGROUND, 0);
+		// Color main_color = {1, 0.0f, 0.66f, 0.89f};
+		Color main_color = {1, 0.28f, 0.06f, 0.25f};
+		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 3, 480 - 12, 640 - 6, 480 - 9, 12, &main_color, ML_BACKGROUND, 0);
 		
-		Color title_color = {1, 0.12f, 0.37f, 0.60f};
+		// Color title_color = {1, 0.0f, 0.66f, 0.89f};
+		Color title_color = {1, 0.28f, 0.06f, 0.25f};
 		self.title_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 0, 40, 640, 40, &title_color, ML_BACKGROUND, 0);
 
+		// Color title_type_color = {1, 0.0f, 0.9f, 0.0f};
+		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
+		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 552, 37, 640 - 555, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
+
 		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.title_rectangle);
+		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.title_type_rectangle);
 		TSU_MenuSubAddBox(self.dsmenu_ptr, self.main_box);
 		
 		InitMenu();		
