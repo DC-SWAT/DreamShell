@@ -102,9 +102,6 @@ extern "C"
 	const char* TSU_LabelGetText(Label *label_ptr)
 	{
 		if (label_ptr != NULL) {
-			// char* result_string = new char[label_ptr->getText().size() + 1];
-			// strcpy(result_string, label_ptr->getText().c_str());
-			// return result_string;
 			return label_ptr->getText().c_str();
 		}
 		else {

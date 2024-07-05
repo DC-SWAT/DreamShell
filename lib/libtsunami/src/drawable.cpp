@@ -203,8 +203,6 @@ extern "C"
 		}
 	}
 
-	// // virtual void  TSU_DrawableSetFinished();
-
 	void TSU_DrawableSubDraw(Drawable *drawable_ptr, int list)
 	{
 		if (drawable_ptr != NULL) {
@@ -248,9 +246,6 @@ extern "C"
 			drawable_ptr->subRemoveAll();
 		}
 	}
-
-	// // virtual void TSU_DrawableDraw(int list);
-	// // virtual void TSU_DrawableNextFrame();
 
 	void TSU_DrawableSetTranslate(Drawable *drawable_ptr, const Vector *v)
 	{

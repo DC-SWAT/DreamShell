@@ -230,10 +230,6 @@ extern "C"
 	const char* TSU_ItemMenuGetItemValue(ItemMenu *item_menu_ptr)
 	{
 		if (item_menu_ptr != NULL) {
-			// char* result_string = new char[item_menu_ptr->item_value.size() + 1];
-			// strcpy(result_string, item_menu_ptr->item_value.c_str());
-			// return result_string;
-
 			return item_menu_ptr->item_value.c_str();
 		}
 		else {
@@ -363,10 +359,7 @@ extern "C"
 
 	const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr)
 	{
-		if (item_menu_ptr != NULL) {
-			// char* result_string = new char[item_menu_ptr->GetLabel()->getText().size() + 1];
-			// strcpy(result_string, item_menu_ptr->GetLabel()->getText().c_str());
-			// return result_string;            
+		if (item_menu_ptr != NULL) {      
 			return item_menu_ptr->GetLabel()->getText().c_str();
 		}
 		else {

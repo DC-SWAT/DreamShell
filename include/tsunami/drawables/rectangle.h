@@ -62,4 +62,4 @@ void TSU_RectangleSetSize(Rectangle *rectangle_ptr, float width, float height);
 };
 #endif
 
-#endif	/* __TSUNAMI_DRW_BANNER_H */
+#endif	/* __TSUNAMI_DRW_RECTANGLE_H */

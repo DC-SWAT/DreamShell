@@ -114,56 +114,16 @@ void DSMenu::StartExitMenu()
     GenericMenu::startExit();
 }
 
-// void DSMenu::DrawSquare(int x, int y, int size, uint32 color, int zIndex = 1)
-// {
-//     DrawRectangle(x, y, size, size, color, zIndex);
-// }
-
-// void DSMenu::DrawRectangle(int x, int y, int width, int height, uint32 color, int zIndex = 1)
-// {
-//     pvr_vertex_t vert;
-
-//     vert.flags = PVR_CMD_VERTEX;
-//     vert.x = x;
-//     vert.y = y;
-//     vert.z = 1.0f;
-//     vert.u = vert.v = 0.0f;
-//     // vert.argb = PVR_PACK_COLOR(1.0f, color / 255.0f, color / 255.0f, color / 255.0f);
-//     vert.argb = color;
-//     vert.oargb = 0;
-//     pvr_prim(&vert, sizeof(vert));
-    
-//     vert.x = x;
-//     vert.y = y - height;
-//     pvr_prim(&vert, sizeof(vert));
-
-//     vert.x = x + width;
-//     vert.y = y;
-//     pvr_prim(&vert, sizeof(vert));
-
-//     vert.flags = PVR_CMD_VERTEX_EOL;
-//     vert.x = x + width;
-//     vert.y = y - height;
-//     pvr_prim(&vert, sizeof(vert));
-// }
-
 extern "C" 
 {
 
 	DSMenu* TSU_MenuCreate(InputEventPtr *input_event_callback)
 	{
-		// // Guard against an untoward exit during testing.
-		// cont_btn_callback(0, CONT_START | CONT_A | CONT_B | CONT_X | CONT_Y, (cont_btn_callback_t)arch_exit);
-
-		// // Get 3D going
-		// pvr_init_defaults();
-
 		return new DSMenu(input_event_callback);
 	}
 
 	DSMenu* TSU_MenuCreateWithExit(InputEventPtr *input_event_callback, ExitDoMenuEventPtr *exit_do_menu_callback)
 	{
-		// cont_btn_callback(0, CONT_START | CONT_A | CONT_B | CONT_X | CONT_Y, (cont_btn_callback_t)arch_exit);
 		return new DSMenu(input_event_callback, exit_do_menu_callback);
 	}
 
@@ -282,22 +242,4 @@ extern "C"
 			dsMenu->getScene()->setTranslate(*v);
 		}
 	}
-
-	// auto scene_shared = dsMenu->getScene();
-
-	// // CONVERTIR shared_ptr to void*
-	// void *scene_ptr = (void *)(&scene_shared);
-	// TSU_SendMessage(((Drawable *)scene_shared.get())->dummy);
-		
-	// // CONVERTIR void* to shared_ptr
-	// auto scene_shared_aux = *(std::shared_ptr<Drawable>*)(scene_ptr);
-	// TSU_SendMessage(scene_shared_aux->dummy);
-
-	// // CONVERTIR shared_ptr to herencia
-	// auto scene_shared_aux = std::dynamic_pointer_cast<Drawable>(scene_shared);        
-
-	// TSU_SendMessage("OK");
-	// strcpy(scene_shared_aux->dummy, "MUNDO!");
-	// auto scene_shared_aux_2 = *(std::shared_ptr<Scene>*)(scene_ptr);
-	// TSU_SendMessage(scene_shared_aux_2->dummy);    
 }

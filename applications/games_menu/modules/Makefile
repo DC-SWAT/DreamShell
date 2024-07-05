@@ -4,7 +4,7 @@
 # http://www.dc-swat.ru
 #
 
-APP_NAME = games
+APP_NAME = games_menu
 TARGET_NAME = app_$(APP_NAME)
 OBJS = module.o utils.o
 DBG_LIBS = -lds -lisofs -lisoldr -lwav

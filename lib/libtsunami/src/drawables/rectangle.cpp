@@ -30,8 +30,6 @@ Rectangle::Rectangle(int list, float x, float y, float width, float height, cons
 	this->radius = radius;
 	this->borderWidth = borderWidth;
 
-	// m_texture = new Texture(1, 1, PVR_TXRFMT_ARGB4444);
-
 	if (borderWidth > 0) {
 		this->borderColor = plx_pack_color(borderColor.a, borderColor.r, borderColor.g, borderColor.b);
 	}
@@ -60,7 +58,6 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 	vert.y = y;
 	vert.z = zIndex;
 	vert.u = vert.v = 0.0f;
-	// vert.argb = PVR_PACK_COLOR(1.0f, color / 255.0f, color / 255.0f, color / 255.0f);
 	vert.argb = color;
 	vert.oargb = 0;
 	pvr_prim(&vert, sizeof(vert));

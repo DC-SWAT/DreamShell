@@ -8,7 +8,7 @@ SUBDIRS = modules
 
 include ../../sdk/Makefile.cfg
 
-APP_NAME = games
+APP_NAME = games_menu
 APP_DIR = $(DS_BUILD)/apps/$(APP_NAME)
 DEPS = modules/app_$(APP_NAME).klf
 

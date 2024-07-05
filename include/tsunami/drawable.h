@@ -159,19 +159,12 @@ extern "C"
 	void TSU_DrawableAnimRemove(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemoveAll(Drawable *drawable_ptr);
 	bool TSU_DrawableIsFinished(Drawable *drawable_ptr);
-
-	// // virtual void  Drawable_SetFinished();
-
 	void TSU_DrawableSubDraw(Drawable *drawable_ptr, int list);
 	void TSU_DrawableSubNextFrame(Drawable *drawable_ptr);
 	void TSU_DrawableSubAdd(Drawable *drawable_ptr, Drawable *new_drawable_ptr);
 	void TSU_DrawableSubRemove(Drawable *drawable_ptr, Drawable *remove_drawable_ptr);
 	void TSU_DrawableSubRemoveFinished(Drawable *drawable_ptr);
 	void TSU_DrawableSubRemoveAll(Drawable *drawable_ptr);
-
-	// // virtual void Drawable_Draw(int list);
-	// // virtual void Drawable_NextFrame();
-
 	void TSU_DrawableSetTranslate(Drawable *drawable_ptr, const Vector *v);
 	const Vector *TSU_DrawableGetTranslate(Drawable *drawable_ptr);
 	void TSU_DrawableTranslate(Drawable *drawable_ptr, const Vector *v);

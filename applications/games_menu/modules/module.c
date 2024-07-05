@@ -28,10 +28,9 @@
 
 #define MOTOSHORT(p) ((*(p))<<8) + *(p+1)
 #define IN_CACHE_GAMES
-#define MAX_SIZE_CDDA 40000000 //60MB
-// #define DEBUG_MENU_GAMES_CD
+#define MAX_SIZE_CDDA 40000000
 
-DEFAULT_MODULE_EXPORTS(app_games);
+DEFAULT_MODULE_EXPORTS(app_games_menu);
 
 static kthread_t *exit_menu_thread;
 static kthread_t *play_cdda_thread;
@@ -130,13 +129,6 @@ static void* PlayCDDAThread(void *params)
 
 static void PlayCDDA(void *params)
 {
-	// if(play_cdda_thread != NULL)
-	// {
-	// 	thd_destroy(play_cdda_thread);
-	// 	play_cdda_thread = NULL;
-	// }
-
-	// play_cdda_thread = thd_create(0, &PlayCDDAThread, params);
 	PlayCDDAThread(params);
 }
 
@@ -144,10 +136,6 @@ static void SetTitle(const char *text)
 {
 	char titleText[101];
 	memset(titleText, 0, sizeof(titleText));
-
-	// static struct mallinfo mi;
-	// mi = mallinfo();
-	// snprintf(titleText, sizeof(titleText), "%s - %i", text, mi.fordblks);
 
 	if (strlen(text) > sizeof(titleText))
 	{
@@ -399,9 +387,6 @@ static ImageDimensionStruct *GetImageDimension(const char *image_file)
 		{
 			image->height = MOTOSHORT(&buffer[i+5]);
 			image->width = MOTOSHORT(&buffer[i+7]);
-			// iBpp = buffer[i+4]; // bits per sample
-			// iBpp = iBpp * buffer[i+9]; // Bpp = number of components * bits per sample
-			// ucSubSample = buffer[i+11];
 		}
 
 		fs_close(image_handle);
@@ -480,7 +465,6 @@ static void SetCursor()
 		if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
 		{
 			Color color = {1, 1.0f, 1.0f, 0.1f};
-			// Color border_color = {1, 0.34f, 0.13f, 1.0f};
 			Color border_color = {1, 0.28f, 0.06f, 0.25f};
 			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 1, &border_color, 0);
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
@@ -609,79 +593,6 @@ static int AppCompareGames(const void *a, const void *b)
 
 	return cmp > 0 ? cmp : -1;
 }
-
-// static int TotalPages()
-// {
-// 	int fileCount = 0;
-// 	char game_path[NAME_MAX];
-// 	char *file_type = NULL;
-// 	file_t fdg;
-// 	dirent_t *entg = NULL;
-
-// 	file_t fd = fs_open(self.games_path, O_RDONLY | O_DIR);
-// 	dirent_t *ent;
-
-// 	if (fd == FILEHND_INVALID)
-// 		return 0;
-
-// 	while ((ent = fs_readdir(fd)) != NULL)
-// 	{
-// 		if (ent->name[0] == '.')
-// 			continue;
-
-// 		file_type = strrchr(ent->name, '.');
-
-// 		if (strcasecmp(file_type, ".cdi") == 0 || strcasecmp(file_type, ".cso") == 0 
-// 			|| (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(entg->name, "track", strlen("track")) == 0)))
-// 		{
-// 			fileCount++;
-// 		}
-// 		else
-// 		{
-// 			memset(game_path, '\0', sizeof(game_path));
-// 			snprintf(game_path, sizeof(game_path), "%s/%s", self.games_path, ent->name);
-
-// 			fdg = fs_open(game_path, O_RDONLY | O_DIR);
-
-// 			if (fdg == FILEHND_INVALID)
-// 				continue;
-
-// 			while ((entg = fs_readdir(fdg)) != NULL)
-// 			{
-// 				if (entg->name[0] == '.')
-// 					continue;
-
-// 				file_type = strrchr(entg->name, '.');
-
-// 				if (strcasecmp(file_type, ".gdi") == 0)
-// 				{
-// 					fileCount++;
-// 					break;
-// 				}
-// 				else if (strcasecmp(file_type, ".cdi") == 0)
-// 				{
-// 					fileCount++;
-// 					break;
-// 				}
-// 				else if (strcasecmp(file_type, ".cso") == 0)
-// 				{
-// 					fileCount++;
-// 					break;
-// 				}
-// 				else if (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(entg->name, "track", strlen("track")) == 0))
-// 				{
-// 					fileCount++;
-// 					break;
-// 				}
-// 			}
-// 			fs_close(fdg);
-// 		}
-// 	}
-// 	fs_close(fd);
-// 	file_type = NULL;
-
-// 	return (fileCount > 0 ? ceil((float)fileCount / (float)self.menu_option.max_page_size) : 0);
-// }
 
 static bool IsUniqueFileGame(const char *full_path_folder)
 {
@@ -875,12 +786,10 @@ static bool LoadPage(bool change_view)
 
 		if (self.current_page < 1)
 		{
-			// self.current_page = 1;
 			self.current_page = self.pages;
 		}
 		else if (self.current_page > self.pages)
 		{
-			// self.current_page = self.pages;
 			self.current_page = 1;
 		}
 
@@ -985,10 +894,10 @@ static bool LoadPage(bool change_view)
 				}
 				else
 				{
-					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.jpg");
+					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.jpg");
 					if (FileExists(game_cover_path) == 0) 
 					{
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games/images/gd.png");
+						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.png");
 						self.games_array[icount].cover_type = IT_PNG;
 					}
 					else 
@@ -1070,7 +979,7 @@ static bool LoadPage(bool change_view)
 
 		char font_path[NAME_MAX];
 		memset(font_path, 0, sizeof(font_path));
-		snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games/fonts/message.txf");
+		snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games_menu/fonts/message.txf");
 
 		TSU_LabelDestroy(&self.title);
 		TSU_FontDestroy(&self.menu_font);
@@ -1086,55 +995,46 @@ static bool LoadPage(bool change_view)
 
 static void InitMenu()
 {
-	// // snd_stream_init();
-	// // mp3_init();
-	// // mp3_start("/rd/ide/DS/apps/games/music/music.mp3", 0);
 	self.scene_ptr = TSU_MenuGetScene(self.dsmenu_ptr);
 	memset(self.default_dir, 0, sizeof(self.default_dir));
 	memset(self.covers_path, 0, sizeof(self.covers_path));
 	memset(self.games_path, 0, sizeof(self.games_path));
 
-	// getenv("PATH")
 	if (DirExists("/ide/games"))
 	{
 		strcpy(self.default_dir, "/ide/DS");
 		strcpy(self.games_path, "/ide/games");
-		strcpy(self.covers_path, "/ide/DS/apps/games/covers");
+		strcpy(self.covers_path, "/ide/DS/apps/games_menu/covers");
 	}
 	else if (DirExists("/sd/games"))
 	{
 		strcpy(self.default_dir, "/sd/DS");
 		strcpy(self.games_path, "/sd/games");
-		strcpy(self.covers_path, "/sd/DS/apps/games/covers");
+		strcpy(self.covers_path, "/sd/DS/apps/games_menu/covers");
 	}
 	else if (!is_custom_bios())
 	{
 		strcpy(self.default_dir, "/cd");
 
 #ifdef DEBUG_MENU_GAMES_CD
-		strcpy(self.games_path, "/cd/apps/games/gdis");
-		strcpy(self.covers_path, "/cd/apps/games/covers");
+		strcpy(self.games_path, "/cd/apps/games_menu/gdis");
+		strcpy(self.covers_path, "/cd/apps/games_menu/covers");
 #else
 		strcpy(self.games_path, "/cd/games");
-		strcpy(self.covers_path, "/cd/apps/games/covers");
+		strcpy(self.covers_path, "/cd/apps/games_menu/covers");
 #endif
 	}
 
 	char font_path[NAME_MAX];
 	memset(font_path, 0, sizeof(font_path));
-	snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games/fonts/default.txf");
+	snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games_menu/fonts/default.txf");
 
 	self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
-	// TSU_FontCreateInternal(self.menu_font, font_path, PVR_LIST_TR_POLY);
 
 	SetMenuType(MT_IMAGE_TEXT_64_5X2);
 	self.exit_app = false;
 	self.title = NULL;
 	self.title_type = NULL;
-
-	// Set a green background
-	// TSU_MenuSetBg(self.dsmenu_ptr, 0.06f, 0.41f, 0.81f);
-	// TSU_MenuSetBg(self.dsmenu_ptr, 0.0f, 0.0f, 0.0f);
 
 	// Offset our scene so 0,0,0 is the screen center with Z +10
 	Vector vector = {0, 0, 10, 1};
@@ -1241,19 +1141,9 @@ static void GamesApp_InputEvent(int type, int key)
 
 		case KeyCancel:
 		{
-			// if ((new_time.tv_sec - old_time.tv_sec) > 1) {
-			//    old_time.tv_sec = 0;
-			//    new_time.tv_sec = 0;
-			// }
-
-			// old_time = new_time;
-			// rtc_gettimeofday(&new_time);
-
-			// if ((new_time.tv_sec - old_time.tv_sec) == 1) {
 			self.exit_app = true;
 			skip_cursor = true;
 			StartExit();
-			// }
 		}
 		break;
 
@@ -1264,7 +1154,6 @@ static void GamesApp_InputEvent(int type, int key)
 			if (LoadPage(false))
 			{
 				self.menu_cursel = 0;
-				// skip_cursor = true;
 			}
 		}
 		break;
@@ -1376,7 +1265,6 @@ static void GamesApp_InputEvent(int type, int key)
 
 		default:
 			{
-				// printf("Unhandled Event Key\n");
 			}
 			break;
 	}
@@ -1408,26 +1296,6 @@ static int CanUseTrueAsyncDMA(void)
 			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
-// static int GetImageType(const char *filename)
-// {
-//    int result_image_type = -1;
-//    if (filename != NULL && strlen(filename) > 4) {
-//       char *image_type = strrchr(filename, '.');
-
-//       if (strcasecmp(image_type, ".gdi") == 0) {
-// 	      result_image_type = ISOFS_IMAGE_TYPE_GDI;
-//       }
-//       else if (strcasecmp(image_type, ".cdi") == 0) {
-//          result_image_type = ISOFS_IMAGE_TYPE_CDI;
-//       }
-//       else if (strcasecmp(image_type, ".iso") == 0) {
-//          result_image_type = ISOFS_IMAGE_TYPE_ISO;
-//       }
-//    }
-
-//    return result_image_type;
-// }
-
 static void SendMessageEvent(const char *message)
 {
 	ds_printf("DS_MESSAGE: %s\n", message);
@@ -1454,7 +1322,6 @@ void DefaultPreset()
 	self.isoldr->syscalls = 0;
 	self.isoldr->emu_vmu = 0;
 	self.isoldr->scr_hotkey = 0;
-	// self.isoldr->exec.type = BIN_TYPE_AUTO;
 	self.isoldr->boot_mode = BOOT_MODE_DIRECT;
 
 	// Enable CDDA if present
@@ -1493,7 +1360,7 @@ static void GetMD5Hash(const char *file_mount_point)
 			kos_md5(self.boot_sector, sizeof(self.boot_sector), self.md5);
 		}
 
-		/* Also get image type and sector size */
+		// Also get image type and sector size
 		if (fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int)&self.image_type) < 0)
 		{
 			ds_printf("%s: Can't get image type\n", lib_get_name());
@@ -1530,7 +1397,6 @@ static int LoadPreset()
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
-	// uint32 heap = HEAP_MODE_AUTO;
 	bool default_preset_loaded = false;
 	char title[32] = "";
 	char device[8] = "";
@@ -1576,12 +1442,10 @@ static int LoadPreset()
 
 		if (!default_preset_loaded)
 		{
-			// uint32 addr = ISOLDR_DEFAULT_ADDR_LOW;
 			self.isoldr->use_dma = use_dma;
 			self.isoldr->emu_async = emu_async;
 			self.isoldr->emu_cdda = strtoul(cdda, NULL, 16);
 			self.isoldr->use_irq = use_irq;
-			// self.isoldr->emu_vmu = emu_vmu;
 			self.isoldr->scr_hotkey = scr_hotkey;
 
 			if (strtoul(heap_memory, NULL, 10) <= HEAP_MODE_MAPLE)
@@ -1594,7 +1458,6 @@ static int LoadPreset()
 			}
 
 			self.isoldr->boot_mode = boot_mode;
-			// self.isoldr->image_type = 0;
 			self.isoldr->fast_boot = fastboot;
 
 			if (strlen(device) > 0)
@@ -1642,24 +1505,6 @@ static int LoadPreset()
 			}
 		}
 
-		// ds_printf("fs_dev: %s, memory: %u, use_dma: %u, emu_async: %u\nemu_cdda: %u, use_irq: %u, emu_vmu: %u, scr_hotkey: %u\nheap: %u, boot_mode: %u, fast_boot: %u\nexec.type: %u",
-		//    self.isoldr->fs_dev,
-		//    self.addr, //memory,
-		//    self.isoldr->use_dma,
-		//    self.isoldr->emu_async,
-		//    self.isoldr->emu_cdda,
-		//    self.isoldr->use_irq,
-		//    self.isoldr->emu_vmu,
-		//    self.isoldr->scr_hotkey,
-		//    self.isoldr->heap,
-		//    self.isoldr->boot_mode,
-		//    self.isoldr->fast_boot,
-		//    self.isoldr->exec.type);
-
-		// if(GUI_WidgetGetState(self.alt_boot)) {
-		//    isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
-		// }
-
 		return 1;
 	}
 	else
@@ -1697,9 +1542,7 @@ void FreeAppData()
 		{
 			TSU_TriggerDestroy(&self.exit_trigger_list[i]);
 		}
-	}
-
-	
+	}	
 
 	if (self.main_box != NULL)
 	{
@@ -1884,15 +1727,12 @@ void GamesApp_Init(App_t *app)
 
 	if ((self.dsmenu_ptr = TSU_MenuCreateWithExit(GamesApp_InputEvent, GamesApp_ExitMenuEvent)) != NULL)
 	{
-		// Color main_color = {1, 0.0f, 0.66f, 0.89f};
 		Color main_color = {1, 0.28f, 0.06f, 0.25f};
 		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 3, 480 - 12, 640 - 6, 480 - 9, 12, &main_color, ML_BACKGROUND, 0);
 		
-		// Color title_color = {1, 0.0f, 0.66f, 0.89f};
 		Color title_color = {1, 0.28f, 0.06f, 0.25f};
 		self.title_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 0, 40, 640, 40, &title_color, ML_BACKGROUND, 0);
 
-		// Color title_type_color = {1, 0.0f, 0.9f, 0.0f};
 		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 552, 37, 640 - 555, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
 
