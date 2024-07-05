@@ -340,7 +340,21 @@ static ImageDimensionStruct *GetImageDimension(const char *image_file)
 	ImageDimensionStruct *image = NULL;
 	char *image_type = strrchr(image_file, '.');
 
-	if (strcasecmp(image_type, ".jpg") == 0)
+	if (strcasecmp(image_type, ".kmg") == 0)
+	{
+		file_t image_handle = fs_open(image_file, O_RDONLY);
+
+		if (image_handle == FILEHND_INVALID)
+			return NULL;
+			
+		image = (ImageDimensionStruct *)malloc(sizeof(ImageDimensionStruct));
+		memset(image, 0, sizeof(ImageDimensionStruct));
+		image->height = 128;
+		image->width = 128;
+
+		fs_close(image_handle);
+	}
+	else if (strcasecmp(image_type, ".jpg") == 0)
 	{
 		file_t image_handle = fs_open(image_file, O_RDONLY);
 
@@ -914,20 +928,30 @@ static bool LoadPage(bool change_view)
 					strncpy(game_without_extension, self.games_array[icount].game, strlen(self.games_array[icount].game) - 4);
 
 					memset(game_cover_path, 0, sizeof(game_cover_path));
-					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game_without_extension);
-					if (IsValidImage(game_cover_path))
+					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.kmg", self.covers_path, game_without_extension);
+					if (1 != 1 && IsValidImage(game_cover_path)) // DISABLE KMG
 					{
 						self.games_array[icount].exists_cover = SC_EXISTS;
-						self.games_array[icount].cover_type = IT_JPG;
+						self.games_array[icount].cover_type = IT_KMG;
 					}
-					else
+					else 
 					{
 						memset(game_cover_path, 0, sizeof(game_cover_path));
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game_without_extension);
+						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game_without_extension);
 						if (IsValidImage(game_cover_path))
 						{
 							self.games_array[icount].exists_cover = SC_EXISTS;
-							self.games_array[icount].cover_type = IT_PNG;
+							self.games_array[icount].cover_type = IT_JPG;
+						}
+						else
+						{
+							memset(game_cover_path, 0, sizeof(game_cover_path));
+							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game_without_extension);
+							if (IsValidImage(game_cover_path))
+							{
+								self.games_array[icount].exists_cover = SC_EXISTS;
+								self.games_array[icount].cover_type = IT_PNG;
+							}
 						}
 					}
 
@@ -942,7 +966,11 @@ static bool LoadPage(bool change_view)
 					memset(game, 0, sizeof(game));
 					strncpy(game, self.games_array[icount].game, strlen(self.games_array[icount].game) - 4);
 
-					if (self.games_array[icount].cover_type == IT_JPG)
+					if (self.games_array[icount].cover_type == IT_KMG)
+					{
+						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.kmg", self.covers_path, game);
+					}
+					else if (self.games_array[icount].cover_type == IT_JPG)
 					{
 						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game);
 					}

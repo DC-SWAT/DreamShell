@@ -31,7 +31,8 @@ enum ImageTypeEnum
     IT_PNG = 0,
     IT_JPG = 1,
     IT_BPM = 2,
-    IT_PVR = 3
+    IT_PVR = 3,
+    IT_KMG = 4
 };
 
 #endif //__TSUDEFINITION_H

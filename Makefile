@@ -29,7 +29,6 @@ INC_DIR = $(DS_BASE)/include
 SRC_DIR = $(DS_BASE)/src
 LIB_DIR = $(DS_BASE)/lib
 
-#KOS_CPPFLAGS += -std=gnu++17
 KOS_LDFLAGS += -L$(LIB_DIR)
 KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
 			-I$(INC_DIR)/tsunami \
@@ -109,8 +108,6 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
 		$(UTILS_OBJ) $(FATFS) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o
-
-#$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) $(TSUNAMI_OBJS)		
 
 ifdef TARGET_PROF
 	OBJS += $(SRC_DIR)/profiler.o
