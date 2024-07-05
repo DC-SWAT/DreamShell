@@ -61,9 +61,9 @@ SDL_LIBS = -lSDL_$(SDL_VER) \
 IMAGE_LIBS = -lkmg -ljpeg -lpng -lz
 LUA_LIBS = -llua_$(LUA_VER)
 KLIBS = -lkosext2fs -lkosutils -lstdc++ -lm
-TSUNAME_LIBS = -ltsunami_$(TSUNAMI_VER)
+TSUNAMI_LIBS = -ltsunami_$(TSUNAMI_VER)
 
-CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(TSUNAME_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
+CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(TSUNAMI_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
 
 SDL_GUI = $(LIB_DIR)/SDL_gui
 SDL_CONSOLE = $(LIB_DIR)/SDL_Console/src
