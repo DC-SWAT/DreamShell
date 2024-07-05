@@ -27,7 +27,7 @@ typedef struct maple_alldevinfo {
 
 static uint8_t recv_buff[196];
 
-static void vbl_allinfo_callback(maple_frame_t * frm) {
+static void vbl_allinfo_callback(maple_state_t *st, maple_frame_t * frm) {
     maple_response_t *resp;
 
     /* So.. did we get a response? */
@@ -69,7 +69,7 @@ static int send_allinfo(maple_device_t * dev) {
     return MAPLE_EOK;
 }
 
-static void vm2_reply(maple_frame_t * frm) {
+static void vm2_reply(maple_state_t *st, maple_frame_t * frm) {
     maple_response_t *resp;
 
     /* So.. did we get a response? */
@@ -80,6 +80,7 @@ static void vm2_reply(maple_frame_t * frm) {
     }
 
     memcpy(recv_buff, resp, 4);
+
     maple_frame_unlock(frm);
     genwait_wake_all(frm);
 }
