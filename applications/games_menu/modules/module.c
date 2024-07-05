@@ -894,15 +894,31 @@ static bool LoadPage(bool change_view)
 				}
 				else
 				{
-					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.jpg");
-					if (FileExists(game_cover_path) == 0) 
-					{
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.png");
-						self.games_array[icount].cover_type = IT_PNG;
+					if (self.games_array[icount].exists_cover == SC_DEFAULT)
+					{						
+						if (self.games_array[icount].cover_type == IT_JPG)
+						{
+							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.jpg");
+						}
+						else
+						{
+							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.png");
+						}
 					}
 					else 
 					{
-						self.games_array[icount].cover_type = IT_JPG;
+						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.jpg");
+						if (FileExists(game_cover_path) == 0) 
+						{
+							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.png");
+							self.games_array[icount].exists_cover = SC_DEFAULT;
+							self.games_array[icount].cover_type = IT_PNG;
+						}
+						else 
+						{
+							self.games_array[icount].exists_cover = SC_DEFAULT;
+							self.games_array[icount].cover_type = IT_JPG;
+						}						
 					}
 				}
 

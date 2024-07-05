@@ -18,7 +18,8 @@ enum SearchCoverEnum
 {
     SC_WITHOUT_SEARCHING = -1,
     SC_NOT_EXIST = 0,
-    SC_EXISTS = 1
+    SC_EXISTS = 1,
+    SC_DEFAULT = 2
 };
 
 // #pragma pack(push, 1)
