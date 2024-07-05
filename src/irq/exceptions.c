@@ -45,10 +45,11 @@ static struct {
 };
 
 
-static void guard_irq_handler(irq_t source, irq_context_t *context) {
-	
+static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) {
+
+	(void)data;
 	dbglog(DBG_INFO, "\n=============== CATCHING EXCEPTION ===============\n");
-	
+
 	irq_context_t *irq_ctx = irq_get_context();
 
 	if (source == EXC_FPU) {
@@ -242,7 +243,7 @@ int expt_init() {
 
 	// TODO : save old values
 	for (i = 0; exceptions_code[i].code; i++)
-		irq_set_handler(exceptions_code[i].code, guard_irq_handler);
+		irq_set_handler(exceptions_code[i].code, guard_irq_handler, NULL);
 
 	expt_inited = 1;
 	return 0;
@@ -261,7 +262,7 @@ void expt_shutdown() {
 //	}
 
 	for (i = 0; exceptions_code[i].code; i++)
-		irq_set_handler(exceptions_code[i].code, 0);
+		irq_set_handler(exceptions_code[i].code, NULL, NULL);
 	
 	kthread_key_delete(expt_key);
 }

@@ -52,13 +52,9 @@ typedef struct fatfs {
 
 } fatfs_t;
 
-/* Mutex for file handle.
- * For some reason, the mutex is not always blocked here;
- * this is especially noticeable on an SD card when reading data from multiple threads.
- */
-static spinlock_t fat_mutex = SPINLOCK_INITIALIZER;
-#define FAT_LOCK() spinlock_lock(&fat_mutex);
-#define FAT_UNLOCK() spinlock_unlock(&fat_mutex);
+static mutex_t fat_mutex = MUTEX_INITIALIZER;
+#define FAT_LOCK() mutex_lock(&fat_mutex);
+#define FAT_UNLOCK() mutex_unlock(&fat_mutex);
 
 static int initted = 0;
 static fatfs_t fh[MAX_FAT_FILES] __attribute__((aligned(32)));
