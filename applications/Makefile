@@ -6,7 +6,7 @@
 
 _SUBDIRS = main filemanager region_changer iso_loader \
 			bios_flasher gd_ripper speedtest vmu_manager \
-			settings gdplay dreameye network
+			settings gdplay dreameye network games_menu
 
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))

@@ -1,0 +1,23 @@
+- RefCnt base object for reference counting of objects. Reference count
+  debugging which stores a list of source addresses for things that have
+  a reference.
+- Texture object to wrap the texture management above.
+- Font object to wrap the font stuff above.
+- Drawable object to represent some drawable thing, potentially with
+  sub-things. These can work like a windowing GUI where the child
+  coords/rotation/alpha/etc depend on the parent coords/rotation/alpha/etc.
+- Animation objects which can be attached to one or more Drawables to
+  animate them.
+- Trigger objects which can be actived due to various events
+  (time/frame offset, end of animation, etc) and can cause other
+  events (new Animation, Drawable death, etc).
+- Environmental objects which affect non-visual things but are
+  animatable like Drawables, or cause animation like Animation
+  objects: BGM volume control, sound effects, controller inputs, etc.
+- A crapload of predefined objects of each of the above types
+  (cube, sphere, mouse pointer, scrolling background, banner,
+  label, etc).
+- Code written only to Tsunami should be mostly portable to another
+  platform provided a port is done of any plat-specific code in the
+  actual object draw routines.
+

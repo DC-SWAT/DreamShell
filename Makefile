@@ -31,7 +31,8 @@ LIB_DIR = $(DS_BASE)/lib
 
 KOS_LDFLAGS += -L$(LIB_DIR)
 KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
-			-DHAVE_SDLIMAGE $(TRAGET_VERSION)
+			-I$(INC_DIR)/tsunami \
+			-DHAVE_SDLIMAGE $(TRAGET_VERSION)	
 
 ifdef TARGET_DEBUG
 KOS_CFLAGS += -g -DDS_DEBUG=$(TARGET_DEBUG)
@@ -46,6 +47,7 @@ SDL_IMAGE_VER = 1.2.12
 SDL_TTF_VER = 2.0.11
 SDL_RTF_VER = 0.1.1
 LUA_VER = 5.1.4-2
+TSUNAMI_VER = 2.0.0
 
 EXTRA_LIBS = -lcfg -lmxml -lparallax
 
@@ -59,8 +61,9 @@ SDL_LIBS = -lSDL_$(SDL_VER) \
 IMAGE_LIBS = -lkmg -ljpeg -lpng -lz
 LUA_LIBS = -llua_$(LUA_VER)
 KLIBS = -lkosext2fs -lkosutils -lstdc++ -lm
+TSUNAMI_LIBS = -ltsunami_$(TSUNAMI_VER)
 
-CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
+CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(TSUNAMI_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
 
 SDL_GUI = $(LIB_DIR)/SDL_gui
 SDL_CONSOLE = $(LIB_DIR)/SDL_Console/src

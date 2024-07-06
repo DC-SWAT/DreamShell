@@ -1,0 +1,37 @@
+Coding Conventions for Tsunami
+------------------------------
+
+KOS specifies C coding conventions pretty thoroughly, but not C++
+conventions. This document will fill that space for Tsunami.
+
+The quickest explanation is by example:
+
+class SomeClass {
+public:
+	SomeClass();
+	virtual ~SomeClass();
+
+	int getCoolProperty() const { return m_member; }
+	void setCoolProperty(int value) { m_member = value; }
+
+	void doSomething(int parameter);
+
+	enum CoolEnum {
+		Value1,
+		Value2,
+		Value3
+	};
+
+	static const int Constant;
+
+private:
+	int	m_member;
+};
+
+
+In short:
+- Types are CamelNames with upper case at the front
+- Methods/properties are camelNames with lower case at the front
+- Constants are like type names
+- Generally all members should be private, and have an m_ prefix.
+- Things that don't modify the class should be const.
