@@ -28,7 +28,5 @@ install: app.xml $(DEPS)
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)
-	cp -R covers $(APP_DIR)
 	cp -R fonts $(APP_DIR)
-	cp -R music $(APP_DIR)
 	
