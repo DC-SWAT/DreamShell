@@ -197,7 +197,6 @@ static void SetTitleType(const char *full_path_game)
 		{
 			char *result = (char *)malloc(NAME_MAX);
 			char *path = (char *)malloc(NAME_MAX);
-			int size = 0;
 
 			char *game = (char *)malloc(NAME_MAX);
 			memset(game, 0, NAME_MAX);
@@ -323,7 +322,7 @@ static void SetMenuType(int menu_type)
 	}
 }
 
-static ImageDimensionStruct *GetImageDimension(const char *image_file)
+static ImageDimensionStruct* GetImageDimension(const char *image_file)
 {
 	ImageDimensionStruct *image = NULL;
 	char *image_type = strrchr(image_file, '.');
@@ -354,16 +353,16 @@ static ImageDimensionStruct *GetImageDimension(const char *image_file)
 
 		size_t file_size = fs_total(image_handle);
 		unsigned char buffer[32];
-		int read_bytes, i, j, marker;
+		int i, j, marker;
 
 		fs_seek(image_handle, 0, SEEK_SET);
-		read_bytes = fs_read(image_handle, buffer, 32);
+		fs_read(image_handle, buffer, 32);
 		i = j = 2; // Start at offset of first marker
 		marker = 0; // Search for SOF (start of frame) marker
 
 		while (i < 32 && marker != 0xffc0 && j < file_size)
 		{
-			marker = MOTOSHORT(&buffer[i]) & 0xfffc;
+			marker = (MOTOSHORT(&buffer[i])) & 0xfffc;
 			if (marker < 0xff00) // invalid marker
 			{
 				i += 2;
@@ -376,7 +375,7 @@ static ImageDimensionStruct *GetImageDimension(const char *image_file)
 			if (j < file_size) // need to read more
 			{
 				fs_seek(image_handle, j, SEEK_SET); // read some more
-				read_bytes = fs_read(image_handle, buffer, 32);
+				fs_read(image_handle, buffer, 32);
 				i = 0;
 			}
 			else
@@ -631,10 +630,9 @@ static bool IsUniqueFileGame(const char *full_path_folder)
 
 static void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, int level)
 {
-	char game_path[NAME_MAX];
 	file_t fd = fs_open(full_path_folder, O_RDONLY | O_DIR);
 	if (fd == FILEHND_INVALID)
-		return false;
+		return;
 
 	dirent_t *ent = NULL;
 	char game[MAX_SIZE_GAME_NAME];
@@ -689,7 +687,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 
 		if (game[0] != '\0')
 		{
-			for (char *c = game; *c = toupper(*c); ++c)
+			for (char *c = game; (*c = toupper(*c)); ++c)
 			{
 				if (*c == 'a')
 					*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
@@ -714,7 +712,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 				memset(folder_game, 0, NAME_MAX);
 				strcpy(folder_game, full_path_folder + strlen(self.games_path) + 1);
 
-				for (char *c = folder_game; *c = toupper(*c); ++c)
+				for (char *c = folder_game; (*c = toupper(*c)); ++c)
 				{
 					if (*c == 'a')
 						*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
@@ -1312,11 +1310,6 @@ static int CanUseTrueAsyncDMA(void)
 			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
-static void SendMessageEvent(const char *message)
-{
-	ds_printf("DS_MESSAGE: %s\n", message);
-}
-
 void DefaultPreset()
 {
 	if (CanUseTrueAsyncDMA())
@@ -1633,7 +1626,7 @@ bool RunGame()
 	return is_running;
 }
 
-static void MenuExitHelper(void *params)
+static void* MenuExitHelper(void *params)
 {
 	// NEED IT TO SLEEP BECAUSE MARKS ERROR IN OPEN FUNCTION
 	thd_sleep(1000);
@@ -1676,7 +1669,7 @@ static void MenuExitHelper(void *params)
 		}
 	}
 
-	return;
+	return NULL;
 }
 
 void GamesApp_ExitMenuEvent()

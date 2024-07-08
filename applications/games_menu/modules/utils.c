@@ -173,7 +173,7 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 
 	if (option_path == 2)
 	{
-		for (char *c = path; *c = toupper(*c); ++c)
+		for (char *c = path; (*c = toupper(*c)); ++c)
 		{
 			if (*c == 'a')
 				*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
@@ -181,7 +181,7 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 	}
 	else if (option_path == 1)
 	{
-		for (char *c = path; *c = tolower(*c); ++c)
+		for (char *c = path; (*c = tolower(*c)); ++c)
 		{
 			if (*c == 'A')
 				*c = 'a'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
