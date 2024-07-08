@@ -22,7 +22,7 @@ all: rm-elf library install
 library:
 	cd ./xvidcore/build/generic && make
 	
-library_clean:
+library-clean:
 	cd ./xvidcore/build/generic && make clean
 
 include ../../sdk/Makefile.loadable
