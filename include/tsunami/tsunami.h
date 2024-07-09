@@ -39,6 +39,6 @@
 #include "triggers/chainanim.h"
 #include "triggers/death.h"
 #include "triggers/oneshot.h"
-#include "dsmenu.h"
+#include "dsapp.h"
 
 #endif // __TSUNAMI_INCLUDE_H

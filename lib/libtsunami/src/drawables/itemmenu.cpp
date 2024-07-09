@@ -156,7 +156,7 @@ void ItemMenu::SetColorUnselected(Color color)
     color_unselected = color;
 }
 
-void ItemMenu::SetSelected(bool selected)
+void ItemMenu::SetSelected(bool selected, bool smear)
 {
     this->selected = selected;
     
@@ -164,7 +164,7 @@ void ItemMenu::SetSelected(bool selected)
     if (selected) {
         translate.z = MenuLayerEnum::ML_SELECTED;
         this->setTint(text_color_selected, image_color_selected);
-        text->setSmear(true);
+        text->setSmear(smear);
     }
     else {
         translate.z = MenuLayerEnum::ML_ITEM;
@@ -313,10 +313,10 @@ extern "C"
 		}
 	}
 
-	void TSU_ItemMenuSetSelected(ItemMenu *item_menu_ptr, bool selected)
+	void TSU_ItemMenuSetSelected(ItemMenu *item_menu_ptr, bool selected, bool smear)
 	{
 		if (item_menu_ptr != NULL) {
-			item_menu_ptr->SetSelected(selected);
+			item_menu_ptr->SetSelected(selected, smear);
 		}
 	}
 

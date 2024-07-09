@@ -54,7 +54,7 @@ public:
     void SetImageColor(Color color);
     void SetTextColor(Color color);
     void SetColorUnselected(Color color);
-    void SetSelected(bool selected = true);    
+    void SetSelected(bool selected = true, bool smear = true);
     bool HasTextAndImage(); 
 
     Label* GetLabel();
@@ -88,7 +88,7 @@ bool TSU_ItemMenuIsSelected(ItemMenu *item_menu_ptr);
 void TSU_ItemMenuSetImageColor(ItemMenu *item_menu_ptr, const Color *color);
 void TSU_ItemMenuSetTextColor(ItemMenu *item_menu_ptr, const Color *color);
 void TSU_ItemMenuSetColorUnselected(ItemMenu *item_menu_ptr, const Color *color);
-void TSU_ItemMenuSetSelected(ItemMenu *item_menu_ptr, bool selected);
+void TSU_ItemMenuSetSelected(ItemMenu *item_menu_ptr, bool selected, bool smear);
 bool TSU_ItemMenuHasTextAndImage(ItemMenu *item_menu_ptr);
 Banner* TSU_ItemMenuGetBanner(ItemMenu *item_menu_ptr);
 Label* TSU_ItemMenuGetLabel(ItemMenu *item_menu_ptr);
