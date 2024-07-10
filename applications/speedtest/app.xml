@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Speedtest" version="0.4.0" icon="images/icon.png">
+<app name="Speedtest" version="0.4.1" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_speedtest.klf" />
 		<font src="../../fonts/ttf/dinnext.ttf" type="ttf" size="24" name="dinnext" />
@@ -79,13 +79,13 @@
 		<panel x="5%" y="205" width="90%" height="210">
 			<panel background="result_bg">
 				<panel height="50" y="5">
-					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="pio-write-text" />
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="fs-write-text" />
 				</panel>
 				<panel height="50">
-					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="pio-read-text" />
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="fs-read-text" />
 				</panel>
 				<panel height="60">
-					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="dma-read-text" />
+					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE" name="io-read-text" />
 				</panel>
 				<panel height="50">
 					<label x="2%" width="96%" height="40" font="dinnext" color="#EEEEEE"
