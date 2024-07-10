@@ -239,7 +239,7 @@ static void SetTitleType(const char *full_path_game)
 			free(path);
 			
 			strncpy(title_text, "GDI", 3);
-			if (FileExists(result) == 1)
+			if (FileExists(result) == 0)
 			{
 				title_type_color.r = 0.74f;
 				title_type_color.g = 1.0f;
