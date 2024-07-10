@@ -2,7 +2,7 @@
 
    exec.c
    Copyright (C) 2002 Dan Potter
-   Copyright (C) 2013-2023 SWAT
+   Copyright (C) 2013-2024 SWAT
 */
 
 #include <kos.h>
@@ -15,6 +15,7 @@
 #include <string.h>
 #include <stdio.h>
 
+void arch_shutdown();
 
 /* Pull these in from execasm.s */
 extern uint32 _isoldr_exec_template[];
@@ -23,56 +24,6 @@ extern uint32 _isoldr_exec_template_end[];
 
 /* Pull this in from startup.s */
 extern uint32 _arch_old_sr, _arch_old_vbr, _arch_old_stack, _arch_old_fpscr;
-
-/* GCC stuff */
-extern void _fini(void);
-
-static void isoldr_arch_auto_shutdown() {
-	fs_dclsocket_shutdown();
-	net_shutdown();
-
-	snd_shutdown();
-	timer_shutdown();
-
-	la_shutdown();
-	bba_shutdown();
-	maple_shutdown();
-	cdrom_shutdown();
-	g2_dma_shutdown();
-	spu_shutdown();
-	pvr_shutdown();
-
-	library_shutdown();
-	fs_dcload_shutdown();
-	fs_vmu_shutdown();
-	vmufs_shutdown();
-	fs_iso9660_shutdown();
-	fs_ramdisk_shutdown();
-	fs_romdisk_shutdown();
-	fs_pty_shutdown();
-	fs_shutdown();
-
-	thd_shutdown();
-	rtc_shutdown();
-}
-
-static void isoldr_arch_shutdown() {
-
-    /* Run dtors */
-    _fini();
-
-    dbglog(DBG_CRITICAL, "arch: shutting down kernel\n");
-
-    /* Turn off UBC breakpoints, if any */
-    ubc_shutdown();
-
-    /* Do auto-shutdown */
-    isoldr_arch_auto_shutdown();
-
-    /* Shut down IRQs */
-    irq_shutdown();
-}
-
 
 /* Replace the currently running image with whatever is at
    the pointer; note that this call will never return. */
@@ -110,7 +61,7 @@ void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 par
     icache_flush_range((uint32)buffer, tcount * 4);
 
     /* Shut us down */
-    isoldr_arch_shutdown();
+    arch_shutdown();
 
     /* Reset our old SR, VBR, and FPSCR */
     __asm__ __volatile__("ldc	%0,sr\n"
@@ -134,4 +85,3 @@ void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 par
         trampoline();
     }
 }
-
