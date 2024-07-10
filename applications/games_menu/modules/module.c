@@ -467,8 +467,16 @@ static void FreeGamesForce()
 	{
 		for (int icount = 0; icount < self.games_array_count; icount++)
 		{
-			free(self.games_array[icount].game);
-			free(self.games_array[icount].folder);
+			if (self.games_array[icount].game)
+			{
+				free(self.games_array[icount].game);
+			}
+
+			if (self.games_array[icount].folder)
+			{
+				free(self.games_array[icount].folder);
+			}
+			
 			self.games_array[icount].game = NULL;
 			self.games_array[icount].folder = NULL;
 		}
