@@ -10,7 +10,6 @@
 #ifndef __APP_DEFINITION_H
 #define __APP_DEFINITION_H
 #define MAX_SIZE_ITEMS 12
-#define MAX_SIZE_GAME_NAME 80
 
 #include <stdbool.h>
 
@@ -38,8 +37,8 @@ typedef struct MenuOptionStructure
 
 typedef struct GameItemStructure
 {
-    char game[MAX_SIZE_GAME_NAME];
-    char folder[MAX_SIZE_GAME_NAME];
+    char *game;
+    char *folder;
     bool is_folder_name;
     int8 exists_cover;
     uint8 cover_type;
