@@ -1,7 +1,7 @@
 /** 
  * \file      fs.c
  * \brief     Filesystem
- * \date      2013-2023
+ * \date      2013-2024
  * \author    SWAT
  * \copyright	http://www.dc-swat.ru
  */
@@ -33,6 +33,7 @@ typedef struct ata_devdata {
 
 static kos_blockdev_t sd_dev[MAX_PARTITIONS];
 static kos_blockdev_t g1_dev[MAX_PARTITIONS];
+static kos_blockdev_t g1_dev_dma[MAX_PARTITIONS];
 
 static uint32 ntohl_32(const void *data) {
     const uint8 *d = (const uint8*)data;
@@ -87,68 +88,74 @@ int InitSDCard() {
 		return -1;
 	}
 
+	memset(&sd_dev[0], 0, sizeof(sd_dev));
+
 	for(part = 0; part < MAX_PARTITIONS; part++) {
 
 		dev = &sd_dev[part];
 
-		if(!check_partition(buf, part) && !sdc_blockdev_for_partition(part, dev, &partition_type)) {
+		if(check_partition(buf, part)) {
+			continue;
+		}
+		if(sdc_blockdev_for_partition(part, dev, &partition_type)) {
+			continue;
+		}
 
-			if(!part) {
-				strcpy(path, "/sd");
-				path[3] = '\0';
-			} else {
-				sprintf(path, "sd%d", part);
+		if(!part) {
+			strcpy(path, "/sd");
+			path[3] = '\0';
+		}
+		else {
+			sprintf(path, "sd%d", part);
+		}
+
+		/* Check to see if the MBR says that we have a Linux partition. */
+		if(is_ext2_partition(partition_type)) {
+
+			dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
+
+			if(fs_ext2_init()) {
+
+				dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
+				dev->shutdown(dev);
+			}
+			else {
+				dbglog(DBG_INFO, "Mounting filesystem...\n");
+
+				if(fs_ext2_mount(path, dev, FS_EXT2_MOUNT_READWRITE)) {
+					dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
+					dev->shutdown(dev);
+				}
 			}
 
-			/* Check to see if the MBR says that we have a Linux partition. */
-			if(is_ext2_partition(partition_type)) {
+		}
+		else if((fat_part = is_fat_partition(partition_type))) {
 
-				dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
+			dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
 
-				if(fs_ext2_init()) {
+			if(fs_fat_init()) {
 
-					dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
-					sd_dev[part].shutdown(dev);
-
-				} else {
-
-					dbglog(DBG_INFO, "Mounting filesystem...\n");
-
-					if(fs_ext2_mount(path, dev, FS_EXT2_MOUNT_READWRITE)) {
-						dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
-						sd_dev[part].shutdown(dev);
-					}
-				}
-
-			} else if((fat_part = is_fat_partition(partition_type))) {
-
-				dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
-
-				if(fs_fat_init()) {
-
-					dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
-					sd_dev[part].shutdown(dev);
-
-				} else {
-
-					/* Need full disk block device for FAT */
-					sd_dev[part].shutdown(dev);
-					if(sdc_blockdev_for_device(dev)) {
-						continue;
-					}
-
-					dbglog(DBG_INFO, "Mounting filesystem...\n");
-
-					if(fs_fat_mount(path, dev, 0, part)) {
-						dbglog(DBG_INFO, "Could not mount device as fatfs.\n");
-						sd_dev[part].shutdown(dev);
-					}
-				}
-
-			} else {
-				dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
-				sd_dev[part].shutdown(dev);
+				dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
+				dev->shutdown(dev);
 			}
+			else {
+				/* Need full disk block device for FAT */
+				dev->shutdown(dev);
+				if(sdc_blockdev_for_device(dev)) {
+					continue;
+				}
+
+				dbglog(DBG_INFO, "Mounting filesystem...\n");
+
+				if(fs_fat_mount(path, dev, NULL, part)) {
+					dbglog(DBG_INFO, "Could not mount device as fatfs.\n");
+					dev->shutdown(dev);
+				}
+			}
+		}
+		else {
+			dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
+			dev->shutdown(dev);
 		}
 	}
 	return 0;
@@ -162,9 +169,8 @@ int InitIDE() {
 	int part = 0, fat_part = 0;
 	char path[8];
 	uint8 buf[512];
-	 /* FIXME: G1 DMA has conflicts with other stuff like G2 DMA and so on */
-	int use_dma = 0;
 	kos_blockdev_t *dev;
+	kos_blockdev_t *dev_dma;
 
 	if(g1_ata_init()) {
 		return -1;
@@ -176,85 +182,93 @@ int InitIDE() {
 			dbglog(DBG_ERROR, "Can't read MBR from IDE by LBA\n");
 			return -1;
 		}
-	} else {
-		use_dma = 0;
+	}
+	else {
 		if(g1_ata_read_chs(0, 0, 1, 1, (uint16_t *)buf) < 0) {
 			dbglog(DBG_ERROR, "Can't read MBR from IDE by CHS\n");
 			return -1;
 		}
 	}
 
+	memset(&g1_dev[0], 0, sizeof(g1_dev));
+	memset(&g1_dev_dma[0], 0, sizeof(g1_dev_dma));
+
 	for(part = 0; part < MAX_PARTITIONS; part++) {
 
 		dev = &g1_dev[part];
+		dev_dma = &g1_dev_dma[part];
 
-		if(!check_partition(buf, part) && !g1_ata_blockdev_for_partition(part, use_dma, dev, &partition_type)) {
+		if(check_partition(buf, part)) {
+			continue;
+		}
+		if(g1_ata_blockdev_for_partition(part, 0, dev, &partition_type)) {
+			continue;
+		}
 
-			if(!part) {
-				strcpy(path, "/ide");
-				path[4] = '\0';
-			} else {
-				sprintf(path, "/ide%d", part);
-				path[strlen(path)] = '\0';
+		if(!part) {
+			strcpy(path, "/ide");
+			path[4] = '\0';
+		}
+		else {
+			sprintf(path, "/ide%d", part);
+			path[strlen(path)] = '\0';
+		}
+
+		/* Check to see if the MBR says that we have a EXT2 or FAT partition. */
+		if (is_ext2_partition(partition_type)) {
+
+			dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
+
+			if (fs_ext2_init()) {
+				dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
+				dev->shutdown(dev);
 			}
+			else {
 
-			/* Check to see if the MBR says that we have a EXT2 or FAT partition. */
-			if(is_ext2_partition(partition_type)) {
+				dbglog(DBG_INFO, "Mounting filesystem...\n");
 
-				dbglog(DBG_INFO, "Detected EXT2 filesystem on partition %d\n", part);
+				if (fs_ext2_mount(path, dev, FS_EXT2_MOUNT_READWRITE)) {
+					dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
+					dev->shutdown(dev);
+				}
+			}
+		}
+		else if ((fat_part = is_fat_partition(partition_type))) {
 
-				if(fs_ext2_init()) {
+			dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
 
-					dbglog(DBG_INFO, "Could not initialize fs_ext2!\n");
-					g1_dev[part].shutdown(dev);
+			if (fs_fat_init()) {
 
-				} else {
+				dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
+				dev->shutdown(dev);
 
-					if (use_dma) {
-						/* Only PIO for EXT2 */
-						g1_dev[part].shutdown(dev);
-						if(g1_ata_blockdev_for_partition(part, 0, dev, &partition_type)) {
-							continue;
-						}
-					}
+			}
+			else {
+				/* Need full disk block device for FAT */
+				dev->shutdown(dev);
 
-					dbglog(DBG_INFO, "Mounting filesystem...\n");
-
-					if(fs_ext2_mount(path, dev, FS_EXT2_MOUNT_READWRITE)) {
-						dbglog(DBG_INFO, "Could not mount device as ext2fs.\n");
-						g1_dev[part].shutdown(dev);
-					}
+				if (g1_ata_blockdev_for_device(0, dev)) {
+					continue;
 				}
 
-			}  else if((fat_part = is_fat_partition(partition_type))) {
-
-				dbglog(DBG_INFO, "Detected FAT%d filesystem on partition %d\n", fat_part, part);
-
-				if(fs_fat_init()) {
-
-					dbglog(DBG_INFO, "Could not initialize fs_fat!\n");
-					g1_dev[part].shutdown(dev);
-
-				} else {
-
-					/* Need full disk block device for FAT */
-					g1_dev[part].shutdown(dev);
-					if(g1_ata_blockdev_for_device(use_dma, dev)) {
-						continue;
-					}
-
-					dbglog(DBG_INFO, "Mounting filesystem...\n");
-
-					if(fs_fat_mount(path, dev, use_dma, part)) {
-						dbglog(DBG_INFO, "Could not mount device as fatfs.\n");
-						g1_dev[part].shutdown(dev);
-					}
+				if (g1_ata_blockdev_for_device(1, dev_dma)) {
+					dev_dma = NULL;
 				}
 
-			} else {
-				dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
-				g1_dev[part].shutdown(dev);
+				dbglog(DBG_INFO, "Mounting filesystem...\n");
+
+				if(fs_fat_mount(path, dev, dev_dma, part)) {
+					dbglog(DBG_INFO, "Could not mount device as fatfs.\n");
+					dev->shutdown(dev);
+					if (dev_dma) {
+						dev_dma->shutdown(dev_dma);
+					}
+				}
 			}
+		}
+		else {
+			dbglog(DBG_INFO, "Unknown filesystem: 0x%02x\n", partition_type);
+			dev->shutdown(dev);
 		}
 	}
 	return 0;

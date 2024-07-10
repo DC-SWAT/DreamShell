@@ -1,7 +1,7 @@
 /** 
  * \file    fs.h
  * \brief   DreamShell filesystem
- * \date    2007-2023
+ * \date    2007-2024
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -70,7 +70,7 @@ int fs_fat_shutdown(void);
  * For block device need reset to 0 start_block number
  * return 0 on success, or < 0 if error
  */
-int fs_fat_mount(const char *mp, kos_blockdev_t *dev, int dma, int partition);
+int fs_fat_mount(const char *mp, kos_blockdev_t *dev_pio, kos_blockdev_t *dev_dma, int partition);
 
 /**
  * Unmount FAT filesystem
