@@ -24,22 +24,27 @@
 #include <tsunami/anims/logxymover.h>
 #include <tsunami/triggers/death.h>
 #include <tsunami/drawables/box.h>
-#include <tsunami/dsmenu.h>
+#include <tsunami/dsapp.h>
 
 #define MOTOSHORT(p) ((*(p))<<8) + *(p+1)
 #define IN_CACHE_GAMES
-#define MAX_SIZE_CDDA 40000000
+#define MAX_SIZE_CDDA 0
+// #define DEBUG_MENU_GAMES_CD
 
 DEFAULT_MODULE_EXPORTS(app_games_menu);
 
-static kthread_t *exit_menu_thread;
-static kthread_t *play_cdda_thread;
+static Event_t *do_menu_control_event;
+static Event_t *do_menu_video_event;
+static Event_t *do_menu_end_video_event;
+static void* MenuExitHelper(void *params);
+static volatile bool finished_menu = false;
+static volatile bool cdda_game_changed = false;
 
 static struct
 {
 	App_t *app;
 	bool have_args;
-	DSMenu *dsmenu_ptr;
+	DSApp *dsapp_ptr;
 	Scene *scene_ptr;
 	int image_type;
 	int sector_size;
@@ -103,7 +108,37 @@ static const char* GetFullGamePathByIndex(int game_index)
 
 static void* PlayCDDAThread(void *params)
 {
+	if (params)
+	{
+		const char *track_file_path = (const char*)params;
+		const uint max_time = 2000;
+		uint time = 0;
+
+		while (!cdda_game_changed && time < max_time)
+		{
+			thd_sleep(100);
+			time += 100;
+		}
+
+		if (!cdda_game_changed)
+		{
+			PlayCDDATrack(track_file_path, 3);
+		}
+	}
+
+	return NULL;
+}
+
+static void PlayCDDA(void *params)
+{	
 	StopCDDATrack();
+	if (self.app->thd) {
+		cdda_game_changed = true;
+		thd_join(self.app->thd, NULL);
+		self.app->thd = NULL;
+		cdda_game_changed = false;
+	}
+
 	if (params != NULL) {
 		char track_file_path[NAME_MAX];
 		const char *full_path_game = (const char*)params;
@@ -113,23 +148,15 @@ static void* PlayCDDAThread(void *params)
 			track_size = GetCDDATrackFilename(6, full_path_game, track_file_path);
 		}
 
-		if (track_size > 0 && track_size <= MAX_SIZE_CDDA) {
-			// thd_sleep(3000);
-
+		if (track_size > 0 && (track_size <= MAX_SIZE_CDDA || MAX_SIZE_CDDA == 0)) {
 			do
 			{
 				track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, track_file_path);
 			} while (track_size == 0);
-			PlayCDDATrack(track_file_path, 3);
+
+			self.app->thd = thd_create(0, PlayCDDAThread, track_file_path);
 		}
-	}
-
-	return NULL;
-}
-
-static void PlayCDDA(void *params)
-{
-	PlayCDDAThread(params);
+	}	
 }
 
 static void SetTitle(const char *text)
@@ -158,7 +185,7 @@ static void SetTitle(const char *text)
 		static Color color = {1, 1.0f, 1.0f, 1.0f};
 		self.title = TSU_LabelCreate(self.menu_font, titleText, 26, false, true);
 		TSU_LabelSetTint(self.title, &color);
-		TSU_MenuSubAddLabel(self.dsmenu_ptr, self.title);
+		TSU_AppSubAddLabel(self.dsapp_ptr, self.title);
 	}
 
 	if (self.title_animation != NULL)
@@ -234,7 +261,7 @@ static void SetTitleType(const char *full_path_game)
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
 			self.title_type = TSU_LabelCreate(self.menu_font, title_text, 26, false, true);
 			TSU_LabelSetTint(self.title_type, &color);
-			TSU_MenuSubAddLabel(self.dsmenu_ptr, self.title_type);
+			TSU_AppSubAddLabel(self.dsapp_ptr, self.title_type);
 		}
 
 		if (self.title_type_animation != NULL)
@@ -455,7 +482,7 @@ static void SetCursor()
 
 	if (self.item_selector != NULL)
 	{
-		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.item_selector);
+		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.item_selector);
 		TSU_RectangleDestroy(&self.item_selector);
 	}
 
@@ -463,9 +490,9 @@ static void SetCursor()
 	{
 		if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
 		{
-			Color color = {1, 1.0f, 1.0f, 0.1f};
-			Color border_color = {1, 0.28f, 0.06f, 0.25f};
-			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 1, &border_color, 0);
+			Color color = {1, 0.0f, 0.0f, 0.0f};
+			Color border_color = {1, 1.0f, 1.0f, 0.1f};
+			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 3, &border_color, 0);
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
 			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.8f);
 		}
@@ -493,7 +520,7 @@ static void SetCursor()
 			TSU_DrawableSetTranslate((Drawable *)self.item_selector, &selector_translate);
 		}
 
-		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.item_selector);
+		TSU_AppSubAddRectangle(self.dsapp_ptr, self.item_selector);
 	}
 
 	static int init_position_x;
@@ -805,7 +832,7 @@ static bool LoadPage(bool change_view)
 
 				if (self.img_button[i] != NULL)
 				{
-					TSU_MenuSubRemoveItemMenu(self.dsmenu_ptr, self.img_button[i]);
+					TSU_AppSubRemoveItemMenu(self.dsapp_ptr, self.img_button[i]);
 					TSU_ItemMenuDestroy(&self.img_button[i]);
 				}				
 			}
@@ -969,7 +996,7 @@ static bool LoadPage(bool change_view)
 
 				if (self.game_count == 1)
 				{
-					TSU_ItemMenuSetSelected(item_menu, true);
+					TSU_ItemMenuSetSelected(item_menu, true, false);
 					SetTitle(name);
 					SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
 					SetCursor();
@@ -977,10 +1004,10 @@ static bool LoadPage(bool change_view)
 				}
 				else
 				{
-					TSU_ItemMenuSetSelected(item_menu, false);
+					TSU_ItemMenuSetSelected(item_menu, false, false);
 				}
 
-				TSU_MenuSubAddItemMenu(self.dsmenu_ptr, item_menu);
+				TSU_AppSubAddItemMenu(self.dsapp_ptr, item_menu);
 			}
 
 			loaded = true;
@@ -1009,7 +1036,7 @@ static bool LoadPage(bool change_view)
 
 static void InitMenu()
 {
-	self.scene_ptr = TSU_MenuGetScene(self.dsmenu_ptr);
+	self.scene_ptr = TSU_AppGetScene(self.dsapp_ptr);
 	memset(self.default_dir, 0, sizeof(self.default_dir));
 	memset(self.covers_path, 0, sizeof(self.covers_path));
 	memset(self.games_path, 0, sizeof(self.games_path));
@@ -1052,12 +1079,32 @@ static void InitMenu()
 
 	// Offset our scene so 0,0,0 is the screen center with Z +10
 	Vector vector = {0, 0, 10, 1};
-	TSU_MenSetTranslate(self.dsmenu_ptr, &vector);
+	TSU_AppSetTranslate(self.dsapp_ptr, &vector);
 
 	self.current_page = 1;
 	LoadPage(false);
 
 	self.menu_cursel = 0;
+}
+
+static void DoMenuEndVideoHandler(void *ds_event, void *param, int action)
+{
+	switch(action) {
+		case EVENT_ACTION_RENDER:
+			{
+				if (TSU_AppEnd(self.dsapp_ptr))
+				{
+					finished_menu = true;
+				}
+			}
+			break;
+		case EVENT_ACTION_RENDER_POST:
+			break;
+		case EVENT_ACTION_UPDATE:
+			break;
+		default:
+			break;
+	}
 }
 
 static void StartExit()
@@ -1067,32 +1114,32 @@ static void StartExit()
 
 	if (self.main_box != NULL)
 	{
-		TSU_MenuSubRemoveBox(self.dsmenu_ptr, self.main_box);
+		TSU_AppSubRemoveBox(self.dsapp_ptr, self.main_box);
 	}
 
 	if (self.title_rectangle != NULL)
 	{
-		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.title_rectangle);
+		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.title_rectangle);
 	}
 
 	if (self.title_type_rectangle != NULL)
 	{
-		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.title_type_rectangle);
+		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.title_type_rectangle);
 	}
 
 	if (self.item_selector != NULL)
 	{
-		TSU_MenuSubRemoveRectangle(self.dsmenu_ptr, self.item_selector);
+		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.item_selector);
 	}
 
 	if (self.title != NULL)
 	{
-		TSU_MenuSubRemoveLabel(self.dsmenu_ptr, self.title);
+		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title);
 	}
 
 	if (self.title_type != NULL)
 	{
-		TSU_MenuSubRemoveLabel(self.dsmenu_ptr, self.title_type);
+		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_type);
 	}
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
@@ -1126,7 +1173,22 @@ static void StartExit()
 			}
 		}
 	}
-	TSU_MenuStartExit(self.dsmenu_ptr);
+	TSU_AppStartExit(self.dsapp_ptr);
+
+	RemoveEvent(do_menu_video_event);
+	RemoveEvent(do_menu_control_event);
+
+	do_menu_end_video_event = AddEvent
+	(
+		"GamesEndVideo_Event",
+		EVENT_TYPE_VIDEO,
+		EVENT_PRIO_DEFAULT,
+		DoMenuEndVideoHandler,
+		NULL
+	);	
+	
+	while (!finished_menu);
+	MenuExitHelper(NULL);
 }
 
 static void GamesApp_InputEvent(int type, int key)
@@ -1165,9 +1227,10 @@ static void GamesApp_InputEvent(int type, int key)
 		case KeyPgup:
 		{
 			self.current_page--;
+			self.menu_cursel = 0;
 			if (LoadPage(false))
 			{
-				self.menu_cursel = 0;
+				skip_cursor = true;
 			}
 		}
 		break;
@@ -1176,10 +1239,10 @@ static void GamesApp_InputEvent(int type, int key)
 		case KeyPgdn:
 		{
 			self.current_page++;
+			self.menu_cursel = 0;
 			if (LoadPage(false))
 			{
-				self.menu_cursel = 0;
-				// skip_cursor = true;
+				skip_cursor = true;				
 			}
 		}
 		break;
@@ -1289,7 +1352,7 @@ static void GamesApp_InputEvent(int type, int key)
 		{
 			if (i == self.menu_cursel)
 			{
-				TSU_ItemMenuSetSelected(self.img_button[i], true);
+				TSU_ItemMenuSetSelected(self.img_button[i], true, false);
 				SetTitle(TSU_ItemMenuGetItemValue(self.img_button[i]));
 				SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
 				SetCursor();
@@ -1297,7 +1360,7 @@ static void GamesApp_InputEvent(int type, int key)
 			}
 			else
 			{
-				TSU_ItemMenuSetSelected(self.img_button[i], false);
+				TSU_ItemMenuSetSelected(self.img_button[i], false, false);
 			}
 		}
 	}
@@ -1522,12 +1585,13 @@ static int LoadPreset()
 	}
 }
 
-void FreeAppData()
+static void FreeAppData()
 {
-	if(play_cdda_thread != NULL)
+	if(self.app->thd != NULL)
 	{
-		thd_destroy(play_cdda_thread);
-		play_cdda_thread = NULL;
+		cdda_game_changed = true;
+		thd_join(self.app->thd, NULL);
+		self.app->thd = NULL;
 	}
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
@@ -1599,13 +1663,14 @@ void FreeAppData()
 	}
 
 	TSU_FontDestroy(&self.menu_font);
-	TSU_MenuDestroy(&self.dsmenu_ptr);
+
+	TSU_AppDestroy(&self.dsapp_ptr);
 	FreeGamesForce();
 
 	self.scene_ptr = NULL;
 }
 
-bool RunGame()
+static bool RunGame()
 {
 	bool is_running = false;
 
@@ -1626,20 +1691,109 @@ bool RunGame()
 	return is_running;
 }
 
+static void DoMenuControlHandler(void *ds_event, void *param, int action)
+{
+	SDL_Event *event = (SDL_Event *) param;
+	
+	switch(event->type) {
+		case SDL_JOYBUTTONDOWN: {
+			switch(event->jbutton.button) {
+				case 1: // B
+					GamesApp_InputEvent(EvtKeypress, KeyCancel);
+					break;
+
+				case 2: // A				
+					GamesApp_InputEvent(EvtKeypress, KeySelect);
+					break;
+
+				case 5: // Y
+					break;
+
+				case 6: // X
+					GamesApp_InputEvent(EvtKeypress, KeyMiscX);
+					break;
+
+				case 3: // START
+					break;
+
+				default:
+					break;
+			}
+		}
+		break;
+
+		case SDL_JOYAXISMOTION: {
+			switch(event->jaxis.axis) {
+				case 2: // RIGHT TRIGGER
+					if (event->jaxis.value == 255) {
+						GamesApp_InputEvent(EvtKeypress, KeyPgdn);
+					}
+					break;
+
+				case 3: // LEFT TRIGGER
+					if (event->jaxis.value == 255) {
+						GamesApp_InputEvent(EvtKeypress, KeyPgup);
+					}					
+					break;
+			}
+		}
+
+		case SDL_JOYHATMOTION: {
+			switch(event->jhat.value) {
+				case 0x0E: // KEY UP
+					GamesApp_InputEvent(EvtKeypress, KeyUp);
+					break;
+
+				case 0x0B: // KEY DOWN
+					GamesApp_InputEvent(EvtKeypress, KeyDown);
+					break;
+
+				case 0x07: // KEY LEFT
+					GamesApp_InputEvent(EvtKeypress, KeyLeft);
+					break;
+
+				case 0x0D: // KEY RIGHT
+					GamesApp_InputEvent(EvtKeypress, KeyRight);
+					break;
+
+				default:
+					break;
+			}
+		}
+		break;
+
+		default:
+			break;
+	}
+}
+
+static void DoMenuVideoHandler(void *ds_event, void *param, int action)
+{
+	switch(action) {
+		case EVENT_ACTION_RENDER:
+			{
+				TSU_AppDoFrame(self.dsapp_ptr);
+			}
+			break;
+		case EVENT_ACTION_RENDER_POST:
+			break;
+		case EVENT_ACTION_UPDATE:
+			break;
+		default:
+			break;
+	}
+}
+
 static void* MenuExitHelper(void *params)
 {
-	// NEED IT TO SLEEP BECAUSE MARKS ERROR IN OPEN FUNCTION
-	thd_sleep(1000);
-
-	if (self.dsmenu_ptr != NULL)
+	if (self.dsapp_ptr != NULL)
 	{
+		RemoveEvent(do_menu_end_video_event);
 		if (!self.exit_app)
 		{
 			if (RunGame())
 			{
-				InitVideoThread();
 				SDL_DC_EmulateMouse(SDL_TRUE);
-				SDL_DC_EmulateKeyboard(SDL_TRUE);
 				EnableScreen();
 				GUI_Enable();
 				ShutdownDS();
@@ -1647,9 +1801,7 @@ static void* MenuExitHelper(void *params)
 			else
 			{
 				FreeAppData();
-				InitVideoThread();
 				SDL_DC_EmulateMouse(SDL_TRUE);
-				SDL_DC_EmulateKeyboard(SDL_TRUE);
 				EnableScreen();
 				GUI_Enable();
 
@@ -1659,9 +1811,7 @@ static void* MenuExitHelper(void *params)
 		else
 		{
 			FreeAppData();
-			InitVideoThread();
 			SDL_DC_EmulateMouse(SDL_TRUE);
-			SDL_DC_EmulateKeyboard(SDL_TRUE);
 			EnableScreen();
 			GUI_Enable();
 
@@ -1672,24 +1822,10 @@ static void* MenuExitHelper(void *params)
 	return NULL;
 }
 
-void GamesApp_ExitMenuEvent()
-{
-	exit_menu_thread = thd_create(0, &MenuExitHelper, NULL);
-}
-
 void GamesApp_Init(App_t *app)
 {
-	if (exit_menu_thread)
-	{
-		thd_destroy(exit_menu_thread);
-	}
-	exit_menu_thread = NULL;
-
-	if (play_cdda_thread)
-	{
-		thd_destroy(play_cdda_thread);
-	}
-	play_cdda_thread = NULL;
+	finished_menu = false;
+	cdda_game_changed = false;
 
 	if (app->args != NULL)
 	{
@@ -1699,7 +1835,9 @@ void GamesApp_Init(App_t *app)
 	{
 		self.have_args = false;
 	}
-
+	
+	self.app = app;
+	self.app->thd = NULL;
 	self.isoldr = NULL;
 	self.sector_size = 2048;
 	self.exit_app = false;
@@ -1734,7 +1872,7 @@ void GamesApp_Init(App_t *app)
 		self.exit_trigger_list[i] = NULL;
 	}
 
-	if ((self.dsmenu_ptr = TSU_MenuCreateWithExit(GamesApp_InputEvent, GamesApp_ExitMenuEvent)) != NULL)
+	if ((self.dsapp_ptr = TSU_AppCreate(GamesApp_InputEvent)) != NULL)
 	{
 		Color main_color = {1, 0.28f, 0.06f, 0.25f};
 		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 3, 480 - 12, 640 - 6, 480 - 9, 12, &main_color, ML_BACKGROUND, 0);
@@ -1745,9 +1883,9 @@ void GamesApp_Init(App_t *app)
 		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 552, 37, 640 - 555, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
 
-		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.title_rectangle);
-		TSU_MenuSubAddRectangle(self.dsmenu_ptr, self.title_type_rectangle);
-		TSU_MenuSubAddBox(self.dsmenu_ptr, self.main_box);
+		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_rectangle);
+		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_type_rectangle);
+		TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
 		
 		InitMenu();		
 	}
@@ -1757,7 +1895,7 @@ void GamesApp_Open(App_t *app)
 {
 	(void)app;
 
-	if (self.dsmenu_ptr != NULL)
+	if (self.dsapp_ptr != NULL)
 	{
 		int mx = 0;
 		int my = 0;
@@ -1767,8 +1905,26 @@ void GamesApp_Open(App_t *app)
 
 		DisableScreen();
 		GUI_Disable();
-		ShutdownVideoThread();
-		TSU_MenuDoMenu(self.dsmenu_ptr);
+
+		TSU_AppBegin(self.dsapp_ptr);
+
+		do_menu_control_event = AddEvent
+		(
+			"GamesControl_Event",
+			EVENT_TYPE_INPUT,
+			EVENT_PRIO_DEFAULT,
+			DoMenuControlHandler,
+			NULL
+		);
+
+		do_menu_video_event = AddEvent
+		(
+			"GamesVideo_Event",
+			EVENT_TYPE_VIDEO,
+			EVENT_PRIO_DEFAULT,
+			DoMenuVideoHandler,
+			NULL
+		);
 	}
 }
 
@@ -1785,22 +1941,6 @@ void GamesApp_Shutdown(App_t *app)
 void GamesApp_Exit(GUI_Widget *widget)
 {
 	(void)widget;
-
-	App_t *app = NULL;
-	if (self.have_args == true)
-	{
-
-		app = GetAppByName("File Manager");
-
-		if (!app || !(app->state & APP_STATE_LOADED))
-		{
-			app = NULL;
-		}
-	}
-	if (!app)
-	{
-		app = GetAppByName("Main");
-	}
-
+	App_t *app = GetAppByName("Main");
 	OpenApp(app, NULL);
 }
