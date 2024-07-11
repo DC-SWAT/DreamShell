@@ -203,6 +203,7 @@ static void SetTitleType(const char *full_path_game)
 {
 	if (full_path_game != NULL)
 	{
+		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 		const char *file_type = strrchr(full_path_game, '.');
 
 		char title_text[4];
@@ -237,17 +238,17 @@ static void SetTitleType(const char *full_path_game)
 			free(game);
 			free(path);
 			
-			if (FileExists(result) == 1)
+			strncpy(title_text, "GDI", 3);
+			if (FileExists(result) == 0)
 			{
-				strncpy(title_text, "OPT", 3);
-			}
-			else
-			{
-				strncpy(title_text, "GDI", 3);
+				title_type_color.r = 1.0f;
+				title_type_color.g = 0.0f;
+				title_type_color.b = 0.0f;
 			}
 
 			free(result);
 		}
+		TSU_DrawableSetTint((Drawable *)self.title_type_rectangle, &title_type_color);
 
 		static Vector vectorInit = {650, 32, ML_ITEM + 3, 1};
 		static Vector vector = {559, 32, ML_ITEM + 3, 1};
@@ -464,6 +465,22 @@ static void FreeGamesForce()
 {
 	if (self.games_array_count > 0)
 	{
+		for (int icount = 0; icount < self.games_array_count; icount++)
+		{
+			if (self.games_array[icount].game)
+			{
+				free(self.games_array[icount].game);
+			}
+
+			if (self.games_array[icount].folder)
+			{
+				free(self.games_array[icount].folder);
+			}
+			
+			self.games_array[icount].game = NULL;
+			self.games_array[icount].folder = NULL;
+		}
+
 		free(self.games_array);
 		self.games_array = NULL;
 		self.games_array_count = 0;
@@ -579,11 +596,11 @@ static int AppCompareGames(const void *a, const void *b)
 	const GameItemStruct *right = (const GameItemStruct *)b;
 	int cmp = 0;
 
-	char *left_compare = malloc(MAX_SIZE_GAME_NAME);
-	char *right_compare = malloc(MAX_SIZE_GAME_NAME);
+	char *left_compare = malloc(NAME_MAX);
+	char *right_compare = malloc(NAME_MAX);
 
-	memset(left_compare, 0, MAX_SIZE_GAME_NAME);
-	memset(right_compare, 0, MAX_SIZE_GAME_NAME);
+	memset(left_compare, 0, NAME_MAX);
+	memset(right_compare, 0, NAME_MAX);
 
 	if (left->is_folder_name && right->is_folder_name)
 	{
@@ -662,7 +679,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 		return;
 
 	dirent_t *ent = NULL;
-	char game[MAX_SIZE_GAME_NAME];
+	char game[NAME_MAX];
 	char *file_type = NULL;
 	bool is_folder_name = false;	
 	bool unique_file = level > 0 ? IsUniqueFileGame(full_path_folder) : false;
@@ -707,7 +724,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 			memset(new_folder, 0, NAME_MAX);
 			snprintf(new_folder, NAME_MAX, "%s/%s", full_path_folder, ent->name);
 
-			RetrieveGamesRecursive(new_folder, ent->name, level++);
+			RetrieveGamesRecursive(new_folder, ent->name, level+1);
 			
 			free(new_folder);
 		}
@@ -731,6 +748,9 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 			}
 
 			memset(&self.games_array[self.games_array_count - 1], 0, sizeof(GameItemStruct));
+			
+			self.games_array[self.games_array_count - 1].game = (char *)malloc(strlen(game) + 1);
+			memset(self.games_array[self.games_array_count - 1].game, 0, strlen(game) + 1);
 			strncpy(self.games_array[self.games_array_count - 1].game, game, strlen(game));
 
 			if (folder)
@@ -745,6 +765,8 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 						*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
 				}
 
+				self.games_array[self.games_array_count - 1].folder = (char *)malloc(strlen(folder_game) + 1);
+				memset(self.games_array[self.games_array_count - 1].folder, 0, strlen(folder_game) + 1);
 				strcpy(self.games_array[self.games_array_count - 1].folder, folder_game);
 				free(folder_game);
 			}
@@ -785,9 +807,9 @@ static bool LoadPage(bool change_view)
 {
 	bool loaded = false;
 	char game_cover_path[NAME_MAX];
-	char name[MAX_SIZE_GAME_NAME];
-	char game[MAX_SIZE_GAME_NAME];
-	char game_without_extension[MAX_SIZE_GAME_NAME];
+	char name[NAME_MAX];
+	char game[NAME_MAX];
+	char game_without_extension[NAME_MAX];
 	char name_truncated[17];
 	int fileCount = 0;
 
