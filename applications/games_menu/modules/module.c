@@ -241,8 +241,8 @@ static void SetTitleType(const char *full_path_game)
 			strncpy(title_text, "GDI", 3);
 			if (FileExists(result) == 0)
 			{
-				title_type_color.r = 0.74f;
-				title_type_color.g = 1.0f;
+				title_type_color.r = 1.0f;
+				title_type_color.g = 0.0f;
 				title_type_color.b = 0.0f;
 			}
 
@@ -724,7 +724,7 @@ static void RetrieveGamesRecursive(const char *full_path_folder, const char *fol
 			memset(new_folder, 0, NAME_MAX);
 			snprintf(new_folder, NAME_MAX, "%s/%s", full_path_folder, ent->name);
 
-			RetrieveGamesRecursive(new_folder, ent->name, level++);
+			RetrieveGamesRecursive(new_folder, ent->name, level+1);
 			
 			free(new_folder);
 		}
