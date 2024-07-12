@@ -71,9 +71,9 @@ int test_ide_io_io(void) {
 	}
 	et = timer_ns_gettime64();
 	tm = (et - st) / 1000000;
-	InitVideoThread();
-
 	free(buf);
+
+	InitVideoThread();
 	speed = buf_size / ((float)tm / 1000);
 
 	snprintf(result, sizeof(result), 
@@ -127,9 +127,9 @@ int test_sd_io(void) {
 	}
 	et = timer_ns_gettime64();
 	tm = (et - st) / 1000000;
-	InitVideoThread();
-
 	free(buf);
+
+	InitVideoThread();
 	speed = buf_size / ((float)tm / 1000);
 
 	snprintf(result, sizeof(result), 
