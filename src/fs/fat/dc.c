@@ -345,8 +345,10 @@ static ssize_t fat_read(void *hnd, void *buffer, size_t size) {
 
 	FAT_GET_HND(hnd, -1);
 
-	if(sf->fil.cltbl == NULL && (sf->mode & O_MODE_MASK) == O_RDONLY) {
-
+	if(sf->fil.cltbl == NULL &&
+		(sf->mode & O_MODE_MASK) == O_RDONLY &&
+		sf->fil.fsize < (100 << 10))
+	{
 		/* Using fast seek feature */
 		memset_sh4(&sf->lktbl, 0, FATFS_LINK_TBL_SIZE * sizeof(DWORD));
 		sf->fil.cltbl = sf->lktbl;           /* Enable fast seek feature */
@@ -874,7 +876,7 @@ DSTATUS disk_initialize (
 	}
 
 	if (mnt->dev_dma) {
-		if (mnt->dev_dma->init(mnt->dev) < 0) {
+		if (mnt->dev_dma->init(mnt->dev_dma) < 0) {
 			mnt->dev_stat |= STA_NOINIT;
 		}
 	}

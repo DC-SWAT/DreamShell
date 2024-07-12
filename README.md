@@ -12,8 +12,9 @@ There are also large subproject is the ISO Loader, which contains emulation of B
 ### Setup environment
 ##### Packages
 ```console
-sudo apt-get install -y genisoimage squashfs-tools
+sudo apt-get install -y genisoimage squashfs-tools texinfo git
 sudo apt-get install -y libpng-dev libjpeg-dev liblzo2-dev liblua5.2-dev
+sudo apt-get install -y libmpc-dev
 cd /tmp && git clone https://github.com/LuaDist/tolua.git && cd tolua
 mkdir build && cd ./build
 cmake ../ && make && sudo make install
