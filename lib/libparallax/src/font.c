@@ -2,7 +2,7 @@
 
    font.c
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 */
 
@@ -11,8 +11,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <kos/fs.h>
-#include <plx/font.h>
-#include <plx/prim.h>
+#include "font.h"
+#include "prim.h"
 
 /* See the header file for all comments and documentation */
 
@@ -294,7 +294,7 @@ fail_1:			/* Only the file is open */
 void plx_font_destroy(plx_font_t * fnt) {
 	assert( fnt != NULL );
 	if (fnt == NULL) return;
-	
+
 	assert( fnt->txr != NULL );
 	if (fnt->txr != NULL)
 		plx_txr_destroy(fnt->txr);
@@ -389,7 +389,7 @@ void plx_fcxt_char_metrics(plx_fcxt_t * cxt, uint16 ch,
 		*outright = (cxt->gap + fnt->vert_ur[g].x) * cxt->size;
 	*outdown = fnt->vert_ll[g].y * -cxt->size;
 }
-	
+
 void plx_fcxt_str_metrics(plx_fcxt_t * cxt, const char * str,
 	float * outleft, float * outup, float * outright, float *outdown)
 {

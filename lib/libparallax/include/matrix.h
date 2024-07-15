@@ -2,8 +2,8 @@
 
    matrix.h
 
-   (c)2002 Dan Potter
-   (c)2013 SWAT
+   Copyright (C) 2002 Megan Potter
+
 
 */
 
@@ -58,7 +58,7 @@ void plx_mat3d_init();
 void plx_mat3d_mode(int mode);
 
 /* Constants for plx_mat3d_mode and plx_mat3d_apply */
-#define	PLX_MAT_PROJECTION	0	/** Projection (frustum, screenview) matrix */
+#define PLX_MAT_PROJECTION	0	/** Projection (frustum, screenview) matrix */
 #define PLX_MAT_MODELVIEW	1	/** Modelview (rotate, scale) matrix */
 #define PLX_MAT_SCREENVIEW	2	/** Internal screen view matrix */
 #define PLX_MAT_SCRATCH		3	/** Temp matrix for user usage */
@@ -82,9 +82,6 @@ void plx_mat3d_perspective(float angle, float aspect, float znear, float zfar);
 
 /** Setup a frustum matrix */
 void plx_mat3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
-
-/** Setup a orthogonal matrix */
-void plx_mat3d_ortho(float left, float right, float bottom, float top, float znear, float zfar);
 
 /** Push a matrix on the stack */
 void plx_mat3d_push();
@@ -119,4 +116,3 @@ void plx_mat3d_apply_all();
 __END_DECLS
 
 #endif	/* __PARALLAX_MATRIX */
-

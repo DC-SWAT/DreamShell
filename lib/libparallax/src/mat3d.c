@@ -1,20 +1,16 @@
 /* Parallax for KallistiOS ##version##
 
    mat3d.c
-   (c)2001-2002 Dan Potter
-   (c)2002 Benoit Miller and Paul Boese
-   (c)2013-2014 SWAT
+   Copyright (C) 2001-2002 Megan Potter
+   Copyright (C) 2002 Benoit Miller and Paul Boese
 */
 
 #include <assert.h>
 #include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
 #include <dc/fmath.h>
 #include <dc/matrix.h>
 #include <dc/video.h>
-#include <plx/matrix.h>
-#include "utils.h"
+#include "matrix.h"
 
 /*
   Most of this file was pulled from KGL's gltrans.c. Why did we do that
@@ -65,12 +61,12 @@ static matrix_t ml __attribute__((aligned(32)));
 
 /* Load an arbitrary matrix */
 void plx_mat3d_load(matrix_t * m) {
-	memcpy_sh4(trans_mats + matrix_mode, m, sizeof(matrix_t));
+	memcpy(trans_mats + matrix_mode, m, sizeof(matrix_t));
 }
 
 /* Save the matrix (whoa!) */
 void plx_mat3d_store(matrix_t * m) {
-	memcpy_sh4(m, trans_mats + matrix_mode, sizeof(matrix_t));
+	memcpy(m, trans_mats + matrix_mode, sizeof(matrix_t));
 }
 
 /* Set the depth range */
@@ -111,7 +107,7 @@ void plx_mat3d_viewport(int x1, int y1, int width, int height) {
 }
 
 /* Setup perspective */
-void plx_mat3d_perspective(float angle, float aspect, 
+void plx_mat3d_perspective(float angle, float aspect,
 	float znear, float zfar)
 {
 	float xmin, xmax, ymin, ymax;
@@ -157,37 +153,6 @@ void plx_mat3d_frustum(float left, float right,
 	mat_store(trans_mats + matrix_mode);
 }
 
-static matrix_t mo __attribute__((aligned(32))) = {
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 0.0f },
-    { 0.0f, 0.0f, 0.0f, 1.0f }
-};
-
-void plx_mat3d_ortho(float left, float right, float bottom, float top, float znear, float zfar) {
-
-	float x, y, z;
-	float tx, ty, tz;
-
-	x = 2.0f / (right - left);
-	y = 2.0f / (top - bottom);
-	z = -2.0f / (zfar - znear);
-	tx = -(right + left) / (right - left);
-	ty = -(top + bottom) / (top - bottom);
-	tz = -(zfar + znear) / (zfar - znear);
-
-	mo[0][0] = x;
-	mo[1][1] = y;
-	mo[2][2] = z;
-	mo[3][0] = tx;
-	mo[3][1] = ty;
-	mo[3][2] = tz;
-
-	mat_load(trans_mats + matrix_mode);
-	mat_apply(&mo);
-	mat_store(trans_mats + matrix_mode);
-}
-
 void plx_mat3d_push() {
 	switch (matrix_mode)
 	{
@@ -195,7 +160,7 @@ void plx_mat3d_push() {
 		assert_msg(mat_mv_stack_top < MAT_MV_STACK_CNT, "Modelview stack overflow.");
 		if (mat_mv_stack_top >= MAT_MV_STACK_CNT) return;
 
-		memcpy_sh4(mat_mv_stack + mat_mv_stack_top,
+		memcpy(mat_mv_stack + mat_mv_stack_top,
 			trans_mats + matrix_mode,
 			sizeof(matrix_t));
 		mat_mv_stack_top++;
@@ -204,7 +169,7 @@ void plx_mat3d_push() {
 		assert_msg(mat_p_stack_top < MAT_P_STACK_CNT, "Projection stack overflow.");
 		if (mat_p_stack_top >= MAT_P_STACK_CNT) return;
 
-		memcpy_sh4(mat_p_stack + mat_p_stack_top,
+		memcpy(mat_p_stack + mat_p_stack_top,
 			trans_mats + matrix_mode,
 			sizeof(matrix_t));
 		mat_p_stack_top++;
@@ -222,7 +187,7 @@ void plx_mat3d_pop() {
 		if (mat_mv_stack_top <= 0) return;
 
 		mat_mv_stack_top--;
-		memcpy_sh4(trans_mats + matrix_mode,
+		memcpy(trans_mats + matrix_mode,
 			mat_mv_stack + mat_mv_stack_top,
 			sizeof(matrix_t));
 		break;
@@ -231,7 +196,7 @@ void plx_mat3d_pop() {
 		if (mat_p_stack_top <= 0) return;
 
 		mat_p_stack_top--;
-		memcpy_sh4(trans_mats + matrix_mode,
+		memcpy(trans_mats + matrix_mode,
 			mat_p_stack + mat_p_stack_top,
 			sizeof(matrix_t));
 		break;
@@ -247,7 +212,7 @@ void plx_mat3d_peek() {
 		assert_msg(mat_mv_stack_top > 0, "Modelview stack underflow.");
 		if (mat_mv_stack_top <= 0) return;
 
-		memcpy_sh4(trans_mats + matrix_mode,
+		memcpy(trans_mats + matrix_mode,
 			mat_mv_stack + mat_mv_stack_top - 1,
 			sizeof(matrix_t));
 		break;
@@ -255,7 +220,7 @@ void plx_mat3d_peek() {
 		assert_msg(mat_p_stack_top > 0, "Projection stack underflow.");
 		if (mat_p_stack_top <= 0) return;
 
-		memcpy_sh4(trans_mats + matrix_mode,
+		memcpy(trans_mats + matrix_mode,
 			mat_p_stack + mat_p_stack_top - 1,
 			sizeof(matrix_t));
 		break;
@@ -437,7 +402,7 @@ static matrix_t mam __attribute__((aligned(32))) = {
 };
 
 void plx_mat3d_apply_mat(matrix_t * mat) {
-	memcpy_sh4(&mam, mat, sizeof(matrix_t));
+	memcpy(&mam, mat, sizeof(matrix_t));
 	mat_load(trans_mats + matrix_mode);
 	mat_apply(&mam);
 	mat_store(trans_mats + matrix_mode);
@@ -475,4 +440,3 @@ void plx_mat3d_init() {
 	plx_mat3d_viewport(0, 0, vid_mode->width, vid_mode->height);
 	vp_z_fudge = 0.0f;
 }
-

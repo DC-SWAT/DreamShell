@@ -52,8 +52,9 @@ SDL_TTF_VER = 2.0.11
 SDL_RTF_VER = 0.1.1
 LUA_VER = 5.1.4-2
 TSUNAMI_VER = 2.0.0
+PARALLAX_VER = 2.0.0
 
-EXTRA_LIBS = -lcfg -lmxml -lparallax
+EXTRA_LIBS = -lcfg -lmxml
 
 SDL_LIBS = -lSDL_$(SDL_VER) \
 			-lSDL_image_$(SDL_IMAGE_VER) \
@@ -61,13 +62,14 @@ SDL_LIBS = -lSDL_$(SDL_VER) \
 			-lSDL_rtf_$(SDL_RTF_VER) \
 			-lSDL_gfx_$(SDL_GFX_VER) \
 			-lfreetype
-			 
+
 IMAGE_LIBS = -lkmg -ljpeg -lpng -lz
 LUA_LIBS = -llua_$(LUA_VER)
 KLIBS = -lkosext2fs -lkosutils -lstdc++ -lm
-TSUNAMI_LIBS = -ltsunami_$(TSUNAMI_VER)
+GRAPHICS_LIBS = -ltsunami_$(TSUNAMI_VER) \
+				-lparallax_$(PARALLAX_VER)
 
-CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(TSUNAMI_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
+CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(GRAPHICS_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
 
 SDL_GUI = $(LIB_DIR)/SDL_gui
 SDL_CONSOLE = $(LIB_DIR)/SDL_Console/src

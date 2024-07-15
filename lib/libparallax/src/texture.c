@@ -2,8 +2,8 @@
 
    texture.c
 
-   (c)2002 Dan Potter
-   (c)2013-2014 SWAT
+   Copyright (C) 2002 Megan Potter
+   (c)2013, 2014, 2024 SWAT
 
 */
 
@@ -11,15 +11,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <stdio.h>
-#include <plx/texture.h>
-//#include <png/png.h>
+#include "texture.h"
+#include <png/png.h>
 #include <jpeg/jpeg.h>
 #include <kmg/kmg.h>
-#include "utils.h"
 
 int pvr_to_img(const char *file_name, kos_img_t *rv);
-int png_to_img(const char *file_name, kos_img_t *rv);
 
 /* See the header file for all comments and documentation */
 
@@ -36,6 +33,7 @@ static void fill_contexts(plx_texture_t * txr) {
 }
 
 plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) {
+	uint32		mask;
 	kos_img_t	img;
 	plx_texture_t	* txr;
 	int		fnlen;
@@ -43,8 +41,11 @@ plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) 
 	/* What type of texture is it? */
 	fnlen = strlen(fn);
 	if (!strcasecmp(fn + fnlen - 3, "png")) {
+		/* Figure out the PNG alpha flags */
+		mask = use_alpha ? PNG_FULL_ALPHA : PNG_NO_ALPHA;
+
 		/* Load the texture (or try) */
-		if (png_to_img(fn, &img) < 0) {
+		if (png_to_img(fn, mask, &img) < 0) {
 			dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
 			return NULL;
 		}
@@ -181,7 +182,7 @@ void plx_txr_setfilter(plx_texture_t * txr, int mode) {
 
 void plx_txr_setuvclamp(plx_texture_t * txr, int umode, int vmode) {
 	int mode;
-	
+
 	assert( txr != NULL );
 	if (txr == NULL) return;
 

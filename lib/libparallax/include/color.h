@@ -2,7 +2,7 @@
 
    color.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -26,4 +26,3 @@ static inline uint32 plx_pack_color(float a, float r, float g, float b) {
 __END_DECLS
 
 #endif	/* __PARALLAX_COLOR */
-

@@ -2,7 +2,7 @@
 
    texture.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -103,4 +103,3 @@ void plx_txr_send_hdr(plx_texture_t * txr, int list, int flush);
 __END_DECLS
 
 #endif	/* __PARALLAX_TEXTURE */
-
