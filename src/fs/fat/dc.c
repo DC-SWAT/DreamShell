@@ -164,6 +164,48 @@ static void fatfs_set_errno(FRESULT rc) {
 	}
 }
 
+static FRESULT fat_create_linkmap(fatfs_t *sf) {
+	FRESULT rc;
+
+	if(sf->fil.cltbl != NULL) {
+		return FR_OK;
+	}
+
+	memset_sh4(&sf->lktbl, 0, FATFS_LINK_TBL_SIZE * sizeof(DWORD));
+	sf->fil.cltbl = sf->lktbl;           /* Enable fast seek feature */
+	sf->lktbl[0] = FATFS_LINK_TBL_SIZE;  /* Set table size to the first item */
+
+	/* Create CLMT */
+	rc = f_lseek(&sf->fil, CREATE_LINKMAP);
+
+	if(rc == FR_NOT_ENOUGH_CORE) {
+
+		DBG((DBG_DEBUG, "FATFS: Creating linkmap %d < %ld, retry...", 
+			FATFS_LINK_TBL_SIZE, sf->lktbl[0]));
+
+		size_t lms = sf->fil.cltbl[0];
+		sf->fil.cltbl = (DWORD *) calloc(lms, sizeof(DWORD)); 
+
+		if(sf->fil.cltbl != NULL) {
+			sf->fil.cltbl[0] = lms;
+			rc = f_lseek(&sf->fil, CREATE_LINKMAP);
+
+			if(rc != FR_OK) {
+				free(sf->fil.cltbl);
+			}
+		}
+	}
+
+	if(rc != FR_OK) {
+		sf->fil.cltbl = NULL;
+		DBG((DBG_ERROR, "FATFS: Create linkmap %ld error: %d", sf->lktbl[0], rc));
+	}
+	else {
+		DBG((DBG_DEBUG, "FATFS: Created linkmap %ld dwords\n", sf->lktbl[0]));
+	}
+	return rc;
+}
+
 
 #define FAT_GET_HND(hnd, rv)              \
     file_t fd = ((file_t)hnd) - 1;        \
@@ -313,7 +355,6 @@ static int fat_close(void *hnd) {
 			if(sf->fil.cltbl != (DWORD*)&sf->lktbl && sf->fil.cltbl != NULL) {
 				DBG((DBG_ERROR, "FATFS: Freeing linktable\n"));
 				free(sf->fil.cltbl);
-				sf->fil.cltbl = NULL;
 			}
 			rc = f_close(&sf->fil);
 			break;
@@ -346,42 +387,10 @@ static ssize_t fat_read(void *hnd, void *buffer, size_t size) {
 	FAT_GET_HND(hnd, -1);
 
 	if(sf->fil.cltbl == NULL &&
-		(sf->mode & O_MODE_MASK) == O_RDONLY &&
-		sf->fil.fsize < (100 << 10))
+		(sf->mode & O_MODE_MASK) == O_RDONLY)
 	{
 		/* Using fast seek feature */
-		memset_sh4(&sf->lktbl, 0, FATFS_LINK_TBL_SIZE * sizeof(DWORD));
-		sf->fil.cltbl = sf->lktbl;           /* Enable fast seek feature */
-		sf->lktbl[0] = FATFS_LINK_TBL_SIZE;  /* Set table size to the first item */
-
-		/* Create CLMT */
-		rc = f_lseek(&sf->fil, CREATE_LINKMAP);
-
-		if(rc == FR_NOT_ENOUGH_CORE) {
-
-			DBG((DBG_DEBUG, "FATFS: Creating linkmap %d < %ld, retry...", 
-				FATFS_LINK_TBL_SIZE, sf->lktbl[0]));
-
-			size_t lms = sf->fil.cltbl[0];
-			sf->fil.cltbl = (DWORD*) calloc(lms, sizeof(DWORD)); 
-
-			if(sf->fil.cltbl != NULL) {
-
-				sf->fil.cltbl[0] = lms;
-				rc = f_lseek(&sf->fil, CREATE_LINKMAP);
-
-				if(rc != FR_OK) {
-					DBG((DBG_ERROR, "FATFS: Create linkmap %d error: %d", lms, rc));
-					free(sf->fil.cltbl);
-					sf->fil.cltbl = NULL;
-				}
-			}
-		} else if(rc != FR_OK) {
-			sf->fil.cltbl = NULL;
-			DBG((DBG_ERROR, "FATFS: Create linkmap %ld error: %d", sf->lktbl[0], rc));
-		} else {
-			DBG((DBG_DEBUG, "FATFS: Created linkmap %ld dwords\n", sf->lktbl[0]));
-		}
+		rc = fat_create_linkmap(sf);
 	}
 
 	rc = f_read(&sf->fil, buffer, (UINT) size, &rs);
@@ -560,7 +569,7 @@ static int fat_rewinddir(void * hnd) {
 /* !=0: Sector number, 0: Failed - invalid cluster# */
 DWORD clust2sect(FATFS *fs, DWORD clst);
 
-static int fat_ioctl(void * hnd, int cmd, va_list ap) {
+static int fat_ioctl(void *hnd, int cmd, va_list ap) {
 	
 	DRESULT rc = RES_OK;
 	FAT_GET_HND(hnd, -1);
@@ -584,12 +593,17 @@ static int fat_ioctl(void * hnd, int cmd, va_list ap) {
 			break;
 		}
 		case FATFS_IOCTL_GET_FD_LINK_MAP:
-			if(sf->fil.cltbl[0]) {
-				memcpy_sh4(data, &sf->fil.cltbl, sf->fil.cltbl[0] * sizeof(DWORD));
-			} else {
+		{
+			rc = fat_create_linkmap(sf);
+
+			if(rc == RES_OK) {
+				memcpy_sh4(data, sf->fil.cltbl, sf->fil.cltbl[0] * sizeof(DWORD));
+			}
+			else {
 				memset_sh4(data, 0, sizeof(DWORD));
 			}
 			break;
+		}
 		default:
 			rc = disk_ioctl(sf->fil.fs->drv, (BYTE)cmd, data);
 			break;
@@ -1080,25 +1094,25 @@ static vfs_handler_t vh = {
 };
 
 static void fs_fat_free(fatfs_mnt_t *mnt) {
-		if (mnt == NULL) {
-			return;
-		}
-		if (mnt->vfsh) {
-			free(mnt->vfsh);
-		}
-		if (mnt->fs) {
-			free(mnt->fs);
-		}
-		if (mnt->dev) {
-			mnt->dev->shutdown(mnt->dev);
-		}
-		if (mnt->dev_dma) {
-			mnt->dev_dma->shutdown(mnt->dev_dma);
-		}
-		if (mnt->dmabuf) {
-			free(mnt->dmabuf);
-		}
-		memset_sh4(mnt, 0, sizeof(fatfs_mnt_t));
+	if (mnt == NULL) {
+		return;
+	}
+	if (mnt->vfsh) {
+		free(mnt->vfsh);
+	}
+	if (mnt->fs) {
+		free(mnt->fs);
+	}
+	if (mnt->dev) {
+		mnt->dev->shutdown(mnt->dev);
+	}
+	if (mnt->dev_dma) {
+		mnt->dev_dma->shutdown(mnt->dev_dma);
+	}
+	if (mnt->dmabuf) {
+		free(mnt->dmabuf);
+	}
+	memset_sh4(mnt, 0, sizeof(fatfs_mnt_t));
 }
 
 int fs_fat_mount(const char *mp, kos_blockdev_t *dev_pio, kos_blockdev_t *dev_dma, int partition) {
