@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 project(img4dc)
 
 ADD_DEFINITIONS("-Wall -Wpedantic")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -D_XOPEN_SOURCE=500")
 
 add_subdirectory(common)
 add_subdirectory(edc)
