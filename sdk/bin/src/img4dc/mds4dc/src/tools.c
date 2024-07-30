@@ -1,5 +1,6 @@
 #include "tools.h"
 #include <ctype.h>
+#include <string.h>
 
 /* 
 	Pour passer un tableau � plusieurs dimensions en param�tre � une fonction, il suffit fournir les diff�rentes 
