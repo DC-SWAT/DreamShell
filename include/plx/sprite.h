@@ -2,7 +2,7 @@
 
    sprite.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -329,4 +329,3 @@ static inline void plx_spr_imp(
 __END_DECLS
 
 #endif	/* __PARALLAX_SPRITE */
-

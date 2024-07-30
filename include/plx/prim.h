@@ -2,7 +2,7 @@
 
    prim.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -105,7 +105,7 @@ static inline void plx_vert_fnd(plx_dr_state_t * state, int flags, float x, floa
 	float a, float r, float g, float b)
 {
 	plx_vertex_t * vert = plx_dr_target(state);
-	
+
 	vert->flags = flags;
 	vert->x = x;
 	vert->y = y;
@@ -124,7 +124,7 @@ static inline void plx_vert_ind(plx_dr_state_t * state, int flags, float x, floa
 	uint32 color)
 {
 	plx_vertex_t * vert = plx_dr_target(state);
-	
+
 	vert->flags = flags;
 	vert->x = x;
 	vert->y = y;
@@ -143,7 +143,7 @@ static inline void plx_vert_ffd(plx_dr_state_t * state, int flags, float x, floa
 	float a, float r, float g, float b, float u, float v)
 {
 	plx_vertex_t * vert = plx_dr_target(state);
-	
+
 	vert->flags = flags;
 	vert->x = x;
 	vert->y = y;
@@ -163,7 +163,7 @@ static inline void plx_vert_ifd(plx_dr_state_t * state, int flags, float x, floa
 	uint32 color, float u, float v)
 {
 	plx_vertex_t * vert = plx_dr_target(state);
-	
+
 	vert->flags = flags;
 	vert->x = x;
 	vert->y = y;
@@ -206,7 +206,7 @@ static inline void plx_vert_fnp(int flags, float x, float y, float z,
 	float a, float r, float g, float b)
 {
 	plx_vertex_t vert;
-	
+
 	vert.flags = flags;
 	vert.x = x;
 	vert.y = y;
@@ -223,7 +223,7 @@ static inline void plx_vert_fnp(int flags, float x, float y, float z,
  */
 static inline void plx_vert_inp(int flags, float x, float y, float z, uint32 color) {
 	plx_vertex_t vert;
-	
+
 	vert.flags = flags;
 	vert.x = x;
 	vert.y = y;
@@ -250,7 +250,7 @@ static inline void plx_vert_ffp(int flags, float x, float y, float z,
 	float a, float r, float g, float b, float u, float v)
 {
 	plx_vertex_t vert;
-	
+
 	vert.flags = flags;
 	vert.x = x;
 	vert.y = y;
@@ -270,7 +270,7 @@ static inline void plx_vert_ifp(int flags, float x, float y, float z,
 	uint32 color, float u, float v)
 {
 	plx_vertex_t vert;
-	
+
 	vert.flags = flags;
 	vert.x = x;
 	vert.y = y;
@@ -286,4 +286,3 @@ static inline void plx_vert_ifp(int flags, float x, float y, float z,
 __END_DECLS
 
 #endif	/* __PARALLAX_PRIM */
-

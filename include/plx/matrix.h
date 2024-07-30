@@ -2,8 +2,8 @@
 
    matrix.h
 
-   (c)2002 Dan Potter
-   (c)2013 SWAT
+   Copyright (C) 2002 Megan Potter
+
 
 */
 
@@ -83,9 +83,6 @@ void plx_mat3d_perspective(float angle, float aspect, float znear, float zfar);
 /** Setup a frustum matrix */
 void plx_mat3d_frustum(float left, float right, float bottom, float top, float znear, float zfar);
 
-/** Setup a orthogonal matrix */
-void plx_mat3d_ortho(float left, float right, float bottom, float top, float znear, float zfar);
-
 /** Push a matrix on the stack */
 void plx_mat3d_push();
 
@@ -119,4 +116,3 @@ void plx_mat3d_apply_all();
 __END_DECLS
 
 #endif	/* __PARALLAX_MATRIX */
-

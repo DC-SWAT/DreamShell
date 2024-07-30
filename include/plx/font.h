@@ -2,7 +2,7 @@
 
    font.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -15,7 +15,7 @@ __BEGIN_DECLS
 
 /**
   \file Texture-based font routines. These are equivalent to DCPLIB's
-  fntTxf routines, but are written entirely in C. 
+  fntTxf routines, but are written entirely in C.
  */
 
 #include <kos/vector.h>
@@ -197,4 +197,3 @@ void plx_fcxt_end(plx_fcxt_t * cxt);
 __END_DECLS
 
 #endif	/* __PARALLAX_FONT */
-

@@ -2,7 +2,7 @@
 
    context.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -70,6 +70,15 @@ void plx_cxt_fog(int type);
 #define PLX_FOG_TABLE	PVR_FOG_TABLE
 
 /**
+  Set the specular highlight mode.
+ */
+void plx_cxt_specular(int type);
+
+/* Constants for specular modes */
+#define PLX_SPECULAR_NONE	PVR_SPECULAR_DISABLE
+#define PLX_SPECULAR		PVR_SPECULAR_ENABLE
+
+/**
   Submit the selected context for rendering.
  */
 void plx_cxt_send(int list);
@@ -77,4 +86,3 @@ void plx_cxt_send(int list);
 __END_DECLS
 
 #endif	/* __PARALLAX_TEXTURE */
-

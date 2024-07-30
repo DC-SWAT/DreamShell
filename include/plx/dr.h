@@ -2,7 +2,8 @@
 
    dr.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
+   Copyright (C) 2024 Falco Girgis
 
 
 */
@@ -27,11 +28,25 @@ typedef pvr_vertex_t plx_vertex_t;
 #define PLX_VERT	PVR_CMD_VERTEX
 #define PLX_VERT_EOS	PVR_CMD_VERTEX_EOL
 
-#define plx_dr_init(a) pvr_dr_init(a)
-#define plx_dr_target(a) pvr_dr_target(*a)
-#define plx_dr_commit(a) pvr_dr_commit(a)
+static inline void plx_dr_init(plx_dr_state_t *state) {
+    pvr_dr_init((pvr_dr_state_t *)state);
+}
 
-#define plx_prim pvr_prim
+static inline plx_vertex_t *plx_dr_target(plx_dr_state_t *state) {
+    return (plx_vertex_t *)pvr_dr_target(*(pvr_dr_state_t*)state);
+}
+
+static inline void plx_dr_commit(plx_vertex_t *vertex) {
+    pvr_dr_commit((pvr_vertex_t *)vertex);
+}
+
+static inline void plx_dr_finish(void) {
+    pvr_dr_finish();
+}
+
+static inline int plx_prim(void *data, int size) {
+    return pvr_prim(data, size);
+}
 
 static inline void plx_scene_begin() {
 	pvr_wait_ready();
@@ -49,4 +64,3 @@ static inline void plx_scene_end() {
 __END_DECLS
 
 #endif	/* __PARALLAX_DR */
-

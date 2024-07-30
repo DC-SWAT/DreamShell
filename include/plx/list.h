@@ -2,7 +2,7 @@
 
    list.h
 
-   (c)2002 Dan Potter
+   Copyright (C) 2002 Megan Potter
 
 
 */
@@ -31,4 +31,3 @@ __BEGIN_DECLS
 __END_DECLS
 
 #endif	/* __PARALLAX_LIST */
-
