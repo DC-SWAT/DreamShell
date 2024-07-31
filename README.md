@@ -43,13 +43,9 @@ make && cd ../../
 ```console
 cd /usr/local/dc/kos/kos
 source ./environ.sh
-make && cd ../kos-ports && ./utils/build-all.sh && cd ./lib
-mv libfreetype.a libfreetype-kos.a
-mv liboggvorbisplay.a liboggvorbisplay-kos.a
-mv libogg.a libogg-kos.a
-mv libvorbis.a libvorbis-kos.a
-mv libwav.a libwav-kos.a
-cd ../../kos/ds/sdk/bin/src && make && make install && cd ../../../
+make && cd ../kos-ports && ./utils/build-all.sh
+cd ${KOS_BASE}/ds/sdk/bin/src && make && make install
+cd ${KOS_BASE}/ds
 ln -nsf `which tolua` sdk/bin/tolua
 ln -nsf `which mkisofs` sdk/bin/mkisofs
 ln -nsf `which mksquashfs` sdk/bin/mksquashfs

@@ -1,6 +1,6 @@
 #
 # DreamShell libraries Makefile
-# Copyright (C) 2008-2022 SWAT
+# Copyright (C) 2008-2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -28,7 +28,7 @@ $(patsubst %, _install_dir_%, $(_SUBDIRS)):
 build_freetype:
 	cd freetype/builds/unix && ./conf.sh
 	$(MAKE) -C freetype
-	cp ./freetype/objs/.libs/libfreetype.a libfreetype.a
+	cp ./freetype/objs/.libs/libfreetype.a libfreetype_2.4.4.a
 
 build_mxml:
 	cd ./mxml && ./conf.sh
