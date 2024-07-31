@@ -1,6 +1,6 @@
 #
 # ffmpeg module for DreamShell
-# Copyright (C)2011-2022 SWAT
+# Copyright (C)2011-2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -23,13 +23,22 @@ all: rm-elf ffmpeg-0.6.3/config.h include/libavcodec/avcodec.h
 include ../../sdk/Makefile.loadable
 
 ffmpeg-0.6.3/config.h:
-	ln -nsf $(DS_SDK)/lib/liboggvorbis.a $(DS_SDK)/lib/libvorbisenc.a
-	ln -nsf $(DS_SDK)/lib/liboggvorbis.a $(DS_SDK)/lib/libogg.a
-	ln -nsf $(DS_SDK)/lib/libxvid.a $(DS_SDK)/lib/libxvidcore.a
+	-mv $(KOS_PORTS)/lib/libogg.a $(KOS_PORTS)/lib/libogg-kos.a
+	-mv $(KOS_PORTS)/lib/libvorbis.a $(KOS_PORTS)/lib/libvorbis-kos.a
 	./config.sh
-	
+
 include/libavcodec/avcodec.h:
+	@-mv $(KOS_PORTS)/lib/libogg.a $(KOS_PORTS)/lib/libogg-kos.a
+	@-mv $(KOS_PORTS)/lib/libvorbis.a $(KOS_PORTS)/lib/libvorbis-kos.a
 	cd ./ffmpeg-0.6.3 && make install
+	-mv $(KOS_PORTS)/lib/libogg-kos.a $(KOS_PORTS)/lib/libogg.a
+	-mv $(KOS_PORTS)/lib/libvorbis-kos.a $(KOS_PORTS)/lib/libvorbis.a
+
+clean-all:
+	-rm -R ./include
+	-rm -R ./lib
+	-rm -f ./ffmpeg-0.6.3/config.h
+	cd ./ffmpeg-0.6.3 && make clean
 
 rm-elf:
 	-rm -f $(TARGET)
