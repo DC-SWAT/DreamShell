@@ -4,7 +4,7 @@
 # http://www.dc-swat.ru
 #
 
-TARGET_NAME = wav
+TARGET_NAME = wave
 OBJS = module.o libwav/sndwav.o libwav/libwav.o
 DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt

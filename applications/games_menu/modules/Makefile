@@ -7,7 +7,7 @@
 APP_NAME = games_menu
 TARGET_NAME = app_$(APP_NAME)
 OBJS = module.o utils.o
-DBG_LIBS = -lds -lisofs -lisoldr -lwav
+DBG_LIBS = -lds -lisofs -lisoldr -lwave
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
