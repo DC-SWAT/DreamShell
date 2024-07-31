@@ -11,16 +11,15 @@ POSTDIRS = test
 BUILD_TARGET = build 
 KOS_CFLAGS += -I. -I../liboggvorbis/libvorbis/include -I../liboggvorbis/libogg/include
 
-all: subdirs liboggvorbisplay.a 
+all: subdirs liboggvorbisplay-local.a 
 
-libvorbisplay.a:$(OBJS)
+libvorbisplay-local.a:$(OBJS)
 	-cp $(OBJS) ./build/
-	# $(KOS_AR) rcs ./lib/libvorbisplay.a build/main.o build/sndoggvorbis.o
 
-liboggvorbisplay.a:$(OBJS)
+liboggvorbisplay-local.a:$(OBJS)
 	-cp $(OBJS) ./build/
 	-cp ../liboggvorbis/build/*.o ./build/
-	$(KOS_AR) rcs ./lib/liboggvorbisplay.a ./build/*.o
+	$(KOS_AR) rcs ./lib/liboggvorbisplay-local.a ./build/*.o
 
 clean: clean_subdirs
 	-rm -f $(OBJS) *.bck

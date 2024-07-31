@@ -1,6 +1,6 @@
 #
 # WAV module for DreamShell
-# Copyright (C) 2023 SWAT
+# Copyright (C) 2023-2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -12,11 +12,10 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 1
 VER_MINOR = 1
 VER_MICRO = 1
-VER_BUILD = 0
 
 KOS_CFLAGS += -I./libwav
 
-all: rm-elf library install
+all: rm-elf library
 
 include ../../sdk/Makefile.loadable
 

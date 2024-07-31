@@ -13,11 +13,10 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 1
 VER_MINOR = 0
 VER_MICRO = 0
-VER_BUILD = 0
 
 KOS_LIB_PATHS += -L./xvidcore/build/generic/=build
 
-all: rm-elf library install
+all: rm-elf library
 
 library:
 	cd ./xvidcore/build/generic && make

@@ -12,7 +12,6 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 3
 VER_MINOR = 8
 VER_MICRO = 1
-VER_BUILD = 0
 
 KOS_LIB_PATHS += -L../../lib
 KOS_CFLAGS += -DSTDC_HEADERS=1 \
@@ -33,7 +32,7 @@ KOS_CFLAGS += -DSTDC_HEADERS=1 \
 				-DSQLITE_OMIT_LOAD_EXTENSION=1 \
 				-DSQLITE_THREADSAFE=0
 
-all: rm-elf install
+all: rm-elf
 
 include ../../sdk/Makefile.loadable
 

@@ -20,11 +20,10 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 1
 VER_MINOR = 0
 VER_MICRO = 6
-VER_BUILD = 0
 
 KOS_LIB_PATHS += -L./$(TARGET_NAME)
 
-all: rm-elf install
+all: rm-elf
 
 include ../../sdk/Makefile.loadable
 

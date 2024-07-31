@@ -1,25 +1,24 @@
 #
 # oggvorbis module for DreamShell
-# Copyright (C) 2011-2023 SWAT
+# Copyright (C) 2011-2024 SWAT
 # http://www.dc-swat.ru
 #
 
 TARGET_NAME = oggvorbis
 OBJS = module.o
 DBG_LIBS = -lds
-LIBS = -loggvorbisplay -logg-local -lvorbis-local
+LIBS = -loggvorbisplay-local -logg-local -lvorbis-local
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 3
 VER_MICRO = 0
-VER_BUILD = 0
 
 KOS_LIB_PATHS += -L./liboggvorbis/liboggvorbisplay/lib \
 				-L./liboggvorbis/liboggvorbis/libogg/build \
 				-L./liboggvorbis/liboggvorbis/libvorbis/build
 
-all: rm-elf library install
+all: rm-elf library
 
 library:
 	cd ./liboggvorbis && make

@@ -12,9 +12,8 @@ EXPORTS_FILE = exports.txt
 VER_MAJOR = 1
 VER_MINOR = 6
 VER_MICRO = 0
-VER_BUILD = 0
 
-all: rm-elf install
+all: rm-elf
 
 include ../../sdk/Makefile.loadable
 
