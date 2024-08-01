@@ -11,7 +11,7 @@ _SUBDIRS = bin2iso flashrom netstat ping scramble \
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
 $(patsubst %, _dir_%, $(_SUBDIRS)):
-	$(MAKE) -C $(patsubst _dir_%, %, $@) install
+	$(MAKE) -C $(patsubst _dir_%, %, $@) all install
 
 clean: $(patsubst %, _clean_dir_%, $(_SUBDIRS))
 
