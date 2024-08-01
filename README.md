@@ -64,14 +64,14 @@ make
 ```
 ##### Modules, applications and commands
 ```console
-cd ./modules && make && make install && cd ../
-cd ./commands && make && make install && cd ../
-cd ./applications && make && make install && cd ../
+cd ${KOS_BASE}/ds/modules && make
+cd ${KOS_BASE}/ds/commands && make
+cd ${KOS_BASE}/ds/applications && make
 ```
 ##### Firmwares
 ```console
-cd ./firmware/bootloader && make && make release && cd ../../
-cd ./firmware/isoldr && make && make install && cd ../../../
+cd ${KOS_BASE}/ds/firmware/bootloader && make && make release
+cd ${KOS_BASE}/ds/firmware/isoldr && make && make install
 ```
 ##### Full build (modules, apps etc)
 ```console

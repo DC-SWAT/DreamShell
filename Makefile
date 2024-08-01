@@ -175,9 +175,9 @@ $(LIB_DIR)/libSDL_$(SDL_VER).a:
 
 build: $(TARGET)
 	@echo Building modules, commands, applications and firmwares...
-	cd $(DS_BASE)/modules && make && make install
-	cd $(DS_BASE)/commands && make && make install
-	cd $(DS_BASE)/applications && make && make install
+	cd $(DS_BASE)/modules && make
+	cd $(DS_BASE)/commands && make
+	cd $(DS_BASE)/applications && make
 	cd $(DS_BASE)/firmware/isoldr && make && make install
 	cd $(DS_BASE)/firmware/bootloader && make && make install
 #   cd $(DS_BASE)/firmware/aica && make && make install
@@ -186,6 +186,7 @@ clean-all: clean
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
 	@-rm -rf $(DS_BASE)/release
 	@-rm -rf $(DS_BASE)/build
+	@-rm -rf $(DS_SDK)/lib/*.a
 	cd $(DS_BASE)/lib && make clean
 	cd $(DS_BASE)/modules && make clean
 	cd $(DS_BASE)/commands && make clean

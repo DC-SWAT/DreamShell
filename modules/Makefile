@@ -1,6 +1,6 @@
 #
 # DreamShell modules Makefile
-# Copyright (C) 2009-2023 SWAT
+# Copyright (C) 2009-2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -15,7 +15,7 @@ _SUBDIRS = minilzo isofs isoldr ppp bflash dreameye \
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
 $(patsubst %, _dir_%, $(_SUBDIRS)):
-	$(MAKE) -C $(patsubst _dir_%, %, $@)
+	$(MAKE) -C $(patsubst _dir_%, %, $@) install
 
 clean: $(patsubst %, _clean_dir_%, $(_SUBDIRS))
 

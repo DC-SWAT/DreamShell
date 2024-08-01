@@ -8,11 +8,10 @@ _SUBDIRS = main filemanager region_changer iso_loader \
 			bios_flasher gd_ripper speedtest vmu_manager \
 			settings gdplay dreameye network games_menu
 
-
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
 $(patsubst %, _dir_%, $(_SUBDIRS)):
-	$(MAKE) -C $(patsubst _dir_%, %, $@)
+	$(MAKE) -C $(patsubst _dir_%, %, $@) install
 
 clean: $(patsubst %, _clean_dir_%, $(_SUBDIRS))
 
