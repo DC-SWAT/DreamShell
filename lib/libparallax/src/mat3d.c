@@ -10,7 +10,7 @@
 #include <dc/fmath.h>
 #include <dc/matrix.h>
 #include <dc/video.h>
-#include "matrix.h"
+#include "plx/matrix.h"
 
 /*
   Most of this file was pulled from KGL's gltrans.c. Why did we do that
