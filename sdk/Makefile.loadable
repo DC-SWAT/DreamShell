@@ -1,6 +1,6 @@
 #
 # DreamShell SDK Makefile.loadable
-# Copyright (C) 2009-2023 SWAT
+# Copyright (C) 2009-2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -8,11 +8,11 @@
 ifdef TARGET_NAME
 
 ifndef TARGET
-TARGET = $(TARGET_NAME).klf
+TARGET := $(TARGET_NAME).klf
 endif
 
 else
-TARGET_NAME = $(TARGET)
+TARGET_NAME := $(TARGET)
 endif
 
 ### Config ###
@@ -29,15 +29,15 @@ increment_build: $(TARGET_NAME).build
 ifdef VER_MAJOR
 
 ifndef VER_MINOR
-VER_MINOR=0
+VER_MINOR := 0
 endif
 
 ifndef VER_MICRO
-VER_MICRO=0
+VER_MICRO := 0
 endif
 
 ifndef VER_BUILD
-VER_BUILD=$(shell cat ${TARGET_NAME}.build || 1)
+VER_BUILD := $(shell [ -f $(TARGET_NAME).build ] && cat $(TARGET_NAME).build || echo 1)
 endif
 
 KOS_CFLAGS += -DVER_MAJOR=$(VER_MAJOR)	\
@@ -113,13 +113,16 @@ all: increment_build $(TARGET)
 # of zero so we can do tracebacks later), second one makes the real file.
 $(TARGET): $(OBJS)
 ifndef NO_LD_DEBUG
-	$(KOS_CC) -g -ml -m4-single-only -O2 -g -Wl,-Ttext=0x00000000 -e _start -nostartfiles -nodefaultlibs -o dbg-$(TARGET) $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(DBG_LIBS) $(DBG_GCC_LIB) -Wl,--end-group
+	$(KOS_CC) -g -ml -m4-single-only -O2 -g -Wl,-Ttext=0x00000000 -e _start -nostartfiles -nodefaultlibs \
+		-o dbg-$(TARGET) $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(DBG_LIBS) $(DBG_GCC_LIB) -Wl,--end-group
 endif
-	$(KOS_CC) -g -ml -m4-single-only -O2 -Wl,-d -Wl,-r -Wl,-S -Wl,-x -nostartfiles -nodefaultlibs -o $(TARGET) -Wl,-T $(DS_SDK)/shlelf.xr $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(GCC_LIB) -Wl,--end-group
+	$(KOS_CC) -g -ml -m4-single-only -O2 -Wl,-d -Wl,-r -Wl,-S -Wl,-x -nostartfiles -nodefaultlibs \
+		-o $(TARGET) -Wl,-T $(DS_SDK)/shlelf.xr $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(GCC_LIB) -Wl,--end-group
 ifdef VER_MAJOR
 	@echo "\033[42m Compiled: $(TARGET_NAME) v$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO) build $(VER_BUILD) \033[0m"
 	@$(KOS_SIZE) $(TARGET)
 endif
 
 clean:
-	-rm -f $(OBJS) $(TARGET) dbg-$(TARGET) $(TARGET_LIB) romdisk.o romdisk.img exports.c exports_stubs.c exports_stubs.o tolua_*.c
+	-rm -f $(OBJS) $(TARGET) dbg-$(TARGET) $(TARGET_LIB) $(TARGET_NAME).build \
+		romdisk.o romdisk.img exports.c exports_stubs.c exports_stubs.o tolua_*.c
