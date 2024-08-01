@@ -7,7 +7,7 @@
 #include "ds.h"
 #include "audio/wav.h"
 
-DEFAULT_MODULE_HEADER(wav);
+DEFAULT_MODULE_HEADER(wave);
 
 static int wav_inited = 0;
 static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;
@@ -31,7 +31,7 @@ static void stop_playback() {
     wav_hnd = SND_STREAM_INVALID;
 }
 
-static int builtin_wav(int argc, char *argv[]) {
+static int builtin_wave(int argc, char *argv[]) {
 
     if(argc == 1) {
         ds_printf("Usage: %s option args...\n\n"
@@ -91,8 +91,8 @@ static int builtin_wav(int argc, char *argv[]) {
 }
 
 int lib_open(klibrary_t *lib) {
-    AddCmd(lib_get_name(), "Wav player", (CmdHandler *) builtin_wav); 
-    return nmmgr_handler_add(&ds_wav_hnd.nmmgr);
+    AddCmd(lib_get_name(), "PCM player", (CmdHandler *) builtin_wave); 
+    return nmmgr_handler_add(&ds_wave_hnd.nmmgr);
 }
 
 int lib_close(klibrary_t *lib) {
@@ -101,5 +101,5 @@ int lib_close(klibrary_t *lib) {
         wav_shutdown();
         wav_inited = 0;
     }
-    return nmmgr_handler_remove(&ds_wav_hnd.nmmgr);
+    return nmmgr_handler_remove(&ds_wave_hnd.nmmgr);
 }

@@ -570,8 +570,8 @@ function FileManager:openFile()
 
 		local mod = string.sub(ext, -3);
 
-		if mod == "raw" then
-			mod = "wav"
+		if mod == "raw" or mod == "wav" then
+			mod = "wave"
 		elseif mod == "ogg" then
 			mod = "oggvorbis"
 		elseif mod == "mp1" or mod == "mp2" or mod == "mp3" then
