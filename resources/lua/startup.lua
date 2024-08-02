@@ -50,13 +50,14 @@ local DreamShell = {
 		--"http",
 		--"httpd",
 		--"telnetd",
+		--"ftpd",
 		--"mongoose",
 		--"ppp",
 		--"mpg123",
 		--"oggvorbis",
 		--"adx",
 		--"s3m",
-		--"wav",
+		--"wave",
 		--"xvid",
 		--"SDL_mixer",        -- Depends: oggvorbis
 		--"ffmpeg",           -- Depends: oggvorbis, mpg123, bzip2

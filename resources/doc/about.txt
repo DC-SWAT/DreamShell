@@ -1,3 +1,4 @@
-DreamShell 4.0.0.RC.5
-Copyright (C)2004-2023 SWAT
+DreamShell 4.0.0.Release
+Copyright (C)2004-2024 Ruslan Rostovtsev (aka SWAT and DC-SWAT)
 http://www.dc-swat.ru
+https://github.com/DC-SWAT/DreamShell
