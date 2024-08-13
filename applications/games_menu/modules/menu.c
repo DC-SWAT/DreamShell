@@ -92,50 +92,48 @@ void* PlayCDDAThread(void *params)
 	if (game_index >= 0)
 	{
 		const char *full_path_game = GetFullGamePathByIndex(game_index);
-		const uint max_time = 2500;
+		const uint max_time = 2000;
 		uint time_elapsed = 0;
 
 		while (!menu_data.cdda_game_changed && time_elapsed < max_time)
 		{
-			thd_sleep(100);
-			time_elapsed += 100;
+			thd_sleep(50);
+			time_elapsed += 50;
 		}
 
 		if (!menu_data.cdda_game_changed)
 		{
-			size_t track_size = 0;
-			char *track_file_path = (char *)malloc(NAME_MAX);
-			srand(time(NULL));
-
-			do
+			if (CheckCDDA(game_index))
 			{
-				track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, &track_file_path);
-			} while (track_size == 0);
-			
-			PlayCDDATrack(track_file_path, 3);	
-			free(track_file_path);
+				if (!menu_data.cdda_game_changed)
+				{
+					size_t track_size = 0;
+					char *track_file_path = (char *)malloc(NAME_MAX);
+					srand(time(NULL));
+
+					do
+					{
+						track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, &track_file_path);
+					} while (track_size == 0);
+					
+					PlayCDDATrack(track_file_path, 3);	
+					free(track_file_path);
+				}
+			}
 		}
 	}
 
 	return NULL;
 }
 
-void PlayCDDA(int game_index)
+bool CheckCDDA(int game_index)
 {
-	StopCDDATrack();
-	if (menu_data.play_cdda_thread)
-	{
-		menu_data.cdda_game_changed = true;
-		thd_join(menu_data.play_cdda_thread, NULL);
-		menu_data.play_cdda_thread = NULL;
-		menu_data.cdda_game_changed = false;
-	}
-
+	bool isCDDA = false;
 	if (game_index >= 0)
 	{
 		if (menu_data.games_array[game_index].is_cdda == CCGE_CDDA)
 		{
-			menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
+			isCDDA = true;
 		}
 		else
 		{
@@ -147,24 +145,51 @@ void PlayCDDA(int game_index)
 				char *track_file_path = (char *)malloc(NAME_MAX);
 				track_size = GetCDDATrackFilename(4, full_path_game, &track_file_path);
 
-				if (track_size && track_size < 30 * 1024 * 1024)
+				if (track_size > 0 && track_size < 30 * 1024 * 1024)
 				{
 					track_size = GetCDDATrackFilename(6, full_path_game, &track_file_path);
 				}
 
 				if (track_size > 0 && (track_size <= MAX_SIZE_CDDA || MAX_SIZE_CDDA == 0))
 				{
+					isCDDA = true;
 					menu_data.games_array[game_index].is_cdda = CCGE_CDDA;
-					menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
 				}
 				else
 				{
+					isCDDA = false;
 					menu_data.games_array[game_index].is_cdda = CCGE_NOT_CDDA;
 				}
 				
 				free(track_file_path);
 			}
 		}
+	}
+
+	return isCDDA;
+}
+
+void StopCDDA()
+{
+	StopCDDATrack();
+	if (menu_data.play_cdda_thread)
+	{
+		menu_data.cdda_game_changed = true;
+		thd_join(menu_data.play_cdda_thread, NULL);
+		menu_data.play_cdda_thread = NULL;
+		menu_data.cdda_game_changed = false;
+	}
+}
+
+void PlayCDDA(int game_index)
+{
+	StopCDDA();
+	
+	if ((menu_data.games_array[game_index].is_cdda == CCGE_NOT_CHECKED || menu_data.games_array[game_index].is_cdda == CCGE_CDDA)
+		&& menu_data.current_dev == APP_DEVICE_IDE)
+	{
+		menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
+		thd_set_prio(menu_data.play_cdda_thread, PRIO_DEFAULT + 2);
 	}
 }
 
@@ -583,8 +608,7 @@ void CleanIncompleteCover()
 bool ExtractPVRCover(int game_index)
 {
 	bool extracted_cover = false;
-	int current_device = GetDeviceType(menu_data.default_dir);
-	if (game_index >= 0 && (current_device == APP_DEVICE_SD || current_device == APP_DEVICE_IDE))
+	if (game_index >= 0 && (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE))
 	{
 		if (menu_data.games_array[game_index].check_pvr && menu_data.games_array[game_index].exists_cover == SC_DEFAULT)
 		{

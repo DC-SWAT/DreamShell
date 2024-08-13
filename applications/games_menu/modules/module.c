@@ -130,7 +130,7 @@ static void SetMessageScan(const char *fmt, const char *message)
 
 static void ShowCoverScan()
 {
-	StopCDDATrack();
+	StopCDDA();
 	HideCoverScan();	
 
 	Vector vector_init_title = {640/2, 400/2-20, ML_ITEM + 6, 1};
@@ -629,7 +629,7 @@ static void DoMenuEndVideoHandler(void *ds_event, void *param, int action)
 
 static void StartExit()
 {
-	StopCDDATrack();
+	StopCDDA();
 	float y = 1.0f;
 
 	if (self.main_box != NULL)
@@ -727,7 +727,7 @@ static void GamesApp_InputEvent(int type, int key)
 		return;
 	
 	bool skip_cursor = false;
-	StopCDDATrack();
+	StopCDDA();
 
 	switch (key)
 	{
