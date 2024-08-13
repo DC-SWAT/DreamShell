@@ -15,7 +15,9 @@
 Texture::Texture(const std::filesystem::path &fn, bool use_alpha, bool yflip) {
 	m_txr = nullptr;
 	if (!loadFromFile(fn, use_alpha, yflip))
-		assert( false );
+	{
+		// assert( false );
+	}		
 }
 
 Texture::Texture(int w, int h, int fmt) {
@@ -50,6 +52,7 @@ void Texture::sendHdr(int list) {
 
 bool Texture::loadFromFile(const std::filesystem::path &fn, bool use_alpha, bool flip) {
 	m_txr = plx_txr_load(fn.c_str(), use_alpha, flip ? PVR_TXRLOAD_INVERT_Y : 0);
+	// m_txr = plx_txr_load(fn.c_str(), use_alpha, PVR_TXRLOAD_SQ);
 	if (m_txr == nullptr) {
 		dbglog(DBG_WARNING, "Texture::loadFromFile: Can't load '%s'\n", fn.c_str());
 		return false;

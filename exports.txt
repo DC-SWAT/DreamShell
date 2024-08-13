@@ -24,6 +24,8 @@ include dc/sound/sound.h
 
 include ds.h
 include fs.h
+include img/load.h
+include img/convert.h
 include network/net.h
 include exports_fix.h
 include zlib/zlib.h
@@ -260,6 +262,9 @@ InitNet
 ShutdownNet
 pvr_to_img
 png_to_img
+pvr_to_png
+pvr_to_jpg
+resize_image
 #
 InitGUI
 ShutdownGUI
@@ -1216,6 +1221,7 @@ TSU_ItemMenuSetLabelText
 TSU_ItemMenuGetLabelText
 TSU_ItemMenuSetItemIndex
 TSU_ItemMenuGetItemIndex
+TSU_ItemMenuSetImage
 TSU_ItemMenuDestroy
 TSU_LogXYMoverCreate
 TSU_ExpXYMoverCreate
@@ -1250,6 +1256,7 @@ TSU_BannerCreate
 TSU_BannerDestroy
 TSU_BannerDestroyAll
 TSU_BannerSetTexture
+TSU_BannerSetTextureType
 TSU_BannerSetUV
 TSU_BannerSetSize
 TSU_LabelCreate

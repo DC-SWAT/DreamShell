@@ -156,6 +156,31 @@ int conf_parse(isoldr_conf *cfg, const char *filename)
 	return 0;
 }
 
+bool IsGdiOptimized(const char *full_path_game)
+{
+	bool is_optimized = false;
+	if (full_path_game)
+	{
+		char *result = (char *)malloc(NAME_MAX);
+		char *path = (char *)malloc(NAME_MAX);
+
+		char *game = (char *)malloc(NAME_MAX);
+		memset(game, 0, NAME_MAX);
+		strcpy(game, GetLastPart(full_path_game, '/', 0));	
+
+		memset(result, 0, NAME_MAX);
+		memset(path, 0, NAME_MAX);
+
+		strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
+		snprintf(result, NAME_MAX, "%s/track01.iso", path);
+		free(game);
+		free(path);
+		
+		is_optimized = (FileExists(result) == 1);
+	}
+	return is_optimized;
+}
+
 const char* GetLastPart(const char *source, const char separator, int option_path)
 {
 	static char path[NAME_MAX];
@@ -193,7 +218,6 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 
 int GetDeviceType(const char *dir)
 {
-
 	if (!strncasecmp(dir, "/cd", 3))
 	{
 		return APP_DEVICE_CD;
@@ -248,7 +272,6 @@ char *MakePresetFilename(const char *dir, uint8 *md5)
 		dev[3] = '\0';
 	}
 
-
 	snprintf(filename, sizeof(filename),
 			"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
 #ifndef DEBUG_MENU_GAMES_CD
@@ -263,35 +286,39 @@ char *MakePresetFilename(const char *dir, uint8 *md5)
 	return filename;
 }
 
-size_t GetCDDATrackFilename(int num, const char *full_path_game, char *result)
+size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result)
 {
 	char *path = (char *)malloc(NAME_MAX);
 	int size = 0;
 
 	char *game = (char *)malloc(NAME_MAX);
 	memset(game, 0, NAME_MAX);
-	strcpy(game, GetLastPart(full_path_game, '/', 0));	
-
-	memset(result, 0, NAME_MAX);
+	strcpy(game, GetLastPart(full_path_game, '/', 0));
+	
+	if (*result == NULL)
+	{
+		*result = (char *)malloc(NAME_MAX);
+	}
+	
+	memset(*result, 0, NAME_MAX);
 	memset(path, 0, NAME_MAX);
 
 	strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
-	snprintf(result, NAME_MAX, "%s/track%02d.raw", path, num);
+	snprintf(*result, NAME_MAX, "%s/track%02d.raw", path, num);
 	free(game);
 	free(path);
-
-	size = FileSize(result);
+	size = FileSize(*result);
 	
 	if (size > 0)
 	{
 		return size;
 	}
 
-	int len = strlen(result);
-	result[len - 3] = 'w';
-	result[len - 1] = 'v';
+	int len = strlen(*result);
+	(*result)[len - 3] = 'w';
+	(*result)[len - 1] = 'v';
 
-	return FileSize(result);
+	return FileSize(*result);
 }
 
 static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;

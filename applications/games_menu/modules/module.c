@@ -6,6 +6,7 @@
 */
 
 #include <ds.h>
+#include "app_menu.h"
 #include "app_utils.h"
 #include "app_module.h"
 #include "app_definition.h"
@@ -26,138 +27,143 @@
 #include <tsunami/drawables/box.h>
 #include <tsunami/dsapp.h>
 
-#define MOTOSHORT(p) ((*(p))<<8) + *(p+1)
-#define IN_CACHE_GAMES
-#define MAX_SIZE_CDDA 0
-// #define DEBUG_MENU_GAMES_CD
-
 DEFAULT_MODULE_EXPORTS(app_games_menu);
 
+extern struct menu_structure menu_data;
 static Event_t *do_menu_control_event;
 static Event_t *do_menu_video_event;
 static Event_t *do_menu_end_video_event;
 static void* MenuExitHelper(void *params);
-static volatile bool finished_menu = false;
-static volatile bool cdda_game_changed = false;
+static mutex_t change_page_mutex = MUTEX_INITIALIZER;
 
 static struct
 {
 	App_t *app;
-	bool have_args;
 	DSApp *dsapp_ptr;
 	Scene *scene_ptr;
+
+	bool have_args;
 	int image_type;
 	int sector_size;
-	int current_dev;
-	isoldr_info_t *isoldr;
-	uint32 addr;
 	uint8 md5[16];
 	uint8 boot_sector[2048];
+	uint32 addr;
+	isoldr_info_t *isoldr;
 	
 	bool exit_app;
 	bool first_menu_load;
-	struct timeval old_time;
-	struct timeval new_time;
-	int menu_type;
+	uint32 scan_covers_start_time;
+	uint32 scan_covers_end_time;
 	int pages;
 	int current_page;
 	int previous_page;
 	int game_count;
 	int menu_cursel;
-	int games_array_count;
-	char default_dir[20];
-	char games_path[NAME_MAX];
-	char covers_path[50];
+
 	char item_value_selected[NAME_MAX];
-	MenuOptionStruct menu_option;
-	GameItemStruct *games_array;
 	Animation *item_selector_animation;
 	Rectangle *item_selector;
 	Font *menu_font;
+	Font *message_font;
 	Trigger *exit_trigger_list[MAX_SIZE_ITEMS];
 	Animation *exit_animation_list[MAX_SIZE_ITEMS];
 	Animation *img_button_animation[MAX_SIZE_ITEMS];
 	ItemMenu *img_button[MAX_SIZE_ITEMS];
-	Label *title;
-	Label *title_type;
+	Label *title, *title_back;
+	Label *title_type, *title_type_back;
 	Animation *title_animation;
+	Animation *title_back_animation;
 	Animation *title_type_animation;
+	Animation *title_type_back_animation;
 	Box *main_box;
 	Rectangle *title_rectangle;
 	Rectangle *title_type_rectangle;
+	Rectangle *modal_cover_scan;
+	Label *title_cover_scan;
+	Label *message_cover_scan;
 } self;
 
-
-static const char* GetFullGamePathByIndex(int game_index)
+static void HideCoverScan()
 {
-	static char full_path_game[NAME_MAX];
-	memset(full_path_game, 0, sizeof(full_path_game));
-	if (game_index >= 0)
+	if (self.modal_cover_scan != NULL)
 	{
-		if (self.games_array[game_index].is_folder_name)
-		{
-			snprintf(full_path_game, NAME_MAX, "%s/%s/%s", self.games_path, self.games_array[game_index].folder, self.games_array[game_index].game);
-		}
-		else
-		{
-			snprintf(full_path_game, NAME_MAX, "%s/%s", self.games_path, self.games_array[game_index].game);
-		}
+		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.modal_cover_scan);
+		TSU_RectangleDestroy(&self.modal_cover_scan);
 	}
 
-	return full_path_game;
-}
-
-static void* PlayCDDAThread(void *params)
-{
-	if (params)
+	if (self.title_cover_scan != NULL)
 	{
-		const char *track_file_path = (const char*)params;
-		const uint max_time = 2000;
-		uint time = 0;
-
-		while (!cdda_game_changed && time < max_time)
-		{
-			thd_sleep(100);
-			time += 100;
-		}
-
-		if (!cdda_game_changed)
-		{
-			PlayCDDATrack(track_file_path, 3);
-		}
+		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_cover_scan);
+		TSU_LabelDestroy(&self.title_cover_scan);
 	}
 
-	return NULL;
+	if (self.message_cover_scan != NULL)
+	{
+		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.message_cover_scan);
+		TSU_LabelDestroy(&self.message_cover_scan);
+	}
 }
 
-static void PlayCDDA(void *params)
-{	
+static void SetMessageScan(const char *fmt, const char *message)
+{
+	char message_scan[NAME_MAX];
+	memset(message_scan, 0, sizeof(message_scan));
+	snprintf(message_scan, sizeof(message_scan), fmt, message);
+		
+	if (self.message_cover_scan != NULL)
+	{
+		TSU_LabelSetText(self.message_cover_scan, message_scan);
+	}
+	else
+	{
+		Color color = {1, 1.0f, 1.0f, 1.0f};
+		Vector vector_init_title = {640/2, 400/2, ML_ITEM + 6, 1};
+		vector_init_title.x = 50;
+		vector_init_title.y += 40;
+		
+		self.message_cover_scan = TSU_LabelCreate(self.message_font, message_scan, 16, false, true);
+		TSU_LabelSetTint(self.message_cover_scan, &color);
+		TSU_AppSubAddLabel(self.dsapp_ptr, self.message_cover_scan);
+		TSU_LabelSetTranslate(self.message_cover_scan, &vector_init_title);
+	}
+}
+
+static void ShowCoverScan()
+{
 	StopCDDATrack();
-	if (self.app->thd) {
-		cdda_game_changed = true;
-		thd_join(self.app->thd, NULL);
-		self.app->thd = NULL;
-		cdda_game_changed = false;
+	HideCoverScan();	
+
+	Vector vector_init_title = {640/2, 400/2-20, ML_ITEM + 6, 1};
+	Color modal_color = {1, 0.0f, 0.0f, 0.0f};
+	Color modal_border_color = {1, 1.0f, 1.0f, 1.0f};	
+	
+	self.modal_cover_scan = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 40, 350, 560, 230, &modal_color, ML_ITEM + 5, 3, &modal_border_color, 0);
+	TSU_AppSubAddRectangle(self.dsapp_ptr, self.modal_cover_scan);
+
+	static Color color = {1, 1.0f, 1.0f, 1.0f};
+	self.title_cover_scan = TSU_LabelCreate(self.menu_font, "SCANNING MISSING COVER", 26, true, true);
+	TSU_LabelSetTint(self.title_cover_scan, &color);
+	TSU_AppSubAddLabel(self.dsapp_ptr, self.title_cover_scan);
+	TSU_LabelSetTranslate(self.title_cover_scan, &vector_init_title);
+}
+
+static bool LoadCover(ItemMenu *item_menu)
+{
+	bool loaded_cover = false;
+
+	if (item_menu != NULL)
+	{
+		char *game_cover_path = NULL;
+		int game_index = TSU_ItemMenuGetItemIndex(item_menu);
+		if (GetGameCoverPath(game_index, &game_cover_path))
+		{
+			TSU_ItemMenuSetImage(item_menu, game_cover_path, menu_data.games_array[game_index].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY);
+			loaded_cover = true;
+			free(game_cover_path);
+		}
 	}
 
-	if (params != NULL) {
-		char track_file_path[NAME_MAX];
-		const char *full_path_game = (const char*)params;
-		size_t track_size = GetCDDATrackFilename(4, full_path_game, track_file_path);
-
-		if (track_size && track_size < 30 * 1024 * 1024) {
-			track_size = GetCDDATrackFilename(6, full_path_game, track_file_path);
-		}
-
-		if (track_size > 0 && (track_size <= MAX_SIZE_CDDA || MAX_SIZE_CDDA == 0)) {
-			do
-			{
-				track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, track_file_path);
-			} while (track_size == 0);
-
-			self.app->thd = thd_create(0, PlayCDDAThread, track_file_path);
-		}
-	}	
+	return loaded_cover;
 }
 
 static void SetTitle(const char *text)
@@ -174,43 +180,63 @@ static void SetTitle(const char *text)
 		strcpy(titleText, text);
 	}
 
-	static Vector vectorInit = {-50, 32, ML_ITEM, 1};
-	static Vector vector = {10, 32, ML_ITEM, 1};
+	static Vector vectorInit = {-50, 34, ML_ITEM, 1};
+	static Vector vector = {10, 34, ML_ITEM, 1};
+	vectorInit.z = ML_ITEM + 1;
+	vector.z = ML_ITEM + 1;
 	
 	if (self.title != NULL)
 	{
+		TSU_LabelSetText(self.title_back, titleText);
 		TSU_LabelSetText(self.title, titleText);
 	}
 	else
 	{
 		static Color color = {1, 1.0f, 1.0f, 1.0f};
-		self.title = TSU_LabelCreate(self.menu_font, titleText, 26, false, true);
+		self.title = TSU_LabelCreate(self.menu_font, titleText, 26, false, false);
 		TSU_LabelSetTint(self.title, &color);
 		TSU_AppSubAddLabel(self.dsapp_ptr, self.title);
+
+		static Color color_back = {1, 0.0f, 0.0f, 0.0f};
+		self.title_back = TSU_LabelCreate(self.menu_font, titleText, 26, false, false);
+		TSU_LabelSetTint(self.title_back, &color_back);
+		TSU_AppSubAddLabel(self.dsapp_ptr, self.title_back);
 	}
 
 	if (self.title_animation != NULL)
 	{
 		TSU_AnimationComplete(self.title_animation, (Drawable *)self.title);
 		TSU_AnimationDestroy(&self.title_animation);
+
+		TSU_AnimationComplete(self.title_back_animation, (Drawable *)self.title_back);
+		TSU_AnimationDestroy(&self.title_back_animation);
 	}
 
 	TSU_LabelSetTranslate(self.title, &vectorInit);
 	self.title_animation = (Animation *)TSU_LogXYMoverCreate(vector.x, vector.y);
 	TSU_DrawableAnimAdd((Drawable *)self.title, (Animation *)self.title_animation);
+
+	vectorInit.z = ML_ITEM;
+	TSU_LabelSetTranslate(self.title_back, &vectorInit);
+	self.title_back_animation = (Animation *)TSU_LogXYMoverCreate(vector.x, vector.y);
+	TSU_DrawableAnimAdd((Drawable *)self.title_back, (Animation *)self.title_back_animation);
 }
 
-static void SetTitleType(const char *full_path_game)
+static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 {
 	if (full_path_game != NULL)
 	{
-		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
+		Color title_type_color = {1, 1.0f, 0.95f, 0.1f};
 		const char *file_type = strrchr(full_path_game, '.');
 
 		char title_text[4];
 		memset(title_text, 0, sizeof(title_text));
 
-		if (strcasecmp(file_type, ".cdi") == 0)
+		if (is_gdi_optimized)
+		{
+			strncpy(title_text, "GDI", 3);			
+		}
+		else if (strcasecmp(file_type, ".cdi") == 0)
 		{
 			strncpy(title_text, "CDI", 3);
 		}
@@ -224,267 +250,54 @@ static void SetTitleType(const char *full_path_game)
 		}
 		else if (strcasecmp(file_type, ".gdi") == 0)
 		{
-			char *result = (char *)malloc(NAME_MAX);
-			char *path = (char *)malloc(NAME_MAX);
-
-			char *game = (char *)malloc(NAME_MAX);
-			memset(game, 0, NAME_MAX);
-			strcpy(game, GetLastPart(full_path_game, '/', 0));	
-
-			memset(result, 0, NAME_MAX);
-			memset(path, 0, NAME_MAX);
-
-			strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
-			snprintf(result, NAME_MAX, "%s/track01.iso", path);
-			free(game);
-			free(path);
-			
 			strncpy(title_text, "GDI", 3);
-			if (FileExists(result) == 0)
-			{
-				title_type_color.r = 1.0f;
-				title_type_color.g = 0.54f;
-				title_type_color.b = 0.0f;
-			}
 
-			free(result);
+			title_type_color.r = 1.0f;
+			title_type_color.g = 0.54f;
+			title_type_color.b = 0.0f;
 		}
+
 		TSU_DrawableSetTint((Drawable *)self.title_type_rectangle, &title_type_color);
 
-		static Vector vectorInit = {650, 32, ML_ITEM + 3, 1};
-		static Vector vector = {559, 32, ML_ITEM + 3, 1};
+		static Vector vectorInit = {685, 34, ML_ITEM + 6, 1};
+		static Vector vector = {585, 34, ML_ITEM + 6, 1};
+		vectorInit.z = ML_ITEM + 6;
 
 		if (self.title_type != NULL)
 		{
+			TSU_LabelSetText(self.title_type_back, title_text);
 			TSU_LabelSetText(self.title_type, title_text);
 		}
 		else
 		{
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
-			self.title_type = TSU_LabelCreate(self.menu_font, title_text, 26, false, true);
+			self.title_type = TSU_LabelCreate(self.menu_font, title_text, 26, false, false);
 			TSU_LabelSetTint(self.title_type, &color);
 			TSU_AppSubAddLabel(self.dsapp_ptr, self.title_type);
+
+			static Color color_back = {1, 0.0f, 0.0f, 0.0f};
+			self.title_type_back = TSU_LabelCreate(self.menu_font, title_text, 26, false, false);
+			TSU_LabelSetTint(self.title_type_back, &color_back);
+			TSU_AppSubAddLabel(self.dsapp_ptr, self.title_type_back);
 		}
 
 		if (self.title_type_animation != NULL)
 		{
 			TSU_AnimationComplete(self.title_type_animation, (Drawable *)self.title_type);
 			TSU_AnimationDestroy(&self.title_type_animation);
+
+			TSU_AnimationComplete(self.title_type_back_animation, (Drawable *)self.title_type_back);
+			TSU_AnimationDestroy(&self.title_type_back_animation);			
 		}
 
 		TSU_LabelSetTranslate(self.title_type, &vectorInit);
 		self.title_type_animation = (Animation *)TSU_LogXYMoverCreate(vector.x, vector.y);
-		TSU_DrawableAnimAdd((Drawable *)self.title_type, (Animation *)self.title_type_animation);		
-	}
-}
+		TSU_DrawableAnimAdd((Drawable *)self.title_type, (Animation *)self.title_type_animation);
 
-static void SetMenuType(int menu_type)
-{
-	self.menu_type = menu_type;
-
-	switch (menu_type)
-	{
-		case MT_IMAGE_TEXT_64_5X2:
-		{
-			self.menu_option.max_page_size = 10;
-			self.menu_option.max_columns = 2;
-			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
-			self.menu_option.init_position_x = 20;
-			self.menu_option.init_position_y = -22;
-			self.menu_option.padding_x = 320;
-			self.menu_option.padding_y = 22;
-			self.menu_option.image_size = 64.0f;
-		}
-		break;
-
-		case MT_IMAGE_128_4X3:
-		{
-			self.menu_option.max_page_size = 12;
-			self.menu_option.max_columns = 4;
-			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
-			self.menu_option.init_position_x = 55;
-			self.menu_option.init_position_y = -45;
-			self.menu_option.padding_x = 163;
-			self.menu_option.padding_y = 12;
-			self.menu_option.image_size = 128.0f;
-		}
-		break;
-
-		case MT_IMAGE_256_3X2:
-		{
-			self.menu_option.max_page_size = 6;
-			self.menu_option.max_columns = 3;
-			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
-			self.menu_option.init_position_x = 90;
-			self.menu_option.init_position_y = -82;
-			self.menu_option.padding_x = 212.0f;
-			self.menu_option.padding_y = 12;
-			self.menu_option.image_size = 200.0f;
-		}
-		break;
-
-		case MT_PLANE_TEXT:
-		{
-			self.menu_option.max_page_size = 10;
-			self.menu_option.max_columns = 1;
-			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
-			self.menu_option.init_position_x = 20;
-			self.menu_option.init_position_y = 5;
-			self.menu_option.padding_x = 320;
-			self.menu_option.padding_y = 12;
-			self.menu_option.image_size = 64.0f;
-		}
-		break;
-
-		default:
-		{
-			self.menu_option.max_page_size = 10;
-			self.menu_option.max_columns = 2;
-			self.menu_option.size_items_column = self.menu_option.max_page_size / self.menu_option.max_columns;
-			self.menu_option.init_position_x = 20;
-			self.menu_option.init_position_y = 5;
-			self.menu_option.padding_x = 320;
-			self.menu_option.padding_y = 12;
-			self.menu_option.image_size = 64.0f;
-		}
-		break;
-	}
-}
-
-static ImageDimensionStruct* GetImageDimension(const char *image_file)
-{
-	ImageDimensionStruct *image = NULL;
-	char *image_type = strrchr(image_file, '.');
-
-	if (strcasecmp(image_type, ".kmg") == 0)
-	{
-		file_t image_handle = fs_open(image_file, O_RDONLY);
-
-		if (image_handle == FILEHND_INVALID)
-			return NULL;
-			
-		image = (ImageDimensionStruct *)malloc(sizeof(ImageDimensionStruct));
-		memset(image, 0, sizeof(ImageDimensionStruct));
-		image->height = 128;
-		image->width = 128;
-
-		fs_close(image_handle);
-	}
-	else if (strcasecmp(image_type, ".jpg") == 0)
-	{
-		file_t image_handle = fs_open(image_file, O_RDONLY);
-
-		if (image_handle == FILEHND_INVALID)
-			return NULL;
-
-		image = (ImageDimensionStruct *)malloc(sizeof(ImageDimensionStruct));
-		memset(image, 0, sizeof(ImageDimensionStruct));
-
-		size_t file_size = fs_total(image_handle);
-		unsigned char buffer[32];
-		int i, j, marker;
-
-		fs_seek(image_handle, 0, SEEK_SET);
-		fs_read(image_handle, buffer, 32);
-		i = j = 2; // Start at offset of first marker
-		marker = 0; // Search for SOF (start of frame) marker
-
-		while (i < 32 && marker != 0xffc0 && j < file_size)
-		{
-			marker = (MOTOSHORT(&buffer[i])) & 0xfffc;
-			if (marker < 0xff00) // invalid marker
-			{
-				i += 2;
-				continue;
-			}
-			if (marker == 0xffc0)
-				break;
-
-			j += 2 + MOTOSHORT(&buffer[i+2]); // Skip to next marker
-			if (j < file_size) // need to read more
-			{
-				fs_seek(image_handle, j, SEEK_SET); // read some more
-				fs_read(image_handle, buffer, 32);
-				i = 0;
-			}
-			else
-				break;
-		}
-
-		if (marker == 0xffc0)
-		{
-			image->height = MOTOSHORT(&buffer[i+5]);
-			image->width = MOTOSHORT(&buffer[i+7]);
-		}
-
-		fs_close(image_handle);
-	}
-	else if (strcasecmp(image_type, ".png") == 0 || strcasecmp(image_type, ".bpm") == 0)
-	{
-		file_t image_handle = fs_open(image_file, O_RDONLY);
-
-		if (image_handle == FILEHND_INVALID)
-			return NULL;
-
-		image = (ImageDimensionStruct *)malloc(sizeof(ImageDimensionStruct));
-		memset(image, 0, sizeof(ImageDimensionStruct));
-
-		if (strcasecmp(image_type, ".png") == 0)
-		{
-			fs_seek(image_handle, 16, SEEK_SET);
-			fs_read(image_handle, (char *)&image->width, sizeof(uint32));
-
-			fs_seek(image_handle, 20, SEEK_SET);
-			fs_read(image_handle, (char *)&image->height, sizeof(uint32));
-		}
-		else if (strcasecmp(image_type, ".bmp") == 0)
-		{
-			fs_seek(image_handle, 18, SEEK_SET);
-			fs_read(image_handle, (char *)&image->width, sizeof(uint32));
-
-			fs_seek(image_handle, 22, SEEK_SET);
-			fs_read(image_handle, (char *)&image->height, sizeof(uint32));
-		}
-
-		image->width = ntohl(image->width);
-		image->height = ntohl(image->height);
-
-		fs_close(image_handle);
-	}
-
-	return image;
-}
-
-static void FreeGames()
-{
-#ifndef IN_CACHE_GAMES
-	FreeGamesForce();
-#endif
-}
-
-static void FreeGamesForce()
-{
-	if (self.games_array_count > 0)
-	{
-		for (int icount = 0; icount < self.games_array_count; icount++)
-		{
-			if (self.games_array[icount].game)
-			{
-				free(self.games_array[icount].game);
-			}
-
-			if (self.games_array[icount].folder)
-			{
-				free(self.games_array[icount].folder);
-			}
-			
-			self.games_array[icount].game = NULL;
-			self.games_array[icount].folder = NULL;
-		}
-
-		free(self.games_array);
-		self.games_array = NULL;
-		self.games_array_count = 0;
+		vectorInit.z = ML_ITEM + 5;
+		TSU_LabelSetTranslate(self.title_type_back, &vectorInit);
+		self.title_type_back_animation = (Animation *)TSU_LogXYMoverCreate(vector.x, vector.y);
+		TSU_DrawableAnimAdd((Drawable *)self.title_type_back, (Animation *)self.title_type_back_animation);
 	}
 }
 
@@ -506,7 +319,7 @@ static void SetCursor()
 
 	if (self.item_selector == NULL)
 	{
-		if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
+		if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 		{
 			Color color = {1, 0.0f, 0.0f, 0.0f};
 			Color border_color = {1, 1.0f, 1.0f, 0.1f};
@@ -514,7 +327,7 @@ static void SetCursor()
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
 			TSU_DrawableSetAlpha((Drawable *)self.item_selector, 0.8f);
 		}
-		else if (self.menu_type == MT_IMAGE_128_4X3)
+		else if (menu_data.menu_type == MT_IMAGE_128_4X3)
 		{
 			Color color = {1, 0.0f, 0.0f, 0.0f};
 			Color border_color = {1, 1.0f, 1.0f, 0.1f};			
@@ -544,288 +357,59 @@ static void SetCursor()
 	static int init_position_x;
 	static int init_position_y;
 
-	if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
+	if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 	{
-
-		TSU_RectangleSetSize(self.item_selector, 310, self.menu_option.image_size + 8);
+		TSU_RectangleSetSize(self.item_selector, 310, menu_data.menu_option.image_size + 8);
 		init_position_x = 5;
 		init_position_y = 33;
 		selector_translate.z = ML_CURSOR;
 	}
-	else if (self.menu_type == MT_IMAGE_128_4X3)
+	else if (menu_data.menu_type == MT_IMAGE_128_4X3)
 	{
-		TSU_RectangleSetSize(self.item_selector, self.menu_option.image_size + 4, self.menu_option.image_size + 4);
+		TSU_RectangleSetSize(self.item_selector, menu_data.menu_option.image_size + 4, menu_data.menu_option.image_size + 4);
 		init_position_x = 9;
 		init_position_y = 41;
 		selector_translate.z = ML_CURSOR;		
 	}
 	else
 	{
-		TSU_RectangleSetSize(self.item_selector, self.menu_option.image_size + 4, self.menu_option.image_size + 4);
+		TSU_RectangleSetSize(self.item_selector, menu_data.menu_option.image_size + 4, menu_data.menu_option.image_size + 4);
 		init_position_x = 8;
 		init_position_y = 40;
 		selector_translate.z = ML_CURSOR;
 	}
 
-	selector_translate.x = self.menu_cursel / self.menu_option.size_items_column * self.menu_option.padding_x + init_position_x;
-	selector_translate.y = ((self.menu_cursel + 1) - self.menu_option.size_items_column * (self.menu_cursel / self.menu_option.size_items_column)) * (self.menu_option.padding_y + self.menu_option.image_size) + init_position_y;
+	selector_translate.x = self.menu_cursel / menu_data.menu_option.size_items_column * menu_data.menu_option.padding_x + init_position_x;
+	selector_translate.y = ((self.menu_cursel + 1) - menu_data.menu_option.size_items_column * (self.menu_cursel / menu_data.menu_option.size_items_column)) * (menu_data.menu_option.padding_y + menu_data.menu_option.image_size) + init_position_y;
 
 	self.item_selector_animation = (Animation *)TSU_LogXYMoverCreate(selector_translate.x, selector_translate.y);
 	TSU_DrawableAnimAdd((Drawable *)self.item_selector, (Animation *)self.item_selector_animation);
 }
 
-static bool IsValidImage(const char *image_file)
-{
-	bool isValid = false;
-
-	ImageDimensionStruct *image = GetImageDimension(image_file);
-	if (image != NULL)
-	{
-		isValid = (image->height == 64 && image->width == 64) 
-			|| (image->height == 128 && image->width == 128) 
-			|| (image->height == 256 && image->width == 256);
-
-		free(image);
-	}
-
-	return isValid;
-}
-
-static int AppCompareGames(const void *a, const void *b)
-{
-	const GameItemStruct *left = (const GameItemStruct *)a;
-	const GameItemStruct *right = (const GameItemStruct *)b;
-	int cmp = 0;
-
-	char *left_compare = malloc(NAME_MAX);
-	char *right_compare = malloc(NAME_MAX);
-
-	memset(left_compare, 0, NAME_MAX);
-	memset(right_compare, 0, NAME_MAX);
-
-	if (left->is_folder_name && right->is_folder_name)
-	{
-		strcpy(left_compare, GetLastPart(left->folder, '/', 2));
-		strcpy(right_compare, GetLastPart(right->folder, '/', 2));
-
-		cmp = strcmp(left_compare, right_compare);
-	}
-	else if (left->is_folder_name)
-	{
-		strcpy(left_compare, GetLastPart(left->folder, '/', 2));
-		strncpy(right_compare, right->game, strlen(right->game) - 4);
-
-		cmp = strcmp(left_compare, right_compare);
-	}
-	else if (right->is_folder_name)
-	{
-		strncpy(left_compare, left->game, strlen(left->game) - 4);
-		strcpy(right_compare, GetLastPart(right->folder, '/', 2));
-		
-		cmp = strcmp(left_compare, right_compare);
-	}
-	else
-	{
-		strncpy(left_compare, left->game, strlen(left->game) - 4);
-		strncpy(right_compare, right->game, strlen(right->game) - 4);
-
-		cmp = strcmp(left_compare, right_compare);
-	}
-
-	free(left_compare);
-	free(right_compare);
-
-	return cmp > 0 ? cmp : -1;
-}
-
-static bool IsUniqueFileGame(const char *full_path_folder)
-{
-	file_t fd = fs_open(full_path_folder, O_RDONLY | O_DIR);
-	if (fd == FILEHND_INVALID)
-		return false;
-
-	int file_count = 0;
-	char *file_type = NULL;
-	dirent_t *ent = NULL;
-
-	while ((ent = fs_readdir(fd)) != NULL)
-	{
-		if (ent->name[0] == '.')
-			continue;
-
-		file_type = strrchr(ent->name, '.');
-		if (strcasecmp(file_type, ".gdi") == 0
-			|| strcasecmp(file_type, ".cdi") == 0
-			|| (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(ent->name, "track", strlen("track")) == 0))
-			|| strcasecmp(file_type, ".cso") == 0)
-		{
-			file_count++;
-
-			if (file_count > 1)
-			{
-				break;
-			}
-		}
-	}
-	ent = NULL;
-	fs_close(fd);
-
-	return !(file_count > 1);
-}
-
-static void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, int level)
-{
-	file_t fd = fs_open(full_path_folder, O_RDONLY | O_DIR);
-	if (fd == FILEHND_INVALID)
-		return;
-
-	dirent_t *ent = NULL;
-	char game[NAME_MAX];
-	char *file_type = NULL;
-	bool is_folder_name = false;	
-	bool unique_file = level > 0 ? IsUniqueFileGame(full_path_folder) : false;
-
-	while ((ent = fs_readdir(fd)) != NULL)
-	{
-		if (ent->name[0] == '.')
-			continue;
-
-		// SKIP FULL NAMES WITH A LENGTH LONGER THAN NAMEMAX
-		if ((full_path_folder && (strlen(full_path_folder) + strlen(ent->name)) > NAME_MAX)
-			|| strlen(ent->name) > NAME_MAX)
-			continue;
-
-		is_folder_name = false;
-		file_type = strrchr(ent->name, '.');
-		memset(game, '\0', sizeof(game));
-
-		if (strcasecmp(file_type, ".gdi") == 0)
-		{
-			strcpy(game, ent->name);
-			is_folder_name = level > 0;
-		}
-		else if (strcasecmp(file_type, ".cdi") == 0)
-		{
-			strcpy(game, ent->name);
-			is_folder_name = unique_file;
-		}
-		else if (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(ent->name, "track", strlen("track")) == 0))
-		{
-			strcpy(game, ent->name);
-			is_folder_name = unique_file;
-		}
-		else if (strcasecmp(file_type, ".cso") == 0)
-		{
-			strcpy(game, ent->name);
-			is_folder_name = unique_file;
-		}
-		else if (!(strncasecmp(ent->name, "track", strlen("track")) == 0))
-		{
-			char *new_folder = (char *)malloc(NAME_MAX);
-			memset(new_folder, 0, NAME_MAX);
-			snprintf(new_folder, NAME_MAX, "%s/%s", full_path_folder, ent->name);
-
-			RetrieveGamesRecursive(new_folder, ent->name, level+1);
-			
-			free(new_folder);
-		}
-
-		if (game[0] != '\0')
-		{
-			for (char *c = game; (*c = toupper(*c)); ++c)
-			{
-				if (*c == 'a')
-					*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
-			}
-
-			self.games_array_count++;
-			if (self.games_array == NULL)
-			{
-				self.games_array = (GameItemStruct *)malloc(sizeof(GameItemStruct));
-			}
-			else
-			{
-				self.games_array = (GameItemStruct *)realloc(self.games_array, self.games_array_count * sizeof(GameItemStruct));
-			}
-
-			memset(&self.games_array[self.games_array_count - 1], 0, sizeof(GameItemStruct));
-			
-			self.games_array[self.games_array_count - 1].game = (char *)malloc(strlen(game) + 1);
-			memset(self.games_array[self.games_array_count - 1].game, 0, strlen(game) + 1);
-			strncpy(self.games_array[self.games_array_count - 1].game, game, strlen(game));
-
-			if (folder)
-			{
-				char *folder_game = malloc(NAME_MAX); 
-				memset(folder_game, 0, NAME_MAX);
-				strcpy(folder_game, full_path_folder + strlen(self.games_path) + 1);
-
-				for (char *c = folder_game; (*c = toupper(*c)); ++c)
-				{
-					if (*c == 'a')
-						*c = 'A'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
-				}
-
-				self.games_array[self.games_array_count - 1].folder = (char *)malloc(strlen(folder_game) + 1);
-				memset(self.games_array[self.games_array_count - 1].folder, 0, strlen(folder_game) + 1);
-				strcpy(self.games_array[self.games_array_count - 1].folder, folder_game);
-				free(folder_game);
-			}
-			
-			self.games_array[self.games_array_count - 1].is_folder_name = is_folder_name;
-			self.games_array[self.games_array_count - 1].exists_cover = SC_WITHOUT_SEARCHING;
-		}
-	}
-	ent = NULL;
-	file_type = NULL;
-	fs_close(fd);
-}
-
-static bool RetrieveGames()
-{
-#ifdef IN_CACHE_GAMES
-	if (self.games_array_count > 0)
-	{
-		return true;
-	}
-#endif
-
-	FreeGames();
-	RetrieveGamesRecursive(self.games_path, NULL, 0);
-
-	if (self.games_array_count > 0)
-	{
-		qsort(self.games_array, self.games_array_count, sizeof(GameItemStruct), AppCompareGames);
-		return true;
-	}
-	else
-	{
-		return false;
-	}
-}
-
 static bool LoadPage(bool change_view)
 {
 	bool loaded = false;
+
+	mutex_lock(&change_page_mutex);	
 	char game_cover_path[NAME_MAX];
 	char name[NAME_MAX];
-	char game[NAME_MAX];
-	char game_without_extension[NAME_MAX];
-	char name_truncated[17];
+	char *game_cover_path_tmp = NULL;
+	char name_truncated[19];
 	int fileCount = 0;
 
 	if (self.pages == -1)
 	{
 		if (RetrieveGames())
 		{
-			self.pages = (self.games_array_count > 0 ? ceil((float)self.games_array_count / (float)self.menu_option.max_page_size) : 0);
+			timer_ms_gettime(&self.scan_covers_start_time, NULL);
+			self.pages = (menu_data.games_array_count > 0 ? ceil((float)menu_data.games_array_count / (float)menu_data.menu_option.max_page_size) : 0);
 		}
 	}
 	else
 	{
 		if (change_view)
 		{
-			self.pages = (self.games_array_count > 0 ? ceil((float)self.games_array_count / (float)self.menu_option.max_page_size) : 0);
+			self.pages = (menu_data.games_array_count > 0 ? ceil((float)menu_data.games_array_count / (float)menu_data.menu_option.max_page_size) : 0);
 		}
 	}
 
@@ -865,10 +449,10 @@ static bool LoadPage(bool change_view)
 			self.game_count = 0;
 			Vector vectorTranslate = {0, 480, ML_ITEM, 1};
 
-			for (int icount = 0; icount < self.games_array_count; icount++)
+			for (int icount = 0; icount < menu_data.games_array_count; icount++)
 			{
 				fileCount++;
-				page = ceil((float)fileCount / (float)self.menu_option.max_page_size);
+				page = ceil((float)fileCount / (float)menu_data.menu_option.max_page_size);
 
 				if (page < self.current_page)
 					continue;
@@ -877,110 +461,27 @@ static bool LoadPage(bool change_view)
 
 				self.game_count++;
 
-				column = floor((float)(self.game_count - 1) / (float)self.menu_option.size_items_column);
-
-				if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING)
+				column = floor((float)(self.game_count - 1) / (float)menu_data.menu_option.size_items_column);				
+				
+				game_cover_path_tmp = NULL;
+				CheckCover(icount);
+				if (GetGameCoverPath(icount, &game_cover_path_tmp))
 				{
-					memset(game_without_extension, 0, sizeof(game_without_extension));
-					strncpy(game_without_extension, self.games_array[icount].game, strlen(self.games_array[icount].game) - 4);
-
-					memset(game_cover_path, 0, sizeof(game_cover_path));
-					snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.kmg", self.covers_path, game_without_extension);
-					if (1 != 1 && IsValidImage(game_cover_path)) // DISABLE KMG
-					{
-						self.games_array[icount].exists_cover = SC_EXISTS;
-						self.games_array[icount].cover_type = IT_KMG;
-					}
-					else 
-					{
-						memset(game_cover_path, 0, sizeof(game_cover_path));
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game_without_extension);
-						if (IsValidImage(game_cover_path))
-						{
-							self.games_array[icount].exists_cover = SC_EXISTS;
-							self.games_array[icount].cover_type = IT_JPG;
-						}
-						else
-						{
-							memset(game_cover_path, 0, sizeof(game_cover_path));
-							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game_without_extension);
-							if (IsValidImage(game_cover_path))
-							{
-								self.games_array[icount].exists_cover = SC_EXISTS;
-								self.games_array[icount].cover_type = IT_PNG;
-							}
-						}
-					}
-
-					if (self.games_array[icount].exists_cover == SC_WITHOUT_SEARCHING)
-					{
-						self.games_array[icount].exists_cover = SC_NOT_EXIST;
-					}
-				}
-
-				if (self.games_array[icount].exists_cover == SC_EXISTS)
-				{
-					memset(game, 0, sizeof(game));
-					strncpy(game, self.games_array[icount].game, strlen(self.games_array[icount].game) - 4);
-
-					if (self.games_array[icount].cover_type == IT_KMG)
-					{
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.kmg", self.covers_path, game);
-					}
-					else if (self.games_array[icount].cover_type == IT_JPG)
-					{
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.jpg", self.covers_path, game);
-					}
-					else if (self.games_array[icount].cover_type == IT_PNG)
-					{
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s.png", self.covers_path, game);
-					}
-					else
-					{
-						// NEVER HERE!
-					}
-				}
-				else
-				{
-					if (self.games_array[icount].exists_cover == SC_DEFAULT)
-					{						
-						if (self.games_array[icount].cover_type == IT_JPG)
-						{
-							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.jpg");
-						}
-						else
-						{
-							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.png");
-						}
-					}
-					else 
-					{
-						snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.jpg");
-						if (FileExists(game_cover_path) == 0) 
-						{
-							snprintf(game_cover_path, sizeof(game_cover_path), "%s/%s", self.default_dir, "apps/games_menu/images/gd.png");
-							self.games_array[icount].exists_cover = SC_DEFAULT;
-							self.games_array[icount].cover_type = IT_PNG;
-						}
-						else 
-						{
-							self.games_array[icount].exists_cover = SC_DEFAULT;
-							self.games_array[icount].cover_type = IT_JPG;
-						}						
-					}
+					strcpy(game_cover_path, game_cover_path_tmp);
+					free(game_cover_path_tmp);
 				}
 
 				memset(name, 0, sizeof(name));
-				if (self.games_array[icount].is_folder_name)
+				if (menu_data.games_array[icount].is_folder_name)
 				{
-					strcpy(name, GetLastPart(self.games_array[icount].folder, '/', 0));
+					strcpy(name, GetLastPart(menu_data.games_array[icount].folder, '/', 0));
 				}
 				else
 				{
-					strncpy(name, self.games_array[icount].game, strlen(self.games_array[icount].game) - 4);
+					strncpy(name, menu_data.games_array[icount].game, strlen(menu_data.games_array[icount].game) - 4);
 				}
 
-				if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
+				if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 				{
 					memset(name_truncated, 0, sizeof(name_truncated));
 					if (strlen(name) > sizeof(name_truncated) - 1)
@@ -992,18 +493,19 @@ static bool LoadPage(bool change_view)
 						strcpy(name_truncated, name);
 					}
 
-					self.img_button[self.game_count - 1] = TSU_ItemMenuCreate(game_cover_path, self.menu_option.image_size, self.menu_option.image_size
-										, self.games_array[icount].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY
-										, name_truncated, self.menu_font, 16);
+					self.img_button[self.game_count - 1] = TSU_ItemMenuCreate(game_cover_path, menu_data.menu_option.image_size, menu_data.menu_option.image_size
+								, menu_data.games_array[icount].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY
+								, name_truncated, self.menu_font, 18);
+					
 				}
-				else if (self.menu_type == MT_PLANE_TEXT)
+				else if (menu_data.menu_type == MT_PLANE_TEXT)
 				{
 				}
 				else
-				{
-					self.img_button[self.game_count - 1] = TSU_ItemMenuCreateImage(game_cover_path, self.menu_option.image_size
-								, self.menu_option.image_size
-								, self.games_array[icount].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY);
+				{					
+					self.img_button[self.game_count - 1] = TSU_ItemMenuCreateImage(game_cover_path, menu_data.menu_option.image_size
+							, menu_data.menu_option.image_size
+							, menu_data.games_array[icount].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY);
 				}
 
 				ItemMenu *item_menu = self.img_button[self.game_count - 1];
@@ -1012,10 +514,10 @@ static bool LoadPage(bool change_view)
 				TSU_ItemMenuSetItemValue(item_menu, name);
 				TSU_ItemMenuSetTranslate(item_menu, &vectorTranslate);
 
-				self.img_button_animation[self.game_count - 1] = (Animation *)TSU_LogXYMoverCreate(self.menu_option.init_position_x + (column * self.menu_option.padding_x),
-																									(self.menu_option.image_size + self.menu_option.padding_y) * (self.game_count - self.menu_option.size_items_column * column) + self.menu_option.init_position_y);
+				self.img_button_animation[self.game_count - 1] = (Animation *)TSU_LogXYMoverCreate(menu_data.menu_option.init_position_x + (column * menu_data.menu_option.padding_x),
+																									(menu_data.menu_option.image_size + menu_data.menu_option.padding_y) * (self.game_count - menu_data.menu_option.size_items_column * column) + menu_data.menu_option.init_position_y);
 
-				TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count - 1]);
+				TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count - 1]);				
 
 				if (self.first_menu_load)
 				{
@@ -1023,16 +525,19 @@ static bool LoadPage(bool change_view)
 					{
 						TSU_ItemMenuSetSelected(item_menu, true, false);
 						SetTitle(name);
-						SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
+
+						SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu))
+							, menu_data.games_array[TSU_ItemMenuGetItemIndex(item_menu)].is_gdi_optimized);
+
 						SetCursor();
-						PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
+						PlayCDDA(TSU_ItemMenuGetItemIndex(item_menu));
 					}
 					else
 					{
 						TSU_ItemMenuSetSelected(item_menu, false, false);
 					}
 				}
-
+				
 				TSU_AppSubAddItemMenu(self.dsapp_ptr, item_menu);
 			}
 
@@ -1047,16 +552,18 @@ static bool LoadPage(bool change_view)
 
 		char font_path[NAME_MAX];
 		memset(font_path, 0, sizeof(font_path));
-		snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games_menu/fonts/message.txf");
+		snprintf(font_path, sizeof(font_path), "%s/%s", menu_data.default_dir, "apps/games_menu/fonts/message.txf");
 
 		TSU_LabelDestroy(&self.title);
 		TSU_FontDestroy(&self.menu_font);
 		self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 		
-		snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n%s\n\nand images here:\n%s", self.games_path, self.covers_path);
+		snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n%s\n\n\nand images here:\n%s", menu_data.games_path, menu_data.covers_path);
 		ds_printf(game_cover_path);
 		SetTitle(game_cover_path);
 	}
+
+	mutex_unlock(&change_page_mutex);
 
 	return loaded;
 }
@@ -1064,49 +571,35 @@ static bool LoadPage(bool change_view)
 static void InitMenu()
 {
 	self.scene_ptr = TSU_AppGetScene(self.dsapp_ptr);
-	memset(self.default_dir, 0, sizeof(self.default_dir));
-	memset(self.covers_path, 0, sizeof(self.covers_path));
-	memset(self.games_path, 0, sizeof(self.games_path));
-
-	if (DirExists("/ide/games"))
-	{
-		strcpy(self.default_dir, "/ide/DS");
-		strcpy(self.games_path, "/ide/games");
-		strcpy(self.covers_path, "/ide/DS/apps/games_menu/covers");
-	}
-	else if (DirExists("/sd/games"))
-	{
-		strcpy(self.default_dir, "/sd/DS");
-		strcpy(self.games_path, "/sd/games");
-		strcpy(self.covers_path, "/sd/DS/apps/games_menu/covers");
-	}
-	else if (!is_custom_bios())
-	{
-		strcpy(self.default_dir, "/cd");
-
-#ifdef DEBUG_MENU_GAMES_CD
-		strcpy(self.games_path, "/cd/apps/games_menu/gdis");
-		strcpy(self.covers_path, "/cd/apps/games_menu/covers");
-#else
-		strcpy(self.games_path, "/cd/games");
-		strcpy(self.covers_path, "/cd/apps/games_menu/covers");
-#endif
-	}
-
+	
 	char font_path[NAME_MAX];
 	memset(font_path, 0, sizeof(font_path));
-	snprintf(font_path, sizeof(font_path), "%s/%s", self.default_dir, "apps/games_menu/fonts/default.txf");
-
+	snprintf(font_path, sizeof(font_path), "%s/%s", menu_data.default_dir, "apps/games_menu/fonts/default.txf");
 	self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
+
+	memset(font_path, 0, sizeof(font_path));
+	snprintf(font_path, sizeof(font_path), "%s/%s", menu_data.default_dir, "apps/games_menu/fonts/message.txf");
+	self.message_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
 	SetMenuType(MT_IMAGE_TEXT_64_5X2);
 	self.exit_app = false;
 	self.title = NULL;
 	self.title_type = NULL;
+	self.title_back = NULL;
+	self.title_type_back = NULL;
 
 	// Offset our scene so 0,0,0 is the screen center with Z +10
 	Vector vector = {0, 0, 10, 1};
 	TSU_AppSetTranslate(self.dsapp_ptr, &vector);
+
+	if (LoadScannedCover())
+	{
+		CleanIncompleteCover();
+	}
+	else 
+	{
+		memset(&menu_data.cover_scanned_app, 0, sizeof(CoverScannedStruct));
+	}
 
 	self.current_page = 1;
 	LoadPage(false);
@@ -1115,13 +608,13 @@ static void InitMenu()
 }
 
 static void DoMenuEndVideoHandler(void *ds_event, void *param, int action)
-{
+{ 
 	switch(action) {
 		case EVENT_ACTION_RENDER:
 			{
 				if (TSU_AppEnd(self.dsapp_ptr))
 				{
-					finished_menu = true;
+					menu_data.finished_menu = true;
 				}
 			}
 			break;
@@ -1169,6 +662,16 @@ static void StartExit()
 		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_type);
 	}
 
+	if (self.title_back != NULL)
+	{
+		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_back);
+	}
+
+	if (self.title_type_back != NULL)
+	{
+		TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_type_back);
+	}
+
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
 		if (self.img_button[i] != NULL)
@@ -1214,7 +717,7 @@ static void StartExit()
 		NULL
 	);	
 	
-	while (!finished_menu);
+	while (!menu_data.finished_menu) { thd_pass(); }
 	MenuExitHelper(NULL);
 }
 
@@ -1224,17 +727,17 @@ static void GamesApp_InputEvent(int type, int key)
 		return;
 	
 	bool skip_cursor = false;
+	StopCDDATrack();
 
 	switch (key)
 	{
-
 		// X: CHANGE VISUALIZATION
 		case KeyMiscX:
 		{
-			int real_cursel = (self.current_page - 1) * self.menu_option.max_page_size + self.menu_cursel + 1;
-			SetMenuType(self.menu_type >= 2 ? MT_IMAGE_TEXT_64_5X2 : self.menu_type + 1);
-			self.current_page = ceil((float)real_cursel / (float)self.menu_option.max_page_size);
-			self.menu_cursel = real_cursel - (self.current_page - 1) * self.menu_option.max_page_size - 1;
+			int real_cursel = (self.current_page - 1) * menu_data.menu_option.max_page_size + self.menu_cursel + 1;
+			SetMenuType(menu_data.menu_type >= MT_IMAGE_256_3X2 ? MT_IMAGE_TEXT_64_5X2 : menu_data.menu_type + 1);
+			self.current_page = ceil((float)real_cursel / (float)menu_data.menu_option.max_page_size);
+			self.menu_cursel = real_cursel - (self.current_page - 1) * menu_data.menu_option.max_page_size - 1;
 
 			if (LoadPage(true))
 			{
@@ -1276,7 +779,7 @@ static void GamesApp_InputEvent(int type, int key)
 		{
 			self.menu_cursel--;
 
-			if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
+			if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 			{
 				if (self.menu_cursel < 0)
 				{
@@ -1285,9 +788,9 @@ static void GamesApp_InputEvent(int type, int key)
 			}
 			else
 			{
-				if ((self.menu_cursel + 1) % self.menu_option.size_items_column == 0)
+				if ((self.menu_cursel + 1) % menu_data.menu_option.size_items_column == 0)
 				{
-					self.menu_cursel += self.menu_option.size_items_column;
+					self.menu_cursel += menu_data.menu_option.size_items_column;
 				}
 
 				if (self.menu_cursel < 0)
@@ -1307,7 +810,7 @@ static void GamesApp_InputEvent(int type, int key)
 		{
 			self.menu_cursel++;
 
-			if (self.menu_type == MT_IMAGE_TEXT_64_5X2)
+			if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 			{
 				if (self.menu_cursel >= self.game_count)
 				{
@@ -1316,9 +819,9 @@ static void GamesApp_InputEvent(int type, int key)
 			}
 			else
 			{
-				if (self.menu_cursel % self.menu_option.size_items_column == 0)
+				if (self.menu_cursel % menu_data.menu_option.size_items_column == 0)
 				{
-					self.menu_cursel -= self.menu_option.size_items_column;
+					self.menu_cursel -= menu_data.menu_option.size_items_column;
 				}
 
 				if (self.menu_cursel >= self.game_count)
@@ -1331,13 +834,13 @@ static void GamesApp_InputEvent(int type, int key)
 		break;
 
 		case KeyLeft:
-			if (self.game_count <= self.menu_option.size_items_column)
+			if (self.game_count <= menu_data.menu_option.size_items_column)
 			{
 				self.menu_cursel = 0;
 			}
 			else
 			{
-				self.menu_cursel -= self.menu_option.size_items_column;
+				self.menu_cursel -= menu_data.menu_option.size_items_column;
 
 				if (self.menu_cursel < 0)
 					self.menu_cursel += self.game_count;
@@ -1346,13 +849,13 @@ static void GamesApp_InputEvent(int type, int key)
 			break;
 
 		case KeyRight:
-			if (self.game_count <= self.menu_option.size_items_column)
+			if (self.game_count <= menu_data.menu_option.size_items_column)
 			{
 				self.menu_cursel = self.game_count - 1;
 			}
 			else
 			{
-				self.menu_cursel += self.menu_option.size_items_column;
+				self.menu_cursel += menu_data.menu_option.size_items_column;
 
 				if (self.menu_cursel >= self.game_count)
 					self.menu_cursel -= self.game_count;
@@ -1381,9 +884,13 @@ static void GamesApp_InputEvent(int type, int key)
 				{
 					TSU_ItemMenuSetSelected(self.img_button[i], true, false);
 					SetTitle(TSU_ItemMenuGetItemValue(self.img_button[i]));
-					SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
+
+					SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i]))
+						, menu_data.games_array[TSU_ItemMenuGetItemIndex(self.img_button[i])].is_gdi_optimized);
+
 					SetCursor();
-					PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
+
+					PlayCDDA(TSU_ItemMenuGetItemIndex(self.img_button[i]));
 				}
 				else
 				{
@@ -1397,7 +904,7 @@ static void GamesApp_InputEvent(int type, int key)
 static int CanUseTrueAsyncDMA(void)
 {
 	return (self.sector_size == 2048 &&
-			(self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
+			(menu_data.current_dev == APP_DEVICE_IDE || menu_data.current_dev == APP_DEVICE_CD) &&
 			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
 }
 
@@ -1427,18 +934,23 @@ void DefaultPreset()
 	// Enable CDDA if present
 	if (self.item_value_selected[0] != '\0')
 	{
-		char track_file_path[NAME_MAX];
-		size_t track_size = GetCDDATrackFilename(4, self.item_value_selected, track_file_path);
+		char *track_file_path = NULL;
+		size_t track_size = GetCDDATrackFilename(4, self.item_value_selected, &track_file_path);
 
 		if (track_size && track_size < 30 * 1024 * 1024)
 		{
-			track_size = GetCDDATrackFilename(6, self.item_value_selected, track_file_path);
+			track_size = GetCDDATrackFilename(6, self.item_value_selected, &track_file_path);
 		}
 
 		if (track_size > 0)
 		{
 			self.isoldr->use_irq = 1;
 			self.isoldr->emu_cdda = 1;
+		}
+
+		if (track_file_path)
+		{
+			free(track_file_path);
 		}
 	}
 }
@@ -1482,7 +994,7 @@ static int LoadPreset()
 	{
 		GetMD5Hash("/iso_game");
 		fs_iso_unmount("/iso_game");
-		preset_file_name = MakePresetFilename(self.default_dir, self.md5);
+		preset_file_name = MakePresetFilename(menu_data.default_dir, self.md5);
 		ds_printf("PresetFileName: %s", preset_file_name);
 
 		if (FileSize(preset_file_name) < 5)
@@ -1490,8 +1002,6 @@ static int LoadPreset()
 			preset_file_name = NULL;
 		}
 	}
-
-	self.current_dev = GetDeviceType(self.default_dir);
 
 	int use_dma = 0, emu_async = 16, use_irq = 0;
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
@@ -1591,15 +1101,15 @@ static int LoadPreset()
 
 		if (strncmp(self.isoldr->fs_dev, "auto", 4) == 0)
 		{
-			if (!strncasecmp(self.default_dir, "/cd", 3))
+			if (!strncasecmp(menu_data.default_dir, "/cd", 3))
 			{
 				strcpy(self.isoldr->fs_dev, "cd");
 			}
-			else if (!strncasecmp(self.default_dir, "/sd", 3))
+			else if (!strncasecmp(menu_data.default_dir, "/sd", 3))
 			{
 				strcpy(self.isoldr->fs_dev, "sd");
 			}
-			else if (!strncasecmp(self.default_dir, "/ide", 4))
+			else if (!strncasecmp(menu_data.default_dir, "/ide", 4))
 			{
 				strcpy(self.isoldr->fs_dev, "ide");
 			}
@@ -1615,12 +1125,8 @@ static int LoadPreset()
 
 static void FreeAppData()
 {
-	if(self.app->thd != NULL)
-	{
-		cdda_game_changed = true;
-		thd_join(self.app->thd, NULL);
-		self.app->thd = NULL;
-	}
+	mutex_destroy(&change_page_mutex);
+	DestroyMenuData();
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
@@ -1670,9 +1176,19 @@ static void FreeAppData()
 		TSU_LabelDestroy(&self.title);
 	}
 
+	if (self.title_back != NULL)
+	{
+		TSU_LabelDestroy(&self.title_back);
+	}
+
 	if (self.title_animation != NULL)
 	{
 		TSU_AnimationDestroy(&self.title_animation);
+	}
+
+	if (self.title_back_animation != NULL)
+	{
+		TSU_AnimationDestroy(&self.title_back_animation);
 	}
 
 	if (self.title_type != NULL)
@@ -1680,9 +1196,19 @@ static void FreeAppData()
 		TSU_LabelDestroy(&self.title_type);
 	}
 
+	if (self.title_type_back != NULL)
+	{
+		TSU_LabelDestroy(&self.title_type_back);
+	}
+
 	if (self.title_type_animation != NULL)
 	{
 		TSU_AnimationDestroy(&self.title_type_animation);
+	}
+
+	if (self.title_type_back_animation != NULL)
+	{
+		TSU_AnimationDestroy(&self.title_type_back_animation);
 	}
 
 	if (self.item_selector_animation != NULL)
@@ -1691,10 +1217,8 @@ static void FreeAppData()
 	}
 
 	TSU_FontDestroy(&self.menu_font);
-
+	TSU_FontDestroy(&self.message_font);
 	TSU_AppDestroy(&self.dsapp_ptr);
-	FreeGamesForce();
-
 	self.scene_ptr = NULL;
 }
 
@@ -1719,9 +1243,45 @@ static bool RunGame()
 	return is_running;
 }
 
+static void PostLoadPVRCover(bool new_cover)
+{
+	if ((bool)new_cover)
+	{
+		for (int i = 0; i < self.game_count; i++)
+		{
+			if (menu_data.finished_menu) break;
+			
+			if (self.img_button[i] != NULL)
+			{
+				// ONLY PVR AT THIS TIME
+				if (menu_data.games_array[TSU_ItemMenuGetItemIndex(self.img_button[i])].is_pvr_cover)
+				{
+					if (menu_data.finished_menu) break;
+
+					LoadCover(self.img_button[i]);
+				}
+			}
+		}
+	}
+
+	HideCoverScan();	
+}
+
 static void DoMenuControlHandler(void *ds_event, void *param, int action)
 {
 	SDL_Event *event = (SDL_Event *) param;
+
+	if (menu_data.load_pvr_cover_thread != NULL) {
+		bool skip_return = self.modal_cover_scan == NULL;
+		menu_data.stop_load_pvr_cover = true;		
+		thd_join(menu_data.load_pvr_cover_thread, NULL);
+		menu_data.load_pvr_cover_thread = NULL;
+
+		if (!skip_return)
+			return;
+	}
+
+	timer_ms_gettime(&self.scan_covers_start_time, NULL);
 	
 	switch(event->type) {
 		case SDL_JOYBUTTONDOWN: {
@@ -1753,14 +1313,28 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 		case SDL_JOYAXISMOTION: {
 			switch(event->jaxis.axis) {
 				case 2: // RIGHT TRIGGER
-					if (event->jaxis.value == 255) {
-						GamesApp_InputEvent(EvtKeypress, KeyPgdn);
+					{
+						static bool right_trigger_down = false;
+						if (!right_trigger_down && (event->jaxis.value >= MAX_TRIGGER_VALUE/3)) {
+							right_trigger_down = true;
+							GamesApp_InputEvent(EvtKeypress, KeyPgdn);
+						}
+						else if (event->jaxis.value < MAX_TRIGGER_VALUE/3) {
+							right_trigger_down = false;
+						}
 					}
 					break;
 
 				case 3: // LEFT TRIGGER
-					if (event->jaxis.value == 255) {
-						GamesApp_InputEvent(EvtKeypress, KeyPgup);
+					{
+						static bool left_trigger_down = false;
+						if (!left_trigger_down && (event->jaxis.value >= MAX_TRIGGER_VALUE/3)) {
+							left_trigger_down = true;
+							GamesApp_InputEvent(EvtKeypress, KeyPgup);
+						}
+						else if (event->jaxis.value < MAX_TRIGGER_VALUE/3) {
+							left_trigger_down = false;
+						}
 					}					
 					break;
 			}
@@ -1797,7 +1371,23 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 
 static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 {
-	switch(action) {
+	if (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE)
+	{
+		if (menu_data.cover_scanned_app.last_game_index < menu_data.games_array_count && menu_data.load_pvr_cover_thread == NULL)
+		{
+			timer_ms_gettime(&self.scan_covers_end_time, NULL);
+			if ((self.scan_covers_end_time - self.scan_covers_start_time) >= 5)
+			{
+				self.scan_covers_start_time = self.scan_covers_end_time;
+				menu_data.stop_load_pvr_cover = false;
+				menu_data.load_pvr_cover_thread = thd_create(0, LoadPVRCoverThread, NULL);
+				ShowCoverScan();
+			}
+		}
+	}
+
+	switch(action)
+	{
 		case EVENT_ACTION_RENDER:
 			{
 				TSU_AppDoFrame(self.dsapp_ptr);
@@ -1852,8 +1442,7 @@ static void* MenuExitHelper(void *params)
 
 void GamesApp_Init(App_t *app)
 {
-	finished_menu = false;
-	cdda_game_changed = false;
+	mutex_init((mutex_t *)&change_page_mutex, MUTEX_TYPE_NORMAL);
 
 	if (app->args != NULL)
 	{
@@ -1874,22 +1463,25 @@ void GamesApp_Init(App_t *app)
 	self.previous_page = 0;
 	self.game_count = 0;
 	self.menu_cursel = 0;
-	self.games_array_count = 0;
-	self.games_array = NULL;
 	self.item_selector = NULL;
 	self.menu_font = NULL;
+	self.message_font = NULL;
 	self.item_selector_animation = NULL;
 	self.title_animation = NULL;
+	self.title_back_animation = NULL;
 	self.title_type_animation = NULL;
+	self.title_type_back_animation = NULL;
 	self.title = NULL;	
 	self.title_type = NULL;
+	self.title_back = NULL;
+	self.title_type_back = NULL;
 	self.main_box = NULL;
 	self.title_rectangle = NULL;
 	self.title_type_rectangle = NULL;
 	self.first_menu_load = true;
-
-	memset(&self.menu_option, 0, sizeof(self.menu_option));
-	self.menu_type = MT_IMAGE_TEXT_64_5X2;
+	self.modal_cover_scan = NULL;
+	self.title_cover_scan = NULL;
+	self.message_cover_scan = NULL;	
 
 	memset(self.item_value_selected, 0, sizeof(self.item_value_selected));
 	
@@ -1903,20 +1495,21 @@ void GamesApp_Init(App_t *app)
 
 	if ((self.dsapp_ptr = TSU_AppCreate(GamesApp_InputEvent)) != NULL)
 	{
-		Color main_color = {1, 0.28f, 0.06f, 0.25f};
+		Color main_color = {1, 0.22f, 0.06f, 0.25f};
 		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 3, 480 - 12, 640 - 6, 480 - 9, 12, &main_color, ML_BACKGROUND, 0);
 		
-		Color title_color = {1, 0.28f, 0.06f, 0.25f};
+		Color title_color = {1, 0.22f, 0.06f, 0.25f};
 		self.title_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 0, 40, 640, 40, &title_color, ML_BACKGROUND, 0);
 
 		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
-		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 552, 37, 640 - 555, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
+		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 584, 37, 60, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
 
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_rectangle);
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_type_rectangle);
-		TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
-		
-		InitMenu();		
+		TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);		
+
+		CreateMenuData(&SetMessageScan, &PostLoadPVRCover);
+		InitMenu();
 	}
 }
 

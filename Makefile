@@ -34,7 +34,7 @@ SRC_DIR = $(DS_BASE)/src
 LIB_DIR = $(DS_BASE)/lib
 
 KOS_LDFLAGS += -L$(LIB_DIR)
-KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
+KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/img -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
 			-I$(INC_DIR)/tsunami \
 			-DHAVE_SDLIMAGE $(TRAGET_VERSION)	
 
@@ -109,7 +109,7 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/module.o $(SRC_DIR)/events.o $(SRC_DIR)/fs/fs.o  \
 		$(SRC_DIR)/lua/lua.o $(SRC_DIR)/lua/lua_ds.o $(SRC_DIR)/lua/packlib.o \
 		$(SRC_DIR)/app/app.o $(SRC_DIR)/app/load.o $(SRC_DIR)/list.o \
-		$(SRC_DIR)/img/pvr.o $(SRC_DIR)/cmd_elf.o $(SRC_DIR)/vmu/vmu.o \
+		$(SRC_DIR)/img/SegaPVRImage.o $(SRC_DIR)/img/load.o $(SRC_DIR)/img/convert.o $(SRC_DIR)/cmd_elf.o $(SRC_DIR)/vmu/vmu.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \
 		$(SRC_DIR)/settings.o $(SRC_DIR)/sfx.o \
 		$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \

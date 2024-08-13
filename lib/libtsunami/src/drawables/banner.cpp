@@ -32,6 +32,14 @@ Texture* Banner::getTexture() {
 	return m_texture;
 }
 
+void Banner::setTextureType(int texture_type) {
+	m_list = texture_type;
+}
+
+int Banner::getTextureType() {
+	return m_list;
+}
+
 void Banner::setUV(float u1, float v1, float u2, float v2, float u3, float v3, float u4, float v4) {
 	m_u1 = u1;
 	m_v1 = v1;
@@ -147,6 +155,13 @@ extern "C"
 	{
 		if (banner_ptr != NULL && texture_ptr != NULL) {
 			banner_ptr->setTexture(texture_ptr);
+		}
+	}
+
+	void TSU_BannerSetTextureType(Banner *banner_ptr, int texture_type)
+	{
+		if (banner_ptr != NULL && texture_type >= 0) {
+			banner_ptr->setTextureType(texture_type);
 		}
 	}
 
