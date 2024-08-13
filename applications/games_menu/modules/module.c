@@ -55,6 +55,7 @@ static struct
 	uint8 boot_sector[2048];
 	
 	bool exit_app;
+	bool first_menu_load;
 	struct timeval old_time;
 	struct timeval new_time;
 	int menu_type;
@@ -242,7 +243,7 @@ static void SetTitleType(const char *full_path_game)
 			if (FileExists(result) == 0)
 			{
 				title_type_color.r = 1.0f;
-				title_type_color.g = 0.0f;
+				title_type_color.g = 0.54f;
 				title_type_color.b = 0.0f;
 			}
 
@@ -1016,23 +1017,27 @@ static bool LoadPage(bool change_view)
 
 				TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count - 1]);
 
-				if (self.game_count == 1)
+				if (self.first_menu_load)
 				{
-					TSU_ItemMenuSetSelected(item_menu, true, false);
-					SetTitle(name);
-					SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
-					SetCursor();
-					PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
-				}
-				else
-				{
-					TSU_ItemMenuSetSelected(item_menu, false, false);
+					if (self.game_count == 1)
+					{
+						TSU_ItemMenuSetSelected(item_menu, true, false);
+						SetTitle(name);
+						SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
+						SetCursor();
+						PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu)));
+					}
+					else
+					{
+						TSU_ItemMenuSetSelected(item_menu, false, false);
+					}
 				}
 
 				TSU_AppSubAddItemMenu(self.dsapp_ptr, item_menu);
 			}
 
 			loaded = true;
+			self.first_menu_load = false;
 			FreeGames();
 		}
 	}
@@ -1229,10 +1234,10 @@ static void GamesApp_InputEvent(int type, int key)
 			int real_cursel = (self.current_page - 1) * self.menu_option.max_page_size + self.menu_cursel + 1;
 			SetMenuType(self.menu_type >= 2 ? MT_IMAGE_TEXT_64_5X2 : self.menu_type + 1);
 			self.current_page = ceil((float)real_cursel / (float)self.menu_option.max_page_size);
+			self.menu_cursel = real_cursel - (self.current_page - 1) * self.menu_option.max_page_size - 1;
 
 			if (LoadPage(true))
 			{
-				self.menu_cursel = real_cursel - (self.current_page - 1) * self.menu_option.max_page_size - 1;
 			}
 		}
 		break;
@@ -1252,7 +1257,6 @@ static void GamesApp_InputEvent(int type, int key)
 			self.menu_cursel = 0;
 			if (LoadPage(false))
 			{
-				skip_cursor = true;
 			}
 		}
 		break;
@@ -1263,8 +1267,7 @@ static void GamesApp_InputEvent(int type, int key)
 			self.current_page++;
 			self.menu_cursel = 0;
 			if (LoadPage(false))
-			{
-				skip_cursor = true;				
+			{		
 			}
 		}
 		break;
@@ -1372,17 +1375,20 @@ static void GamesApp_InputEvent(int type, int key)
 	{
 		for (int i = 0; i < self.game_count; i++)
 		{
-			if (i == self.menu_cursel)
+			if (self.img_button[i] != NULL)
 			{
-				TSU_ItemMenuSetSelected(self.img_button[i], true, false);
-				SetTitle(TSU_ItemMenuGetItemValue(self.img_button[i]));
-				SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
-				SetCursor();
-				PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
-			}
-			else
-			{
-				TSU_ItemMenuSetSelected(self.img_button[i], false, false);
+				if (i == self.menu_cursel)
+				{
+					TSU_ItemMenuSetSelected(self.img_button[i], true, false);
+					SetTitle(TSU_ItemMenuGetItemValue(self.img_button[i]));
+					SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
+					SetCursor();
+					PlayCDDA((void *)GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.img_button[i])));
+				}
+				else
+				{
+					TSU_ItemMenuSetSelected(self.img_button[i], false, false);
+				}
 			}
 		}
 	}
@@ -1880,6 +1886,7 @@ void GamesApp_Init(App_t *app)
 	self.main_box = NULL;
 	self.title_rectangle = NULL;
 	self.title_type_rectangle = NULL;
+	self.first_menu_load = true;
 
 	memset(&self.menu_option, 0, sizeof(self.menu_option));
 	self.menu_type = MT_IMAGE_TEXT_64_5X2;
