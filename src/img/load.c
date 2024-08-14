@@ -25,55 +25,31 @@ int pvr_to_img(const char *filename, kos_img_t *rv)
 	unsigned char *image;
 	unsigned long int imageSize;
 
-	FILE *pFile = fopen(filename, "rb");
-	if (pFile == NULL)
+	file_t pFile = fs_open(filename, O_RDONLY);
+	if (pFile == FILEHND_INVALID)
 	{
 		return -1;
 	}
 
-	fseek(pFile, 0, SEEK_END);			 // seek to end of file
-	size_t fsize = (size_t)ftell(pFile); // get current file pointer
-	fseek(pFile, 0, SEEK_SET);
+	fs_seek(pFile, 0, SEEK_END);				// seek to end of file
+	size_t fsize = fs_total(pFile);		// get current file pointer
+	fs_seek(pFile, 0, SEEK_SET);
 
 	uint8 *data = (uint8 *)memalign(32, fsize);
 	if (data == NULL)
 	{
-		fclose(pFile);
+		fs_close(pFile);
 		return -1;
 	}
 
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
-
-	int fd = fileno(pFile);
-
-	if (fd > -1)
+	if (!fs_read(pFile, data, fsize))
 	{
-		if (read(fd, data, fsize) < 0)
-		{
-			close(fd);
-			fclose(pFile);
-			return -1;
-		}
-	}
-	else
-	{
-		if (!fread(data, fsize, 1, pFile))
-		{
-			fclose(pFile);
-			return -1;
-		}
-	}
-
-#else
-	if (!fread(data, fsize, 1, pFile))
-	{
-		fclose(pFile);
+		fs_close(pFile);
 		return -1;
 	}
-#endif
 
-	fclose(pFile);
-	pFile = NULL;
+	fs_close(pFile);
+	pFile = -1;
 
 	struct PVRTHeader pvrtHeader;
 	unsigned int offset = ReadPVRHeader(data, &pvrtHeader);

@@ -32,19 +32,19 @@ unsigned int ToUint16(unsigned char* value)
 
 int LoadPVRFromFile(const char* filename, unsigned char** image, unsigned long int* imageSize, struct PVRTHeader* outPvrtHeader)
 {
-    FILE* pFile = fopen(filename, "rb");
+    file_t pFile =  fs_open(filename, O_RDONLY);
     if (pFile == 0)
     {
         return 0;
     }
     
-    fseek(pFile, 0, SEEK_END); // seek to end of file
-    size_t fsize = ftell(pFile); // get current file pointer
-    fseek(pFile, 0, SEEK_SET);
+    fs_seek(pFile, 0, SEEK_END); // seek to end of file
+    size_t fsize = fs_total(pFile); // get current file pointer
+    fs_seek(pFile, 0, SEEK_SET);
     
     unsigned char* buff = (unsigned char*)malloc(fsize);
-    fread(buff, fsize, 1, pFile);
-    fclose(pFile);
+    fs_read(pFile, buff, fsize);
+    fs_close(pFile);
     
     unsigned char* srcPtr = buff;
     
