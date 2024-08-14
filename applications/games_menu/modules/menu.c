@@ -780,7 +780,7 @@ bool CheckGdiOptimized(int game_index)
 		if (!menu_data.games_array[game_index].check_optimized)
 		{
 			menu_data.games_array[game_index].check_optimized = true;
-			menu_data.games_array[game_index].is_gdi_optimized = IsGdiOptimized(GetFullGamePathByIndex(game_index));
+			optimized = menu_data.games_array[game_index].is_gdi_optimized = IsGdiOptimized(GetFullGamePathByIndex(game_index));
 		}
 	}
 
