@@ -189,7 +189,6 @@ void PlayCDDA(int game_index)
 		&& menu_data.current_dev == APP_DEVICE_IDE)
 	{
 		menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
-		thd_set_prio(menu_data.play_cdda_thread, PRIO_DEFAULT + 2);
 	}
 }
 

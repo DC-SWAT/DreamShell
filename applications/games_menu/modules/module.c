@@ -395,7 +395,6 @@ static bool LoadPage(bool change_view)
 	char name[NAME_MAX];
 	char *game_cover_path_tmp = NULL;
 	char name_truncated[19];
-	int fileCount = 0;
 
 	if (self.pages == -1)
 	{
@@ -449,10 +448,9 @@ static bool LoadPage(bool change_view)
 			self.game_count = 0;
 			Vector vectorTranslate = {0, 480, ML_ITEM, 1};
 
-			for (int icount = 0; icount < menu_data.games_array_count; icount++)
+			for (int icount = ((self.current_page - 1) * menu_data.menu_option.max_page_size); icount < menu_data.games_array_count; icount++)
 			{
-				fileCount++;
-				page = ceil((float)fileCount / (float)menu_data.menu_option.max_page_size);
+				page = ceil((float)(icount + 1) / (float)menu_data.menu_option.max_page_size);
 
 				if (page < self.current_page)
 					continue;
