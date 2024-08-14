@@ -715,15 +715,7 @@ void* LoadPVRCoverThread(void *params)
 			menu_data.cover_scanned_app.last_game_status = CSE_EXISTS;
 		}
 		
-		// if (icount+1 == menu_data.games_array_count
-		// 	|| strcasecmp(menu_data.cover_scanned_app.last_game_scanned, previous_game) != 0)
-		// {
-			menu_data.cover_scanned_app.last_game_index = (uint32)icount + 1;
-		// }
-
-		// memset(previous_game, 0, sizeof(previous_game));
-		// strcpy(previous_game, menu_data.cover_scanned_app.last_game_scanned);
-
+		menu_data.cover_scanned_app.last_game_index = (uint32)icount + 1;
 		SaveScannedCover();
 	}
 
@@ -777,6 +769,22 @@ static int AppCompareGames(const void *a, const void *b)
 	free(right_compare);
 
 	return cmp > 0 ? cmp : -1;
+}
+
+bool CheckGdiOptimized(int game_index)
+{
+	bool optimized = false;
+	
+	if (game_index >= 0)
+	{
+		if (!menu_data.games_array[game_index].check_optimized)
+		{
+			menu_data.games_array[game_index].check_optimized = true;
+			menu_data.games_array[game_index].is_gdi_optimized = IsGdiOptimized(GetFullGamePathByIndex(game_index));
+		}
+	}
+
+	return optimized;
 }
 
 bool IsUniqueFileGame(const char *full_path_folder)
@@ -915,7 +923,7 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 			
 			menu_data.games_array[menu_data.games_array_count - 1].is_folder_name = is_folder_name;
 			menu_data.games_array[menu_data.games_array_count - 1].exists_cover = SC_WITHOUT_SEARCHING;
-			menu_data.games_array[menu_data.games_array_count - 1].is_gdi_optimized = IsGdiOptimized(GetFullGamePathByIndex(menu_data.games_array_count - 1));
+			menu_data.games_array[menu_data.games_array_count - 1].check_optimized = false;
 			menu_data.games_array[menu_data.games_array_count - 1].is_cdda = CCGE_NOT_CHECKED;
 		}
 	}

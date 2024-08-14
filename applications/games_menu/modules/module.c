@@ -517,7 +517,9 @@ static bool LoadPage(bool change_view)
 				self.img_button_animation[self.game_count - 1] = (Animation *)TSU_LogXYMoverCreate(menu_data.menu_option.init_position_x + (column * menu_data.menu_option.padding_x),
 																									(menu_data.menu_option.image_size + menu_data.menu_option.padding_y) * (self.game_count - menu_data.menu_option.size_items_column * column) + menu_data.menu_option.init_position_y);
 
-				TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count - 1]);				
+				TSU_ItemMenuAnimAdd(item_menu, self.img_button_animation[self.game_count - 1]);
+
+				CheckGdiOptimized(icount);
 
 				if (self.first_menu_load)
 				{

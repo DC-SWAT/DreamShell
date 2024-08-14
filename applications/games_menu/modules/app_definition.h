@@ -57,6 +57,7 @@ typedef struct GameItemStructure
     uint8 cover_type;
     bool check_pvr;
     bool is_pvr_cover;
+    bool check_optimized;
     bool is_gdi_optimized;
     int16 is_cdda;
 

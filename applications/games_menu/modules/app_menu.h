@@ -41,6 +41,7 @@ struct menu_structure
 
 void CreateMenuData(SendMessageCallBack *send_message_scan, PostPVRCoverCallBack *post_pvr_cover);
 void DestroyMenuData();
+bool CheckGdiOptimized();
 const char *GetFullGamePathByIndex(int game_index);
 void StopCDDA();
 bool CheckCDDA(int game_index);
