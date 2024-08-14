@@ -137,11 +137,11 @@ bool CheckCDDA(int game_index)
 		}
 		else
 		{
-			const char *full_path_game = GetFullGamePathByIndex(game_index);
-			size_t track_size = 0;
-
 			if (menu_data.games_array[game_index].is_cdda == CCGE_NOT_CHECKED)
 			{
+				const char *full_path_game = GetFullGamePathByIndex(game_index);
+				size_t track_size = 0;
+
 				char *track_file_path = (char *)malloc(NAME_MAX);
 				track_size = GetCDDATrackFilename(4, full_path_game, &track_file_path);
 
