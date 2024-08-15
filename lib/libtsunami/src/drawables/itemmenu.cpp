@@ -19,21 +19,16 @@ void ItemMenu::setTint(Color text_color, Color image_color)
     }
 
     if (image != nullptr) {
-        image->setTint(image_color);            
+        image->setTint(image_color);
     }
 }
 
 void ItemMenu::FreeItem()
 {
-    // if (font != nullptr) {
-    //     delete font;
-    //     font = nullptr;
-    // }
-
-    if (image_texture != nullptr) {
-        delete image_texture;
-        image_texture = nullptr;
-    }
+	if (image_texture != nullptr) {
+		delete image_texture;
+		image_texture = nullptr;
+	}
 
     if (image != nullptr) {
         delete image;
@@ -77,9 +72,6 @@ ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr
     image->setSize(width, height);        
     image->setTranslate(translateVector);
     this->subAdd(image);
-
-    // image_texture.reset();
-    // image_texture = nullptr;
 }
 
 ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
@@ -172,6 +164,24 @@ void ItemMenu::SetSelected(bool selected, bool smear)
         text->setSmear(false);
     }
     Drawable::setTranslate(translate);
+}
+
+void ItemMenu::SetImage(const char *image_file, uint16 pvr_type)
+{
+	if (image_file) {
+		Texture *new_image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY);
+		if (new_image_texture != nullptr) {			
+			image->setTexture(new_image_texture);
+			image->setTextureType(pvr_type);
+
+			if (image_texture != nullptr) {
+				delete image_texture;
+				image_texture = nullptr;
+			}
+
+			image_texture = new_image_texture;
+		}
+	}
 }
 
 Label* ItemMenu::GetLabel()
@@ -348,12 +358,12 @@ extern "C"
 		else {
 			return NULL;
 		}
-	}
+	}	
 
 	void TSU_ItemMenuSetLabelText(ItemMenu *item_menu_ptr, const char *text)
 	{
 		if (item_menu_ptr != NULL) {
-			item_menu_ptr->GetLabel()->setText(text);            
+			item_menu_ptr->GetLabel()->setText(text);
 		}
 	}
 
@@ -364,6 +374,13 @@ extern "C"
 		}
 		else {
 			return NULL;
+		}
+	}
+
+	void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, uint16 pvr_type)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->SetImage(image_file, pvr_type);
 		}
 	}
 

@@ -4,6 +4,7 @@
 //
 //  Created by Yevgeniy Logachev on 4/13/14.
 //  Copyright (c) 2014 yev. All rights reserved.
+//  Copyright (c) 2024 Maniac Vera
 //
 
 #ifndef SEGAPVRIMAGE_H
@@ -52,7 +53,7 @@ struct PVRTHeader
 
 
 extern void             BuildTwiddleTable();
-extern int              LoadPVRFromFile(const char* filename, unsigned char** image, unsigned long int* imageSize);
+extern int              LoadPVRFromFile(const char* filename, unsigned char** image, unsigned long int* imageSize, struct PVRTHeader* outPvrtHeader);
 extern unsigned int     ReadPVRHeader(unsigned char* srcData, struct PVRTHeader* pvrtHeader);
 extern int              DecodePVR(unsigned char* srcData, const struct PVRTHeader* pvrtHeader, unsigned char* dstData);
 

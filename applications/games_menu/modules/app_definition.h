@@ -21,7 +21,21 @@ enum SearchCoverEnum
     SC_DEFAULT = 2
 };
 
-// #pragma pack(push, 1)
+enum CoverStatusEnum
+{
+    CSE_EXISTS = 1,
+    CSE_PROCESSING = 2,
+    CSE_COMPLETED = 3
+};
+
+enum CheckCDDAGameEnum
+{
+    CCGE_NOT_CHECKED = -1,
+    CCGE_CDDA = 1,
+    CCGE_CDDA_BIG_SIZE = 2,
+    CCGE_NOT_CDDA = 3 
+};
+
 typedef struct MenuOptionStructure
 {
     int max_page_size;
@@ -33,15 +47,19 @@ typedef struct MenuOptionStructure
     int padding_y;
     float image_size;
 } MenuOptionStruct;
-// #pragma pack(pop)
 
 typedef struct GameItemStructure
 {
     char *game;
     char *folder;
     bool is_folder_name;
-    int8 exists_cover;
+    int16 exists_cover;
     uint8 cover_type;
+    bool check_pvr;
+    bool is_pvr_cover;
+    bool check_optimized;
+    bool is_gdi_optimized;
+    int16 is_cdda;
 
 } GameItemStruct;
 
@@ -50,5 +68,15 @@ typedef struct ImageDimensionStructure
 	unsigned int width;
 	unsigned int height;
 } ImageDimensionStruct;
+
+#pragma pack(push, 4)
+typedef struct CoverScannedStructure
+{
+    char last_game_scanned[NAME_MAX];
+    uint32 last_game_index;
+    uint32 last_game_status;
+    uint32 games_count;
+} CoverScannedStruct;
+#pragma pack(pop)
 
 #endif //__APP_DEFINITION_H

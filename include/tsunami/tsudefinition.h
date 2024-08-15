@@ -12,10 +12,10 @@
 
 enum MenuTypeEnum
 {
-    MT_IMAGE_TEXT_64_5X2 = 0,
-    MT_IMAGE_128_4X3 = 1,
-    MT_IMAGE_256_3X2 = 2,
-    MT_PLANE_TEXT = 3
+    MT_IMAGE_TEXT_64_5X2 = 1,
+    MT_IMAGE_128_4X3 = 2,
+    MT_IMAGE_256_3X2 = 3,
+    MT_PLANE_TEXT = 4
 };
 
 enum MenuLayerEnum
@@ -28,11 +28,11 @@ enum MenuLayerEnum
 
 enum ImageTypeEnum
 {
-    IT_PNG = 0,
-    IT_JPG = 1,
-    IT_BPM = 2,
-    IT_PVR = 3,
-    IT_KMG = 4
+    IT_PNG = 1,
+    IT_JPG = 2,
+    IT_BPM = 3,
+    IT_PVR = 4,
+    IT_KMG = 5
 };
 
 #endif //__TSUDEFINITION_H

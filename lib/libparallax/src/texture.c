@@ -68,6 +68,7 @@ plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) 
 			dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
 			return NULL;
 		}
+		use_alpha = -2;
 	} else {
 		dbglog(DBG_WARNING, "plx_txr_load: unknown extension for file '%s'\n", fn);
 		return NULL;
@@ -85,7 +86,7 @@ plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) 
 	txr->ptr = pvr_mem_malloc(img.byte_count);
 	txr->w = img.w;
 	txr->h = img.h;
-	if (use_alpha == -1) {
+	if (use_alpha < 0) {
 		/* Pull from the image source */
 		switch (KOS_IMG_FMT_I(img.fmt) & KOS_IMG_FMT_MASK) {
 		case KOS_IMG_FMT_RGB565:
@@ -103,6 +104,10 @@ plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) 
 				(int)(KOS_IMG_FMT_I(img.fmt) & KOS_IMG_FMT_MASK));
 			txr->fmt = PVR_TXRFMT_RGB565;
 			break;
+		}
+
+		if (use_alpha == -2) {
+			txr->fmt |= PVR_TXRFMT_NONTWIDDLED;
 		}
 	} else {
 		txr->fmt = use_alpha ? PVR_TXRFMT_ARGB4444 : PVR_TXRFMT_RGB565;

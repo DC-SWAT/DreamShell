@@ -88,13 +88,6 @@ void ShutdownVideoThread();
 void ShowLogo();
 void HideLogo();
 
-
-/* Load PVR to a KOS Platform Independent Image */
-int pvr_to_img(const char *filename, kos_img_t *rv);
-
-/* Load zlib compressed KMG to a KOS Platform Independent Image */
-int gzip_kmg_to_img(const char * filename, kos_img_t *rv);
-
 /* Utility function to fill out the initial poly contexts */
 void plx_fill_contexts(plx_texture_t * txr);
 
