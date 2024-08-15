@@ -13,10 +13,6 @@
 #include <malloc.h>
 #endif
 
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
-int fileno(FILE *f);
-#endif
-
 static bool bPVRTwiddleTable = false;
 
 /* Open the pvr texture and send it to VRAM */
@@ -31,18 +27,15 @@ int pvr_to_img(const char *filename, kos_img_t *rv)
 		return -1;
 	}
 
-	fs_seek(pFile, 0, SEEK_END);				// seek to end of file
-	size_t fsize = fs_total(pFile);		// get current file pointer
-	fs_seek(pFile, 0, SEEK_SET);
-
-	uint8 *data = (uint8 *)memalign(32, fsize);
+	size_t fsize = fs_total(pFile);
+	uint8 *data = (uint8 *)memalign(32, fsize);	
 	if (data == NULL)
 	{
 		fs_close(pFile);
 		return -1;
 	}
 
-	if (!fs_read(pFile, data, fsize))
+	if (fs_read(pFile, data, fsize) == -1)
 	{
 		fs_close(pFile);
 		return -1;

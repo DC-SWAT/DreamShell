@@ -14,6 +14,10 @@
 #include <stdio.h>
 #include <math.h>
 
+#if defined(__DREAMCAST__)
+#include <malloc.h>
+#endif
+
 // Twiddle
 static const unsigned int kTwiddleTableSize = 1024;
 unsigned long int gTwiddledTable[1024];
@@ -33,16 +37,13 @@ unsigned int ToUint16(unsigned char* value)
 int LoadPVRFromFile(const char* filename, unsigned char** image, unsigned long int* imageSize, struct PVRTHeader* outPvrtHeader)
 {
     file_t pFile =  fs_open(filename, O_RDONLY);
-    if (pFile == 0)
+    if (pFile == FILEHND_INVALID)
     {
         return 0;
     }
     
-    fs_seek(pFile, 0, SEEK_END); // seek to end of file
-    size_t fsize = fs_total(pFile); // get current file pointer
-    fs_seek(pFile, 0, SEEK_SET);
-    
-    unsigned char* buff = (unsigned char*)malloc(fsize);
+    size_t fsize = fs_total(pFile);    
+    unsigned char* buff  = (unsigned char *)memalign(32, fsize);
     fs_read(pFile, buff, fsize);
     fs_close(pFile);
     
