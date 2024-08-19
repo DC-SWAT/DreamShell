@@ -559,16 +559,37 @@ void video_screenshot() {
 		req = 0;
 	}
 
-	char *filename = "/DS/screenshot/game_scr_001.ppm";
-	const char *header = "# DreamShell ISO Loader\n640 480\n255\n";
+	char filename[] = "/DS/screenshot/game_scr_001.ppm";
+	char header[] = "# DreamShell ISO Loader\n640 480\n255\n";
 	const size_t header_len = strlen(header);
 
-	const size_t fs_sector_size = 512;
-	const size_t buffer_size = fs_sector_size * 3;
+	const size_t buffer_size = FS_SECTOR_SIZE * 3;
 	uint8 *buffer = (uint8 *)malloc(buffer_size);
 	uint8 *buffer_end = buffer + buffer_size;
 	uint8 *pbuffer = buffer;
 	uint32 try_cnt = 30;
+
+	uint32 pixel;
+	uint32 *vraml = (uint32 *)(VIDEO_VRAM_START);
+	uint16 *vrams = (uint16 *)(vraml);
+	uint8 *vramb = (uint8 *)(vraml);
+	const uint32 display_cfg = *(vuint32 *)0xa05f8044;
+	const uint32 pixel_mode = (display_cfg >> 2) & 0x0f;
+	const uint32 display_size = *(vuint32 *)0xa05f805c;
+	uint32 width = 640;
+	uint32 height = ((display_size >> 10) & 0x3ff) + 1;
+	if(height <= 240) {
+		width = 320;
+		height = 240;
+		header[23] = '0' + (width / 100);
+		header[24] = '0' + ((width % 100) / 10);
+		header[27] = '0' + (height / 100);
+		header[28] = '0' + ((height % 100) / 10);
+	} else {
+		height = 480;
+	}
+	const uint32 pix_num = width * height;
+	LOGFF("%s %dx%d %d\n", filename, width, height, pixel_mode);
 
 	if (buffer == NULL) {
 		LOGFF("Can't allocate memory\n");
@@ -605,33 +626,15 @@ void video_screenshot() {
 	buffer[0] = 'P';
 	buffer[1] = '6';
 	buffer[2] = '\n';
-	memcpy(buffer + (fs_sector_size - header_len), header, header_len);
+	memcpy(buffer + (FS_SECTOR_SIZE - header_len), header, header_len);
 
-	for (uint32 i = 64; i < (fs_sector_size - header_len); ++i) {
+	for (uint32 i = 64; i < (FS_SECTOR_SIZE - header_len); ++i) {
 		if (i % 64 == 0) {
 			buffer[i] = '\n';
 		}
 	}
 
-	write(fd, buffer, fs_sector_size);
-
-	uint32 pixel;
-	uint32 *vraml = (uint32 *)(VIDEO_VRAM_START);
-	uint16 *vrams = (uint16 *)(vraml);
-	uint8 *vramb = (uint8 *)(vraml);
-	const uint32 display_cfg = *(vuint32 *)0xa05f8044;
-	const uint32 pixel_mode = (display_cfg >> 2) & 0x0f;
-	const uint32 display_size = *(vuint32 *)0xa05f805c;
-	uint32 width = 640;
-	uint32 height = ((display_size >> 10) & 0x3ff) + 1;
-	if(height <= 240) {
-		width = 320;
-		height = 240;
-	} else {
-		height = 480;
-	}
-	const uint32 pix_num = width * height;
-	LOGFF("%s %dx%d %d\n", filename, width, height, pixel_mode);
+	write(fd, buffer, FS_SECTOR_SIZE);
 
 	for(uint32 i = 0; i < pix_num; ++i) {
 
