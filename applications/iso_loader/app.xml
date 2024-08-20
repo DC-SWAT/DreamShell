@@ -149,6 +149,23 @@
 			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
 		</surface>
 
+		<surface height="25" name="sw_btn_sm" width="40">
+			<fill color="#FFFFFF" />
+			<fill color="#31799F" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+		<surface height="25" name="sw_btn_sm_hl" width="40">
+			<fill color="#FFFFFF" />
+			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+		<surface height="25" name="sw_btn_sm_on" width="40">
+			<fill color="#31799F" />
+			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+		<surface height="25" name="sw_btn_sm_on_hl" width="40">
+			<fill color="#31799F" />
+			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+
 		<surface height="50" width="50%" name="menu_bg">
 			<fill color="#FFFFFF" />
 			<fill color="#85C4E2" height="48" x="1" y="1" />
@@ -255,12 +272,12 @@
 						<label align="left" color="#000000" font="arial" height="20" text="Save as preset" width="87%" x="17%" />
 					</input>
 
-					<panel height="155" width="84%" x="13%" y="45">
+					<panel height="190" width="84%" x="13%" y="45">
 						<input height="25" name="dma-checkbox" onclick="export:isoLoader_toggleDMA()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Use DMA transfer (GD/IDE only)" x="9%" />
 						</input>
 
-						<panel height="72" name="async-panel" width="100%">
+						<panel height="80" name="async-panel" width="100%">
 							<label align="left" color="#31799F" font="arial" height="22" text="Emulate async read (in sectors):" width="100%" />
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="26%">
 								<label align="left" color="#000000" font="arial" height="20" name="async-label" text="none" width="86%" x="36%" />
@@ -294,6 +311,9 @@
 							</input>
 						</panel>
 
+						<input height="25" name="alt-read-checkbox" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="Bypass pre-reading (IDE only)" x="9%" />
+						</input>
 						<input height="25" name="cdda-checkbox" onclick="export:isoLoader_toggleCDDA()" type="checkbox" width="100%">
 							<label align="left" color="#000000" font="arial" height="20" text="Emulate CDDA audio" x="9%" />
 						</input>
@@ -302,7 +322,7 @@
 						</input>
 					</panel>
 
-					<panel height="125" name="os-panel" width="84%" x="13%" y="187">
+					<panel height="125" name="os-panel" width="84%" x="13%" y="227">
 						<label align="left" color="#31799F" font="arial" height="25" text="Binary OS:" />
 						<input checked="true" height="25" onclick="export:isoLoader_toggleOS()" type="checkbox" width="41%">
 							<label align="left" color="#000000" font="arial" height="20" text="Auto" x="23%" />
@@ -317,14 +337,9 @@
 							<label align="left" color="#000000" font="arial" height="20" text="WinCE" x="23%" />
 						</input>
 					</panel>
-
-					<panel height="45" width="52%" x="13%" y="257">
-						<label align="left" color="#31799F" font="arial" height="22" text="Loader device:" width="100%" />
-						<input font="arial" fontcolor="#000000" height="18" name="device" size="30" type="text" value="auto" width="100%" />
-					</panel>
 				</panel>
 
-				<panel height="370" width="55%" x="56%" y="10" name="container-panel" >
+				<panel height="370" width="55%" x="49%" y="10" name="container-panel">
 
 					<panel height="30" name="switch-panel" width="100%" y="16">
 						<input type="checkbox" checked="true" height="25" width="60" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
@@ -339,16 +354,19 @@
 						<input type="checkbox" height="25" width="60" x="191" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
 							<label align="center" color="#ffffff" font="m23" height="20" text="Patch" width="100%" y="3" />
 						</input>
+						<input type="checkbox" height="25" width="40" x="255" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_sm_hl" offnormal="sw_btn_sm" onhighlight="sw_btn_sm_on_hl" onnormal="sw_btn_sm_on">
+							<label align="center" color="#ffffff" font="m23" height="20" text="FW" width="100%" y="3" />
+						</input>
 					</panel>
 
-					<cardstack height="330" width="100%" name="options-panel" y="48">
+					<cardstack height="330" width="100%" name="options-panel" y="48" x="10">
 						<panel name="boot-panel">
 							<panel height="25" name="boot-mode-panel" width="100%">
-								<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="22%">
-									<label align="left" color="#000000" font="arial" height="20" text="Direct" width="81%" x="32%" />
+								<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
+									<label align="left" color="#000000" font="arial" height="20" text="Direct" width="81%" x="31%" />
 								</input>
-								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="21%">
-									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN" width="86%" x="34%" />
+								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
+									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN" width="86%" x="31%" />
 								</input>
 								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
 									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN cut" width="113%" x="31%" />
@@ -536,6 +554,13 @@
 									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 2" />
 								</panel>
 								<input font="arial" fontcolor="#000000" height="18" name="pv2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+							</panel>
+						</panel>
+
+						<panel name="fw-panel">
+							<panel height="250" width="80%">
+								<label align="left" color="#31799F" font="arial" height="22" text="Loader device:" width="100%" />
+								<input font="arial" fontcolor="#000000" height="18" name="device" size="30" type="text" value="auto" width="100%" />
 							</panel>
 						</panel>
 

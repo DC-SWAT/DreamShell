@@ -240,7 +240,6 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 		// 	LOGF("G1_IRQ_VISIBLE: %03lx %03lx %08lx %08lx %08lx\n",
 		// 		code, g1_dma_irq_code_game, status, statusExt, statusErr);
 		// }
-		poll_all(0);
 		return current_vector;
 	}
 
@@ -381,7 +380,7 @@ void g1_dma_set_irq_mask(s32 last_transfer) {
 	}
 	else if (dma_mode == FS_DMA_SHARED || dma_mode == FS_DMA_STREAM) {
 
-		if(!g1_dma_irq_code_game) {
+		if(!g1_dma_irq_code_game && g1_dma_irq_visible) {
 			g1_dma_irq_code_game = g1_dma_has_irq_mask();
 		}
 
