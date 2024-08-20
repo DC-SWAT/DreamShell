@@ -73,11 +73,12 @@ static struct {
 	GUI_Widget *vmu_priv_1mb;
 	GUI_Widget *screenshot;
 	GUI_Widget *alt_boot;
+	GUI_Widget *alt_read;
 
 	GUI_Widget *device;
 	GUI_Widget *os_chk[4];
 
-	GUI_Widget *options_switch[4];
+	GUI_Widget *options_switch[5];
 	GUI_Widget *boot_mode_chk[3];
 	GUI_Widget *memory_chk[16];
 	GUI_Widget *memory_text;
@@ -405,11 +406,12 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	if(GUI_WidgetGetState(self.dma)) {
 		strcat(cmd, " -a");
 	}
-
+	if(GUI_WidgetGetState(self.alt_read)) {
+		strcat(cmd, " -y");
+	}
 	if(GUI_WidgetGetState(self.irq)) {
 		strcat(cmd, " -q");
 	}
-
 	if(GUI_WidgetGetState(self.low)) {
 		strcat(cmd, " -l");
 	}
@@ -1054,11 +1056,9 @@ void isoLoader_Run(GUI_Widget *widget) {
 	if(GUI_WidgetGetState(self.irq)) {
 		self.isoldr->use_irq = 1;
 	}
-
 	if(GUI_WidgetGetState(self.low)) {
 		self.isoldr->syscalls = 1;
 	}
-
 	if(GUI_WidgetGetState(self.cdda)) {
 		self.isoldr->emu_cdda = getModeCDDA();
 	}
@@ -1086,7 +1086,9 @@ void isoLoader_Run(GUI_Widget *widget) {
 	if(GUI_WidgetGetState(self.dma)) {
 		self.isoldr->use_dma = 1;
 	}
-
+	if(GUI_WidgetGetState(self.alt_read)) {
+		self.isoldr->alt_read = 1;
+	}
 	if(GUI_WidgetGetState(self.fastboot)) {
 		self.isoldr->fast_boot = 1;
 	}
@@ -1348,6 +1350,7 @@ void isoLoader_DefaultPreset() {
 
 	setModeCDDA(CDDA_MODE_DISABLED);
 
+	GUI_WidgetSetState(self.alt_read, 0);
 	GUI_WidgetSetState(self.irq, 0);
 	GUI_WidgetSetState(self.low, 0);
 	isoLoader_toggleVMU(self.vmu_disabled);
@@ -1484,12 +1487,13 @@ int isoLoader_SavePreset() {
 	snprintf(result, sizeof(result),
 			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %08lx\n"
 			"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
-			"vmu = %d\nscrhotkey = %lx\n"
+			"vmu = %d\nscrhotkey = %lx\naltread = %d\n"
 			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
 			title, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
 			cdda_mode, GUI_WidgetGetState(self.irq), GUI_WidgetGetState(self.low), heap,
 			GUI_WidgetGetState(self.fastboot), type, mode, memory,
 			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
+			GUI_WidgetGetState(self.alt_read),
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
 	if(GUI_WidgetGetState(self.alt_boot)) {
@@ -1516,7 +1520,7 @@ int isoLoader_LoadPreset() {
 		return -1;
 	}
 
-	int use_dma = 0, emu_async = 16, use_irq = 0;
+	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0;
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
@@ -1535,6 +1539,7 @@ int isoLoader_LoadPreset() {
 
 	isoldr_conf options[] = {
 		{ "dma",      CONF_INT,   (void *) &use_dma    },
+		{ "altread",  CONF_INT,   (void *) &alt_read   },
 		{ "cdda",     CONF_ULONG, (void *) &emu_cdda   },
 		{ "irq",      CONF_INT,   (void *) &use_irq    },
 		{ "low",      CONF_INT,   (void *) &low        },
@@ -1564,6 +1569,7 @@ int isoLoader_LoadPreset() {
 
 	GUI_WidgetSetState(self.dma, use_dma);
 	isoLoader_toggleDMA(self.dma);
+	GUI_WidgetSetState(self.alt_read, alt_read);
 
 	if (emu_async == 0) {
 		GUI_WidgetSetState(self.async[0], 1);
@@ -1738,6 +1744,7 @@ void isoLoader_Init(App_t *app) {
 		
 		self.preset        = APP_GET_WIDGET("preset-checkbox");
 		self.dma           = APP_GET_WIDGET("dma-checkbox");
+		self.alt_read      = APP_GET_WIDGET("alt-read-checkbox");
 		self.cdda          = APP_GET_WIDGET("cdda-checkbox");
 		self.irq           = APP_GET_WIDGET("irq-checkbox");
 		self.low           = APP_GET_WIDGET("low-checkbox");
