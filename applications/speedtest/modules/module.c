@@ -37,7 +37,7 @@ static void show_status_error(char *msg) {
 	GUI_LabelSetText(self.status, msg);
 }
 
-int test_ide_io_io(void) {
+int test_ide_io(void) {
 	kos_blockdev_t bdev;
 	uint64 st, et;
 	uint32_t tm;
@@ -181,9 +181,17 @@ void Speedtest_Run(GUI_Widget *widget) {
 
 		if(FileExists(name)) {
 			goto readtest;
-		} else {
-			snprintf(name, sizeof(name), "%s/1ST_READ.BIN", wname);
-			goto readtest;
+		}
+		else {
+			snprintf(name, sizeof(name), "%s/1DS_BOOT.BIN", wname);
+
+			if(FileExists(name)) {
+				goto readtest;
+			}
+			else {
+				snprintf(name, sizeof(name), "%s/1ST_READ.BIN", wname);
+				goto readtest;
+			}
 		}
 	}
 
@@ -318,7 +326,7 @@ readtest:
 	show_status_ok("Complete!"); 
 
 	if(is_ide) {
-		test_ide_io_io();
+		test_ide_io();
 	}
 	else if(is_sd) {
 		test_sd_io();
