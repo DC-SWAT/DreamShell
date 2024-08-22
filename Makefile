@@ -211,6 +211,32 @@ release: build cdi
 	@echo 
 	@echo "\033[42m Complete $(DS_BASE)/release \033[0m"
 
+update:
+	@echo Fetching DreamShell from GitHub...
+	@git fetch && git checkout origin/master
+	@echo Fetching KallistiOS from GitHub...
+	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt`
+	@echo Fetching kos-ports from GitHub...
+	@cd $(KOS_BASE)/../kos-ports && git fetch && git checkout origin/master
+
+update-build:
+	@echo Fetching DreamShell from GitHub...
+	@git fetch && git checkout origin/master
+	@echo Fetching and build KallistiOS from GitHub...
+	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt` && make clean && make
+	@echo Fetching and build kos-ports from GitHub...
+	@mv include include_
+	@cd $(KOS_BASE)/../kos-ports && git fetch && git checkout origin/master && ./utils/build-all.sh
+	@mv include_ include
+	@echo Building DreamShell...
+	@make clean-all && make build
+
+toolchain:
+	@cp $(DS_SDK)/toolchain/environ.sh $(KOS_BASE)/environ.sh
+	@cp $(DS_SDK)/toolchain/patches/*.diff $(KOS_BASE)/utils/dc-chain/patches
+	@source $(KOS_BASE)/environ.sh
+	@cd $(KOS_BASE)/utils/dc-chain && cp Makefile.default.cfg Makefile.cfg && make
+
 $(TARGET): libs $(TARGET_BIN) make-build
 
 $(TARGET).elf: $(OBJS)
