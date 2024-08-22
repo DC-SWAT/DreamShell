@@ -15,8 +15,9 @@ There are also large subproject is the ISO Loader, which contains emulation of B
 sudo apt-get install -y genisoimage squashfs-tools texinfo git
 sudo apt-get install -y libpng-dev libjpeg-dev liblzo2-dev liblua5.2-dev
 sudo apt-get install -y libmpc-dev
-cd /tmp && git clone https://github.com/LuaDist/tolua.git && cd tolua
-mkdir build && cd ./build
+cd /tmp
+git clone https://github.com/LuaDist/tolua.git
+cd /tmp/tolua && mkdir build && cd ./build
 cmake ../ && make && sudo make install
 ```
 ##### Code
@@ -25,7 +26,8 @@ sudo mkdir -p /usr/local/dc/kos
 sudo chown -R $(id -u):$(id -g) /usr/local/dc
 cd /usr/local/dc/kos
 git clone https://github.com/KallistiOS/kos-ports.git
-git clone https://github.com/KallistiOS/KallistiOS.git kos && cd kos
+git clone https://github.com/KallistiOS/KallistiOS.git kos
+cd /usr/local/dc/kos/kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
 cp ds/sdk/toolchain/environ.sh environ.sh
@@ -37,7 +39,7 @@ sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
 cd /usr/local/dc/kos/kos/utils/dc-chain
 cp Makefile.default.cfg Makefile.cfg
-make && cd ../../
+make
 ```
 ##### SDK
 ```console
@@ -58,28 +60,44 @@ cd /usr/local/dc/kos/kos/ds && source ../environ.sh
 ```
 
 ### Build code
-##### Core and libraries
+##### Full build
+```console
+make build
+```
+##### Full clean
+```console
+make clean-all
+```
+##### Make release package
+```console
+make release
+```
+##### Update code from GitHub
+```console
+make update
+```
+##### Update code from GitHub and re-build
+```console
+make update-build
+```
+##### Re-build toochain (if updated)
+```console
+make toolchain
+```
+##### Core and libraries only
 ```console
 make
 ```
-##### Modules, applications and commands
+##### Modules, applications and commands only
 ```console
 cd ${KOS_BASE}/ds/modules && make
 cd ${KOS_BASE}/ds/commands && make
 cd ${KOS_BASE}/ds/applications && make
 ```
-##### Firmwares
+##### Firmwares only
 ```console
 cd ${KOS_BASE}/ds/firmware/bootloader && make && make release
 cd ${KOS_BASE}/ds/firmware/isoldr && make && make install
-```
-##### Full build (modules, apps etc)
-```console
-make build
-```
-##### Make release package
-```console
-make release
 ```
 
 ### Running
@@ -87,6 +105,7 @@ make release
 - dc-tool-serial: `make run-serial`
 - lxdream emulator: `make lxdream`
 - nulldc emulator: `make nulldc`
+- flycast emulator: `make flycast`
 - make cdi image: `make cdi`
 
 ## Links

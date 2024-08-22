@@ -386,23 +386,16 @@ static void abort_data_cmd() {
 	gd_state_t *GDS = get_GDS();
 
 	LOGFF(NULL);
-	if(fs_dma_enabled() == FS_DMA_STREAM) {
-		fs_enable_dma(FS_DMA_SHARED);
-	}
 	abort_async(iso_fd);
 	GDS->ata_status = CMD_WAIT_IRQ;
 
 	while(!pre_read_xfer_done()) {
 		gdcExitToGame();
 	}
-
 	pre_read_xfer_end();
-
-	if(GDS->cmd_abort) {
-		GDS->transfered = 0;
-		GDS->status = CMD_STAT_IDLE;
-		GDS->ata_status = CMD_WAIT_INTERNAL;
-	}
+	GDS->transfered = 0;
+	GDS->status = CMD_STAT_IDLE;
+	GDS->ata_status = CMD_WAIT_INTERNAL;
 }
 
 static void data_transfer_cb(size_t size) {
@@ -616,27 +609,23 @@ static void data_transfer_dma_stream() {
 		}
 		else if(pre_read_xfer_done() || alt_read) {
 
-			if(!alt_read) {
-				pre_read_xfer_end();
+			if(alt_read) {
+				do {} while(poll(iso_fd) > 1);
 			}
+			pre_read_xfer_end();
 			GDS->transfered = pre_read_xfer_size();
 			GDS->ata_status = CMD_WAIT_INTERNAL;
 
 			if(GDS->requested == 0) {
-				if(alt_read) {
-					abort_data_cmd();
-				}
 				GDS->status = CMD_STAT_COMPLETED;
 				break;
 			}
 		}
-
 		if(GDS->cmd_abort) {
 			abort_data_cmd();
 			break;
 		}
 	}
-
 	GDS->drv_stat = CD_STATUS_PAUSED;
 }
 
@@ -662,11 +651,9 @@ static void data_transfer_pio_stream() {
 
 			if(alt_read) {
 				read(iso_fd, (uint8 *)GDS->param[2], GDS->param[1]);
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-				/* Just for ATA IRQ from NOP command. */
-				g1_ata_abort();
-#endif
-			} else {
+				pre_read_xfer_abort();
+			}
+			else {
 				pre_read_xfer_start(GDS->param[2], GDS->param[1]);
 			}
 			GDS->ata_status = CMD_WAIT_IRQ;
@@ -1281,8 +1268,8 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 		return -1;
 	}
 #ifdef _FS_ASYNC
-	if(fs_dma_enabled() == FS_DMA_STREAM && !exception_inited()) {
-		poll(iso_fd);
+	if(fs_dma_enabled() == FS_DMA_STREAM) {
+		do {} while(poll(iso_fd) > 1);
 	}
 #endif
 	if(pre_read_xfer_busy()) {
