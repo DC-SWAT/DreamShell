@@ -352,7 +352,7 @@ int gdGdcReqDmaTrans(int gd_chn, uint32_t *params)	/* _8c0032a2 */
 		return -1;
 	}
 
-	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 	OUT32(G1_ATA_DMA_ADDRESS, params[0]);
 	OUT32(G1_ATA_DMA_LENGTH, params[1]);
 	OUT8(G1_ATA_DMA_DIRECTION, 1);
@@ -1088,7 +1088,7 @@ void gd_dmaread(uint32_t *params, GDS *my_gds)	/* _8c001b2c */
 		return;
 	}
 	
-	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 	OUT32(G1_ATA_DMA_ADDRESS, params[2]);
 	OUT32(G1_ATA_DMA_LENGTH, params[1] << 11);
 	OUT8(G1_ATA_DMA_DIRECTION, 1);

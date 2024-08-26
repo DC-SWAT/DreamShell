@@ -102,7 +102,9 @@
 #define G1_ATA_DMA_STARD        0xA05F74F4      /* Read-only */
 #define G1_ATA_DMA_LEND         0xA05F74F8      /* Read-only */
 #define G1_ATA_DMA_PRO          0xA05F74B8      /* Write-only */
-#define G1_ATA_DMA_PRO_SYSMEM   0x8843407F
+#define G1_ATA_DMA_PRO_CODE     0x8843
+#define G1_ATA_DMA_PRO_SYSMEM   (G1_ATA_DMA_PRO_CODE << 16 | 0x407F)
+#define G1_ATA_DMA_PRO_ALLMEM   (G1_ATA_DMA_PRO_CODE << 16 | 0x007F)
 
 /* PIO-related registers. */
 #define G1_ATA_PIO_RACCESS_WAIT 0xA05F7490      /* Write-only */
@@ -304,17 +306,16 @@ void g1_dma_abort(void) {
 void g1_dma_start(u32 addr, size_t bytes) {
 
 	/* Set the DMA parameters up. */
-	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
-	OUT32(G1_ATA_DMA_ADDRESS, (addr & 0x0FFFFFFF));
+	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
+	OUT32(G1_ATA_DMA_ADDRESS, PHYS_ADDR(addr));
 	OUT32(G1_ATA_DMA_LENGTH, bytes);
 	OUT8(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
-	
+
 	/* Enable G1 DMA. */
 	OUT8(G1_ATA_DMA_ENABLE, 1);
 	/* Start the DMA transfer. */
 	OUT8(G1_ATA_DMA_STATUS, 1);
 }
-
 
 static void g1_dma_irq_hide(void) {
 
@@ -476,7 +477,7 @@ static s32 g1_dev_scan(void)
 	g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2));
 	OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
 	OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
-	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+	OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 	return 1;
 #else
 
@@ -580,7 +581,7 @@ static s32 g1_dev_scan(void)
 			g1_ata_set_transfer_mode(ATA_TRANSFER_WDMA(2));
 			OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
 			OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
-			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 		}
 		else
 #endif
@@ -621,7 +622,7 @@ static s32 g1_dev_scan(void)
 				{
 					OUT32(G1_ATA_DMA_RACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
 					OUT32(G1_ATA_DMA_WACCESS_WAIT, G1_ACCESS_WDMA_MODE2);
-					OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+					OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 				}
 				else 
 				{
@@ -688,7 +689,9 @@ static s32 g1_ata_access(struct ide_req *req) {
 	if ((req->cmd & 2)) {
 		if ((u32)buff & 0x1f) {
 			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n", (u32)buff);
-			return -1;
+			// return -1;
+			req->cmd = G1_READ_PIO;
+			req->async = 0;
 		}
 	}
 	if (IN8(G1_ATA_ALTSTATUS) & ATA_SR_DRQ) {
@@ -753,23 +756,23 @@ static s32 g1_ata_access(struct ide_req *req) {
 		OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
 
 		if ((req->cmd & 2)) {
-			if (req->cmd == G1_READ_DMA) {
-				 /* Invalidate the dcache over the range of the data. */
-				if((u32)buff & 0xF0000000) {
+			if(((u32)buff >> 24) == 0x8c) {
+				if (req->cmd == G1_READ_DMA) {
+					/* Invalidate the dcache over the range of the data. */
 					dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * sector_size));
 				}
-			}
 #if _FS_READONLY == 0
-			else {
-				/* Flush the dcache over the range of the data. */
-				dcache_purge_range((u32) buff, len * sector_size);
-			}
+				else {
+					/* Flush the dcache over the range of the data. */
+					dcache_purge_range((u32) buff, len * sector_size);
+				}
 #endif
+			}
 
 			/* Set the DMA parameters up. */
 			OUT8(G1_ATA_DMA_ENABLE, 0);
 			g1_ata_wait_dma();
-			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
+			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 			OUT32(G1_ATA_DMA_ADDRESS, PHYS_ADDR((u32)buff));
 			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * sector_size));
 			OUT8(G1_ATA_DMA_DIRECTION, (req->cmd == G1_READ_DMA));
@@ -1925,8 +1928,8 @@ static s32 g1_packet_read(struct ide_req *req)
 		}
 		OUT8(G1_ATA_DMA_ENABLE, 0);
 		g1_ata_wait_dma();
-		OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_SYSMEM);
-		OUT32(G1_ATA_DMA_ADDRESS, ((u32) buff) & 0x0FFFFFFF);
+		OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
+		OUT32(G1_ATA_DMA_ADDRESS, PHYS_ADDR((u32)buff));
 		OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (req->count * (data_len << 1)));
 		OUT8(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
 		
