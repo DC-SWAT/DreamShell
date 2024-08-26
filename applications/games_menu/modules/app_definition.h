@@ -10,8 +10,19 @@
 #ifndef __APP_DEFINITION_H
 #define __APP_DEFINITION_H
 #define MAX_SIZE_ITEMS 12
+#define MAX_BUTTONS 7
+#define MAX_SCAN_COUNT 2
 
 #include <stdbool.h>
+
+enum DirectionMenuDisplacementEnum
+{
+    DMD_NONE = 0,
+    DMD_LEFT = 1,
+    DMD_RIGHT = 2,
+    DMD_UP = 3,
+    DMD_DOWN = 4,
+};
 
 enum SearchCoverEnum
 {
@@ -78,5 +89,14 @@ typedef struct CoverScannedStructure
     uint32 games_count;
 } CoverScannedStruct;
 #pragma pack(pop)
+
+#pragma pack(push, 4)
+typedef struct AppConfigStructure
+{
+    int initial_view;
+} AppConfigStruct;
+#pragma pack(pop)
+
+typedef isoldr_conf GenericConfigStruct;
 
 #endif //__APP_DEFINITION_H

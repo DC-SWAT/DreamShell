@@ -1227,6 +1227,8 @@ TSU_LogXYMoverCreate
 TSU_ExpXYMoverCreate
 TSU_AlphaFaderCreate
 TSU_TintFaderCreate
+TSU_FadeInCreate
+TSU_FadeOutCreate
 TSU_FontCreate
 TSU_FontDestroy
 TSU_FontLoadFromFile
@@ -1276,6 +1278,7 @@ TSU_RectangleDestroy
 TSU_RectangleSetSize
 TSU_BirthCreate
 TSU_DeathCreate
+TSU_ChainAnimationCreate
 TSU_DrawableAnimAdd
 TSU_DrawableAnimAdd
 TSU_DrawableAnimRemove

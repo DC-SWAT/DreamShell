@@ -12,18 +12,18 @@
 
 enum MenuTypeEnum
 {
-    MT_IMAGE_TEXT_64_5X2 = 1,
-    MT_IMAGE_128_4X3 = 2,
-    MT_IMAGE_256_3X2 = 3,
-    MT_PLANE_TEXT = 4
+    MT_PLANE_TEXT = 1,
+    MT_IMAGE_TEXT_64_5X2 = 2,
+    MT_IMAGE_128_4X3 = 3,
+    MT_IMAGE_256_3X2 = 4    
 };
 
 enum MenuLayerEnum
 {
-    ML_BACKGROUND = 1,
-    ML_CURSOR,
-    ML_ITEM,
-    ML_SELECTED
+    ML_BACKGROUND = 1,    
+    ML_ITEM = 10,
+    ML_SELECTED = 20,
+    ML_CURSOR = 30    
 };
 
 enum ImageTypeEnum

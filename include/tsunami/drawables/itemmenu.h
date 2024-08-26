@@ -42,9 +42,9 @@ public:
     Banner *image;
     Label *text;
 
-    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type);
-    ItemMenu(const char *text, Font* font, int font_size = 24);
-    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font* font, int font_size = 24);
+    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, uint flags = 0);
+    ItemMenu(const char *text, Font* font, int font_size = 24, uint flags = 0);
+    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font* font, int font_size = 24, uint flags = 0);
     virtual ~ItemMenu();
 
     virtual void draw(int list);
@@ -73,8 +73,8 @@ extern "C"
 {
 #endif
 
-ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size);
-ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type);
+ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, uint flags);
+ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type, uint flags);
 ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size);
 void TSU_ItemMenuDestroy(ItemMenu **item_menu_ptr);
 void TSU_ItemMenuSetItemValue(ItemMenu *item_menu_ptr, const char *value);
