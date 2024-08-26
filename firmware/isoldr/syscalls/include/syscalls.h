@@ -56,7 +56,9 @@ typedef unsigned char		uint8_t;
 #define G1_ATA_DMA_STARD        0xA05F74F4      /* Read-only */
 #define G1_ATA_DMA_LEND         0xA05F74F8      /* Read-only */
 #define G1_ATA_DMA_PRO          0xA05F74B8      /* Write-only */
-#define G1_ATA_DMA_PRO_SYSMEM   0x8843407F
+#define G1_ATA_DMA_PRO_CODE     0x8843
+#define G1_ATA_DMA_PRO_SYSMEM   (G1_ATA_DMA_PRO_CODE << 16 | 0x407F)
+#define G1_ATA_DMA_PRO_ALLMEM   (G1_ATA_DMA_PRO_CODE << 16 | 0x007F)
 
 #define ASIC_BASE         (0xa05f6900)
 #define ASIC_IRQ_STATUS   ((volatile uint32_t *) (ASIC_BASE + 0x00))

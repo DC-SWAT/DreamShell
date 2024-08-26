@@ -586,8 +586,9 @@ static void data_transfer_dma_stream() {
 
 	if(alt_read) {
 		fs_enable_dma(FS_DMA_STREAM);
-	} else {
-		fs_enable_dma(FS_DMA_SHARED);
+	}
+	else {
+		fs_enable_dma(IsoInfo->use_dma ? FS_DMA_SHARED : FS_DMA_DISABLED);
 	}
 
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], alt_read);
@@ -1240,7 +1241,8 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 			return -1;
 		}
 #endif
-	} else {
+	}
+	else {
 		pre_read_xfer_start(dmabuf[0], dmabuf[1]);
 	}
 	return 0;
