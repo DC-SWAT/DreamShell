@@ -26,8 +26,9 @@ struct menu_structure
 	int current_dev;
 	char default_dir[20];
 	char games_path[NAME_MAX];
-	char covers_path[50];	
+	char covers_path[50];
 
+	AppConfigStruct app_config;
 	CoverScannedStruct cover_scanned_app;
 	MenuOptionStruct menu_option;
 	GameItemStruct *games_array;
@@ -54,8 +55,14 @@ bool GetGameCoverPath(int game_index, char **game_cover_path);
 void SetMenuType(int menu_type);
 void FreeGames();
 void FreeGamesForce();
+void LoadDefaultMenuConfig();
+bool LoadMenuConfig();
+void ParseMenuConfigToPresentation();
+void ParsePresentationToMenuConfig();
+bool SaveMenuConfig();
 bool SaveScannedCover();
 bool LoadScannedCover();
+bool HasAnyCover();
 void CleanIncompleteCover();
 bool ExtractPVRCover(int game_index);
 void *LoadPVRCoverThread(void *params);

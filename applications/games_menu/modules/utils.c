@@ -11,7 +11,7 @@
 #include "audio/wav.h"
 
 /* Trim begin/end spaces and copy into output buffer */
-void trim_spaces(char *input, char *output, int size)
+void TrimSpaces(char *input, char *output, int size)
 {
 	char *p;
 	char *o;
@@ -55,7 +55,29 @@ void trim_spaces(char *input, char *output, int size)
 	}
 }
 
-char *trim_spaces2(char *txt)
+char *Trim(char *string)
+{
+    // trim prefix
+    while ((*string) == ' ' ) {
+         string ++;
+    }
+
+    // find end of original string
+    char *c = string;
+    while (*c) {
+         c ++;
+    }
+    c--;
+
+    // trim suffix
+    while ((*c) == ' ' ) {
+        *c = '\0';
+        c--;
+    }
+    return string;
+}
+
+char *TrimSpaces2(char *txt)
 {
 	int32_t i;
 
@@ -76,7 +98,7 @@ char *trim_spaces2(char *txt)
 	return txt;
 }
 
-char *fix_spaces(char *str)
+char *FixSpaces(char *str)
 {
 	if (!str)
 		return NULL;
@@ -92,7 +114,7 @@ char *fix_spaces(char *str)
 	return str;
 }
 
-int conf_parse(isoldr_conf *cfg, const char *filename)
+int ConfigParse(isoldr_conf *cfg, const char *filename)
 {
 	file_t fd;
 	int i;
@@ -133,7 +155,7 @@ int conf_parse(isoldr_conf *cfg, const char *filename)
 
 		for (i = 0; cfg[i].conf_type; i++)
 		{
-			if (strncasecmp(cfg[i].name, trim_spaces2(optname), 32))
+			if (strncasecmp(cfg[i].name, TrimSpaces2(optname), 32))
 				continue;
 
 			switch (cfg[i].conf_type)
@@ -143,7 +165,7 @@ int conf_parse(isoldr_conf *cfg, const char *filename)
 				break;
 
 			case CONF_STR:
-				strcpy((char *)cfg[i].pointer, trim_spaces2(value));
+				strcpy((char *)cfg[i].pointer, TrimSpaces2(value));
 				break;
 
 			case CONF_ULONG:
@@ -328,6 +350,7 @@ void StopCDDATrack()
 {
 	if (wav_inited)
 	{
+		wav_inited = 0;
 		wav_shutdown();
 	}
 }

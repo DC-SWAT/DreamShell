@@ -27,6 +27,8 @@
 #include "vectordouble.h"
 #include "anims/alphafader.h"
 #include "anims/expxymover.h"
+#include "anims/fadein.h"
+#include "anims/fadeout.h"
 #include "anims/logxymover.h"
 #include "anims/tintfader.h"
 #include "drawables/box.h"

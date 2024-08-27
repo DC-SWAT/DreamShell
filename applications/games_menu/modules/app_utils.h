@@ -30,10 +30,11 @@ typedef struct {
 	void *pointer;
 } isoldr_conf;
 
-void trim_spaces(char *input, char *output, int size);
-char *trim_spaces2(char *txt);
-char *fix_spaces(char *str);
-int conf_parse(isoldr_conf *cfg, const char *filename);
+char *Trim(char *string);
+void TrimSpaces(char *input, char *output, int size);
+char *TrimSpaces2(char *txt);
+char *FixSpaces(char *str);
+int ConfigParse(isoldr_conf *cfg, const char *filename);
 bool IsGdiOptimized(const char *full_path_game);
 const char* GetLastPart(const char *source, const char separator, int option_path);
 

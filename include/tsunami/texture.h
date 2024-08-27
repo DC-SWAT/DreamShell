@@ -21,13 +21,13 @@
 
 class Texture {
 public:
-	Texture(const std::filesystem::path &fn, bool use_alpha, bool yflip = false);
+	Texture(const std::filesystem::path &fn, bool use_alpha, bool yflip = false, uint flags = 0);
 	Texture(int w, int h, int fmt);
 	Texture();
 	virtual ~Texture();
 
 	// Load this texture from a file (if it hasn't been done already)
-	bool loadFromFile(const std::filesystem::path &fn, bool use_alpha, bool yflip);
+	bool loadFromFile(const std::filesystem::path &fn, bool use_alpha, bool yflip, uint flags);
 	
 	// Submit one of the poly headers
 	void sendHdr(int list);
@@ -72,10 +72,10 @@ extern "C"
 #endif
 
 Texture* TSU_TextureCreate(int w, int h, int fmt);
-Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, bool yflip);
+Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, bool yflip, uint flags);
 Texture* TSU_TextureCreateEmpty();
 void TSU_TextureDestroy(Texture **texture_ptr);
-bool TSU_TextureLoadFromFile(Texture *texture_ptr, const char *texture_path, bool use_alpha, bool yflip);
+bool TSU_TextureLoadFromFile(Texture *texture_ptr, const char *texture_path, bool use_alpha, bool yflip, uint flags);
 
 #ifdef __cplusplus
 };

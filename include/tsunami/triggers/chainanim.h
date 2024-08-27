@@ -42,6 +42,21 @@ private:
 	Drawable	*m_target;
 };
 
+#else
+
+typedef struct chainAnimation ChainAnimation;
+
+#endif
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
+ChainAnimation* TSU_ChainAnimationCreate(Animation *animation_ptr, Drawable *target_ptr);
+
+#ifdef __cplusplus
+};
 #endif
 
 #endif	/* __TSUNAMI_TRIG_CHAINANIM_H */
