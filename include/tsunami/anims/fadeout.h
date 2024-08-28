@@ -41,6 +41,7 @@ extern "C"
 #endif
 
 FadeOut* TSU_FadeOutCreate(float factor);
+void TSU_FadeOutDestroy(FadeOut **fadeout_ptr);
 
 #ifdef __cplusplus
 };

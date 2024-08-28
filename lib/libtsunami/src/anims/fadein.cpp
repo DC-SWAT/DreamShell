@@ -64,4 +64,12 @@ extern "C"
 	{	
 		return new FadeIn(factor);
 	}
+
+	void TSU_FadeInDestroy(FadeIn **fadein_ptr)
+	{
+		if (*fadein_ptr != NULL) {
+			delete *fadein_ptr;
+			*fadein_ptr = NULL;
+		}
+	}
 }

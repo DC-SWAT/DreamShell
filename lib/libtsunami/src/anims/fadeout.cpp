@@ -64,4 +64,12 @@ extern "C"
 	{	
 		return new FadeOut(factor);
 	}
+
+	void TSU_FadeOutDestroy(FadeOut **fadeout_ptr)
+	{
+		if (*fadeout_ptr != NULL) {
+			delete *fadeout_ptr;
+			*fadeout_ptr = NULL;
+		}
+	}
 }

@@ -62,4 +62,12 @@ extern "C"
 	{
 		return new TintFader(*fade_to, *delta);
 	}
+
+	void TSU_TintFaderDestroy(TintFader **tintfader_ptr)
+	{
+		if (*tintfader_ptr != NULL) {
+			delete *tintfader_ptr;
+			*tintfader_ptr = NULL;
+		}
+	}
 }

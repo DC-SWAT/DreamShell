@@ -39,4 +39,12 @@ extern "C"
 	{	
 		return new LogXYMover(dstx, dsty);
 	}
+
+	void TSU_LogXYMoverDestroy(LogXYMover **logxymover_ptr)
+	{
+		if (*logxymover_ptr != NULL) {
+			delete *logxymover_ptr;
+			*logxymover_ptr = NULL;
+		}
+	}
 }

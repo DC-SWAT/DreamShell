@@ -40,6 +40,7 @@ extern "C"
 #endif
 
 LogXYMover* TSU_LogXYMoverCreate(float dstx, float dsty);
+void TSU_LogXYMoverDestroy(LogXYMover **logxymover_ptr);
 
 #ifdef __cplusplus
 };

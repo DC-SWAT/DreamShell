@@ -41,6 +41,7 @@ extern "C"
 #endif
 
 FadeIn* TSU_FadeInCreate(float factor);
+void TSU_FadeInDestroy(FadeIn **fadein_ptr);
 
 #ifdef __cplusplus
 };

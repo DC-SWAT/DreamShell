@@ -39,6 +39,7 @@ extern "C"
 #endif
 
 ExpXYMover* TSU_ExpXYMoverCreate(float dx, float dy, float maxx, float maxy);
+void TSU_ExpXYMoverDestroy(ExpXYMover **expxymover_ptr);
 
 #ifdef __cplusplus
 };

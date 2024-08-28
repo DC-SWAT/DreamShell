@@ -44,4 +44,12 @@ extern "C"
 	{
 		return new ExpXYMover(dx, dy, maxx, maxy);
 	}
+
+	void TSU_ExpXYMoverDestroy(ExpXYMover **expxymover_ptr)
+	{
+		if (*expxymover_ptr != NULL) {
+			delete *expxymover_ptr;
+			*expxymover_ptr = NULL;
+		}
+	}
 }

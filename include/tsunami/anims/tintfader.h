@@ -42,6 +42,7 @@ extern "C"
 #endif
 
 TintFader* TSU_TintFaderCreate(const Color *fade_to, const Color *delta);
+void TSU_TintFaderDestroy(TintFader **tintfader_ptr);
 
 #ifdef __cplusplus
 };

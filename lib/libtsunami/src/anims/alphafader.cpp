@@ -43,4 +43,12 @@ extern "C"
 	{
 		return new AlphaFader(fade_to, delta);
 	}
+
+	void TSU_AlphaFaderDestroy(AlphaFader **alphafader_ptr)
+	{
+		if (*alphafader_ptr != NULL) {
+			delete *alphafader_ptr;
+			*alphafader_ptr = NULL;
+		}
+	}
 }
