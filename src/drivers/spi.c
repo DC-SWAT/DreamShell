@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2011-2015 by SWAT <swat@211.ru>
+ * Copyright (c) 2011-2015, 2023-2024 by SWAT <swat@211.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -29,32 +29,25 @@
 	//#define SPI_DEBUG_RW
 #endif
 
+static uint16 pwork = 0;
+// static mutex_t spi_mutex = MUTEX_INITIALIZER;
+static int spi_inited = 0;
+static int spi_delay = SPI_DEFAULT_DELAY;
 
-#define MSB     	0x80
-
-static uint16 	pwork		=	0;
-static mutex_t	spi_mutex	=	MUTEX_INITIALIZER;
-static int 		spi_inited	=	0;
-static int 		spi_delay	= 	SPI_DEFAULT_DELAY;
-
-static void spi_custom_delay(void);
-//static void spi_max_speed_delay(void);
-#define spi_max_speed_delay() /*__asm__("nop\n\tnop\n\tnop\n\tnop\n\tnop")*/
-
+#define MSB 0x80
 
 #define RX_BIT() (reg_read_16(SCSPTR2) & SCSPTR2_SPB2DT)
 
-#define TX_BIT()																\
-	_pwork = b & MSB ? (_pwork | SCSPTR2_SPB2DT) : (_pwork & ~SCSPTR2_SPB2DT);	\
+#define TX_BIT() \
+	_pwork = b & MSB ? (_pwork | SCSPTR2_SPB2DT) : (_pwork & ~SCSPTR2_SPB2DT); \
 	reg_write_16(SCSPTR2, _pwork)
 
-#define CTS_ON()												\
-	reg_write_16(SCSPTR2, _pwork | SCSPTR2_CTSDT); 				\
-	if(spi_delay == SPI_DEFAULT_DELAY) spi_max_speed_delay();	\
-	else spi_custom_delay()
-	
-#define CTS_ON_FAST()	 reg_write_16(SCSPTR2, _pwork | SCSPTR2_CTSDT); spi_max_speed_delay()
-#define CTS_OFF()	reg_write_16(SCSPTR2, _pwork & ~SCSPTR2_CTSDT)
+#define CTS_ON() \
+	reg_write_16(SCSPTR2, _pwork | SCSPTR2_CTSDT); \
+	if(spi_delay != SPI_DEFAULT_DELAY) timer_spin_delay_ns(spi_delay)
+
+#define CTS_ON_FAST() reg_write_16(SCSPTR2, _pwork | SCSPTR2_CTSDT)
+#define CTS_OFF() reg_write_16(SCSPTR2, _pwork & ~SCSPTR2_CTSDT)
 
 
 #ifdef SPI_DEBUG
@@ -64,11 +57,10 @@ static void dump_regs() {
 	uint32 gpio;
 	char gpios[512];
 	char gr[32];
-	int i = 0;
-	
+
 	pwork = reg_read_16(SCSPTR2);
 	gpio = reg_read_32(PCTRA);
-	
+
 	dbglog(DBG_DEBUG, "SCIF registers: \n"
 					" SCSCR2:  %04x\n"
 					" SCSMR2:  %04x\n"
@@ -98,27 +90,19 @@ static void dump_regs() {
 					reg_read_32(GPIOIC), 
 					reg_read_16(PDTRA), 
 					gpio);
-				
 
-	
-	for(i = 0; i < 10; i++) {
-		
+	for(int i = 0; i < 10; i++) {
 		sprintf(gr, "          GPIO_%d: %d\n", i, (int)(gpio & (1 << i)));
-		
 		if(!i) {
 			strcpy(gpios, gr);
 		} else {
 			strcat(gpios, gr);
 		}
 	}
-	
 	dbglog(DBG_DEBUG, "%s\n", gpios);
-	
 }
 
 #endif
-
-
 
 /**
  * Initializes the SPI interface.
@@ -211,7 +195,6 @@ int spi_init(int use_gpio) {
 int spi_shutdown() {
 	
 	if(spi_inited) {
-		mutex_destroy(&spi_mutex);
 		scif_init();
 		spi_inited = 0;
 		return 0;
@@ -220,7 +203,6 @@ int spi_shutdown() {
 	return -1;
 }
 
-
 void spi_set_delay(int delay) {
 	spi_delay = delay;
 #ifdef SPI_DEBUG
@@ -228,33 +210,10 @@ void spi_set_delay(int delay) {
 #endif
 }
 
-
 int spi_get_delay() {
 	return spi_delay;
 }
 
-
-// 1.5uSEC delay
-static void spi_low_speed_delay(void) {
-	timer_prime(TMU1, 2000000, 0);
-	timer_clear(TMU1);
-	timer_start(TMU1);
-
-	while(!timer_clear(TMU1));
-	while(!timer_clear(TMU1));
-	while(!timer_clear(TMU1));
-	timer_stop(TMU1);
-}
-
-
-static void spi_custom_delay(void) {
-	timer_prime(TMU1, spi_delay, 0);
-	timer_clear(TMU1);
-	timer_start(TMU1);
-
-	while(!timer_clear(TMU1));
-	timer_stop(TMU1);
-}
 
 void spi_cs_on(int cs) {
 	
@@ -627,11 +586,11 @@ uint8 spi_slow_sr_byte(register uint8 b) {
 		pwork = b & MSB ? (pwork | SCSPTR2_SPB2DT) : (pwork & ~SCSPTR2_SPB2DT);
 		reg_write_16(SCSPTR2, pwork);
 
-		spi_low_speed_delay();
+		timer_spin_delay_ns(1500);
 		pwork |= SCSPTR2_CTSDT;
 		reg_write_16(SCSPTR2, pwork);
 		b = (b << 1) | RX_BIT();
-		spi_low_speed_delay();
+		timer_spin_delay_ns(1500);
 
 		pwork &= ~SCSPTR2_CTSDT;
 		reg_write_16(SCSPTR2, pwork);
