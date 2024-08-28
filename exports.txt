@@ -1640,6 +1640,7 @@ ldexp
 frexp
 jiffies
 gettimeofday
+settimeofday
 localtime
 time
 ctime
@@ -2064,6 +2065,8 @@ png_set_strip_16
 # Timers
 #
 timer_ns_gettime64
+timer_spin_delay_ns
+timer_spin_delay_us
 perf_cntr_config
 perf_cntr_start
 perf_cntr_stop
