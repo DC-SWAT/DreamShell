@@ -39,6 +39,7 @@ extern "C"
 #endif
 
 AlphaFader* TSU_AlphaFaderCreate(float fade_to, float delta);
+void TSU_AlphaFaderDestroy(AlphaFader **alphafader_ptr);
 
 #ifdef __cplusplus
 };

@@ -1224,11 +1224,17 @@ TSU_ItemMenuGetItemIndex
 TSU_ItemMenuSetImage
 TSU_ItemMenuDestroy
 TSU_LogXYMoverCreate
+TSU_LogXYMoverDestroy
 TSU_ExpXYMoverCreate
+TSU_ExpXYMoverDestroy
 TSU_AlphaFaderCreate
+TSU_AlphaFaderDestroy
 TSU_TintFaderCreate
+TSU_TintFaderDestroy
 TSU_FadeInCreate
+TSU_FadeInDestroy
 TSU_FadeOutCreate
+TSU_FadeOutDestroy
 TSU_FontCreate
 TSU_FontDestroy
 TSU_FontLoadFromFile
