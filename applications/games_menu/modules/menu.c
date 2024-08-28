@@ -772,12 +772,17 @@ void* LoadPVRCoverThread(void *params)
 		menu_data.cover_scanned_app.last_game_index = 1;
 	}
 
+	char *game_without_extension = (char *)malloc(NAME_MAX);
 	for (int icount = menu_data.cover_scanned_app.last_game_index-1; icount < menu_data.games_array_count; icount++)
 	{
 		memset(menu_data.cover_scanned_app.last_game_scanned, 0, sizeof(menu_data.cover_scanned_app.last_game_scanned));
 		strncpy(menu_data.cover_scanned_app.last_game_scanned, menu_data.games_array[icount].game, strlen(menu_data.games_array[icount].game) - 4);
 
-		if (menu_data.stop_load_pvr_cover || menu_data.finished_menu) break;		
+		if (menu_data.stop_load_pvr_cover || menu_data.finished_menu) break;
+		
+		memset(game_without_extension, 0, NAME_MAX);
+		strncpy(game_without_extension, menu_data.games_array[icount].game, strlen(menu_data.games_array[icount].game) - 4);
+		menu_data.send_message_scan("Check game: %s", game_without_extension);
 		
 		if (CheckCover(icount) == SC_DEFAULT)
 		{
@@ -802,6 +807,7 @@ void* LoadPVRCoverThread(void *params)
 		menu_data.cover_scanned_app.last_game_index = (uint32)icount + 1;
 		SaveScannedCover();
 	}
+	free(game_without_extension);
 
 	menu_data.post_pvr_cover(new_cover);
 		
