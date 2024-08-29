@@ -25,7 +25,7 @@ FileManager = {
 	audio = {
 		ext = {
 			".mp1", ".mp2", ".mp3", ".ogg", ".adx", ".s3m", ".wav",
-			".raw"
+			".raw", ".pcm", "dpcm"
 		}
 	},
 
@@ -570,7 +570,7 @@ function FileManager:openFile()
 
 		local mod = string.sub(ext, -3);
 
-		if mod == "raw" or mod == "wav" then
+		if mod == "raw" or mod == "wav" or mod == "pcm" then
 			mod = "wave"
 		elseif mod == "ogg" then
 			mod = "oggvorbis"
