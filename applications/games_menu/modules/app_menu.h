@@ -51,6 +51,7 @@ void PlayCDDA(int game_index);
 ImageDimensionStruct *GetImageDimension(const char *image_file);
 bool IsValidImage(const char *image_file);
 int16 CheckCover(int game_index);
+bool GetCoverName(int game_index, char **cover_name);
 bool GetGameCoverPath(int game_index, char **game_cover_path);
 void SetMenuType(int menu_type);
 void FreeGames();

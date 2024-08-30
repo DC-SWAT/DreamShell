@@ -63,6 +63,7 @@ typedef struct GameItemStructure
 {
     char *game;
     char *folder;
+    char *folder_name;
     bool is_folder_name;
     int16 exists_cover;
     uint8 cover_type;

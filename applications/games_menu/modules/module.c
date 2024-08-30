@@ -214,8 +214,8 @@ static void* SetCoverThread(void *params)
 			TSU_FadeOutDestroy(&self.fadeout_animation_cover);
 
 			TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game);
-			TSU_BannerDestroyAll(&self.img_cover_game);
-			self.texture_cover_game = NULL;
+			TSU_BannerDestroy(&self.img_cover_game);
+			TSU_TextureDestroy(&self.texture_cover_game);
 		}
 
 		const uint max_time = 400;
@@ -535,8 +535,8 @@ static void RemoveViewTextPlane()
 	if (self.img_cover_game_background != NULL)
 	{
 		TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game_background);
-		TSU_BannerDestroyAll(&self.img_cover_game_background);
-		self.texture_cover_game_background = NULL;
+		TSU_BannerDestroy(&self.img_cover_game_background);
+		TSU_TextureDestroy(&self.texture_cover_game_background);
 	}
 
 	if (self.img_cover_game_rectangle != NULL)
@@ -569,8 +569,8 @@ static void RemoveViewTextPlane()
 		}		
 
 		TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game);
-		TSU_BannerDestroyAll(&self.img_cover_game);
-		self.texture_cover_game = NULL;
+		TSU_BannerDestroy(&self.img_cover_game);
+		TSU_TextureDestroy(&self.texture_cover_game);
 	}
 
 	if (self.game_list_rectangle != NULL)
@@ -590,7 +590,7 @@ static void CreateInfoButton(uint8 button_index, const char *button_file, const 
 		if (FileExists(image_path))
 		{
 			Vector vector_translate = { x, y, ML_ITEM + 3, 1};
-			self.item_button[button_index] = TSU_ItemMenuCreate(image_path, 32, 32, PVR_LIST_TR_POLY, text, self.menu_font, 14, 0);
+			self.item_button[button_index] = TSU_ItemMenuCreate(image_path, 32, 32, PVR_LIST_TR_POLY, text, self.menu_font, 14, false, 0);
 			TSU_ItemMenuSetTranslate(self.item_button[button_index], &vector_translate);			
 		}
 
@@ -713,7 +713,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 			{
 				if (menu_data.menu_type == MT_PLANE_TEXT)
 				{
-					CreateViewTextPlane();					
+					CreateViewTextPlane();
 				}
 				else
 				{
@@ -753,7 +753,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 				memset(name, 0, sizeof(name));
 				if (menu_data.games_array[icount].is_folder_name)
 				{
-					strcpy(name, GetLastPart(menu_data.games_array[icount].folder, '/', 0));
+					strcpy(name, menu_data.games_array[icount].folder_name);
 				}
 				else
 				{
@@ -774,7 +774,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 					self.item_game[self.game_count - 1] = TSU_ItemMenuCreate(game_cover_path, menu_data.menu_option.image_size, menu_data.menu_option.image_size
 								, menu_data.games_array[icount].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY
-								, name_truncated, self.menu_font, 18, 0);
+								, name_truncated, self.menu_font, 18, false, 0);
 					
 				}
 				else if (menu_data.menu_type == MT_PLANE_TEXT)
@@ -799,7 +799,8 @@ static bool LoadPage(bool change_view, uint8 direction)
 							, menu_data.menu_option.image_size
 							, menu_data.menu_option.image_size
 							, menu_data.games_array[icount].cover_type == IT_JPG ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY
-							, 0);
+							, false
+							, PVR_TXRLOAD_SQ);
 				}
 
 				ItemMenu *item_menu = self.item_game[self.game_count - 1];
@@ -1647,12 +1648,14 @@ static void FreeAppData()
 
 	if (self.img_cover_game != NULL)
 	{
-		TSU_BannerDestroyAll(&self.img_cover_game);
+		TSU_BannerDestroy(&self.img_cover_game);
+		TSU_TextureDestroy(&self.texture_cover_game);
 	}
 
 	if (self.img_cover_game_background != NULL)
 	{
-		TSU_BannerDestroyAll(&self.img_cover_game_background);
+		TSU_BannerDestroy(&self.img_cover_game_background);
+		TSU_TextureDestroy(&self.texture_cover_game_background);
 	}
 
 	for (int i = 0; i < MAX_BUTTONS; i++)
@@ -1699,7 +1702,7 @@ static bool RunGame()
 
 static void PostLoadPVRCover(bool new_cover)
 {
-	if ((bool)new_cover)
+	if (new_cover)
 	{
 		for (int i = 0; i < self.game_count; i++)
 		{
@@ -1902,6 +1905,8 @@ void GamesApp_Init(App_t *app)
 	srand(time(NULL));
 	mutex_init((mutex_t *)&change_page_mutex, MUTEX_TYPE_NORMAL);
 
+	memset(&self, 0, sizeof(self));
+
 	if (app->args != NULL)
 	{
 		self.have_args = true;
@@ -1913,43 +1918,9 @@ void GamesApp_Init(App_t *app)
 	
 	self.app = app;
 	self.app->thd = NULL;
-	self.isoldr = NULL;
 	self.sector_size = 2048;
-	self.exit_app = false;
-	self.game_changed = false;
 	self.pages = -1;
-	self.current_page = 0;
-	self.previous_page = 0;
-	self.game_count = 0;
-	self.menu_cursel = 0;
-	self.scan_count = 0;
-	self.item_selector = NULL;
-	self.menu_font = NULL;
-	self.message_font = NULL;
-	self.item_selector_animation = NULL;
-	self.img_cover_game = NULL;
-	self.img_cover_game_background = NULL;
-	self.img_cover_game_rectangle = NULL;	
-	self.animation_cover_game = NULL;
-	self.fadeout_animation_cover = NULL;
-	self.texture_cover_game = NULL;
-	self.texture_cover_game_background = NULL;
-	self.title_animation = NULL;
-	self.title_back_animation = NULL;
-	self.title_type_animation = NULL;
-	self.title = NULL;	
-	self.title_type = NULL;
-	self.title_back = NULL;
-	self.main_box = NULL;
-	self.title_rectangle = NULL;
-	self.title_type_rectangle = NULL;
-	self.game_list_rectangle = NULL;
 	self.first_menu_load = true;
-	self.modal_cover_scan = NULL;
-	self.title_cover_scan = NULL;
-	self.note_cover_scan = NULL;
-	self.message_cover_scan = NULL;
-	self.set_cover_thread = NULL;
 
 	memset(self.item_value_selected, 0, sizeof(self.item_value_selected));
 
@@ -1978,9 +1949,9 @@ void GamesApp_Init(App_t *app)
 		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 584, 37, 60, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
 
+		TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_rectangle);
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_type_rectangle);
-		TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
 
 		CreateMenuData(&SetMessageScan, &PostLoadPVRCover);
 		InitMenu();

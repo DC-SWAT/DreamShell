@@ -73,7 +73,7 @@ const char* GetFullGamePathByIndex(int game_index)
 	memset(full_path_game, 0, sizeof(full_path_game));
 	if (game_index >= 0)
 	{
-		if (menu_data.games_array[game_index].is_folder_name)
+		if (menu_data.games_array[game_index].folder)
 		{
 			snprintf(full_path_game, NAME_MAX, "%s/%s/%s", menu_data.games_path, menu_data.games_array[game_index].folder, menu_data.games_array[game_index].game);
 		}
@@ -317,10 +317,8 @@ int16 CheckCover(int game_index)
 	if (menu_data.games_array[game_index].exists_cover == SC_WITHOUT_SEARCHING)
 	{
 		char *game_cover_path = (char *)malloc(NAME_MAX);
-		char *game_without_extension = (char *)malloc(NAME_MAX);
-
-		memset(game_without_extension, 0, NAME_MAX);
-		strncpy(game_without_extension, menu_data.games_array[game_index].game, strlen(menu_data.games_array[game_index].game) - 4);
+		char *game_without_extension = NULL;
+		GetCoverName(game_index, &game_without_extension);
 
 		memset(game_cover_path, 0, NAME_MAX);
 		snprintf(game_cover_path, NAME_MAX, "%s/%s.kmg", menu_data.covers_path, game_without_extension);
@@ -360,7 +358,11 @@ int16 CheckCover(int game_index)
 		}
 
 		free(game_cover_path);
-		free(game_without_extension);
+
+		if (game_without_extension != NULL)
+		{
+			free(game_without_extension);
+		}
 	}
 	else
 	{
@@ -370,19 +372,49 @@ int16 CheckCover(int game_index)
 	return exists_cover;
 }
 
+bool GetCoverName(int game_index, char **cover_name)
+{
+	if (*cover_name != NULL)
+	{
+		free(*cover_name);		
+	}
+
+	*cover_name = NULL;
+	if (game_index >= 0)
+	{
+		*cover_name = (char *)malloc(NAME_MAX);
+		memset(*cover_name, 0, NAME_MAX);
+
+		if (menu_data.games_array[game_index].is_folder_name)
+		{
+			strncpy(*cover_name, menu_data.games_array[game_index].folder_name, strlen(menu_data.games_array[game_index].folder_name));
+		}
+		else
+		{
+			strncpy(*cover_name, menu_data.games_array[game_index].game, strlen(menu_data.games_array[game_index].game) - 4);
+		}
+	}
+
+	return *cover_name != NULL;	
+}
+
 bool GetGameCoverPath(int game_index, char **game_cover_path)
 {
+	if (*game_cover_path != NULL)
+	{
+		free(*game_cover_path);		
+	}
+
 	*game_cover_path = NULL;
 	if (game_index >= 0)
 	{
 		*game_cover_path = (char *)malloc(NAME_MAX);
 		memset(*game_cover_path, 0, NAME_MAX);
 
-		char *game = (char *)malloc(NAME_MAX);
+		char *game = NULL;
 		if (menu_data.games_array[game_index].exists_cover == SC_EXISTS)
 		{
-			memset(game, 0, NAME_MAX);
-			strncpy(game, menu_data.games_array[game_index].game, strlen(menu_data.games_array[game_index].game) - 4);
+			GetCoverName(game_index, &game);
 
 			if (menu_data.games_array[game_index].cover_type == IT_KMG)
 			{
@@ -415,10 +447,14 @@ bool GetGameCoverPath(int game_index, char **game_cover_path)
 				}
 			}
 		}
-		free(game);
+
+		if (game != NULL)
+		{
+			free(game);
+		}
 	}
 
-	return game_cover_path != NULL;
+	return *game_cover_path != NULL;
 }
 
 void SetMenuType(int menu_type)
@@ -516,9 +552,15 @@ void FreeGamesForce()
 			{
 				free(menu_data.games_array[icount].folder);
 			}
+
+			if (menu_data.games_array[icount].folder_name)
+			{
+				free(menu_data.games_array[icount].folder_name);
+			}
 			
 			menu_data.games_array[icount].game = NULL;
 			menu_data.games_array[icount].folder = NULL;
+			menu_data.games_array[icount].folder_name = NULL;
 		}
 
 		free(menu_data.games_array);
@@ -648,11 +690,13 @@ bool LoadScannedCover()
 
 	if (file_size <= 0)
 	{
+		memset(&menu_data.cover_scanned_app, 0, sizeof(CoverScannedStruct));
 		remove(file_name);
 	}
 
 	if (!HasAnyCover())
 	{
+		memset(&menu_data.cover_scanned_app, 0, sizeof(CoverScannedStruct));
 		remove(file_name);		
 	}
 
@@ -697,14 +741,12 @@ bool ExtractPVRCover(int game_index)
 			return false;
 		}
 
-		char *game_without_extension = (char *)malloc(NAME_MAX);
+		char *game_without_extension = NULL;
 		const char *full_game_path = GetFullGamePathByIndex(game_index);
 		menu_data.games_array[game_index].check_pvr = false;
 
-		memset(game_without_extension, 0, NAME_MAX);
-		strncpy(game_without_extension, menu_data.games_array[game_index].game, strlen(menu_data.games_array[game_index].game) - 4);
-
-		menu_data.send_message_scan("Mounting ISO: %s", game_without_extension);
+		GetCoverName(game_index, &game_without_extension);
+		menu_data.send_message_scan("Mounting GAME: %s", game_without_extension);
 
 		if(fs_iso_mount("/iso_cover", full_game_path) == 0)
 		{
@@ -752,7 +794,10 @@ bool ExtractPVRCover(int game_index)
 			fs_iso_unmount("/iso_cover");
 		}
 
-		free(game_without_extension);
+		if (game_without_extension != NULL)
+		{
+			free(game_without_extension);
+		}
 	}
 
 	return extracted_cover;
@@ -772,16 +817,16 @@ void* LoadPVRCoverThread(void *params)
 		menu_data.cover_scanned_app.last_game_index = 1;
 	}
 
-	char *game_without_extension = (char *)malloc(NAME_MAX);
+	char *game_without_extension = NULL;
 	for (int icount = menu_data.cover_scanned_app.last_game_index-1; icount < menu_data.games_array_count; icount++)
 	{
-		memset(menu_data.cover_scanned_app.last_game_scanned, 0, sizeof(menu_data.cover_scanned_app.last_game_scanned));
-		strncpy(menu_data.cover_scanned_app.last_game_scanned, menu_data.games_array[icount].game, strlen(menu_data.games_array[icount].game) - 4);
+		GetCoverName(icount, &game_without_extension);
 
-		if (menu_data.stop_load_pvr_cover || menu_data.finished_menu) break;
+		memset(menu_data.cover_scanned_app.last_game_scanned, 0, sizeof(menu_data.cover_scanned_app.last_game_scanned));
+		strncpy(menu_data.cover_scanned_app.last_game_scanned, game_without_extension, strlen(game_without_extension));
+
+		if (menu_data.stop_load_pvr_cover || menu_data.finished_menu) break;		
 		
-		memset(game_without_extension, 0, NAME_MAX);
-		strncpy(game_without_extension, menu_data.games_array[icount].game, strlen(menu_data.games_array[icount].game) - 4);
 		menu_data.send_message_scan("Check game: %s", game_without_extension);
 		
 		if (CheckCover(icount) == SC_DEFAULT)
@@ -806,8 +851,12 @@ void* LoadPVRCoverThread(void *params)
 		
 		menu_data.cover_scanned_app.last_game_index = (uint32)icount + 1;
 		SaveScannedCover();
+
+		if (game_without_extension != NULL)
+		{
+			free(game_without_extension);
+		}
 	}
-	free(game_without_extension);
 
 	menu_data.post_pvr_cover(new_cover);
 		
@@ -828,24 +877,17 @@ static int AppCompareGames(const void *a, const void *b)
 
 	if (left->is_folder_name && right->is_folder_name)
 	{
-		strcpy(left_compare, GetLastPart(left->folder, '/', 2));
-		strcpy(right_compare, GetLastPart(right->folder, '/', 2));
-
-		cmp = strcmp(left_compare, right_compare);
+		cmp = strcmp(left->folder_name, right->folder_name);
 	}
 	else if (left->is_folder_name)
 	{
-		strcpy(left_compare, GetLastPart(left->folder, '/', 2));
 		strncpy(right_compare, right->game, strlen(right->game) - 4);
-
-		cmp = strcmp(left_compare, right_compare);
+		cmp = strcmp(left->folder_name, right_compare);
 	}
 	else if (right->is_folder_name)
 	{
-		strncpy(left_compare, left->game, strlen(left->game) - 4);
-		strcpy(right_compare, GetLastPart(right->folder, '/', 2));
-		
-		cmp = strcmp(left_compare, right_compare);
+		strncpy(left_compare, left->game, strlen(left->game) - 4);		
+		cmp = strcmp(left_compare, right->folder_name);
 	}
 	else
 	{
@@ -1041,6 +1083,14 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 				menu_data.games_array[menu_data.games_array_count - 1].folder = (char *)malloc(strlen(folder_game) + 1);
 				memset(menu_data.games_array[menu_data.games_array_count - 1].folder, 0, strlen(folder_game) + 1);
 				strcpy(menu_data.games_array[menu_data.games_array_count - 1].folder, folder_game);
+
+				if (is_folder_name)
+				{
+					menu_data.games_array[menu_data.games_array_count - 1].folder_name = (char *)malloc(strlen(GetLastPart(folder_game, '/', 0)) + 1);
+					memset(menu_data.games_array[menu_data.games_array_count - 1].folder_name, 0, strlen(GetLastPart(folder_game, '/', 0)) + 1);
+					strcpy(menu_data.games_array[menu_data.games_array_count - 1].folder_name, GetLastPart(folder_game, '/', 0));
+				}
+				
 				free(folder_game);
 			}
 			
@@ -1081,18 +1131,18 @@ bool RetrieveGames()
 			&& menu_data.cover_scanned_app.last_game_index > 0
 			&& menu_data.cover_scanned_app.last_game_index <= menu_data.games_array_count)
 		{
-			char name[NAME_MAX];
-			strncpy(name, menu_data.games_array[menu_data.cover_scanned_app.last_game_index-1].game, strlen(menu_data.games_array[menu_data.cover_scanned_app.last_game_index-1].game) - 4);
-			if (menu_data.games_array[menu_data.cover_scanned_app.last_game_index-1].is_folder_name)
+			char *name = NULL;
+			if (GetCoverName(menu_data.cover_scanned_app.last_game_index-1, &name))
 			{
-				if (strcasecmp(menu_data.cover_scanned_app.last_game_scanned, menu_data.games_array[menu_data.cover_scanned_app.last_game_index-1].folder) != 0)
+				if (strcasecmp(menu_data.cover_scanned_app.last_game_scanned, name) != 0)
 				{
 					menu_data.rescan_covers = true;
 				}
-			}
-			else if (strcasecmp(menu_data.cover_scanned_app.last_game_scanned, name) != 0)
-			{
-				menu_data.rescan_covers = true;
+
+				if (name != NULL)
+				{
+					free(name);
+				}
 			}
 		}
 
