@@ -22,7 +22,7 @@ unsigned char* resize_image(unsigned char *data, uint width, uint height, uint o
 		&& stbir_resize_uint8_linear(data, (int)width, (int)height, 0, resized_pixels
 								, (int)output_width, (int)output_height, 0, pixel_layout) == 0)
 	{
-		dbglog(DBG_INFO, "resize_image error, stbir_resize_uint8_linear");
+		dbglog(DBG_INFO, "resize_image error, stbir_resize_uint8_linear\n");
 
 		if (resized_pixels)
 		{
@@ -42,7 +42,7 @@ int pvr_to_jpg(const char *source_file, const char *dest_file, uint32 output_wid
 
 	if (pvr_to_img(source_file, &img) == -1)
 	{
-		dbglog(DBG_INFO, "pvr_to_jpg: Error loading PVR file");
+		dbglog(DBG_INFO, "pvr_to_jpg: Error loading PVR file\n");
 		return 0;
 	}
 
@@ -66,7 +66,7 @@ int pvr_to_jpg(const char *source_file, const char *dest_file, uint32 output_wid
 	if (stbi_write_jpg(dest_file, img.w, img.h, 4, img.data, resolution) == 0)
 	{
 		kos_img_free(&img, 0);
-		dbglog(DBG_INFO, "pvr_to_jpg: Error saving PNG file");
+		dbglog(DBG_INFO, "pvr_to_jpg: Error saving PNG file\n");
 		return 0;
 	}
 
@@ -89,7 +89,7 @@ int pvr_to_png(const char *source_file, const char *dest_file, uint32 output_wid
 
 	if (pvr_to_img(source_file, &img) == -1)
 	{
-		dbglog(DBG_INFO, "pvr_to_png: Error loading PVR file");
+		dbglog(DBG_INFO, "pvr_to_png: Error loading PVR file\n");
 		return 0;
 	}
 
@@ -113,7 +113,7 @@ int pvr_to_png(const char *source_file, const char *dest_file, uint32 output_wid
 	if (stbi_write_png(dest_file, img.h, img.h, 4, img.data, img.h * 4) == 0)
 	{
 		kos_img_free(&img, 0);
-		dbglog(DBG_INFO, "pvr_to_png: Error saving PNG file");
+		dbglog(DBG_INFO, "pvr_to_png: Error saving PNG file\n");
 		return 0;
 	}
 
