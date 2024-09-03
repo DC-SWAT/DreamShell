@@ -76,6 +76,7 @@ static struct {
 	GUI_Widget *alt_read;
 
 	GUI_Widget *device;
+	GUI_Widget *fw_browser;
 	GUI_Widget *os_chk[4];
 
 	GUI_Widget *options_switch[5];
@@ -1013,6 +1014,24 @@ void isoLoader_toggleVMU(GUI_Widget *widget) {
 	}
 }
 
+void isoLoader_FwItemClick(dirent_fm_t *fm_ent) {
+	if (!fm_ent) {
+		return;
+	}
+	dirent_t *ent = &fm_ent->ent;
+
+	if (ent->attr != O_DIR) {
+		char noext[128];
+		size_t len = strlen(ent->name) - 4;
+		memset(noext, 0, sizeof(noext));
+		strncpy(noext, ent->name, len);
+		GUI_TextEntrySetText(self.device, noext);
+	}
+	else if(ent->name[0] == '.' && ent->name[1] == '.') {
+		GUI_TextEntrySetText(self.device, "auto");
+	}
+}
+
 void isoLoader_Run(GUI_Widget *widget) {
 
 	char filepath[NAME_MAX];
@@ -1794,6 +1813,11 @@ void isoLoader_Init(App_t *app) {
 
 		self.async_label   = APP_GET_WIDGET("async-label");
 		self.device        = APP_GET_WIDGET("device");
+		self.fw_browser    = APP_GET_WIDGET("fw_browser");
+
+		char fw_dir[128];
+		sprintf(fw_dir, "%s/firmware/isoldr", getenv("PATH"));
+		GUI_FileManagerChangeDir(self.fw_browser, fw_dir, 0);
 
 		w = APP_GET_WIDGET("switch-panel");
 

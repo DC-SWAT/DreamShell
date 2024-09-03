@@ -42,15 +42,15 @@
 		<image name="overlay" src="images/cover_overlay.png" />
 		<image name="cover" src="images/cover_image.png" />
 
-		<surface height="30" name="item-normal" width="100%">
+		<surface height="30" name="item-normal" width="50%">
 			<fill color="#CCE4F0" />
 			<fill color="#FFFFFF" height="2" y="28" />
 		</surface>
-		<surface height="30" name="item-focus" width="100%">
+		<surface height="30" name="item-focus" width="50%">
 			<fill color="#85C4E2" />
 			<fill color="#FFFFFF" height="2" y="28" />
 		</surface>
-		<surface height="30" name="item-selected" width="100%">
+		<surface height="30" name="item-selected" width="50%">
 			<fill color="#D4F129" />
 			<fill color="#FFFFFF" height="2" y="28" />
 		</surface>
@@ -77,6 +77,13 @@
 		<surface width="18" height="260" name="sb-back">
 			<fill color="#FFFFFF" />
 			<fill width="1" color="#CCE4F0" />
+		</surface>
+		<surface width="18" height="158" name="sb-back-sm">
+			<fill color="#FFFFFF" />
+			<fill width="1" color="#CCE4F0" />
+		</surface>
+		<surface width="80%" height="200" name="fw_browser_bg">
+			<fill color="#FFFFFF" />
 		</surface>
 
 		<image name="btn_cd_norm" src="images/btn_cd_norm.png" />
@@ -559,8 +566,31 @@
 
 						<panel name="fw-panel">
 							<panel height="250" width="80%">
-								<label align="left" color="#31799F" font="arial" height="22" text="Loader device:" width="100%" />
-								<input font="arial" fontcolor="#000000" height="18" name="device" size="30" type="text" value="auto" width="100%" />
+								<panel height="45">
+									<label align="left" color="#31799F" font="arial" height="22" text="Loader firmware:" width="100%" />
+									<input font="arial" fontcolor="#000000" height="18" name="device" size="30" type="text" value="auto" width="100%" />
+								</panel>
+								<panel height="200" background="fw_browser_bg" >
+									<filemanager height="198" y="1" x="1" path="/"
+										item_disabled="item-selected"
+										item_font="m23"
+										item_font_color="#3278A0"
+										item_highlight="item-focus"
+										item_normal="item-normal"
+										item_pressed="item-focus"
+										sb_knob="sb-knob"
+										sb_back="sb-back-sm"
+										sbbup_normal="sbb-normal"
+										sbbup_highlight="sbb-focus"
+										sbbup_pressed="sbb-pressed"
+										sbbup_disabled="sbb-disabled"
+										sbbdown_normal="sbb-normal"
+										sbbdown_highlight="sbb-focus"
+										sbbdown_pressed="sbb-pressed"
+										sbbdown_disabled="sbb-disabled"
+										name="fw_browser"
+										onclick="export:isoLoader_FwItemClick()" />
+								</panel>
 							</panel>
 						</panel>
 

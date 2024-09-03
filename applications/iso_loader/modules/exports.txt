@@ -36,3 +36,4 @@ isoLoader_toggleLinkName
 isoLoader_Rotate_Image
 isoLoader_toggleExtension
 isoLoader_toggleVMU
+isoLoader_FwItemClick

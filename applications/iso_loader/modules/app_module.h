@@ -91,4 +91,7 @@ void isoLoader_Shutdown(App_t *app);
 void isoLoader_Exit(GUI_Widget *widget);
 
 uint32 getModeCDDA();
+
 void setModeCDDA(uint32 mode);
+
+void isoLoader_FwItemClick(dirent_fm_t *fm_ent);
