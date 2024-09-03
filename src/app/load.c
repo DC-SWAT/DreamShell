@@ -2389,15 +2389,6 @@ static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, cha
 		GUI_PanelSetBackground(fm, sn);
 	}
 
-	sn = getElementSurfaceTheme(app, node, "item_normal");
-
-	if(sn != NULL) {
-		sh = getElementSurfaceTheme(app, node, "item_highlight");
-		sp = getElementSurfaceTheme(app, node, "item_pressed");
-		sd = getElementSurfaceTheme(app, node, "item_disabled");
-		GUI_FileManagerSetItemSurfaces(fm, sn, sh, sp, sd);
-	}
-
 	fnt = getElementFont(app, node, FindXmlAttr("item_font", node, NULL));
 
 	if(fnt != NULL) {
@@ -2440,6 +2431,14 @@ static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, cha
 		GUI_FileManagerSetScrollbarButtonDown(fm, sn, sh, sp, sd);
 	}
 
+	sn = getElementSurfaceTheme(app, node, "item_normal");
+
+	if(sn != NULL) {
+		sh = getElementSurfaceTheme(app, node, "item_highlight");
+		sp = getElementSurfaceTheme(app, node, "item_pressed");
+		sd = getElementSurfaceTheme(app, node, "item_disabled");
+		GUI_FileManagerSetItemSurfaces(fm, sn, sh, sp, sd);
+	}
 
 	event = FindXmlAttr("onclick", node, NULL);
 

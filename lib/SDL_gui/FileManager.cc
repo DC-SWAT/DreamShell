@@ -450,10 +450,14 @@ void GUI_FileManager::SetItemLabel(GUI_Font *font, int r, int g, int b)	{
 void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled) {
 	
 	if(normal) {
-		item_area.w = normal->GetWidth(); 
-		item_area.h = normal->GetHeight(); 
+		item_area.w = normal->GetWidth();
+		item_area.h = normal->GetHeight();
+
+		if(item_area.w > (area.w - scrollbar->GetWidth())) {
+			item_area.w = area.w - scrollbar->GetWidth();
+		}
 	}
-	
+
 	GUI_ObjectKeep((GUI_Object **) &item_normal, normal);
 	GUI_ObjectKeep((GUI_Object **) &item_highlight, highlight);
 	GUI_ObjectKeep((GUI_Object **) &item_pressed, pressed);
