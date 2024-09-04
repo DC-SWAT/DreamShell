@@ -155,12 +155,15 @@ typedef struct ide_req {
 
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static u32 device_count = 0;
+
 static u32 g1_dma_part_avail = 0;
 static u32 g1_dma_irq_inited = 0;
 static u32 g1_dma_irq_visible = 1;
 static u32 g1_dma_irq_code_game = 0;
 static u32 g1_dma_irq_code_internal = 0;
+
 static u32 g1_ata_aborted = 0;
+static u32 g1_ata_requested = 0;
 
 static u32 g1_pio_total = 0;
 static u32 g1_pio_avail = 0;
@@ -789,6 +792,7 @@ static s32 g1_ata_access(struct ide_req *req) {
 		if (g1_ata_aborted) {
 			g1_ata_wait_nerr();
 			g1_ata_aborted = 0;
+			g1_ata_requested = 0;
 		}
 
 		if (req->cmd == G1_READ_PIO) {
@@ -1095,8 +1099,18 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 	if (g1_ata_aborted) {
 		g1_ata_wait_nerr();
 		g1_ata_aborted = 0;
-	}
 
+		if (g1_ata_requested) {
+			/*
+				FIXME: Find out what exactly we need to wait for.
+				If the previous DMA read command was aborted,
+				then an additional delay is required for Holly to catch on.
+				The ATA status does not change at this point.
+			*/
+			delay_1ms();
+		}
+	}
+	g1_ata_requested = count * 512;
 	return 0;
 }
 
@@ -1205,6 +1219,7 @@ u32 g1_pio_transfered(void) {
 
 
 void g1_ata_xfer(u32 addr, size_t bytes) {
+	g1_ata_requested -= bytes;
 	if (fs_dma_enabled()) {
 		g1_dma_start(addr, bytes);
 	} else {
