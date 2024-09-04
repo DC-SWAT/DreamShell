@@ -58,6 +58,7 @@ _sys_saved_vector:
 sys_redir_k:
 	.long sys_redir
 
+.align 2
 sys_redir:
 	mov #4,r1
 	cmp/hs r1,r7
@@ -72,7 +73,7 @@ badsyscall:
 	rts
 	mov #-1,r0
 
-.align 2
+.align 4
 sys_misc_init:
 	.long _sys_misc_init
 sys_unknown:

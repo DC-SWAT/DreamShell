@@ -165,6 +165,17 @@ uint Load_BootBin() {
 	return rv == COMPLETED ? 1 : 0;
 }
 
+void rom_memcpy(void* dst, void* src, size_t cnt) {
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+	do {} while(pre_read_xfer_busy());
+#endif
+	uint8 *d = (uint8 *)dst;
+	uint8 *s = (uint8 *)src;
+
+	while (cnt--) {
+		*d++ = *s++;
+	}
+}
 
 void setup_region() {
 	char region_str[3][6] = {
@@ -176,20 +187,29 @@ void setup_region() {
 	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
 	uint8 *reg = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_ADDR + 0x20);
 	uint32 ipbin_reg = NONCACHED_ADDR(IP_BIN_REGION_ADDR);
+	char *ipbin = (char *)ipbin_reg;
 
-	if (IsoInfo->boot_mode == BOOT_MODE_DIRECT || *(uint32 *)(ipbin_reg) == 0x2045554a) {
+	if (ipbin[1] != 'U' && ipbin[1] != ' ') {
+		/* No IP.BIN info, copy flashrom value */
 		*reg = 0;
 		rom_memcpy(dst, src, 5);
-	} else if(*((char *)(ipbin_reg + 2)) == 'E') {
+	}
+	else if(ipbin[2] == 'E') {
 		*reg = 3;
 		memcpy(dst, region_str[2], 5);
-	} else if(*((char *)(ipbin_reg + 1)) == 'U') {
+	}
+	else if(ipbin[1] == 'U') {
 		*reg = 2;
 		memcpy(dst, region_str[1], 5);
-	} else {
+	}
+	else {
 		*reg = 1;
 		memcpy(dst, region_str[0], 5);
 	}
+	LOGFF("orig=%c%c%c%c%c, cur=%c%c%c%c%c, ipbin=%c%c%c\n",
+		src[0], src[1], src[2], src[3], src[4],
+		dst[0], dst[1], dst[2], dst[3], dst[4],
+		ipbin[0], ipbin[1], ipbin[2]);
 }
 
 uint Load_IPBin(int header_only) {

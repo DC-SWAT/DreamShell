@@ -115,10 +115,13 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if(IsoInfo->boot_mode != BOOT_MODE_DIRECT) {
+	if((IsoInfo->boot_mode != BOOT_MODE_DIRECT) ||
+		((loader_end < IP_BIN_ADDR || loader_end > APP_BIN_ADDR) &&
+			(malloc_heap_pos() < IP_BIN_ADDR || malloc_heap_pos() > APP_BIN_ADDR)))
+	{
 		printf("Loading IP.BIN...\n");
 
-		if(!Load_IPBin(0)) {
+		if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT ? 1 : 0)) {
 			goto error;
 		}
 	}

@@ -385,7 +385,7 @@ static void get_ver_str() {
 static void abort_data_cmd() {
 	gd_state_t *GDS = get_GDS();
 
-	LOGFF(NULL);
+	DBGFF(NULL);
 	abort_async(iso_fd);
 	GDS->ata_status = CMD_WAIT_IRQ;
 
@@ -1256,10 +1256,6 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 
 	gd_state_t *GDS = get_GDS();
 
-	LOGFF("%d %ld %ld %d %d\n", gd_chn, GDS->requested,
-		pre_read_xfer_size(), GDS->ata_status,
-		pre_read_xfer_busy());
-
 	if(gd_chn != GDS->req_count) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
 		return -1;
@@ -1276,10 +1272,11 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 #endif
 	if(pre_read_xfer_busy()) {
 		*size = pre_read_xfer_size();
+		LOGFF("%d busy s=%ld\n", gd_chn, pre_read_xfer_size());
 		return 1;
 	}
-
 	*size = GDS->requested;
+	LOGFF("%d done s=%d r=%ld\n", gd_chn, pre_read_xfer_size(), GDS->requested);
 	return 0;
 }
 
@@ -1414,7 +1411,6 @@ int menu_check_disc(void) {
  * FlashROM syscalls
  */
 int flashrom_info(int part, uint32 *info) {
-
 	DBGFF("%d 0x%08lx\n", part, info);
 
 	switch(part) {
@@ -1442,48 +1438,25 @@ int flashrom_info(int part, uint32 *info) {
 			info[0] = info[1] = 0;
 			break;
 	}
-
 	return 0;
 }
 
-
-void rom_memcpy(void* dst, const void* src, size_t cnt) {
-
-#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
-	do {} while(pre_read_xfer_busy());
-#endif
-
-	uint8 *d = (uint8*)dst;
-	const uint8 *s = (const uint8*)src;
-
-	while (cnt--) {
-		*d++ = *s++;
-	}
-}
-
 int flashrom_read(int offset, void *buffer, int bytes) {
-
 	DBGFF("0x%08lx 0x%08lx %d\n", offset, (uint32)buffer, bytes);
-
 	uint8 *src = (uint8 *)(NONCACHED_ADDR(FLASH_ROM_ADDR) + offset);
-
 	rom_memcpy(buffer, src, bytes);
 	return 0;
 }
 
 int flashrom_write(int offset, void * buffer, int bytes) {
-
 	DBGFF("0x%08lx 0x%08lx %d\n", offset, buffer, bytes);
-
 	(void)offset;
 	(void)buffer;
 	(void)bytes;
-
 	return 0;
 }
 
 int flashrom_delete(int offset) {
-
 	DBGFF("0x%08lx\n", offset);
 	(void)offset;
 	return 0;
@@ -1493,17 +1466,11 @@ int flashrom_delete(int offset) {
  * Sysinfo syscalls
  */
 int sys_misc_init(void) {
-	uint8 *src, *dst = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
-
 	LOGFF(NULL);
-	memset(dst, 0, 32 - 8);
-
-	src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
-	dst = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
+	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
 	rom_memcpy(dst, src, 8);
 	setup_region();
-
-	dcache_flush_range(CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR - 8), 32);
 	return 0;
 }
 
@@ -1520,8 +1487,10 @@ int sys_icon(int icon, uint8 *dest) {
 }
 
 uint8 *sys_id(void) {
-	LOGFF(NULL);
-	return (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	uint8 *ptr = (uint8 *)CACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+	LOGFF("csr=%02lX cs=%02lX id=%02lX%02lX%02lX%02lX%02lX%02lX\n",
+		ptr[0], ptr[1], ptr[2], ptr[3], ptr[4], ptr[5], ptr[6], ptr[7]);
+	return ptr;
 }
 
 void enable_syscalls(int all) {

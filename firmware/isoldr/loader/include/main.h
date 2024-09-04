@@ -89,7 +89,7 @@ void descramble(uint8 *source, uint8 *dest, uint32 size);
 void *search_memory(const uint8 *key, uint32 key_size);
 int patch_memory(const uint32 key, const uint32 val);
 void apply_patch_list();
-void rom_memcpy(void* dst, const void* src, size_t cnt);
+void rom_memcpy(void* dst, void* src, size_t cnt);
 
 #ifndef printf
 int printf(const char *fmt, ...);
