@@ -662,7 +662,7 @@ static void data_transfer_pio_stream() {
 			GDS->requested -= GDS->param[1];
 			GDS->param[2] = 0;
 
-			if(GDS->callback != 0) {
+			if(GDS->requested != 0 && GDS->callback != 0) {
 				void (*callback)() = (void (*)())(GDS->callback);
 				callback(GDS->callback_param);
 			}

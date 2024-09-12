@@ -982,7 +982,7 @@ read_abort:
 				}
 				else
 				{
-					if(my_gds->callback != 0)
+					if(my_gds->requested != 0 && my_gds->callback != 0)
 					{
 						void (*callback)() = (void (*)())(my_gds->callback);
 						callback(my_gds->callback_param);
