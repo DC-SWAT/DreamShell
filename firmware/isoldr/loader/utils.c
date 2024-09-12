@@ -189,23 +189,25 @@ void setup_region() {
 	uint32 ipbin_reg = NONCACHED_ADDR(IP_BIN_REGION_ADDR);
 	char *ipbin = (char *)ipbin_reg;
 
-	if (ipbin[1] != 'U' && ipbin[1] != ' ') {
-		/* No IP.BIN info, copy flashrom value */
-		*reg = 0;
-		rom_memcpy(dst, src, 5);
-	}
-	else if(ipbin[2] == 'E') {
+	if(ipbin[2] == 'E') {
 		*reg = 3;
-		memcpy(dst, region_str[2], 5);
 	}
 	else if(ipbin[1] == 'U') {
 		*reg = 2;
-		memcpy(dst, region_str[1], 5);
+	}
+	else if(ipbin[0] == 'J') {
+		*reg = 1;
 	}
 	else {
-		*reg = 1;
-		memcpy(dst, region_str[0], 5);
+		/* No IP.BIN info, keep flashrom value */
+		*reg = 0;
+		rom_memcpy(dst, src, 5);
 	}
+
+	if (*reg && src[2] != region_str[*reg - 1][2]) {
+		memcpy(dst, region_str[*reg - 1], 5);
+	}
+
 	LOGFF("orig=%c%c%c%c%c, cur=%c%c%c%c%c, ipbin=%c%c%c\n",
 		src[0], src[1], src[2], src[3], src[4],
 		dst[0], dst[1], dst[2], dst[3], dst[4],
