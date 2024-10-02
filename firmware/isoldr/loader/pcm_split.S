@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C) 2014-2023 SWAT <http://www.dc-swat.ru>
+!   Copyright (C) 2014-2024 SWAT <http://www.dc-swat.ru>
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -22,7 +22,7 @@
 .globl _unlock_cdda
 
 !
-! void pcm16_split(int16 *all, int16 *left, int16 *right, uint32 size);
+! void pcm16_split(uint32 *data, uint32 *left, uint32 *right, uint32 size);
 !
 .align 2
 _pcm16_split:
@@ -58,13 +58,16 @@ _pcm16_split:
 	bf/s .pcm16_pref
 	add #32, r8
 .pcm16_exit:
+	ocbp @r5
 	mov.l @r15+, r12
+	ocbp @r6
 	mov.l @r15+, r11
-	mov.l @r15+, r8
 	rts
-	nop
+	mov.l @r15+, r8
 .pcm16_store_alloc:
+	ocbp @r5
 	add r0, r5
+	ocbp @r6
 	add r0, r6
 	mov r11, r0
 	movca.l r0, @r5

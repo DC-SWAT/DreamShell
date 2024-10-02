@@ -56,7 +56,7 @@ static struct {
 	GUI_Widget *cdda;
 	GUI_Widget *cdda_mode[6];
 	GUI_Widget *cdda_mode_src[2];
-	GUI_Widget *cdda_mode_dst[2];
+	GUI_Widget *cdda_mode_dst[3];
 	GUI_Widget *cdda_mode_pos[2];
 	GUI_Widget *cdda_mode_ch[2];
 	GUI_Widget *irq;
@@ -755,7 +755,7 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	}
 
 	isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
-	isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
+	isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
 	isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 	isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 
@@ -839,6 +839,8 @@ uint32 getModeCDDA() {
 
 	index = getActiveWidgetIndex(self.cdda_mode_dst, sizeof(self.cdda_mode_dst) >> 2);
 	if (index == 0) {
+		mode |= CDDA_MODE_DST_PIO;
+	} else if(index == 1) {
 		mode |= CDDA_MODE_DST_SQ;
 	} else {
 		mode |= CDDA_MODE_DST_DMA;
@@ -878,25 +880,25 @@ void setModeCDDA(uint32 mode) {
 		switch (mode) {
 			case CDDA_MODE_DMA_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_DMA_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_SQ_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_SQ_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
@@ -912,10 +914,12 @@ void setModeCDDA(uint32 mode) {
 		isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
 	}
 
-	if (mode & CDDA_MODE_DST_SQ) {
+	if (mode & CDDA_MODE_DST_PIO) {
 		isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
-	} else {
+	} else if (mode & CDDA_MODE_DST_SQ) {
 		isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
+	} else {
+		isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
 	}
 
 	if (mode & CDDA_MODE_POS_TMU1) {

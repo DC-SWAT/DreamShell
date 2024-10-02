@@ -504,39 +504,42 @@
 							<panel height="250" width="85%">
 								<panel name="cdda-mode-panel" width="100%">
 									<panel width="100%" height="25" name="cdda-mode-src-panel">
-										<label align="left" color="#31799F" font="arial" height="20" text="Source:" width="30%" />
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Source()" type="checkbox" width="31%">
-											<label align="left" color="#000000" font="arial" height="20" text="PIO" x="25" />
+										<label align="left" color="#31799F" font="arial" height="20" text="Source:" width="25%" />
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Source()" type="checkbox" width="25%">
+											<label align="left" color="#000000" font="arial" height="20" text="PIO" x="22" />
 										</input>
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Source()" type="checkbox" width="39%">
-											<label align="left" color="#000000" font="arial" height="20" text="DMA" x="25" />
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Source()" type="checkbox" width="28%">
+											<label align="left" color="#000000" font="arial" height="20" text="DMA" x="22" />
 										</input>
 									</panel>
 									<panel width="100%" height="25" name="cdda-mode-dst-panel">
-										<label align="left" color="#31799F" font="arial" height="20" text="Destination:" width="30%" />
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="31%">
-											<label align="left" color="#000000" font="arial" height="20" text="SQ" x="25" />
+										<label align="left" color="#31799F" font="arial" height="20" text="Dest:" width="25%" />
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="25%">
+											<label align="left" color="#000000" font="arial" height="20" text="PIO" x="22" />
 										</input>
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="39%">
-											<label align="left" color="#000000" font="arial" height="20" text="DMA" x="25" />
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="23%">
+											<label align="left" color="#000000" font="arial" height="20" text="SQ" x="22" />
+										</input>
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="27%">
+											<label align="left" color="#000000" font="arial" height="20" text="DMA" x="22" />
 										</input>
 									</panel>
 									<panel width="100%" height="25" name="cdda-mode-pos-panel">
-										<label align="left" color="#31799F" font="arial" height="20" text="Position:" width="30%" />
+										<label align="left" color="#31799F" font="arial" height="20" text="Position:" width="25%" />
 										<input height="25" onclick="export:isoLoader_toggleCDDA_Pos()" type="checkbox" width="31%">
-											<label align="left" color="#000000" font="arial" height="20" text="TMU1" x="25" />
+											<label align="left" color="#000000" font="arial" height="20" text="TMU1" x="22" />
 										</input>
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Pos()" type="checkbox" width="39%">
-											<label align="left" color="#000000" font="arial" height="20" text="TMU2" x="25" />
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Pos()" type="checkbox" width="44%">
+											<label align="left" color="#000000" font="arial" height="20" text="TMU2" x="22" />
 										</input>
 									</panel>
 									<panel width="100%" height="25" name="cdda-mode-ch-panel">
-										<label align="left" color="#31799F" font="arial" height="20" text="Channels:" width="30%" />
+										<label align="left" color="#31799F" font="arial" height="20" text="Channels:" width="25%" />
 										<input height="25" onclick="export:isoLoader_toggleCDDA_Chan()" type="checkbox" width="31%">
-											<label align="left" color="#000000" font="arial" height="20" text="Fixed" x="25" />
+											<label align="left" color="#000000" font="arial" height="20" text="Fixed" x="22" />
 										</input>
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Chan()" type="checkbox" width="39%">
-											<label align="left" color="#000000" font="arial" height="20" text="Adaptive" x="25" />
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Chan()" type="checkbox" width="44%">
+											<label align="left" color="#000000" font="arial" height="20" text="Adaptive" x="22" />
 										</input>
 									</panel>
 								</panel>

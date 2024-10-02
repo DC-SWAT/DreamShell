@@ -142,7 +142,7 @@ static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 	AICA_DMA_G2APRO = 0x4659007f;      // Protection code
 	AICA_DMA_ADEN   = 0;               // Disable wave DMA
 	AICA_DMA_ADDIR  = 0;               // To wave memory
-	AICA_DMA_ADTRG  = 0x00000004;      // Initiate by CPU, suspend enabled
+	AICA_DMA_ADTRG  = 0x00000004 | 1;  // Initiate by SPU, suspend enabled
 	AICA_DMA_ADSTAR = PHYS_ADDR(addr); // System memory address
 	AICA_DMA_ADSTAG = dest;            // Wave memory address
 	AICA_DMA_ADLEN  = size|0x80000000; // Data size, disable after DMA end
@@ -187,13 +187,23 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 	if (cdda->trans_method == PCM_TRANS_DMA) {
-		dcache_purge_range((uint32)data, size);
+#ifdef HAVE_CDDA_ADPCM
+		if(cdda->bitsize == 4) {
+			dcache_purge_range((uint32)data, size);
+		}
+#endif
 		int old = irq_disable();
 		aica_dma_irq_hide();
 		aica_dma_transfer(data, dest, size);
 		irq_restore(old);
-	} 
+	}
 #ifdef HAVE_CDDA_ADPCM
+	else if(cdda->trans_method == PCM_TRANS_PIO) {
+		g2_lock();
+		memcpy((void *)dest, data, size);
+		dcache_purge_range(dest, size);
+		g2_unlock();
+	}
 	else {
 		aica_sq_transfer(data, dest, size);
 	}
@@ -219,7 +229,7 @@ static void setup_pcm_buffer(void) {
 	cdda->end_tm = 36185;
 	cdda->size = 0x8000;
 
-	size_t ram_usage = cdda->size >> (cdda->trans_method == PCM_TRANS_SQ_SPLIT);
+	size_t ram_usage = cdda->size >> (cdda->trans_method >= PCM_TRANS_SQ_SPLIT ? 1 : 0);
 	uint32 avail_mem = cdda->size;
 	malloc_stat(&avail_mem, &avail_mem);
 
@@ -265,7 +275,7 @@ static void setup_pcm_buffer(void) {
 	}
 
 	cdda->buff[PCM_TMP_BUFF] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
-	if(cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
+	if(cdda->trans_method < PCM_TRANS_SQ_SPLIT) {
 		cdda->buff[PCM_DMA_BUFF] = cdda->buff[0] + (cdda->size >> 1);
 	} else {
 		cdda->buff[PCM_DMA_BUFF] = NULL;
@@ -656,6 +666,7 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 
 	DBGFF("0x%08lx 0x%08lx %ld\n", src, dst, size);
 	uint32 count = size >> 1;
+	dcache_pref_block((void *)src);
 
 	switch(cdda->bitsize) {
 #ifdef HAVE_CDDA_ADPCM
@@ -665,12 +676,12 @@ static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 #endif
 		case 16:
 		default:
-			pcm16_split((int16 *)src, (int16 *)dst, (int16 *)(dst + count), size);
+			pcm16_split((uint32 *)src, (uint32 *)dst, (uint32 *)(dst + count), size);
 			break;
 	}
 }
 
-static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
+static void aica_pcm16_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
 
 	uint32 *masked_left = (uint32 *)(void *)(0xe0000000 | (aica_left & 0x03ffffe0));
 	uint32 *masked_right = (uint32 *)(void *)(0xe0000000 | (aica_right & 0x03ffffe0));
@@ -721,6 +732,16 @@ static void aica_pcm_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, 
 		s += 64;
 	}
 
+	g2_unlock();
+}
+
+static void aica_pcm16_split_movcal(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
+	dcache_pref_block((void *)data);
+	g2_lock();
+	pcm16_split((uint32 *)data,
+		(uint32 *)CACHED_ADDR(aica_left),
+		(uint32 *)CACHED_ADDR(aica_right),
+		size);
 	g2_unlock();
 }
 
@@ -873,8 +894,13 @@ int CDDA_Init() {
 	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1
 		|| (IsoInfo->emu_cdda & CDDA_MODE_DST_DMA)) {
 		cdda->trans_method = PCM_TRANS_DMA;
-	} else {
+	}
+	else if(IsoInfo->emu_cdda <= CDDA_MODE_SQ_TMU1
+		|| (IsoInfo->emu_cdda & CDDA_MODE_DST_SQ)) {
 		cdda->trans_method = PCM_TRANS_SQ;
+	}
+	else {
+		cdda->trans_method = PCM_TRANS_PIO;
 	}
 
 	/* SH4 timer */
@@ -1045,9 +1071,20 @@ static void play_track(uint32 track) {
 
 	if(cdda->trans_method != PCM_TRANS_DMA) {
 		if(cdda->bitsize == 16) {
-			cdda->trans_method = PCM_TRANS_SQ_SPLIT;
-		} else {
-			cdda->trans_method = PCM_TRANS_SQ;
+			if(cdda->trans_method == PCM_TRANS_SQ) {
+				cdda->trans_method = PCM_TRANS_SQ_SPLIT;
+			}
+			else if(cdda->trans_method == PCM_TRANS_PIO) {
+				cdda->trans_method = PCM_TRANS_PIO_SPLIT;
+			}
+		}
+		else {
+			if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
+				cdda->trans_method = PCM_TRANS_SQ;
+			}
+			else if(cdda->trans_method == PCM_TRANS_PIO_SPLIT) {
+				cdda->trans_method = PCM_TRANS_PIO;
+			}
 		}
 	}
 
@@ -1370,7 +1407,7 @@ void CDDA_MainLoop(void) {
 		cdda->cur_offset = tell(cdda->fd) - cdda->offset;
 		GDS->lba = cdda->lba + (cdda->cur_offset / RAW_SECTOR_SIZE);
 
-		if(cdda->trans_method != PCM_TRANS_SQ_SPLIT) {
+		if(cdda->trans_method < PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
 		}
 		cdda->stat = CDDA_STAT_POS;
@@ -1393,16 +1430,25 @@ void CDDA_MainLoop(void) {
 
 	/* Send data to AICA */
 	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_in_progress() == 0) {
-		if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
-			aica_pcm_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
+		if(cdda->trans_method >= PCM_TRANS_SQ_SPLIT) {
+			if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
+				aica_pcm16_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
 					cdda->aica_left[cdda->cur_buff],
 					cdda->aica_right[cdda->cur_buff],
 					cdda->size >> 1);
+			}
+			else {
+				aica_pcm16_split_movcal((uint32)cdda->buff[PCM_TMP_BUFF],
+					cdda->aica_left[cdda->cur_buff],
+					cdda->aica_right[cdda->cur_buff],
+					cdda->size >> 1);
+			}
 			cdda->cur_buff = !cdda->cur_buff;
 			cdda->stat = CDDA_STAT_FILL;
 			unlock_cdda();
 			return;
-		} else {
+		}
+		else {
 			aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
 			cdda->stat = CDDA_STAT_SNDR;
 
