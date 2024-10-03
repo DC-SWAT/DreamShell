@@ -103,13 +103,14 @@ int SDL_SavePNG_RW(SDL_Surface *surface, SDL_RWops *dst, int freedst)
 		if (freedst) SDL_RWclose(dst);
 		return (ERROR);
 	}
-	
-	if (setjmp(png_jmpbuf(png_ptr)))	/* All other errors, see also "png_error_SDL" */
-	{
-		png_destroy_write_struct(&png_ptr, &info_ptr);
-		if (freedst) SDL_RWclose(dst);
-		return (ERROR);
-	}
+
+	// FIXME
+	// if (setjmp(png_jmpbuf(png_ptr)))	/* All other errors, see also "png_error_SDL" */
+	// {
+	// 	png_destroy_write_struct(&png_ptr, &info_ptr);
+	// 	if (freedst) SDL_RWclose(dst);
+	// 	return (ERROR);
+	// }
 
 	/* Setup our RWops writer */
 	png_set_write_fn(png_ptr, dst, png_write_SDL, NULL); /* w_ptr, write_fn, flush_fn */

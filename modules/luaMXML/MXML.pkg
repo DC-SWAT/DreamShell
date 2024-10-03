@@ -143,7 +143,7 @@ typedef struct mxml_index_s		/**** An XML node index. ****/
   int			num_nodes;	/* Number of nodes in index */
   int			alloc_nodes;	/* Allocated nodes in index */
   int			cur_node;	/* Current node */
-  mxml_node_t		**nodes;	/* Node array */
+  //FIXME: mxml_node_t		**nodes;	/* Node array */
 } mxml_index_t;
 
 /*

@@ -1945,13 +1945,14 @@ void SDL_PauseAudio(int pause_on);
  * corrupt.  Currently raw and MS-ADPCM WAVE files are supported.
  */
 
-SDL_AudioSpec * SDL_LoadWAV_RW(SDL_RWops *src, int freesrc, SDL_AudioSpec *spec, Uint8 **audio_buf, Uint32 *audio_len);
+// FIXME
+// SDL_AudioSpec * SDL_LoadWAV_RW(SDL_RWops *src, int freesrc, SDL_AudioSpec *spec, Uint8 **audio_buf, Uint32 *audio_len);
 
 
 /*
  * This function frees data previously allocated with SDL_LoadWAV_RW()
  */
-void SDL_FreeWAV(Uint8 *audio_buf);
+// void SDL_FreeWAV(Uint8 *audio_buf);
 
 /*
  * This function takes a source format and rate and a destination format

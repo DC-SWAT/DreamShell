@@ -36,6 +36,7 @@ static char rcsid =
 #include "SDL_timer.h"
 #include "SDL_error.h"
 #include "SDL_timer_c.h"
+#include "SDL_systhread.h"
 
 static uint64 start;
 

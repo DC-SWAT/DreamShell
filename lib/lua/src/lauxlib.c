@@ -635,10 +635,11 @@ static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
     return realloc(ptr, nsize);
 }
 
+extern void *luaB_fputs(const char * s);
 
 static int _panic (lua_State *L) {
   (void)L;  /* to avoid warnings */
-  luaB_fputs("PANIC: unprotected error in call to Lua API (%s)\n", lua_tostring(L, -1));
+  luaB_fputs("PANIC: unprotected error in call to Lua API\n");
   return 0;
 }
 

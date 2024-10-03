@@ -466,7 +466,7 @@ int main(int argc, char *argv[]) {
     int         action = TGZ_EXTRACT;
     int         arg = 1;
     char        *TGZfile;
-    gzFile      *f;
+    gzFile      f;
 
     prog = strrchr(argv[0],'\\');
     if (prog == NULL)

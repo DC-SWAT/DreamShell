@@ -324,12 +324,23 @@ SDL_Rect **DC_ListModes(_THIS, SDL_PixelFormat *format, Uint32 flags)
 
 #ifdef HAVE_KGL
 static pvr_init_params_t sdl_dc_gl_params = {
-        /* Enable opaque and translucent polygons with size 16 */
-        { PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16 },
-        /* Vertex buffer size */
-        512*1024,
+	/* Enable opaque and translucent polygons with size 16 */
+	{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_16 },
+
+	/* Vertex buffer size 512K */
+	512 * 1024,
+
+	/* No DMA */
 	0,
-	0
+
+	/* No FSAA */
+	0,
+
+	/* Translucent Autosort enabled. */
+	0,
+
+	/* Extra OPBs */
+	3
 };
 #endif
 
@@ -787,9 +798,9 @@ static int DC_FlipHWSurface(_THIS, SDL_Surface *surface)
 			vid_waitvbl();
 		if (sdl_dc_video_driver!=SDL_DC_DIRECT_VIDEO)
 		{
-			dcache_flush_range(sdl_dc_dblmem,sdl_dc_dblsize);
+			dcache_flush_range((uintptr_t)sdl_dc_dblmem,sdl_dc_dblsize);
 			while (!pvr_dma_ready());
-			pvr_dma_transfer(sdl_dc_dblmem, vram_l, sdl_dc_dblsize,PVR_DMA_VRAM32,-1,NULL,NULL);
+			pvr_dma_transfer(sdl_dc_dblmem, (uintptr_t)vram_l, sdl_dc_dblsize,PVR_DMA_VRAM32,-1,NULL,NULL);
 		}
 		else
 			sq_cpy(vram_l,sdl_dc_dblmem,sdl_dc_dblsize);
