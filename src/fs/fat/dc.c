@@ -774,34 +774,38 @@ static int fat_fcntl(void *hnd, int cmd, va_list ap) {
     return rv;
 }
 
-
-
-static int fat_stat(struct vfs_handler *vfs, const char *fn, struct stat *st, int flag) {
+static int fat_stat(struct vfs_handler *vfs, const char *path, struct stat *st, int flag) {
 
 	FILINFO inf;
 	FAT_GET_MNT();
-	
-	if((rc = f_stat((const TCHAR*)fn, &inf)) != FR_OK) {
-		goto error;
-	}
-	
-	memset_sh4(st, 0, sizeof(struct stat));
-	
+	size_t len = strlen(path);
+
+	memset(st, 0, sizeof(struct stat));
 	st->st_dev = (dev_t)((ptr_t)vfs);
 	st->st_mode = S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
 	st->st_nlink = 1;
 
-	// TODO
+	/* Root directory */
+	if(len == 0 || (len == 1 && *path == '/')) {
+		st->st_mode |= S_IFDIR;
+		st->st_size = -1;
+		return 0;
+	}
+
+	if((rc = f_stat((const TCHAR*)path, &inf)) != FR_OK) {
+		goto error;
+	}
+
+	// FIXME
 	st->st_atime = inf.fdate + inf.ftime;
 	st->st_mtime = inf.fdate + inf.ftime;
 	st->st_ctime = inf.fdate + inf.ftime;
 	
 	if(inf.fattrib & AM_DIR) {
-
 		st->st_mode |= S_IFDIR;
-		
-	} else {
-		
+		st->st_size = -1;
+	}
+	else {
 		st->st_mode |= S_IFREG;
 		st->st_size = inf.fsize;
 		st->st_blksize = 1 << mnt->dev->l_block_size;
@@ -811,10 +815,9 @@ static int fat_stat(struct vfs_handler *vfs, const char *fn, struct stat *st, in
 			++st->st_blocks;
 		}
 	}
-
 	FAT_UNLOCK();
 	return 0;
-	
+
 error:
 	fatfs_set_errno(rc);
 	put_rc(rc, __func__);
@@ -826,19 +829,18 @@ error:
 static int fat_fstat(void *hnd, struct stat *st) {
 
 	FAT_GET_HND(hnd, -1);
-    memset_sh4(st, 0, sizeof(struct stat));
-			
+    memset(st, 0, sizeof(struct stat));
+
 	st->st_nlink = 1;
 	st->st_blksize = 1 << sf->mnt->dev->l_block_size;
 	st->st_dev = (dev_t)((ptr_t)sf->mnt->dev);
 	st->st_mode = S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR | S_IXGRP | S_IXOTH;
 
     if(sf->type == STAT_TYPE_DIR) {
-		
 		st->st_mode |= S_IFDIR;
-
-    } else {
-		
+		st->st_size = -1;
+    }
+	else {
 		st->st_mode |= S_IFREG;
 		st->st_size = sf->fil.fsize;
 		st->st_blocks = sf->fil.fsize >> sf->mnt->dev->l_block_size;
