@@ -582,13 +582,6 @@ int makeabspath_wd(char *buff, char *path, char *dir, size_t size) {
 }
 
 
-// Deprecated
-int makeabspath(char *buff, char *path, size_t size) {
-    //return makeabspath_wd(buff, path, cwd, size);
-	realpath(path, buff);
-	return 1;
-}
-
 const char *relativeFilePath(const char *rel, const char *file) {
     
     if(file[0] == '/') return file;
@@ -617,19 +610,11 @@ const char *relativeFilePath(const char *rel, const char *file) {
 
 
 int relativeFilePath_wb(char *buff, const char *rel, const char *file) {
-    
+
     if(file[0] == '/') {
        strncpy(buff, file, NAME_MAX);
        return 1;
     }
-/*    
-    char *rslash, *dir;
-
-    if((rslash = strrchr(rel, '/')) != NULL) {
-        dir = substring(rel, 0, strlen(rel) - strlen(rslash));
-        makeabspath_wd(buff, file, dir, NAME_MAX);
-        ds_printf("Directory: '%s' File: '%s' Out: '%s'", dir, rel, buff);
-*/
 
     makeabspath_wd(buff, (char*)file, getFilePath(rel), NAME_MAX);
     //ds_printf("Directory: '%s' File: '%s' Out: '%s'", path, rel, buff);
@@ -638,13 +623,11 @@ int relativeFilePath_wb(char *buff, const char *rel, const char *file) {
 
 
 char *getFilePath(const char *file) {
-     
     char *rslash;
-    
+
     if((rslash = strrchr(file, '/')) != NULL) {
         return substring(file, 0, strlen(file) - strlen(rslash));
     }
-    
     return NULL;
 }
 

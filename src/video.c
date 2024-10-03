@@ -382,7 +382,7 @@ void InitVideoHardware() {
 
 //	dbglog(DBG_INFO, "PVR hardware ID: %08lx Revision: %08lx\n", PVR_GET(PVR_ID), PVR_GET(PVR_REVISION));
 	pvr_init_defaults();
-//	pvr_dma_init();
+	pvr_dma_init();
 }
 
 
@@ -536,13 +536,6 @@ void SDL_DS_Blit_Textured() {
 		plx_fcxt_end(plx_cxt);
 	}
 
-	if (screen_changed) {
-		pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
-		// dcache_flush_range((unsigned)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-		// pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2, -1, NULL, 0);
-		screen_changed = 0;
-	}
-
 	plx_mat3d_identity();
 	plx_mat3d_translate(sdl_dc_trans_x, sdl_dc_trans_y, sdl_dc_trans_z);
 	//plx_mat3d_translate((sdl_dc_wtex/2)+512.0f*sdl_dc_trans_x/native_width,(sdl_dc_htex/2)+512.0f*sdl_dc_trans_y/native_height,sdl_dc_trans_z - 3);
@@ -593,10 +586,27 @@ static void *VideoThread(void *ptr) {
 
 		if(pvr_wait_ready() < 0) {
 			// dbglog(DBG_ERROR, "VideoThread: pvr_wait_ready() failed\n");
+			thd_pass();
 			continue;
 		}
 
 		LockVideo();
+
+		if(screen_changed && draw_screen) {
+			// pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+			dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+			do {
+				int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
+					sdl_dc_wtex * sdl_dc_htex * 2, 1, NULL, 0);
+				if(rs < 0 && errno == EINPROGRESS) {
+					thd_pass();
+					continue;
+				}
+				break;
+			} while(1);
+			screen_changed = 0;
+		}
+
 		pvr_scene_begin();
 
 		if(draw_screen) {

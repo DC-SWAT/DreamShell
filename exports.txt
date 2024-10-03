@@ -1734,6 +1734,7 @@ fs_readlink
 fs_rewinddir
 fs_fstat
 fs_path_append
+fs_normalize_path
 #
 #
 # Network Core

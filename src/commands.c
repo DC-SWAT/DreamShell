@@ -1650,7 +1650,7 @@ static int builtin_console(int argc, char *argv[]) {
 
 	if(back) {
 		if(file) {
-			realpath(file, fn);
+			fs_normalize_path(file, fn);
 			CON_Background(GetConsole(), fn, x, y);
 		} else {
 			ds_printf("DS_ERROR: Too few arguments.\n");
@@ -1710,7 +1710,7 @@ int builtin_gzip(int argc, char *argv[]) {
 	char buff[512];
 	int len = 0;
 
-	realpath(argv[2], src);
+	fs_normalize_path(argv[2], src);
 
 	if(argc < 4) {
 
@@ -1719,7 +1719,7 @@ int builtin_gzip(int argc, char *argv[]) {
 		sprintf(dst, "%s.gz", tmp);
 
 	} else {
-		realpath(argv[3], dst);
+		fs_normalize_path(argv[3], dst);
 	}
 
 	if(!strncmp("-s", argv[1], 2)) {

@@ -171,7 +171,7 @@ Module_t *OpenModule(const char *fn) {
 	Module_t *m;
 	char full_path[NAME_MAX];
 	char name[NAME_MAX / 2];
-	realpath(fn, full_path);
+	fs_normalize_path(fn, full_path);
 	
 	char *file = strrchr(full_path, '/');
 	char *mname = file + 1;

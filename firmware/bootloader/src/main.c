@@ -27,20 +27,22 @@ KOS_INIT_FLAGS(INIT_DEFAULT);
 #endif
 
 pvr_init_params_t params = {
+	/* Enable opaque and translucent with size 16 and polygons with size 32 */
 	{ PVR_BINSIZE_16, PVR_BINSIZE_0, PVR_BINSIZE_32, PVR_BINSIZE_0, PVR_BINSIZE_0 },
+	/* Vertex buffer size 512K */
 	512 * 1024,
 
-    /* No DMA */
-    0,
+	/* No DMA */
+	0,
 
-    /* No FSAA */
-    0,
+	/* No FSAA */
+	0,
 
-    /* Translucent Autosort enabled. */
-    0,
+	/* Translucent Autosort enabled. */
+	0,
 
-    /* Extra Tile Bins */
-    1
+	/* Extra OPBs */
+	3
 };
 
 const char	title[28] = "DreamShell boot loader v"VERSION;

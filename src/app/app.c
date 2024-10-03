@@ -175,7 +175,7 @@ App_t *AddApp(const char *fn) {
 		return NULL;
 	}
 
-	realpath(fn, file);
+	fs_normalize_path(fn, file);
 	fd = fs_open(file, O_RDONLY);
 
 	if(fd == FILEHND_INVALID) {
