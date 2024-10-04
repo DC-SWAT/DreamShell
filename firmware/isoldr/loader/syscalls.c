@@ -584,6 +584,20 @@ static void data_transfer_dma_stream() {
 	gd_state_t *GDS = get_GDS();
 	const int alt_read = IsoInfo->alt_read;
 
+#ifdef DEV_TYPE_SD
+	/* SD card can't provide DMA streams,
+	 * but it will work for Atomiswave games,
+	 * because they doesn't uses IRQ and MMU.
+	 * In other cases, we will return an error.
+	 */
+	if(IsoInfo->exec.type != BIN_TYPE_KATANA) {
+		gdcExitToGame();
+		GDS->status = CMD_STAT_FAILED;
+		GDS->drv_stat = CD_STATUS_PAUSED;
+		return;
+	}
+#endif
+
 	if(alt_read) {
 		fs_enable_dma(FS_DMA_STREAM);
 	}
@@ -1003,9 +1017,9 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 			else {
 				rv = CMD_STAT_COMPLETED;
 				GDS->ata_status = CMD_WAIT_INTERNAL;
-				GDS->status = CMD_STAT_IDLE;
 			}
 
+			GDS->status = CMD_STAT_IDLE;
 			status[2] = GDS->transfered;
 			status[3] = GDS->ata_status;
 			break;
@@ -1020,6 +1034,8 @@ int gdcGetCmdStat(int gd_chn, uint32 *status) {
 		case CMD_STAT_FAILED:
 			status[0] = CMD_ERR_HARDWARE;
 			rv = CMD_STAT_FAILED;
+			GDS->status = CMD_STAT_IDLE;
+			GDS->ata_status = CMD_WAIT_INTERNAL;
 			break;
 
 		default:
