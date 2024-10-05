@@ -32,7 +32,7 @@ OBJECT_EXTENSION=o
 CC=$(KOS_CC)
 SPECIFIC_CFLAGS= 
 ALTIVEC_CFLAGS=
-CFLAGS=-O2 -fomit-frame-pointer -ml -m4-single-only -ffunction-sections -fdata-sections  -I$(KOS_BASE)/include -I$(KOS_BASE)/kernel/arch/dreamcast/include -I$(KOS_BASE)/addons/include -I$(KOS_BASE)/../kos-ports/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -I$(KOS_BASE)/ds/include
+CFLAGS=-O2 -fomit-frame-pointer -ml -m4-single -ffunction-sections -fdata-sections  -I$(KOS_BASE)/include -I$(KOS_BASE)/kernel/arch/dreamcast/include -I$(KOS_BASE)/addons/include -I$(KOS_BASE)/../kos-ports/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -I$(KOS_BASE)/ds/include
 
 # ============================================================================
 # Assembler

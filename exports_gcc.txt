@@ -2,6 +2,10 @@ include kos/exports.h
 include exports_fix.h
 
 #GCC
+__fixdfdi
+__fixunsdfdi
+__floatundidf
+__unorddf2
 __floatdidf
 __divdf3
 __ledf2
