@@ -364,7 +364,7 @@ int OpenApp(App_t *app, const char *args) {
 		}
 
 		if(!strncasecmp(app->name, "Main", sizeof(app->name))) {
-			vmu_draw_string(getenv("HOST"));
+			vmu_draw_string(getenv("TITLE"));
 		}
 		else {
 			vmu_draw_string(app->name);

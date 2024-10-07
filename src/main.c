@@ -38,27 +38,27 @@ uint32 GetVersion() {
 }
 
 void SetVersion(uint32 ver) {
-	
+
 	char ver_str[32];
 	uint ver_bld;
-	
+
 	if(ver == 0) {
 		ver_int = DS_MAKE_VER(VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD);
-	} else {
+	}
+	else {
 		ver_int = ver;
 	}
-	
-	ver_bld = (uint)DS_VER_BUILD(ver_int);
-	
-	if(DS_VER_BUILD_TYPE(ver_bld) == DS_VER_BUILD_TYPE_RELEASE) {
 
+	ver_bld = (uint)DS_VER_BUILD(ver_int);
+
+	if(DS_VER_BUILD_TYPE(ver_bld) == DS_VER_BUILD_TYPE_RELEASE) {
 		snprintf(ver_str, sizeof(ver_str), "%d.%d.%d %s",
 					(uint)DS_VER_MAJOR(ver_int),
 					(uint)DS_VER_MINOR(ver_int),
 					(uint)DS_VER_MICRO(ver_int),
 					DS_VER_BUILD_TYPE_STR(ver_bld));
-	} else {
-
+	}
+	else {
 		snprintf(ver_str, sizeof(ver_str), "%d.%d.%d.%s.%d",
 					(uint)DS_VER_MAJOR(ver_int),
 					(uint)DS_VER_MINOR(ver_int),
@@ -66,8 +66,13 @@ void SetVersion(uint32 ver) {
 					DS_VER_BUILD_TYPE_STR(ver_bld),
 					DS_VER_BUILD_NUM(ver_bld));
 	}
-
 	setenv("VERSION", ver_str, 1);
+	snprintf(ver_str, sizeof(ver_str), "%d.%d.%d",
+				(uint)DS_VER_MAJOR(ver_int),
+				(uint)DS_VER_MINOR(ver_int),
+				(uint)DS_VER_MICRO(ver_int));
+
+	setenv("VERSION_SHORT", ver_str, 1);
 }
 
 const char *GetVersionBuildTypeString(int type) {
@@ -208,6 +213,9 @@ int InitDS() {
 	setenv("USER", getenv("HOST"), 1);
 	setenv("ARCH", hardware_sys_mode(&tmpi) == HW_TYPE_SET5 ? "Set5.xx" : "Dreamcast", 1);
 
+	snprintf(bf, sizeof(bf), "%s v%s", getenv("HOST"), getenv("VERSION_SHORT"));
+	setenv("TITLE", bf, 1);
+
 	setenv("NET_IPV4", "0.0.0.0", 1);
 
 	setenv("SDL_DEBUG", "0", 1);
@@ -219,8 +227,8 @@ int InitDS() {
 	InitVideoHardware();
 	ShowLogo();
 
-	vmu_draw_string(getenv("HOST"));
 	dbglog(DBG_INFO, "Initializing DreamShell Core...\n");
+	vmu_draw_string(getenv("TITLE"));
 
 	SetConsoleDebug(1);
 
@@ -248,7 +256,7 @@ int InitDS() {
 	memset(fn, 0, sizeof(fn));
 
 	for(tmpi = 0; tmpi < 8; tmpi++) {
-		sprintf(bf, "%02X", tmpb[tmpi]);
+		snprintf(bf, sizeof(bf), "%02X", tmpb[tmpi]);
 		strcat(fn, bf);
 	}
 
