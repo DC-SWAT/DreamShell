@@ -307,6 +307,8 @@ static void setTitle(const char *text) {
 	}
 	GUI_LabelSetText(self.title, lines[0]);
 	GUI_LabelSetText(self.title2, lines[1]);
+
+	vmu_draw_string(text);
 }
 
 /* Try to get cover image from ISO */
@@ -374,8 +376,6 @@ static void showCover() {
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
 	}
-
-	vmu_draw_string(noext);
 }
 
 void isoLoader_MakeShortcut(GUI_Widget *widget) {
@@ -1672,7 +1672,6 @@ int isoLoader_LoadPreset() {
 
 	if (strlen(title) > 0) {
 		setTitle(title);
-		vmu_draw_string(title);
 	}
 
 	if (strlen(device) > 0) {
