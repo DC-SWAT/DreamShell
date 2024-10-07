@@ -74,11 +74,10 @@ static void vmu_draw_str(uint8 bitmap[192], unsigned char *str, int x, int y)
 void vmu_draw_string_xy(const char *str, int x, int y) {
 
 	uint8 bitmap[192];
-	maple_device_t *mvmu = NULL;
+	maple_device_t *mvmu;
+	int vmi = 0;
 
-	mvmu = maple_enum_type(0, MAPLE_FUNC_LCD);
-
-	if (mvmu) {
+	while((mvmu = maple_enum_type(vmi++, MAPLE_FUNC_LCD))) {
 		memset(bitmap, 0, sizeof(bitmap));
 		vmu_draw_str(bitmap, (uint8*)str, x, y);
 		vmu_draw_lcd(mvmu, bitmap);
@@ -86,50 +85,43 @@ void vmu_draw_string_xy(const char *str, int x, int y) {
 }
 
 void vmu_draw_string(const char *str) {
-	
 	int i;
 	char msg[32];
-	char *pmsg = msg;
+	char *pmsg;
 	uint8 bitmap[192];
-	maple_device_t *mvmu = NULL;
+	maple_device_t *mvmu;
+	int vmi = 0;
+	int len, c, x, y;
 
-	int len = strlen(str);
-	int c;
-	int x;
-	int y = len <= 10 ? 10 : 5;
-	
-	if(len > 20) {
-		y = 0;
-	}
-	
-	mvmu = maple_enum_type(0, MAPLE_FUNC_LCD);
-
-	if (mvmu) {
-		
+	while((mvmu = maple_enum_type(vmi++, MAPLE_FUNC_LCD))) {
 		memset(bitmap, 0, sizeof(bitmap));
-		// FIXME: ugly code
-		
-		if(len <= 10) {
+		memset(msg, 0, sizeof(msg));
 
+		pmsg = msg;
+		len = strlen(str);
+		y = len <= 10 ? 10 : 5;
+
+		if(len > 20) {
+			y = 0;
+		}
+
+		if(len <= 10) {
 			c = (10 - len);
 			x = len >= 10 ? 0 : ((c / 2) * 5) + ((c % 2) ? 3 : 0);
 			vmu_draw_str(bitmap, (uint8*)str, x, y);
-			
-		} else {
-			
+		}
+		else {
 			strncpy(msg, str, sizeof(msg));
 			for(i = 0; i < sizeof(msg); i++) {
-				
-				if(msg[i] == '\0') {
 
+				if(msg[i] == '\0') {
 					len = strlen(pmsg);
 					c = (10 - len);
 					x = len >= 10 ? 0 : ((c / 2) * 5) + ((c % 2) ? 3 : 0);
 					vmu_draw_str(bitmap, (uint8*)pmsg, x, y);
 					break;
-					
-				} else if(msg[i] == ' ') {
-
+				}
+				else if(msg[i] == ' ') {
 					msg[i] = '\0';
 					len = strlen(pmsg);
 					c = (10 - len);
@@ -140,7 +132,6 @@ void vmu_draw_string(const char *str) {
 				}
 			}
 		}
-		
 		vmu_draw_lcd(mvmu, bitmap);
 	}
 }

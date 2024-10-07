@@ -363,7 +363,12 @@ int OpenApp(App_t *app, const char *args) {
 			UnlockVideo();
 		}
 
-		vmu_draw_string(app->name);
+		if(!strncasecmp(app->name, "Main", sizeof(app->name))) {
+			vmu_draw_string(getenv("HOST"));
+		}
+		else {
+			vmu_draw_string(app->name);
+		}
 		app->state |= APP_STATE_OPENED;
 		curOpenedApp = app->id;
 
