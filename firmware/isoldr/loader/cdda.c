@@ -216,17 +216,30 @@ static void setup_pcm_buffer(void) {
 	 *
 	 * Measured values for PCM 16-bit 44100 Hz:
 	 * 
+	 * VA1 motherboard:
 	 * 32KB - 36185  (small cumulative error)
 	 * 16KB - 18090  (no error)
 	 * 8KB  - 9043   (small error)
+	 * 
+	 * VA0 motherboard:
+	 * 32KB - 36277  (no error)
+	 * 16KB - 18136  (small error)
+	 * 8KB  - 9065   (small error)
 	 *
 	 * Measured values for ADPCM 4-bit 44100 Hz:
 	 * 
+	 * VA1 motherboard:
 	 * 32KB - 144758 (no error)
 	 * 16KB - 72376  (no error)
 	 * 8KB  - 36185  (small error)
+	 * 
+	 * VA0 motherboard:
+	 * 32KB - 145123 (no error)
+	 * 16KB - 72559  (no error)
+	 * 8KB  - 36277  (small error)
 	 */
-	cdda->end_tm = 36185;
+	int is_va0 = (holly_revision() <= HOLLY_REV_VA0 ? 1 : 0);
+	cdda->end_tm = is_va0 ? 36277 : 36185;
 	cdda->size = 0x8000;
 
 	size_t ram_usage = cdda->size >> (cdda->trans_method >= PCM_TRANS_SQ_SPLIT ? 1 : 0);
@@ -242,12 +255,12 @@ static void setup_pcm_buffer(void) {
 			 */
 			ram_usage >>= 1;
 			cdda->size >>= 1;
-			cdda->end_tm = 72376;
+			cdda->end_tm = is_va0 ? 72559 : 72376;
 
 			if(avail_mem < cdda->size) {
 				ram_usage >>= 1;
 				cdda->size >>= 1;
-				cdda->end_tm = 36185;
+				cdda->end_tm = is_va0 ? 36277 : 36185;
 			}
 			break;
 #endif
@@ -259,13 +272,13 @@ static void setup_pcm_buffer(void) {
 				 */
 				ram_usage >>= 1;
 				cdda->size >>= 1;
-				cdda->end_tm = 18090;
+				cdda->end_tm = is_va0 ? 18136 : 18090;
 			}
 			if(avail_mem < cdda->size) {
 				uint32 s = (exception_inited() ? 1 : 2);
 				ram_usage >>= s;
 				cdda->size >>= s;
-				cdda->end_tm = 9043;
+				cdda->end_tm = is_va0 ? 9065 : 9043;
 			}
 			break;
 	}
@@ -662,7 +675,7 @@ static inline int aica_suitable_pos() {
 	return 0;
 }
 
-static void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
+static inline void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 
 	DBGFF("0x%08lx 0x%08lx %ld\n", src, dst, size);
 	uint32 count = size >> 1;
@@ -1494,8 +1507,10 @@ void aica_test_pos(void) {
 	if(smp && tmc) {
 		float cps = (float)tmc / (float)smp;
 		uint32 ppos = (uint32)((float)tm / cps);
-		LOGF("CDDA: ppos=%05ld rpos=%05ld diff=%03d tm=%05ld, smp=%04d tmc=%04d, cps=%ld.%ld\n",
-			ppos, pos, pos - ppos, tm, smp, tmc, tmc / smp, tmc % smp);
+		// LOGF("CDDA: ppos=%05ld rpos=%05ld diff=%03d tm=%05ld, smp=%04d tmc=%04d, cps=%ld.%ld\n",
+		// 	ppos, pos, pos - ppos, tm, smp, tmc, tmc / smp, tmc % smp);
+		LOGF("CDDA: ppos=%05ld rpos=%05ld diff=%03d cps=%ld.%ld\n",
+			ppos, pos, pos - ppos, tmc / smp, tmc % smp);
 	}
 }
 

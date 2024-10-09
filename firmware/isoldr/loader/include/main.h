@@ -64,6 +64,10 @@
 #define is_custom_bios() (*(uint16 *)NONCACHED_ADDR(BIOS_ROM_ADDR + 0x100018) != 0x4e46)
 #define is_no_syscalls() (*(uint16 *)NONCACHED_ADDR(RAM_START_ADDR + 0x00100) != 0x2f06)
 
+#define HOLLY_REV_VA1 0x10
+#define HOLLY_REV_VA0 0x0b
+#define holly_revision() (*(vuint32 *)NONCACHED_ADDR(0x005f689c))
+
 extern isoldr_info_t *IsoInfo;
 extern uint32 loader_size;
 extern uint32 loader_addr;
