@@ -78,49 +78,221 @@ _pcm16_split:
 
 #ifdef HAVE_CDDA_ADPCM
 !
-! void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
+! void adpcm_split(uint32 *data, uint32 *left, uint32 *right, uint32 size);
 !
 .align 2
 _adpcm_split:
 	mov #-5, r1
 	shld r1, r7
+	mov.l r8, @-r15
+	mov.l r9, @-r15
 	mov.l r10, @-r15
-	mov #16, r1
+	mov.l r11, @-r15
+	mov #4, r1
+	mov #15, r11
 .adpcm_pref:
 	add #32, r4
 	pref @r4
 	add #-32, r4
 .adpcm_copy:
 	dt r1
-	mov.w @r4+, r10
-	mov r10, r0
-	and #0xf0, r0
-	mov r0, r2
-	shlr2 r2
-	mov r10, r0
-	shlr2 r2
-	and #0x0f, r0
+	!!! src = *data++;
+	mov.l @r4+, r0
+
+	!!! dst_r = src & 0xf
 	mov r0, r3
-	shlr8 r10
-	mov r10, r0
-	and #0xf0, r0
-	or r0, r2
-	mov.b r2, @r5
-	add #1, r5
-	mov r10, r0
-	and #0x0f, r0
-	shll2 r0
-	shll2 r0
-	or r0, r3
-	mov.b r3, @r6
+	and r11, r3
+
+	!!! src >>= 4
+	mov #-4, r10
+	shld r10, r0
+
+	!!! dst_l = src & 0xf
+	mov r0, r2
+	and r11, r2
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp <<= 4,
+	mov #4, r10
+	shld r10, r9
+	shld r10, r8
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	mov #-4, r10
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp <<= 8,
+	shll8 r9
+	shll8 r8
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp <<= 12,
+	mov #12, r10
+	shld r10, r9
+	shld r10, r8
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! src = *data++;
+	mov.l @r4+, r0
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	mov #-4, r10
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! tmp <<= 16,
+	shll16 r9
+	shll16 r8
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! tmp <<= 20,
+	mov #20, r10
+	shld r10, r9
+	shld r10, r8
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! src >>= 4
+	mov #-4, r10
+	shld r10, r0
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! tmp <<= 24,
+	mov #24, r10
+	shld r10, r9
+	shld r10, r8
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! src >>= 4
+	mov #-4, r10
+	shld r10, r0
+
+	!!! tmp_r = src & 0xf
+	mov r0, r9
+	and r11, r9
+
+	!!! src >>= 4
+	shld r10, r0
+
+	!!! tmp_l = src & 0xf
+	mov r0, r8
+	and r11, r8
+
+	!!! tmp <<= 28,
+	mov #28, r10
+	shld r10, r9
+	shld r10, r8
+
+	!!! dst |= tmp
+	or r9, r3
+	or r8, r2
+
+	!!! *chan++ = dst;
+	mov.l r2, @r5
+	mov.l r3, @r6
+.adpcm_loops:
+	add #4, r5
 	bf/s .adpcm_copy
-	add #1, r6
+	add #4, r6
 	dt r7
 	bf/s .adpcm_pref
-	mov #16, r1
+	mov #4, r1
+.adpcm_exit:
+	mov.l @r15+, r11
 	mov.l @r15+, r10
+	mov.l @r15+, r9
 	rts
-	nop
+	mov.l @r15+, r8
 #endif
 
 .align 2

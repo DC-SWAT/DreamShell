@@ -680,11 +680,12 @@ static inline void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 	DBGFF("0x%08lx 0x%08lx %ld\n", src, dst, size);
 	uint32 count = size >> 1;
 	dcache_pref_block((void *)src);
+	// uint64_t begin = timer_ns_gettime64();
 
 	switch(cdda->bitsize) {
 #ifdef HAVE_CDDA_ADPCM
 		case 4:
-			adpcm_split(src, dst, dst + count, size);
+			adpcm_split((uint32 *)src, (uint32 *)dst, (uint32 *)(dst + count), size);
 			break;
 #endif
 		case 16:
@@ -692,6 +693,10 @@ static inline void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 			pcm16_split((uint32 *)src, (uint32 *)dst, (uint32 *)(dst + count), size);
 			break;
 	}
+	// uint64_t end = timer_ns_gettime64();
+	// LOGF("%ld ns, %08lx %08lx -> %08lx | %08lx\n",
+	// 	(uint32)(end - begin), *(uint32 *)src, *(uint32 *)(src + 4),
+	// 	*(uint32 *)dst, *(uint32 *)(dst + count));
 }
 
 static void aica_pcm16_split_sq(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
@@ -1522,8 +1527,8 @@ void CDDA_Test(void) {
 
 		while(cdda->stat != CDDA_STAT_IDLE) {
 			CDDA_MainLoop();
-			aica_test_pos();
-			// timer_spin_sleep_bios(10);
+			// aica_test_pos();
+			timer_spin_sleep_bios(10);
 		}
 	}
 }

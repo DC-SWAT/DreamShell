@@ -100,7 +100,7 @@ typedef struct cdda_ctx {
 
 /* PCM and ADPCM stereo splitters, optimized for SH4 */
 void pcm16_split(uint32 *data, uint32 *left, uint32 *right, uint32 size);
-void adpcm_split(uint8 *all, uint8 *left, uint8 *right, uint32 size);
+void adpcm_split(uint32 *data, uint32 *left, uint32 *right, uint32 size);
 
 int lock_cdda(void);
 void unlock_cdda(void);

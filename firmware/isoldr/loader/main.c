@@ -37,6 +37,10 @@ int main(int argc, char *argv[]) {
 	timer_init();
 	timer_prime_bios(TMU0);
 	timer_start(TMU0);
+#ifdef LOG
+	/* Setup Perfomance Counter timer */
+	timer_ns_enable();
+#endif
 
 	int emu_all_sc = 0;
 
