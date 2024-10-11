@@ -15,19 +15,19 @@
 		<image name="stdico" src="images/gd.png" />
 	
 		<surface height="104" name="head_bg" width="100%">
-			<fill color="#B2E2F9" height="366" />
+			<fill color="#DDDDDD" height="366" />
 			<fill color="#31799F" height="114" width="100%" y="366" />
 			
 			<blit height="79" surface="logo" width="19%" x="1%" y="14" />
 		</surface>
 
 		<surface height="380" name="games_bg" width="100%">
-			<fill color="#B2E2F9" height="266" />
+			<fill color="#DDDDDD" height="266" />
 			<fill color="#31799F" height="114" width="100%" y="266" />
 		</surface>
 
 		<surface height="380" name="settings_bg" width="100%">
-			<fill color="#B2E2F9" height="266" />
+			<fill color="#DDDDDD" height="266" />
 			<fill color="#31799F" height="114" width="100%" y="262" />
 
 			<fill color="#FFFFFF" height="312" width="94%" x="3%" y="10" />
@@ -517,11 +517,11 @@
 										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="25%">
 											<label align="left" color="#000000" font="arial" height="20" text="PIO" x="22" />
 										</input>
-										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="23%">
-											<label align="left" color="#000000" font="arial" height="20" text="SQ" x="22" />
-										</input>
 										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="27%">
 											<label align="left" color="#000000" font="arial" height="20" text="DMA" x="22" />
+										</input>
+										<input height="25" onclick="export:isoLoader_toggleCDDA_Dest()" type="checkbox" width="23%">
+											<label align="left" color="#000000" font="arial" height="20" text="SQ" x="22" />
 										</input>
 									</panel>
 									<panel width="100%" height="25" name="cdda-mode-pos-panel">

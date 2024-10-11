@@ -321,6 +321,7 @@ static void showCover() {
 	ipbin_meta_t *ipbin;
 	int use_cover = 0;
 
+	setTitle("Loading...");
 	snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 
 	if(fs_iso_mount("/isocover", path)) {
@@ -755,7 +756,7 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	}
 
 	isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
-	isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
+	isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 	isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 	isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 
@@ -841,9 +842,9 @@ uint32 getModeCDDA() {
 	if (index == 0) {
 		mode |= CDDA_MODE_DST_PIO;
 	} else if(index == 1) {
-		mode |= CDDA_MODE_DST_SQ;
-	} else {
 		mode |= CDDA_MODE_DST_DMA;
+	} else {
+		mode |= CDDA_MODE_DST_SQ;
 	}
 
 	index = getActiveWidgetIndex(self.cdda_mode_pos, sizeof(self.cdda_mode_pos) >> 2);
@@ -880,25 +881,25 @@ void setModeCDDA(uint32 mode) {
 		switch (mode) {
 			case CDDA_MODE_DMA_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_DMA_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_SQ_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
 			case CDDA_MODE_SQ_TMU1:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[0]);
-				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
+				isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
 				isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[0]);
 				isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 				break;
@@ -916,7 +917,7 @@ void setModeCDDA(uint32 mode) {
 
 	if (mode & CDDA_MODE_DST_PIO) {
 		isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[0]);
-	} else if (mode & CDDA_MODE_DST_SQ) {
+	} else if (mode & CDDA_MODE_DST_DMA) {
 		isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[1]);
 	} else {
 		isoLoader_toggleCDDA_Dest(self.cdda_mode_dst[2]);
@@ -1719,9 +1720,11 @@ void isoLoader_Init(App_t *app) {
 	char *default_dir = NULL;
 
 	if(app != NULL) {
-		
+		(void)random();
+		(void)random();
+
 		memset(&self, 0, sizeof(self));
-		
+
 		self.app = app;
 		self.current_dev = -1;
 		self.current_item = -1;
