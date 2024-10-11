@@ -18,7 +18,7 @@
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="comic-16" />
 
 		<surface height="480" name="page1" width="100%">
-			<fill color="#B2E2F9" height="366" />
+			<fill color="#DDDDDD" height="366" />
 			<fill color="#31799F" height="114" width="100%" y="366" />
 
 			<fill color="#EEEEEE" height="305" width="50%" x="3%" y="120" />
@@ -31,14 +31,14 @@
 		</surface>
 
 		<surface height="480" name="page2" width="100%">
-			<fill color="#B2E2F9" height="366" />
+			<fill color="#DDDDDD" height="366" />
 			<fill color="#31799F" height="114" width="100%" y="366" />
 			<fill color="#EEEEEE" height="318" width="69%" x="14%" y="55" />
 			<fill color="#CCE4F0" height="298" width="67%" x="15%" y="66" />
 		</surface>
 
 		<surface height="480" name="page3" width="100%">
-			<fill color="#B2E2F9" height="366" />
+			<fill color="#DDDDDD" height="366" />
 			<fill color="#31799F" height="114" width="100%" y="366" />
 
 			<fill color="#EEEEEE" height="274" width="92%" x="4%" y="106" />
