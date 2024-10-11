@@ -58,16 +58,16 @@ _pcm16_split:
 	bf/s .pcm16_pref
 	add #32, r8
 .pcm16_exit:
-	ocbp @r5
+	! ocbp @r5
 	mov.l @r15+, r12
-	ocbp @r6
+	! ocbp @r6
 	mov.l @r15+, r11
 	rts
 	mov.l @r15+, r8
 .pcm16_store_alloc:
-	ocbp @r5
+	! ocbp @r5
 	add r0, r5
-	ocbp @r6
+	! ocbp @r6
 	add r0, r6
 	mov r11, r0
 	movca.l r0, @r5

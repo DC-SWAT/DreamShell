@@ -142,12 +142,12 @@ static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
 	AICA_DMA_G2APRO = 0x4659007f;      // Protection code
 	AICA_DMA_ADEN   = 0;               // Disable wave DMA
 	AICA_DMA_ADDIR  = 0;               // To wave memory
-	AICA_DMA_ADTRG  = 0x00000004 | 1;  // Initiate by SPU, suspend enabled
+	AICA_DMA_ADTRG  = 0x00000004 | 1;  // Suspend enabled, initiate by CPU + SPU
 	AICA_DMA_ADSTAR = PHYS_ADDR(addr); // System memory address
 	AICA_DMA_ADSTAG = dest;            // Wave memory address
 	AICA_DMA_ADLEN  = size|0x80000000; // Data size, disable after DMA end
 	AICA_DMA_ADEN   = 1;               // Enable wave DMA
-	AICA_DMA_ADST   = 1;               // Start wave DMA
+	AICA_DMA_ADST   = 1;               // Start wave DMA by CPU
 }
 
 #ifdef HAVE_CDDA_ADPCM
@@ -187,23 +187,23 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
 static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 	if (cdda->trans_method == PCM_TRANS_DMA) {
-#ifdef HAVE_CDDA_ADPCM
-		if(cdda->bitsize == 4) {
+// #ifdef HAVE_CDDA_ADPCM
+// 		if(cdda->bitsize == 4) {
 			dcache_purge_range((uint32)data, size);
-		}
-#endif
+// 		}
+// #endif
 		int old = irq_disable();
 		aica_dma_irq_hide();
 		aica_dma_transfer(data, dest, size);
 		irq_restore(old);
 	}
-#ifdef HAVE_CDDA_ADPCM
 	else if(cdda->trans_method == PCM_TRANS_PIO) {
 		g2_lock();
 		memcpy((void *)dest, data, size);
 		dcache_purge_range(dest, size);
 		g2_unlock();
 	}
+#ifdef HAVE_CDDA_ADPCM
 	else {
 		aica_sq_transfer(data, dest, size);
 	}
@@ -694,7 +694,7 @@ static inline void aica_pcm_split(uint8 *src, uint8 *dst, uint32 size) {
 			break;
 	}
 	// uint64_t end = timer_ns_gettime64();
-	// LOGF("%ld ns, %08lx %08lx -> %08lx | %08lx\n",
+	// LOGFF("%ld ns, %08lx %08lx -> %08lx | %08lx\n",
 	// 	(uint32)(end - begin), *(uint32 *)src, *(uint32 *)(src + 4),
 	// 	*(uint32 *)dst, *(uint32 *)(dst + count));
 }
@@ -753,7 +753,11 @@ static void aica_pcm16_split_sq(uint32 data, uint32 aica_left, uint32 aica_right
 	g2_unlock();
 }
 
-static void aica_pcm16_split_movcal(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
+/* FIXME: Works a bit unstable in games by unknown reason.
+   In CDDA_TEST build it's works fine,
+   only in games there are small clicks in the sound.
+*/
+static inline void aica_pcm16_split_movcal(uint32 data, uint32 aica_left, uint32 aica_right, uint32 size) {
 	dcache_pref_block((void *)data);
 	g2_lock();
 	pcm16_split((uint32 *)data,
@@ -1092,17 +1096,17 @@ static void play_track(uint32 track) {
 			if(cdda->trans_method == PCM_TRANS_SQ) {
 				cdda->trans_method = PCM_TRANS_SQ_SPLIT;
 			}
-			else if(cdda->trans_method == PCM_TRANS_PIO) {
-				cdda->trans_method = PCM_TRANS_PIO_SPLIT;
-			}
+			// else if(cdda->trans_method == PCM_TRANS_PIO) {
+			// 	cdda->trans_method = PCM_TRANS_PIO_SPLIT;
+			// }
 		}
 		else {
 			if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
 				cdda->trans_method = PCM_TRANS_SQ;
 			}
-			else if(cdda->trans_method == PCM_TRANS_PIO_SPLIT) {
-				cdda->trans_method = PCM_TRANS_PIO;
-			}
+			// else if(cdda->trans_method == PCM_TRANS_PIO_SPLIT) {
+			// 	cdda->trans_method = PCM_TRANS_PIO;
+			// }
 		}
 	}
 
@@ -1449,18 +1453,18 @@ void CDDA_MainLoop(void) {
 	/* Send data to AICA */
 	if(cdda->stat == CDDA_STAT_SNDL && aica_dma_in_progress() == 0) {
 		if(cdda->trans_method >= PCM_TRANS_SQ_SPLIT) {
-			if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
+			// if(cdda->trans_method == PCM_TRANS_SQ_SPLIT) {
 				aica_pcm16_split_sq((uint32)cdda->buff[PCM_TMP_BUFF],
 					cdda->aica_left[cdda->cur_buff],
 					cdda->aica_right[cdda->cur_buff],
 					cdda->size >> 1);
-			}
+			/*}
 			else {
 				aica_pcm16_split_movcal((uint32)cdda->buff[PCM_TMP_BUFF],
 					cdda->aica_left[cdda->cur_buff],
 					cdda->aica_right[cdda->cur_buff],
 					cdda->size >> 1);
-			}
+			}*/
 			cdda->cur_buff = !cdda->cur_buff;
 			cdda->stat = CDDA_STAT_FILL;
 			unlock_cdda();
