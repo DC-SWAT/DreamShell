@@ -42,6 +42,10 @@ int net_ipv4_input(netif_t *src, const uint8 *pkt, size_t pktsize,
                    const eth_hdr_t *eth);
 
 /* GCC exports */
+extern uint32 __fixdfdi;
+extern uint32 __fixunsdfdi;
+extern uint32 __floatundidf;
+extern uint32 __unorddf2;
 extern uint32 __floatdidf;
 extern uint32 __divdf3;
 extern uint32 __ledf2;

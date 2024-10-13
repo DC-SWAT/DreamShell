@@ -113,10 +113,10 @@ all: increment_build $(TARGET)
 # of zero so we can do tracebacks later), second one makes the real file.
 $(TARGET): $(OBJS)
 ifndef NO_LD_DEBUG
-	$(KOS_CC) -g -ml -m4-single-only -O2 -g -Wl,-Ttext=0x00000000 -e _start -nostartfiles -nodefaultlibs \
+	$(KOS_CC) -g -ml -m4-single -O2 -g -Wl,-Ttext=0x00000000 -e _start -nostartfiles -nodefaultlibs \
 		-o dbg-$(TARGET) $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(DBG_LIBS) $(DBG_GCC_LIB) -Wl,--end-group
 endif
-	$(KOS_CC) -g -ml -m4-single-only -O2 -Wl,-d -Wl,-r -Wl,-S -Wl,-x -nostartfiles -nodefaultlibs \
+	$(KOS_CC) -g -ml -m4-single -O2 -Wl,-d -Wl,-r -Wl,-S -Wl,-x -nostartfiles -nodefaultlibs \
 		-o $(TARGET) -Wl,-T $(DS_SDK)/shlelf.xr $(OBJS) $(KOS_LIB_PATHS) -Wl,--start-group $(LIBS) $(GCC_LIB) -Wl,--end-group
 ifdef VER_MAJOR
 	@echo "\033[42m Compiled: $(TARGET_NAME) v$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO) build $(VER_BUILD) \033[0m"

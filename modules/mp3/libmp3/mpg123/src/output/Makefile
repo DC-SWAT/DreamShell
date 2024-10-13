@@ -368,9 +368,9 @@ AWK = gawk
 CC = /opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
 CCAS = /opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
 CCASDEPMODE = depmode=gcc3
-CCASFLAGS = -O2 -fomit-frame-pointer -ml -m4-single-only -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing
+CCASFLAGS = -O2 -fomit-frame-pointer -ml -m4-single -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing
 CCDEPMODE = depmode=gcc3
-CFLAGS = -O2 -fomit-frame-pointer -funroll-all-loops -finline-functions -ffast-math  -O2 -fomit-frame-pointer -ml -m4-single-only -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing
+CFLAGS = -O2 -fomit-frame-pointer -funroll-all-loops -finline-functions -ffast-math  -O2 -fomit-frame-pointer -ml -m4-single -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing
 COREAUDIO_CFLAGS = 
 COREAUDIO_LDFLAGS = 
 COREAUDIO_LIBS = -framework AudioToolbox -framework AudioUnit -framework CoreServices
@@ -417,7 +417,7 @@ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
 JACK_CFLAGS = 
 JACK_LDFLAGS = 
 JACK_LIBS = 
-LDFLAGS =   -ml -m4-single-only -Wl,-Ttext=0x8c010000 -T/usr/local/dc/kos/kos/utils/ldscripts/shlelf.xc -nodefaultlibs -L/usr/local/dc/kos/kos/lib/dreamcast -L/usr/local/dc/kos/kos/addons/lib/dreamcast
+LDFLAGS =   -ml -m4-single -Wl,-Ttext=0x8c010000 -T/usr/local/dc/kos/kos/utils/ldscripts/shlelf.xc -nodefaultlibs -L/usr/local/dc/kos/kos/lib/dreamcast -L/usr/local/dc/kos/kos/addons/lib/dreamcast
 LFS_LOBJ =  lfs_alias.lo
 LIBMPG123_VERSION = 32:0:32
 LIBOBJS = 
