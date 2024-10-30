@@ -17,6 +17,7 @@
 
 // Constructor / Destructor
 Drawable::Drawable() {
+	m_id = -1;
 	m_trans.zero();
 	m_rotate.zero();
 	m_scale = Vector(1.0f, 1.0f, 1.0f, 1.0f);
@@ -25,15 +26,20 @@ Drawable::Drawable() {
 	m_t_prelative = true;
 	m_r_prelative = true;
 	m_s_prelative = true;
-	m_a_prelative = true;
+	m_a_prelative = true;	
 
 	m_finished = false;
 	m_subs_finished = false;
+	m_readonly = false;
 
+	m_width = 0;
+	m_height = 0;
 	m_parent = nullptr;
+	m_click_function = nullptr;
 }
 
 Drawable::~Drawable() {
+	m_click_function = nullptr;
 }
 
 void Drawable::animAdd(Animation *ani) {
@@ -169,9 +175,25 @@ void Drawable::popTransformMatrix() const {
 	plx_mat3d_pop();
 }
 
+void Drawable::click() {
+	if (m_click_function) {
+		m_click_function(this);
+	}
+}
+
+void Drawable::setClickEvent(ClickEventFunctionPtr click_function) {
+	m_click_function = click_function;
+}
 
 extern "C" 
 {
+	void TSU_DrawableEventSetClick(Drawable *drawable_ptr, ClickEventFunctionPtr click_function)
+	{
+		if (drawable_ptr) {
+			drawable_ptr->setClickEvent(click_function);
+		}
+	}
+
 	void TSU_DrawableAnimAdd(Drawable *drawable_ptr, Animation *anim_ptr)
 	{
 		if (drawable_ptr != NULL && anim_ptr != NULL) {
@@ -228,8 +250,6 @@ extern "C"
 	{
 		if (drawable_ptr != NULL && remove_drawable_ptr != NULL) {
 			drawable_ptr->subRemove(remove_drawable_ptr);
-			delete remove_drawable_ptr;
-			remove_drawable_ptr = NULL;
 		}
 	}
 
@@ -244,6 +264,13 @@ extern "C"
 	{
 		if (drawable_ptr != NULL) {
 			drawable_ptr->subRemoveAll();
+		}
+	}
+
+	void TSU_DrawableSetFinished(Drawable *drawable_ptr)
+	{
+		if (drawable_ptr != NULL) {
+			drawable_ptr->setFinished();
 		}
 	}
 
@@ -332,5 +359,32 @@ extern "C"
 	Drawable* TSU_DrawableGetParent(Drawable *drawable_ptr)
 	{
 		return drawable_ptr->getParent();
+	}
+
+	bool TSU_DrawableIsReadOnly(Drawable *drawable_ptr)
+	{
+		if (drawable_ptr != NULL) {
+			return drawable_ptr->isReadOnly();
+		}
+		else {
+			return false;
+		}
+	}
+
+	void TSU_DrawableSetReadOnly(Drawable *drawable_ptr, bool is_readonly)
+	{
+		if (drawable_ptr != NULL) {
+			drawable_ptr->setReadOnly(is_readonly);
+		}
+	}
+
+	int TSU_DrawableGetId(Drawable *drawable_ptr) {
+		return drawable_ptr->getId();
+	}
+
+	void TSU_DrawableSetId(Drawable *drawable_ptr, int id) {
+		if (drawable_ptr != NULL) {
+			drawable_ptr->setId(id);
+		}
 	}
 }

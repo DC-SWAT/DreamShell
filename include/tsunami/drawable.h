@@ -16,6 +16,8 @@
 #include "vector.h"
 #include "color.h"
 
+typedef void (*ClickEventFunctionPtr)(Drawable *drawable);
+
 #ifdef __cplusplus
 
 #include <deque>
@@ -112,6 +114,26 @@ public:
 	/// Get our parent object (if any)
 	Drawable * getParent() const { return m_parent; }
 
+	virtual void setSize(float width, float height) { 
+		m_width = width;
+		m_height = height;
+	}
+
+	virtual void getSize(float *width, float *height) { 
+		*width = m_width;
+		*height = m_height;
+	}
+	
+	void setReadOnly(bool is_readonly) { m_readonly = is_readonly; }
+
+	bool isReadOnly() { return m_readonly; }
+
+	void setId(uint32 id) { m_id = id; }
+	int getId() { return m_id; }
+
+	virtual void click();
+	void setClickEvent(ClickEventFunctionPtr click_function);
+
 protected:
 	/// Setup a transform matrix, taking into account the
 	/// parent relative rotation and scaling parameters. Pushes the old
@@ -120,6 +142,8 @@ protected:
 
 	/// Pops the old matrix off the stack.
 	void popTransformMatrix() const;
+
+	float		m_width, m_height;
 
 private:
 	Vector		m_trans;		///< Translation
@@ -134,11 +158,14 @@ private:
 
 	bool		m_finished;		///< Is it "finished" (i.e., can safely be removed from scene)
 	bool		m_subs_finished;	///< Cached resultes if all sub-drawables are finished
+	bool		m_readonly;
+	int			m_id;
 
 	Drawable	* m_parent;		///< Our parent object
 
 	std::deque<Animation *>	m_anims;		///< Animation objects
 	std::deque<Drawable *>	m_subs;			///< Our sub-drawable list
+	ClickEventFunctionPtr m_click_function;
 };
 
 #else
@@ -155,6 +182,7 @@ extern "C"
 {
 #endif
 
+	void TSU_DrawableEventSetClick(Drawable *drawable_ptr, ClickEventFunctionPtr click_function);
 	void TSU_DrawableAnimAdd(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemove(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemoveAll(Drawable *drawable_ptr);
@@ -165,6 +193,7 @@ extern "C"
 	void TSU_DrawableSubRemove(Drawable *drawable_ptr, Drawable *remove_drawable_ptr);
 	void TSU_DrawableSubRemoveFinished(Drawable *drawable_ptr);
 	void TSU_DrawableSubRemoveAll(Drawable *drawable_ptr);
+	void TSU_DrawableSetFinished(Drawable *drawable_ptr);
 	void TSU_DrawableSetTranslate(Drawable *drawable_ptr, const Vector *v);
 	const Vector *TSU_DrawableGetTranslate(Drawable *drawable_ptr);
 	void TSU_DrawableTranslate(Drawable *drawable_ptr, const Vector *v);
@@ -179,7 +208,10 @@ extern "C"
 	float TSU_DrawableGetAlpha(Drawable *drawable_ptr);
 	Color TSU_DrawableGetColor(Drawable *drawable_ptr);
 	Drawable* TSU_DrawableGetParent(Drawable *drawable_ptr);
-
+	bool TSU_DrawableIsReadOnly(Drawable *drawable_ptr);
+	void TSU_DrawableSetReadOnly(Drawable *drawable_ptr, bool is_readonly);
+	int TSU_DrawableGetId(Drawable *drawable_ptr);
+	void TSU_DrawableSetId(Drawable *drawable_ptr, int id);
 
 #ifdef __cplusplus
 };

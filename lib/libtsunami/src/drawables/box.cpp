@@ -29,6 +29,7 @@ Box::Box(int list, float x, float y, float width, float height, float borderWidt
 	this->zIndex = zIndex;
 	this->radius = radius;
 	this->borderWidth = borderWidth;
+	setReadOnly(true);
 
 	Drawable::setTranslate(Vector(x, y, zIndex, 1.0f));
 	Drawable::setTint(color);

@@ -8,6 +8,8 @@
 #ifndef __APP_UTILS_H
 #define __APP_UTILS_H
 
+#include "app_definition.h"
+
 /* Indexes of devices  */
 enum {
 	APP_DEVICE_CD = 0,
@@ -24,11 +26,7 @@ enum {
 	CONF_ULONG,
 };
 
-typedef struct {
-	const char *name;
-	int conf_type;
-	void *pointer;
-} isoldr_conf;
+
 
 char *Trim(char *string);
 void TrimSpaces(char *input, char *output, int size);
@@ -37,18 +35,12 @@ char *FixSpaces(char *str);
 int ConfigParse(isoldr_conf *cfg, const char *filename);
 bool IsGdiOptimized(const char *full_path_game);
 const char* GetLastPart(const char *source, const char separator, int option_path);
-
 int  GetDeviceType(const char *dir);
-bool ReadBootSector(const char *track_file, uint8* bootSector);
-// int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename);
-char *MakePresetFilename(const char *dir, uint8 *md5);
-
+int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type);
+void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data);
+char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5);
 size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result);
 void PlayCDDATrack(const char *file, int loop);
 void StopCDDATrack();
-
-// char *lib_get_name();
-// uint32 lib_get_version();
-
 
 #endif // __APP_UTILS_H

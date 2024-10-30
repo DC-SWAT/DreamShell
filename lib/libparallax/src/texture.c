@@ -105,10 +105,6 @@ plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) 
 			txr->fmt = PVR_TXRFMT_RGB565;
 			break;
 		}
-
-		if (use_alpha == -2) {
-			txr->fmt |= PVR_TXRFMT_NONTWIDDLED;
-		}
 	} else {
 		txr->fmt = use_alpha ? PVR_TXRFMT_ARGB4444 : PVR_TXRFMT_RGB565;
 	}

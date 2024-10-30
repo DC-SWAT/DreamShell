@@ -7,6 +7,8 @@
 */
 
 #include "ds.h"
+#include <kos/md5.h>
+#include <isoldr.h>
 #include "app_utils.h"
 #include "audio/wav.h"
 
@@ -264,26 +266,52 @@ int GetDeviceType(const char *dir)
 	}
 }
 
-// int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename) {
-// 	memset(filepath, 0, NAME_MAX);
-// 	snprintf(filepath, NAME_MAX, "%s/%s/%s.gdi", fmPath, dirname, filename);
+int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type)
+{
+	return (sector_size == 2048 &&
+			(current_dev == APP_DEVICE_IDE || current_dev == APP_DEVICE_CD) &&
+			(image_type == ISOFS_IMAGE_TYPE_ISO || image_type == ISOFS_IMAGE_TYPE_GDI));
+}
 
-// 	if(FileExists(filepath)) {
-// 		memset(filepath, 0, NAME_MAX);
-// 		snprintf(filepath, NAME_MAX, "%s/%s.gdi", dirname, filename);
-// 		return 1;
-// 	}
+void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data)
+{
+	file_t fd;
+	fd = fs_iso_first_file(file_mount_point);
 
-// 	return 0;
-// }
+	if (fd != FILEHND_INVALID)
+	{
+		if (fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, (int)sector_data->boot_sector) < 0)
+		{
+			memset(sector_data->md5, 0, sizeof(sector_data->md5));
+			memset(sector_data->boot_sector, 0, sizeof(sector_data->boot_sector));
+		}
+		else
+		{
+			kos_md5(sector_data->boot_sector, sizeof(sector_data->boot_sector), sector_data->md5);
+		}
 
-char *MakePresetFilename(const char *dir, uint8 *md5)
+		// Also get image type and sector size
+		if (fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int)&sector_data->image_type) < 0)
+		{
+			ds_printf("Can't get image type\n");
+		}
+
+		if (fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, (int)&sector_data->sector_size) < 0)
+		{
+			ds_printf("Can't get sector size\n");
+		}
+
+		fs_close(fd);
+	}
+}
+
+char *MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5)
 {
 	char dev[8];
 	static char filename[NAME_MAX];
 
 	memset(filename, 0, sizeof(filename));
-	strncpy(dev, &dir[1], 3);
+	strncpy(dev, &device_dir[1], 3);
 
 	if (dev[2] == '/')
 	{
@@ -296,11 +324,7 @@ char *MakePresetFilename(const char *dir, uint8 *md5)
 
 	snprintf(filename, sizeof(filename),
 			"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-#ifndef DEBUG_MENU_GAMES_CD
-			getenv("PATH"), "iso_loader", "ide", md5[0],
-#else
-			getenv("PATH"), "iso_loader", dev, md5[0],
-#endif
+			default_dir, "iso_loader", dev, md5[0],
 			md5[1], md5[2], md5[3], md5[4], md5[5],
 			md5[6], md5[7], md5[8], md5[9], md5[10],
 			md5[11], md5[12], md5[13], md5[14], md5[15]);

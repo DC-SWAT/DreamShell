@@ -60,7 +60,7 @@ void Animation::complete(Drawable *d) {
 extern "C"
 {
 	void TSU_AnimationComplete(Animation *animation_ptr, Drawable *drawable_ptr) {
-		if (animation_ptr != NULL) {
+		if (animation_ptr != NULL && drawable_ptr != NULL) {
 			animation_ptr->complete(drawable_ptr);
 		}
 	}

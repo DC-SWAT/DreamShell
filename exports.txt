@@ -24,8 +24,12 @@ include dc/sound/sound.h
 
 include ds.h
 include fs.h
+include img/SegaPVRImage.h
+include img/decode.h
 include img/load.h
 include img/convert.h
+include img/copy.h
+include img/utils.h
 include network/net.h
 include exports_fix.h
 include zlib/zlib.h
@@ -41,6 +45,7 @@ include drivers/aica.h
 include drivers/rtc.h
 include png/png.h
 include jpeg/jpeglib.h
+include jpeg/jpeg.h
 include tsunami/tsunami.h
 
 start
@@ -260,11 +265,22 @@ ShowLogo
 HideLogo
 InitNet
 ShutdownNet
+ReadPVRHeader
+DecodePVR
+pvr_decode
+png_decode
+jpg_decode
 pvr_to_img
 png_to_img
+jpeg_to_img
+img_to_png
+img_to_jpg
 pvr_to_png
 pvr_to_jpg
 resize_image
+copy_image
+copy_image_memory_to_file
+pvr_is_alpha
 #
 InitGUI
 ShutdownGUI
@@ -1199,6 +1215,93 @@ TSU_AppSubRemoveLabel
 TSU_AppSetTranslate
 TSU_SceneCreate
 TSU_SceneDestroy
+TSU_FormCreate
+TSU_FormRemove
+TSU_FormDestroy
+TSU_FormtSetAttributes
+TSU_FormGetTitleFont
+TSU_FormInputEvent
+TSU_FormSelectedEvent
+TSU_FormGetObjectsCurrentViewEvent
+TSU_FormOnGetObjectsCurrentView
+TSU_FormSetTitle
+TSU_FormSetSize
+TSU_FormSetPosition
+TSU_FormSetColumnSize
+TSU_FormSetColumnSpan
+TSU_FormSetRowSize
+TSU_FormSetRowSpan
+TSU_FormAddBodyScene
+TSU_FormAddBodyForm
+TSU_FormAddBodyBanner
+TSU_FormAddBodyRectangle
+TSU_FormAddBodyLabel
+TSU_FormAddBodyItemMenu
+TSU_FormAddBodyOptionGroup
+TSU_FormAddBodyTextBox
+TSU_FormAddBodyComboBox
+TSU_FormAddBodyCheckBox
+TSU_FormGetBodyObject
+TSU_FormRemoveBodyScene
+TSU_FormRemoveBodyForm
+TSU_FormRemoveBodyBanner
+TSU_FormRemoveBodyRectangle
+TSU_FormRemoveBodyLabel
+TSU_FormRemoveBodyItemMenu
+TSU_FormRemoveBodyOptionGroup
+TSU_FormRemoveBodyTextBox
+TSU_FormRemoveBodyComboBox
+TSU_FormRemoveBodyCheckBox
+TSU_FormAddBottomBanner
+TSU_FormGetBottomBanner
+TSU_FormAddBottomLabel
+TSU_FormGetBottomLabel
+TSU_FormRemoveBottomBanner
+TSU_FormRemoveBottomLabel
+TSU_FormShow
+TSU_FormHide
+TSU_FormGetState
+TSU_FormEnable
+TSU_FormIsEnable
+TSU_OptionGroupCreate
+TSU_OptionGroupDestroy
+TSU_OptionGroupSetStates
+TSU_OptionGroupGetControlState
+TSU_OptionGroupSetFocus
+TSU_OptionGroupInputEvent
+TSU_OptionGroupAdd
+TSU_OptionGroupDelete
+TSU_OptionGroupDeleteByIndex
+TSU_OptionGroupSelectOptionByIndex
+TSU_OptionGroupSelectOptionByKey
+TSU_OptionGroupSelectOptionByText
+TSU_OptionGroupGetTextSelected
+TSU_OptionGroupSetDisplayText
+TSU_OptionGroupClear
+TSU_OptionGroupGetKeySelected
+TSU_OptionGroupGetIndexSelected
+TSU_OptionGroupSetOptionByText
+TSU_OptionGroupSetOptionByKey
+TSU_OptionGroupSetOptionByIndex
+TSU_OptionGroupGetOptionByText
+TSU_OptionGroupGetOptionByKey
+TSU_OptionGroupGetOptionByIndex
+TSU_CheckBoxCreate
+TSU_CheckBoxDestroy
+TSU_CheckBoxInputEvent
+TSU_CheckBoxGetText
+TSU_CheckBoxGetValue
+TSU_CheckBoxSetOn
+TSU_CheckBoxSetOff
+TSU_TextBoxCreate
+TSU_TextBoxDestroy
+TSU_TextBoxSetStates
+TSU_TextBoxGetControlState
+TSU_TextBoxSetFocus
+TSU_TextBoxInputEvent
+TSU_TextBoxGetText
+TSU_TextBoxSetText
+TSU_TextBoxClear
 TSU_ItemMenuCreate
 TSU_ItemMenuCreateImage
 TSU_ItemMenuCreateLabel
@@ -1224,6 +1327,7 @@ TSU_ItemMenuGetItemIndex
 TSU_ItemMenuSetImage
 TSU_ItemMenuDestroy
 TSU_LogXYMoverCreate
+TSU_LogXYMoverSetFactor
 TSU_LogXYMoverDestroy
 TSU_ExpXYMoverCreate
 TSU_ExpXYMoverDestroy
@@ -1235,6 +1339,8 @@ TSU_FadeInCreate
 TSU_FadeInDestroy
 TSU_FadeOutCreate
 TSU_FadeOutDestroy
+TSU_FadeToCreate
+TSU_FadeToDestroy
 TSU_FontCreate
 TSU_FontDestroy
 TSU_FontLoadFromFile
@@ -1275,6 +1381,7 @@ TSU_LabelGetText
 TSU_LabelSetSmear
 TSU_LabelSetTranslate
 TSU_LabelSetTint
+TSU_LabelIsCentered
 TSU_BoxCreate
 TSU_BoxDestroy
 TSU_BoxSetSize
@@ -1282,21 +1389,25 @@ TSU_RectangleCreate
 TSU_RectangleCreateWithBorder
 TSU_RectangleDestroy
 TSU_RectangleSetSize
+TSU_TriangleCreate
+TSU_TriangleCreateWithBorder
+TSU_TriangleDestroy
 TSU_BirthCreate
 TSU_DeathCreate
 TSU_ChainAnimationCreate
+TSU_DrawableEventSetClick
 TSU_DrawableAnimAdd
 TSU_DrawableAnimAdd
 TSU_DrawableAnimRemove
 TSU_DrawableAnimRemoveAll
 TSU_DrawableIsFinished
-#TSU_DrawableSetFinished
 TSU_DrawableSubDraw
 TSU_DrawableSubNextFrame
 TSU_DrawableSubAdd
 TSU_DrawableSubRemove
 TSU_DrawableSubRemoveFinished
 TSU_DrawableSubRemoveAll
+TSU_DrawableSetFinished
 #TSU_DrawableDraw
 #TSU_DrawableNextFrame
 TSU_DrawableSetTranslate
@@ -1313,6 +1424,10 @@ TSU_DrawableSetAlpha
 TSU_DrawableGetAlpha
 TSU_DrawableGetColor
 TSU_DrawableGetParent
+TSU_DrawableIsReadOnly
+TSU_DrawableSetReadOnly
+TSU_DrawableGetId
+TSU_DrawableSetId
 TSU_AnimationComplete
 TSU_AnimationDestroy
 TSU_TriggerAdd

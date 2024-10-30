@@ -30,6 +30,8 @@ public:
 	virtual void draw(int list);
 	const std::string getText();
 	void setSmear(bool smear);
+	void setCenter(bool centered);
+	bool isCentered() { return m_centered; }
 
 private:
 	Font 	*m_fh;
@@ -55,9 +57,11 @@ void TSU_LabelDestroy(Label **label_ptr);
 void TSU_LabelSetText(Label *label_ptr, const char *text);
 void TSU_LabelSetFont(Label *label_ptr, Font *font_ptr);
 const char* TSU_LabelGetText(Label *label_ptr);
+void TSU_LabelSetCenter(Label *label_ptr, bool centered);
 void TSU_LabelSetSmear(Label *label_ptr, bool smear);
 void TSU_LabelSetTranslate(Label *label_ptr, const Vector *v);
 void TSU_LabelSetTint(Label *label_ptr, const Color *tint);
+void TSU_LabelIsCentered(Label *label_ptr);
 
 #ifdef __cplusplus
 };
