@@ -30,7 +30,7 @@ private:
 public:
     virtual void inputEvent(const Event & evt);
     virtual void beginApp();
-    // virtual void doMenu();
+    virtual void doMenu();
     virtual void doAppFrame();
     virtual void doAppControl();
     virtual bool endApp();

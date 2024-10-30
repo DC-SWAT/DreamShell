@@ -26,6 +26,7 @@ struct menu_structure
 	bool cd;
 	bool rescan_covers;
 	bool convert_pvr_to_png;
+	volatile bool finish_menu;
 	volatile bool finished_menu;
 	volatile bool cdda_game_changed;
 	volatile bool stop_load_pvr_cover;

@@ -12,7 +12,7 @@
 
 #define MAX_SIZE_ITEMS 12
 #define MAX_BUTTONS 7
-#define MAX_SCAN_COUNT 1
+#define MAX_SCAN_COUNT 2
 #define MAX_MENU 3
 
 #include <stdbool.h>

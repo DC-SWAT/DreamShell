@@ -88,7 +88,7 @@ static struct
 	Banner *img_cover_game_background;
 	Banner *img_cover_game;
 	FadeTo *animation_cover_game;
-	FadeOut *fadeout_animation_cover;
+	FadeOut *fadeout_cover_animation;
 	Texture *texture_cover_game_background;
 	Texture *texture_cover_game;
 	Texture *texture_info;
@@ -124,10 +124,10 @@ static void* ShowCoverThread(void *params)
 				TSU_FadeToDestroy(&self.animation_cover_game);
 			}
 			
-			if (self.fadeout_animation_cover == NULL)
+			if (self.fadeout_cover_animation == NULL)
 			{			
-				self.fadeout_animation_cover = TSU_FadeOutCreate(10.0f);
-				TSU_DrawableAnimAdd((Drawable *)self.img_cover_game, (Animation *)self.fadeout_animation_cover);
+				self.fadeout_cover_animation = TSU_FadeOutCreate(10.0f);
+				TSU_DrawableAnimAdd((Drawable *)self.img_cover_game, (Animation *)self.fadeout_cover_animation);
 			}
 
 			const uint max_time = 200;			
@@ -140,9 +140,9 @@ static void* ShowCoverThread(void *params)
 			if (self.game_changed || menu_data.menu_type != MT_PLANE_TEXT)
 				return NULL;
 
-			TSU_AnimationComplete((Animation *)self.fadeout_animation_cover, (Drawable *)self.img_cover_game);
+			TSU_AnimationComplete((Animation *)self.fadeout_cover_animation, (Drawable *)self.img_cover_game);
 			thd_pass();
-			TSU_FadeOutDestroy(&self.fadeout_animation_cover);
+			TSU_FadeOutDestroy(&self.fadeout_cover_animation);
 
 			TSU_DrawableSetFinished((Drawable *)self.img_cover_game);
 			TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game);
@@ -550,9 +550,9 @@ static void RemoveViewTextPlane()
 			TSU_AnimationComplete((Animation *)self.animation_cover_game, (Drawable *)self.img_cover_game);
 		}
 
-		if (self.fadeout_animation_cover != NULL)
+		if (self.fadeout_cover_animation != NULL)
 		{
-			TSU_AnimationComplete((Animation *)self.fadeout_animation_cover, (Drawable *)self.img_cover_game);
+			TSU_AnimationComplete((Animation *)self.fadeout_cover_animation, (Drawable *)self.img_cover_game);
 		}		
 
 		TSU_DrawableSetFinished((Drawable *)self.img_cover_game);
@@ -568,16 +568,12 @@ static void RemoveViewTextPlane()
 
 	if (self.img_cover_game_background != NULL)
 	{
-		TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game_background);
-		thd_pass();
 		TSU_BannerDestroy(&self.img_cover_game_background);
 		TSU_TextureDestroy(&self.texture_cover_game_background);
 	}
 
 	if (self.img_cover_game_rectangle != NULL)
 	{
-		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.img_cover_game_rectangle);
-		thd_pass();
 		TSU_RectangleDestroy(&self.img_cover_game_rectangle);
 	}	
 
@@ -585,8 +581,6 @@ static void RemoveViewTextPlane()
 	{
 		if (self.item_button[i] != NULL)
 		{
-			TSU_AppSubRemoveItemMenu(self.dsapp_ptr, self.item_button[i]);
-			thd_pass();
 			TSU_ItemMenuDestroy(&self.item_button[i]);
 		}
 	}
@@ -595,28 +589,20 @@ static void RemoveViewTextPlane()
 	{
 		if (self.animation_cover_game != NULL)
 		{
-			TSU_AnimationComplete((Animation *)self.animation_cover_game, (Drawable *)self.img_cover_game);
-			thd_pass();
 			TSU_FadeToDestroy(&self.animation_cover_game);
 		}
 
-		if (self.fadeout_animation_cover != NULL)
+		if (self.fadeout_cover_animation != NULL)
 		{
-			TSU_AnimationComplete((Animation *)self.fadeout_animation_cover, (Drawable *)self.img_cover_game);
-			thd_pass();
-			TSU_FadeOutDestroy(&self.fadeout_animation_cover);
+			TSU_FadeOutDestroy(&self.fadeout_cover_animation);
 		}		
 
-		TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game);
-		thd_pass();
 		TSU_BannerDestroy(&self.img_cover_game);
 		TSU_TextureDestroy(&self.texture_cover_game);
 	}
 
 	if (self.game_list_rectangle != NULL)
 	{
-		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.game_list_rectangle);
-		thd_pass();
 		TSU_RectangleDestroy(&self.game_list_rectangle);
 	}
 }
@@ -962,7 +948,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 		TSU_FontDestroy(&self.menu_font);
 		self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 		
-		snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n%s\n\n\nand images here:\n%s", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));
+		snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n\n%s\n\n\n\nand images here:\n\n%s", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));
 		ds_printf(game_cover_path);
 		SetTitle(-1, game_cover_path);
 	}
@@ -1030,8 +1016,13 @@ static void DoMenuEndVideoHandler(void *ds_event, void *param, int action)
 
 static void RemoveAll()
 {
-	TSU_DrawableSetFinished((Drawable *)self.main_box);
-	TSU_DrawableSetFinished((Drawable *)self.main_box);
+	TSU_AnimationComplete((Animation *)self.title_animation, (Drawable *)self.title);
+	TSU_AnimationComplete((Animation *)self.title_back_animation, (Drawable *)self.title_back);
+	TSU_AnimationComplete((Animation *)self.title_type_animation, (Drawable *)self.title_type);
+	TSU_AnimationComplete((Animation *)self.item_selector_animation, (Drawable *)self.item_selector);
+	TSU_AnimationComplete((Animation *)self.animation_cover_game, (Drawable *)self.img_cover_game);
+	TSU_AnimationComplete((Animation *)self.fadeout_cover_animation, (Drawable *)self.img_cover_game);
+
 	TSU_DrawableSetFinished((Drawable *)self.main_box);
 	TSU_DrawableSetFinished((Drawable *)self.title_rectangle);
 	TSU_DrawableSetFinished((Drawable *)self.title_type_rectangle);
@@ -1039,22 +1030,10 @@ static void RemoveAll()
 	TSU_DrawableSetFinished((Drawable *)self.item_selector);
 	TSU_DrawableSetFinished((Drawable *)self.title);
 	TSU_DrawableSetFinished((Drawable *)self.title_type);
-	TSU_DrawableSetFinished((Drawable *)self.title_back);
-	TSU_AnimationComplete((Animation *)self.animation_cover_game, (Drawable *)self.img_cover_game);
-	TSU_AnimationComplete((Animation *)self.fadeout_animation_cover, (Drawable *)self.img_cover_game);
+	TSU_DrawableSetFinished((Drawable *)self.title_back);	
 	TSU_DrawableSetFinished((Drawable *) self.img_cover_game);
 	TSU_DrawableSetFinished((Drawable *) self.img_cover_game_background);
-
-	TSU_AppSubRemoveBox(self.dsapp_ptr, self.main_box);
-	TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.title_rectangle);
-	TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.title_type_rectangle);
-	TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.game_list_rectangle);
-	TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.item_selector);
-	TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title);
-	TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_type);
-	TSU_AppSubRemoveLabel(self.dsapp_ptr, self.title_back);
-	TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game);
-	TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game_background);
+	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_rectangle);
 
 	for (int i = 0; i < MAX_BUTTONS; i++)
 	{
@@ -1064,19 +1043,6 @@ static void RemoveAll()
 		}
 	}
 
-	for (int i = 0; i < MAX_BUTTONS; i++)
-	{
-		if (self.item_button[i] != NULL)
-		{
-			TSU_AppSubRemoveItemMenu(self.dsapp_ptr, self.item_button[i]);
-		}
-	}
-
-	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_rectangle);
-	TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.img_cover_game_rectangle);
-
-	SystemMenuRemoveAll();
-
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
 		if (self.item_game_animation[i] != NULL)
@@ -1084,6 +1050,9 @@ static void RemoveAll()
 			TSU_AnimationComplete((Animation *)self.item_game_animation[i], (Drawable *)self.item_game[i]);
 		}
 	}
+
+	SystemMenuRemoveAll();
+	TSU_DrawableSubRemoveFinished((Drawable *)self.scene_ptr);
 }
 
 static void StartExit()
@@ -1872,65 +1841,55 @@ static int LoadPreset()
 static void FreeAppData()
 {
 	mutex_destroy(&change_page_mutex);	
-	DestroyMenuData();
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
-		TSU_AnimationComplete((Animation *)self.item_game_animation[i], (Drawable *)self.item_game[i]);
-		TSU_DrawableSetFinished((Drawable *)self.item_game[i]);
-
-		if (self.exit_animation_list[i] != NULL)
+		if (self.item_game[i] != NULL)
 		{
-			TSU_AnimationComplete((Animation *)self.exit_animation_list[i], (Drawable *)self.item_game[i]);
-		}
-	}
+			if (!self.exit_app && TSU_ItemMenuIsSelected(self.item_game[i]) && self.run_animation != NULL)
+			{
+				TSU_AnimationComplete((Animation *)self.run_animation, (Drawable *)self.item_game[i]);			
+			}
+			else if (self.exit_animation_list[i] != NULL)
+			{
+				TSU_AnimationComplete((Animation *)self.exit_animation_list[i], (Drawable *)self.item_game[i]);
+			}
 
-	TSU_DrawableSetFinished((Drawable *)self.main_box);
-	TSU_DrawableSetFinished((Drawable *)self.title_rectangle);
-	TSU_DrawableSetFinished((Drawable *)self.title_type_rectangle);
-	TSU_DrawableSetFinished((Drawable *)self.game_list_rectangle);
-	TSU_DrawableSetFinished((Drawable *)self.item_selector);
-	TSU_DrawableSetFinished((Drawable *)self.title);
-	TSU_DrawableSetFinished((Drawable *)self.title_back);
-	TSU_AnimationComplete((Animation *)self.title_animation, (Drawable *)self.title);
-	TSU_AnimationComplete((Animation *)self.title_back_animation, (Drawable *)self.title_back);
-	TSU_DrawableSetFinished((Drawable *)self.title_type);
-	TSU_AnimationComplete((Animation *)self.title_type_animation, (Drawable *)self.title_type);
-	TSU_AnimationComplete((Animation *)self.item_selector_animation, (Drawable *)self.item_selector);
-	TSU_AnimationComplete((Animation *)self.fadeout_animation_cover, (Drawable *)self.img_cover_game);
-	TSU_DrawableSetFinished((Drawable *)self.img_cover_game);
-	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_background);
-	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_rectangle);
+			TSU_DrawableSetFinished((Drawable *)self.item_game[i]);
+		}
+	}	
 
 	TSU_DrawableSubRemoveFinished((Drawable *)self.scene_ptr);
 	thd_pass();
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
-		if (self.item_game_animation[i] != NULL)
-		{
-			TSU_LogXYMoverDestroy(&self.item_game_animation[i]);
-		}
-
 		if (self.item_game[i] != NULL)
 		{
-			TSU_ItemMenuDestroy(&self.item_game[i]);
-		}
+			if (TSU_ItemMenuIsSelected(self.item_game[i]) && self.run_animation != NULL)
+			{
+				TSU_LogXYMoverDestroy(&self.run_animation);
+			}
+			else if (self.exit_animation_list[i] != NULL)
+			{
+				TSU_ExpXYMoverDestroy(&self.exit_animation_list[i]);
+			}
 
-		if (self.exit_animation_list[i] != NULL)
-		{
-			TSU_ExpXYMoverDestroy(&self.exit_animation_list[i]);
-		}
+			if (self.item_game_animation[i] != NULL)
+			{
+				TSU_LogXYMoverDestroy(&self.item_game_animation[i]);
+			}
 
-		if (self.exit_trigger_list[i] != NULL)
-		{
-			TSU_TriggerDestroy(&self.exit_trigger_list[i]);
-		}
-	}
+			if (self.exit_trigger_list[i] != NULL)
+			{
+				TSU_TriggerDestroy(&self.exit_trigger_list[i]);
+			}
 
-	if (self.run_animation != NULL)
-	{
-		TSU_LogXYMoverDestroy(&self.run_animation);
+			if (self.item_game[i] != NULL)
+			{
+				TSU_ItemMenuDestroy(&self.item_game[i]);
+			}
+		}
 	}
 
 	if (self.main_box != NULL)
@@ -1998,9 +1957,9 @@ static void FreeAppData()
 		TSU_FadeToDestroy(&self.animation_cover_game);		
 	}
 
-	if (self.fadeout_animation_cover != NULL)
+	if (self.fadeout_cover_animation != NULL)
 	{
-		TSU_FadeOutDestroy(&self.fadeout_animation_cover);		
+		TSU_FadeOutDestroy(&self.fadeout_cover_animation);		
 	}
 
 	if (self.img_cover_game != NULL)
@@ -2034,6 +1993,8 @@ static void FreeAppData()
 	TSU_FontDestroy(&self.message_font);
 	TSU_AppDestroy(&self.dsapp_ptr);
 	self.scene_ptr = NULL;
+
+	DestroyMenuData();
 }
 
 static bool PlayGame()
@@ -2233,15 +2194,15 @@ static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 {
 	if (self.show_cover_game) thd_pass();
 
-	if (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE)
+	if ((menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE)
+		&& menu_data.state_app == SA_GAMES_MENU)
 	{
 		if (menu_data.cover_scanned_app.scan_count < MAX_SCAN_COUNT
-			&& (self.scan_count < MAX_SCAN_COUNT && 1 != 1) // DISABLE
+			&& (self.scan_count < MAX_SCAN_COUNT)
 			&& menu_data.cover_scanned_app.last_game_index < menu_data.games_array_count
 			&& menu_data.load_pvr_cover_thread == NULL
 			&& menu_data.optimize_game_cover_thread == NULL)
 		{
-			menu_data.cover_scanned_app.scan_count++;
 			timer_ms_gettime(&self.scan_covers_end_time, NULL);
 			if ((self.scan_covers_end_time - self.scan_covers_start_time) >= 5)
 			{
