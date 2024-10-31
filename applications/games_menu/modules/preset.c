@@ -276,6 +276,7 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case PATCHADDRESS1_CONTROL_ID:
 		{
+			memset(self.preset->patch_a[0], 0, 10);
 			strcpy(self.preset->patch_a[0], TSU_TextBoxGetText((TextBox *)drawable));
 
 			if (self.preset->patch_a[0][1] != '0' && strlen(self.preset->patch_a[0]) == 8)
@@ -291,9 +292,10 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case PATCHVALUE1_CONTROL_ID:
 		{
+			memset(self.preset->patch_v[0], 0, 10);
 			strcpy(self.preset->patch_v[0], TSU_TextBoxGetText((TextBox *)drawable));
 
-			if (strlen(self.preset->patch_v[0]))
+			if (self.preset->patch_v[0][0] != '\0' && strlen(self.preset->patch_v[0]) > 0)
 			{
 				self.preset->pv[0] = strtoul(self.preset->patch_v[0], NULL, 16);
 			} 
@@ -306,6 +308,7 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case PATCHADDRESS2_CONTROL_ID:
 		{
+			memset(self.preset->patch_a[1], 0, 10);
 			strcpy(self.preset->patch_a[1], TSU_TextBoxGetText((TextBox *)drawable));
 
 			if (self.preset->patch_a[1][1] != '0' && strlen(self.preset->patch_a[1]) == 8)
@@ -321,9 +324,10 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case PATCHVALUE2_CONTROL_ID:
 		{
+			memset(self.preset->patch_v[1], 0, 10);
 			strcpy(self.preset->patch_v[1], TSU_TextBoxGetText((TextBox *)drawable));
 
-			if (strlen(self.preset->patch_v[1]))
+			if (self.preset->patch_v[1][0] != '\0' && strlen(self.preset->patch_v[1]) > 0)
 			{
 				self.preset->pv[1] = strtoul(self.preset->patch_v[1], NULL, 16);
 			} 
