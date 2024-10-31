@@ -78,6 +78,7 @@ void CDDADestinationInputEvent(int type, int key);
 void CDDAPositionInputEvent(int type, int key);
 void CDDAChannelInputEvent(int type, int key);
 
+void SetPatchByType(TextBox *patch_textbox, int control_type, char *patch_text_variable_ptr, uint32 *patch_variable_ptr);
 void PatchAddress1InputEvent(int type, int key);
 void PatchValue1InputEvent(int type, int key);
 void PatchAddress2InputEvent(int type, int key);

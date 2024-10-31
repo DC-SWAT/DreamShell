@@ -1031,8 +1031,8 @@ static void RemoveAll()
 	TSU_DrawableSetFinished((Drawable *)self.title);
 	TSU_DrawableSetFinished((Drawable *)self.title_type);
 	TSU_DrawableSetFinished((Drawable *)self.title_back);	
-	TSU_DrawableSetFinished((Drawable *) self.img_cover_game);
-	TSU_DrawableSetFinished((Drawable *) self.img_cover_game_background);
+	TSU_DrawableSetFinished((Drawable *)self.img_cover_game);
+	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_background);
 	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_rectangle);
 
 	for (int i = 0; i < MAX_BUTTONS; i++)

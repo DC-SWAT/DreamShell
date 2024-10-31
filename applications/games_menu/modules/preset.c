@@ -22,6 +22,12 @@
 
 extern struct menu_structure menu_data;
 
+enum PatchEnum
+{
+	PATCH_ADDRESS_TYPE = 1,
+	PATCH_VALUE_TYPE = 2
+};
+
 enum ViewEnum
 {
 	GENERAL_VIEW = 0,
@@ -276,65 +282,21 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case PATCHADDRESS1_CONTROL_ID:
 		{
-			memset(self.preset->patch_a[0], 0, 10);
-			strcpy(self.preset->patch_a[0], TSU_TextBoxGetText((TextBox *)drawable));
-
-			if (self.preset->patch_a[0][1] != '0' && strlen(self.preset->patch_a[0]) == 8)
-			{
-				self.preset->pa[0] = strtoul(self.preset->patch_a[0], NULL, 16);
-			}
-			else
-			{
-				self.preset->pa[0] = 0;
-			}
 		}
 		break;
 
 		case PATCHVALUE1_CONTROL_ID:
 		{
-			memset(self.preset->patch_v[0], 0, 10);
-			strcpy(self.preset->patch_v[0], TSU_TextBoxGetText((TextBox *)drawable));
-
-			if (self.preset->patch_v[0][0] != '\0' && strlen(self.preset->patch_v[0]) > 0)
-			{
-				self.preset->pv[0] = strtoul(self.preset->patch_v[0], NULL, 16);
-			} 
-			else
-			{
-				self.preset->pv[0] = 0;
-			}
 		}
 		break;
 
 		case PATCHADDRESS2_CONTROL_ID:
 		{
-			memset(self.preset->patch_a[1], 0, 10);
-			strcpy(self.preset->patch_a[1], TSU_TextBoxGetText((TextBox *)drawable));
-
-			if (self.preset->patch_a[1][1] != '0' && strlen(self.preset->patch_a[1]) == 8)
-			{
-				self.preset->pa[1] = strtoul(self.preset->patch_a[1], NULL, 16);
-			} 
-			else
-			{
-				self.preset->pa[1] = 0;
-			}
 		}
 		break;
 
 		case PATCHVALUE2_CONTROL_ID:
 		{
-			memset(self.preset->patch_v[1], 0, 10);
-			strcpy(self.preset->patch_v[1], TSU_TextBoxGetText((TextBox *)drawable));
-
-			if (self.preset->patch_v[1][0] != '\0' && strlen(self.preset->patch_v[1]) > 0)
-			{
-				self.preset->pv[1] = strtoul(self.preset->patch_v[1], NULL, 16);
-			} 
-			else
-			{
-				self.preset->pv[1] = 0;
-			}
 		}
 		break;
 	} 
@@ -1189,22 +1151,72 @@ void CDDAChannelInputEvent(int type, int key)
 	TSU_OptionGroupInputEvent(self.cddachannel_option, type, key);
 }
 
+void SetPatchByType(TextBox *patch_textbox, int control_type, char *patch_text_variable_ptr, uint32 *patch_variable_ptr)
+{
+	char text[10];
+	memset(text, 0, sizeof(text));
+	strcpy(text, TSU_TextBoxGetText(patch_textbox));
+	uint32_t text_value = strtoul(text, NULL, 16);
+
+	if( (strlen(text) != 8) || (control_type == PATCH_ADDRESS_TYPE && (!(text_value & 0xffffff) 
+									|| (
+											(text_value >> 24 != 0x0c) 
+										&&  (text_value >> 24 != 0x8c) 
+										&&  (text_value >> 24 != 0xac)
+										)
+								))
+							|| (control_type == PATCH_VALUE_TYPE && !text_value)) 
+	{		
+		TSU_TextBoxSetText(patch_textbox, (control_type ==  PATCH_ADDRESS_TYPE ? "0c000000" : "00000000"));
+
+		memset(patch_text_variable_ptr, 0, 10);
+		strcpy(patch_text_variable_ptr, (control_type ==  PATCH_ADDRESS_TYPE ? "0c000000" : "00000000"));
+		*patch_variable_ptr = 0;
+	}
+	else
+	{
+		memset(patch_text_variable_ptr, 0, 10);
+		strcpy(patch_text_variable_ptr, text);
+		*patch_variable_ptr = strtoul(text, NULL, 16);
+	}
+}
+
 void PatchAddress1InputEvent(int type, int key)
 {
+	if (key == KeyCancel)
+	{
+		SetPatchByType(self.patchaddress1_option, PATCH_ADDRESS_TYPE, self.preset->patch_a[0], &self.preset->pa[0]);
+	}
+
 	TSU_TextBoxInputEvent(self.patchaddress1_option , type, key);
 }
 
 void PatchValue1InputEvent(int type, int key)
 {
+	if (key == KeyCancel)
+	{
+		SetPatchByType(self.patchvalue1_option, PATCH_VALUE_TYPE, self.preset->patch_v[0], &self.preset->pv[0]);
+	}
+
 	TSU_TextBoxInputEvent(self.patchvalue1_option, type, key);
 }
 
 void PatchAddress2InputEvent(int type, int key)
 {
+	if (key == KeyCancel)
+	{
+		SetPatchByType(self.patchaddress2_option, PATCH_ADDRESS_TYPE, self.preset->patch_a[1], &self.preset->pa[1]);
+	}
+
 	TSU_TextBoxInputEvent(self.patchaddress2_option, type, key);
 }
 
 void PatchValue2InputEvent(int type, int key)
 {
+	if (key == KeyCancel)
+	{
+		SetPatchByType(self.patchvalue2_option, PATCH_VALUE_TYPE, self.preset->patch_v[1], &self.preset->pv[1]);
+	}
+
 	TSU_TextBoxInputEvent(self.patchvalue2_option, type, key);
 }
