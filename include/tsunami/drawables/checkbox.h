@@ -27,10 +27,10 @@
 class CheckBox : public Drawable
 {
 private:
-	float m_z_index = 0;
-	float m_border_width = 2;
-	float m_padding_width = 32;
-	float m_padding_height = 6;
+	float m_z_index;
+	float m_border_width;
+	float m_padding_width;
+	float m_padding_height;
 	Font *m_display_font;
 
 	int m_option_selected;

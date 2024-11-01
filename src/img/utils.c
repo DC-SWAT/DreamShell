@@ -18,7 +18,7 @@ bool pvr_is_alpha(const char *filename)
 		return false;
 	}
 
-	size_t fsize = fs_total(pFile);
+	size_t fsize = 512;
 	uint8 *data = (uint8 *)memalign(32, fsize);	
 	if (data == NULL)
 	{

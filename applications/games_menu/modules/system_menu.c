@@ -152,8 +152,7 @@ void ScanMissingCoversClick(Drawable *drawable)
 		{
 			menu_data.stop_load_pvr_cover = false;
 			menu_data.load_pvr_cover_thread = thd_create(0, LoadPVRCoverThread, NULL);
-			ShowCoverScan();
-			menu_data.state_app = SA_SCAN_COVER;
+			ShowCoverScan();			
 		}
 	}
 	else
@@ -264,6 +263,8 @@ int StopOptimizeCovers()
 
 void ShowCoverScan()
 {
+	menu_data.state_app = SA_SCAN_COVER;
+
 	StopCDDA();
 	HideCoverScan();
 

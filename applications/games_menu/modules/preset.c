@@ -432,7 +432,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// LOADER
-		Label *loader_label = TSU_LabelCreate(form_font, "LOADER DEVICE:", 15, false, false);
+		Label *loader_label = TSU_LabelCreate(form_font, "LOADER FW:", 15, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)loader_label, true);
 		TSU_FormAddBodyLabel(form_ptr, loader_label, 3, 1);
 

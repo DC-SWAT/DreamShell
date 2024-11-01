@@ -6,6 +6,11 @@
 #include <string>
 
 CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height) {	
+	m_z_index = 0;
+	m_border_width = 2;
+	m_padding_width = 32;
+	m_padding_height = 6;
+
 	m_display_font = display_font;
 	m_width = width + m_padding_width + m_border_width;
 	m_height = height + m_padding_height + m_border_width;

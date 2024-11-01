@@ -1587,7 +1587,6 @@ void* OptimizeCoverThread(void *param)
 
 void* LoadPVRCoverThread(void *params)
 {
-	menu_data.state_app = SA_SCAN_COVER;
 	menu_data.cover_scanned_app.scan_count++;
 	
 	bool new_cover = false;
