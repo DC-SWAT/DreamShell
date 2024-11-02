@@ -20,11 +20,13 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	, PostPVRCoverCallBack *post_pvr_cover, PostOptimizerCoverCallBack *post_optimizer_cover)
 {
 	menu_data.games_array_count = 0;
+	menu_data.firmware_array_count = 0;
 	menu_data.play_cdda_thread = NULL;
 	menu_data.load_pvr_cover_thread = NULL;
 	menu_data.finished_menu = false;
 	menu_data.cdda_game_changed = false;
-	menu_data.stop_load_pvr_cover = false;		
+	menu_data.stop_load_pvr_cover = false;	
+	menu_data.firmware_array = NULL;
 
 	menu_data.send_message_scan = send_message_scan;
 	menu_data.send_message_optimizer = send_message_optimizer;
@@ -80,6 +82,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.convert_pvr_to_png = (menu_data.current_dev == APP_DEVICE_IDE);
 
 	LoadMenuConfig();
+	LoadFirmwareFiles();
 }
 
 void DestroyMenuData()
@@ -96,6 +99,12 @@ void DestroyMenuData()
 		menu_data.cdda_game_changed = true;
 		thd_join(menu_data.play_cdda_thread, NULL);
 		menu_data.play_cdda_thread = NULL;
+	}
+
+	if (menu_data.firmware_array != NULL)
+	{
+		free(menu_data.firmware_array);
+		menu_data.firmware_array_count = 0;
 	}
 
 	FreeGamesForce();
@@ -936,6 +945,79 @@ void FreeGamesForce()
 	}
 }
 
+static int AppCompareFirmwares(const void *a, const void *b)
+{
+	const FirmwareStruct *left = (const FirmwareStruct *)a;
+	const FirmwareStruct *right = (const FirmwareStruct *)b;
+
+	if (ContainsOnlyNumbers(left->file) && ContainsOnlyNumbers(right->file))
+	{
+		return left->file - right->file;
+	}
+	else if (ContainsOnlyNumbers(left->file))
+	{
+		return -1;
+	}
+
+	return strcmp(left->file, right->file);
+}
+
+bool LoadFirmwareFiles()
+{
+	char fw_dir[128];
+	memset(fw_dir, 0, sizeof(fw_dir));	
+	sprintf(fw_dir, "%s/firmware/isoldr", getenv("PATH"));
+
+	ds_printf("FIRMWARE:", fw_dir);
+
+	if (menu_data.firmware_array != NULL)
+	{
+		free(menu_data.firmware_array);
+		menu_data.firmware_array_count = 0;
+	}
+
+	file_t fd = fs_open(fw_dir, O_RDONLY | O_DIR);
+	if (fd == FILEHND_INVALID)
+		return false;
+
+	dirent_t *ent = NULL;
+	char *file_type = NULL;
+
+	while ((ent = fs_readdir(fd)) != NULL)
+	{
+		if (ent->name[0] == '.')
+			continue;
+		
+		file_type = strrchr(ent->name, '.');
+
+		if (strcasecmp(file_type, ".bin") == 0 && (strlen(ent->name) - 4) <= FIRMWARE_SIZE)
+		{	
+			menu_data.firmware_array_count++;
+
+			if (menu_data.firmware_array == NULL)
+			{
+				menu_data.firmware_array = (FirmwareStruct *)malloc(sizeof(FirmwareStruct));
+			}
+			else
+			{
+				menu_data.firmware_array = (FirmwareStruct *)realloc(menu_data.firmware_array, menu_data.firmware_array_count * sizeof(FirmwareStruct));
+			}
+			
+			memset(&menu_data.firmware_array[menu_data.firmware_array_count-1], 0, sizeof(FirmwareStruct));
+			memset(menu_data.firmware_array[menu_data.firmware_array_count-1].file, 0, FIRMWARE_SIZE+1);
+			strncpy(menu_data.firmware_array[menu_data.firmware_array_count-1].file, ent->name, strlen(ent->name) - 4);
+		}		
+	}	
+	fs_close(fd);
+
+	if (menu_data.firmware_array_count > 0)
+	{
+		qsort(menu_data.firmware_array, menu_data.firmware_array_count, sizeof(FirmwareStruct), AppCompareFirmwares);
+	}
+
+	return true;
+}
+
 PresetStruct* GetDefaultPresetGame(const char* full_path_game, SectorDataStruct *sector_data)
 {
 	PresetStruct *preset = NULL;
@@ -1216,7 +1298,7 @@ bool SavePresetGame(const char *full_path_game, PresetStruct *preset)
 		TrimSpaces(ipbin->title, title, sizeof(ipbin->title));
 		vmu_num = preset->emu_vmu;
 
-		char device[12];
+		char device[FIRMWARE_SIZE];
 		memset(device, 0, sizeof(device));
 
 		if (preset->device[0] == '\0' || preset->device[0] == ' ')

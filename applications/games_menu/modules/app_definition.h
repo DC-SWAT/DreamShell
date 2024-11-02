@@ -14,6 +14,7 @@
 #define MAX_BUTTONS 7
 #define MAX_SCAN_COUNT 2
 #define MAX_MENU 3
+#define FIRMWARE_SIZE 8
 
 #include <stdbool.h>
 
@@ -85,6 +86,11 @@ enum CheckCDDAGameEnum
 	CCGE_NOT_CDDA = 3
 };
 
+typedef struct FirmwareStructure
+{
+	char file[FIRMWARE_SIZE+1];
+} FirmwareStruct;
+
 typedef struct PresetStructure
 {
 	int use_dma;
@@ -107,7 +113,7 @@ typedef struct PresetStructure
 	uint32 pv[2];
 
 	char title[32];
-	char device[8];	
+	char device[FIRMWARE_SIZE+1];	
 	char memory[12];
 	char custom_memory[12];
 	char heap_memory[12];

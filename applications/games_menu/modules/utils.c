@@ -240,6 +240,19 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 	return path;
 }
 
+bool ContainsOnlyNumbers(const char *string)
+{
+	const int string_len = strlen(string);
+
+	for(int i = 0; i < string_len; ++i)
+	{
+		if(!isdigit((unsigned char)string[i])) 
+			return false;
+	}
+
+	return true;
+}
+
 int GetDeviceType(const char *dir)
 {
 	if (!strncasecmp(dir, "/cd", 3))

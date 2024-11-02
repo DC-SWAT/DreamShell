@@ -58,7 +58,7 @@ static struct
 	CheckBox *cdda_option;
 	CheckBox *irq_option;
 	OptionGroup *os_option;
-	TextBox *loader_option;
+	OptionGroup *loader_option;
 	OptionGroup *boot_option;
 	CheckBox *fast_option;
 	CheckBox *lowlevel_option;
@@ -196,17 +196,8 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case LOADER_CONTROL_ID:
 		{
-			strcpy(string_value, TSU_TextBoxGetText((TextBox *)drawable));
-			memset(self.preset->device, 0, sizeof(self.preset->device));
-
-			if (string_value[0] != '\0' && string_value[0] != ' ')
-			{
-				strcpy(self.preset->device, string_value);
-			}
-			else
-			{				
-				strcpy(self.preset->device, "auto");
-			}
+			memset(self.preset->device, 0, FIRMWARE_SIZE);
+			strcpy(self.preset->device, TSU_OptionGroupGetTextSelected((OptionGroup *)drawable));
 		}
 		break;
 
@@ -436,14 +427,24 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)loader_label, true);
 		TSU_FormAddBodyLabel(form_ptr, loader_label, 3, 1);
 
-		self.loader_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, true, 150, self.body_height_size, true, false, true, true);
+		self.loader_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 130, self.body_height_size);
 		TSU_DrawableSetId((Drawable *)self.loader_option, LOADER_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.loader_option, SA_CONTROL + LOADER_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
-		TSU_FormAddBodyTextBox(form_ptr, self.loader_option, 4, 1);
+		TSU_OptionGroupSetStates(self.loader_option, SA_CONTROL + LOADER_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupAdd(self.loader_option, 0, "auto");
+
+		for (int i = 0; i < menu_data.firmware_array_count; i++)
+		{
+			TSU_OptionGroupAdd(self.loader_option, i+1, menu_data.firmware_array[i].file);	
+		}
+
+		TSU_FormAddBodyOptionGroup(form_ptr, self.loader_option, 4, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.loader_option, &LoaderOptionClick);
 
-		TSU_TextBoxSetText(self.loader_option, self.preset->device);
+		if (self.preset->device[0] != '\0' || self.preset->device[0] == ' ')
+		{
+			TSU_OptionGroupSelectOptionByText(self.loader_option, self.preset->device);
+		}
 		
 		loader_label = NULL;
 	}
@@ -973,7 +974,7 @@ void OSOptionClick(Drawable *drawable)
 
 void LoaderOptionClick(Drawable *drawable)
 {
-	TSU_TextBoxSetFocus(self.loader_option, true);
+	TSU_OptionGroupSetFocus(self.loader_option, true);
 }
 
 void BootOptionClick(Drawable *drawable)
@@ -1084,21 +1085,7 @@ void OSInputEvent(int type, int key)
 
 void LoaderInputEvent(int type, int key)
 {
-	if (key == KeyCancel)
-	{
-		char text[20];
-		memset(text, 0, sizeof(text));
-		strcpy(text, TSU_TextBoxGetText(self.loader_option));
-		
-		if (text[0] == '\0' || text[0] == ' ')
-		{
-			memset(self.preset->device, 0, sizeof(self.preset->device));
-			strcpy(self.preset->device, "auto");
-			TSU_TextBoxSetText(self.loader_option, "auto");
-		}
-	}
-
-	TSU_TextBoxInputEvent(self.loader_option, type, key);
+	TSU_OptionGroupInputEvent(self.loader_option, type, key);
 }
 
 void BootInputEvent(int type, int key)

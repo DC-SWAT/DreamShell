@@ -35,6 +35,7 @@ struct menu_structure
 	int menu_type;
 	int games_array_count;
 	int covers_array_count;
+	int firmware_array_count;
 	int current_dev;	
 
 	char default_dir[20];
@@ -49,7 +50,8 @@ struct menu_structure
 	CoverScannedStruct cover_scanned_app;
 	MenuOptionStruct menu_option;
 	GameItemStruct *games_array;
-	CoverStruct *covers_array;	
+	CoverStruct *covers_array;
+	FirmwareStruct *firmware_array;
 
 	SendMessageCallBack *send_message_scan;
 	SendMessageCallBack *send_message_optimizer;
@@ -84,6 +86,7 @@ bool GetGameCoverPath(int game_index, char **game_cover_path, int menu_type);
 void SetMenuType(int menu_type);
 void FreeGames();
 void FreeGamesForce();
+bool LoadFirmwareFiles();
 void LoadDefaultMenuConfig();
 bool LoadMenuConfig();
 void PatchParseText(PresetStruct *preset);
