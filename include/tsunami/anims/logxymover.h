@@ -23,9 +23,10 @@ public:
 	virtual ~LogXYMover();
 
 	virtual void nextFrame(Drawable *t);
+   void setFactor(float factor);
 
 private:
-	float	m_dstx, m_dsty;
+	float	m_dstx, m_dsty, m_factor;
 };
 
 #else
@@ -41,6 +42,7 @@ extern "C"
 
 LogXYMover* TSU_LogXYMoverCreate(float dstx, float dsty);
 void TSU_LogXYMoverDestroy(LogXYMover **logxymover_ptr);
+void TSU_LogXYMoverSetFactor(LogXYMover *logxymover_ptr, float factor);
 
 #ifdef __cplusplus
 };

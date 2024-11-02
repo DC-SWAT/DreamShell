@@ -372,8 +372,19 @@ extern "C"
 
 	const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr)
 	{
-		if (item_menu_ptr != NULL) {      
-			return strdup(item_menu_ptr->GetLabel()->getText().c_str());
+		if (item_menu_ptr != NULL) {  
+			static char *text = NULL;
+			
+			if (text != NULL) {
+				free(text);
+				text = NULL;
+			}
+
+			text = (char *)malloc(item_menu_ptr->GetLabel()->getText().length() + 1);
+			memset(text, 0, item_menu_ptr->GetLabel()->getText().length() + 1);
+			strcpy(text, item_menu_ptr->GetLabel()->getText().c_str());
+
+			return text;
 		}
 		else {
 			return NULL;

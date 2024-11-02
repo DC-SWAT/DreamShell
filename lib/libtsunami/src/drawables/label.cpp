@@ -60,6 +60,10 @@ const std::string Label::getText() {
 	return m_text;
 }
 
+void Label::setCenter(bool centered) {
+	m_centered = centered;
+}
+
 void Label::setSmear(bool smear) {
 	m_smear = smear;
 }
@@ -102,10 +106,28 @@ extern "C"
 	const char* TSU_LabelGetText(Label *label_ptr)
 	{
 		if (label_ptr != NULL) {
-			return label_ptr->getText().c_str();
+			static char *text = NULL;
+			
+			if (text != NULL) {
+				free(text);
+				text = NULL;
+			}
+
+			text = (char *)malloc(label_ptr->getText().length() + 1);
+			memset(text, 0, label_ptr->getText().length() + 1);
+			strcpy(text, label_ptr->getText().c_str());
+
+			return text;
 		}
 		else {
 			return NULL;
+		}
+	}
+
+	void TSU_LabelSetCenter(Label *label_ptr, bool centered)
+	{
+		if (label_ptr != NULL) {
+			label_ptr->setCenter(centered);
 		}
 	}
 
@@ -127,6 +149,13 @@ extern "C"
 	{
 		if (label_ptr != NULL) {
 			label_ptr->setTint(*tint);
+		}
+	}
+
+	void TSU_LabelIsCentered(Label *label_ptr)
+	{
+		if (label_ptr != NULL) {
+			label_ptr->isCentered();
 		}
 	}
 }

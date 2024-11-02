@@ -14,6 +14,7 @@
 LogXYMover::LogXYMover(float dstx, float dsty) {
 	m_dstx = dstx;
 	m_dsty = dsty;
+	m_factor = 8.0f;
 }
 
 LogXYMover::~LogXYMover() { }
@@ -28,10 +29,15 @@ void LogXYMover::nextFrame(Drawable *t) {
 		float dx = m_dstx - pos.x;
 		float dy = m_dsty - pos.y;
 		t->setTranslate(Vector(
-			pos.x + dx/8.0f, pos.y + dy/8.0f, pos.z));
+			pos.x + dx/m_factor, pos.y + dy/m_factor, pos.z));
 	}
 }
 
+void LogXYMover::setFactor(float factor) {
+	if (factor > 0.0f) {
+		m_factor =  factor;
+	}
+}
 
 extern "C"
 {
@@ -45,6 +51,13 @@ extern "C"
 		if (*logxymover_ptr != NULL) {
 			delete *logxymover_ptr;
 			*logxymover_ptr = NULL;
+		}
+	}
+
+	void TSU_LogXYMoverSetFactor(LogXYMover *logxymover_ptr, float factor)
+	{
+		if (logxymover_ptr != NULL) {
+			logxymover_ptr->setFactor(factor);
 		}
 	}
 }

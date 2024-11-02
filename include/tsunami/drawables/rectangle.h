@@ -28,6 +28,7 @@ public:
 	virtual ~Rectangle();
 
 	void setSize(float w, float h);
+	void getSize(float *w, float *h);
 
 	virtual void draw(int list);
 

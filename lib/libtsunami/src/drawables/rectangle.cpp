@@ -29,6 +29,7 @@ Rectangle::Rectangle(int list, float x, float y, float width, float height, cons
 	this->zIndex = zIndex;
 	this->radius = radius;
 	this->borderWidth = borderWidth;
+	setReadOnly(true);
 
 	if (borderWidth > 0) {
 		this->borderColor = plx_pack_color(borderColor.a, borderColor.r, borderColor.g, borderColor.b);
@@ -47,6 +48,11 @@ Rectangle::~Rectangle() {
 void Rectangle::setSize(float w, float h) {
 	width = w;
 	height = h;
+}
+
+void Rectangle::getSize(float *w, float *h) {
+	*w = width;
+	*h = height;
 }
 
 
@@ -146,7 +152,7 @@ extern "C"
 				radius = 0;
 			}
 
-			Color border_color = {1, 0.0f, 0.0f, 0.0f};
+			Color border_color = {0, 0.0f, 0.0f, 0.0f};
 			return new Rectangle (list, x, y, width, height, *color, zIndex, 0, border_color, radius);
 		}
 		else {

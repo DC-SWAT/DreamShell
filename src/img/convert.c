@@ -1,16 +1,21 @@
 /* DreamShell ##version##
-   pvr.c
-   SWAT
+   convert.c
+   Copyright (C) 2024 Maniac Vera
 */
 
 #include "ds.h"
 #include "img/load.h"
 #include "img/convert.h"
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize2.h"
+#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
+	#define STB_IMAGE_WRITE_IMPLEMENTATION
+#endif
+#include "img/stb_image_write.h"
+
+#ifndef STB_IMAGE_RESIZE_IMPLEMENTATION
+	#define STB_IMAGE_RESIZE_IMPLEMENTATION
+#endif
+#include "img/stb_image_resize2.h"
 
 extern int stbi_write_png_compression_level;
 
@@ -22,7 +27,7 @@ unsigned char* resize_image(unsigned char *data, uint width, uint height, uint o
 		&& stbir_resize_uint8_linear(data, (int)width, (int)height, 0, resized_pixels
 								, (int)output_width, (int)output_height, 0, pixel_layout) == 0)
 	{
-		dbglog(DBG_INFO, "resize_image error, stbir_resize_uint8_linear\n");
+		dbglog(DBG_INFO, "resize_image error, stbir_resize_uint8_linear");
 
 		if (resized_pixels)
 		{
@@ -33,40 +38,47 @@ unsigned char* resize_image(unsigned char *data, uint width, uint height, uint o
 	}
 
 	return resized_pixels;
-} 
+}
 
-
-int pvr_to_jpg(const char *source_file, const char *dest_file, uint32 output_width, uint32 output_height, uint8 resolution)
+int pvr_to_jpg(const char *source_file, const char *dest_file, uint output_width, uint output_height, uint8 resolution)
 {
 	kos_img_t img;
 
 	if (pvr_to_img(source_file, &img) == -1)
 	{
-		dbglog(DBG_INFO, "pvr_to_jpg: Error loading PVR file\n");
+		dbglog(DBG_INFO, "pvr_to_jpg: Error loading PVR file");
 		return 0;
 	}
 
-	if (output_width > 0 && output_height > 0)
-	{
-		unsigned char *data_image = resize_image(img.data, img.h, img.h, output_width, output_height, STBIR_RGBA);
-		if (data_image == NULL)
-		{
-			return 0;
-		}
-
-		img.w = output_width;
-		img.h = output_height;
-		img.byte_count = output_width * output_height * 4;
-
-		free(img.data);
-		img.data = data_image;
-		data_image = NULL;
-	}
-
-	if (stbi_write_jpg(dest_file, img.w, img.h, 4, img.data, resolution) == 0)
+	if (img_to_jpg(&img, dest_file, output_width, output_height, resolution) == 0)
 	{
 		kos_img_free(&img, 0);
-		dbglog(DBG_INFO, "pvr_to_jpg: Error saving PNG file\n");
+		return 0;
+	}
+
+	kos_img_free(&img, 0);	
+	return 1;
+}
+
+int pvr_to_png(const char *source_file, const char *dest_file, uint output_width, uint output_height, uint8 level_compression)
+{
+	kos_img_t img;
+
+	stbi_write_png_compression_level = 0;
+	if (level_compression > 0)
+	{
+		stbi_write_png_compression_level = (int)level_compression;
+	}
+
+	if (pvr_to_img(source_file, &img) == -1)
+	{
+		dbglog(DBG_INFO, "pvr_to_png: Error loading PVR file");
+		return 0;
+	}
+
+	if (img_to_png(&img, dest_file, output_width, output_height) == 0)
+	{
+		kos_img_free(&img, 0);
 		return 0;
 	}
 
@@ -74,50 +86,72 @@ int pvr_to_jpg(const char *source_file, const char *dest_file, uint32 output_wid
 	return 1;
 }
 
-int pvr_to_png(const char *source_file, const char *dest_file, uint32 output_width, uint32 output_height, uint8 resolution)
+int img_to_png(kos_img_t *img, const char *dest_file, uint output_width, uint output_height)
 {
-	kos_img_t img;
-
-	if (resolution > 0)
-	{
-		stbi_write_png_compression_level = (int)resolution;
+	unsigned char *data_image = NULL;
+	if (output_width > 0 && output_height > 0)
+	{	
+		data_image = resize_image(img->data, img->w, img->h, output_width, output_height, STBIR_4CHANNEL);
+		if (data_image == NULL)
+		{
+			dbglog(DBG_INFO, "img_to_png: Error resize");
+			return 0;
+		}
 	}
 	else
 	{
-		stbi_write_png_compression_level = 8;
+		output_width = img->w;
+		output_height = img->h;
 	}
 
-	if (pvr_to_img(source_file, &img) == -1)
+	if (stbi_write_png(dest_file, output_width, output_height, 4, data_image != NULL ? data_image : img->data, output_height * 4) == 0)
 	{
-		dbglog(DBG_INFO, "pvr_to_png: Error loading PVR file\n");
+		free(data_image);
+		dbglog(DBG_INFO, "img_to_png: Error saving PNG file");
 		return 0;
 	}
-
-	if (output_width > 0 && output_height > 0)
+	
+	if (data_image != NULL)
 	{
-		unsigned char *data_image = resize_image(img.data, img.h, img.h, output_width, output_height, STBIR_4CHANNEL); //STBIR_RGBA);
+		free(data_image);
+	}
+
+	return 1;
+}
+
+int img_to_jpg(kos_img_t *img, const char *dest_file, uint output_width, uint output_height, uint8 resolution)
+{
+	unsigned char *data_image = NULL;
+	if (output_width > 0 && output_height > 0)
+	{	
+		data_image = resize_image(img->data, img->w, img->h, output_width, output_height, STBIR_RGBA);
 		if (data_image == NULL)
 		{
+			dbglog(DBG_INFO, "img_to_jpg: Error resize");
 			return 0;
 		}
-
-		img.w = output_width;
-		img.h = output_height;
-		img.byte_count = output_width * output_height * 4;
-
-		free(img.data);
-		img.data = data_image;
-		data_image = NULL;
+	}
+	else
+	{
+		output_width = img->w;
+		output_height = img->h;
 	}
 
-	if (stbi_write_png(dest_file, img.h, img.h, 4, img.data, img.h * 4) == 0)
+	if (stbi_write_jpg(dest_file, output_width, output_height, 4, data_image != NULL ? data_image : img->data, resolution) == 0)
 	{
-		kos_img_free(&img, 0);
-		dbglog(DBG_INFO, "pvr_to_png: Error saving PNG file\n");
+		if (data_image != NULL)
+		{
+			free(data_image);
+		}
+
+		dbglog(DBG_INFO, "img_to_jpg: Error saving JPG file");
 		return 0;
 	}
-
-	kos_img_free(&img, 0);
+	
+	if (data_image != NULL)
+	{
+		free(data_image);
+	}
 
 	return 1;
 }
