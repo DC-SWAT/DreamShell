@@ -196,7 +196,7 @@ export KOS_CFLAGS="${KOS_CFLAGS} -fno-builtin"
 # NOTE: Altering this setting also requires your toolchain to have been built
 #       with support for these modes, which is not the case by default!
 #
-export KOS_SH4_PRECISION="-m4-single-only"
+export KOS_SH4_PRECISION="-m4-single"
 
 # Use LRA (Local Register Allocator) Pass
 #
