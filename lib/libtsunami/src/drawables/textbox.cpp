@@ -8,6 +8,7 @@
 TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width, float height, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
 		bool enable_chars_type_number, bool enable_chars_type_symbol) {
 
+	setObjectType(ObjectTypeEnum::TEXTBOX_TYPE);
 	m_display_font = display_font;
 	m_width = width + m_padding_width + m_border_width + 2;
 	m_height = height + m_padding_height + m_border_width;
@@ -197,7 +198,7 @@ void TextBox::setTextCursor() {
 
 	font_y = control_position.y - m_border_width/2;
 
-	Color background_color = {0.8f, 0.90f, 0.90f, 0.90f};
+	Color background_color = {0.4f, 0.90f, 0.90f, 0.90f};
 	Color border_color = {1.0f, 1.0f, 1.0f, 1.0f};
 	float border_width = 1.0f;
 	int z_index = position.z;

@@ -54,6 +54,7 @@ extern "C"
 #endif
 
 ChainAnimation* TSU_ChainAnimationCreate(Animation *animation_ptr, Drawable *target_ptr);
+void TSU_ChainAnimationDestroy(ChainAnimation **chainanimation_ptr);
 
 #ifdef __cplusplus
 };

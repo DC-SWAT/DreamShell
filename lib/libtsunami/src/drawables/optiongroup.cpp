@@ -5,7 +5,9 @@
 #include <cstring>
 #include <string>
 
-OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float height) {	
+OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float height) {
+	setObjectType(ObjectTypeEnum::OPTIONGROUP_TYPE);
+
 	m_display_font = display_font;
 	m_width = width + m_padding_width + border_width;
 	m_height = height + m_padding_height + border_width;
@@ -67,23 +69,33 @@ OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float 
 		display_label_control.z = z_index + 1;
 		m_display_label->setTranslate(display_label_control);
 
-		Color triangle_color = {1.0f, 0.22f, 0.06f, 0.25f};
+		Color triangle_color = {1.0f, 0.22f, 0.06f, 0.25f};	
 
 		m_left_triangle = new Triangle(PVR_LIST_OP_POLY, 
-				left_rectangle_vector.x - 6.5, left_rectangle_vector.y - (height/2 + border_width*2),
-				left_rectangle_vector.x + 3.5, left_rectangle_vector.y - (border_width*2),
-				left_rectangle_vector.x + 3.5, left_rectangle_vector.y - (height + border_width*2),
+				10, 0,
+				0, (height/2),
+				10, (height),
 				triangle_color, z_index + 2, 0, triangle_color, 0);
 
-		m_left_rectangle->subAdd(m_left_triangle);
+		this->subAdd(m_left_triangle);
+
+		Vector left_triangle_vector = m_left_triangle->getPosition();
+		left_triangle_vector.x -= 5;
+		left_triangle_vector.y -= (height/2 + border_width/2);
+		m_left_triangle->setTranslate(left_triangle_vector);
 
 		m_right_triangle = new Triangle(PVR_LIST_OP_POLY, 
-				 5.5, right_rectangle_vector.y - (height/2 + border_width*2),
-				- 4.5, right_rectangle_vector.y - (border_width*2),
-				- 4.5, right_rectangle_vector.y - (height + border_width*2),
+				0, 0,
+				10, (height/2),
+				0, (height),
 				triangle_color, z_index + 2, 0, triangle_color, 0);
 
-		m_right_rectangle->subAdd(m_right_triangle);
+		Vector right_triangle_vector = m_right_triangle->getPosition();
+		right_triangle_vector.x += m_width - (3 + border_width + 10);
+		right_triangle_vector.y -= (height/2 + border_width/2);
+		m_right_triangle->setTranslate(right_triangle_vector);
+
+		this->subAdd(m_right_triangle);
 	}
 }
 
@@ -103,13 +115,13 @@ OptionGroup::~OptionGroup() {
 	}
 
 	if (m_left_triangle != nullptr) {
-		m_left_rectangle->subRemove(m_left_triangle);
+		this->subRemove(m_left_triangle);
 		delete m_left_triangle;
 		m_left_triangle = nullptr;
 	}
 
 	if (m_right_triangle != nullptr) {
-		m_right_rectangle->subRemove(m_right_triangle);
+		this->subRemove(m_right_triangle);
 		delete m_right_triangle;
 		m_right_triangle = nullptr;
 	}

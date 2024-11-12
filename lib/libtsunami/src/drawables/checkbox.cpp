@@ -6,6 +6,7 @@
 #include <string>
 
 CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height) {	
+	setObjectType(ObjectTypeEnum::CHECKBOX_TYPE);
 	m_z_index = 0;
 	m_border_width = 2;
 	m_padding_width = 32;

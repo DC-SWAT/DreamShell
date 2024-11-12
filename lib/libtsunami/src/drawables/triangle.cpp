@@ -10,6 +10,7 @@
 #include "drawables/triangle.h"
 
 Triangle::Triangle(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0) {
+	setObjectType(ObjectTypeEnum::TRIANGLE_TYPE);
 	m_list = list;
 
 	if (zIndex < 0) {

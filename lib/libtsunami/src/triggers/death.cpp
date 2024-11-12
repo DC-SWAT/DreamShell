@@ -41,4 +41,12 @@ extern "C"
 			return new Death(nullptr);
 		}
 	}
+
+	void TSU_DeathDestroy(Death **death_ptr)
+	{
+		if (*death_ptr != NULL) {
+			delete *death_ptr;
+			*death_ptr = NULL;
+		}
+	}
 }

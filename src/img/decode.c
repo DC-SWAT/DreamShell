@@ -6,10 +6,6 @@
 #include "ds.h"
 #include "img/decode.h"
 #include "img/SegaPVRImage.h"
-
-#ifndef STB_IMAGE_IMPLEMENTATION
-	#define STB_IMAGE_IMPLEMENTATION
-#endif
 #include "img/stb_image.h"
 
 static bool bPVRTwiddleTableDec = false;
@@ -29,6 +25,8 @@ int pvr_decode(const char *filename, kos_img_t *kimg)
 	if (fsize <= 0)
 	{
 		dbglog(DBG_INFO, "pvr_decode: empty file");
+		fs_close(pFile);
+		return -1;
 	}
 
 	uint8 *data = (uint8 *)memalign(32, fsize);

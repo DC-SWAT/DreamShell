@@ -11,6 +11,7 @@
 
 Box::Box(int list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius = 0) {
 	m_list = list;
+	setObjectType(ObjectTypeEnum::BOX_TYPE);
 
 	if (zIndex < 0) {
 		zIndex = 0;

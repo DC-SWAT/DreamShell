@@ -25,8 +25,8 @@ enum MenuLayerEnum
 	ML_BACKGROUND = 1,
 	ML_ITEM = 10,
 	ML_SELECTED = 20,
-	ML_CURSOR = 30,
-	ML_POPUP = 100
+	ML_CURSOR = ML_ITEM + ML_SELECTED + 20,
+	ML_POPUP = 160
 };
 
 enum ImageTypeEnum

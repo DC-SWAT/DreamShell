@@ -1263,6 +1263,7 @@ TSU_FormHide
 TSU_FormGetState
 TSU_FormEnable
 TSU_FormIsEnable
+TSU_FormSetCursor
 TSU_OptionGroupCreate
 TSU_OptionGroupDestroy
 TSU_OptionGroupSetStates
@@ -1325,7 +1326,7 @@ TSU_ItemMenuGetLabelText
 TSU_ItemMenuSetItemIndex
 TSU_ItemMenuGetItemIndex
 TSU_ItemMenuSetImage
-TSU_ItemMenuDestroy
+TSU_ItemMenuSetTint
 TSU_LogXYMoverCreate
 TSU_LogXYMoverSetFactor
 TSU_LogXYMoverDestroy
@@ -1370,6 +1371,7 @@ TSU_BannerCreate
 TSU_BannerDestroy
 TSU_BannerDestroyAll
 TSU_BannerSetTexture
+TSU_BannerGetTexture
 TSU_BannerSetTextureType
 TSU_BannerSetUV
 TSU_BannerSetSize
@@ -1377,6 +1379,7 @@ TSU_LabelCreate
 TSU_LabelDestroy
 TSU_LabelSetText
 TSU_LabelSetFont
+TSU_LabelGetFont
 TSU_LabelGetText
 TSU_LabelSetSmear
 TSU_LabelSetTranslate
@@ -1393,10 +1396,12 @@ TSU_TriangleCreate
 TSU_TriangleCreateWithBorder
 TSU_TriangleDestroy
 TSU_BirthCreate
+TSU_BirthDestroy
 TSU_DeathCreate
+TSU_DeathDestroy
 TSU_ChainAnimationCreate
+TSU_ChainAnimationDestroy
 TSU_DrawableEventSetClick
-TSU_DrawableAnimAdd
 TSU_DrawableAnimAdd
 TSU_DrawableAnimRemove
 TSU_DrawableAnimRemoveAll

@@ -64,6 +64,7 @@ GenericMenu::GenericMenu() {
 GenericMenu::~GenericMenu() {
 	if (m_scene) {
 		delete m_scene;
+		m_scene = nullptr;
 	}
 }
 

@@ -49,30 +49,30 @@ plx_texture_t * plx_txr_load(const char * fn, int use_alpha, int txrload_flags) 
 			dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
 			return NULL;
 		}
-	} else if (!strcasecmp(fn + fnlen - 3, "jpg")) {
-		/* Load the texture (or try) */
-		if (jpeg_to_img(fn, 1, &img) < 0) {
-			dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
+		} else if (!strcasecmp(fn + fnlen - 3, "jpg")) {
+			/* Load the texture (or try) */
+			if (jpeg_to_img(fn, 1, &img) < 0) {
+				dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
+				return NULL;
+			}
+		} else if (!strcasecmp(fn + fnlen - 3, "kmg")) {
+			/* Load the texture (or try) */
+			if (kmg_to_img(fn, &img) < 0) {
+				dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
+				return NULL;
+			}
+			use_alpha = -1;
+		} else if (!strcasecmp(fn + fnlen - 3, "pvr")) {
+			/* Load the texture (or try) */
+			if (pvr_to_img(fn, &img) < 0) {
+				dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
+				return NULL;
+			}
+			use_alpha = -2;
+		} else {
+			dbglog(DBG_WARNING, "plx_txr_load: unknown extension for file '%s'\n", fn);
 			return NULL;
 		}
-	} else if (!strcasecmp(fn + fnlen - 3, "kmg")) {
-		/* Load the texture (or try) */
-		if (kmg_to_img(fn, &img) < 0) {
-			dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
-			return NULL;
-		}
-		use_alpha = -1;
-	} else if (!strcasecmp(fn + fnlen - 3, "pvr")) {
-		/* Load the texture (or try) */
-		if (pvr_to_img(fn, &img) < 0) {
-			dbglog(DBG_WARNING, "plx_txr_load: can't load texture from file '%s'\n", fn);
-			return NULL;
-		}
-		use_alpha = -2;
-	} else {
-		dbglog(DBG_WARNING, "plx_txr_load: unknown extension for file '%s'\n", fn);
-		return NULL;
-	}
 
 	/* We got it -- allocate a texture struct */
 	txr = malloc(sizeof(plx_texture_t));

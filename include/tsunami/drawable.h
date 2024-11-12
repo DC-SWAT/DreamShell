@@ -18,6 +18,23 @@
 
 typedef void (*ClickEventFunctionPtr)(Drawable *drawable);
 
+enum ObjectTypeEnum
+{
+	DRAWABLE_TYPE = 1,
+	SCENE_TYPE,
+	FORM_TYPE,
+	BANNER_TYPE,
+	LABEL_TYPE,
+	ITEMMENU_TYPE,
+	OPTIONGROUP_TYPE,
+	TEXTBOX_TYPE,
+	COMBOBOX_TYPE,
+	CHECKBOX_TYPE,
+	RECTANGLE_TYPE,
+	BOX_TYPE,
+	TRIANGLE_TYPE
+};
+
 #ifdef __cplusplus
 
 #include <deque>
@@ -134,6 +151,8 @@ public:
 	virtual void click();
 	void setClickEvent(ClickEventFunctionPtr click_function);
 
+	uint getObjectType();
+
 protected:
 	/// Setup a transform matrix, taking into account the
 	/// parent relative rotation and scaling parameters. Pushes the old
@@ -142,6 +161,8 @@ protected:
 
 	/// Pops the old matrix off the stack.
 	void popTransformMatrix() const;
+
+	void setObjectType(uint type);
 
 	float		m_width, m_height;
 
@@ -160,6 +181,7 @@ private:
 	bool		m_subs_finished;	///< Cached resultes if all sub-drawables are finished
 	bool		m_readonly;
 	int			m_id;
+	uint		m_object_type;
 
 	Drawable	* m_parent;		///< Our parent object
 

@@ -5,6 +5,7 @@
 Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bool visible_title, bool visible_bottom, Font *title_font,
 	ViewIndexChangedEventPtr view_index_changed_event)  {
 
+	setObjectType(ObjectTypeEnum::FORM_TYPE);
 	setFinished();
 
 	m_cursor_animation_enable = false;
@@ -172,8 +173,20 @@ void Form::freeObject(ObjectStruct *object_ptr) {
 				delete ((Rectangle *)object_ptr->object);
 				break;
 
+			case ITEMMENU_TYPE:
+				delete ((ItemMenu *)object_ptr->object);
+				break;
+
 			case BANNER_TYPE:
 				delete ((Banner *)object_ptr->object);
+				break;
+
+			case BOX_TYPE:
+				delete ((Box *)object_ptr->object);
+				break;
+
+			case TRIANGLE_TYPE:
+				delete ((Triangle *)object_ptr->object);
 				break;
 		
 			default:
@@ -863,6 +876,8 @@ void Form::setCursor(Drawable *drawable) {
 		float drawable_width = 0, drawable_height = 0;
 		drawable->getSize(&drawable_width, &drawable_height);
 
+		Vector drawable_position = drawable->getPosition();
+
 		if (drawable_width > 0 && drawable_height > 0) {
 			column_width = drawable_width + border_width + 2;
 			row_height = drawable_height + border_width + 2;
@@ -876,13 +891,24 @@ void Form::setCursor(Drawable *drawable) {
 			subAdd(m_cursor);
 		}
 
-		Vector current_init_position = getPositionXY(m_current_column, m_current_row);
-
 		Vector body_position = m_body_rectangle->getTranslate();
 		m_selector_translate.z = body_position.z + ML_CURSOR;
 		m_selector_translate.w = column_width;
-		m_selector_translate.x = current_init_position.x + border_width + cursor_padding_left;
-		m_selector_translate.y = current_init_position.y + (row_height/2) - border_width;
+		m_selector_translate.x = drawable_position.x;
+		m_selector_translate.y = drawable_position.y + (row_height/2) - border_width;
+
+		dbglog(DBG_INFO, "object type: %d", drawable->getObjectType());
+		if (drawable->getObjectType() == ObjectTypeEnum::ITEMMENU_TYPE || drawable->getObjectType() == ObjectTypeEnum::BANNER_TYPE) {
+			m_selector_translate.y += drawable_height/2;
+		}
+		else if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE && 1 != 1) { // DISABLED
+			Label *label = (Label *)drawable;
+			float tw, th;
+			label->getFont()->getTextSize(label->getText(), &tw, &th);
+			m_selector_translate.y -= th/2;
+			m_selector_translate.w = tw + border_width + 2;
+			label = nullptr;
+		}		
 
 		if (m_cursor_animation_enable) {
 			m_cursor_animation = new LogXYMover(m_selector_translate.x, m_selector_translate.y);
@@ -1479,6 +1505,14 @@ extern "C"
 		if (form_ptr != NULL)
 		{
 			form_ptr->isEnable();
+		}
+	}
+
+	void TSU_FormSetCursor(Form *form_ptr, Drawable *drawable_ptr)
+	{
+		if (form_ptr != NULL && drawable_ptr != NULL)
+		{
+			form_ptr->setCursor(drawable_ptr);
 		}
 	}
 	

@@ -17,6 +17,7 @@
 
 // Constructor / Destructor
 Drawable::Drawable() {
+	m_object_type = ObjectTypeEnum::DRAWABLE_TYPE;
 	m_id = -1;
 	m_trans.zero();
 	m_rotate.zero();
@@ -159,6 +160,15 @@ Color Drawable::getColor() const {
 
 	return tint;
 }
+
+uint Drawable::getObjectType() {
+	return m_object_type;
+}
+
+void Drawable::setObjectType(uint type) {
+	m_object_type = type;
+}
+
 
 void Drawable::pushTransformMatrix() const {
 	const Vector & pos = getTranslate();

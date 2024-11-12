@@ -17,6 +17,8 @@
 #include "../animation.h"
 #include "../anims/logxymover.h"
 #include "rectangle.h"
+#include "box.h"
+#include "triangle.h"
 #include "scene.h"
 #include "label.h"
 #include "banner.h"
@@ -48,21 +50,6 @@ typedef struct AttributeStructure
 	uint span;
 	int view_index;
 } AttributeStruct;
-
-enum ObjectTypeEnum
-{
-	DRAWABLE_TYPE = 1,
-	SCENE_TYPE,
-	FORM_TYPE,
-	BANNER_TYPE,
-	LABEL_TYPE,
-	ITEMMENU_TYPE,
-	OPTIONGROUP_TYPE,
-	TEXTBOX_TYPE,
-	COMBOBOX_TYPE,
-	CHECKBOX_TYPE,
-	RECTANGLE_TYPE
-};
 
 enum SearchDirectionEnum
 {
@@ -247,6 +234,7 @@ extern "C"
 	uint TSU_FormGetState(Form *form_ptr);			  // SHOW|HIDEN, ENABLE|DISABLE
 	void TSU_FormEnable(Form *form_ptr, bool enable); // ANOTHER VERSION
 	void TSU_FormIsEnable(Form *form_ptr);
+	void TSU_FormSetCursor(Form *form_ptr, Drawable *drawable_ptr);
 
 #ifdef __cplusplus
 };

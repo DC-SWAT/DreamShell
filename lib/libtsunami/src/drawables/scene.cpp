@@ -1,6 +1,7 @@
 #include "drawables/scene.h"
 
 Scene::Scene() {
+	setObjectType(ObjectTypeEnum::SCENE_TYPE);
 	// Scene is always finished itself, because it doesn't draw
 	// anything. This will make it check its sub-drawables for
 	// finishedness before acquiescing.
