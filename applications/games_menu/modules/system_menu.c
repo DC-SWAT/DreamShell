@@ -19,6 +19,7 @@ extern struct menu_structure menu_data;
 
 static struct
 {
+	bool first_scan_cover;
 	DSApp *dsapp_ptr;
 	Scene *scene_ptr;
 	Form *system_menu_form;
@@ -29,6 +30,9 @@ static struct
 	Label *note_cover_scan;
 	Label *message_cover_scan;
 	Rectangle *modal_cover_scan;
+
+	CheckBox *save_preset_option;
+	CheckBox *cover_background_option;
 
 	Font *message_font;
 	Font *menu_font;
@@ -41,6 +45,7 @@ void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font 
 	self.message_font = message_font;
 	self.menu_font = menu_font;
 	self.system_menu_form = NULL;
+	self.first_scan_cover = false;
 }
 
 void DestroySystemMenu()
@@ -82,51 +87,89 @@ void ShowSystemMenu()
 
 		Font *form_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
-		self.system_menu_form = TSU_FormCreate(640 / 2 - 150, 480 / 2 + 180 / 2 - 40, 300, 190, true, 3, true, false, form_font, NULL);
-		TSU_FormtSetAttributes(self.system_menu_form, 1, 4, 296, 38);
-
-		Label *missing_covers_label = TSU_LabelCreate(form_font, "Scan missing covers", 18, true, false);
-		Label *optimize_covers_label = TSU_LabelCreate(form_font, "Optimize covers", 18, true, false);
-		Label *exit_covers_label = TSU_LabelCreate(form_font, "Return", 18, true, false);
-
+		uint width = 300;
+		uint height = 330;
+		self.system_menu_form = TSU_FormCreate(640 / 2 - 150, 480 / 2 + (height - 10) / 2, width, height, true, 3, true, false, form_font, NULL);
+		TSU_FormtSetAttributes(self.system_menu_form, 1, 8, 296, 38);
 		TSU_FormSelectedEvent(self.system_menu_form, &SystemMenuSelectedEvent);
-
-		TSU_DrawableEventSetClick((Drawable *)missing_covers_label, &ScanMissingCoversClick);
-		TSU_DrawableEventSetClick((Drawable *)optimize_covers_label, &OptimizeCoversClick);
-		TSU_DrawableEventSetClick((Drawable *)exit_covers_label, &ExitSystemMenuClick);
-
-		TSU_FormSetRowSize(self.system_menu_form, 3, 40);
+		TSU_FormSetRowSize(self.system_menu_form, 4, 30);
+		TSU_FormSetRowSize(self.system_menu_form, 6, 30);
+		TSU_FormSetRowSize(self.system_menu_form, 7, 20);
 		TSU_FormSetTitle(self.system_menu_form, "SYSTEM MENU");
-
-		TSU_FormAddBodyLabel(self.system_menu_form, missing_covers_label, 1, 1);
-		TSU_FormAddBodyLabel(self.system_menu_form, optimize_covers_label, 1, 2);
-		TSU_FormAddBodyLabel(self.system_menu_form, exit_covers_label, 1, 3);
 
 		// THE ALIGN SHOULD BE IN FORM CLASS
 		{
-			Vector label_vector = TSU_DrawableGetPosition((Drawable *)missing_covers_label);
-			label_vector.x += 300/2 - 5;
-			TSU_DrawableSetTranslate((Drawable *)missing_covers_label, &label_vector);
+			// SCAN MISSING COVERS
+			Label *missing_covers_label = TSU_LabelCreate(form_font, "\t\t\tScan missing covers", 18, false, false);
+			TSU_FormAddBodyLabel(self.system_menu_form, missing_covers_label, 1, 1);
+			TSU_DrawableEventSetClick((Drawable *)missing_covers_label, &ScanMissingCoversClick);
+			missing_covers_label = NULL;
 		}
 
 		{
-			Vector label_vector = TSU_DrawableGetPosition((Drawable *)optimize_covers_label);
-			label_vector.x += 300/2 - 5;
-			TSU_DrawableSetTranslate((Drawable *)optimize_covers_label, &label_vector);
+			// OPTIMIZE COVERS
+			Label *optimize_covers_label = TSU_LabelCreate(form_font, "\t\t\t\t\t\tOptimize covers", 18, false, false);
+			TSU_FormAddBodyLabel(self.system_menu_form, optimize_covers_label, 1, 2);
+			TSU_DrawableEventSetClick((Drawable *)optimize_covers_label, &OptimizeCoversClick);
+			optimize_covers_label = NULL;
+		}		
+
+		{
+			// DEFAULT SAVE PRESET
+			Label *save_preset_label = TSU_LabelCreate(form_font, "Default save preset:", 18, false, false);
+			TSU_DrawableSetReadOnly((Drawable*)save_preset_label, true);
+			TSU_FormAddBodyLabel(self.system_menu_form, save_preset_label, 1, 3);
+
+			self.save_preset_option = TSU_CheckBoxCreate(form_font, 18, 50, 22);
+			TSU_FormAddBodyCheckBox(self.system_menu_form, self.save_preset_option, 1, 4);
+
+			Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.save_preset_option);
+			option_vector.y -= 5;
+			TSU_DrawableSetTranslate((Drawable *)self.save_preset_option, &option_vector);
+
+			TSU_DrawableEventSetClick((Drawable *)self.save_preset_option, &DefaultSavePresetOptionClick);
+
+			if (menu_data.app_config.save_preset)
+			{
+				TSU_CheckBoxSetOn(self.save_preset_option);
+			}
+
+			save_preset_label = NULL;
 		}
 
 		{
-			Vector label_vector = TSU_DrawableGetPosition((Drawable *)exit_covers_label);
-			label_vector.x += 300/2 - 5;
-			TSU_DrawableSetTranslate((Drawable *)exit_covers_label, &label_vector);
+			// COVER BACKGROUND
+			Label *cover_background_label = TSU_LabelCreate(form_font, "Cover background:", 18, false, false);
+			TSU_DrawableSetReadOnly((Drawable*)cover_background_label, true);
+			TSU_FormAddBodyLabel(self.system_menu_form, cover_background_label, 1, 5);
+
+			self.cover_background_option = TSU_CheckBoxCreate(form_font, 18, 50, 22);
+			TSU_FormAddBodyCheckBox(self.system_menu_form, self.cover_background_option, 1, 6);
+
+			Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.cover_background_option);
+			option_vector.y -= 5;
+			TSU_DrawableSetTranslate((Drawable *)self.cover_background_option, &option_vector);
+
+			TSU_DrawableEventSetClick((Drawable *)self.cover_background_option, &CoverBackgroundOptionClick);
+
+			if (menu_data.app_config.cover_background)
+			{
+				TSU_CheckBoxSetOn(self.cover_background_option);
+			}
+
+			cover_background_label = NULL;
+		}
+
+		{
+			// EXIT TO MAIN MENU
+			Label *exit_covers_label = TSU_LabelCreate(form_font, "\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tReturn", 18, true, false);
+			TSU_FormAddBodyLabel(self.system_menu_form, exit_covers_label, 1, 8);
+			TSU_DrawableEventSetClick((Drawable *)exit_covers_label, &ExitSystemMenuClick);
+			exit_covers_label = NULL;
 		}
 
 		TSU_DrawableSubAdd((Drawable *)self.scene_ptr, (Drawable *)self.system_menu_form);
-
 		form_font = NULL;
-		missing_covers_label = NULL;
-		optimize_covers_label = NULL;
-		exit_covers_label = NULL;
 	}
 }
 
@@ -151,6 +194,13 @@ void ScanMissingCoversClick(Drawable *drawable)
 		if (menu_data.load_pvr_cover_thread == NULL && menu_data.optimize_game_cover_thread == NULL)
 		{
 			menu_data.stop_load_pvr_cover = false;
+
+			if (!self.first_scan_cover)
+			{
+				menu_data.rescan_covers = true;
+			}
+
+			self.first_scan_cover = true;
 			menu_data.load_pvr_cover_thread = thd_create(0, LoadPVRCoverThread, NULL);
 			ShowCoverScan();			
 		}
@@ -181,9 +231,27 @@ void OptimizeCoversClick(Drawable *drawable)
 	}
 }
 
+void DefaultSavePresetOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.save_preset_option, 0, KeySelect);
+	menu_data.save_preset = (TSU_CheckBoxGetValue(self.save_preset_option) ? 1 : 0);
+}
+
+void CoverBackgroundOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.cover_background_option, 0, KeySelect);
+	menu_data.cover_background = (TSU_CheckBoxGetValue(self.cover_background_option) ? 1 : 0);
+}
+
 void ExitSystemMenuClick(Drawable *drawable)
 {
 	HideSystemMenu();
+
+	int menu_type = menu_data.menu_type;
+	menu_data.menu_type = menu_data.app_config.initial_view;
+	SaveMenuConfig();
+	menu_data.menu_type = menu_type;
+
 	menu_data.state_app = SA_GAMES_MENU;
 }
 

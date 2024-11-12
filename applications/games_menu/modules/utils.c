@@ -9,6 +9,7 @@
 #include "ds.h"
 #include <kos/md5.h>
 #include <isoldr.h>
+#include <img/copy.h>
 #include "app_utils.h"
 #include "audio/wav.h"
 
@@ -318,7 +319,187 @@ void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data)
 	}
 }
 
-char *MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5)
+bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full_path_game, bool show_name, const char* game_cover_path, int width, int height, bool yflip)
+{
+	FILE *fd;
+	char save_file[NAME_MAX];
+	char cmd[NAME_MAX * 2];
+	int i;
+
+	StopCDDATrack();
+
+	if (show_name)
+	{
+		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", device_dir, preset->shortcut_name);
+	}
+	else
+	{
+		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/_%s.dsc", device_dir, preset->shortcut_name);		
+	}
+
+	fd = fopen(save_file, "w");
+
+	if(!fd)
+	{
+		ds_printf("DS_ERROR: Can't save shortcut\n");
+		return false;
+	}
+
+	fprintf(fd, "module -o -f %s/modules/minilzo.klf\n", device_dir);
+	fprintf(fd, "module -o -f %s/modules/isofs.klf\n", device_dir);
+	fprintf(fd, "module -o -f %s/modules/isoldr.klf\n", device_dir);
+
+	strcpy(cmd, "isoldr");
+	strcat(cmd, preset->fastboot ? " -s" : " -i" );
+
+	if (preset->use_dma)
+	{
+		strcat(cmd, " -a");
+	}
+
+	if (preset->alt_read)
+	{
+		strcat(cmd, " -y");
+	}
+
+	if (preset->use_irq)
+	{
+		strcat(cmd, " -q");
+	}
+
+	if (preset->low)
+	{
+		strcat(cmd, " -l");
+	}
+
+	if (preset->emu_async)
+	{
+		char async[8];
+		snprintf(async, sizeof(async), " -e %d", preset->emu_async);
+		strcat(cmd, async);
+	}
+
+	if(strncmp(preset->device, "auto", 4) != 0)
+	{
+		strcat(cmd, " -d ");
+		strcat(cmd, preset->device);
+	}
+
+	const char *memory_tmp;
+
+	if(strlen(preset->memory) < 8)
+	{		
+		char text[24];
+		memset(text, 0, sizeof(text));
+		strncpy(text, preset->memory, 10);
+		memory_tmp = strncat(text, preset->custom_memory, 10);
+
+		strcat(cmd, " -x ");
+		strcat(cmd, memory_tmp);
+	}
+	else 
+	{
+		strcat(cmd, " -x ");
+		strcat(cmd, preset->memory);
+	}
+
+	char game[NAME_MAX];
+	memset(game, 0, NAME_MAX);
+	strcpy(game, full_path_game);
+
+	strcat(cmd, " -f ");
+	strcat(cmd, FixSpaces(game));
+
+	char boot_mode[8];
+	sprintf(boot_mode, "%d", preset->boot_mode);
+	strcat(cmd, " -j ");
+	strcat(cmd, boot_mode);
+
+	char os[8];
+	sprintf(os, "%d", preset->bin_type);
+	strcat(cmd, " -o ");
+	strcat(cmd, os);
+
+	char patchstr[24];
+	for(i = 0; i < 2 ; ++i)
+	{
+		if(preset->pa[i] & 0xffffff) {
+			sprintf(patchstr," --pa%d 0x%s", i + 1, preset->patch_a[i]);
+			strcat(cmd, patchstr);
+			sprintf(patchstr," --pv%d 0x%s", i + 1, preset->patch_v[i]);
+			strcat(cmd, patchstr);
+		}
+	}
+
+	if (preset->emu_cdda)
+	{
+		char cdda_mode[12];
+		sprintf(cdda_mode, "0x%08lx", preset->emu_cdda);
+		strcat(cmd, " -g ");
+		strcat(cmd, cdda_mode);
+	}
+
+	if (preset->heap <= HEAP_MODE_MAPLE)
+	{
+		char mode[24];
+		sprintf(mode, " -h %d", i);
+		strcat(cmd, mode);
+	} 
+	else 
+	{
+		char *addr = preset->heap_memory;
+		strcat(cmd, " -h ");
+		strcat(cmd, addr);
+	}
+
+	if (preset->vmu_mode > 0)
+	{
+		char number[12];
+		sprintf(number, " -v %d", atoi(preset->vmu_file));
+		strcat(cmd, number);
+	}
+
+	if (preset->screenshot)
+	{
+		char hotkey[24];
+		sprintf(hotkey, " -k 0x%lx", (uint32)SCREENSHOT_HOTKEY);
+		strcat(cmd, hotkey);
+	}
+
+	if(preset->alt_boot)
+	{
+		char boot_file[24];
+		sprintf(boot_file, " -b %s", ALT_BOOT_FILE);
+		strcat(cmd, boot_file);
+	}
+
+	fprintf(fd, "%s\n", cmd);
+	fprintf(fd, "console --show\n");
+	fclose(fd);
+
+	if (show_name)
+	{
+		snprintf(save_file, NAME_MAX, "%s/apps/main/images/%s.png", device_dir, preset->shortcut_name);
+	}
+	else
+	{
+		snprintf(save_file, NAME_MAX, "%s/apps/main/images/_%s.png", device_dir, preset->shortcut_name);
+	}
+
+	if(FileExists(save_file))
+	{
+		fs_unlink(save_file);
+	}
+
+	if (game_cover_path != NULL)
+	{
+		copy_image(game_cover_path, save_file, strcasecmp(strrchr(game_cover_path, '.'), ".png") == 0 ? true : false, true, 256, 256, width, height, yflip);
+	}
+
+	return true;
+}
+
+char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5)
 {
 	char dev[8];
 	static char filename[NAME_MAX];
@@ -343,6 +524,22 @@ char *MakePresetFilename(const char *default_dir, const char *device_dir, uint8 
 			md5[11], md5[12], md5[13], md5[14], md5[15]);
 
 	return filename;
+}
+
+const char *GetFolderPathFromFile(const char *full_path_file)
+{
+	static char path[NAME_MAX];
+
+	char *filename = (char *)malloc(NAME_MAX);
+	memset(filename, 0, NAME_MAX);
+	strcpy(filename, GetLastPart(full_path_file, '/', 0));
+	
+	memset(path, 0, NAME_MAX);
+
+	strncpy(path, full_path_file, strlen(full_path_file) - (strlen(filename) + 1));
+	free(filename);
+
+	return path;
 }
 
 size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result)
