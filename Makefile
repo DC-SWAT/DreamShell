@@ -18,7 +18,7 @@ TARGET_BIN_CD = 1$(TARGET_BIN)
 TRAGET_VERSION = -DVER_MAJOR=4 \
 				-DVER_MINOR=0 \
 				-DVER_MICRO=1 \
-				-DVER_BUILD=0x12
+				-DVER_BUILD=0x13
 # TARGET_DEBUG = 1 # or 2 for GDB
 # TARGET_EMU = 1
 # TARGET_PROF = 1
@@ -36,7 +36,9 @@ LIB_DIR = $(DS_BASE)/lib
 KOS_LDFLAGS += -L$(LIB_DIR)
 KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/img -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
 			-I$(INC_DIR)/tsunami \
-			-DHAVE_SDLIMAGE $(TRAGET_VERSION)	
+			-DHAVE_SDLIMAGE $(TRAGET_VERSION)
+
+KOS_CPPFLAGS += -Wno-template-id-cdtor
 
 ifdef TARGET_DEBUG
 KOS_CFLAGS += -g -DDS_DEBUG=$(TARGET_DEBUG)
@@ -313,7 +315,7 @@ lxdgdb: $(TARGET).cdi
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"
 
 flycast: $(TARGET).cdi
-	Flycast -config config:Debug.SerialConsoleEnabled=yes
+	Flycast -config config:Debug.SerialConsoleEnabled=yes ./$(TARGET).cdi
 
 gprof:
 	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/kernel_gmon.out > gprof.out
