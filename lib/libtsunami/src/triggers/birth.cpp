@@ -42,4 +42,12 @@ extern "C"
 			return NULL;
 		}
 	}
+
+	void TSU_BirthDestroy(Birth **birth_ptr)
+	{
+		if (*birth_ptr != NULL) {
+			delete *birth_ptr;
+			*birth_ptr = NULL;
+		}
+	}
 }

@@ -12,6 +12,80 @@
 #include "tsunamiutils.h"
 #include <cstring>
 
+ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags)
+{
+	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
+    Init();
+
+    Vector translateVector = Vector(padding_x, padding_y, 2);
+
+	m_width = width;
+	m_height = height;
+    
+    image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY, yflip, flags);
+    image = new Banner(pvr_type, image_texture);
+    image->setSize(width, height);        
+    image->setTranslate(translateVector);
+    this->subAdd(image);	
+}
+
+ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
+{
+	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
+    Init();
+    
+    Vector translateVector = Vector(padding_x, padding_y, 2);
+
+    if (font != nullptr) {
+        this->font = font;
+    }
+
+	float w, h;
+	font->getTextSize(text, &w, &h);
+	m_width = w;
+	m_height = h;
+
+    this->text = new Label(font, text, font_size, false, false);       
+    this->text->setTranslate(translateVector);
+    this->subAdd(this->text);
+}
+
+ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size, bool yflip, uint flags)
+{
+	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
+    Init();
+
+    Vector translateVector = Vector(padding_x, padding_y, 2);
+
+    image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY, yflip, flags);
+    image = new Banner(pvr_type, image_texture);
+    image->setSize(width, height);
+    image->setTranslate(translateVector);
+    this->subAdd(image);
+    
+    if (font != nullptr) {
+        this->font = font;
+    }
+
+    translateVector.x += width/2 + 6.f;
+    this->text = new Label(font, text, font_size, false, false);
+
+	float w, h;
+	font->getTextSize(text, &w, &h);
+
+	m_width = width + w - padding_x;
+	m_height = height + padding_y/2;
+	
+	translateVector.y +=  (h/2 - padding_y/2);
+    this->text->setTranslate(translateVector);
+    this->subAdd(this->text);
+}
+
+ItemMenu::~ItemMenu()
+{
+    FreeItem();
+}
+
 void ItemMenu::setTint(Color text_color, Color image_color)
 {
     if (text != nullptr) {
@@ -61,66 +135,6 @@ void ItemMenu::Init()
     image_texture = nullptr;
 }
 
-ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags)
-{
-    Init();
-
-    Vector translateVector = Vector(padding_x, padding_y, 2);
-    
-    image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY, yflip, flags);
-    image = new Banner(pvr_type, image_texture);
-    image->setSize(width, height);        
-    image->setTranslate(translateVector);
-    this->subAdd(image);
-}
-
-ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
-{
-    Init();
-    
-    Vector translateVector = Vector(padding_x, padding_y, 2);
-
-    if (font != nullptr) {
-        this->font = font;
-    }
-
-    this->text = new Label(font, text, font_size, false, false);       
-    this->text->setTranslate(translateVector);
-    this->subAdd(this->text);
-}
-
-ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size, bool yflip, uint flags)
-{
-    Init();
-
-    Vector translateVector = Vector(padding_x, padding_y, 2);
-
-    image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY, yflip, flags);
-    image = new Banner(pvr_type, image_texture);
-    image->setSize(width, height);
-    image->setTranslate(translateVector);
-    this->subAdd(image);
-    
-    if (font != nullptr) {
-        this->font = font;
-    }
-
-    translateVector.x += width/2 + 6.f;
-    this->text = new Label(font, text, font_size, false, false);
-
-	float w, h;
-	font->getTextSize(text, &w, &h);
-	
-	translateVector.y +=  (h/2 - padding_y/2);
-    this->text->setTranslate(translateVector);
-    this->subAdd(this->text);
-}
-
-ItemMenu::~ItemMenu()
-{
-    FreeItem();
-}
-
 void ItemMenu::draw(int list)
 {
     Drawable::draw(list);
@@ -155,14 +169,15 @@ void ItemMenu::SetSelected(bool selected, bool smear)
 {
     this->selected = selected;
     
-    Vector translate = Drawable::getTranslate();    
+	static float z_translate = Drawable::getTranslate().z;
+    Vector translate = Drawable::getTranslate();
     if (selected) {
-        translate.z = MenuLayerEnum::ML_SELECTED;
+        translate.z = z_translate + MenuLayerEnum::ML_SELECTED;
         this->setTint(text_color_selected, image_color_selected);
         text->setSmear(smear);
     }
     else {
-        translate.z = MenuLayerEnum::ML_ITEM;
+        translate.z = z_translate + MenuLayerEnum::ML_ITEM;
         this->setTint(color_unselected, color_unselected);
         text->setSmear(false);
     }
@@ -398,4 +413,10 @@ extern "C"
 		}
 	}
 
+	void TSU_ItemMenuSetTint(ItemMenu *item_menu_ptr, Color text_color, Color image_color)
+	{
+		if (item_menu_ptr != NULL) {
+			item_menu_ptr->setTint(text_color, image_color);
+		}
+	}
 }

@@ -11,6 +11,7 @@
 #include "drawables/banner.h"
 
 Banner::Banner(int list, Texture *texture) {
+	setObjectType(ObjectTypeEnum::BANNER_TYPE);
 	m_list = list;
 	m_texture = texture;
 
@@ -155,6 +156,16 @@ extern "C"
 	{
 		if (banner_ptr != NULL && texture_ptr != NULL) {
 			banner_ptr->setTexture(texture_ptr);
+		}
+	}
+
+	Texture* TSU_BannerGetTexture(Banner *banner_ptr)
+	{
+		if (banner_ptr != NULL) {
+			return banner_ptr->getTexture();
+		}
+		else {
+			return NULL;
 		}
 	}
 

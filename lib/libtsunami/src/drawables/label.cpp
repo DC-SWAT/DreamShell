@@ -15,6 +15,8 @@
 
 Label::Label(Font *fh, const std::string &text,
 	     int size, bool centered, bool smear) {
+	
+	setObjectType(ObjectTypeEnum::LABEL_TYPE);
 	m_fh = fh;
 	m_text = text;
 	m_size = size;
@@ -31,6 +33,10 @@ void Label::setText(const std::string &text) {
 
 void Label::setFont(Font *f) {
 	m_fh = f;
+}
+
+Font* Label::getFont() {
+	return m_fh;
 }
 
 void Label::draw(int list) {
@@ -102,6 +108,16 @@ extern "C"
 			label_ptr->setFont(font_ptr);
 		}
 	}
+
+	Font* TSU_LabelGetFont(Label *label_ptr)
+	{
+		if (label_ptr != NULL) {
+			return label_ptr->getFont();
+		}
+		else {
+			return NULL;
+		}
+	}	
 
 	const char* TSU_LabelGetText(Label *label_ptr)
 	{

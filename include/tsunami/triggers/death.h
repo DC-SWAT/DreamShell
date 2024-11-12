@@ -41,6 +41,7 @@ extern "C"
 #endif
 
 Death* TSU_DeathCreate(Drawable *target_ptr);
+void TSU_DeathDestroy(Death **death_ptr);
 
 #ifdef __cplusplus
 };

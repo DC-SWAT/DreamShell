@@ -10,6 +10,7 @@
 #include "drawables/rectangle.h"
 
 Rectangle::Rectangle(int list, float x, float y, float width, float height, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0) {
+	setObjectType(ObjectTypeEnum::RECTANGLE_TYPE);
 	m_list = list;
 
 	if (zIndex < 0) {

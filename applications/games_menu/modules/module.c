@@ -73,13 +73,15 @@ static struct
 	int menu_cursel;
 	int scan_count;	
 	uint8 device_selected;
+
+	int game_index_selected;
 	char item_value_selected[NAME_MAX];
 
 	LogXYMover *item_selector_animation;
 	Rectangle *item_selector;
 	Font *menu_font;
 	Font *message_font;
-	Trigger *exit_trigger_list[MAX_SIZE_ITEMS];
+	Death *exit_trigger_list[MAX_SIZE_ITEMS];
 	LogXYMover *run_animation;
 	ExpXYMover *exit_animation_list[MAX_SIZE_ITEMS];
 	LogXYMover *item_game_animation[MAX_SIZE_ITEMS];
@@ -91,7 +93,6 @@ static struct
 	FadeOut *fadeout_cover_animation;
 	Texture *texture_cover_game_background;
 	Texture *texture_cover_game;
-	Texture *texture_info;
 	Label *title, *title_back;
 	Label *title_type;
 	LogXYMover *title_animation;
@@ -656,7 +657,7 @@ static void CreateViewTextPlane()
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.game_list_rectangle);
 	}
 
-	if (self.img_cover_game_background == NULL)
+	if (self.img_cover_game_background == NULL && menu_data.cover_background)
 	{
 		char *game_cover_path = (char *)malloc(NAME_MAX);
 		snprintf(game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/cover.png");
@@ -975,6 +976,7 @@ static void InitMenu()
 	self.title = NULL;
 	self.title_type = NULL;
 	self.title_back = NULL;
+	self.game_index_selected = -1;
 
 	Vector vector = {0, 0, 10, 1};
 	TSU_AppSetTranslate(self.dsapp_ptr, &vector);
@@ -999,7 +1001,7 @@ static void DoMenuEndVideoHandler(void *ds_event, void *param, int action)
 	switch(action) {
 		case EVENT_ACTION_RENDER:
 			{
-				if (TSU_AppEnd(self.dsapp_ptr))
+				if (!menu_data.finished_menu && TSU_AppEnd(self.dsapp_ptr))
 				{
 					menu_data.finished_menu = true;
 				}
@@ -1034,7 +1036,7 @@ static void RemoveAll()
 	TSU_DrawableSetFinished((Drawable *)self.img_cover_game);
 	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_background);
 	TSU_DrawableSetFinished((Drawable *)self.img_cover_game_rectangle);
-
+	
 	for (int i = 0; i < MAX_BUTTONS; i++)
 	{
 		if (self.item_button[i] != NULL)
@@ -1053,16 +1055,17 @@ static void RemoveAll()
 
 	SystemMenuRemoveAll();
 	TSU_DrawableSubRemoveFinished((Drawable *)self.scene_ptr);
+	thd_pass();
 }
 
 static void StartExit()
 {
-	thd_pass();
 	StopCDDA();
 	StopShowCover();
 	RemoveAll();
 
 	float y = 1.0f;
+	self.game_index_selected = -1;
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
@@ -1070,7 +1073,8 @@ static void StartExit()
 		{
 			if (!self.exit_app && TSU_ItemMenuIsSelected(self.item_game[i]))
 			{
-				strcpy(self.item_value_selected, GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.item_game[i])));
+				self.game_index_selected = TSU_ItemMenuGetItemIndex(self.item_game[i]);
+				strcpy(self.item_value_selected, GetFullGamePathByIndex(self.game_index_selected));
 				self.device_selected = menu_data.games_array[TSU_ItemMenuGetItemIndex(self.item_game[i])].device;
 
 				if (menu_data.menu_type == MT_PLANE_TEXT)
@@ -1096,16 +1100,16 @@ static void StartExit()
 					self.run_animation = TSU_LogXYMoverCreate((640 - 84) / 2, (480 - 84) / 2);
 				}
 
-				self.exit_trigger_list[i] = (Trigger *)TSU_DeathCreate(NULL);
-				TSU_TriggerAdd((Animation *)self.run_animation, self.exit_trigger_list[i]);
+				self.exit_trigger_list[i] = TSU_DeathCreate(NULL);
+				TSU_TriggerAdd((Animation *)self.run_animation, (Trigger *)self.exit_trigger_list[i]);
 				TSU_DrawableAnimAdd((Drawable *)self.item_game[i], (Animation *)self.run_animation);
 			}
 			else
 			{				
-				self.exit_animation_list[i] = TSU_ExpXYMoverCreate(0, y + .10, 0, 400);
-				self.exit_trigger_list[i] = (Trigger *)TSU_DeathCreate(NULL);
+				self.exit_animation_list[i] = TSU_ExpXYMoverCreate(0, y + .10, 0, 500);
+				self.exit_trigger_list[i] = TSU_DeathCreate(NULL);
 
-				TSU_TriggerAdd((Animation *)self.exit_animation_list[i], self.exit_trigger_list[i]);
+				TSU_TriggerAdd((Animation *)self.exit_animation_list[i], (Trigger *)self.exit_trigger_list[i]);
 				TSU_DrawableAnimAdd((Drawable *)self.item_game[i], (Animation *)self.exit_animation_list[i]);
 			}
 		}
@@ -1260,7 +1264,7 @@ static void GamesApp_ControlInputEvent(int type, int key, int state_app)
 			break;
 		}
 
-		case SA_CONTROL + CUSTOMMEMORY_CONTROL_ID: //CUSTOM MEMORY
+		case SA_CONTROL + CUSTOM_MEMORY_CONTROL_ID: //CUSTOM MEMORY
 		{
 			CustomMemoryInputEvent(type, key);
 			break;
@@ -1272,51 +1276,99 @@ static void GamesApp_ControlInputEvent(int type, int key, int state_app)
 			break;
 		}	
 
-		case SA_CONTROL + CDDASOURCE_CONTROL_ID: //CDDA SOURCE
+		case SA_CONTROL + CDDA_SOURCE_CONTROL_ID: //CDDA SOURCE
 		{
 			CDDASourceInputEvent(type, key);
 			break;
 		}	
 
-		case SA_CONTROL + CDDADESTINATION_CONTROL_ID: //CDDA DESTINATION
+		case SA_CONTROL + CDDA_DESTINATION_CONTROL_ID: //CDDA DESTINATION
 		{
 			CDDADestinationInputEvent(type, key);
 			break;
 		}	
 
-		case SA_CONTROL + CDDADPOSITION_CONTROL_ID: //CDDA POSITION
+		case SA_CONTROL + CDDA_POSITION_CONTROL_ID: //CDDA POSITION
 		{
 			CDDAPositionInputEvent(type, key);
 			break;
 		}	
 
-		case SA_CONTROL + CDDADCHANNEL_CONTROL_ID: //CDDA CHANNEL
+		case SA_CONTROL + CDDA_CHANNEL_CONTROL_ID: //CDDA CHANNEL
 		{
 			CDDAChannelInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + PATCHADDRESS1_CONTROL_ID: //PATCH ADDRESS 1
+		case SA_CONTROL + PATCH_ADDRESS1_CONTROL_ID: //PATCH ADDRESS 1
 		{
 			PatchAddress1InputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + PATCHVALUE1_CONTROL_ID: //PATCH VALUE 1
+		case SA_CONTROL + PATCH_VALUE1_CONTROL_ID: //PATCH VALUE 1
 		{
 			PatchValue1InputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + PATCHADDRESS2_CONTROL_ID: //PATCH ADDRESS 2
+		case SA_CONTROL + PATCH_ADDRESS2_CONTROL_ID: //PATCH ADDRESS 2
 		{
 			PatchAddress2InputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + PATCHVALUE2_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + PATCH_VALUE2_CONTROL_ID: //PATCH VALUE 2
 		{
 			PatchValue2InputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + ALTERBOOT_CONTROL_ID: //PATCH VALUE 2
+		{
+			AlterBootInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + SCREENSHOT_CONTROL_ID: //PATCH VALUE 2
+		{
+			ScreenshotInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + VMU_CONTROL_ID: //PATCH VALUE 2
+		{
+			VMUInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + VMUSELECTOR_CONTROL_ID: //PATCH VALUE 2
+		{
+			VMUSelectorInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + SHORTCUT_SIZE_CONTROL_ID: //PATCH VALUE 2
+		{
+			ShortcutSizeInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + SHORTCUT_ROTATE_CONTROL_ID: //PATCH VALUE 2
+		{
+			ShortcutRotateInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + SHORTCUT_NAME_CONTROL_ID: //PATCH VALUE 2
+		{
+			ShortcutNameInputEvent(type, key);
+			break;
+		}
+
+		case SA_CONTROL + SHORTCUT_DONTSHOWNAME_CONTROL_ID: //PATCH VALUE 2
+		{
+			ShortcutDontShowNameInputEvent(type, key);
 			break;
 		}
 		
@@ -1349,8 +1401,8 @@ static void GamesApp_InputEvent(int type, int key)
 		case KeyMiscY:
 		{
 			menu_data.state_app = SA_PRESET_MENU;
-			ShowPresetMenu(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel])));
-			skip_cursor = true;			
+			ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
+			skip_cursor = true;
 		}
 		break;
 
@@ -1599,217 +1651,40 @@ static void GamesApp_InputEvent(int type, int key)
 	mutex_unlock(&change_page_mutex);
 }
 
-static void DefaultPreset()
-{
-	if (CanUseTrueAsyncDMA(self.sector_size, menu_data.current_dev, self.image_type))
-	{
-		self.isoldr->use_dma = 1;
-		self.isoldr->emu_async = 0;
-		self.addr = ISOLDR_DEFAULT_ADDR_MIN_GINSU;
-	}
-	else
-	{
-		self.isoldr->use_dma = 0;
-		self.isoldr->emu_async = 8;
-		self.addr = ISOLDR_DEFAULT_ADDR_LOW;
-	}
-
-	self.isoldr->alt_read = 0;
-	strcpy(self.isoldr->fs_dev, "auto");
-	self.isoldr->emu_cdda = CDDA_MODE_DISABLED;
-	self.isoldr->use_irq = 0;
-	self.isoldr->syscalls = 0;
-	self.isoldr->emu_vmu = 0;
-	self.isoldr->scr_hotkey = 0;
-	self.isoldr->boot_mode = BOOT_MODE_DIRECT;
-
-	// Enable CDDA if present
-	if (self.item_value_selected[0] != '\0')
-	{
-		char *track_file_path = NULL;
-		size_t track_size = GetCDDATrackFilename(4, self.item_value_selected, &track_file_path);
-
-		if (track_size && track_size < 30 * 1024 * 1024)
-		{
-			track_size = GetCDDATrackFilename(6, self.item_value_selected, &track_file_path);
-		}
-
-		if (track_size > 0)
-		{
-			self.isoldr->use_irq = 1;
-			self.isoldr->emu_cdda = 1;
-		}
-
-		if (track_file_path)
-		{
-			free(track_file_path);
-		}
-	}
-}
-
-static void GetMD5Hash(const char *file_mount_point)
-{
-	file_t fd;
-	fd = fs_iso_first_file(file_mount_point);
-
-	if (fd != FILEHND_INVALID)
-	{
-		if (fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, (int)self.boot_sector) < 0)
-		{
-			memset(self.md5, 0, sizeof(self.md5));
-			memset(self.boot_sector, 0, sizeof(self.boot_sector));
-		}
-		else
-		{
-			kos_md5(self.boot_sector, sizeof(self.boot_sector), self.md5);
-		}
-
-		// Also get image type and sector size
-		if (fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int)&self.image_type) < 0)
-		{
-			ds_printf("%s: Can't get image type\n", lib_get_name());
-		}
-
-		if (fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, (int)&self.sector_size) < 0)
-		{
-			ds_printf("%s: Can't get sector size\n", lib_get_name());
-		}
-
-		fs_close(fd);
-	}
-}
-
 static int LoadPreset()
 {
-	char *preset_file_name = NULL;
-	if (fs_iso_mount("/iso_game", self.item_value_selected) == 0)
+	if (menu_data.preset == NULL || menu_data.preset->game_index != self.game_index_selected)
 	{
-		GetMD5Hash("/iso_game");
-		fs_iso_unmount("/iso_game");
-
-		if (GetDeviceType(self.item_value_selected) == APP_DEVICE_SD)
+		if (menu_data.preset != NULL)
 		{
-			preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_SD), GetDefaultDir(APP_DEVICE_SD), self.md5);
-			if (!FileExists(preset_file_name) && menu_data.ide)
-			{
-				preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_SD), self.md5);
-			}
-		}
-		else if (GetDeviceType(self.item_value_selected) == APP_DEVICE_IDE)
-		{
-			preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_IDE), self.md5);			
-		}
-		else
-		{
-			preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), self.md5);
+			free(menu_data.preset);
 		}
 
-		ds_printf("PresetFileName: %s", preset_file_name);
-		if (FileSize(preset_file_name) < 5)
-		{
-			preset_file_name = NULL;
-		}
+		menu_data.preset = LoadPresetGame(self.game_index_selected);
 	}
 
-	bool default_preset_loaded = false;
-	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0;
-	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
-	int boot_mode = BOOT_MODE_DIRECT;
-	int bin_type = BIN_TYPE_AUTO;
-	char title[32] = "";
-	char device[8] = "";
-	char cdda[12] = "";
-	char memory[12] = "0x8c000100";
-	char heap_memory[12] = "";
-	char bin_file[12] = "";
-	char patch_a[2][10];
-	char patch_v[2][10];
-	memset(patch_a, 0, 2 * 10);
-	memset(patch_v, 0, 2 * 10);
-
-	isoldr_conf options[] = {
-		{"dma", CONF_INT, (void *)&use_dma},
-		{"altread", CONF_INT, (void *)&alt_read},
-		{"cdda", CONF_STR, (void *)cdda},
-		{"irq", CONF_INT, (void *)&use_irq},
-		{"low", CONF_INT, (void *)&low},
-		{"vmu", CONF_INT, (void *)&emu_vmu},
-		{"scrhotkey", CONF_INT, (void *)&scr_hotkey},
-		{"heap", CONF_STR, (void *)&heap_memory},
-		{"memory", CONF_STR, (void *)memory},
-		{"async", CONF_INT, (void *)&emu_async},
-		{"mode", CONF_INT, (void *)&boot_mode},
-		{"type", CONF_INT, (void *)&bin_type},
-		{"file", CONF_STR, (void *)bin_file},
-		{"title", CONF_STR, (void *)title},
-		{"device", CONF_STR, (void *)device},
-		{"fastboot", CONF_INT, (void *)&fastboot},
-		{"pa1", CONF_STR, (void *)patch_a[0]},
-		{"pv1", CONF_STR, (void *)patch_v[0]},
-		{"pa2", CONF_STR, (void *)patch_a[1]},
-		{"pv2", CONF_STR, (void *)patch_v[1]},
-		{NULL, CONF_END, NULL}};
-
-	if ((self.isoldr = isoldr_get_info(self.item_value_selected, 0)) == NULL)	
+	if ((self.isoldr = ParsePresetToIsoldr(self.game_index_selected, menu_data.preset)) == NULL)
 	{
 		return 0;
 	}
-	
-	if (preset_file_name == NULL || ConfigParse(options, preset_file_name) == -1)
+
+	char memory[12];
+	memset(memory, 0, sizeof(memory));
+
+	if (strcasecmp(menu_data.preset->memory, "0x8c") == 0)
 	{
-		ds_printf("DS_ERROR: Can't parse preset\n");
-		DefaultPreset();
-		default_preset_loaded = true;
+		snprintf(memory, sizeof(memory), "%s%s", menu_data.preset->memory, menu_data.preset->custom_memory);
+	}
+	else
+	{
+		strcpy(memory, menu_data.preset->memory);
 	}
 
-	if (!default_preset_loaded)
+	self.addr = strtoul(memory, NULL, 16);
+
+	if (menu_data.preset->emu_vmu)
 	{
-		self.isoldr->use_dma = use_dma;
-		self.isoldr->alt_read = alt_read;
-		self.isoldr->emu_async = emu_async;
-		self.isoldr->emu_cdda = strtoul(cdda, NULL, 16);
-		self.isoldr->use_irq = use_irq;
-		self.isoldr->scr_hotkey = scr_hotkey;
-
-		if (strtoul(heap_memory, NULL, 10) <= HEAP_MODE_MAPLE)
-		{
-			self.isoldr->heap = strtoul(heap_memory, NULL, 10);
-		}
-		else
-		{
-			self.isoldr->heap = strtoul(heap_memory, NULL, 16);
-		}
-
-		self.isoldr->boot_mode = boot_mode;
-		self.isoldr->fast_boot = fastboot;
-
-		if (strlen(device) > 0)
-		{
-			if (strncmp(device, "auto", 4) != 0)
-			{
-				strcpy(self.isoldr->fs_dev, device);
-			}
-			else
-			{
-				strcpy(self.isoldr->fs_dev, "auto");
-			}
-		}
-		else
-		{
-			strcpy(self.isoldr->fs_dev, "auto");
-		}
-
-		if (bin_type != BIN_TYPE_AUTO)
-		{
-			self.isoldr->exec.type = bin_type;
-		}
-
-		if (low)
-		{
-			self.isoldr->syscalls = 1;
-		}
-
-		self.addr = strtoul(memory, NULL, 16);
+		GenerateVMUFile(self.item_value_selected, menu_data.preset->vmu_mode, menu_data.preset->emu_vmu);
 	}
 
 	if (strncmp(self.isoldr->fs_dev, "auto", 4) == 0)
@@ -1882,7 +1757,7 @@ static void FreeAppData()
 
 			if (self.exit_trigger_list[i] != NULL)
 			{
-				TSU_TriggerDestroy(&self.exit_trigger_list[i]);
+				TSU_DeathDestroy(&self.exit_trigger_list[i]);
 			}
 
 			if (self.item_game[i] != NULL)
@@ -1988,6 +1863,7 @@ static void FreeAppData()
 	}
 
 	DestroySystemMenu();
+	DestroyPresetMenu();
 
 	TSU_FontDestroy(&self.menu_font);
 	TSU_FontDestroy(&self.message_font);

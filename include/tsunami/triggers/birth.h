@@ -44,6 +44,7 @@ extern "C"
 #endif
 
 Birth* TSU_BirthCreate(Drawable *new_drawable_ptr, Drawable *target_ptr);
+void TSU_BirthDestroy(Birth **birth_ptr);
 
 #ifdef __cplusplus
 };

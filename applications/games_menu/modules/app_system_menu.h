@@ -29,6 +29,8 @@ void SystemMenuSelectedEvent(Drawable *drawable, uint bottom_index, uint column,
 void OptimizeCoversClick(Drawable *drawable);
 void ExitSystemMenuClick(Drawable *drawable);
 void ScanMissingCoversClick(Drawable *drawable);
+void DefaultSavePresetOptionClick(Drawable *drawable);
+void CoverBackgroundOptionClick(Drawable *drawable);
 
 void ShowOptimizeCoverPopup();
 void HideOptimizeCoverPopup();

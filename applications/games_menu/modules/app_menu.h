@@ -2,6 +2,7 @@
 #define __APP_MENU_H
 
 #include <ds.h>
+#include <isoldr.h>
 #include "app_utils.h"
 #include "app_definition.h"
 #include "tsunami/tsudefinition.h"
@@ -21,6 +22,8 @@ typedef void PostOptimizerCoverCallBack();
 
 struct menu_structure
 {
+	bool save_preset;
+	bool cover_background;
 	bool ide;
 	bool sd;
 	bool cd;
@@ -36,7 +39,8 @@ struct menu_structure
 	int games_array_count;
 	int covers_array_count;
 	int firmware_array_count;
-	int current_dev;	
+	int current_dev;
+	int vmu_mode;
 
 	char default_dir[20];
 	char games_path[NAME_MAX];
@@ -45,6 +49,8 @@ struct menu_structure
 	char default_dir_sd[20];
 	char games_path_sd[NAME_MAX];
 	char covers_path_sd[50];
+
+	PresetStruct *preset;
 
 	AppConfigStruct app_config;
 	CoverScannedStruct cover_scanned_app;
@@ -86,13 +92,15 @@ bool GetGameCoverPath(int game_index, char **game_cover_path, int menu_type);
 void SetMenuType(int menu_type);
 void FreeGames();
 void FreeGamesForce();
+int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number);
 bool LoadFirmwareFiles();
 void LoadDefaultMenuConfig();
 bool LoadMenuConfig();
 void PatchParseText(PresetStruct *preset);
 PresetStruct* GetDefaultPresetGame(const char* full_path_game, SectorDataStruct *sector_data);
-PresetStruct* LoadPresetGame(const char *full_path_game);
-bool SavePresetGame(const char *full_path_game, PresetStruct *preset);
+PresetStruct* LoadPresetGame(int game_index);
+bool SavePresetGame(PresetStruct *preset);
+isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset);
 void ParseMenuConfigToPresentation();
 void ParsePresentationToMenuConfig();
 bool SaveMenuConfig();

@@ -1,6 +1,7 @@
 #include "drawables/combobox.h"
 
 ComboBox::ComboBox() {
+	setObjectType(ObjectTypeEnum::COMBOBOX_TYPE);
 }
 
 ComboBox::~ComboBox() {

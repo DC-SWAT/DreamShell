@@ -67,23 +67,7 @@ void DSApp::visualPerFrame()
 	m_scene->nextFrame();
 }
 
-void DSApp::doMenu()
-{
-	// Start background music if necessary
-	/* if (m_usebgm) {
-		oggStart(m_bgmFn, true, m_cachebgm, false);
-	} */
-
-	// Reset our timeout
-	resetTimeout();
-
-	// Enter the main loop
-	m_exiting = false;
-	while (!m_exiting) {
-		controlPerFrame();
-		visualPerFrame();
-	}
-}
+void DSApp::doMenu() {}
 
 bool DSApp::endApp()
 {
@@ -101,29 +85,24 @@ bool DSApp::endApp()
 		return false;
 	}
 
-	if (1 == 1) { // DISABLE
+	// Did we get a quit-now request?
+	if (!m_exitSpeed)
 		return true;
-	}
-	else {
-		// Did we get a quit-now request?
-		if (!m_exitSpeed)
-			return true;
 
-		// We should be faded out now -- do three more frames to finish
-		// clearing out the PVR buffered scenes.
-		m_exitCount = 0;
-		visualPerFrame();
-		visualPerFrame();
-		visualPerFrame();
+	// We should be faded out now -- do three more frames to finish
+	// clearing out the PVR buffered scenes.
+	m_exitCount = 0;
+	GenericMenu::visualPerFrame();
+	GenericMenu::visualPerFrame();
+	GenericMenu::visualPerFrame();
 
-		// Stop music if necessary
-		/* if (m_usebgm) {
-			oggStop(m_cachebgm);
-		} */
+	// Stop music if necessary
+	/* if (m_usebgm) {
+		oggStop(m_cachebgm);
+	} */
 
-		if (m_postDelay)
-			thd_sleep(m_postDelay);
-	}
+	if (m_postDelay)
+		thd_sleep(m_postDelay);
 
 	return true;
 }

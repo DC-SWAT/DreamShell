@@ -30,9 +30,7 @@ private:
     bool selected = false;
     Color text_color_selected;
     Color image_color_selected;
-    Color color_unselected;    
-
-    void setTint(Color text_color, Color image_color);
+    Color color_unselected;
     Font *font = nullptr;
     Texture *image_texture;
 
@@ -57,6 +55,7 @@ public:
     void SetSelected(bool selected = true, bool smear = true);
     bool HasTextAndImage(); 
     void SetImage(const char *image_file, uint16 pvr_type);
+    void setTint(Color text_color, Color image_color);
 
     Label* GetLabel();
     Banner* GetBanner();
@@ -96,6 +95,7 @@ Label* TSU_ItemMenuGetLabel(ItemMenu *item_menu_ptr);
 void TSU_ItemMenuSetLabelText(ItemMenu *item_menu_ptr, const char *text);
 const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr);
 void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, uint16 pvr_type);
+void TSU_ItemMenuSetTint(ItemMenu *item_menu_ptr, Color text_color, Color image_color);
 
 #ifdef __cplusplus
 };
