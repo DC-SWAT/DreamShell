@@ -1,6 +1,6 @@
 #
 # xvid module for DreamShell
-# Copyright (C) 2011-2022 SWAT
+# Copyright (C) 2011-2024 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -19,10 +19,7 @@ KOS_LIB_PATHS += -L./xvidcore/build/generic/=build
 all: rm-elf library
 
 library:
-	cd ./xvidcore/build/generic && make
-	
-library-clean:
-	cd ./xvidcore/build/generic && make clean
+	cd ./xvidcore/build/generic && make clean && make
 
 include ../../sdk/Makefile.loadable
 

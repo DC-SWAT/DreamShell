@@ -9,8 +9,7 @@ _SUBDIRS = minilzo isofs isoldr ppp bflash dreameye \
 		luaTask luaSocket tolua tolua++ \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
 		SDL_net http httpd telnetd mongoose gumbo \
-		adx s3m mp3 ogg wav xvid ffmpeg \
-		bitcoin openssl ftpd quirc
+		adx s3m mp3 ogg wav ffmpeg bitcoin openssl ftpd quirc
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

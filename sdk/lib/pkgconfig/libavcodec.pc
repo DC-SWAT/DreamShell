@@ -9,6 +9,6 @@ Version: 52.72.2
 Requires: libavutil = 50.15.1
 Requires.private: 
 Conflicts:
-Libs: -L${libdir} -lavcodec -lz -lbz2 -lm -lvorbisenc -lvorbis -logg -lc -lgcc -lm -lxvidcore -lc -lgcc -lm
+Libs: -L${libdir} -lavcodec -lz -lbz2 -lm -lvorbisenc -lvorbis -logg -lc -lgcc -lm -lc -lgcc -lm
 Libs.private: 
 Cflags: -I${includedir}
