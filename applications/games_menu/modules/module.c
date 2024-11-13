@@ -1324,49 +1324,49 @@ static void GamesApp_ControlInputEvent(int type, int key, int state_app)
 			break;
 		}
 
-		case SA_CONTROL + ALTERBOOT_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + ALTERBOOT_CONTROL_ID: //ALTER BOOT
 		{
 			AlterBootInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + SCREENSHOT_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + SCREENSHOT_CONTROL_ID: //SCREENSHOT
 		{
 			ScreenshotInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + VMU_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + VMU_CONTROL_ID: //VMU
 		{
 			VMUInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + VMUSELECTOR_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + VMUSELECTOR_CONTROL_ID: //VMU OPTION
 		{
 			VMUSelectorInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + SHORTCUT_SIZE_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + SHORTCUT_SIZE_CONTROL_ID: //SHORTCUT SIZE
 		{
 			ShortcutSizeInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + SHORTCUT_ROTATE_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + SHORTCUT_ROTATE_CONTROL_ID: //SHORTCUT ROTATE
 		{
 			ShortcutRotateInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + SHORTCUT_NAME_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + SHORTCUT_NAME_CONTROL_ID: //SHORTCUT NAME
 		{
 			ShortcutNameInputEvent(type, key);
 			break;
 		}
 
-		case SA_CONTROL + SHORTCUT_DONTSHOWNAME_CONTROL_ID: //PATCH VALUE 2
+		case SA_CONTROL + SHORTCUT_DONTSHOWNAME_CONTROL_ID: //SHORTCUT DONT SHOW NAME
 		{
 			ShortcutDontShowNameInputEvent(type, key);
 			break;
