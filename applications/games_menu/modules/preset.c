@@ -996,6 +996,10 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_FormAddBodyCheckBox(form_ptr, self.altboot_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.altboot_option, &AlterBootOptionClick);
 
+		Vector altboot_vector = TSU_DrawableGetPosition((Drawable *)self.altboot_option);
+		altboot_vector.x += 50;
+		TSU_DrawableSetTranslate((Drawable *)self.altboot_option, &altboot_vector);
+
 		if (menu_data.preset->alt_boot)
 		{
 			TSU_CheckBoxSetOn(self.altboot_option);
@@ -1006,7 +1010,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	{
 		// SCREENSHOT
-		Label *screenshot_label = TSU_LabelCreate(form_font, "Enable screenshots (START + A + B):", self.body_letter_size - 2, false, false);
+		Label *screenshot_label = TSU_LabelCreate(form_font, "Screenshots (START + A + B):", self.body_letter_size - 2, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)screenshot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, screenshot_label, 1, 2);
 
@@ -1015,6 +1019,10 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.screenshot_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.screenshot_option, &ScreenshotOptionClick);
+
+		Vector screenshot_vector = TSU_DrawableGetPosition((Drawable *)self.screenshot_option);
+		screenshot_vector.x += 50;
+		TSU_DrawableSetTranslate((Drawable *)self.screenshot_option, &screenshot_vector);
 
 		if (menu_data.preset->screenshot)
 		{
