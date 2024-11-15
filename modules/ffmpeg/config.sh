@@ -14,8 +14,8 @@ cd ./ffmpeg-0.6.3
   	--disable-vaapi --disable-vdpau --disable-dxva2 --disable-decoders --disable-demuxers \
 	\
 	--enable-gpl --prefix=../ --enable-cross-compile --cross-prefix=sh-elf- --arch=sh4 --target-os=gnu \
-	--extra-cflags="${KOS_CFLAGS} -I${KOS_BASE}/ds/include -I${KOS_BASE}/ds/include/zlib -I${KOS_BASE}/ds/sdk/include/freetype -I${KOS_BASE}/ds/modules/ogg/liboggvorbis/liboggvorbis/libvorbis/include -I${KOS_BASE}/ds/modules/ogg/liboggvorbis/liboggvorbis/libogg/include" \
-	--extra-ldflags="${KOS_LDFLAGS} -L${KOS_BASE}/ds/sdk/lib ${KOS_LIBS}" --enable-zlib --enable-bzlib --enable-libvorbis --enable-libxvid \
+	--extra-cflags="${KOS_CFLAGS} -Wno-incompatible-pointer-types -I${KOS_BASE}/ds/include -I${KOS_BASE}/ds/include/zlib -I${KOS_BASE}/ds/sdk/include/freetype -I${KOS_BASE}/ds/modules/ogg/liboggvorbis/liboggvorbis/libvorbis/include -I${KOS_BASE}/ds/modules/ogg/liboggvorbis/liboggvorbis/libogg/include" \
+	--extra-ldflags="${KOS_LDFLAGS} -L${KOS_BASE}/ds/sdk/lib ${KOS_LIBS}" --enable-zlib --enable-bzlib --enable-libvorbis \
 	\
 	--enable-decoder=h264 --enable-decoder=mpeg2video --enable-decoder=mpeg4 --enable-decoder=msmpeg4v1 --enable-decoder=ape \
 	--enable-decoder=mpeg1video --enable-decoder=ac3 --enable-decoder=eac3 --enable-decoder=vp6 --enable-decoder=vp5 --enable-decoder=vp3 \
