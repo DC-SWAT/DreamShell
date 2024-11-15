@@ -584,20 +584,6 @@ static void data_transfer_dma_stream() {
 	gd_state_t *GDS = get_GDS();
 	const int alt_read = IsoInfo->alt_read;
 
-#ifdef DEV_TYPE_SD
-	/* SD card can't provide DMA streams,
-	 * but it will work for Atomiswave games,
-	 * because they doesn't uses IRQ and MMU.
-	 * In other cases, we will return an error.
-	 */
-	if(IsoInfo->exec.type != BIN_TYPE_KATANA) {
-		gdcExitToGame();
-		GDS->status = CMD_STAT_FAILED;
-		GDS->drv_stat = CD_STATUS_PAUSED;
-		return;
-	}
-#endif
-
 	if(alt_read) {
 		fs_enable_dma(FS_DMA_STREAM);
 	}
@@ -792,6 +778,17 @@ static int is_transfer_cmd(int cmd) {
 int gdcReqCmd(int cmd, uint32 *param) {
 
 	int gd_chn = GDC_CHN_ERROR;
+#ifdef DEV_TYPE_SD
+	/* SD card can't provide DMA streams,
+	* but it will work for Atomiswave games,
+	* because they doesn't uses IRQ and MMU.
+	* In other cases, we will return an error.
+	*/
+	if((cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX) &&
+			IsoInfo->exec.type != BIN_TYPE_KATANA) {
+		return -1;
+	}
+#endif
 	OpenLog();
 
 	if(cmd > CMD_MAX || lock_gdsys()) {
@@ -802,7 +799,7 @@ int gdcReqCmd(int cmd, uint32 *param) {
 	gd_state_t *GDS = get_GDS();
 		
 	if(GDS->status == CMD_STAT_IDLE) {
-		
+
 		/* I just simulate BIOS code =) */
 		if(GDS->req_count++ == 0) {
 			GDS->req_count++;
