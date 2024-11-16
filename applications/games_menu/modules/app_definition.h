@@ -113,7 +113,7 @@ typedef struct FirmwareStructure
 typedef struct PresetStructure
 {
 	int game_index;
-	char preset_file_name[50];
+	char preset_file_name[100];
 
 	int use_dma;
 	int emu_async;
