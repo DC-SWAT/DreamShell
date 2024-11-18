@@ -1409,7 +1409,6 @@ static void GamesApp_InputEvent(int type, int key)
 		// X: CHANGE VISUALIZATION
 		case KeyMiscX:
 		{
-			StopCDDA();
 			StopShowCover();
 
 			int real_cursel = (self.current_page - 1) * menu_data.menu_option.max_page_size + self.menu_cursel + 1;
@@ -1611,7 +1610,9 @@ static void GamesApp_InputEvent(int type, int key)
 
 	if (!skip_cursor)
 	{
-		StopCDDA();
+		if (key != KeyMiscX)
+			StopCDDA();
+
 		self.game_changed = true;
 		for (int i = 0; i < self.game_count; i++)
 		{
@@ -1637,7 +1638,9 @@ static void GamesApp_InputEvent(int type, int key)
 					}
 
 					ShowCover(TSU_ItemMenuGetItemIndex(self.item_game[i]));
-					PlayCDDA(TSU_ItemMenuGetItemIndex(self.item_game[i]));
+
+					if (key != KeyMiscX)
+						PlayCDDA(TSU_ItemMenuGetItemIndex(self.item_game[i]));
 				}
 				else
 				{
