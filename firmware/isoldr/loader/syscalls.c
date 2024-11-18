@@ -544,6 +544,9 @@ void data_transfer() {
 # endif
 #endif /* _FS_ASYNC */
 
+	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
+		gdcExitToGame();
+	}
 
 	/**
 	 * Read if emu async is disabled or if requested 1/100 sector(s)
@@ -557,7 +560,6 @@ void data_transfer() {
 		 || GDS->param[1] >= 100
 #endif
 	) {
-		gdcExitToGame();
 		GDS->status = ReadSectors((uint8 *)GDS->param[2], GDS->param[0], GDS->param[1], NULL);
 		GDS->transfered = (GDS->param[1] * GDS->gdc.sec_size);
 		GDS->requested -= GDS->transfered;
@@ -648,6 +650,8 @@ static void data_transfer_pio_stream() {
 
 	while(1) {
 
+		gdcExitToGame();
+
 		if(GDS->param[2] != 0) {
 
 			if(alt_read) {
@@ -685,7 +689,6 @@ static void data_transfer_pio_stream() {
 			abort_data_cmd();
 			break;
 		}
-		gdcExitToGame();
 	}
 
 	GDS->drv_stat = CD_STATUS_PAUSED;
@@ -786,6 +789,17 @@ int gdcReqCmd(int cmd, uint32 *param) {
 	*/
 	if((cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX) &&
 			IsoInfo->exec.type != BIN_TYPE_KATANA) {
+		return -1;
+	}
+#elif defined(DEV_TYPE_IDE)
+	/* Use this method for the alternate read mode
+	   if you're using homebrew that supports stream commands.
+	   They also support fallback to the normal sector read mode,
+	   (I took care of it) so we can just return an error here.
+	   At least until I finish the alternative mode completely.
+	*/
+	if(IsoInfo->alt_read && IsoInfo->exec.type == BIN_TYPE_KOS &&
+		(cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX)) {
 		return -1;
 	}
 #endif
