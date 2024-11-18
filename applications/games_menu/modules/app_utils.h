@@ -40,7 +40,7 @@ bool ContainsOnlyNumbers(const char *string);
 int  GetDeviceType(const char *dir);
 int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type);
 void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data);
-char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5);
+char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name);
 const char *GetFolderPathFromFile(const char *full_path_file);
 size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result);
 void PlayCDDATrack(const char *file, int loop);

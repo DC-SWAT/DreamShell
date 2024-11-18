@@ -959,7 +959,7 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 				{
 					snprintf(vmu_file_path, sizeof(vmu_file_path), 
 							"%s/apps/%s/resources/empty_vmu_128kb.vmd", 
-							GetDefaultDir(menu_data.current_dev), "iso_loader");
+							GetDefaultDir(menu_data.current_dev), "games_menu");
 				}
 				break;
 			
@@ -967,7 +967,7 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 				{
 					snprintf(vmu_file_path, sizeof(vmu_file_path),
 							"%s/apps/%s/resources/empty_vmu_1024kb.vmd", 
-							GetDefaultDir(menu_data.current_dev), "iso_loader");
+							GetDefaultDir(menu_data.current_dev), "games_menu");
 				}
 				break;
 		}
@@ -1160,7 +1160,7 @@ PresetStruct* LoadPresetGame(int game_index)
 		preset->game_index = game_index;
 		const char *full_path_game = GetFullGamePathByIndex(game_index);
 		
-		char *preset_file_name = NULL;
+		char *full_preset_file_name = NULL;
 		SectorDataStruct sector_data;
 		memset(&sector_data, 0, sizeof(SectorDataStruct));
 		
@@ -1169,32 +1169,48 @@ PresetStruct* LoadPresetGame(int game_index)
 			GetMD5HashISO("/iso_game", &sector_data);
 			fs_iso_unmount("/iso_game");
 
-			if (GetDeviceType(full_path_game) == APP_DEVICE_SD)
+			int app_name_count = 0;
+			const char *app_name_array[3] = { "games_menu", "iso_loader", NULL };
+			while (app_name_array[app_name_count] != NULL)
 			{
-				preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_SD), GetDefaultDir(APP_DEVICE_SD), sector_data.md5);
-				if (!FileExists(preset_file_name) && menu_data.ide)
+				if (GetDeviceType(full_path_game) == APP_DEVICE_SD)
 				{
-					preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_SD), sector_data.md5);
+					full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_SD), GetDefaultDir(APP_DEVICE_SD), sector_data.md5, app_name_array[app_name_count]);
+					if (!FileExists(full_preset_file_name) && menu_data.ide)
+					{
+						full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_SD), sector_data.md5, app_name_array[app_name_count]);
+					}
 				}
-			}
-			else if (GetDeviceType(full_path_game) == APP_DEVICE_IDE)
-			{
-				preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_IDE), sector_data.md5);			
-			}
-			else
-			{
-				preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5);
+				else if (GetDeviceType(full_path_game) == APP_DEVICE_IDE)
+				{
+					full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_IDE), sector_data.md5, app_name_array[app_name_count]);			
+				}
+				else
+				{
+					full_preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5, app_name_array[app_name_count]);
+				}
+
+				if (FileExists(full_preset_file_name))
+				{
+					break;
+				}
+
+				++app_name_count;
 			}
 
-			ds_printf("PresetFileName: %s", preset_file_name);
-			if (FileSize(preset_file_name) < 5)
-			{
-				preset_file_name = NULL;
-			}
+			ds_printf("PresetFileName: %s", full_preset_file_name);
 		}
 
-		memset(preset->preset_file_name, 0, sizeof(preset->preset_file_name));
-		strcpy(preset->preset_file_name, preset_file_name);		
+		if (full_preset_file_name != NULL)
+		{
+			memset(preset->preset_file_name, 0, sizeof(preset->preset_file_name));
+			strcpy(preset->preset_file_name, strrchr(full_preset_file_name, '/') + 1);
+		}
+
+		if (FileSize(full_preset_file_name) < 5)
+		{
+			full_preset_file_name = NULL;
+		}		
 		
 		preset->emu_async = 16;
 		preset->boot_mode = BOOT_MODE_DIRECT;
@@ -1235,9 +1251,9 @@ PresetStruct* LoadPresetGame(int game_index)
 			{"pv2", 		CONF_STR, 	(void *)preset->patch_v[1]},
 			{NULL, CONF_END, NULL}};
 
-		if (preset_file_name != NULL)
+		if (full_preset_file_name != NULL)
 		{
-			if (ConfigParse(options, preset_file_name) == 0)
+			if (ConfigParse(options, full_preset_file_name) == 0)
 			{
 				preset->heap = strtoul(preset->heap_memory, NULL, 16);
 				PatchParseText(preset);
@@ -1406,7 +1422,7 @@ bool SavePresetGame(PresetStruct *preset)
 		uint32 cdda_mode = CDDA_MODE_DISABLED;
 
 		StopCDDA();
-		char *preset_file_name = MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5);
+		char *preset_file_name = MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "games_menu");
 
 		fd = fs_open(preset_file_name, O_CREAT | O_TRUNC | O_WRONLY);
 
@@ -1467,6 +1483,14 @@ bool SavePresetGame(PresetStruct *preset)
 
 		fs_write(fd, result, strlen(result));
 		fs_close(fd);
+
+		// COPY TO ISO LOADER FOLDER
+		char *isoldr_preset_file_name = MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "iso_loader");
+		if (FileExists(isoldr_preset_file_name))
+		{
+			fs_unlink(isoldr_preset_file_name);
+		}
+		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
 
 		saved = true;
 	}
