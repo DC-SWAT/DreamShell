@@ -1190,7 +1190,7 @@ PresetStruct* LoadPresetGame(int game_index)
 					full_preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5, app_name_array[app_name_count]);
 				}
 
-				if (FileExists(full_preset_file_name) && FileSize(full_preset_file_name) >= 5)
+				if (FileSize(full_preset_file_name) >= 5)
 				{
 					break;
 				}
