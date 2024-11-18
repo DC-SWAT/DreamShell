@@ -499,7 +499,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 	return true;
 }
 
-char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5)
+char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name)
 {
 	char dev[8];
 	static char filename[NAME_MAX];
@@ -518,7 +518,7 @@ char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 
 
 	snprintf(filename, sizeof(filename),
 			"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-			default_dir, "iso_loader", dev, md5[0],
+			default_dir, app_name, dev, md5[0],
 			md5[1], md5[2], md5[3], md5[4], md5[5],
 			md5[6], md5[7], md5[8], md5[9], md5[10],
 			md5[11], md5[12], md5[13], md5[14], md5[15]);

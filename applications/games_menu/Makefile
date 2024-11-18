@@ -29,8 +29,12 @@ install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)/covers	
 	-mkdir -p $(APP_DIR)/fonts
 	-mkdir -p $(APP_DIR)/music
+	-mkdir -p $(APP_DIR)/presets
+	-mkdir -p $(APP_DIR)/resources
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)
 	cp -R fonts $(APP_DIR)
+	cp -R presets $(APP_DIR)
+	cp -R resources $(APP_DIR)
 	

@@ -1257,6 +1257,11 @@ void ShortcutLoadTextureCover()
 					TSU_BannerSetTexture(self.cover_banner, texture_tmp);
 				}
 
+				if (self.cover_texture != NULL)
+				{
+					TSU_TextureDestroy(&self.cover_texture);
+				}
+
 				self.cover_texture = texture_tmp;
 				texture_tmp = NULL;
 			}
