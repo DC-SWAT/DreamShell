@@ -76,7 +76,6 @@ int StateSystemMenu()
 
 void ShowSystemMenu()
 {
-	StopCDDA();
 	HideSystemMenu();
 
 	if (self.system_menu_form == NULL)

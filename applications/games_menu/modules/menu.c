@@ -1190,7 +1190,7 @@ PresetStruct* LoadPresetGame(int game_index)
 					full_preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5, app_name_array[app_name_count]);
 				}
 
-				if (FileExists(full_preset_file_name))
+				if (FileSize(full_preset_file_name) >= 5)
 				{
 					break;
 				}
@@ -1421,7 +1421,6 @@ bool SavePresetGame(PresetStruct *preset)
 		uint32 heap = HEAP_MODE_AUTO;
 		uint32 cdda_mode = CDDA_MODE_DISABLED;
 
-		StopCDDA();
 		char *preset_file_name = MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "games_menu");
 
 		fd = fs_open(preset_file_name, O_CREAT | O_TRUNC | O_WRONLY);

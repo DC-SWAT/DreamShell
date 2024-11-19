@@ -326,8 +326,6 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 	char cmd[NAME_MAX * 2];
 	int i;
 
-	StopCDDATrack();
-
 	if (show_name)
 	{
 		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", device_dir, preset->shortcut_name);

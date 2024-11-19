@@ -1282,7 +1282,6 @@ void ShowPresetMenu(int game_index)
 		memset(self.full_path_game, 0, sizeof(NAME_MAX));
 		strcpy(self.full_path_game, GetFullGamePathByIndex(self.game_index));
 
-		StopCDDA();
 		HidePresetMenu();
 		
 		CheckCover(self.game_index, MT_PLANE_TEXT);
