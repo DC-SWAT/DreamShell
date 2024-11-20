@@ -1491,7 +1491,6 @@ bool SavePresetGame(PresetStruct *preset)
 			fs_unlink(isoldr_preset_file_name);
 		}		
 		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
-		
 		saved = true;
 	}
 
