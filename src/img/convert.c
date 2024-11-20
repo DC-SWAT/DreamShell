@@ -106,7 +106,11 @@ int img_to_png(kos_img_t *img, const char *dest_file, uint output_width, uint ou
 
 	if (stbi_write_png(dest_file, output_width, output_height, 4, data_image != NULL ? data_image : img->data, output_height * 4) == 0)
 	{
-		free(data_image);
+		if (data_image != NULL)
+		{
+			free(data_image);
+		}
+		
 		dbglog(DBG_INFO, "img_to_png: Error saving PNG file");
 		return 0;
 	}

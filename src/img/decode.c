@@ -43,7 +43,6 @@ int pvr_decode(const char *filename, kos_img_t *kimg)
 	}
 
 	fs_close(pFile);
-	pFile = -1;
 
 	struct PVRTHeader pvrtHeader;
 	unsigned int offset = ReadPVRHeader(data, &pvrtHeader);
@@ -76,7 +75,9 @@ int pvr_decode(const char *filename, kos_img_t *kimg)
 
 	if (!DecodePVR(data + offset, &pvrtHeader, kimg->data))
 	{
+		kos_img_free(kimg, 0);
 		free(data);
+
 		dbglog(DBG_INFO, "pvr_decode: can't decode file");
 		return -1;
 	}

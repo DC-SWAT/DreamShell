@@ -118,23 +118,16 @@ bool copy_image_memory_to_file(kos_img_t *image_source, const char *image_dest, 
 		}
 		else
 		{
+			fs_unlink(image_dest);
+			
 			char *image_type_dest = strrchr(image_dest, '.');
 
 			if (strcasecmp(image_type_dest, ".png") == 0)
 			{
-				if (FileExists(image_type_dest))
-				{
-					remove(image_type_dest);
-				}
-
 				copied = (img_to_png(image_source, image_dest, width, height) == 1);
 			}
 			else if (strcasecmp(image_type_dest, ".jpg") == 0)
-			{
-				if (FileExists(image_type_dest))
-				{
-					remove(image_type_dest);
-				}
+			{	
 				copied = (img_to_jpg(image_source, image_dest, width, height, 100) == 1);
 			}
 			else

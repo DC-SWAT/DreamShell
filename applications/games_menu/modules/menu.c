@@ -1018,8 +1018,6 @@ bool LoadFirmwareFiles()
 	char fw_dir[128];
 	memset(fw_dir, 0, sizeof(fw_dir));	
 	sprintf(fw_dir, "%s/firmware/isoldr", GetDefaultDir(menu_data.current_dev));
-	
-	ds_printf("FIRMWARE: %s", fw_dir);
 
 	if (menu_data.firmware_array != NULL)
 	{
@@ -1421,7 +1419,10 @@ bool SavePresetGame(PresetStruct *preset)
 		uint32 heap = HEAP_MODE_AUTO;
 		uint32 cdda_mode = CDDA_MODE_DISABLED;
 
-		char *preset_file_name = MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "games_menu");
+		char preset_file_name[100];
+
+		memset(preset_file_name, 0, 100);
+		strcpy(preset_file_name, MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "games_menu"));
 
 		fd = fs_open(preset_file_name, O_CREAT | O_TRUNC | O_WRONLY);
 
@@ -1488,9 +1489,8 @@ bool SavePresetGame(PresetStruct *preset)
 		if (FileExists(isoldr_preset_file_name))
 		{
 			fs_unlink(isoldr_preset_file_name);
-		}
+		}		
 		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
-
 		saved = true;
 	}
 
