@@ -18,7 +18,21 @@ bool pvr_is_alpha(const char *filename)
 		return false;
 	}
 
-	size_t fsize = 512;
+	size_t sector_size = 512;
+	size_t fsize = fs_total(pFile);
+
+	if (fsize <= 0)
+	{
+		dbglog(DBG_INFO, "pvr_is_alpha: empty file");
+		fs_close(pFile);
+		return false;
+	}
+
+	if (fsize > sector_size)
+	{
+		fsize = sector_size;
+	}
+
 	uint8 *data = (uint8 *)memalign(32, fsize);	
 	if (data == NULL)
 	{
@@ -37,13 +51,13 @@ bool pvr_is_alpha(const char *filename)
 
 	struct PVRTHeader pvrtHeader;
 	unsigned int offset = ReadPVRHeader(data, &pvrtHeader);
+	free(data);
+
 	if (offset == 0)
-	{
-		free(data);
+	{	
 		dbglog(DBG_INFO, "pvr_is_alpha: wrong header");		
 		return false;
 	}
-	free(data);
 
 	enum TextureFormatMasks srcFormat = (enum TextureFormatMasks)(pvrtHeader.textureAttributes & 0xFF);
 

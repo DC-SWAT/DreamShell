@@ -897,7 +897,6 @@ void Form::setCursor(Drawable *drawable) {
 		m_selector_translate.x = drawable_position.x;
 		m_selector_translate.y = drawable_position.y + (row_height/2) - border_width;
 
-		dbglog(DBG_INFO, "object type: %d", drawable->getObjectType());
 		if (drawable->getObjectType() == ObjectTypeEnum::ITEMMENU_TYPE || drawable->getObjectType() == ObjectTypeEnum::BANNER_TYPE) {
 			m_selector_translate.y += drawable_height/2;
 		}
