@@ -118,10 +118,7 @@ bool copy_image_memory_to_file(kos_img_t *image_source, const char *image_dest, 
 		}
 		else
 		{
-			if (FileExists(image_dest))
-			{
-				fs_unlink(image_dest);
-			}
+			fs_unlink(image_dest);
 			
 			char *image_type_dest = strrchr(image_dest, '.');
 

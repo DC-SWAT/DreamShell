@@ -33,12 +33,7 @@ bool pvr_is_alpha(const char *filename)
 		fsize = sector_size;
 	}
 
-	uint8 *data = (uint8 *)memalign(32, fsize);	
-	if (data == NULL)
-	{
-		fs_close(pFile);
-		return false;
-	}
+	uint8 data[512] __attribute__((aligned(32)));
 
 	if (fs_read(pFile, data, fsize) == -1)
 	{
@@ -47,11 +42,9 @@ bool pvr_is_alpha(const char *filename)
 	}
 
 	fs_close(pFile);
-	pFile = -1;
 
 	struct PVRTHeader pvrtHeader;
 	unsigned int offset = ReadPVRHeader(data, &pvrtHeader);
-	free(data);
 
 	if (offset == 0)
 	{	

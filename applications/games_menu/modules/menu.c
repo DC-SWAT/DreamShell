@@ -1419,7 +1419,7 @@ bool SavePresetGame(PresetStruct *preset)
 		uint32 heap = HEAP_MODE_AUTO;
 		uint32 cdda_mode = CDDA_MODE_DISABLED;
 
-		char *preset_file_name = (char *)malloc(100);
+		char preset_file_name[100];
 
 		memset(preset_file_name, 0, 100);
 		strcpy(preset_file_name, MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "games_menu"));
@@ -1489,10 +1489,9 @@ bool SavePresetGame(PresetStruct *preset)
 		if (FileExists(isoldr_preset_file_name))
 		{
 			fs_unlink(isoldr_preset_file_name);
-		}
+		}		
 		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
-		free(preset_file_name);
-
+		
 		saved = true;
 	}
 
