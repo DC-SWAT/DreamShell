@@ -830,6 +830,12 @@ Drawable* Form::findNextObject(int direction) {
 	return drawable;
 }
 
+void Form::setCursorSize(float width, float height) {	
+	if (m_cursor != nullptr) {
+		m_cursor->setSize(width, height);
+	}
+}
+
 void Form::setCursor(Drawable *drawable) {
 	if (drawable && !drawable->isReadOnly()) {
 		if (m_current_object_selected) {
@@ -874,7 +880,15 @@ void Form::setCursor(Drawable *drawable) {
 
 		float border_width = 3;
 		float drawable_width = 0, drawable_height = 0;
-		drawable->getSize(&drawable_width, &drawable_height);
+
+		if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE) {
+			Label *label = (Label *)drawable;
+			label->getFont()->getTextSize(label->getText(), &drawable_width, &drawable_height);
+			label = NULL;
+		}
+		else {
+			drawable->getSize(&drawable_width, &drawable_height);
+		}
 
 		Vector drawable_position = drawable->getPosition();
 
@@ -900,14 +914,10 @@ void Form::setCursor(Drawable *drawable) {
 		if (drawable->getObjectType() == ObjectTypeEnum::ITEMMENU_TYPE || drawable->getObjectType() == ObjectTypeEnum::BANNER_TYPE) {
 			m_selector_translate.y += drawable_height/2;
 		}
-		else if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE && 1 != 1) { // DISABLED
-			Label *label = (Label *)drawable;
-			float tw, th;
-			label->getFont()->getTextSize(label->getText(), &tw, &th);
-			m_selector_translate.y -= th/2;
-			m_selector_translate.w = tw + border_width + 2;
-			label = nullptr;
-		}		
+		else if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE) {
+			m_selector_translate.y -= (drawable_height/2 - (border_width + 2));
+			m_selector_translate.w -= (border_width + 2);
+		}
 
 		if (m_cursor_animation_enable) {
 			m_cursor_animation = new LogXYMover(m_selector_translate.x, m_selector_translate.y);
@@ -915,7 +925,7 @@ void Form::setCursor(Drawable *drawable) {
 			m_cursor->animAdd((Animation *)m_cursor_animation);
 		}
 		else {
-			m_cursor->setTranslate(m_selector_translate);			
+			m_cursor->setTranslate(m_selector_translate);
 		}
 	}
 }
@@ -1512,6 +1522,14 @@ extern "C"
 		if (form_ptr != NULL && drawable_ptr != NULL)
 		{
 			form_ptr->setCursor(drawable_ptr);
+		}
+	}
+
+	void TSU_FormSetCursorSize(Form *form_ptr, float width, float height)
+	{
+		if (form_ptr != NULL)
+		{
+			form_ptr->setCursorSize(width, height);
 		}
 	}
 	

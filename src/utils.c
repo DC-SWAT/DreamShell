@@ -181,7 +181,7 @@ int CopyFile(const char *src_fn, const char *dest_fn, int verbose) {
 		return 0;
 	}
 
-	dest_fd = fs_open(dest_fn, O_WRONLY | O_CREAT);
+	dest_fd = fs_open(dest_fn, O_WRONLY | O_CREAT | O_TRUNC);
 
 	if (dest_fd == FILEHND_INVALID) {
 		ds_printf("DS_ERROR: Can't open %s for write\n", dest_fn);

@@ -1264,6 +1264,7 @@ TSU_FormGetState
 TSU_FormEnable
 TSU_FormIsEnable
 TSU_FormSetCursor
+TSU_FormSetCursorSize
 TSU_OptionGroupCreate
 TSU_OptionGroupDestroy
 TSU_OptionGroupSetStates
