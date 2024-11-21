@@ -1485,9 +1485,9 @@ bool SavePresetGame(PresetStruct *preset)
 		fs_close(fd);
 
 		// COPY TO ISO LOADER FOLDER
-		char *isoldr_preset_file_name = MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "iso_loader");
-		fs_unlink(isoldr_preset_file_name);
-		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
+		CopyFile(preset_file_name, MakePresetFilename(GetDefaultDir(menu_data.current_dev), 
+												GetGamesPath(GetDeviceType(full_path_game)), 
+												sector_data.md5, "iso_loader"), 0);
 		saved = true;
 	}
 
