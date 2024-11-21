@@ -13,11 +13,14 @@
 #include "tsunami/drawable.h"
 #include "tsunami/dsapp.h"
 #include "tsunami/drawables/scene.h"
+#include "tsunami/drawables/form.h"
 
 #include "app_utils.h"
 #include "app_definition.h"
 
 void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font);
+void CreateSystemMenuView(Form *form_ptr);
+void OnSystemViewIndexChangedEvent(Drawable *drawable, int view_index);
 void DestroySystemMenu();
 void SystemMenuRemoveAll();
 
