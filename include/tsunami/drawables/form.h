@@ -103,6 +103,7 @@ public:
 	void inputEvent(int event_type, int key);
 	void setAttributes(uint number_columns, uint number_rows, uint columns_size, uint rows_size);
 	void setCursor(Drawable *drawable);
+	void setCursorSize(float width, float height);
 	void setTitle(const std::string &text);
 	void setSize(float width, float height);
 	void setPosition(float x, float y);
@@ -235,6 +236,7 @@ extern "C"
 	void TSU_FormEnable(Form *form_ptr, bool enable); // ANOTHER VERSION
 	void TSU_FormIsEnable(Form *form_ptr);
 	void TSU_FormSetCursor(Form *form_ptr, Drawable *drawable_ptr);
+	void TSU_FormSetCursorSize(Form *form_ptr, float width, float height);
 
 #ifdef __cplusplus
 };
