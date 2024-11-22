@@ -35,6 +35,5 @@ install: app.xml $(DEPS)
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)
 	cp -R fonts $(APP_DIR)
-	cp -R presets $(APP_DIR)
 	cp -R resources $(APP_DIR)
 	
