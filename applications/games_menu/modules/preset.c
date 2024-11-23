@@ -50,6 +50,15 @@ static struct
 	char full_path_game[NAME_MAX];
 	char *game_cover_path;
 	int changed_yflip;
+	bool button_start;
+	bool button_x;
+	bool button_y;
+	bool button_z;
+	bool button_lt;
+	bool button_a;
+	bool button_b;
+	bool button_c;
+	bool button_rt;
 
 	LogXYMover *menu_init_animation;
 	ExpXYMover *menu_end_animation;
@@ -85,6 +94,15 @@ static struct
 	
 	CheckBox *altboot_option;
 	CheckBox *screenshot_option;
+	CheckBox *button_start_option;
+	CheckBox *button_x_option;
+	CheckBox *button_y_option;
+	CheckBox *button_z_option;
+	CheckBox *button_rt_option;
+	CheckBox *button_a_option;
+	CheckBox *button_b_option;
+	CheckBox *button_c_option;
+	CheckBox *button_lt_option;
 	TextBox *vmu_option;
 	OptionGroup *vmu_selector_option;
 
@@ -337,9 +355,9 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case SCREENSHOT_CONTROL_ID:
 		{
-			menu_data.preset->screenshot = TSU_CheckBoxGetValue((CheckBox *)drawable);
+			menu_data.preset->screenshot = TSU_CheckBoxGetValue((CheckBox *)drawable);			
 		}
-		break;
+		break;		
 
 		case VMU_CONTROL_ID:
 		{
@@ -977,11 +995,13 @@ void CreatePatchView(Form *form_ptr)
 
 void CreateExtensionsView(Form *form_ptr)
 {
-	TSU_FormtSetAttributes(form_ptr, 2, 4, 100, 42);
+	TSU_FormtSetAttributes(form_ptr, 5, 6, 100, 42);
 
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
 	TSU_FormSetColumnSize(form_ptr, 1, 250);
 	TSU_FormSetColumnSize(form_ptr, 2, 320);
+	TSU_FormSetRowSize(form_ptr, 3, 34);
+	TSU_FormSetRowSize(form_ptr, 4, 34);
 	TSU_FormSetTitle(form_ptr, "SETTINGS - EXTENSIONS");
 
 	{
@@ -1010,7 +1030,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	{
 		// SCREENSHOT
-		Label *screenshot_label = TSU_LabelCreate(form_font, "Screenshots (START + A + B):", self.body_letter_size - 2, false, false);
+		Label *screenshot_label = TSU_LabelCreate(form_font, "Enable screenshots:", self.body_letter_size - 2, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)screenshot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, screenshot_label, 1, 2);
 
@@ -1032,17 +1052,167 @@ void CreateExtensionsView(Form *form_ptr)
 		screenshot_label = NULL;
 	}
 
+	Vector init_button_position, start_button_vector, a_button_vector;
+	{
+		self.button_start_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 3, 52, self.body_height_size - 6, "START", "START");
+		TSU_DrawableSetId((Drawable *)self.button_start_option, BUTTON_START_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_start_option, 1, 3);
+		TSU_DrawableEventSetClick((Drawable *)self.button_start_option, &ButtonStartOptionClick);
+
+		init_button_position = start_button_vector = TSU_DrawableGetPosition((Drawable *)self.button_start_option);
+		start_button_vector.x += 40;
+		TSU_DrawableSetTranslate((Drawable *)self.button_start_option, &start_button_vector);
+
+		if (self.button_start)
+		{
+			TSU_CheckBoxSetOn(self.button_start_option);
+		}	
+	}
+
+	{
+		self.button_x_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "x", "x");
+		TSU_DrawableSetId((Drawable *)self.button_x_option, BUTTON_X_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_x_option, 2, 3);
+		TSU_DrawableEventSetClick((Drawable *)self.button_x_option, &ButtonXOptionClick);
+
+		start_button_vector.x += 120;
+		TSU_DrawableSetTranslate((Drawable *)self.button_x_option, &start_button_vector);
+
+		if (self.button_x)
+		{
+			TSU_CheckBoxSetOn(self.button_x_option);
+		}
+	}
+
+	{
+		self.button_y_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "y", "y");
+		TSU_DrawableSetId((Drawable *)self.button_y_option, BUTTON_Y_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_y_option, 3, 3);
+		TSU_DrawableEventSetClick((Drawable *)self.button_y_option, &ButtonYOptionClick);
+
+		start_button_vector.x += 100;
+		TSU_DrawableSetTranslate((Drawable *)self.button_y_option, &start_button_vector);
+
+		if (self.button_y)
+		{
+			TSU_CheckBoxSetOn(self.button_y_option);
+		}		
+	}
+
+	{
+		self.button_z_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "z", "z");
+		TSU_DrawableSetId((Drawable *)self.button_z_option, BUTTON_Z_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_z_option, 4, 3);
+		TSU_DrawableEventSetClick((Drawable *)self.button_z_option, &ButtonZOptionClick);
+
+		start_button_vector.x += 100;
+		TSU_DrawableSetTranslate((Drawable *)self.button_z_option, &start_button_vector);
+
+		if (self.button_z)
+		{
+			TSU_CheckBoxSetOn(self.button_z_option);
+		}	
+	}
+
+	if (1 != 1) // DISABLED
+	{
+		self.button_lt_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "lt", "lt");
+		TSU_DrawableSetId((Drawable *)self.button_lt_option, BUTTON_LT_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_lt_option, 5, 3);
+		TSU_DrawableEventSetClick((Drawable *)self.button_lt_option, &ButtonLTOptionClick);
+
+		start_button_vector.x += 100;
+		TSU_DrawableSetTranslate((Drawable *)self.button_lt_option, &start_button_vector);
+
+		if (self.button_lt)
+		{
+			TSU_CheckBoxSetOn(self.button_lt_option);
+		}		
+	}
+	
+	init_button_position.x += 160;
+	{
+		self.button_a_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "a", "a");
+		TSU_DrawableSetId((Drawable *)self.button_a_option, BUTTON_A_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_a_option, 2, 4);
+		TSU_DrawableEventSetClick((Drawable *)self.button_a_option, &ButtonAOptionClick);
+
+		a_button_vector = TSU_DrawableGetPosition((Drawable *)self.button_a_option);
+		a_button_vector.x = init_button_position.x;
+		TSU_DrawableSetTranslate((Drawable *)self.button_a_option, &a_button_vector);
+
+		if (self.button_a)
+		{
+			TSU_CheckBoxSetOn(self.button_a_option);
+		}		
+	}
+
+	{
+		self.button_b_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "b", "b");
+		TSU_DrawableSetId((Drawable *)self.button_b_option, BUTTON_B_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_b_option, 3, 4);
+		TSU_DrawableEventSetClick((Drawable *)self.button_b_option, &ButtonBOptionClick);
+
+		a_button_vector.x += 100;
+		TSU_DrawableSetTranslate((Drawable *)self.button_b_option, &a_button_vector);
+
+		if (self.button_b)
+		{
+			TSU_CheckBoxSetOn(self.button_b_option);
+		}		
+	}
+
+	{
+		self.button_c_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "c", "c");
+		TSU_DrawableSetId((Drawable *)self.button_c_option, BUTTON_C_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_c_option, 4, 4);
+		TSU_DrawableEventSetClick((Drawable *)self.button_c_option, &ButtonCOptionClick);
+
+		a_button_vector.x += 100;
+		TSU_DrawableSetTranslate((Drawable *)self.button_c_option, &a_button_vector);
+
+		if (self.button_c)
+		{
+			TSU_CheckBoxSetOn(self.button_c_option);
+		}		
+	}
+
+	if (1 != 1) // DISABLED
+	{
+		self.button_rt_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "rt", "rt");
+		TSU_DrawableSetId((Drawable *)self.button_rt_option, BUTTON_RT_CONTROL_ID);
+
+		TSU_FormAddBodyCheckBox(form_ptr, self.button_rt_option, 5, 4);
+		TSU_DrawableEventSetClick((Drawable *)self.button_rt_option, &ButtonRTOptionClick);
+
+		a_button_vector.x += 100;
+		TSU_DrawableSetTranslate((Drawable *)self.button_rt_option, &a_button_vector);
+
+		if (self.button_rt)
+		{
+			TSU_CheckBoxSetOn(self.button_rt_option);
+		}		
+	}
+
 	{
 		// VMU EMULATION
 		Label *vmu_label = TSU_LabelCreate(form_font, "VMU EMULATION:", self.body_letter_size - 2, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)vmu_label, true);
-		TSU_FormAddBodyLabel(form_ptr, vmu_label, 1, 3);
+		TSU_FormAddBodyLabel(form_ptr, vmu_label, 1, 5);
 
 		self.vmu_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 130, self.body_height_size, false, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.vmu_option, VMU_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.vmu_option, SA_CONTROL + VMU_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
-		TSU_FormAddBodyTextBox(form_ptr, self.vmu_option, 2, 3);
+		TSU_FormAddBodyTextBox(form_ptr, self.vmu_option, 2, 5);
 		TSU_DrawableEventSetClick((Drawable *)self.vmu_option, &VMUOptionClick);
 
 		memset(menu_data.preset->vmu_file, 0, sizeof(menu_data.preset->vmu_file));
@@ -1071,7 +1241,7 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.vmu_selector_option, 2, "Private dump 200 blocks (128 KB)");
 		TSU_OptionGroupAdd(self.vmu_selector_option, 3, "Private dump 1800 blocks (1024 KB)");
 		TSU_OptionGroupSetStates(self.vmu_selector_option, SA_CONTROL + VMUSELECTOR_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
-		TSU_FormAddBodyOptionGroup(form_ptr, self.vmu_selector_option, 2, 4);
+		TSU_FormAddBodyOptionGroup(form_ptr, self.vmu_selector_option, 2, 6);
 		TSU_DrawableEventSetClick((Drawable *)self.vmu_selector_option, &VMUSelectorOptionClick);
 
 		if (menu_data.preset->vmu_mode)
@@ -1297,6 +1467,7 @@ void ShowPresetMenu(int game_index)
 
 			self.save = menu_data.save_preset;
 			menu_data.preset = LoadPresetGame(self.game_index);
+			SetModeScreenshot();
 
 			char font_path[NAME_MAX];
 			memset(font_path, 0, sizeof(font_path));
@@ -1508,9 +1679,185 @@ void AlterBootOptionClick(Drawable *drawable)
 	AlterBootInputEvent(0, KeySelect);
 }
 
+bool AllButtonsDisabled()
+{
+	return (!self.button_x && !self.button_y && !self.button_z && !self.button_rt 
+			&& !self.button_a && !self.button_b && !self.button_c && !self.button_lt 
+			&& !self.button_start);
+}
+
 void ScreenshotOptionClick(Drawable *drawable)
 {
 	ScreenshotInputEvent(0, KeySelect);
+
+	if (TSU_CheckBoxGetValue(self.screenshot_option)) 
+	{
+		if (AllButtonsDisabled())
+		{
+			TSU_CheckBoxSetOn(self.button_start_option);
+			TSU_CheckBoxSetOn(self.button_a_option);
+			TSU_CheckBoxSetOn(self.button_b_option);
+
+			self.button_a = self.button_b = self.button_start = true;
+			menu_data.preset->scr_hotkey = GetModeScreenshot();
+		}
+	}
+	else
+	{
+		TSU_CheckBoxSetOff(self.button_start_option);
+		TSU_CheckBoxSetOff(self.button_x_option);
+		TSU_CheckBoxSetOff(self.button_y_option);
+		TSU_CheckBoxSetOff(self.button_z_option);
+		TSU_CheckBoxSetOff(self.button_lt_option);
+		TSU_CheckBoxSetOff(self.button_a_option);
+		TSU_CheckBoxSetOff(self.button_b_option);
+		TSU_CheckBoxSetOff(self.button_c_option);
+		TSU_CheckBoxSetOff(self.button_rt_option);
+
+		self.button_x = self.button_y = self.button_z = self.button_rt = self.button_a = self.button_b = self.button_c = self.button_lt = self.button_start = false;
+		menu_data.preset->scr_hotkey = GetModeScreenshot();
+	}
+}
+
+void SetModeScreenshot()
+{
+	self.button_x = (menu_data.preset->scr_hotkey & CONT_X);
+	self.button_y = (menu_data.preset->scr_hotkey & CONT_Y);
+	self.button_z = (menu_data.preset->scr_hotkey & CONT_Z);
+	self.button_lt = false;
+	self.button_a = (menu_data.preset->scr_hotkey & CONT_A);
+	self.button_b = (menu_data.preset->scr_hotkey & CONT_B);
+	self.button_c = (menu_data.preset->scr_hotkey & CONT_C);
+	self.button_start = (menu_data.preset->scr_hotkey & CONT_START);
+	self.button_rt = false;	
+}
+
+int GetModeScreenshot()
+{
+	int screenshot_mode = 0;
+
+	if (self.button_x)
+	{
+		screenshot_mode |= CONT_X;
+	}
+
+	if (self.button_y)
+	{
+		screenshot_mode |= CONT_Y;
+	}
+
+	if (self.button_z)
+	{
+		screenshot_mode |= CONT_Z;
+	}
+
+	if (self.button_rt)
+	{
+	}
+
+	if (self.button_a)
+	{
+		screenshot_mode |= CONT_A;
+	}
+
+	if (self.button_b)
+	{
+		screenshot_mode |= CONT_B;
+	}
+
+	if (self.button_c)
+	{
+		screenshot_mode |= CONT_C;
+	}
+
+	if (self.button_lt)
+	{
+	}
+
+	if (self.button_start)
+	{
+		screenshot_mode |= CONT_START;
+	}
+
+	return screenshot_mode;
+}
+
+void CheckScreenshot()
+{
+	if (AllButtonsDisabled())
+	{
+		TSU_CheckBoxSetOff(self.screenshot_option);
+		menu_data.preset->scr_hotkey = menu_data.preset->screenshot = 0;
+	}
+	else
+	{
+		TSU_CheckBoxSetOn(self.screenshot_option);
+		menu_data.preset->screenshot = 1;
+		menu_data.preset->scr_hotkey = GetModeScreenshot();
+	}
+}
+
+void ButtonStartOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_start_option, 0, KeySelect);
+	self.button_start = TSU_CheckBoxGetValue(self.button_start_option);
+	CheckScreenshot();
+}
+
+void ButtonXOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_x_option, 0, KeySelect);
+	self.button_x = TSU_CheckBoxGetValue(self.button_x_option);
+	CheckScreenshot();
+}
+
+void ButtonYOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_y_option, 0, KeySelect);
+	self.button_y = TSU_CheckBoxGetValue(self.button_y_option);
+	CheckScreenshot();
+}
+
+void ButtonZOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_z_option, 0, KeySelect);
+	self.button_z = TSU_CheckBoxGetValue(self.button_z_option);
+	CheckScreenshot();
+}
+
+void ButtonLTOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_lt_option, 0, KeySelect);
+	self.button_lt = TSU_CheckBoxGetValue(self.button_lt_option);
+	CheckScreenshot();
+}
+
+void ButtonAOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_a_option, 0, KeySelect);
+	self.button_a = TSU_CheckBoxGetValue(self.button_a_option);
+	CheckScreenshot();
+}
+
+void ButtonBOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_b_option, 0, KeySelect);
+	self.button_b = TSU_CheckBoxGetValue(self.button_b_option);
+	CheckScreenshot();
+}
+
+void ButtonCOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_c_option, 0, KeySelect);
+	self.button_c = TSU_CheckBoxGetValue(self.button_c_option);
+	CheckScreenshot();
+}
+
+void ButtonRTOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.button_rt_option, 0, KeySelect);
+	self.button_rt = TSU_CheckBoxGetValue(self.button_rt_option);
+	CheckScreenshot();
 }
 
 void VMUOptionClick(Drawable *drawable)
@@ -1770,11 +2117,9 @@ void VMUInputEvent(int type, int key)
 		memset(menu_data.preset->vmu_file, 0, sizeof(menu_data.preset->vmu_file));
 		strcpy(menu_data.preset->vmu_file, TSU_TextBoxGetText(self.vmu_option));
 
-		ds_printf("vmu: %s", menu_data.preset->vmu_file);
 		if (menu_data.preset->vmu_file[0] != '\0' && ContainsOnlyNumbers(menu_data.preset->vmu_file))
 		{
 			menu_data.preset->emu_vmu = atoi(menu_data.preset->vmu_file);
-			ds_printf("emu_vmu: %d", menu_data.preset->emu_vmu);
 			if (menu_data.preset->emu_vmu > MAX_VMU)
 			{
 				memset(menu_data.preset->vmu_file, 0, sizeof(menu_data.preset->vmu_file));
