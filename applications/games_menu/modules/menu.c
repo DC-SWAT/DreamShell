@@ -1226,6 +1226,9 @@ PresetStruct* LoadPresetGame(int game_index)
 		memset(preset->pa, 0, 2 * sizeof(uint32));
 		memset(preset->pv, 0, 2 * sizeof(uint32));
 
+		char scr_hotkey[4];
+		memset(scr_hotkey, 0, sizeof(scr_hotkey));
+
 		isoldr_conf options[] = {
 			{"dma", 		CONF_INT, 	(void *)&preset->use_dma},
 			{"altread", 	CONF_INT, 	(void *)&preset->alt_read},
@@ -1233,7 +1236,7 @@ PresetStruct* LoadPresetGame(int game_index)
 			{"irq", 		CONF_INT, 	(void *)&preset->use_irq},
 			{"low", 		CONF_INT, 	(void *)&preset->low},
 			{"vmu", 		CONF_INT, 	(void *)&preset->emu_vmu},
-			{"scrhotkey", 	CONF_INT, 	(void *)&preset->scr_hotkey},
+			{"scrhotkey", 	CONF_STR, 	(void *)scr_hotkey},
 			{"heap", 		CONF_STR, 	(void *)&preset->heap_memory},
 			{"memory", 		CONF_STR, 	(void *)preset->memory},
 			{"async", 		CONF_INT, 	(void *)&preset->emu_async},
@@ -1255,6 +1258,11 @@ PresetStruct* LoadPresetGame(int game_index)
 			{
 				preset->heap = strtoul(preset->heap_memory, NULL, 16);
 				PatchParseText(preset);
+
+				if (scr_hotkey[0] != '\0' && scr_hotkey[0] != ' ')
+				{
+					preset->scr_hotkey = strtol(scr_hotkey, NULL, 16);
+				}
 			}
 			else 
 			{
@@ -1472,7 +1480,7 @@ bool SavePresetGame(PresetStruct *preset)
 				title, preset->device, preset->use_dma, async,
 				cdda_mode, preset->use_irq, preset->low, heap,
 				preset->fastboot, type, mode, memory,
-				(int)preset->emu_vmu, (uint32)(preset->screenshot ? SCREENSHOT_HOTKEY : 0),
+				(int)preset->emu_vmu, (uint32)preset->scr_hotkey,
 				preset->alt_read,
 				preset->pa[0], preset->pv[0], preset->pa[1], preset->pv[1]);
 

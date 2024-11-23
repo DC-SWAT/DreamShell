@@ -1289,6 +1289,7 @@ TSU_OptionGroupGetOptionByText
 TSU_OptionGroupGetOptionByKey
 TSU_OptionGroupGetOptionByIndex
 TSU_CheckBoxCreate
+TSU_CheckBoxCreateWithCustomText
 TSU_CheckBoxDestroy
 TSU_CheckBoxInputEvent
 TSU_CheckBoxGetText

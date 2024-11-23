@@ -63,7 +63,20 @@ void PatchAddress2OptionClick(Drawable *drawable);
 void PatchValue2OptionClick(Drawable *drawable);
 
 void AlterBootOptionClick(Drawable *drawable);
+void SetModeScreenshot();
+int GetModeScreenshot();
+bool AllButtonsDisabled();
+void CheckScreenshot();
 void ScreenshotOptionClick(Drawable *drawable);
+void ButtonStartOptionClick(Drawable *drawable);
+void ButtonXOptionClick(Drawable *drawable);
+void ButtonYOptionClick(Drawable *drawable);
+void ButtonZOptionClick(Drawable *drawable);
+void ButtonLTOptionClick(Drawable *drawable);
+void ButtonAOptionClick(Drawable *drawable);
+void ButtonBOptionClick(Drawable *drawable);
+void ButtonCOptionClick(Drawable *drawable);
+void ButtonRTOptionClick(Drawable *drawable);
 void VMUOptionClick(Drawable *drawable);
 void VMUSelectorOptionClick(Drawable *drawable);
 

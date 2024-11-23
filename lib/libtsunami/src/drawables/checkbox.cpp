@@ -3,9 +3,12 @@
 #include "tsudefinition.h"
 #include <algorithm>
 #include <cstring>
-#include <string>
 
-CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height) {	
+CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height)
+	: CheckBox(display_font, text_size, width, height, nullptr, nullptr) {
+}
+
+CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height, const char *on_text, const char *off_text) {
 	setObjectType(ObjectTypeEnum::CHECKBOX_TYPE);
 	m_z_index = 0;
 	m_border_width = 2;
@@ -17,6 +20,16 @@ CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height
 	m_height = height + m_padding_height + m_border_width;
 	m_option_selected = 0;
 	m_display_label = nullptr;
+	m_on_text = "ON";
+	m_off_text = "OFF";
+
+	if (on_text != nullptr) {
+		m_on_text = on_text;
+	}
+
+	if (off_text != nullptr) {
+		m_off_text = off_text;
+	}
 
 	if (text_size == 0) {
 		text_size = 20;
@@ -39,7 +52,7 @@ CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height
 		this->subAdd(m_control_rectangle);
 		this->subAdd(m_rectangle);
 
-		m_display_label = new Label(display_font, "OFF", text_size, true, false);
+		m_display_label = new Label(display_font, m_off_text, text_size, true, false);
 		this->subAdd(m_display_label);
 
 		Vector rectangle_vector = m_rectangle->getTranslate();
@@ -126,7 +139,7 @@ int CheckBox::getValue() {
 
 void CheckBox::setOn() {
 	m_option_selected = 1;
-	m_display_label->setText("ON");
+	m_display_label->setText(m_on_text);
 
 	Vector position = m_control_rectangle->getTranslate();
 
@@ -147,7 +160,7 @@ void CheckBox::setOn() {
 
 void CheckBox::setOff() {
 	m_option_selected = 0;
-	m_display_label->setText("OFF");
+	m_display_label->setText(m_off_text);
 
 	Vector position = m_control_rectangle->getTranslate();
 	float rw, rh;
@@ -167,6 +180,11 @@ extern "C"
 	CheckBox* TSU_CheckBoxCreate(Font *display_font, uint text_size, float width, float height)
 	{
 		return new CheckBox(display_font, text_size, width, height);
+	}
+
+	CheckBox* TSU_CheckBoxCreateWithCustomText(Font *display_font, uint text_size, float width, float height, const char *on_text, const char *off_text)
+	{
+		return new CheckBox(display_font, text_size, width, height, on_text, off_text);
 	}
 
 	void TSU_CheckBoxDestroy(CheckBox **checkbox_ptr)
