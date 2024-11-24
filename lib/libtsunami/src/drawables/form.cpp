@@ -107,7 +107,7 @@ Form::~Form() {
 
 	this->setFinished();
 	this->subRemoveFinished();
-	thd_sleep(100);
+	thd_pass(); // FIXME: ON VERY DIFFERENT OCCASIONS IT SHOWS ERROR WHEN DELETING THE FORM
 
 	if (m_cursor != nullptr) {
 		delete m_cursor;
