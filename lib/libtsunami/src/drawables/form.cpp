@@ -159,7 +159,7 @@ void Form::clearBottomObjects() {
 	}
 
 	this->subRemoveFinished();
-	thd_pass();
+	thd_pass(); // FIXME
 
 	for (auto it = m_bottom_objects.begin(); it != m_bottom_objects.end();) {
 		freeObject(*it);		
@@ -232,7 +232,7 @@ void Form::clearObjects() {
 	}
 
 	this->subRemoveFinished();
-	thd_pass();
+	thd_pass(); // FIXME
 
 	for (auto it = m_objects.begin(); it != m_objects.end();) {
 		freeObject(*it);		
@@ -870,7 +870,7 @@ void Form::setCursor(Drawable *drawable) {
 		
 		if (m_cursor_animation != nullptr) {
 			m_cursor_animation->complete(m_cursor);
-			thd_pass();
+			thd_pass(); // FIXME
 			delete m_cursor_animation;
 			m_cursor_animation = nullptr;
 		}
