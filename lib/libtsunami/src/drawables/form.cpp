@@ -1169,8 +1169,6 @@ extern "C"
 	{
 		if (*form_ptr != NULL)
 		{
-			// TSU_FormRemove(*form_ptr);
-
 			delete *form_ptr;
 			*form_ptr = NULL;
 		}
