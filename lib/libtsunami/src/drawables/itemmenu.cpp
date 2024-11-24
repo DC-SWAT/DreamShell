@@ -26,7 +26,7 @@ ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr
     image = new Banner(pvr_type, image_texture);
     image->setSize(width, height);        
     image->setTranslate(translateVector);
-    this->subAdd(image);	
+    this->subAdd(image);
 }
 
 ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
@@ -40,14 +40,10 @@ ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
         this->font = font;
     }
 
-	float w, h;
-	font->getTextSize(text, &w, &h);
-	m_width = w;
-	m_height = h;
-
     this->text = new Label(font, text, font_size, false, false);       
     this->text->setTranslate(translateVector);
     this->subAdd(this->text);
+	this->text->getFont()->getTextSize(text, &m_width, &m_height);
 }
 
 ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size, bool yflip, uint flags)
@@ -67,16 +63,16 @@ ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr
         this->font = font;
     }
 
+	translateVector = image->getPosition();
     translateVector.x += width/2 + 6.f;
     this->text = new Label(font, text, font_size, false, false);
 
 	float w, h;
-	font->getTextSize(text, &w, &h);
-
-	m_width = width + w - padding_x;
-	m_height = height + padding_y/2;
+	this->text->getFont()->getTextSize(text, &w, &h);
+	m_width = width + w + padding_x;
+	m_height = (height > h ? height : h) + padding_y/2;
 	
-	translateVector.y +=  (h/2 - padding_y/2);
+	translateVector.y = m_height - (m_height/2 + height/2 - padding_y);
     this->text->setTranslate(translateVector);
     this->subAdd(this->text);
 }

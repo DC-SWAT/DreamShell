@@ -81,19 +81,31 @@ CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height
 CheckBox::~CheckBox() {
 	
 	if (m_display_label != nullptr) {
-		this->subRemove(m_display_label);
+		m_display_label->setFinished();
+	}
+
+	if (m_control_rectangle != nullptr) {
+		m_control_rectangle->setFinished();
+	}
+
+	if (m_rectangle != nullptr) {
+		m_rectangle->setFinished();
+	}
+
+	this->subRemoveFinished();
+	thd_pass(); // FIXME
+
+	if (m_display_label != nullptr) {
 		delete m_display_label;
 		m_display_label = nullptr;
 	}
 
 	if (m_control_rectangle != nullptr) {
-		this->subRemove(m_control_rectangle);
 		delete m_control_rectangle;
 		m_control_rectangle = nullptr;
 	}
 
 	if (m_rectangle != nullptr) {
-		this->subRemove(m_rectangle);
 		delete m_rectangle;
 		m_rectangle = nullptr;
 	}
