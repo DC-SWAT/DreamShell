@@ -24,6 +24,7 @@ struct menu_structure
 {
 	bool save_preset;
 	bool cover_background;
+	bool change_page_with_pad;
 	bool ide;
 	bool sd;
 	bool cd;

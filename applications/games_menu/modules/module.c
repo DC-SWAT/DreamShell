@@ -1086,6 +1086,7 @@ static void StartExit()
 					strcpy(label_text, TSU_ItemMenuGetLabelText(self.item_game[i]));
 					label_text = Trim(label_text);
 
+					TSU_FontSetSize(self.menu_font, 18);
 					TSU_FontGetTextSize(self.menu_font, label_text, &w, &h);
 					self.run_animation = TSU_LogXYMoverCreate((640/2 - w/2), (480 - 84) / 2);
 
@@ -1556,13 +1557,35 @@ static void GamesApp_InputEvent(int type, int key)
 				if (self.game_count <= menu_data.menu_option.size_items_column)
 				{
 					self.menu_cursel = 0;
+
+					if (menu_data.app_config.change_page_with_pad)
+					{
+						self.current_page--;
+						self.menu_cursel = 0;
+						if (LoadPage(false, DMD_RIGHT))
+						{
+						}
+					}
 				}
 				else
 				{
 					self.menu_cursel -= menu_data.menu_option.size_items_column;
 
 					if (self.menu_cursel < 0)
-						self.menu_cursel += self.game_count;
+					{
+						if (menu_data.app_config.change_page_with_pad)
+						{
+							self.current_page--;
+							self.menu_cursel = 0;
+							if (LoadPage(false, DMD_RIGHT))
+							{
+							}
+						}
+						else
+						{
+							self.menu_cursel += self.game_count;
+						}
+					}
 				}
 			}
 
@@ -1583,13 +1606,35 @@ static void GamesApp_InputEvent(int type, int key)
 				if (self.game_count <= menu_data.menu_option.size_items_column)
 				{
 					self.menu_cursel = self.game_count - 1;
+					
+					if (menu_data.app_config.change_page_with_pad)
+					{
+						self.current_page++;
+						self.menu_cursel = 0;
+						if (LoadPage(false, DMD_LEFT))
+						{
+						}
+					}
 				}
 				else
 				{
 					self.menu_cursel += menu_data.menu_option.size_items_column;
 
 					if (self.menu_cursel >= self.game_count)
-						self.menu_cursel -= self.game_count;
+					{
+						if (menu_data.app_config.change_page_with_pad)
+						{
+							self.current_page++;
+							self.menu_cursel = 0;
+							if (LoadPage(false, DMD_LEFT))
+							{
+							}
+						}
+						else
+						{
+							self.menu_cursel -= self.game_count;
+						}
+					}
 				}
 			}
 

@@ -38,6 +38,7 @@ static struct
 
 	CheckBox *save_preset_option;
 	CheckBox *cover_background_option;
+	CheckBox *change_page_with_page_option;
 
 	Font *message_font;
 	Font *menu_font;
@@ -92,7 +93,7 @@ void ShowSystemMenu()
 		Font *form_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
 		uint width = 300;
-		uint height = 330;
+		uint height = 390;
 		self.system_menu_form = TSU_FormCreate(640 / 2 - 150, 480 / 2 + (height - 10) / 2, width, height, true, 3, true, false, form_font, &OnSystemViewIndexChangedEvent);
 		TSU_DrawableSubAdd((Drawable *)self.scene_ptr, (Drawable *)self.system_menu_form);
 		TSU_FormSelectedEvent(self.system_menu_form, &SystemMenuSelectedEvent);		
@@ -112,16 +113,19 @@ void OnSystemViewIndexChangedEvent(Drawable *drawable, int view_index)
 void CreateSystemMenuView(Form *form_ptr)
 {
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
-	TSU_FormtSetAttributes(form_ptr, 1, 8, 296, 38);		
+	TSU_FormtSetAttributes(form_ptr, 1, 10, 296, 38);		
 	TSU_FormSetRowSize(form_ptr, 4, 30);
 	TSU_FormSetRowSize(form_ptr, 6, 30);
-	TSU_FormSetRowSize(form_ptr, 7, 20);
+	TSU_FormSetRowSize(form_ptr, 8, 30);
+	TSU_FormSetRowSize(form_ptr, 9, 20);
 	TSU_FormSetTitle(form_ptr, "SYSTEM MENU");
+
+	int font_size = 17;
 
 	// THE ALIGN SHOULD BE IN FORM CLASS
 	{
 		// SCAN MISSING COVERS
-		Label *missing_covers_label = TSU_LabelCreate(form_font, "Scan missing covers", 18, false, false);
+		Label *missing_covers_label = TSU_LabelCreate(form_font, "Scan missing covers", font_size, false, false);
 		TSU_FormAddBodyLabel(form_ptr, missing_covers_label, 1, 1);
 		TSU_DrawableEventSetClick((Drawable *)missing_covers_label, &ScanMissingCoversClick);
 
@@ -135,7 +139,7 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// OPTIMIZE COVERS
-		Label *optimize_covers_label = TSU_LabelCreate(form_font, "Optimize covers", 18, false, false);
+		Label *optimize_covers_label = TSU_LabelCreate(form_font, "Optimize covers", font_size, false, false);
 		TSU_FormAddBodyLabel(form_ptr, optimize_covers_label, 1, 2);
 		TSU_DrawableEventSetClick((Drawable *)optimize_covers_label, &OptimizeCoversClick);
 
@@ -148,11 +152,11 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// DEFAULT SAVE PRESET
-		Label *save_preset_label = TSU_LabelCreate(form_font, "Default save preset:", 18, false, false);
+		Label *save_preset_label = TSU_LabelCreate(form_font, "Default save preset:", font_size, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)save_preset_label, true);
 		TSU_FormAddBodyLabel(form_ptr, save_preset_label, 1, 3);
 
-		self.save_preset_option = TSU_CheckBoxCreate(form_font, 18, 50, 22);
+		self.save_preset_option = TSU_CheckBoxCreate(form_font, font_size, 50, 22);
 		TSU_FormAddBodyCheckBox(form_ptr, self.save_preset_option, 1, 4);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.save_preset_option);
@@ -171,11 +175,11 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// COVER BACKGROUND
-		Label *cover_background_label = TSU_LabelCreate(form_font, "Cover background:", 18, false, false);
+		Label *cover_background_label = TSU_LabelCreate(form_font, "Cover background:", font_size, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cover_background_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cover_background_label, 1, 5);
 
-		self.cover_background_option = TSU_CheckBoxCreate(form_font, 18, 50, 22);
+		self.cover_background_option = TSU_CheckBoxCreate(form_font, font_size, 50, 22);
 		TSU_FormAddBodyCheckBox(form_ptr, self.cover_background_option, 1, 6);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.cover_background_option);
@@ -193,9 +197,32 @@ void CreateSystemMenuView(Form *form_ptr)
 	}
 
 	{
+		// CHANGE PAGE WITH PAD
+		Label *change_page_with_page_label = TSU_LabelCreate(form_font, "Change page with pad:", font_size, false, false);
+		TSU_DrawableSetReadOnly((Drawable*)change_page_with_page_label, true);
+		TSU_FormAddBodyLabel(form_ptr, change_page_with_page_label, 1, 7);
+
+		self.change_page_with_page_option = TSU_CheckBoxCreate(form_font, font_size, 50, 22);
+		TSU_FormAddBodyCheckBox(form_ptr, self.change_page_with_page_option, 1, 8);
+
+		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.change_page_with_page_option);
+		option_vector.y -= 5;
+		TSU_DrawableSetTranslate((Drawable *)self.change_page_with_page_option, &option_vector);
+
+		TSU_DrawableEventSetClick((Drawable *)self.change_page_with_page_option, &ChangePageWithPadOptionClick);
+
+		if (menu_data.app_config.change_page_with_pad)
+		{
+			TSU_CheckBoxSetOn(self.change_page_with_page_option);
+		}
+
+		change_page_with_page_label = NULL;
+	}
+
+	{
 		// EXIT TO MAIN MENU
-		Label *exit_covers_label = TSU_LabelCreate(form_font, "Return", 18, false, false);
-		TSU_FormAddBodyLabel(form_ptr, exit_covers_label, 1, 8);
+		Label *exit_covers_label = TSU_LabelCreate(form_font, "Return", font_size, false, false);
+		TSU_FormAddBodyLabel(form_ptr, exit_covers_label, 1, 10);
 		TSU_DrawableEventSetClick((Drawable *)exit_covers_label, &ExitSystemMenuClick);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)exit_covers_label);
@@ -276,6 +303,12 @@ void CoverBackgroundOptionClick(Drawable *drawable)
 {
 	TSU_CheckBoxInputEvent(self.cover_background_option, 0, KeySelect);
 	menu_data.cover_background = (TSU_CheckBoxGetValue(self.cover_background_option) ? 1 : 0);
+}
+
+void ChangePageWithPadOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.change_page_with_page_option, 0, KeySelect);
+	menu_data.change_page_with_pad = (TSU_CheckBoxGetValue(self.change_page_with_page_option) ? 1 : 0);
 }
 
 void ExitSystemMenuClick(Drawable *drawable)

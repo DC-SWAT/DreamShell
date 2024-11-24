@@ -230,6 +230,7 @@ typedef struct AppConfigStructure
 	int initial_view;
 	int save_preset;
 	int cover_background;
+	int change_page_with_pad;
 } AppConfigStruct;
 #pragma pack(pop)
 

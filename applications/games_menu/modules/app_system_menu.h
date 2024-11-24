@@ -34,6 +34,7 @@ void ExitSystemMenuClick(Drawable *drawable);
 void ScanMissingCoversClick(Drawable *drawable);
 void DefaultSavePresetOptionClick(Drawable *drawable);
 void CoverBackgroundOptionClick(Drawable *drawable);
+void ChangePageWithPadOptionClick(Drawable *drawable);
 
 void ShowOptimizeCoverPopup();
 void HideOptimizeCoverPopup();
