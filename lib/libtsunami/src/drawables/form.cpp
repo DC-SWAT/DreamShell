@@ -13,8 +13,8 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 	m_current_column = m_current_row = 0;
 	m_is_popup = is_popup;
 	m_body_rectangle = nullptr;
-	m_background_rectangle  = nullptr;
-	m_title_rectangle  = nullptr;
+	m_background_rectangle = nullptr;
+	m_title_rectangle = nullptr;
 	m_bottom_rectangle = nullptr;
 	m_columns_attributes = nullptr;
 	m_rows_attributes = nullptr;
@@ -52,30 +52,6 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 }
 
 Form::~Form() {
-	if (m_cursor_animation != nullptr) {
-		m_cursor_animation->complete(m_cursor);
-		delete m_cursor_animation;
-		m_cursor_animation = nullptr;
-	}
-
-	if (m_cursor != nullptr) {
-		subRemove(m_cursor);
-		delete m_cursor;
-		m_cursor = nullptr;
-	}
-
-	if (m_bottom_cursor_animation != nullptr) {
-		m_bottom_cursor_animation->complete(m_bottom_cursor);
-		delete m_bottom_cursor_animation;
-		m_bottom_cursor_animation = nullptr;
-	}
-
-	if (m_bottom_cursor != nullptr) {
-		subRemove(m_bottom_cursor);
-		delete m_bottom_cursor;
-		m_bottom_cursor = nullptr;
-	}
-
 	clearObjects();
 	clearBottomObjects();
 
@@ -89,37 +65,86 @@ Form::~Form() {
 		m_rows_attributes = nullptr;
 	}
 
-	if (m_background_rectangle) {
-		subRemove(m_background_rectangle);
+	if (m_cursor_animation != nullptr) {
+		m_cursor_animation->complete(m_cursor);
+		delete m_cursor_animation;
+		m_cursor_animation = nullptr;
+	}
+
+	if (m_bottom_cursor_animation != nullptr) {
+		m_bottom_cursor_animation->complete(m_bottom_cursor);
+		delete m_bottom_cursor_animation;
+		m_bottom_cursor_animation = nullptr;
+	}
+
+	if (m_cursor != nullptr) {
+		m_cursor->setFinished();
+	}
+
+	if (m_bottom_cursor != nullptr) {
+		m_bottom_cursor->setFinished();
+	}	
+
+	if (m_background_rectangle != nullptr) {
+		m_background_rectangle->setFinished();
+	}
+	
+	if (m_title_rectangle != nullptr) {
+		m_title_rectangle->setFinished();
+	}
+	
+	if (m_body_rectangle != nullptr) {
+		m_body_rectangle->setFinished();
+	}
+	
+	if (m_bottom_rectangle != nullptr) {
+		m_bottom_rectangle->setFinished();
+	}
+	
+	if (m_title_label != nullptr) {
+		m_title_label->setFinished();
+	}
+
+	this->setFinished();
+	this->subRemoveFinished();
+	thd_sleep(100);
+
+	if (m_cursor != nullptr) {
+		delete m_cursor;
+		m_cursor = nullptr;
+	}
+
+	if (m_bottom_cursor != nullptr) {
+		delete m_bottom_cursor;
+		m_bottom_cursor = nullptr;
+	}	
+
+	if (m_background_rectangle != nullptr) {
 		delete m_background_rectangle;
 		m_background_rectangle = nullptr;
 	}
 	
-	if (m_title_rectangle) {
-		subRemove(m_title_rectangle);
+	if (m_title_rectangle != nullptr) {
 		delete m_title_rectangle;
 		m_title_rectangle = nullptr;
 	}
 	
-	if (m_body_rectangle) {
-		subRemove(m_body_rectangle);
+	if (m_body_rectangle != nullptr) {
 		delete m_body_rectangle;
 		m_body_rectangle = nullptr;
 	}
 	
-	if (m_bottom_rectangle) {
-		subRemove(m_bottom_rectangle);
+	if (m_bottom_rectangle != nullptr) {
 		delete m_bottom_rectangle;
 		m_bottom_rectangle = nullptr;
 	}
 	
-	if (m_title_label) {
-		subRemove(m_title_label);
+	if (m_title_label != nullptr) {
 		delete m_title_label;
 		m_title_label = nullptr;
 	}
 
-	if (m_title_font) {
+	if (m_title_font != nullptr) {
 		delete m_title_font;
 		m_title_font = nullptr;
 	}
@@ -885,6 +910,9 @@ void Form::setCursor(Drawable *drawable) {
 			Label *label = (Label *)drawable;
 			label->getFont()->getTextSize(label->getText(), &drawable_width, &drawable_height);
 			label = NULL;
+
+			drawable_width += 4;
+			drawable_height += 2;
 		}
 		else {
 			drawable->getSize(&drawable_width, &drawable_height);
@@ -915,6 +943,7 @@ void Form::setCursor(Drawable *drawable) {
 			m_selector_translate.y += drawable_height/2;
 		}
 		else if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE) {
+			m_selector_translate.x -= 2;
 			m_selector_translate.y -= (drawable_height/2 - (border_width + 2));
 			m_selector_translate.w -= (border_width + 2);
 		}
@@ -1132,7 +1161,7 @@ extern "C"
 	{
 		if (form_ptr != NULL)
 		{
-			form_ptr->getParent()->subRemove(form_ptr);					
+			form_ptr->getParent()->subRemove(form_ptr);
 		}
 	}
 
@@ -1140,7 +1169,7 @@ extern "C"
 	{
 		if (*form_ptr != NULL)
 		{
-			TSU_FormRemove(*form_ptr);
+			// TSU_FormRemove(*form_ptr);
 
 			delete *form_ptr;
 			*form_ptr = NULL;

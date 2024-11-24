@@ -91,19 +91,31 @@ TextBox::~TextBox() {
 	clearText();
 	
 	if (m_display_label != nullptr) {
-		this->subRemove(m_display_label);
+		m_display_label->setFinished();
+	}
+
+	if (m_control_rectangle != nullptr) {
+		m_control_rectangle->setFinished();
+	}
+
+	if (m_text_cursor != nullptr) {
+		m_text_cursor->setFinished();
+	}
+
+	this->subRemoveFinished();
+	thd_pass();
+
+	if (m_display_label != nullptr) {
 		delete m_display_label;
 		m_display_label = nullptr;
 	}
 
 	if (m_control_rectangle != nullptr) {
-		this->subRemove(m_control_rectangle);
 		delete m_control_rectangle;
 		m_control_rectangle = nullptr;
 	}
 
 	if (m_text_cursor != nullptr) {
-		this->subRemove(m_text_cursor);
 		delete m_text_cursor;
 		m_text_cursor = nullptr;
 	}

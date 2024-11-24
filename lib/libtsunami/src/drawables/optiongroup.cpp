@@ -103,37 +103,58 @@ OptionGroup::~OptionGroup() {
 	clearOptions();
 	
 	if (m_display_label != nullptr) {
-		this->subRemove(m_display_label);
+		m_display_label->setFinished();
+	}
+
+	if (m_control_rectangle != nullptr) {
+		m_control_rectangle->setFinished();
+	}
+
+	if (m_left_triangle != nullptr) {
+		m_left_triangle->setFinished();
+	}
+
+	if (m_right_triangle != nullptr) {
+		m_right_triangle->setFinished();
+	}
+
+	if (m_left_rectangle != nullptr) {
+		m_left_rectangle->setFinished();
+	}
+
+	if (m_right_rectangle != nullptr) {
+		m_right_rectangle->setFinished();
+	}	
+
+	this->subRemoveFinished();
+	thd_pass();
+
+	if (m_display_label != nullptr) {
 		delete m_display_label;
 		m_display_label = nullptr;
 	}
 
 	if (m_control_rectangle != nullptr) {
-		this->subRemove(m_control_rectangle);
 		delete m_control_rectangle;
 		m_control_rectangle = nullptr;
 	}
 
 	if (m_left_triangle != nullptr) {
-		this->subRemove(m_left_triangle);
 		delete m_left_triangle;
 		m_left_triangle = nullptr;
 	}
 
 	if (m_right_triangle != nullptr) {
-		this->subRemove(m_right_triangle);
 		delete m_right_triangle;
 		m_right_triangle = nullptr;
 	}
 
 	if (m_left_rectangle != nullptr) {
-		this->subRemove(m_left_rectangle);
 		delete m_left_rectangle;
 		m_left_rectangle = nullptr;
 	}
 
 	if (m_right_rectangle != nullptr) {
-		this->subRemove(m_right_rectangle);
 		delete m_right_rectangle;
 		m_right_rectangle = nullptr;
 	}

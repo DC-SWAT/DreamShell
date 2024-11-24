@@ -36,6 +36,7 @@ void Label::setFont(Font *f) {
 }
 
 Font* Label::getFont() {
+	m_fh->setSize(m_size);
 	return m_fh;
 }
 
