@@ -56,8 +56,6 @@ void DSApp::doAppFrame()
 
 void DSApp::visualPerFrame()
 {
-	m_scene->subRemoveFinished();
-
 	pvr_list_begin(PLX_LIST_OP_POLY);
 	visualOpaqueList();
 
