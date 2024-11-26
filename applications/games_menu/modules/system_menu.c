@@ -51,6 +51,8 @@ void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font 
 	self.message_font = message_font;
 	self.menu_font = menu_font;
 	self.system_menu_form = NULL;
+	self.optimize_cover_popup = NULL;
+	self.optimize_covers_label = NULL;
 	self.first_scan_cover = false;
 }
 
