@@ -15,6 +15,12 @@
 
 #define IN_CACHE_GAMES
 
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+	int VideoMustLock();
+}
+
 
 DSApp::DSApp(InputEventPtr *input_event_callback)
 {
@@ -56,13 +62,28 @@ void DSApp::doAppFrame()
 
 void DSApp::visualPerFrame()
 {
-	pvr_list_begin(PLX_LIST_OP_POLY);
-	visualOpaqueList();
+	if (VideoMustLock()) {
+		LockVideo();
+		
+		pvr_list_begin(PLX_LIST_OP_POLY);
+		visualOpaqueList();
 
-	pvr_list_begin(PLX_LIST_TR_POLY);
-	visualTransList();
+		pvr_list_begin(PLX_LIST_TR_POLY);
+		visualTransList();
 
-	m_scene->nextFrame();
+		m_scene->nextFrame();
+
+		UnlockVideo();
+	}
+	else {	
+		pvr_list_begin(PLX_LIST_OP_POLY);
+		visualOpaqueList();
+
+		pvr_list_begin(PLX_LIST_TR_POLY);
+		visualTransList();
+
+		m_scene->nextFrame();
+	}
 }
 
 void DSApp::doMenu() {}

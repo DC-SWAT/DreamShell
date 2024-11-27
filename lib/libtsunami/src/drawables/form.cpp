@@ -6,7 +6,6 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 	ViewIndexChangedEventPtr view_index_changed_event)  {
 
 	setObjectType(ObjectTypeEnum::FORM_TYPE);
-	setFinished();
 
 	m_cursor_animation_enable = false;
 	m_current_view_index = 0;
@@ -55,12 +54,12 @@ Form::~Form() {
 	clearObjects();
 	clearBottomObjects();
 
-	if (m_columns_attributes) {
+	if (m_columns_attributes != nullptr) {
 		free(m_columns_attributes);
 		m_columns_attributes = nullptr;
 	}
 
-	if (m_rows_attributes) {
+	if (m_rows_attributes != nullptr) {
 		free(m_rows_attributes);
 		m_rows_attributes = nullptr;
 	}
@@ -106,8 +105,7 @@ Form::~Form() {
 	}
 
 	this->setFinished();
-	this->subRemoveFinished();
-	thd_pass(); // FIXME: ON VERY DIFFERENT OCCASIONS IT SHOWS ERROR WHEN DELETING THE FORM
+	this->getParent()->subRemoveFinished();
 
 	if (m_cursor != nullptr) {
 		delete m_cursor;
@@ -159,7 +157,6 @@ void Form::clearBottomObjects() {
 	}
 
 	this->subRemoveFinished();
-	thd_pass(); // FIXME
 
 	for (auto it = m_bottom_objects.begin(); it != m_bottom_objects.end();) {
 		freeObject(*it);		
@@ -232,7 +229,6 @@ void Form::clearObjects() {
 	}
 
 	this->subRemoveFinished();
-	thd_pass(); // FIXME
 
 	for (auto it = m_objects.begin(); it != m_objects.end();) {
 		freeObject(*it);		
@@ -870,7 +866,7 @@ void Form::setCursor(Drawable *drawable) {
 		
 		if (m_cursor_animation != nullptr) {
 			m_cursor_animation->complete(m_cursor);
-			thd_pass(); // FIXME
+			
 			delete m_cursor_animation;
 			m_cursor_animation = nullptr;
 		}

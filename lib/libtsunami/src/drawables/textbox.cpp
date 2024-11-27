@@ -103,7 +103,6 @@ TextBox::~TextBox() {
 	}
 
 	this->subRemoveFinished();
-	thd_pass(); // FIXME
 
 	if (m_display_label != nullptr) {
 		delete m_display_label;

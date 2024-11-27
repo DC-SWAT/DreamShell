@@ -13,7 +13,12 @@
 
 #include <algorithm>
 #include "tsunamiutils.h"
-// #include <kos.h>
+
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+	int VideoMustLock();
+}
 
 // Constructor / Destructor
 Drawable::Drawable() {
@@ -48,11 +53,15 @@ void Drawable::animAdd(Animation *ani) {
 }
 
 void Drawable::animRemove(Animation *ani) {
+	LockVideo();
+
 	auto is_ptr = [=](Animation *sp) { return sp == ani; };
 	auto it = std::find_if(m_anims.begin(), m_anims.end(), is_ptr);
 
 	if (it != m_anims.end())
 		m_anims.erase(it);
+
+	UnlockVideo();
 }
 
 void Drawable::animRemoveAll() {
@@ -87,7 +96,7 @@ void Drawable::subDraw(int list) {
 	}
 }
 
-void Drawable::subNextFrame() {
+void Drawable::subNextFrame() {	
 	for (auto it: m_subs) {
 		if (!it->isFinished())
 			it->nextFrame();
@@ -95,22 +104,29 @@ void Drawable::subNextFrame() {
 }
 
 void Drawable::subAdd(Drawable *t) {
+	LockVideo();
 	assert( t->m_parent == nullptr );
 	t->m_parent = this;
 	m_subs.push_front(t);
+	UnlockVideo();
 }
 
 void Drawable::subRemove(Drawable *t) {
 	t->m_parent = nullptr;
+
+	LockVideo();
 
 	auto is_ptr = [=](Drawable *sp) { return sp == t; };
 	auto it = std::find_if(m_subs.begin(), m_subs.end(), is_ptr);
 
 	if (it != m_subs.end())
 		m_subs.erase(it);
+
+	UnlockVideo();
 }
 
 void Drawable::subRemoveFinished() {
+	LockVideo();
 	for (auto it = m_subs.begin(); it != m_subs.end();) {
 		if ((*it)->isFinished()) {
 			(*it)->m_parent = nullptr;
@@ -119,13 +135,17 @@ void Drawable::subRemoveFinished() {
 			it++;
 		}
 	}
+	UnlockVideo();
 }
 
 void Drawable::subRemoveAll() {
+
+	LockVideo();
 	for (auto it = m_subs.begin(); it != m_subs.end();) {
 		(*it)->m_parent = nullptr;
 		it = m_subs.erase(it);
 	}
+	UnlockVideo();
 }
 
 void Drawable::draw(int list) {
@@ -142,7 +162,9 @@ void Drawable::nextFrame() {
 		it->nextFrame(this);
 	}
 
+	LockVideo();
 	subNextFrame();
+	UnlockVideo();
 }
 
 Vector Drawable::getPosition() const {

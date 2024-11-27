@@ -6,6 +6,7 @@ Scene::Scene() {
 	// anything. This will make it check its sub-drawables for
 	// finishedness before acquiescing.
 	setFinished();
+	subRemoveFinished();
 }
 
 Scene::~Scene() {
