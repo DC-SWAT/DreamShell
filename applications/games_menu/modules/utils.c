@@ -186,10 +186,10 @@ bool IsGdiOptimized(const char *full_path_game)
 	bool is_optimized = false;
 	if (full_path_game)
 	{
-		char *result = (char *)malloc(NAME_MAX);
-		char *path = (char *)malloc(NAME_MAX);
+		char result[NAME_MAX];
+		char path[NAME_MAX];
 
-		char *game = (char *)malloc(NAME_MAX);
+		char game[NAME_MAX];
 		memset(game, 0, NAME_MAX);
 		strcpy(game, GetLastPart(full_path_game, '/', 0));	
 
@@ -198,8 +198,6 @@ bool IsGdiOptimized(const char *full_path_game)
 
 		strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
 		snprintf(result, NAME_MAX, "%s/track01.iso", path);
-		free(game);
-		free(path);
 		
 		is_optimized = (FileExists(result) == 1);
 	}
