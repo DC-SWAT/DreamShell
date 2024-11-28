@@ -162,9 +162,7 @@ void Drawable::nextFrame() {
 		it->nextFrame(this);
 	}
 
-	LockVideo();
 	subNextFrame();
-	UnlockVideo();
 }
 
 Vector Drawable::getPosition() const {
