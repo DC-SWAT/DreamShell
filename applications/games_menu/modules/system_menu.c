@@ -51,6 +51,8 @@ void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font 
 	self.message_font = message_font;
 	self.menu_font = menu_font;
 	self.system_menu_form = NULL;
+	self.optimize_cover_popup = NULL;
+	self.optimize_covers_label = NULL;
 	self.first_scan_cover = false;
 }
 
@@ -132,7 +134,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)missing_covers_label);
 		option_vector.x += 24;
 		TSU_DrawableSetTranslate((Drawable *)missing_covers_label, &option_vector);
-		TSU_FormSetCursorSize(form_ptr, 290, 30);
+		TSU_FormSetCursor(form_ptr, (Drawable *)missing_covers_label);
 
 		missing_covers_label = NULL;
 	}

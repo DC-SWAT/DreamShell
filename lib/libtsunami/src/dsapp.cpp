@@ -10,11 +10,6 @@
 #include "dsapp.h"
 #include <kos.h>
 #include "tsunamiutils.h"
-// #include <cstring>
-// #include <mp3/sndserver.h>
-
-#define IN_CACHE_GAMES
-
 
 DSApp::DSApp(InputEventPtr *input_event_callback)
 {
@@ -56,8 +51,6 @@ void DSApp::doAppFrame()
 
 void DSApp::visualPerFrame()
 {
-	m_scene->subRemoveFinished();
-
 	pvr_list_begin(PLX_LIST_OP_POLY);
 	visualOpaqueList();
 
@@ -77,9 +70,7 @@ bool DSApp::endApp()
 		m_exitCount -= m_exitSpeed;
 		if (m_exitCount < 0.0f)
 			m_exitCount = 0.0f;
-		/* if (m_usebgm) {
-			oggVolume(m_exitCount);
-		} */
+
 		visualPerFrame();
 
 		return false;
@@ -95,11 +86,6 @@ bool DSApp::endApp()
 	GenericMenu::visualPerFrame();
 	GenericMenu::visualPerFrame();
 	GenericMenu::visualPerFrame();
-
-	// Stop music if necessary
-	/* if (m_usebgm) {
-		oggStop(m_cachebgm);
-	} */
 
 	if (m_postDelay)
 		thd_sleep(m_postDelay);
