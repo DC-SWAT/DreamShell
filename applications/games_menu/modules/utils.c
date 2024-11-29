@@ -197,7 +197,7 @@ bool IsGdiOptimized(const char *full_path_game)
 		memset(path, 0, NAME_MAX);
 
 		strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
-		snprintf(result, NAME_MAX, "%s/track01.iso", path);
+		snprintf(result, NAME_MAX, "%s/track03.iso", path);
 		
 		is_optimized = (FileExists(result) == 1);
 	}
