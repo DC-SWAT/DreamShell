@@ -16,46 +16,47 @@
 /* Trim begin/end spaces and copy into output buffer */
 void TrimSpaces(char *input, char *output, int size)
 {
-	char *p;
-	char *o;
-	int s = 0;
+    char *p;
+    char *o;
+    int s = 0;
+    size--;
 
-	p = input;
-	o = output;
+    p = input;
+    o = output;
 
-	if (*p == '\0')
-	{
-		*o = '\0';
-		return;
-	}
+    if (*p == '\0')
+    {
+        *o = '\0';
+        return;
+    }
 
-	while (*p == ' ' && s > 0)
-	{
-		p++;
-		size--;
-	}
+    while (*p == ' ' && size > 0)
+    {
+        p++;
+        size--;
+    }
 
-	if (!size)
-	{
-		*o = '\0';
-		return;
-	}
+    if (!size)
+    {
+        *o = '\0';
+        return;
+    }
 
-	while (size--)
-	{
-		*o++ = *p++;
-		s++;
-	}
+    while (size--)
+    {
+        *o++ = *p++;
+        s++;
+    }
 
-	*o = '\0';
-	o--;
+    *o = '\0';
+    o--;
 
-	while (*o == ' ' && s > 0)
-	{
-		*o = '\0';
-		o--;
-		s--;
-	}
+    while (*o == ' ' && s > 0)
+    {
+        *o = '\0';
+        o--;
+        s--;
+    }
 }
 
 char *Trim(char *string)
