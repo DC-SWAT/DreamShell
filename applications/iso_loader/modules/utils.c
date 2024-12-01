@@ -15,6 +15,7 @@ void trim_spaces(char *input, char *output, int size) {
 	char *p;
 	char *o;
 	int s = 0;
+	size--;
 
 	p = input;
 	o = output;
@@ -24,7 +25,7 @@ void trim_spaces(char *input, char *output, int size) {
 		return;
 	}
 
-	while(*p == ' ' && s > 0) {
+	while(*p == ' ' && size > 0) {
 		p++;
 		size--;
 	}
