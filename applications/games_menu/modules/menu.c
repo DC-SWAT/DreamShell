@@ -1199,12 +1199,6 @@ PresetStruct* LoadPresetGame(int game_index)
 			ds_printf("PresetFileName: %s", full_preset_file_name);
 		}
 
-		if (full_preset_file_name != NULL)
-		{
-			memset(preset->preset_file_name, 0, sizeof(preset->preset_file_name));
-			strcpy(preset->preset_file_name, strrchr(full_preset_file_name, '/') + 1);
-		}
-
 		if (FileSize(full_preset_file_name) < 5)
 		{
 			full_preset_file_name = NULL;
@@ -1268,6 +1262,7 @@ PresetStruct* LoadPresetGame(int game_index)
 			{
 				free(preset);
 				preset = GetDefaultPresetGame(full_path_game, &sector_data);
+				preset->game_index = game_index;
 			}
 
 			if (preset->scr_hotkey)
@@ -1313,6 +1308,7 @@ PresetStruct* LoadPresetGame(int game_index)
 		{
 			free(preset);
 			preset = GetDefaultPresetGame(full_path_game, &sector_data);
+			preset->game_index = game_index;
 		}
 
 		if (preset->emu_cdda)
