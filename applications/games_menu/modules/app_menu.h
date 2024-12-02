@@ -35,6 +35,7 @@ struct menu_structure
 	volatile bool cdda_game_changed;
 	volatile bool stop_load_pvr_cover;
 	volatile bool stop_optimize_game_cover;
+	int default_cover_type;
 	int state_app;
 	int menu_type;
 	int games_array_count;
