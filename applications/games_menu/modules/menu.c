@@ -1003,11 +1003,15 @@ static int AppCompareFirmwares(const void *a, const void *b)
 
 	if (ContainsOnlyNumbers(left->file) && ContainsOnlyNumbers(right->file))
 	{
-		return left->file - right->file;
+		return atoi(left->file) - atoi(right->file);
 	}
 	else if (ContainsOnlyNumbers(left->file))
 	{
 		return -1;
+	}
+	else if (ContainsOnlyNumbers(right->file))
+	{
+		return 1;
 	}
 
 	return strcmp(left->file, right->file);
