@@ -242,15 +242,21 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 
 bool ContainsOnlyNumbers(const char *string)
 {
-	const int string_len = strlen(string);
+	volatile char c;
 
-	for(int i = 0; i < string_len; ++i)
-	{
-		if(!isdigit((unsigned char)string[i])) 
-			return false;
+	if (string == NULL)
+		return false;
+
+	if (*string == 0) 
+		return false; 
+
+	while ((c=*(string++))!=0)
+	{ 
+		if (c<'0' || c>'9') 
+			return false; 
 	}
 
-	return true;
+	return true; 
 }
 
 int GetDeviceType(const char *dir)
