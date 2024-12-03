@@ -307,13 +307,8 @@ static void SetTitle(int game_index, const char *text)
 	}
 	else
 	{
-		int font_size = 22;
+		int font_size = 20;
 		Color color = {1, 1.0f, 1.0f, 1.0f};
-
-		if(vid_check_cable() != CT_VGA)
-		{
-			font_size = 20;
-		}
 
 		self.title = TSU_LabelCreate(self.menu_font, titleText, font_size, false, false);
 		TSU_LabelSetTint(self.title, &color);
@@ -399,11 +394,7 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 		}
 		else
 		{
-			int font_size = 22;
-			if(vid_check_cable() != CT_VGA)
-			{
-				font_size = 20;
-			}
+			int font_size = 20;
 			
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
 			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, true, true);
@@ -847,7 +838,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 					}
 
 					self.item_game[self.game_count - 1] = TSU_ItemMenuCreateLabel(name_truncated, self.menu_font, 18);
-					Color color_unselected = { 1, 0.85f, 0.85f, 0.85f };
+					Color color_unselected = { 1, 0.95f, 0.95f, 0.95f };
 					TSU_ItemMenuSetColorUnselected(self.item_game[self.game_count - 1], &color_unselected);
 				}
 				else

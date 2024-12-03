@@ -19,6 +19,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.cover_background = true;
 	menu_data.games_array_count = 0;
 	menu_data.firmware_array_count = 0;
+	menu_data.default_cover_type = -1;
 	menu_data.play_cdda_thread = NULL;
 	menu_data.load_pvr_cover_thread = NULL;
 	menu_data.finished_menu = false;
@@ -80,6 +81,11 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	
 	menu_data.current_dev = GetDeviceType(menu_data.default_dir);
 	menu_data.convert_pvr_to_png = (menu_data.current_dev == APP_DEVICE_IDE);
+
+	char game_cover_path[NAME_MAX];
+	memset(game_cover_path, 0, NAME_MAX);
+	snprintf(game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/gd.jpg");
+	menu_data.default_cover_type = (FileExists(game_cover_path) ? IT_JPG : IT_PNG);
 
 	LoadMenuConfig();
 	LoadFirmwareFiles();
@@ -700,15 +706,9 @@ int16 CheckCover(int game_index, int menu_type)
 		
 		if (menu_data.games_array[game_index].exists_cover[menu_type-1] == SC_WITHOUT_SEARCHING)
 		{
-			char *game_cover_path = (char *)malloc(NAME_MAX);
-			memset(game_cover_path, 0, NAME_MAX);
-
-			snprintf(game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/gd.jpg");			
-			SetCoverType(game_index, menu_type, FileExists(game_cover_path) ? IT_JPG : IT_PNG);
+			SetCoverType(game_index, menu_type, menu_data.default_cover_type);
 			exists_cover = menu_data.games_array[game_index].exists_cover[menu_type-1] = SC_DEFAULT;
 			menu_data.games_array[game_index].check_pvr = true;
-
-			free(game_cover_path);
 		}
 	}
 	else
@@ -1003,11 +1003,15 @@ static int AppCompareFirmwares(const void *a, const void *b)
 
 	if (ContainsOnlyNumbers(left->file) && ContainsOnlyNumbers(right->file))
 	{
-		return left->file - right->file;
+		return atoi(left->file) - atoi(right->file);
 	}
 	else if (ContainsOnlyNumbers(left->file))
 	{
 		return -1;
+	}
+	else if (ContainsOnlyNumbers(right->file))
+	{
+		return 1;
 	}
 
 	return strcmp(left->file, right->file);
@@ -2221,8 +2225,8 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 	dirent_t *ent = NULL;
 	char game[NAME_MAX];
 	char *file_type = NULL;
-	bool is_folder_name = false;	
-	bool unique_file = level > 0 ? IsUniqueFileGame(full_path_folder) : false;
+	bool is_folder_name = false;
+	int unique_file = -1;
 
 	while ((ent = fs_readdir(fd)) != NULL)
 	{
@@ -2246,17 +2250,31 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 		else if (strcasecmp(file_type, ".cdi") == 0)
 		{
 			strcpy(game, ent->name);
-			is_folder_name = unique_file;
+
+			if (unique_file == -1)
+			{
+				unique_file = level > 0 ? IsUniqueFileGame(full_path_folder) : false;
+			}
+			is_folder_name = (unique_file == 1);
 		}
 		else if (strcasecmp(file_type, ".iso") == 0 && !(strncasecmp(ent->name, "track", strlen("track")) == 0))
 		{
 			strcpy(game, ent->name);
-			is_folder_name = unique_file;
+
+			if (unique_file == -1)
+			{
+				unique_file = level > 0 ? IsUniqueFileGame(full_path_folder) : false;
+			}
+			is_folder_name = (unique_file == 1);
 		}
 		else if (strcasecmp(file_type, ".cso") == 0)
 		{
 			strcpy(game, ent->name);
-			is_folder_name = unique_file;
+			if (unique_file == -1)
+			{
+				unique_file = level > 0 ? IsUniqueFileGame(full_path_folder) : false;
+			}
+			is_folder_name = (unique_file == 1);
 		}
 		else if (!(strncasecmp(ent->name, "track", strlen("track")) == 0))
 		{
@@ -2326,6 +2344,11 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 			menu_data.games_array[menu_data.games_array_count - 1].check_optimized = false;
 			menu_data.games_array[menu_data.games_array_count - 1].is_cdda = CCGE_NOT_CHECKED;
 			menu_data.games_array[menu_data.games_array_count - 1].device = GetDeviceType(full_path_folder);
+
+			if (strcasecmp(file_type, ".gdi") == 0)
+			{
+				CheckGdiOptimized(menu_data.games_array_count - 1);
+			}
 		}
 	}
 	ent = NULL;
