@@ -1085,7 +1085,7 @@ void Form::onViewIndexChangedEvent() {
 		uint column_width = 64;
 		Vector bottom_position = m_bottom_rectangle->getTranslate();
 		
-		Color color = {0.3f, 1.0f, 1.0f, 0.1f};
+		Color color = {0.1f, 1.0f, 1.0f, 0.1f};
 		Color border_color = {1, 1.0f, 1.0f, 0.1f};
 		m_bottom_cursor = new Rectangle(PVR_LIST_TR_POLY, m_bottom_selector_translate.x, m_bottom_selector_translate.y, column_width, row_height, color, bottom_position.z + 1, 3, border_color, 0);
 		subAdd(m_bottom_cursor);
