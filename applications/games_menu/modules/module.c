@@ -376,16 +376,17 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 
 		TSU_DrawableSetTint((Drawable *)self.title_type_rectangle, &title_type_color);
 
-		static Vector vectorInit = {700, 20, ML_ITEM + 6, 1};
-		static Vector vector = {612, 18, ML_ITEM + 6, 1};
+		static Vector vectorInit = {700, 32, ML_ITEM + 6, 1};
+		static Vector vector = {592, 32, ML_ITEM + 6, 1};
+
 		vectorInit.z = ML_ITEM + 6;
 
 		if(vid_check_cable() != CT_VGA)
 		{
-			vectorInit.y = 27;
+			vectorInit.y = 40;
 			
-			vector.x = 608;
-			vector.y = 27;
+			vector.x = 592;
+			vector.y = 40;
 		}
 
 		if (self.title_type != NULL)
@@ -397,7 +398,7 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 			int font_size = 20;
 			
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
-			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, true, true);
+			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, false, true);
 			TSU_LabelSetTint(self.title_type, &color);
 			TSU_AppSubAddLabel(self.dsapp_ptr, self.title_type);
 		}
