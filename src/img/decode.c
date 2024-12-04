@@ -87,6 +87,7 @@ int pvr_decode(const char *filename, kos_img_t *kimg)
 	kimg->byte_count = (kimg->byte_count + 31) & ~31;
 	kimg->w = pvrtHeader.width;
 	kimg->h = pvrtHeader.height;
+	kimg->fmt = srcFormat;
 
 	return 0;
 }

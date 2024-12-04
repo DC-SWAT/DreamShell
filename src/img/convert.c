@@ -21,19 +21,13 @@ extern int stbi_write_png_compression_level;
 
 unsigned char* resize_image(unsigned char *data, uint width, uint height, uint output_width, uint output_height, uint8 pixel_layout)
 {
-	unsigned char *resized_pixels = (unsigned char *)malloc(width * height * 4);
+	unsigned char *resized_pixels = NULL;
 
 	if (width > 0 && height > 0 
-		&& stbir_resize_uint8_linear(data, (int)width, (int)height, 0, resized_pixels
-								, (int)output_width, (int)output_height, 0, pixel_layout) == 0)
+		&& (resized_pixels = stbir_resize_uint8_linear(data, (int)width, (int)height, 0, NULL
+								, (int)output_width, (int)output_height, 0, pixel_layout)) == 0)
 	{
 		dbglog(DBG_INFO, "resize_image error, stbir_resize_uint8_linear");
-
-		if (resized_pixels)
-		{
-			free(resized_pixels);
-		}
-
 		return NULL;
 	}
 

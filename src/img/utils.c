@@ -18,21 +18,7 @@ bool pvr_is_alpha(const char *filename)
 		return false;
 	}
 
-	size_t sector_size = 512;
-	size_t fsize = fs_total(pFile);
-
-	if (fsize <= 0)
-	{
-		dbglog(DBG_INFO, "pvr_is_alpha: empty file");
-		fs_close(pFile);
-		return false;
-	}
-
-	if (fsize > sector_size)
-	{
-		fsize = sector_size;
-	}
-
+	size_t fsize = 512;
 	uint8 data[512] __attribute__((aligned(32)));
 
 	if (fs_read(pFile, data, fsize) == -1)
