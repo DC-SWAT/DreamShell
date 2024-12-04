@@ -1818,32 +1818,33 @@ bool ExtractPVRCover(int game_index)
 
 		if(fs_iso_mount("/iso_cover", full_game_path) == 0)
 		{
-			char *pvr_path = (char *)malloc(30);
+			char pvr_path[30];
 			memset(pvr_path, 0, 30);
-			strcpy(pvr_path, "/iso_cover/0GDTEX.PVR");
+			strcpy(pvr_path, "/iso_cover/0GDTEX.PVR");			
 			
-			char *game_cover_path = (char *)malloc(NAME_MAX);				
 			menu_data.send_message_scan("Extracting PVR: %s", game_without_extension);
+			menu_data.cover_scanned_app.last_game_status = CSE_PROCESSING;
+			SaveScannedCover();
 
-			uint16 image_type = 0;
-			if (pvr_is_alpha(pvr_path) && menu_data.convert_pvr_to_png)
+			kos_img_t kimg;
+			if(pvr_decode(pvr_path, &kimg) == 0)
 			{
-				image_type = IT_PNG;
-			}
-			else
-			{
-				image_type = IT_JPG;
-			}
-
-			if (image_type > 0)
-			{
-				snprintf(game_cover_path, NAME_MAX, "%s/%s%s", GetCoversPath(menu_data.current_dev), game_without_extension, GetCoverExtensionFromType(image_type));
-				menu_data.cover_scanned_app.last_game_status = CSE_PROCESSING;
-				SaveScannedCover();
-
-				kos_img_t kimg;
-				if(pvr_decode(pvr_path, &kimg) == 0)
+				uint16 image_type = 0;
+				if (kimg.fmt != TFM_RGB565 && menu_data.convert_pvr_to_png)
 				{
+					image_type = IT_PNG;
+				}
+				else
+				{
+					image_type = IT_JPG;
+				}
+
+				if (image_type > 0)
+				{
+					char game_cover_path[NAME_MAX];
+					memset(game_cover_path, 0, NAME_MAX);
+					snprintf(game_cover_path, NAME_MAX, "%s/%s%s", GetCoversPath(menu_data.current_dev), game_without_extension, GetCoverExtensionFromType(image_type));
+
 					if	( 	(image_type == IT_PNG && img_to_png(&kimg, game_cover_path, 0, 0))
 						||	(image_type == IT_JPG && img_to_jpg(&kimg, game_cover_path, 0, 0, 100)) )
 					{
@@ -1855,15 +1856,12 @@ bool ExtractPVRCover(int game_index)
 
 						menu_data.games_array[game_index].is_pvr_cover = true;
 						extracted_cover = true;
-					}
-					kos_img_free(&kimg, 0);
+					}					
 				}
 
+				kos_img_free(&kimg, 0);
 				menu_data.cover_scanned_app.last_game_status = CSE_COMPLETED;
 			}
-
-			free(game_cover_path);
-			free(pvr_path);
 
 			fs_iso_unmount("/iso_cover");
 		}
