@@ -12,6 +12,12 @@
 #include "drawable.h"
 #include <algorithm>
 
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+	int VideoMustLock();
+}
+
 Animation::Animation() {
 }
 
@@ -23,15 +29,21 @@ void Animation::triggerAdd(Trigger *t) {
 }
 
 void Animation::triggerRemove(Trigger *tr) {
+	LockVideo();
+
 	auto is_ptr = [=](Trigger *sp) { return sp == tr; };
 	auto it = std::find_if(m_triggers.begin(), m_triggers.end(), is_ptr);
 
 	if (it != m_triggers.end())
 		m_triggers.erase(it);
+
+	UnlockVideo();
 }
 
 void Animation::triggerRemoveAll() {
+	LockVideo();
 	m_triggers.clear();
+	UnlockVideo();
 }
 
 void Animation::nextFrame(Drawable *t) {

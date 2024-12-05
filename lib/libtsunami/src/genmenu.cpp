@@ -124,8 +124,6 @@ void GenericMenu::setPostDelay(int d) {
 }
 
 void GenericMenu::visualPerFrame() {
-	m_scene->subRemoveFinished();
-
 	pvr_wait_ready();
 
 	if (m_exiting)
