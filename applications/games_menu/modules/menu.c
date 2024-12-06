@@ -953,8 +953,22 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 		char vmu_file_path[NAME_MAX];
 		memset(vmu_file_path, 0, NAME_MAX);
 
+		char private_path[NAME_MAX];
+		snprintf(private_path, NAME_MAX, "%s/vmu%03ld.vmd", GetFolderPathFromFile(full_path_game), vmu_number);
+
+		int private_size = FileSize(private_path);
+		if (vmu_mode == 1) // SHARED
+		{
+			if (private_size > 0)
+			{
+				fs_unlink(private_path);
+			}
+
+			return 0;
+		}
+
 		switch(vmu_mode)
-		{			
+		{
 			case 2: // 200 BLOCKS
 				{
 					snprintf(vmu_file_path, sizeof(vmu_file_path), 
@@ -970,14 +984,9 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 							GetDefaultDir(menu_data.current_dev), "games_menu");
 				}
 				break;
-		}
+		}	
 		
-		char private_path[NAME_MAX];
-		snprintf(private_path, NAME_MAX, "%s/vmu%03ld.vmd", GetFolderPathFromFile(full_path_game), vmu_number);
-
-		int private_size = FileSize(private_path);
-		int source_size = FileSize(vmu_file_path);
-		
+		int source_size = FileSize(vmu_file_path);		
 		if (source_size > 0 && private_size != source_size)
 		{
 			if (private_size > 0)
@@ -1365,6 +1374,7 @@ isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset)
 		isoldr->heap = preset->heap;
 		isoldr->boot_mode = preset->boot_mode;
 		isoldr->fast_boot = preset->fastboot;
+		isoldr->emu_vmu = preset->emu_vmu;
 		
 		if (preset->low)
 		{
