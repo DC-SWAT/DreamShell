@@ -1550,15 +1550,27 @@ void ParseMenuConfigToPresentation()
 	{
 		menu_data.save_preset = true;
 	}
+	else
+	{
+		menu_data.save_preset = false;
+	}
 
 	if (menu_data.app_config.cover_background)
 	{
 		menu_data.cover_background = true;
 	}
+	else
+	{
+		menu_data.cover_background = false;
+	}
 
 	if (menu_data.app_config.change_page_with_pad)
 	{
 		menu_data.change_page_with_pad = true;
+	}
+	else
+	{
+		menu_data.change_page_with_pad = false;		
 	}
 }
 
