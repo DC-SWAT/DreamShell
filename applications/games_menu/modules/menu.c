@@ -1546,64 +1546,17 @@ void ParseMenuConfigToPresentation()
 		menu_data.app_config.initial_view = menu_data.menu_type = MT_PLANE_TEXT;
 	}
 
-	if (menu_data.app_config.save_preset)
-	{
-		menu_data.save_preset = true;
-	}
-	else
-	{
-		menu_data.save_preset = false;
-	}
-
-	if (menu_data.app_config.cover_background)
-	{
-		menu_data.cover_background = true;
-	}
-	else
-	{
-		menu_data.cover_background = false;
-	}
-
-	if (menu_data.app_config.change_page_with_pad)
-	{
-		menu_data.change_page_with_pad = true;
-	}
-	else
-	{
-		menu_data.change_page_with_pad = false;		
-	}
+	menu_data.save_preset = (menu_data.app_config.save_preset == 1);
+	menu_data.cover_background = (menu_data.app_config.cover_background == 1);
+	menu_data.change_page_with_pad = (menu_data.app_config.change_page_with_pad == 1);
 }
 
 void ParsePresentationToMenuConfig()
 {
 	menu_data.app_config.initial_view = menu_data.menu_type;
-
-	if (menu_data.save_preset)
-	{
-		menu_data.app_config.save_preset = 1;
-	}
-	else
-	{
-		menu_data.app_config.save_preset = 0;		
-	}
-
-	if (menu_data.cover_background)
-	{
-		menu_data.app_config.cover_background = 1;
-	}
-	else
-	{
-		menu_data.app_config.cover_background = 0;		
-	}
-
-	if (menu_data.change_page_with_pad)
-	{
-		menu_data.app_config.change_page_with_pad = 1;
-	}
-	else
-	{
-		menu_data.app_config.change_page_with_pad = 0;		
-	}
+	menu_data.app_config.save_preset = (menu_data.save_preset ? 1 : 0);
+	menu_data.app_config.cover_background = (menu_data.cover_background ? 1 : 0);
+	menu_data.app_config.change_page_with_pad = (menu_data.change_page_with_pad ? 1 : 0);
 }
 
 bool SaveMenuConfig()
