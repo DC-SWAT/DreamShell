@@ -953,8 +953,22 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 		char vmu_file_path[NAME_MAX];
 		memset(vmu_file_path, 0, NAME_MAX);
 
+		char private_path[NAME_MAX];
+		snprintf(private_path, NAME_MAX, "%s/vmu%03ld.vmd", GetFolderPathFromFile(full_path_game), vmu_number);
+
+		int private_size = FileSize(private_path);
+		if (vmu_mode == 1) // SHARED
+		{
+			if (private_size > 0)
+			{
+				fs_unlink(private_path);
+			}
+
+			return 0;
+		}
+
 		switch(vmu_mode)
-		{			
+		{
 			case 2: // 200 BLOCKS
 				{
 					snprintf(vmu_file_path, sizeof(vmu_file_path), 
@@ -970,14 +984,9 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 							GetDefaultDir(menu_data.current_dev), "games_menu");
 				}
 				break;
-		}
+		}	
 		
-		char private_path[NAME_MAX];
-		snprintf(private_path, NAME_MAX, "%s/vmu%03ld.vmd", GetFolderPathFromFile(full_path_game), vmu_number);
-
-		int private_size = FileSize(private_path);
-		int source_size = FileSize(vmu_file_path);
-		
+		int source_size = FileSize(vmu_file_path);		
 		if (source_size > 0 && private_size != source_size)
 		{
 			if (private_size > 0)
@@ -1272,10 +1281,12 @@ PresetStruct* LoadPresetGame(int game_index)
 			if (preset->scr_hotkey)
 			{
 				preset->screenshot = 1;
+				preset->use_irq = 1;
 			}
 
 			if (preset->emu_vmu)
 			{
+				preset->use_irq = 1;
 				snprintf(preset->vmu_file, sizeof(preset->vmu_file), "vmu%03ld.vmd", preset->emu_vmu);
 
 				char dst_path[NAME_MAX];
@@ -1365,6 +1376,7 @@ isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset)
 		isoldr->heap = preset->heap;
 		isoldr->boot_mode = preset->boot_mode;
 		isoldr->fast_boot = preset->fastboot;
+		isoldr->emu_vmu = preset->emu_vmu;
 		
 		if (preset->low)
 		{
@@ -1390,6 +1402,23 @@ isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset)
 		else
 		{
 			strcpy(isoldr->fs_dev, "auto");
+		}
+
+		for(int i = 0; i < sizeof(isoldr->patch_addr) >> 2; ++i)
+		{
+			if(preset->pa[i] & 0xffffff)
+			{
+				isoldr->patch_addr[i] = preset->pa[i];
+				isoldr->patch_value[i] = preset->pa[i];
+			}
+		}
+
+		if(preset->alt_boot && menu_data.games_array[game_index].folder)
+		{
+			char game_path[NAME_MAX];
+			memset(game_path, 0, NAME_MAX);
+			snprintf(game_path, NAME_MAX, "%s/%s", GetGamesPath(menu_data.games_array[game_index].device), menu_data.games_array[game_index].folder);
+			isoldr_set_boot_file(isoldr, game_path, ALT_BOOT_FILE);
 		}
 	}
 
@@ -1470,6 +1499,11 @@ bool SavePresetGame(PresetStruct *preset)
 		if (preset->device[0] == '\0' || preset->device[0] == ' ')
 		{
 			strcpy(preset->device, "auto");
+		}
+
+		if (preset->emu_vmu > 0 || preset->scr_hotkey)
+		{
+			preset->use_irq = 1;
 		}
 		
 		snprintf(result, sizeof(result),
