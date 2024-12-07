@@ -1465,7 +1465,6 @@ void ShowPresetMenu(int game_index)
 				if (menu_data.preset != NULL)
 				{
 					free(menu_data.preset);
-					menu_data.preset = NULL;
 				}	
 				
 				menu_data.preset = LoadPresetGame(self.game_index);
@@ -1536,6 +1535,11 @@ void HidePresetMenu()
 		if (menu_data.preset->vmu_mode == 0)
 		{
 			menu_data.preset->emu_vmu = 0;
+		}
+
+		if (menu_data.preset->cdda == 0)
+		{
+			menu_data.preset->emu_cdda = CDDA_MODE_DISABLED;
 		}
 
 		if (self.save)
