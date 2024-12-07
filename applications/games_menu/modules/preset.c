@@ -1455,18 +1455,22 @@ void ShowPresetMenu(int game_index)
 		HidePresetMenu();
 		
 		CheckCover(self.game_index, MT_PLANE_TEXT);
-		GetGameCoverPath(self.game_index, &self.game_cover_path, MT_PLANE_TEXT);		
+		GetGameCoverPath(self.game_index, &self.game_cover_path, MT_PLANE_TEXT);
 
 		if (self.preset_menu_form == NULL)
 		{
-			if (menu_data.preset != NULL)
-			{
-				free(menu_data.preset);
-				menu_data.preset = NULL;
-			}			
-
 			self.save = menu_data.save_preset;
-			menu_data.preset = LoadPresetGame(self.game_index);
+			if (menu_data.preset == NULL || menu_data.preset->game_index != self.game_index)
+			{
+				if (menu_data.preset != NULL)
+				{
+					free(menu_data.preset);
+					menu_data.preset = NULL;
+				}	
+				
+				menu_data.preset = LoadPresetGame(self.game_index);
+			}
+
 			SetModeScreenshot();
 
 			char font_path[NAME_MAX];
