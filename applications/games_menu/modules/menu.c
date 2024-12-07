@@ -1281,10 +1281,12 @@ PresetStruct* LoadPresetGame(int game_index)
 			if (preset->scr_hotkey)
 			{
 				preset->screenshot = 1;
+				preset->use_irq = 1;
 			}
 
 			if (preset->emu_vmu)
 			{
+				preset->use_irq = 1;
 				snprintf(preset->vmu_file, sizeof(preset->vmu_file), "vmu%03ld.vmd", preset->emu_vmu);
 
 				char dst_path[NAME_MAX];
@@ -1401,6 +1403,23 @@ isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset)
 		{
 			strcpy(isoldr->fs_dev, "auto");
 		}
+
+		for(int i = 0; i < sizeof(isoldr->patch_addr) >> 2; ++i)
+		{
+			if(preset->pa[i] & 0xffffff)
+			{
+				isoldr->patch_addr[i] = preset->pa[i];
+				isoldr->patch_value[i] = preset->pa[i];
+			}
+		}
+
+		if(preset->alt_boot && menu_data.games_array[game_index].folder)
+		{
+			char game_path[NAME_MAX];
+			memset(game_path, 0, NAME_MAX);
+			snprintf(game_path, NAME_MAX, "%s/%s", GetGamesPath(menu_data.games_array[game_index].device), menu_data.games_array[game_index].folder);
+			isoldr_set_boot_file(isoldr, game_path, ALT_BOOT_FILE);
+		}
 	}
 
 	return isoldr;
@@ -1480,6 +1499,11 @@ bool SavePresetGame(PresetStruct *preset)
 		if (preset->device[0] == '\0' || preset->device[0] == ' ')
 		{
 			strcpy(preset->device, "auto");
+		}
+
+		if (preset->emu_vmu > 0 || preset->scr_hotkey)
+		{
+			preset->use_irq = 1;
 		}
 		
 		snprintf(result, sizeof(result),
