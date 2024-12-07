@@ -1186,23 +1186,25 @@ void isoLoader_Run(GUI_Widget *widget) {
 			}
 
 		} else {
+			char vmupath[NAME_MAX];
+			memset(vmupath, 0, NAME_MAX);
 
 			if(GUI_WidgetGetState(self.vmu_priv_1mb)) {
-				snprintf(filepath, sizeof(filepath),
+				snprintf(vmupath, sizeof(vmupath),
 					"%s/apps/%s/resources/empty_vmu_1024kb.vmd",
 					getenv("PATH"), lib_get_name() + 4);
 			} else {
-				snprintf(filepath, sizeof(filepath),
+				snprintf(vmupath, sizeof(vmupath),
 					"%s/apps/%s/resources/empty_vmu_128kb.vmd",
 					getenv("PATH"), lib_get_name() + 4);
 			}
-			int src_size = FileSize(filepath);
+			int src_size = FileSize(vmupath);
 
 			if (src_size > 0 && priv_size != src_size) {
 				if (priv_size > 0) {
 					fs_unlink(priv_path);
 				}
-				CopyFile(filepath, priv_path, 0);
+				CopyFile(vmupath, priv_path, 0);
 			}
 		}
 	}
