@@ -12,12 +12,6 @@
 #include "tsunamiutils.h"
 #include <cstring>
 
-extern "C" {
-	void LockVideo();
-	void UnlockVideo();
-	int VideoMustLock();
-}
-
 ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags)
 {
 	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
@@ -101,6 +95,16 @@ void ItemMenu::setTint(Color text_color, Color image_color)
 
 void ItemMenu::FreeItem()
 {
+	if (image != nullptr) {
+		image->setFinished();
+	}
+
+	if (text != nullptr) {
+		text->setFinished();
+	}
+	
+	subRemoveFinished();
+
 	if (image_texture != nullptr) {
 		delete image_texture;
 		image_texture = nullptr;
@@ -117,8 +121,6 @@ void ItemMenu::FreeItem()
     }
 
     item_value.clear();
-    std::string().swap(item_value);
-    subRemoveAll();
 }
 
 void ItemMenu::Init() 
@@ -190,17 +192,8 @@ void ItemMenu::SetImage(const char *image_file, uint16 pvr_type)
 {
 	if (image_file) {
 		Texture *new_image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY);
-		if (new_image_texture != nullptr) {
-			
-			if (VideoMustLock()) {
-				LockVideo();
-				image->setTexture(new_image_texture);
-				UnlockVideo();
-			}
-			else {
-				image->setTexture(new_image_texture);
-			}
-			
+		if (new_image_texture != nullptr) {			
+			image->setTexture(new_image_texture);			
 			image->setTextureType(pvr_type);
 
 			if (image_texture != nullptr) {

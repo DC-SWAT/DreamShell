@@ -10,6 +10,12 @@
 
 #include "drawables/banner.h"
 
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+	int VideoMustLock();
+}
+
 Banner::Banner(int list, Texture *texture) {
 	setObjectType(ObjectTypeEnum::BANNER_TYPE);
 	m_list = list;
@@ -26,7 +32,9 @@ Banner::~Banner() {
 }
 
 void Banner::setTexture(Texture *txr) {
+	LockVideo();
 	m_texture = txr;
+	UnlockVideo();
 }
 
 Texture* Banner::getTexture() {

@@ -49,7 +49,9 @@ Drawable::~Drawable() {
 }
 
 void Drawable::animAdd(Animation *ani) {
+	LockVideo();
 	m_anims.push_front(ani);
+	UnlockVideo();
 }
 
 void Drawable::animRemove(Animation *ani) {
@@ -65,7 +67,9 @@ void Drawable::animRemove(Animation *ani) {
 }
 
 void Drawable::animRemoveAll() {
+	LockVideo();
 	m_anims.clear();
+	UnlockVideo();
 }
 
 bool Drawable::isFinished() {
@@ -112,9 +116,8 @@ void Drawable::subAdd(Drawable *t) {
 }
 
 void Drawable::subRemove(Drawable *t) {
-	t->m_parent = nullptr;
-
-	LockVideo();
+	LockVideo();	
+	t->m_parent = nullptr;	
 
 	auto is_ptr = [=](Drawable *sp) { return sp == t; };
 	auto it = std::find_if(m_subs.begin(), m_subs.end(), is_ptr);
