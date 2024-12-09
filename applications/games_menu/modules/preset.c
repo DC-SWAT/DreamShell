@@ -1554,11 +1554,12 @@ void HidePresetMenu()
 		}
 
 		TSU_FormDestroy(&self.preset_menu_form);
+		self.cover_banner = NULL;
 
 		if (self.cover_texture != NULL)
 		{
 			TSU_TextureDestroy(&self.cover_texture);
-		}
+		}		
 
 		if (self.game_cover_path != NULL)
 		{
