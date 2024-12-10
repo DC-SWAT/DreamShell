@@ -469,7 +469,7 @@ void CreateGeneralView(Form *form_ptr)
 		self.async_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 80, body_height_size);
 		TSU_DrawableSetId((Drawable *)self.async_option, ASYNC_CONTROL_ID);
 
-		TSU_OptionGroupAdd(self.async_option, 0, "NONE");
+		TSU_OptionGroupAdd(self.async_option, 0, "TRUE");
 		TSU_OptionGroupAdd(self.async_option, 1, "1");
 		TSU_OptionGroupAdd(self.async_option, 2, "2");
 		TSU_OptionGroupAdd(self.async_option, 3, "3");
@@ -1540,6 +1540,11 @@ void HidePresetMenu()
 		if (menu_data.preset->cdda == 0)
 		{
 			menu_data.preset->emu_cdda = CDDA_MODE_DISABLED;
+		}
+
+		if (menu_data.preset->vmu_mode || menu_data.preset->screenshot)
+		{
+			menu_data.preset->use_irq = 1;			
 		}
 
 		if (self.save)

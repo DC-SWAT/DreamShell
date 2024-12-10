@@ -375,6 +375,7 @@ void SetMessageOptimizer(const char *fmt, const char *message)
 	char message_optimizer[NAME_MAX];
 	memset(message_optimizer, 0, sizeof(message_optimizer));
 	snprintf(message_optimizer, sizeof(message_optimizer), fmt, message);
+	message_optimizer[44] = '\0';
 		
 	if (self.optimize_covers_label != NULL)
 	{
@@ -463,6 +464,7 @@ void SetMessageScan(const char *fmt, const char *message)
 	char message_scan[NAME_MAX];
 	memset(message_scan, 0, sizeof(message_scan));
 	snprintf(message_scan, sizeof(message_scan), fmt, message);
+	message_scan[49] = '\0';
 		
 	if (self.message_cover_scan != NULL)
 	{
