@@ -1116,6 +1116,12 @@ PresetStruct* GetDefaultPresetGame(const char* full_path_game, SectorDataStruct 
 			sprintf(preset->memory, "0x%08lx", (unsigned long)ISOLDR_DEFAULT_ADDR_LOW);
 		}
 
+		char title[32];
+		memset(title, 0, sizeof(title));
+		
+		ipbin_meta_t *ipbin = (ipbin_meta_t *)sector_data->boot_sector;
+		TrimSpaces(ipbin->title, title, sizeof(ipbin->title));
+
 		if (free_sector_data)
 		{
 			free(sector_data);
@@ -1128,6 +1134,7 @@ PresetStruct* GetDefaultPresetGame(const char* full_path_game, SectorDataStruct 
 		preset->emu_vmu = 0;
 		preset->scr_hotkey = 0;
 		preset->boot_mode = BOOT_MODE_DIRECT;
+		strcpy(preset->title, title);
 
 		// Enable CDDA if present
 		if (full_path_game[0] != '\0')
@@ -1212,6 +1219,12 @@ PresetStruct* LoadPresetGame(int game_index)
 			ds_printf("PresetFileName: %s", full_preset_file_name);
 		}
 
+		if (full_preset_file_name != NULL)
+		{
+			memset(preset->preset_file_name, 0, sizeof(preset->preset_file_name));
+			strcpy(preset->preset_file_name, strrchr(full_preset_file_name, '/') + 1);
+		}		
+
 		if (FileSize(full_preset_file_name) < 5)
 		{
 			full_preset_file_name = NULL;
@@ -1258,6 +1271,10 @@ PresetStruct* LoadPresetGame(int game_index)
 			{"pa2", 		CONF_STR, 	(void *)preset->patch_a[1]},
 			{"pv2", 		CONF_STR, 	(void *)preset->patch_v[1]},
 			{NULL, CONF_END, NULL}};
+		
+		char preset_file_name[100];
+		memset(preset_file_name, 0, sizeof(preset_file_name));
+		strcpy(preset_file_name, preset->preset_file_name);
 
 		if (full_preset_file_name != NULL)
 		{
@@ -1276,6 +1293,7 @@ PresetStruct* LoadPresetGame(int game_index)
 				free(preset);
 				preset = GetDefaultPresetGame(full_path_game, &sector_data);
 				preset->game_index = game_index;
+				strcpy(preset->preset_file_name, preset_file_name);
 			}
 
 			if (preset->scr_hotkey)
@@ -1324,6 +1342,7 @@ PresetStruct* LoadPresetGame(int game_index)
 			free(preset);
 			preset = GetDefaultPresetGame(full_path_game, &sector_data);
 			preset->game_index = game_index;
+			strcpy(preset->preset_file_name, preset_file_name);
 		}
 
 		if (preset->emu_cdda)
@@ -1436,30 +1455,21 @@ bool SavePresetGame(PresetStruct *preset)
 
 	if (preset != NULL && preset->game_index >= 0)
 	{
-		const char *full_path_game = GetFullGamePathByIndex(preset->game_index);
-		if (fs_iso_mount("/iso_game", full_path_game) != 0)
-		{
-			return false;
-		}
-		
-		SectorDataStruct sector_data;
-		memset(&sector_data, 0, sizeof(SectorDataStruct));
-		GetMD5HashISO("/iso_game", &sector_data);
-		fs_iso_unmount("/iso_game");
-
 		file_t fd;
-		ipbin_meta_t *ipbin = (ipbin_meta_t *)sector_data.boot_sector;
 		char result[1024];
 		char memory[24];
-		char title[32];
 		int async = 0, type = 0, mode = 0;
 		uint32 heap = HEAP_MODE_AUTO;
 		uint32 cdda_mode = CDDA_MODE_DISABLED;
 
-		char preset_file_name[100];
+		char preset_file_name[NAME_MAX];
+		memset(preset_file_name, 0, NAME_MAX);		
+		
+		snprintf(preset_file_name, sizeof(preset_file_name),
+			"%s/apps/%s/presets/%s",
+			GetDefaultDir(menu_data.current_dev), "games_menu", preset->preset_file_name);
 
-		memset(preset_file_name, 0, 100);
-		strcpy(preset_file_name, MakePresetFilename(GetDefaultDir(menu_data.current_dev), GetGamesPath(GetDeviceType(full_path_game)), sector_data.md5, "games_menu"));
+		snprintf(memory, sizeof(memory), "%s%s", preset->memory, preset->custom_memory);
 
 		fd = fs_open(preset_file_name, O_CREAT | O_TRUNC | O_WRONLY);
 
@@ -1469,7 +1479,6 @@ bool SavePresetGame(PresetStruct *preset)
 		}
 
 		memset(result, 0, sizeof(result));
-		memset(title, 0, sizeof(title));
 		memset(memory, 0, sizeof(memory));
 		
 		async = preset->emu_async;
@@ -1491,7 +1500,6 @@ bool SavePresetGame(PresetStruct *preset)
 		}
 
 		heap = preset->heap;
-		TrimSpaces(ipbin->title, title, sizeof(ipbin->title));
 
 		char device[FIRMWARE_SIZE];
 		memset(device, 0, sizeof(device));
@@ -1511,7 +1519,7 @@ bool SavePresetGame(PresetStruct *preset)
 				"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
 				"vmu = %d\nscrhotkey = %lx\naltread = %d\n"
 				"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
-				title, preset->device, preset->use_dma, async,
+				preset->title, preset->device, preset->use_dma, async,
 				cdda_mode, preset->use_irq, preset->low, heap,
 				preset->fastboot, type, mode, memory,
 				(int)preset->emu_vmu, (uint32)preset->scr_hotkey,
@@ -1526,10 +1534,15 @@ bool SavePresetGame(PresetStruct *preset)
 		fs_write(fd, result, strlen(result));
 		fs_close(fd);
 
+		char isoldr_preset_file_name[NAME_MAX];
+		memset(isoldr_preset_file_name, 0, NAME_MAX);
+
+		snprintf(isoldr_preset_file_name, sizeof(isoldr_preset_file_name),
+			"%s/apps/%s/presets/%s",
+			GetDefaultDir(menu_data.current_dev), "iso_loader", preset->preset_file_name);
+
 		// COPY TO ISO LOADER FOLDER
-		CopyFile(preset_file_name, MakePresetFilename(GetDefaultDir(menu_data.current_dev), 
-												GetGamesPath(GetDeviceType(full_path_game)), 
-												sector_data.md5, "iso_loader"), 0);
+		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
 		saved = true;
 	}
 
