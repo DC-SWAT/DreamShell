@@ -156,6 +156,7 @@ typedef struct PresetStructure
 	char patch_v[2][10];
 	char vmu_file[32];
 	char shortcut_name[33];
+	char preset_file_name[100];
 } PresetStruct;
 
 typedef struct SectorDataStructure
