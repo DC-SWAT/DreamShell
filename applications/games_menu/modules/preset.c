@@ -469,7 +469,15 @@ void CreateGeneralView(Form *form_ptr)
 		self.async_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 80, body_height_size);
 		TSU_DrawableSetId((Drawable *)self.async_option, ASYNC_CONTROL_ID);
 
-		TSU_OptionGroupAdd(self.async_option, 0, "TRUE");
+		if (TSU_CheckBoxGetValue(self.dma_option))
+		{
+			TSU_OptionGroupAdd(self.async_option, 0, "TRUE");
+		}
+		else
+		{
+			TSU_OptionGroupAdd(self.async_option, 0, "NONE");			
+		}
+
 		TSU_OptionGroupAdd(self.async_option, 1, "1");
 		TSU_OptionGroupAdd(self.async_option, 2, "2");
 		TSU_OptionGroupAdd(self.async_option, 3, "3");
@@ -1586,6 +1594,25 @@ void SavePresetOptionClick(Drawable *drawable)
 void DMAOptionClick(Drawable *drawable)
 {
 	DMAInputEvent(0, KeySelect);
+
+	if (TSU_CheckBoxGetValue(self.dma_option))
+	{
+		TSU_OptionGroupSetOptionByKey(self.async_option, 0, "TRUE");
+
+		if (TSU_OptionGroupGetKeySelected(self.async_option) == 0)
+		{
+			TSU_OptionGroupSetDisplayText(self.async_option, "TRUE");
+		}
+	}
+	else
+	{
+		TSU_OptionGroupSetOptionByKey(self.async_option, 0, "NONE");
+
+		if (TSU_OptionGroupGetKeySelected(self.async_option) == 0)
+		{
+			TSU_OptionGroupSetDisplayText(self.async_option, "NONE");
+		}
+	}
 }
 
 void AsyncOptionClick(Drawable *drawable)
