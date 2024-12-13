@@ -204,9 +204,6 @@ void OnViewIndexChangedEvent(Drawable *drawable, int view_index)
 
 void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, uint type, uint row, uint column, int view_index)
 {
-	static char string_value[NAME_MAX];
-	memset(string_value, 0, NAME_MAX);
-
 	if (loop_index == 0 && view_index == CDDA_VIEW)
 	{
 		menu_data.preset->emu_cdda = CDDA_MODE_DISABLED;
