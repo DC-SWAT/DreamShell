@@ -215,8 +215,8 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 		{
 			self.save = TSU_CheckBoxGetValue((CheckBox *)drawable);
 		}
-
 		break;
+		
 		case DMA_CONTROL_ID:
 		{
 			menu_data.preset->use_dma = TSU_CheckBoxGetValue((CheckBox *)drawable);
