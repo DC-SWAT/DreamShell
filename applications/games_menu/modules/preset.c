@@ -204,9 +204,6 @@ void OnViewIndexChangedEvent(Drawable *drawable, int view_index)
 
 void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, uint type, uint row, uint column, int view_index)
 {
-	static char string_value[NAME_MAX];
-	memset(string_value, 0, NAME_MAX);
-
 	if (loop_index == 0 && view_index == CDDA_VIEW)
 	{
 		menu_data.preset->emu_cdda = CDDA_MODE_DISABLED;
@@ -218,8 +215,8 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 		{
 			self.save = TSU_CheckBoxGetValue((CheckBox *)drawable);
 		}
-
 		break;
+		
 		case DMA_CONTROL_ID:
 		{
 			menu_data.preset->use_dma = TSU_CheckBoxGetValue((CheckBox *)drawable);
@@ -284,8 +281,7 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case CUSTOM_MEMORY_CONTROL_ID:
 		{
-			memset(menu_data.preset->custom_memory, 0, sizeof(menu_data.preset->custom_memory));
-			strcpy(menu_data.preset->custom_memory, TSU_TextBoxGetText((TextBox *)drawable));
+			
 		}
 		break;
 
@@ -685,7 +681,26 @@ void CreateGeneralView(Form *form_ptr)
 
 		if (menu_data.preset->memory[0] != 0)
 		{
-			TSU_OptionGroupSelectOptionByText(self.memory_option, menu_data.preset->memory);
+			if (TSU_OptionGroupGetOptionByText(self.memory_option, menu_data.preset->memory) != NULL)
+			{
+				TSU_OptionGroupSelectOptionByText(self.memory_option, menu_data.preset->memory);
+			}
+			else
+			{
+				TSU_OptionGroupSelectOptionByText(self.memory_option, "0x8c");
+				memset(menu_data.preset->custom_memory, 0, sizeof(menu_data.preset->custom_memory));
+
+				if (strlen(menu_data.preset->memory) == 10)
+				{
+					strcpy(menu_data.preset->custom_memory, &menu_data.preset->memory[4]);					
+					memset(menu_data.preset->memory, 0, sizeof(menu_data.preset->memory));
+					strcpy(menu_data.preset->memory, "0x8c");
+				}
+				else
+				{
+					TSU_OptionGroupSelectOptionByText(self.memory_option, "0x8c000100");					
+				}
+			}
 		}
 
 		memory_label = NULL;
@@ -1555,6 +1570,11 @@ void HidePresetMenu()
 			menu_data.preset->use_irq = 1;			
 		}
 
+		if (strlen(menu_data.preset->memory) == 10)
+		{
+			memset(menu_data.preset->custom_memory, 0, sizeof(menu_data.preset->custom_memory));
+		}
+
 		if (self.save)
 		{
 			SavePresetGame(menu_data.preset);
@@ -2043,6 +2063,18 @@ void MemoryInputEvent(int type, int key)
 
 void CustomMemoryInputEvent(int type, int key)
 {
+	if (key == KeyCancel)
+	{
+		memset(menu_data.preset->custom_memory, 0, sizeof(menu_data.preset->custom_memory));
+		strcpy(menu_data.preset->custom_memory, TSU_TextBoxGetText(self.custom_memory_option));
+
+		if (strlen(menu_data.preset->custom_memory) != 6)
+		{
+			memset(menu_data.preset->custom_memory, 0, sizeof(menu_data.preset->custom_memory));
+			TSU_TextBoxSetText(self.custom_memory_option, menu_data.preset->custom_memory);
+		}
+	}
+
 	TSU_TextBoxInputEvent(self.custom_memory_option, type, key);
 }
 

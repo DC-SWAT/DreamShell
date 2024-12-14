@@ -1501,9 +1501,6 @@ bool SavePresetGame(PresetStruct *preset)
 
 		heap = preset->heap;
 
-		char device[FIRMWARE_SIZE];
-		memset(device, 0, sizeof(device));
-
 		if (preset->device[0] == '\0' || preset->device[0] == ' ')
 		{
 			strcpy(preset->device, "auto");
