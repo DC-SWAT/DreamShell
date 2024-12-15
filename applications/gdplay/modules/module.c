@@ -386,6 +386,8 @@ void gdplay_Init(App_t *app)
 void gdplay_Shutdown() 
 {
 	self.kill_gdrom_thd = 1;
+	thd_join(self.app->thd, NULL);
+	
 	if(self.bios_patch)
 	{
 		free(self.bios_patch);
