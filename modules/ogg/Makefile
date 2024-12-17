@@ -25,6 +25,10 @@ library:
 
 include ../../sdk/Makefile.loadable
 
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./liboggvorbis && make clean
+
 rm-elf:
 	-rm -f $(TARGET)
 	-rm -f $(TARGET_LIB)

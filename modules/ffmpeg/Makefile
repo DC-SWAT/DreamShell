@@ -34,18 +34,19 @@ include/libavcodec/avcodec.h:
 	-mv $(KOS_PORTS)/lib/libogg-kos.a $(KOS_PORTS)/lib/libogg.a
 	-mv $(KOS_PORTS)/lib/libvorbis-kos.a $(KOS_PORTS)/lib/libvorbis.a
 
-clean-all:
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./ffmpeg-0.6.3 && make clean
 	-rm -R ./include
 	-rm -R ./lib
 	-rm -f ./ffmpeg-0.6.3/config.h
-	cd ./ffmpeg-0.6.3 && make clean
 
 rm-elf:
-	-rm -f $(TARGET)
-	-rm -f $(TARGET_LIB)
+	-rm -f $(TARGET) || true
+	-rm -f $(TARGET_LIB) || true
 
 install: $(TARGET) $(TARGET_LIB)
-	-rm $(DS_BUILD)/modules/$(TARGET)
-	-rm $(DS_SDK)/lib/$(TARGET_LIB)
+	-rm $(DS_BUILD)/modules/$(TARGET) || true
+	-rm $(DS_SDK)/lib/$(TARGET_LIB) || true
 	cp $(TARGET) $(DS_BUILD)/modules/$(TARGET)
 	cp $(TARGET_LIB) $(DS_SDK)/lib/$(TARGET_LIB)

@@ -29,6 +29,10 @@ $(LIBRARY_NAME)/Makefile:
 	git clone https://github.com/dlbeer/$(LIBRARY_NAME).git
 	cd ./$(LIBRARY_NAME) && git checkout 542848dd6b9b0eaa9587bbf25b9bc67bd8a71fca
 
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./$(LIBRARY_NAME) && make clean
+
 rm-elf:
 	-rm -f $(TARGET) || true
 	-rm -f $(TARGET_LIB) || true

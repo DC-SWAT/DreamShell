@@ -19,9 +19,13 @@ KOS_LIB_PATHS += -L./xvidcore/build/generic/=build
 all: rm-elf library
 
 library:
-	cd ./xvidcore/build/generic && make clean && make
+	cd ./xvidcore/build/generic && make
 
 include ../../sdk/Makefile.loadable
+
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./xvidcore/build/generic && make clean
 
 rm-elf:
 	-rm -f $(TARGET)

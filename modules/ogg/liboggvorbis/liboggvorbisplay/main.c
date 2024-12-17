@@ -1,4 +1,5 @@
 #include <kos.h>
+#include <audio/ogg.h>
 
 static kthread_t * thd = NULL;
 

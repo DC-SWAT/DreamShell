@@ -23,6 +23,10 @@ library:
 
 include ../../sdk/Makefile.loadable
 
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./libmp3 && make clean
+
 rm-elf:
 	-rm -f $(TARGET)
 	-rm -f $(TARGET_LIB)

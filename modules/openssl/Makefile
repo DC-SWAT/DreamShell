@@ -44,6 +44,10 @@ build: $(TARGET_FULLNAME)/Makefile
 		CFLAGS="$(KOS_CFLAGS) -I$(KOS_PORTS)/include/zlib" \
 		CXXFLAGS="$(KOS_CXXFLAGS)" LDFLAGS="$(KOS_LDFLAGS)"
 
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./$(TARGET_FULLNAME) && make clean
+
 rm-elf:
 	-rm -f $(TARGET) || true
 	-rm -f $(TARGET_LIB) || true

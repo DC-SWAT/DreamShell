@@ -38,6 +38,10 @@ secp256k1/Makefile: secp256k1/autogen.sh
 build_lib: secp256k1/Makefile
 	cd ./secp256k1 && make
 
+clean: rm-elf
+	-rm -f $(OBJS)
+	cd ./secp256k1 && make clean
+
 rm-elf:
 	-rm -f $(TARGET) || true
 	-rm -f $(TARGET_LIB) || true
