@@ -56,7 +56,7 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 		/* Display user friendly informations */
 		export_sym_t * symb;
 
-		symb = export_lookup_by_addr(irq_ctx->pc);
+		symb = export_lookup_addr(irq_ctx->pc);
 		
 		if (symb) {
 			dbglog(DBG_INFO, "FPU EXCEPTION PC = %s + 0x%08x (0x%08x)\n", 
@@ -80,7 +80,7 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 	for (i = 15; i >= 0; i--) {
 		
 		if((stk[i] < 0x8c000000) || (stk[i] > 0x8d000000) ||
-			!(symb = export_lookup_by_addr(stk[i])) ||
+			!(symb = export_lookup_addr(stk[i])) ||
 			((int)stk[i] - ((int)symb->ptr) > 0x800)) {
 
 			dbglog(DBG_INFO, "STACK#%2d = 0x%08x\n", i, (int)stk[i]);
@@ -92,7 +92,7 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 		}
 	}
 
-	symb = export_lookup_by_addr(irq_ctx->pc);
+	symb = export_lookup_addr(irq_ctx->pc);
 	
 	if (symb && (int)stk[i] - ((int)symb->ptr) < 0x800) {
 		dbglog(DBG_INFO, "      PC = %s + 0x%08x (0x%08x)\n", 
@@ -104,7 +104,7 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 		dbglog(DBG_INFO, "      PC = 0x%08x\n", (int)irq_ctx->pc);
 	}
 
-	symb = export_lookup_by_addr(irq_ctx->pr);
+	symb = export_lookup_addr(irq_ctx->pr);
 	
 	if (symb && (int)stk[i] - ((int)symb->ptr) < 0x800) {
 		dbglog(DBG_INFO, "      PR = %s + 0x%08x (0x%08x)\n", 

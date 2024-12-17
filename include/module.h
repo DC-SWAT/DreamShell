@@ -12,40 +12,6 @@
 #include "utils.h"
 
 /**
- * \brief Addons for KallistiOS exports and library
- */
-
-/** \brief  Look up a symbol by name and path.
-    \param  name            The name to look up
-    \param  path            The path to look up
-    \return                 The export structure, or NULL on failure
-*/
-export_sym_t * export_lookup_ex(const char *name, const char *path);
-
-/** \brief  Look up a symbol by addr.
-    \param  name            The addr to look up
-    \return                 The export structure, or NULL on failure
-*/
-export_sym_t *export_lookup_by_addr(uint32 addr);
-
-
-/** \brief  Look up a library by file name.
-
-    This function looks up a library by its file name without trying to
-    actually load or open it. This is useful if you want to open a library but
-    not keep around a handle to it (which isn't necessarily encouraged).
-
-    \param  fn              The file name of the library to search for
-    \return                 The library, if found. NULL if not found, errno set
-                            as appropriate.
-
-    \par    Error Conditions:
-    \em     ENOENT - the library was not found
-*/
-klibrary_t *library_lookup_fn(const char * fn);
-
-
-/**
  * \brief DreamShell module system
  */
 

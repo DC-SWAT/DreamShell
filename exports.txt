@@ -102,9 +102,6 @@ CloseModule
 PrintModuleList
 GetExportSymAddr
 GetExportSymName
-export_lookup_ex
-export_lookup_by_addr
-library_lookup_fn
 #
 InitApps
 ShutdownApps
