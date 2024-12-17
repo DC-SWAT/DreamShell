@@ -738,6 +738,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8c004000, "0x8c004000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8c004800, "0x8c004800");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8c008000, "0x8c008000");
+		TSU_OptionGroupAdd(self.heap_option, (int32)0x8ce00000, "0x8ce00000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cef8000, "0x8cef8000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cf80000, "0x8cf80000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cfc0000, "0x8cfc0000");
@@ -746,6 +747,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cfe8000, "0x8cfe8000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cff0000, "0x8cff0000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cff4800, "0x8cff4800");
+		TSU_OptionGroupAdd(self.heap_option, (int32)0x8d000000, "0x8d000000");
 		TSU_OptionGroupSetStates(self.heap_option, SA_CONTROL + HEAP_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.heap_option, 2, 9);
 		TSU_DrawableEventSetClick((Drawable *)self.heap_option, &HeapOptionClick);
