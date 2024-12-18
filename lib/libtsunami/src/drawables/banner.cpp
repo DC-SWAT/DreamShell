@@ -13,7 +13,7 @@
 extern "C" {
 	void LockVideo();
 	void UnlockVideo();
-	int VideoMustLock();
+	int VideoIsLocked();
 }
 
 Banner::Banner(int list, Texture *texture) {
@@ -32,9 +32,16 @@ Banner::~Banner() {
 }
 
 void Banner::setTexture(Texture *txr) {
-	LockVideo();
+	int lockedState = 0;
+	if (!(lockedState = VideoIsLocked())) {
+		LockVideo();
+	}
+	
 	m_texture = txr;
-	UnlockVideo();
+
+	if (!lockedState) {
+		UnlockVideo();
+	}
 }
 
 Texture* Banner::getTexture() {
