@@ -17,7 +17,6 @@
 extern "C" {
 	void LockVideo();
 	void UnlockVideo();
-	int VideoIsLocked();
 }
 
 // Constructor / Destructor
@@ -49,22 +48,13 @@ Drawable::~Drawable() {
 }
 
 void Drawable::animAdd(Animation *ani) {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+	LockVideo();
 	m_anims.push_front(ani);
-	
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Drawable::animRemove(Animation *ani) {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+	LockVideo();
 
 	auto is_ptr = [=](Animation *sp) { return sp == ani; };
 	auto it = std::find_if(m_anims.begin(), m_anims.end(), is_ptr);
@@ -72,22 +62,13 @@ void Drawable::animRemove(Animation *ani) {
 	if (it != m_anims.end())
 		m_anims.erase(it);
 
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Drawable::animRemoveAll() {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
-
+	LockVideo();
 	m_anims.clear();
-
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 bool Drawable::isFinished() {
@@ -126,25 +107,17 @@ void Drawable::subNextFrame() {
 }
 
 void Drawable::subAdd(Drawable *t) {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+	LockVideo();
 
 	assert( t->m_parent == nullptr );
 	t->m_parent = this;
 	m_subs.push_front(t);
 
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Drawable::subRemove(Drawable *t) {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+	LockVideo();
 
 	t->m_parent = nullptr;	
 
@@ -154,16 +127,11 @@ void Drawable::subRemove(Drawable *t) {
 	if (it != m_subs.end())
 		m_subs.erase(it);
 
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Drawable::subRemoveFinished() {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+	LockVideo();
 
 	for (auto it = m_subs.begin(); it != m_subs.end();) {
 		if ((*it)->isFinished()) {
@@ -174,26 +142,18 @@ void Drawable::subRemoveFinished() {
 		}
 	}
 
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Drawable::subRemoveAll() {
-
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+	LockVideo();
 
 	for (auto it = m_subs.begin(); it != m_subs.end();) {
 		(*it)->m_parent = nullptr;
 		it = m_subs.erase(it);
 	}
 	
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Drawable::draw(int list) {

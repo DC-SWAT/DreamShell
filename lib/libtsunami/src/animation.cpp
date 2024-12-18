@@ -15,7 +15,6 @@
 extern "C" {
 	void LockVideo();
 	void UnlockVideo();
-	int VideoIsLocked();
 }
 
 Animation::Animation() {
@@ -28,11 +27,8 @@ void Animation::triggerAdd(Trigger *t) {
 	m_triggers.push_front(t);
 }
 
-void Animation::triggerRemove(Trigger *tr) {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
+void Animation::triggerRemove(Trigger *tr) {	
+	LockVideo();
 
 	auto is_ptr = [=](Trigger *sp) { return sp == tr; };
 	auto it = std::find_if(m_triggers.begin(), m_triggers.end(), is_ptr);
@@ -40,22 +36,13 @@ void Animation::triggerRemove(Trigger *tr) {
 	if (it != m_triggers.end())
 		m_triggers.erase(it);
 
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
-void Animation::triggerRemoveAll() {
-	int lockedState = 0;
-	if (!(lockedState = VideoIsLocked())) {
-		LockVideo();
-	}
-	
+void Animation::triggerRemoveAll() {	
+	LockVideo();
 	m_triggers.clear();
-
-	if (!lockedState) {
-		UnlockVideo();
-	}
+	UnlockVideo();
 }
 
 void Animation::nextFrame(Drawable *t) {

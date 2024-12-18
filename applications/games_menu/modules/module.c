@@ -1187,8 +1187,8 @@ static void GamesApp_PresetMenuInputEvent(int type, int key)
 		{	
 			if (StatePresetMenu())
 			{
-				menu_data.state_app = SA_GAMES_MENU;
 				HidePresetMenu();
+				menu_data.state_app = SA_GAMES_MENU;
 			}
 		}
 		break;
