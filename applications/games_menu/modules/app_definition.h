@@ -112,7 +112,8 @@ enum CheckCDDAGameEnum
 	CCGE_NOT_CHECKED = -1,
 	CCGE_CDDA = 1,
 	CCGE_CDDA_BIG_SIZE = 2,
-	CCGE_NOT_CDDA = 3
+	CCGE_NOT_CDDA = 3,
+	CCGE_CANDIDATE = 4
 };
 
 typedef struct FirmwareStructure
