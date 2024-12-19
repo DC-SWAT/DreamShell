@@ -2234,6 +2234,9 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 	char *file_type = NULL;
 	bool is_folder_name = false;
 	int unique_file = -1;
+	int gdi_index = -1;
+	bool gdi_optimized = false;
+	int gdi_cdda = CCGE_NOT_CHECKED;
 
 	while ((ent = fs_readdir(fd)) != NULL)
 	{
@@ -2283,7 +2286,28 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 			}
 			is_folder_name = (unique_file == 1);
 		}
-		else if (!(strncasecmp(ent->name, "track", strlen("track")) == 0))
+		else if (strncasecmp(ent->name, "track", strlen("track")) == 0)
+		{
+			if (strncasecmp(ent->name, "track03.iso", strlen("track03.iso")) == 0)
+			{
+				gdi_optimized = true;
+			}
+
+			if (gdi_cdda != CCGE_CDDA)
+			{
+				if (strncasecmp(ent->name, "track06.wav", strlen("track06.wav")) == 0
+					|| strncasecmp(ent->name, "track06.raw", strlen("track06.raw")) == 0)
+				{
+					gdi_cdda = CCGE_CDDA;
+				}
+				else if (strncasecmp(ent->name, "track04.wav", strlen("track04.wav")) == 0
+					|| strncasecmp(ent->name, "track04.raw", strlen("track04.raw")) == 0)
+				{
+					gdi_cdda = CCGE_CANDIDATE;
+				}
+			}
+		}
+		else
 		{
 			char *new_folder = (char *)malloc(NAME_MAX);
 			memset(new_folder, 0, NAME_MAX);
@@ -2354,10 +2378,54 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 
 			if (strcasecmp(file_type, ".gdi") == 0)
 			{
-				CheckGdiOptimized(menu_data.games_array_count - 1);
+				gdi_index = menu_data.games_array_count - 1;
+			}
+			else
+			{
+				menu_data.games_array[menu_data.games_array_count - 1].is_cdda = CCGE_NOT_CDDA;
 			}
 		}
 	}
+
+	if (gdi_index >= 0)
+	{
+		menu_data.games_array[gdi_index].check_optimized = menu_data.games_array[gdi_index].is_gdi_optimized = gdi_optimized;
+
+		if (gdi_cdda == CCGE_CANDIDATE || gdi_cdda == CCGE_CDDA)
+		{
+			if (gdi_cdda == CCGE_CANDIDATE)
+			{
+				size_t track_size = 0;
+				char *track_file_path = (char *)malloc(NAME_MAX);
+				const char *full_path_game = GetFullGamePathByIndex(gdi_index);
+				track_size = GetCDDATrackFilename(4, full_path_game, &track_file_path);
+				free(track_file_path);
+
+				if (track_size > 0)
+				{
+					if (track_size < 30 * 1024 * 1024)
+					{
+						gdi_cdda = CCGE_NOT_CDDA;
+					}
+					else
+					{
+						gdi_cdda = CCGE_CDDA;
+					}
+				}
+				else
+				{
+					gdi_cdda = CCGE_NOT_CDDA;
+				}
+			}
+
+			menu_data.games_array[gdi_index].is_cdda = gdi_cdda;
+		}
+		else
+		{
+			menu_data.games_array[gdi_index].is_cdda = CCGE_NOT_CDDA;			
+		}
+	}
+
 	ent = NULL;
 	file_type = NULL;
 	fs_close(fd);
