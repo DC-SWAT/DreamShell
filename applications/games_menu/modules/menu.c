@@ -2231,6 +2231,7 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 
 	dirent_t *ent = NULL;
 	char game[NAME_MAX];
+	char new_folder[NAME_MAX];
 	char *file_type = NULL;
 	bool is_folder_name = false;
 	int unique_file = -1;
@@ -2309,13 +2310,12 @@ void RetrieveGamesRecursive(const char *full_path_folder, const char *folder, in
 		}
 		else
 		{
-			char *new_folder = (char *)malloc(NAME_MAX);
+			if (ent->attr != O_DIR)
+				continue;
+			
 			memset(new_folder, 0, NAME_MAX);
 			snprintf(new_folder, NAME_MAX, "%s/%s", full_path_folder, ent->name);
-
 			RetrieveGamesRecursive(new_folder, ent->name, level+1);
-			
-			free(new_folder);
 		}
 
 		if (game[0] != '\0')
