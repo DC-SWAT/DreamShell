@@ -2152,7 +2152,6 @@ static void* MenuExitHelper(void *params)
 {
 	if (self.dsapp_ptr != NULL)
 	{
-		// RemoveEvent(do_menu_end_video_event);
 		if (!self.exit_app)
 		{
 			if (PlayGame())
