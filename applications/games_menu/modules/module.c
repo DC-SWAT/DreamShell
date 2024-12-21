@@ -42,7 +42,6 @@ DEFAULT_MODULE_EXPORTS(app_games_menu);
 extern struct menu_structure menu_data;
 static Event_t *do_menu_control_event;
 static Event_t *do_menu_video_event;
-static Event_t *do_menu_end_video_event;
 static void* MenuExitHelper(void *params);
 static mutex_t change_page_mutex = MUTEX_INITIALIZER;
 
@@ -60,7 +59,7 @@ static struct
 	uint32 addr;
 	isoldr_info_t *isoldr;
 	
-	bool exit_app;
+	bool exit_app, wait_to_exit_app;
 	bool first_menu_load;
 	volatile bool game_changed;
 	volatile bool show_cover_game;
@@ -988,26 +987,6 @@ static void InitMenu()
 	self.menu_cursel = 0;
 }
 
-static void DoMenuEndVideoHandler(void *ds_event, void *param, int action)
-{ 
-	switch(action) {
-		case EVENT_ACTION_RENDER:
-			{
-				if (!menu_data.finished_menu && TSU_AppEnd(self.dsapp_ptr))
-				{
-					menu_data.finished_menu = true;
-				}
-			}
-			break;
-		case EVENT_ACTION_RENDER_POST:
-			break;
-		case EVENT_ACTION_UPDATE:
-			break;
-		default:
-			break;
-	}
-}
-
 static void RemoveAll()
 {
 	TSU_AnimationComplete((Animation *)self.title_animation, (Drawable *)self.title);
@@ -1125,19 +1104,12 @@ static void StartExit()
 	}
 	TSU_AppStartExit(self.dsapp_ptr);
 
+	self.wait_to_exit_app = true;
+	while (!menu_data.finished_menu) { thd_pass(); }
+
 	RemoveEvent(do_menu_video_event);
 	RemoveEvent(do_menu_control_event);
-
-	do_menu_end_video_event = AddEvent
-	(
-		"GamesEndVideo_Event",
-		EVENT_TYPE_VIDEO,
-		EVENT_PRIO_DEFAULT,
-		DoMenuEndVideoHandler,
-		NULL
-	);
 	
-	while (!menu_data.finished_menu) { thd_pass(); }
 	MenuExitHelper(NULL);
 }
 
@@ -2124,25 +2096,28 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 
 static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 {
-	if (self.show_cover_game) thd_pass();
-
-	if ((menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE)
-		&& menu_data.state_app == SA_GAMES_MENU)
+	if (!self.wait_to_exit_app)
 	{
-		if (menu_data.cover_scanned_app.scan_count < MAX_SCAN_COUNT
-			&& (self.scan_count < MAX_SCAN_COUNT)
-			&& menu_data.cover_scanned_app.last_game_index < menu_data.games_array_count
-			&& menu_data.load_pvr_cover_thread == NULL
-			&& menu_data.optimize_game_cover_thread == NULL)
+		if (self.show_cover_game) thd_pass();
+
+		if ((menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE)
+			&& menu_data.state_app == SA_GAMES_MENU)
 		{
-			timer_ms_gettime(&self.scan_covers_end_time, NULL);
-			if ((self.scan_covers_end_time - self.scan_covers_start_time) >= 5)
+			if (menu_data.cover_scanned_app.scan_count < MAX_SCAN_COUNT
+				&& (self.scan_count < MAX_SCAN_COUNT)
+				&& menu_data.cover_scanned_app.last_game_index < menu_data.games_array_count
+				&& menu_data.load_pvr_cover_thread == NULL
+				&& menu_data.optimize_game_cover_thread == NULL)
 			{
-				self.scan_covers_start_time = self.scan_covers_end_time;
-				menu_data.stop_load_pvr_cover = false;
-				menu_data.load_pvr_cover_thread = thd_create(0, LoadPVRCoverThread, NULL);
-				StopCDDA();
-				ShowCoverScan();
+				timer_ms_gettime(&self.scan_covers_end_time, NULL);
+				if ((self.scan_covers_end_time - self.scan_covers_start_time) >= 5)
+				{
+					self.scan_covers_start_time = self.scan_covers_end_time;
+					menu_data.stop_load_pvr_cover = false;
+					menu_data.load_pvr_cover_thread = thd_create(0, LoadPVRCoverThread, NULL);
+					StopCDDA();
+					ShowCoverScan();
+				}
 			}
 		}
 	}
@@ -2151,7 +2126,17 @@ static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 	{
 		case EVENT_ACTION_RENDER:
 			{
-				TSU_AppDoFrame(self.dsapp_ptr);
+				if (!self.wait_to_exit_app)
+				{
+					TSU_AppDoFrame(self.dsapp_ptr);
+				}
+				else
+				{
+					if (!menu_data.finished_menu && TSU_AppEnd(self.dsapp_ptr))
+					{
+						menu_data.finished_menu = true;
+					}
+				}
 			}
 			break;
 		case EVENT_ACTION_RENDER_POST:
@@ -2167,7 +2152,6 @@ static void* MenuExitHelper(void *params)
 {
 	if (self.dsapp_ptr != NULL)
 	{
-		RemoveEvent(do_menu_end_video_event);
 		if (!self.exit_app)
 		{
 			if (PlayGame())
