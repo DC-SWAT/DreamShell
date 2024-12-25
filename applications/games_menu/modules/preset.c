@@ -555,7 +555,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_FormAddBodyOptionGroup(form_ptr, self.loader_option, 2, 6);
 		TSU_DrawableEventSetClick((Drawable *)self.loader_option, &LoaderOptionClick);
 
-		if (menu_data.preset->device[0] != '\0' || menu_data.preset->device[0] == ' ')
+		if (menu_data.preset->device[0] != '\0')
 		{
 			TSU_OptionGroupSelectOptionByText(self.loader_option, menu_data.preset->device);
 		}
@@ -694,7 +694,7 @@ void CreateGeneralView(Form *form_ptr)
 
 				if (strlen(menu_data.preset->memory) == 10)
 				{
-					strcpy(menu_data.preset->custom_memory, &menu_data.preset->memory[4]);					
+					strcpy(menu_data.preset->custom_memory, &menu_data.preset->memory[4]);
 					memset(menu_data.preset->memory, 0, sizeof(menu_data.preset->memory));
 					strcpy(menu_data.preset->memory, "0x8c");
 				}
@@ -1506,7 +1506,6 @@ void ShowPresetMenu(int game_index)
 			Font *form_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
 			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 618, 455, true, 3, true, true, form_font, &OnViewIndexChangedEvent);
-			TSU_FormSelectedEvent(self.preset_menu_form, &PresetMenuSelectedEvent);
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
 			{
@@ -1571,7 +1570,7 @@ void HidePresetMenu()
 
 		if (menu_data.preset->vmu_mode || menu_data.preset->screenshot)
 		{
-			menu_data.preset->use_irq = 1;			
+			menu_data.preset->use_irq = 1;
 		}
 
 		if (strlen(menu_data.preset->memory) == 10)
@@ -1606,10 +1605,6 @@ void HidePresetMenu()
 	}
 }
 
-void PresetMenuSelectedEvent(Drawable *drawable, uint bottom_index, uint column, uint row)
-{
-}
-
 void SavePresetOptionClick(Drawable *drawable)
 {
 	SavePresetInputEvent(0, KeySelect);	
@@ -1622,11 +1617,7 @@ void DMAOptionClick(Drawable *drawable)
 	if (TSU_CheckBoxGetValue(self.dma_option))
 	{
 		TSU_OptionGroupSetOptionByKey(self.async_option, 0, "TRUE");
-
-		if (TSU_OptionGroupGetKeySelected(self.async_option) == 0)
-		{
-			TSU_OptionGroupSetDisplayText(self.async_option, "TRUE");
-		}
+		TSU_OptionGroupSelectOptionByIndex(self.async_option, 0);
 	}
 	else
 	{
@@ -1634,7 +1625,7 @@ void DMAOptionClick(Drawable *drawable)
 
 		if (TSU_OptionGroupGetKeySelected(self.async_option) == 0)
 		{
-			TSU_OptionGroupSetDisplayText(self.async_option, "NONE");
+			TSU_OptionGroupSelectOptionByIndex(self.async_option, 8);
 		}
 	}
 }

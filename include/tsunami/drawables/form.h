@@ -92,7 +92,7 @@ private:
 
 	void createForm();
 	Drawable* findNextNearestObject(int direction);
-	Drawable* findNextObject(int direction);
+	Drawable* findNextObject(int direction, bool start);
 	void freeObject(ObjectStruct *object_ptr);
 
 public:

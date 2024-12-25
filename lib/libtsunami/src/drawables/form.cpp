@@ -24,8 +24,9 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 	m_bottom_cursor = nullptr;
 	m_bottom_cursor_animation = nullptr;
 	m_selector_translate = {0, 0, ML_CURSOR, 1};
-	m_bottom_selector_translate = {0, 0, ML_CURSOR, 1};
+	m_bottom_selector_translate = {0, 0, ML_CURSOR, 1};	
 	this->view_index_changed_event = view_index_changed_event;
+	selected_event = nullptr;
 	get_objects_current_view_event = nullptr;
 
 	m_zIndex = z_index;
@@ -702,7 +703,7 @@ bool Form::isEnable() {
 Drawable* Form::findNextNearestObject(int direction) {
 	uint previous_current_row = m_current_row;
 	uint previous_current_column = m_current_column;
-	Drawable *drawable = findNextObject(direction);
+	Drawable *drawable = findNextObject(direction, true);
 
 	if (drawable == nullptr) {		
 		switch(direction) {
@@ -714,7 +715,7 @@ Drawable* Form::findNextNearestObject(int direction) {
 					m_current_column = previous_current_column;
 
 					m_current_row--;
-					drawable = findNextObject(direction);
+					drawable = findNextObject(direction, true);
 
 					if (drawable == nullptr) {
 						goto FIND_TO_UP;
@@ -726,7 +727,7 @@ Drawable* Form::findNextNearestObject(int direction) {
 					m_current_column = previous_current_column;
 
 					m_current_row++;
-					drawable = findNextObject(direction);
+					drawable = findNextObject(direction, true);
 
 					if (drawable == nullptr) {
 						goto FIND_TO_DOWN;
@@ -750,7 +751,7 @@ Drawable* Form::findNextNearestObject(int direction) {
 					m_current_row = previous_current_row;
 
 					m_current_column--;
-					drawable = findNextObject(direction);
+					drawable = findNextObject(direction, true);
 
 					if (drawable == nullptr) {
 						goto FIND_TO_LEFT;
@@ -762,7 +763,7 @@ Drawable* Form::findNextNearestObject(int direction) {
 					m_current_row = previous_current_row;
 
 					m_current_column++;
-					drawable = findNextObject(direction);
+					drawable = findNextObject(direction, true);
 
 					if (drawable == nullptr) {
 						goto FIND_TO_RIGHT;
@@ -784,8 +785,18 @@ Drawable* Form::findNextNearestObject(int direction) {
 	return drawable;
 }
 
-Drawable* Form::findNextObject(int direction) {
+Drawable* Form::findNextObject(int direction, bool start) {
 	Drawable *drawable = nullptr;
+	static bool jump = false;
+	static Drawable *first_drawable = nullptr;
+
+	if (start) {
+		first_drawable = nullptr;
+		jump = false;
+	}
+	else if (jump) {
+		return nullptr;
+	}
 
 	switch (direction)
 	{
@@ -818,9 +829,17 @@ Drawable* Form::findNextObject(int direction) {
 		}
 		
 		Drawable *object = getBodyObject(m_current_column, m_current_row);
-		if (object) {
+		if (object) {			
+			if (first_drawable == nullptr) {
+				first_drawable = object;
+			}
+			else if (first_drawable == object) {
+				jump = true;
+				return nullptr;
+			}
+			
 			if (object->isReadOnly()) {
-				drawable = findNextObject(direction);
+				drawable = findNextObject(direction, false);
 			}
 			else {
 				drawable = object;
@@ -838,8 +857,16 @@ Drawable* Form::findNextObject(int direction) {
 		
 		Drawable *object = getBodyObject(m_current_column, m_current_row);
 		if (object) {
-			if (object->isReadOnly()) {
-				drawable = findNextObject(direction);
+			if (first_drawable == nullptr) {
+				first_drawable = object;
+			}
+			else if (first_drawable == object) {
+				jump = true;
+				return nullptr;
+			}
+			
+			if (object->isReadOnly()) {				
+				drawable = findNextObject(direction, false);
 			}
 			else {
 				drawable = object;
