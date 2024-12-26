@@ -1035,6 +1035,7 @@ bool LoadFirmwareFiles()
 	if (menu_data.firmware_array != NULL)
 	{
 		free(menu_data.firmware_array);
+		menu_data.firmware_array = NULL;
 		menu_data.firmware_array_count = 0;
 	}
 
@@ -1468,8 +1469,6 @@ bool SavePresetGame(PresetStruct *preset)
 		snprintf(preset_file_name, sizeof(preset_file_name),
 			"%s/apps/%s/presets/%s",
 			GetDefaultDir(menu_data.current_dev), "games_menu", preset->preset_file_name);
-
-		snprintf(memory, sizeof(memory), "%s%s", preset->memory, preset->custom_memory);
 
 		fd = fs_open(preset_file_name, O_CREAT | O_TRUNC | O_WRONLY);
 
