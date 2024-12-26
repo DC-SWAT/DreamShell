@@ -51,9 +51,7 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 	createForm();
 }
 
-Form::~Form() {
-	clearObjects();
-	clearBottomObjects();
+Form::~Form() {	
 
 	if (m_columns_attributes != nullptr) {
 		free(m_columns_attributes);
@@ -107,6 +105,9 @@ Form::~Form() {
 
 	this->setFinished();
 	this->getParent()->subRemoveFinished();
+
+	clearObjects();
+	clearBottomObjects();
 
 	if (m_cursor != nullptr) {
 		delete m_cursor;
