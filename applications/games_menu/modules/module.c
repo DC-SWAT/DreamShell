@@ -1386,8 +1386,11 @@ static void GamesApp_InputEvent(int type, int key)
 
 		case KeyMiscY:
 		{
-			menu_data.state_app = SA_PRESET_MENU;
-			ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
+			if (menu_data.games_array_count > 0)
+			{
+				menu_data.state_app = SA_PRESET_MENU;
+				ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
+			}
 			skip_cursor = true;
 		}
 		break;
