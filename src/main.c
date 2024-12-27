@@ -351,14 +351,33 @@ void ShutdownDS() {
 	snprintf(fn, NAME_MAX, "%s/lua/shutdown.lua", getenv("PATH"));
 	LuaDo(LUA_DO_FILE, fn, GetLuaState());
 
-	ShutdownCmd();
-	ShutdownVideoThread();
-	ShutdownApps();
-	ShutdownConsole();
-	ShutdownModules();
-	ShutdownEvents();
-	ShutdownLua();
-	ShutdownNet();
+	EXPT_GUARD_BEGIN;
+		ShutdownCmd();
+		ShutdownVideoThread();
+		ShutdownConsole();
+		ShutdownEvents();
+		ShutdownNet();
+	EXPT_GUARD_CATCH;
+		dbglog(DBG_ERROR, "DS_ERROR: Shutting down failed\n");
+	EXPT_GUARD_END;
+
+	EXPT_GUARD_BEGIN_NEXT;
+		ShutdownApps();
+	EXPT_GUARD_CATCH;
+		dbglog(DBG_ERROR, "DS_ERROR: Shutting down failed on apps\n");
+	EXPT_GUARD_END;
+
+	EXPT_GUARD_BEGIN_NEXT;
+		ShutdownModules();
+	EXPT_GUARD_CATCH;
+		dbglog(DBG_ERROR, "DS_ERROR: Shutting down failed on modules\n");
+	EXPT_GUARD_END;
+
+	EXPT_GUARD_BEGIN_NEXT;
+		ShutdownLua();
+	EXPT_GUARD_CATCH;
+		dbglog(DBG_ERROR, "DS_ERROR: Shutting down failed on lua\n");
+	EXPT_GUARD_END;
 
 	expt_shutdown();
 	g1_ata_shutdown();
