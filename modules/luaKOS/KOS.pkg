@@ -6,16 +6,6 @@ $#include <kos.h>
 module KOS
 {
 
-
-/* PVR texture memory pointer; unlike the old "TA" system, PVR pointers
-   in the new system are actually SH-4 compatible pointers and can
-   be used directly in place of ta_txr_map(). */
-typedef void * pvr_ptr_t;
-
-/* PVR list specification */
-typedef uint32 pvr_list_t;
-
-
 typedef unsigned long long uint64;
 typedef unsigned long uint32;
 typedef unsigned short uint16;
@@ -52,21 +42,6 @@ typedef int size_t;
 typedef size_t ssize_t;
 typedef size_t off_t;
 //#endif
-
-/* Flush a range of i-cache, given a physical address range */
-void icache_flush_range(uint32 start, uint32 count);
-
-/* Invalidate a range of o-cache/d-cache, given a physical address range */
-void dcache_inval_range(uint32 start, uint32 count);
-
-/* Flush a range of o-cache/d-cache, given a physical address range */
-void dcache_flush_range(uint32 start, uint32 count);
-
-/* Replace the currently running image with whatever is at
-   the pointer; note that this call will never return. */
-void arch_exec_at(const void *image, uint32 length, uint32 address);
-void arch_exec(const void *image, uint32 length);
-
 
 /** \brief  Directory entry.
 
@@ -632,53 +607,6 @@ char *fs_normalize_path(const char * path, char * resolved);
    pointing to the two ends of the pty are returned. */
 int fs_pty_create(char * buffer, int maxbuflen, file_t * master_out, file_t * slave_out);
 
-
-/* Sound effect handle type */
-typedef uint32 sfxhnd_t;
-#define SFXHND_INVALID 0
-
-/* Load a sound effect from a WAV file and return a handle to it */
-sfxhnd_t snd_sfx_load(const char *fn);
-
-/* Unload a single sample */
-void snd_sfx_unload(sfxhnd_t idx);
-
-/* Unload all loaded samples and free their SPU RAM */
-void snd_sfx_unload_all();
-
-/* Play a sound effect with the given volume and panning; if the sound
-   effect is in stereo, the panning is ignored. Returns the used channel
-   ID (or the left channel, if stereo). */
-int snd_sfx_play(sfxhnd_t idx, int vol, int pan);
-
-/* Stop all playing sound effects. Doesn't stop channels 0 or 1, which
-   are assumed to be for streaming. */
-void snd_sfx_stop_all();
-
-
-/* memcpy and memset designed for sound RAM; for addresses, don't
-   bother to include the 0xa0800000 offset that is implied. 'length'
-   must be a multiple of 4, but if it is not it will be rounded up. */
-void spu_memload(uint32 to, void *from, int length);
-void spu_memload_sq(uint32 to, void *from, int length);
-void spu_memread(void *to, uint32 from, int length);
-void spu_memset(uint32 to, uint32 what, int length);
-
-/* Enable/disable the SPU; note that disable implies reset of the
-   ARM CPU core. */
-void spu_enable();
-void spu_disable();
-
-/* Set CDDA volume: values are 0-15 */
-void spu_cdda_volume(int left_volume, int right_volume);
-
-/* Set CDDA panning: values are 0-31, 16=center */
-void spu_cdda_pan(int left_pan, int right_pan);
-
-/* Set master volume (0..15) and mono/stereo settings */
-void spu_master_mixer(int volume, int stereo);
-
-
 //-----------------------------------------------------------------------------
 #define CT_ANY		-1 // <-- Used ONLY internally with vid_mode
 #define CT_VGA		0
@@ -714,13 +642,7 @@ typedef enum vid_display_mode {
 
 
 int vid_check_cable();
-
-void vid_set_start(uint32 base);
-void vid_flip(int fb);
 void vid_border_color(int r, int g, int b);
-void vid_clear(int r, int g, int b);
-// void vid_empty();
-void vid_waitvbl();
 void vid_set_mode(int dm, int pm);
 
 
