@@ -114,10 +114,10 @@ static void AddToList(const char *name, const char *icon,
 	else {
 		ts.w = 0;
 		pad_x -= 10;
+	}
 
-		if(h >= 96) {
-			pad_y -= 5;
-		}
+	if(h >= 96) {
+		pad_y -= 5;
 	}
 
 	int w = ts.w + GUI_SurfaceGetWidth(s);
