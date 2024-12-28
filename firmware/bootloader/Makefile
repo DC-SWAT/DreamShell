@@ -69,6 +69,10 @@ install: $(TARGET).bin
 	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit.bios $(TARGET).bin
 	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_nogdrom.bios $(TARGET).bin
 	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit_nogdrom_32mb.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit_32mb.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_nogdrom_32mb.bios $(TARGET).bin
+	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_32mb.bios $(TARGET).bin
 
 nulldc: all cdi
 	@echo Running...
