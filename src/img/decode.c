@@ -17,7 +17,7 @@ int pvr_decode(const char *filename, kos_img_t *kimg)
 	file_t pFile = fs_open(filename, O_RDONLY);
 	if (pFile == FILEHND_INVALID)
 	{
-		dbglog(DBG_INFO, "pvr_decode: does not exist");
+		// dbglog(DBG_INFO, "pvr_decode: does not exist");
 		return -1;
 	}
 
