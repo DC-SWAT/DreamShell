@@ -930,19 +930,24 @@ static bool LoadPage(bool change_view, uint8 direction)
 	}
 	else
 	{	
-		memset(game_cover_path, 0, sizeof(game_cover_path));
+		static bool draw_message = true;
+		if (draw_message)
+		{
+			draw_message = false;
+			memset(game_cover_path, 0, sizeof(game_cover_path));
 
-		char font_path[NAME_MAX];
-		memset(font_path, 0, sizeof(font_path));
-		snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/message.txf");
+			char font_path[NAME_MAX];
+			memset(font_path, 0, sizeof(font_path));
+			snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/message.txf");
 
-		TSU_LabelDestroy(&self.title);
-		TSU_FontDestroy(&self.menu_font);
-		self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
-		
-		snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n\n%s\n\n\n\nand images here:\n\n%s", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));
-		ds_printf(game_cover_path);
-		SetTitle(-1, game_cover_path);
+			TSU_LabelDestroy(&self.title);
+			TSU_FontDestroy(&self.menu_font);
+			self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
+			
+			snprintf(game_cover_path, sizeof(game_cover_path), "You need put the games here:\n\n%s\n\n\n\nand images here:\n\n%s", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));
+			ds_printf(game_cover_path);
+			SetTitle(-1, game_cover_path);
+		}
 	}
 
 	return loaded;
@@ -1381,8 +1386,11 @@ static void GamesApp_InputEvent(int type, int key)
 
 		case KeyMiscY:
 		{
-			menu_data.state_app = SA_PRESET_MENU;
-			ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
+			if (menu_data.games_array_count > 0)
+			{
+				menu_data.state_app = SA_PRESET_MENU;
+				ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
+			}
 			skip_cursor = true;
 		}
 		break;
