@@ -4,7 +4,7 @@
    Copyright (C)2000,2001,2003 Dan Potter
    Copyright (C)2001 Andrew Kieschnick
    Copyright (C)2002 Bero
-   Copyright (C)2011-2023 SWAT
+   Copyright (C)2011-2024 SWAT
 */
 
 #include <ds.h>
@@ -15,11 +15,18 @@
 #include "internal.h"
 
 /* List of cache blocks (ordered least recently used to most recently) */
-#define NUM_CACHE_BLOCKS 4
+#define NUM_CACHE_BLOCKS 8
 
 #ifndef MAX_ISO_FILES
-# define MAX_ISO_FILES 16
+# define MAX_ISO_FILES 8
 #endif
+
+#ifdef DEBUG
+#	define debugf(fmt, args...) ds_printf(fmt, ##args)
+#else
+#	define debugf(fmt, args...)
+#endif
+
 
 /* Holds the data for one cache block, and a pointer to the next one.
    As sectors are read from the disc, they are added to the front of
@@ -245,9 +252,7 @@ static int isofile_find_lba(isofs_t *ifs) {
 	if (sec >= ROOT_DIRECTORY_HORIZON)
 		return 150;
 
-#ifdef DEBUG
-	ds_printf("DS_ISOFS: PVD is at %d\n", sec);
-#endif
+	debugf("DS_ISOFS: PVD is at %d\n", sec);
 
 	if (isofile_read(ifs->fd, (sec << 11) + 0x9c, 0x22, buf1) < 0)
 		return -1;
@@ -262,15 +267,11 @@ static int isofile_find_lba(isofs_t *ifs) {
 	if (sec >= ROOT_DIRECTORY_HORIZON)
 		return 150;
 
-#ifdef DEBUG
-	ds_printf("DS_ISOFS: Root directory is at %d\n", sec);
-#endif
+	debugf("DS_ISOFS: Root directory is at %d\n", sec);
 
 	sec = ((((((buf1[5]<<8)|buf1[4])<<8)|buf1[3])<<8)|buf1[2])+150-sec;
 	
-#ifdef DEBUG
-	ds_printf("DS_ISOFS: Session offset is %d\n", sec);
-#endif
+	debugf("DS_ISOFS: Session offset is %d\n", sec);
 
 //	ifs->session_base = sec;
 	return sec;
@@ -302,11 +303,8 @@ static void bgrad_cache(cache_block_t **cache, int block) {
 
 static int bread_cache(cache_block_t **cache, uint32 sector, isofs_t *ifs) {
 	int i, j, rv;
-	
-#ifdef DEBUG
-	ds_printf("%s: %d\n", __func__, sector);
-#endif
 
+	debugf("%s: %d\n", __func__, sector);
 	rv = -1;	
 	mutex_lock(&ifs->cache_mutex);
 
@@ -330,9 +328,7 @@ static int bread_cache(cache_block_t **cache, uint32 sector, isofs_t *ifs) {
 	j = read_data(sector, 1, cache[i]->data, ifs);
 	
 	if (j < 0) {
-#ifdef DEBUG
-		ds_printf("DS_ERROR: Can't read sector %d\n", sector);
-#endif
+		debugf("DS_ERROR: Can't read sector %d\n", sector);
 		goto bread_exit;
 	}
 	
@@ -378,12 +374,13 @@ static void bclear(isofs_t *ifs) {
 //#define IPBIN_TOC_OFFSET 260
 
 static int get_lba_from_mki(isofs_t *ifs) {
-	
-	ds_printf("DS_ISOFS: Searching MKI string...\n");
+
 	int lba = -1;
 	int s = 17;
 	uint8 mki[2048];
 	char mkisofs[256];
+
+	debugf("DS_ISOFS: Searching MKI string...\n");
 
 	while(s < 25) {
 
@@ -410,14 +407,14 @@ static int get_lba_from_mki(isofs_t *ifs) {
 		 */
 		
 		if(mki[0] == 0x4D && mki[1] == 0x4B && mki[2] == 0x49 && mki[3] == 0x20) {
-			ds_printf("DS_ISOFS: %s\n", mki);
+			debugf("DS_ISOFS: %s\n", mki);
 			if(sscanf((char*)mki+29, "mkisofs %[^,],%d", mkisofs, &lba) > 1) {
-				ds_printf("DS_ISOFS: Detected LBA: %d + 150\n", lba);
+				debugf("DS_ISOFS: Detected LBA: %d + 150\n", lba);
 				lba += 150;
 				break;
 			} else {
 				lba = 0;
-				ds_printf("DS_ISOFS: Can't find LBA from MKI.\n");
+				debugf("DS_ISOFS: Can't find LBA from MKI.\n");
 				break;
 			}
 		}
@@ -554,7 +551,7 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 	// virt_iso_reset(ifs);
 	
 	ifs->session_base = get_toc_and_lba(ifs);
-	ds_printf("DS_ISOFS: Session base: %d\n", ifs->session_base);
+	debugf("DS_ISOFS: Session base: %d\n", ifs->session_base);
 	
 	//dbglog(DBG_DEBUG, "virt_iso_init_percd: session base = %d\n", ifs->session_base);
 	
@@ -565,7 +562,7 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 		if (blk < 0) return blk;
 		if (memcmp((char *)ifs->icache[blk]->data, "\02CD001", 6) == 0) {
 			ifs->joliet = isjoliet((char *)ifs->icache[blk]->data+88);
-//			ds_printf("DS_ISOFS: joliet level %d extensions detected\n", ifs->joliet);
+//			debugf("DS_ISOFS: joliet level %d extensions detected\n", ifs->joliet);
 			if (ifs->joliet) break;
 		}
 	}
@@ -861,9 +858,8 @@ static ssize_t virt_iso_read(void * h, void *buf, size_t bytes) {
 			thissect = toread / 2048;
 			toread = thissect * 2048;
 
-#ifdef DEBUG
-			ds_printf("%s: Short-circuit read for %d sectors\n", __func__, thissect);
-#endif
+			debugf("%s: Short-circuit read for %d sectors\n", __func__, thissect);
+
 			/* Do the read */
 			c = read_data(fh[fd].first_extent + fh[fd].ptr/2048, thissect, outbuf, fh[fd].ifs);
 			if (c < 0) {
@@ -1066,12 +1062,9 @@ static int virt_iso_reset(isofs_t *ifs) {
 static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 	
 	file_t fd = (file_t)hnd;
-	
-#ifdef DEBUG
-	ds_printf("%s: %d\n", __func__, cmd);
-#endif
-	
 	void *data = va_arg(ap, void *);
+
+	debugf("%s: %d\n", __func__, cmd);
 
 	switch(cmd) {
 		case ISOFS_IOCTL_RESET:
@@ -1571,9 +1564,7 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 	nmmgr_handler_add(&ifs->vfs->nmmgr); // TODO check for errors
 
 	mutex_unlock(&fh_mutex);
-#ifdef DEBUG
-	ds_printf("DS_ISOFS: Mounted %s\n", mountpoint);
-#endif
+	debugf("DS_ISOFS: Mounted %s\n", mountpoint);
 	return 0;
 }
 
@@ -1624,9 +1615,7 @@ int fs_iso_unmount(const char *mountpoint) {
 			
 			SLIST_REMOVE(&virt_iso_list, n, isofs, list); 
 			free(n);
-#ifdef DEBUG
-			ds_printf("DS_ISOFS: Unmounted %s\n", mountpoint);
-#endif
+			debugf("DS_ISOFS: Unmounted %s\n", mountpoint);
 			mutex_unlock(&fh_mutex);
 			return 0;
 		}

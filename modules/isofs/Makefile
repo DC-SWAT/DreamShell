@@ -1,6 +1,6 @@
 #
 # isofs module for DreamShell
-# Copyright (C) 2011-2023 SWAT
+# Copyright (C) 2011-2024 SWAT
 #
 
 TARGET_NAME = isofs
@@ -11,7 +11,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
 VER_MINOR = 6
-VER_MICRO = 0
+VER_MICRO = 1
 
 all: rm-elf
 
