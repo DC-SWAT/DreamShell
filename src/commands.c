@@ -2,7 +2,7 @@
  * DreamShell ##version##    *
  * commands.c                *
  * DreamShell CMD            *
- * (c)2004-2023 SWAT         *
+ * (c)2004-2024 SWAT         *
  * http://www.dc-swat.ru     *
  ****************************/
 
@@ -2007,6 +2007,57 @@ static int builtin_callfunc(int argc, char *argv[]) {
 }
 
 
+static int builtin_rtc(int argc, char *argv[]) {
+
+	if(argc == 1) {
+		ds_printf("Usage: %s option args...\n"
+		          "Options: \n"
+		          " -s, --set          -Set value\n"
+		          " -g, --get          -Get value\n", argv[0]);
+		ds_printf("Arguments: \n"
+		          " -u, --unix         -UNIX time to set\n");
+		return CMD_NO_ARG;
+	}
+
+	int set_rtc_value = 0, get_rtc_value = 0;
+	int input_value = 0;
+	time_t unix_time;
+	struct tm *time;
+
+	struct cfg_option options[] = {
+		{"set",    's', NULL, CFG_BOOL, (void *) &set_rtc_value,   0},
+		{"get",    'g', NULL, CFG_BOOL, (void *) &get_rtc_value,   0},
+		{"unix",   'u', NULL, CFG_INT,  (void *) &input_value,     0},
+		CFG_END_OF_LIST
+	};
+
+	CMD_DEFAULT_ARGS_PARSER(options);
+
+	if(set_rtc_value) {
+		if(input_value > 0) {
+			unix_time = (time_t)input_value;
+			rtc_set_unix_secs(unix_time);
+		}
+		return CMD_OK;
+	}
+
+	if(get_rtc_value) {
+		unix_time = rtc_unix_secs();
+		time = gmtime(&unix_time);
+
+		if(unix_time < 0 || time == NULL) {
+			ds_printf("DS_ERROR: RTC value is invalid");
+			return CMD_ERROR;
+		}
+		ds_printf("DS_INFO: %s", ctime(&unix_time));
+		return CMD_OK;
+	}
+
+	ds_printf("DS_ERROR: There is no option.\n");
+	return CMD_NO_ARG;
+}
+
+
 /* Setup all our builtins */
 int InitCmd() {
 
@@ -2049,6 +2100,7 @@ int InitCmd() {
 		AddCmd("console",   "Console manager", (CmdHandler *) builtin_console);
 		AddCmd("speedtest", "Testing r/w speed of device", (CmdHandler *) builtin_speedtest);
 		AddCmd("callfunc",  "Call any exported function", (CmdHandler *) builtin_callfunc);
+		AddCmd("rtc",       "Real Time Clock manager", (CmdHandler *) builtin_rtc);
 		//ds_printf("Command list initialised.\n");
 		return 1;
 	}
