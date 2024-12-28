@@ -1509,7 +1509,7 @@ void ShowPresetMenu(int game_index)
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
 			{
-				Label *general_label = TSU_LabelCreate(form_font, "GRAL", 12, false, false);
+				Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 12, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, general_label);
 				general_label = NULL;
 			}

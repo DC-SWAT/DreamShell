@@ -672,7 +672,7 @@ bool CheckCoverImageType(int game_index, int menu_type, uint16 image_type)
 			else
 			{
 				fs_unlink(game_cover_path);
-				ds_printf("INVALID IMAGE: %s", cover_file);
+				// ds_printf("INVALID IMAGE: %s\n", cover_file);
 			}
 
 			free(game_cover_path);
@@ -1217,7 +1217,7 @@ PresetStruct* LoadPresetGame(int game_index)
 				++app_name_count;
 			}
 
-			ds_printf("PresetFileName: %s", full_preset_file_name);
+			// ds_printf("PresetFileName: %s\n", full_preset_file_name);
 		}
 
 		if (full_preset_file_name != NULL)
