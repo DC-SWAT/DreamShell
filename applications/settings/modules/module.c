@@ -397,25 +397,30 @@ static void SetupBootSettings() {
 
 static void update_rtc_ui() {
 	char buf[5];
-    struct tm time;
-	
-	rtc_gettimeutc(&time);
-	
-	sprintf(buf,"%04d",time.tm_year + 1900);
-	GUI_TextEntrySetText(self.sysdate[0], buf);
-	sprintf(buf,"%02d",time.tm_mon + 1);
-	GUI_TextEntrySetText(self.sysdate[1], buf);
-	sprintf(buf,"%02d",time.tm_mday);
-	GUI_TextEntrySetText(self.sysdate[2], buf);
-	sprintf(buf,"%02d",time.tm_hour);
-	GUI_TextEntrySetText(self.sysdate[3], buf);
-	sprintf(buf,"%02d",time.tm_min);
-	GUI_TextEntrySetText(self.sysdate[4], buf);
+	struct tm *time;
+	time_t unix_time;
+
+	unix_time = rtc_unix_secs();
+	time = gmtime(&unix_time);
+
+	if (time != NULL) {
+		sprintf(buf, "%04d", time->tm_year + 1900);
+		GUI_TextEntrySetText(self.sysdate[0], buf);
+		sprintf(buf, "%02d", time->tm_mon + 1);
+		GUI_TextEntrySetText(self.sysdate[1], buf);
+		sprintf(buf, "%02d", time->tm_mday);
+		GUI_TextEntrySetText(self.sysdate[2], buf);
+		sprintf(buf, "%02d", time->tm_hour);
+		GUI_TextEntrySetText(self.sysdate[3], buf);
+		sprintf(buf, "%02d", time->tm_min);
+		GUI_TextEntrySetText(self.sysdate[4], buf);
+	}
 }
 
 void SettingsApp_TimeChange(GUI_Widget *widget)
 {
     struct tm time;
+	time_t unix_time;
 
 	if(strcmp(GUI_ObjectGetName(widget), "get-time") == 0)
 	{
@@ -429,7 +434,11 @@ void SettingsApp_TimeChange(GUI_Widget *widget)
 		time.tm_mday = atoi(GUI_TextEntryGetText(self.sysdate[2]));
 		time.tm_mon = atoi(GUI_TextEntryGetText(self.sysdate[1])) - 1;
 		time.tm_year = atoi(GUI_TextEntryGetText(self.sysdate[0])) - 1900;
-		rtc_settimeutc(&time);
+
+		unix_time = mktime(&time);
+		if(unix_time != -1) {
+			rtc_set_unix_secs(unix_time);
+		}
 	}
 	else if(strcmp(GUI_ObjectGetName(widget), "sync-time") == 0)
 	{
