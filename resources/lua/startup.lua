@@ -79,6 +79,7 @@ local DreamShell = {
 
 		os.execute("env USER Default");
 		local path = os.getenv("PATH");
+		local time = os.time();
 
 		print(os.getenv("HOST") .. " " .. os.getenv("VERSION") .. "\n");
 		print(os.getenv("ARCH") .. ": " .. os.getenv("BOARD_ID") .. "\n");
@@ -104,6 +105,11 @@ local DreamShell = {
 				print("DS_ERROR: Can't load module " .. path .. "/modules/" .. name .. ".klf\n");
 			end
 		end);
+
+		-- RTC validity check and fix.
+		if time < 946684800 or time > 3471292800 then
+			os.execute("rtc --set --unix 1735689600");
+		end
 
 		self:InstallingApps(path .. "/apps");
 		self.initialized = true;
