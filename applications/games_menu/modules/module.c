@@ -705,6 +705,11 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 	if (self.pages > 0)
 	{
+		if (menu_data.last_game_played_index >= 0)
+		{
+			self.current_page = ceil((float)(menu_data.last_game_played_index + 1) / (float)menu_data.menu_option.max_page_size);
+		}
+		
 		if (self.current_page < 1)
 		{
 			self.current_page = self.pages;
@@ -903,8 +908,12 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 				if (self.first_menu_load)
 				{
-					if (self.game_count == 1)
+					if ((self.game_count == 1 && menu_data.last_game_played_index == -1) 
+						|| menu_data.last_game_played_index == icount)
 					{
+						menu_data.last_game_played_index = -1;
+						self.menu_cursel = self.game_count - 1;
+
 						TSU_ItemMenuSetSelected(item_menu, true, false);
 						SetTitle(TSU_ItemMenuGetItemIndex(item_menu), name);
 						SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(item_menu))
@@ -988,8 +997,6 @@ static void InitMenu()
 
 	self.current_page = 1;
 	LoadPage(false, DMD_NONE);
-
-	self.menu_cursel = 0;
 }
 
 static void RemoveAll()
@@ -1378,8 +1385,11 @@ static void GamesApp_InputEvent(int type, int key)
 	{
 		case KeyStart:
 		{	
-			menu_data.state_app = SA_SYSTEM_MENU;
-			ShowSystemMenu();
+			if (menu_data.games_array_count > 0)
+			{
+				menu_data.state_app = SA_SYSTEM_MENU;
+				ShowSystemMenu();
+			}
 			skip_cursor = true;
 		}
 		break;
@@ -1915,6 +1925,16 @@ static bool PlayGame()
 
 	if (self.item_value_selected[0] != '\0')
 	{
+		menu_data.last_device = self.device_selected;
+		if (menu_data.games_array[self.game_index_selected].is_folder_name)
+		{
+			strcpy(menu_data.last_game, menu_data.games_array[self.game_index_selected].folder_name);
+		}
+		else
+		{
+			strcpy(menu_data.last_game, menu_data.games_array[self.game_index_selected].game);
+		}
+
 		ds_printf("DS_GAMES: Run: %s", self.item_value_selected);
 
 		if (LoadPreset() == 1)

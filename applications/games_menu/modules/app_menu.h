@@ -25,6 +25,7 @@ struct menu_structure
 	bool save_preset;
 	bool cover_background;
 	bool change_page_with_pad;
+	bool start_in_last_game;	
 	bool ide;
 	bool sd;
 	bool cd;
@@ -43,10 +44,13 @@ struct menu_structure
 	int firmware_array_count;
 	int current_dev;
 	int vmu_mode;
+	int last_device;
+	int last_game_played_index;
 
 	char default_dir[20];
 	char games_path[NAME_MAX];
 	char covers_path[50];
+	char last_game[NAME_MAX];
 
 	char default_dir_sd[20];
 	char games_path_sd[NAME_MAX];
