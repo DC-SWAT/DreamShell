@@ -335,7 +335,7 @@ void PlayCDDA(int game_index)
 	StopCDDA();
 	
 	if ((menu_data.games_array[game_index].is_cdda == CCGE_NOT_CHECKED || menu_data.games_array[game_index].is_cdda == CCGE_CDDA)
-		&& menu_data.current_dev == APP_DEVICE_IDE)
+		&& (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE))
 	{
 		menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
 	}
