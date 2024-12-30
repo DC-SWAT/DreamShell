@@ -832,7 +832,7 @@ void CreateCDDAView(Form *form_ptr)
 		self.cdda_destination_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size);
 		TSU_DrawableSetId((Drawable *)self.cdda_destination_option, CDDA_DESTINATION_CONTROL_ID);
 
-		TSU_OptionGroupAdd(self.cdda_destination_option, 1, "PIO");
+		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_PIO, "PIO");
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_SQ, "SQ");
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_DMA, "DMA");
 		TSU_OptionGroupSetStates(self.cdda_destination_option, SA_CONTROL + CDDA_DESTINATION_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -842,6 +842,10 @@ void CreateCDDAView(Form *form_ptr)
 		if (menu_data.preset->emu_cdda == CDDA_MODE_DISABLED)
 		{
 			TSU_OptionGroupSelectOptionByKey(self.cdda_destination_option, (int32)CDDA_MODE_DST_SQ);
+		}
+		else if (menu_data.preset->emu_cdda & CDDA_MODE_DST_PIO)
+		{
+			TSU_OptionGroupSelectOptionByKey(self.cdda_destination_option, (int32)CDDA_MODE_DST_PIO);
 		}
 		else if (menu_data.preset->emu_cdda & CDDA_MODE_DST_SQ)
 		{
