@@ -572,10 +572,10 @@ void CreateGeneralView(Form *form_ptr)
 		self.os_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size);
 		TSU_DrawableSetId((Drawable *)self.os_option, OS_CONTROL_ID);
 
-		TSU_OptionGroupAdd(self.os_option, 0, "AUTO");
-		TSU_OptionGroupAdd(self.os_option, 1, "KATANA");
-		TSU_OptionGroupAdd(self.os_option, 2, "HOMEBREW");
-		TSU_OptionGroupAdd(self.os_option, 3, "WinCE");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_AUTO, "AUTO");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_KATANA, "KATANA");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_KOS, "HOMEBREW");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_WINCE, "WinCE");
 		TSU_OptionGroupSetStates(self.os_option, SA_CONTROL + OS_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.os_option, 4, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.os_option, &OSOptionClick);
