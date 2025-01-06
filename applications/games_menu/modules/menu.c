@@ -836,10 +836,10 @@ void SetMenuType(int menu_type)
 			menu_data.menu_option.max_page_size = 10;
 			menu_data.menu_option.max_columns = 2;
 			menu_data.menu_option.size_items_column = menu_data.menu_option.max_page_size / menu_data.menu_option.max_columns;
-			menu_data.menu_option.init_position_x = 20;
-			menu_data.menu_option.init_position_y = -22;
-			menu_data.menu_option.padding_x = 320;
-			menu_data.menu_option.padding_y = 22;
+			menu_data.menu_option.init_position_x = 29;
+			menu_data.menu_option.init_position_y = -16;
+			menu_data.menu_option.padding_x = 306;
+			menu_data.menu_option.padding_y = 20;
 			menu_data.menu_option.image_size = 64.0f;
 		}
 		break;
@@ -849,10 +849,10 @@ void SetMenuType(int menu_type)
 			menu_data.menu_option.max_page_size = 12;
 			menu_data.menu_option.max_columns = 4;
 			menu_data.menu_option.size_items_column = menu_data.menu_option.max_page_size / menu_data.menu_option.max_columns;
-			menu_data.menu_option.init_position_x = 55;
-			menu_data.menu_option.init_position_y = -45;
-			menu_data.menu_option.padding_x = 163;
-			menu_data.menu_option.padding_y = 12;
+			menu_data.menu_option.init_position_x = 62;
+			menu_data.menu_option.init_position_y = -37;
+			menu_data.menu_option.padding_x = 156;
+			menu_data.menu_option.padding_y = 8;
 			menu_data.menu_option.image_size = 128.0f;
 		}
 		break;

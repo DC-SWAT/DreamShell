@@ -31,6 +31,7 @@ public:
 	void getSize(float *w, float *h);
 
 	virtual void draw(int list);
+	virtual void setBorderColor(Color color);
 
 private:
 	int m_list;
@@ -58,6 +59,7 @@ Rectangle* TSU_RectangleCreate(int list, float x, float y, float width, float he
 Rectangle* TSU_RectangleCreateWithBorder(int list, float x, float y, float width, float height, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius);
 void TSU_RectangleDestroy(Rectangle **rectangle_ptr);
 void TSU_RectangleSetSize(Rectangle *rectangle_ptr, float width, float height);
+void TSU_DrawableSetBorderColor(Rectangle *rectangle_ptr, const Color *color);
 
 #ifdef __cplusplus
 };

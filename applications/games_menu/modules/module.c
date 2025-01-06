@@ -99,6 +99,7 @@ static struct
 	LogXYMover *title_type_animation;
 	Box *main_box;
 	Rectangle *title_rectangle;
+	Rectangle *title_background_rectangle;
 	Rectangle *title_type_rectangle;
 	Rectangle *game_list_rectangle;
 	Rectangle *img_cover_game_rectangle;
@@ -286,18 +287,10 @@ static void SetTitle(int game_index, const char *text)
 		strcpy(&titleText[strlen(titleText)], text);
 	}
 
-	static Vector vectorInit = {-50, 32, ML_ITEM, 1};
-	static Vector vector = {10, 32, ML_ITEM, 1};
+	static Vector vectorInit = {-50, 38, ML_ITEM, 1};
+	static Vector vector = {14, 38, ML_ITEM, 1};
 	vectorInit.z = ML_ITEM + 1;
 	vector.z = ML_ITEM + 1;
-
-	if(vid_check_cable() != CT_VGA)
-	{
-		vectorInit.y = 40;
-		
-		vector.x = 14;
-		vector.y = 40;
-	}
 	
 	if (self.title != NULL)
 	{
@@ -374,19 +367,13 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 		}
 
 		TSU_DrawableSetTint((Drawable *)self.title_type_rectangle, &title_type_color);
+		TSU_DrawableSetBorderColor(self.title_type_rectangle, &title_type_color);
+		TSU_DrawableSetBorderColor(self.title_rectangle, &title_type_color);
 
-		static Vector vectorInit = {700, 32, ML_ITEM + 6, 1};
-		static Vector vector = {592, 32, ML_ITEM + 6, 1};
+		static Vector vectorInit = {700, 38, ML_ITEM + 6, 1};
+		static Vector vector = {577, 38, ML_ITEM + 6, 1};
 
 		vectorInit.z = ML_ITEM + 6;
-
-		if(vid_check_cable() != CT_VGA)
-		{
-			vectorInit.y = 40;
-			
-			vector.x = 592;
-			vector.y = 40;
-		}
 
 		if (self.title_type != NULL)
 		{
@@ -445,7 +432,7 @@ static void SetCursor()
 			Color color = {0, 0.0f, 0.0f, 0.0f};
 			Color border_color = {1, 1.0f, 1.0f, 0.1f};
 			
-			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 6, &border_color, 0);			
+			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 5, &border_color, 0);			
 			TSU_DrawableSetTint((Drawable *)self.item_selector, &color);
 		}
 		else if (menu_data.menu_type == MT_PLANE_TEXT)
@@ -478,16 +465,16 @@ static void SetCursor()
 
 	if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 	{
-		TSU_RectangleSetSize(self.item_selector, 310, menu_data.menu_option.image_size + 8);
-		init_position_x = 5;
-		init_position_y = 34;
+		TSU_RectangleSetSize(self.item_selector, 300, menu_data.menu_option.image_size + 8);
+		init_position_x = 13;
+		init_position_y = 40;
 		selector_translate.z = ML_CURSOR;
 	}
 	else if (menu_data.menu_type == MT_IMAGE_128_4X3)
 	{
 		TSU_RectangleSetSize(self.item_selector, menu_data.menu_option.image_size + 4, menu_data.menu_option.image_size + 4);
-		init_position_x = 9;
-		init_position_y = 41;
+		init_position_x = 16;
+		init_position_y = 49;
 		selector_translate.z = ML_CURSOR;
 	}
 	else if (menu_data.menu_type == MT_PLANE_TEXT)
@@ -630,13 +617,13 @@ static void AddInfoButtons()
 
 static void CreateViewTextPlane()
 {
-	CreateInfoButton(0, "btn_x.png", "CHANGE VIEW", 359, 315);
-	CreateInfoButton(1, "btn_y.png", "SETTINGS", 512, 315);
-	CreateInfoButton(2, "btn_a.png", "PLAY", 359, 315 + (32 * 1) + (5 * 1));
-	CreateInfoButton(3, "btn_b.png", "EXIT", 512, 315 + (32 * 1) + (5 * 1));
-	CreateInfoButton(4, "btn_lt.png", "PREVIOUS", 359, 315 + (32 * 2) + (5 * 2));
-	CreateInfoButton(5, "btn_rt.png", "NEXT", 512, 315 + (32 * 2) + (5 * 2));
-	CreateInfoButton(6, "btn_start.png", "SYSTEM MENU", 359, 315 + (32 * 3) + (5 * 3));
+	CreateInfoButton(0, "btn_x.png", "CHANGE VIEW", 352, 315);
+	CreateInfoButton(1, "btn_y.png", "SETTINGS", 504, 315);
+	CreateInfoButton(2, "btn_a.png", "PLAY", 352, 315 + (32 * 1) + (5 * 1));
+	CreateInfoButton(3, "btn_b.png", "EXIT", 504, 315 + (32 * 1) + (5 * 1));
+	CreateInfoButton(4, "btn_lt.png", "PREVIOUS", 352, 315 + (32 * 2) + (5 * 2));
+	CreateInfoButton(5, "btn_rt.png", "NEXT", 504, 315 + (32 * 2) + (5 * 2));
+	CreateInfoButton(6, "btn_start.png", "SYSTEM MENU", 352, 315 + (32 * 3) + (5 * 3));
 	AddInfoButtons();
 
 	if (self.game_list_rectangle == NULL)
@@ -664,7 +651,7 @@ static void CreateViewTextPlane()
 			TSU_AppSubAddBanner(self.dsapp_ptr, self.img_cover_game_background);
 
 			Color background_color = {1, 0.88f, 0.88f, 0.88f};
-			self.img_cover_game_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, vector_position.x - 128, vector_position.y + 128, 256, 256, &background_color, ML_ITEM + 1, 0);
+			self.img_cover_game_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, vector_position.x - 132, vector_position.y + 128, 256, 256, &background_color, ML_ITEM + 1, 0);
 			TSU_AppSubAddRectangle(self.dsapp_ptr, self.img_cover_game_rectangle);
 		}
 
@@ -675,7 +662,7 @@ static void CreateViewTextPlane()
 static bool LoadPage(bool change_view, uint8 direction)
 {
 	const int LENGTH_NAME_TEXT_PLANE = 26;
-	const int LENGTH_NAME_TEXT_64_5X2 = 19;
+	const int LENGTH_NAME_TEXT_64_5X2 = 18;
 	bool loaded = false;
 	char name_truncated[LENGTH_NAME_TEXT_PLANE];
 	char game_cover_path[NAME_MAX];
@@ -1014,6 +1001,7 @@ static void RemoveAll()
 
 	TSU_DrawableSetFinished((Drawable *)self.main_box);
 	TSU_DrawableSetFinished((Drawable *)self.title_rectangle);
+	TSU_DrawableSetFinished((Drawable *)self.title_background_rectangle);	
 	TSU_DrawableSetFinished((Drawable *)self.title_type_rectangle);
 	TSU_DrawableSetFinished((Drawable *)self.game_list_rectangle);
 	TSU_DrawableSetFinished((Drawable *)self.item_selector);
@@ -1823,6 +1811,11 @@ static void FreeAppData()
 		TSU_RectangleDestroy(&self.title_rectangle);
 	}
 
+	if (self.title_background_rectangle != NULL)
+	{
+		TSU_RectangleDestroy(&self.title_background_rectangle);
+	}
+
 	if (self.title_type_rectangle != NULL)
 	{
 		TSU_RectangleDestroy(&self.title_type_rectangle);
@@ -2254,24 +2247,18 @@ void GamesApp_Init(App_t *app)
 	if ((self.dsapp_ptr = TSU_AppCreate(GamesApp_InputEvent)) != NULL)
 	{
 		Color main_color = {1, 0.22f, 0.06f, 0.25f};
-		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 3, 480 - 12, 640 - 6, 480 - 9, 12, &main_color, ML_BACKGROUND, 0);
+		self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 10, 480 - 18, 640 - 28, 480 - 28, 6, &main_color, ML_BACKGROUND + 1, 0);
 		
-		Color title_color = {1, 0.22f, 0.06f, 0.25f};
+		Color title_color = {1, 0.0f, 0.00f, 0.00f};
 		Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 
-		if(vid_check_cable() == CT_VGA)
-		{
-			self.title_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 0, 40, 640, 40, &title_color, ML_BACKGROUND, 0);
-			self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 584, 37, 60, 34, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
-		}
-		else
-		{
-			self.title_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 0, 46, 640, 46, &title_color, ML_BACKGROUND, 0);
-			self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 584, 43, 60, 40, &title_type_color, ML_ITEM + 2, 3, &title_color, 0);
-		}
+		self.title_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 12, 40, 640 - 34, 24, &title_color, ML_BACKGROUND + 1, 3, &title_type_color, 0);
+		self.title_background_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 5, 48, 640 - 18, 40, &main_color, ML_BACKGROUND, 0);
+		self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 570, 40, 48, 24, &title_type_color, ML_ITEM + 2, 3, &title_type_color, 0);
 
 		TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_rectangle);
+		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_background_rectangle);
 		TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_type_rectangle);
 
 		CreateMenuData(&SetMessageScan, &SetMessageOptimizer, &PostLoadPVRCover, &PostOptimizer);
