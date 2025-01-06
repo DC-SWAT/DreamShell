@@ -1509,7 +1509,7 @@ void ShowPresetMenu(int game_index)
 
 			Font *form_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
-			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 618, 455, true, 3, true, true, form_font, &OnViewIndexChangedEvent);
+			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 612, 455, true, 3, true, true, form_font, &OnViewIndexChangedEvent);
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
 			{
