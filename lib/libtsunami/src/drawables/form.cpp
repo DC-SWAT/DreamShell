@@ -1086,7 +1086,13 @@ void Form::inputEvent(int event_type, int key) {
 }
 
 void Form::onViewIndexChangedEvent() {
-	if (view_index_changed_event != nullptr) {		
+	if (view_index_changed_event != nullptr) {
+
+		if (!m_visible_bottom) {
+			m_current_view_index = 0;
+			view_index_changed_event(this, m_current_view_index);
+			return;
+		}
 
 		if (m_current_view_index < 0) {
 			m_current_view_index = m_bottom_objects.size() - 1;

@@ -17,6 +17,10 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 {
 	menu_data.save_preset = true;
 	menu_data.cover_background = true;
+	menu_data.change_page_with_pad = false;
+	menu_data.start_in_last_game = false;
+	menu_data.last_game_played_index = -1;
+	menu_data.last_device = 0;
 	menu_data.games_array_count = 0;
 	menu_data.firmware_array_count = 0;
 	menu_data.default_cover_type = -1;
@@ -37,6 +41,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.games_array = NULL;
 	memset(&menu_data.menu_option, 0, sizeof(menu_data.menu_option));
 
+	memset(menu_data.last_game, 0, sizeof(menu_data.last_game));
 	memset(menu_data.default_dir, 0, sizeof(menu_data.default_dir));
 	memset(menu_data.covers_path, 0, sizeof(menu_data.covers_path));
 	memset(menu_data.games_path, 0, sizeof(menu_data.games_path));
@@ -330,7 +335,7 @@ void PlayCDDA(int game_index)
 	StopCDDA();
 	
 	if ((menu_data.games_array[game_index].is_cdda == CCGE_NOT_CHECKED || menu_data.games_array[game_index].is_cdda == CCGE_CDDA)
-		&& menu_data.current_dev == APP_DEVICE_IDE)
+		&& (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE))
 	{
 		menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
 	}
@@ -831,10 +836,10 @@ void SetMenuType(int menu_type)
 			menu_data.menu_option.max_page_size = 10;
 			menu_data.menu_option.max_columns = 2;
 			menu_data.menu_option.size_items_column = menu_data.menu_option.max_page_size / menu_data.menu_option.max_columns;
-			menu_data.menu_option.init_position_x = 20;
-			menu_data.menu_option.init_position_y = -22;
-			menu_data.menu_option.padding_x = 320;
-			menu_data.menu_option.padding_y = 22;
+			menu_data.menu_option.init_position_x = 29;
+			menu_data.menu_option.init_position_y = -16;
+			menu_data.menu_option.padding_x = 306;
+			menu_data.menu_option.padding_y = 20;
 			menu_data.menu_option.image_size = 64.0f;
 		}
 		break;
@@ -844,10 +849,10 @@ void SetMenuType(int menu_type)
 			menu_data.menu_option.max_page_size = 12;
 			menu_data.menu_option.max_columns = 4;
 			menu_data.menu_option.size_items_column = menu_data.menu_option.max_page_size / menu_data.menu_option.max_columns;
-			menu_data.menu_option.init_position_x = 55;
-			menu_data.menu_option.init_position_y = -45;
-			menu_data.menu_option.padding_x = 163;
-			menu_data.menu_option.padding_y = 12;
+			menu_data.menu_option.init_position_x = 62;
+			menu_data.menu_option.init_position_y = -37;
+			menu_data.menu_option.padding_x = 156;
+			menu_data.menu_option.padding_y = 8;
 			menu_data.menu_option.image_size = 128.0f;
 		}
 		break;
@@ -1551,6 +1556,9 @@ void LoadDefaultMenuConfig()
 	menu_data.app_config.save_preset = 1;
 	menu_data.app_config.cover_background = 1;
 	menu_data.app_config.change_page_with_pad = 0;
+	menu_data.app_config.start_in_last_game  = 0;
+	menu_data.app_config.last_device = 0;
+	memset(menu_data.app_config.last_game, 0, sizeof(menu_data.app_config.last_game));
 }
 
 bool LoadMenuConfig()
@@ -1563,7 +1571,10 @@ bool LoadMenuConfig()
 		{ "initial_view", CONF_INT, (void *)&menu_data.app_config.initial_view },
 		{ "save_preset", CONF_INT, (void *)&menu_data.app_config.save_preset },
 		{ "cover_background", CONF_INT, (void *)&menu_data.app_config.cover_background },
-		{ "change_page_with_pad", CONF_INT, (void *)&menu_data.app_config.change_page_with_pad }
+		{ "change_page_with_pad", CONF_INT, (void *)&menu_data.app_config.change_page_with_pad },
+		{ "start_in_last_game", CONF_INT, (void *)&menu_data.app_config.start_in_last_game },
+		{ "last_game", CONF_STR, (void *)menu_data.app_config.last_game },
+		{ "last_device", CONF_INT, (void *)&menu_data.app_config.last_device }
 	};
 	
 	if (ConfigParse(options, file_name) == -1)
@@ -1592,6 +1603,9 @@ void ParseMenuConfigToPresentation()
 	menu_data.save_preset = (menu_data.app_config.save_preset == 1);
 	menu_data.cover_background = (menu_data.app_config.cover_background == 1);
 	menu_data.change_page_with_pad = (menu_data.app_config.change_page_with_pad == 1);
+	menu_data.start_in_last_game = (menu_data.app_config.start_in_last_game == 1);
+	strcpy(menu_data.last_game, menu_data.app_config.last_game);
+	menu_data.last_device = menu_data.app_config.last_device;
 }
 
 void ParsePresentationToMenuConfig()
@@ -1600,6 +1614,9 @@ void ParsePresentationToMenuConfig()
 	menu_data.app_config.save_preset = (menu_data.save_preset ? 1 : 0);
 	menu_data.app_config.cover_background = (menu_data.cover_background ? 1 : 0);
 	menu_data.app_config.change_page_with_pad = (menu_data.change_page_with_pad ? 1 : 0);
+	menu_data.app_config.start_in_last_game = (menu_data.start_in_last_game ? 1 : 0);
+	strcpy(menu_data.app_config.last_game, menu_data.last_game);
+	menu_data.app_config.last_device = menu_data.last_device;
 }
 
 bool SaveMenuConfig()
@@ -1623,9 +1640,10 @@ bool SaveMenuConfig()
 	}
 
 	snprintf(result, sizeof(result),
-		"initial_view = %d\nsave_preset = %d\ncover_background = %d\nchange_page_with_pad = %d",
+		"initial_view = %d\nsave_preset = %d\ncover_background = %d\nchange_page_with_pad = %d\nstart_in_last_game = %d\nlast_game = %s\nlast_device = %d",
 		menu_data.app_config.initial_view, menu_data.app_config.save_preset, menu_data.app_config.cover_background, 
-		menu_data.app_config.change_page_with_pad);
+		menu_data.app_config.change_page_with_pad, menu_data.app_config.start_in_last_game, menu_data.app_config.last_game,
+		menu_data.app_config.last_device);
 
 	fs_write(fd, result, strlen(result));
 	fs_close(fd);
@@ -2442,6 +2460,13 @@ bool RetrieveGames()
 	FreeGames();
 	RetrieveGamesRecursive(GetGamesPath(menu_data.current_dev), NULL, 0);
 
+	if (menu_data.last_game_played_index > menu_data.games_array_count - 1)
+	{
+		menu_data.last_game_played_index = -1;
+		menu_data.last_device = 0;
+		memset(menu_data.last_game, 0, sizeof(menu_data.last_game));
+	}
+
 	if (menu_data.ide && menu_data.sd)
 	{
 		RetrieveGamesRecursive(GetGamesPath(APP_DEVICE_SD), NULL, 0);		
@@ -2450,6 +2475,22 @@ bool RetrieveGames()
 	if (menu_data.games_array_count > 0)
 	{
 		qsort(menu_data.games_array, menu_data.games_array_count, sizeof(GameItemStruct), AppCompareGames);
+
+		if (menu_data.start_in_last_game)
+		{
+			for (int icount = 0; icount < menu_data.games_array_count; icount++)
+			{
+				if (menu_data.app_config.last_device == menu_data.games_array[icount].device)
+				{
+					if ((menu_data.games_array[icount].is_folder_name && strcasecmp(menu_data.app_config.last_game, menu_data.games_array[icount].folder_name) == 0)
+						|| (!menu_data.games_array[icount].is_folder_name && strcasecmp(menu_data.app_config.last_game, menu_data.games_array[icount].game) == 0))
+					{
+						menu_data.last_game_played_index = icount;
+						break;
+					}
+				}
+			}
+		}
 
 		menu_data.rescan_covers = false;
 		if (menu_data.cover_scanned_app.games_count != menu_data.games_array_count)

@@ -1391,6 +1391,7 @@ TSU_RectangleCreate
 TSU_RectangleCreateWithBorder
 TSU_RectangleDestroy
 TSU_RectangleSetSize
+TSU_DrawableSetBorderColor
 TSU_TriangleCreate
 TSU_TriangleCreateWithBorder
 TSU_TriangleDestroy

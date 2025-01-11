@@ -231,6 +231,9 @@ typedef struct AppConfigStructure
 	int save_preset;
 	int cover_background;
 	int change_page_with_pad;
+	int start_in_last_game;
+	char last_game[NAME_MAX];
+	int last_device;
 } AppConfigStruct;
 #pragma pack(pop)
 

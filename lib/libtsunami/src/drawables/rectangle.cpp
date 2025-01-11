@@ -56,6 +56,11 @@ void Rectangle::getSize(float *w, float *h) {
 	*h = height;
 }
 
+void Rectangle::setBorderColor(Color color) {
+	if (borderWidth > 0) {
+		this->borderColor = plx_pack_color(color.a, color.r, color.g, color.b);
+	}
+}
 
 void Rectangle::drawRectangle(float x, float y, float width, float height, uint32 color, float zIndex) {
 	pvr_vertex_t vert;
@@ -196,6 +201,13 @@ extern "C"
 	{
 		if (rectangle_ptr != NULL) {
 			rectangle_ptr->setSize(w, h);
+		}
+	}
+
+	void TSU_DrawableSetBorderColor(Rectangle *rectangle_ptr, const Color *color)
+	{
+		if (rectangle_ptr != NULL) {
+			rectangle_ptr->setBorderColor(*color);
 		}
 	}
 }

@@ -572,10 +572,10 @@ void CreateGeneralView(Form *form_ptr)
 		self.os_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size);
 		TSU_DrawableSetId((Drawable *)self.os_option, OS_CONTROL_ID);
 
-		TSU_OptionGroupAdd(self.os_option, 0, "AUTO");
-		TSU_OptionGroupAdd(self.os_option, 1, "KATANA");
-		TSU_OptionGroupAdd(self.os_option, 2, "HOMEBREW");
-		TSU_OptionGroupAdd(self.os_option, 3, "WinCE");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_AUTO, "AUTO");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_KATANA, "KATANA");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_KOS, "HOMEBREW");
+		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_WINCE, "WinCE");
 		TSU_OptionGroupSetStates(self.os_option, SA_CONTROL + OS_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.os_option, 4, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.os_option, &OSOptionClick);
@@ -832,7 +832,7 @@ void CreateCDDAView(Form *form_ptr)
 		self.cdda_destination_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size);
 		TSU_DrawableSetId((Drawable *)self.cdda_destination_option, CDDA_DESTINATION_CONTROL_ID);
 
-		TSU_OptionGroupAdd(self.cdda_destination_option, 1, "PIO");
+		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_PIO, "PIO");
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_SQ, "SQ");
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_DMA, "DMA");
 		TSU_OptionGroupSetStates(self.cdda_destination_option, SA_CONTROL + CDDA_DESTINATION_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -842,6 +842,10 @@ void CreateCDDAView(Form *form_ptr)
 		if (menu_data.preset->emu_cdda == CDDA_MODE_DISABLED)
 		{
 			TSU_OptionGroupSelectOptionByKey(self.cdda_destination_option, (int32)CDDA_MODE_DST_SQ);
+		}
+		else if (menu_data.preset->emu_cdda & CDDA_MODE_DST_PIO)
+		{
+			TSU_OptionGroupSelectOptionByKey(self.cdda_destination_option, (int32)CDDA_MODE_DST_PIO);
 		}
 		else if (menu_data.preset->emu_cdda & CDDA_MODE_DST_SQ)
 		{
@@ -1505,7 +1509,7 @@ void ShowPresetMenu(int game_index)
 
 			Font *form_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
-			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 618, 455, true, 3, true, true, form_font, &OnViewIndexChangedEvent);
+			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 612, 455, true, 3, true, true, form_font, &OnViewIndexChangedEvent);
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
 			{

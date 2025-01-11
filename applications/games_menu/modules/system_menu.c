@@ -39,6 +39,7 @@ static struct
 	CheckBox *save_preset_option;
 	CheckBox *cover_background_option;
 	CheckBox *change_page_with_page_option;
+	CheckBox *start_in_last_game_option;	
 
 	Font *message_font;
 	Font *menu_font;
@@ -115,14 +116,15 @@ void OnSystemViewIndexChangedEvent(Drawable *drawable, int view_index)
 void CreateSystemMenuView(Form *form_ptr)
 {
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
-	TSU_FormtSetAttributes(form_ptr, 1, 10, 296, 38);		
+	TSU_FormtSetAttributes(form_ptr, 1, 11, 296, 32);		
 	TSU_FormSetRowSize(form_ptr, 4, 30);
 	TSU_FormSetRowSize(form_ptr, 6, 30);
 	TSU_FormSetRowSize(form_ptr, 8, 30);
-	TSU_FormSetRowSize(form_ptr, 9, 20);
+	TSU_FormSetRowSize(form_ptr, 10, 30);
+	TSU_FormSetRowSize(form_ptr, 11, 26);
 	TSU_FormSetTitle(form_ptr, "SYSTEM MENU");
 
-	int font_size = 17;
+	int font_size = 15;
 
 	// THE ALIGN SHOULD BE IN FORM CLASS
 	{
@@ -132,7 +134,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableEventSetClick((Drawable *)missing_covers_label, &ScanMissingCoversClick);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)missing_covers_label);
-		option_vector.x += 24;
+		option_vector.x += 42;
 		TSU_DrawableSetTranslate((Drawable *)missing_covers_label, &option_vector);
 		TSU_FormSetCursor(form_ptr, (Drawable *)missing_covers_label);
 
@@ -146,7 +148,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableEventSetClick((Drawable *)optimize_covers_label, &OptimizeCoversClick);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)optimize_covers_label);
-		option_vector.x += 48;
+		option_vector.x += 64;
 		TSU_DrawableSetTranslate((Drawable *)optimize_covers_label, &option_vector);
 
 		optimize_covers_label = NULL;
@@ -158,7 +160,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)save_preset_label, true);
 		TSU_FormAddBodyLabel(form_ptr, save_preset_label, 1, 3);
 
-		self.save_preset_option = TSU_CheckBoxCreate(form_font, font_size, 50, 22);
+		self.save_preset_option = TSU_CheckBoxCreate(form_font, font_size, 50, 20);
 		TSU_FormAddBodyCheckBox(form_ptr, self.save_preset_option, 1, 4);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.save_preset_option);
@@ -181,7 +183,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)cover_background_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cover_background_label, 1, 5);
 
-		self.cover_background_option = TSU_CheckBoxCreate(form_font, font_size, 50, 22);
+		self.cover_background_option = TSU_CheckBoxCreate(form_font, font_size, 50, 20);
 		TSU_FormAddBodyCheckBox(form_ptr, self.cover_background_option, 1, 6);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.cover_background_option);
@@ -204,7 +206,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)change_page_with_page_label, true);
 		TSU_FormAddBodyLabel(form_ptr, change_page_with_page_label, 1, 7);
 
-		self.change_page_with_page_option = TSU_CheckBoxCreate(form_font, font_size, 50, 22);
+		self.change_page_with_page_option = TSU_CheckBoxCreate(form_font, font_size, 50, 20);
 		TSU_FormAddBodyCheckBox(form_ptr, self.change_page_with_page_option, 1, 8);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.change_page_with_page_option);
@@ -222,9 +224,32 @@ void CreateSystemMenuView(Form *form_ptr)
 	}
 
 	{
+		// START IN LAST GAME
+		Label *start_in_last_game_label = TSU_LabelCreate(form_font, "Start in last game:", font_size, false, false);
+		TSU_DrawableSetReadOnly((Drawable*)start_in_last_game_label, true);
+		TSU_FormAddBodyLabel(form_ptr, start_in_last_game_label, 1, 9);
+
+		self.start_in_last_game_option = TSU_CheckBoxCreate(form_font, font_size, 50, 20);
+		TSU_FormAddBodyCheckBox(form_ptr, self.start_in_last_game_option, 1, 10);
+
+		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.start_in_last_game_option);
+		option_vector.y -= 5;
+		TSU_DrawableSetTranslate((Drawable *)self.start_in_last_game_option, &option_vector);
+
+		TSU_DrawableEventSetClick((Drawable *)self.start_in_last_game_option, &StartInLastGameOptionClick);
+
+		if (menu_data.app_config.start_in_last_game)
+		{
+			TSU_CheckBoxSetOn(self.start_in_last_game_option);
+		}
+
+		start_in_last_game_label = NULL;
+	}
+
+	{
 		// EXIT TO MAIN MENU
 		Label *exit_covers_label = TSU_LabelCreate(form_font, "Return", font_size, false, false);
-		TSU_FormAddBodyLabel(form_ptr, exit_covers_label, 1, 10);
+		TSU_FormAddBodyLabel(form_ptr, exit_covers_label, 1, 11);
 		TSU_DrawableEventSetClick((Drawable *)exit_covers_label, &ExitSystemMenuClick);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)exit_covers_label);
@@ -311,6 +336,12 @@ void ChangePageWithPadOptionClick(Drawable *drawable)
 {
 	TSU_CheckBoxInputEvent(self.change_page_with_page_option, 0, KeySelect);
 	menu_data.change_page_with_pad = (TSU_CheckBoxGetValue(self.change_page_with_page_option) ? 1 : 0);
+}
+
+void StartInLastGameOptionClick(Drawable *drawable)
+{
+	TSU_CheckBoxInputEvent(self.start_in_last_game_option, 0, KeySelect);
+	menu_data.start_in_last_game = (TSU_CheckBoxGetValue(self.start_in_last_game_option) ? 1 : 0);
 }
 
 void ExitSystemMenuClick(Drawable *drawable)
