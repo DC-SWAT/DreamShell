@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2024 SWAT
+# Copyright (C) 2004-2025 SWAT
 # http://www.dc-swat.ru
 #
 # This makefile can build CDI image (type "make cdi"),
@@ -97,9 +97,8 @@ DRIVERS_OBJ = $(SRC_DIR)/drivers/spi.o $(SRC_DIR)/drivers/sd.o \
 				$(SRC_DIR)/drivers/rtc.o
 
 FATFS_DIR = $(SRC_DIR)/fs/fat
-FATFS = $(FATFS_DIR)/utils.o $(FATFS_DIR)/option/ccsbcs.o \
-		 $(FATFS_DIR)/option/syscall.o $(FATFS_DIR)/ff.o \
-		 $(FATFS_DIR)/dc.o
+FATFS = $(FATFS_DIR)/option/ccsbcs.o $(FATFS_DIR)/option/syscall.o \
+		$(FATFS_DIR)/ff.o $(FATFS_DIR)/dc.o
 	
 UTILS_DIR = $(SRC_DIR)/utils
 UTILS_OBJ = $(SRC_DIR)/utils.o $(UTILS_DIR)/gmtime.o $(UTILS_DIR)/strftime.o \

@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * DreamShell FAT fs        *
  * Created by SWAT          *
- * (c) 2007-2024            *
+ * (c) 2007-2025            *
  * http://www.dc-swat.ru    *
  ****************************/
 
@@ -1054,6 +1054,26 @@ DRESULT disk_ioctl (
 	}
 }
 #endif
+
+DWORD get_fattime() {
+    struct tm *time;
+    time_t unix_time;
+    DWORD tmr = 0;
+
+    unix_time = rtc_unix_secs();
+    time = gmtime(&unix_time);
+
+    if (time != NULL) {
+        tmr = (((DWORD)(time->tm_year - 80)) << 25)   /* tm_year is years since 1900; FAT starts from 1980 */
+             | ((DWORD)(time->tm_mon + 1) << 21)      /* tm_mon ranges from 0 to 11; add 1 for FAT */
+             | ((DWORD)(time->tm_mday) << 16)         /* tm_mday ranges from 1 to 31 */
+             | ((DWORD)(time->tm_hour) << 11)         /* tm_hour ranges from 0 to 23 */
+             | ((DWORD)(time->tm_min) << 5)           /* tm_min ranges from 0 to 59 */
+             | ((DWORD)(time->tm_sec / 2));           /* tm_sec ranges from 0 to 59; FAT stores seconds in 2-second steps */
+    }
+
+    return tmr;
+}
 
 /* This is a template that will be used for each mount */
 static vfs_handler_t vh = {
