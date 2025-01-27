@@ -27,8 +27,8 @@ DRIVERS = $(DS_BASE)/src/drivers
 UTILS = $(DS_BASE)/src/utils
 
 OBJS = src/main.o src/spiral.o src/menu.o src/descramble.o \
-		$(DRIVERS)/spi.o $(DRIVERS)/sd.o $(DRIVERS)/rtc.o \
-		$(FATFS)/utils.o $(FATFS)/option/ccsbcs.o $(FATFS)/option/syscall.o \
+		$(DRIVERS)/spi.o $(DRIVERS)/sd.o \
+		$(FATFS)/option/ccsbcs.o $(FATFS)/option/syscall.o \
 		$(FATFS)/ff.o $(FATFS)/dc.o $(FATFS)/../fs.o \
 		$(UTILS)/memcpy.op $(UTILS)/memset.op romdisk.o
 

@@ -9,6 +9,8 @@
 #ifndef _DS_UTILS_H
 #define _DS_UTILS_H
 
+#include <stddef.h>
+#include <stdio.h>
 
 /* Macros v2 for accessing/creating DreamShell version codes */
 	
