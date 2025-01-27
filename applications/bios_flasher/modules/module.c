@@ -2,7 +2,7 @@
 
    module.c - Bios flasher app module
    Copyright (C)2013 Yev
-   Copyright (C)2013, 2014, 2024 SWAT
+   Copyright (C)2013, 2014, 2024, 2025 SWAT
 
 */
 
@@ -152,14 +152,28 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 	EXPT_GUARD_BEGIN;
 
 		// Erasing
-		if (dev->flags & F_FLASH_ERASE_SECTOR || 
-			dev->flags & F_FLASH_ERASE_ALL) 
+		if ((dev->flags & F_FLASH_ERASE_ALL) && (dev->size <= 2048))
 		{
-			for (i = 0; i < dev->sec_count; ++i) 
-			{		
+			/* Don't full erase on flash with more than 2MB.
+			 * Because other banks data may be usefull.
+			 */
+			if (bflash_erase_all(dev) < 0)
+			{
+				free(data);
+				EXPT_GUARD_RETURN eErasingFail;
+			}
+		}
+		else if(dev->flags & F_FLASH_ERASE_SECTOR)
+		{
+			for (i = 0; i < dev->sec_count; ++i)
+			{
+				/* Don't erase the other banks of sectors. */
+				if(dev->sectors[i] >= 0x200000)
+					break;
+
 				UPDATE_GUI(eErasing, (float)i / dev->sec_count, guiClbk);
 
-				if (bflash_erase_sector(dev, dev->sectors[i]) < 0) 
+				if (bflash_erase_sector(dev, dev->sectors[i]) < 0)
 				{
 					ds_printf("DS_ERROR: Can't erase flash\n");
 					free(data);

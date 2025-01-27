@@ -1,6 +1,6 @@
 #
 # Bios Flasher App module for DreamShell
-# Copyright (C) 2009-2016 SWAT
+# Copyright (C) 2009-2025 SWAT
 # Copyright (C) 2013 Yev
 # http://www.dc-swat.ru
 #
@@ -13,8 +13,8 @@ EXPORTS_FILE = exports.txt
 #KOS_CFLAGS += $(KOS_CSTD)
 
 VER_MAJOR = 2
-VER_MINOR = 0
-VER_MICRO = 4
+VER_MINOR = 1
+VER_MICRO = 1
 
 KOS_CFLAGS += -I./
 
