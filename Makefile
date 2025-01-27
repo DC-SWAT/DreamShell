@@ -3,7 +3,7 @@
 # Copyright (C) 2004-2025 SWAT
 # http://www.dc-swat.ru
 #
-# This makefile can build CDI image (type "make cdi"),
+# This Makefile can build CDI image (type "make cdi"),
 # launch DS on DC through dc-tool-ip (type "make run")
 # or launch DS on emulators nullDC and lxdream 
 # (type "make nulldc" or "make lxdream").
@@ -11,14 +11,14 @@
 #
 
 TARGET = DS
-TARGET_NAME = DreamShell_v4.0.1_Release
+TARGET_NAME = DreamShell_v4.0.2_Beta
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
 TRAGET_VERSION = -DVER_MAJOR=4 \
 				-DVER_MINOR=0 \
-				-DVER_MICRO=1 \
-				-DVER_BUILD=0x30
+				-DVER_MICRO=2 \
+				-DVER_BUILD=0x11
 # TARGET_DEBUG = 1 # or 2 for GDB
 # TARGET_EMU = 1
 # TARGET_PROF = 1
