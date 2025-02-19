@@ -68,6 +68,10 @@ static struct {
 	GUI_Surface *keyboard;
 	GUI_Surface *mouse;
 	GUI_Surface *dreameye;
+	GUI_Surface *mic;
+	GUI_Surface *dreameyemic;
+	GUI_Surface *vibro_pack;
+	GUI_Surface *vmu_d;
 
 	GUI_Widget *vmu_page;
 	GUI_Widget *vmu_container;
@@ -306,6 +310,7 @@ static void show_slots(int port)
 		dev = maple_enum_dev(port, slot);
 
 		if (dev == NULL) {
+			GUI_ButtonSetDisabledImage(self.vmu[port][slot - 1], self.vmu_d);
 			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
 		}
 		else if(dev->info.functions & MAPLE_FUNC_CAMERA) {
@@ -314,7 +319,19 @@ static void show_slots(int port)
 			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
 		}
 		else if(dev->info.functions & MAPLE_FUNC_MEMCARD) {
+			GUI_ButtonSetDisabledImage(self.vmu[port][slot - 1], self.vmu_d);
 			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 1);
+		}
+		//replace inactive memory card slot with microphone if installed
+		else if(dev->info.functions & MAPLE_FUNC_MICROPHONE) {
+			//check if this is Dreameye microphone or not
+			GUI_ButtonSetDisabledImage(self.vmu[port][slot - 1], !strncmp(dev->info.product_name, "MicDevice for Dreameye", 22) ? self.dreameyemic : self.mic);
+			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
+		}
+		//replace inactive memory card slot with vibration pack if installed
+		else if(dev->info.functions & MAPLE_FUNC_PURUPURU) {
+			GUI_ButtonSetDisabledImage(self.vmu[port][slot - 1], self.vibro_pack);
+			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
 		}
 	}
 }
@@ -343,6 +360,9 @@ static void show_port(int port, uint32_t functions)
 		GUI_ProgressBarSetPosition(self.img_cont[port], 0.0);	
 		GUI_WidgetSetEnabled(self.vmu[port][0], 0);
 		GUI_WidgetSetEnabled(self.vmu[port][1], 0);
+		//return normal inactive slots when controller disconnect
+		GUI_ButtonSetDisabledImage(self.vmu[port][0], self.vmu_d);
+		GUI_ButtonSetDisabledImage(self.vmu[port][1], self.vmu_d);
 	}
 }
 
@@ -440,6 +460,10 @@ void Vmu_Manager_Init(App_t* app)
 	self.keyboard = (GUI_Surface *) GetElement("keyboard", LIST_ITEM_GUI_SURFACE, 0);
 	self.mouse = (GUI_Surface *) GetElement("mouse", LIST_ITEM_GUI_SURFACE, 0);
 	self.dreameye = (GUI_Surface *) GetElement("dreameye", LIST_ITEM_GUI_SURFACE, 0);
+	self.mic = (GUI_Surface *) GetElement("mic", LIST_ITEM_GUI_SURFACE, 0);
+	self.dreameyemic = (GUI_Surface *) GetElement("dreameyemic", LIST_ITEM_GUI_SURFACE, 0);
+	self.vibro_pack = (GUI_Surface *) GetElement("vibro_pack", LIST_ITEM_GUI_SURFACE, 0);
+    self.vmu_d = (GUI_Surface *) GetElement("vmu_d", LIST_ITEM_GUI_SURFACE, 0);
 
 	self.progres_img = (GUI_Surface *) GetElement("progressbar", LIST_ITEM_GUI_SURFACE, 0);
 	self.progres_img_b = (GUI_Surface *) GetElement("progressbar_back", LIST_ITEM_GUI_SURFACE, 0);

@@ -5,9 +5,6 @@
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="30" name="m23_30" />
 		<font src="../../fonts/ttf/arial.ttf" type="ttf" size="16" name="arial" />
-		<surface width="640" height="400" name="back">
-			<blit width="640" height="400" surface="images/background.jpg" />
-		</surface>
 		<image src="../../gui/bars/black_bar_640x37.png" name="iBarTop" />
 		<image src="../../gui/icons/normal/button_cancel.png" name="iExitNorm" />
 		<image src="../../gui/icons/highlight/button_cancel.png" name="iExitHigh" />
@@ -23,6 +20,9 @@
 		<image src="images/vmu.png" name="vmu" />
 		<image src="images/vmu_high.png" name="vmu_h" />
 		<image src="images/vmu_disable.png" name="vmu_d" />
+		<image src="images/mic.png" name="mic" />
+		<image src="images/dreameyemic.png" name="dreameyemic" />
+		<image src="images/vibro_pack.png" name="vibro_pack" />
 		<image src="images/controller.png" name="controller" />
 		<image src="images/lightgun.png" name="lightgun" />
 		<image src="images/keyboard.png" name="keyboard" />
@@ -51,10 +51,18 @@
 		<image src="images/dump_disable.png" name="dump_d" />
 		<image src="images/format.png" name="format" />
 		<image src="images/format_high.png" name="format_h" />
-		<image src="images/frame.png" name="frame" />
 		
-		<surface width="640" height="400" name="vmu_frame">
-			<fill width="640" height="400" color="#333333" />
+		<surface width="640" height="385" name="main_frame">
+			<fill color="#EEEEEE" />
+			<fill x="1%" y="2%" width="98%" height="96%" color="#333333" />
+		</surface>
+		<surface width="130" height="130" name="info_frame">
+			<fill color="#EEEEEE" />
+			<fill x="1%" y="1%" width="99%" height="99%" color="#192443" />
+		</surface>
+		<surface width="640" height="385" name="vmu_frame">
+			<fill color="#EEEEEE" />
+			<fill x="1%" y="2%" width="98%" height="96%" color="#333333" />
 		</surface>
 		<surface width="201" height="30" name="item-normal">
 			<fill width="201" height="28" color="#333333" />
@@ -105,23 +113,23 @@
 				highlight="iExitHigh" 
 				pressed="iExitNorm" 
 				disabled="iExitNorm" 
-				x="570" y="15" width="48" height="48" 
+				x="570" y="5" width="48" height="48" 
 				onclick="export:VMU_Manager_Exit" />
 			<input type="button" 
 				normal="ihome" 
 				highlight="ihome_h" 
 				pressed="ihome" 
 				disabled="null" 
-				x="20" y="15" width="48" height="48" name="home_but"
+				x="20" y="5" width="48" height="48" name="home_but"
 				onclick="export:VMU_Manager_EnableMainPage" />
 		</panel>
 
-		<cardstack y="40" width="100%" height="400" name="pages">
+		<cardstack y="40" width="100%" height="385" name="pages">
 
-			<panel background="back" width="100%" height="100%" name="main_page">
+			<panel background="main_frame" width="100%" height="100%" name="main_page">
 
-				<panel x="20" y="120" width="130" height="120">
-					<panel background="frame" width="100%">
+				<panel  x="20" y="120" width="130" height="130">
+					<panel background="info_frame">
 						<panel height="50">
 							<label width="100%" height="40" y="10" font="m23" align="center" color="#ffffff" name="name-device" />
 						</panel>
@@ -139,7 +147,6 @@
 				</panel>
 
 				<panel x="160" y="120" width="480" height="190" name="vmu-container">
-					
 						<input type="button" 
 								normal="vmu" 
 								highlight="vmu_h" 
@@ -211,17 +218,16 @@
 								onclick="export:VMU_Manager_vmu()"
 								onmouseover="export:VMU_Manager_info_bar()"
 								onmouseout="export:VMU_Manager_info_bar_clr()"
-								x="380" y="110" width="80" height="80" name="D2" />
-								
+								x="380" y="110" width="80" height="80" name="D2" />			
 				</panel>
 				
-				<panel x="20" y="350" width="300" height="40">
+				<panel x="20" y="340" width="300" height="40">
 					<label width="300" height="40" font="m23" color="#FFFFFF" text="SELECT SOURCE VMU" name="drection" />
 				</panel>
 
 			</panel>
 			
-			<panel width="640" height="400" name="vmu_page" background="vmu_frame" >
+			<panel  width="100%" height="100%" name="vmu_page" background="vmu_frame" >
 
 				<panel x="220" y="25" width="200" height="350" name="progressbar_container">	
 					<progressbar width="200" height="350" name="progressbar" pos="0.0" bimage="progressbar_back" pimage="progressbar" />
@@ -236,8 +242,8 @@
 					</panel>
 				</panel>
 
-				<panel x="215" width="100" height="285" >
-					<image y="5" src="help" width="100" height="280" />
+				<panel x="220" y="15" width="85" height="235" >
+					<image  src="help" width="85" height="235" />
 				</panel>
 
 				<input type="button" 
@@ -246,11 +252,11 @@
 							pressed="dump" 
 							disabled="dump_d" 
 							onclick="export:VMU_Manager_Dump()" 
-							x="220" y="282" width="100" height="50" name="dump-button" />
+							x="220" y="260" width="100" height="50" name="dump-button" />
 				
-				<panel x="20" y="1" width="180" height="330" >
+				
 				<filemanager path="/" name="file_browser" 
-					width="180" height="330" x="0" y="0"
+					width="180" height="300" x="20" y="15"
 					item_normal="item-normal" 
 					item_highlight="item-focus" 
 					item_pressed="item-focus" 
@@ -258,10 +264,10 @@
 					item_font="arial"
 					item_font_color="#FFFFFF"
 					onclick="export:VMU_Manager_ItemClick()" />
-				</panel>
+				
 					
 				<filemanager path="/" name="file_browser2" 
-					width="300" height="330" x="340" y="1"
+					width="300" height="300" x="340" y="15"
 					item_normal="item-normal2" 
 					item_highlight="item-focus2" 
 					item_pressed="item-focus2" 
@@ -313,29 +319,29 @@
 							onclick="export:VMU_Manager_format()" 
 							x="460" y="230" width="80" height="80" name="format-c" />
 					
-				<panel x="0" y="330" width="60" height="70" >
+				<panel x="20" y="315" width="60" height="70" >
 					<image width="48" height="48" x="5" y="0" name="vmu-icon" src="logo" />
 				</panel>	
 				
-				<panel x="60" y="330" width="200" height="35" >	
+				<panel x="80" y="315" width="200" height="35" >	
 					<label width="200" height="25" font="arial" color="#ffffff" name="save-name" text=" " align="left"/>
 				</panel>
 					
-				<panel x="60" y="365" width="200" height="35" >	
+				<panel x="80" y="350" width="200" height="35" >	
 					<label width="200" height="25" font="arial" color="#ffffff" name="save-size" text=" " align="left"/>	
 				</panel>	
 				
-				<panel x="260" y="330" width="280" height="35" >	
+				<panel x="280" y="315" width="280" height="35" >	
 					<label width="270" height="25" x="10" y="0" font="arial" color="#ffffff" name="desc-short" text=" " align="left"/>	
 				</panel>
 				
-				<panel x="260" y="365" width="280" height="35" >	
+				<panel x="280" y="350" width="280" height="35" >	
 					<label width="270" height="25" x="10" y="0" font="arial" color="#ffffff" name="desc-long" text=" " align="left"/>	
 				</panel>
 				
 			</panel>		
 		
-			<panel width="640" height="400" name="folder_page" background="vmu_frame" >
+			<panel width="100%" height="100%" name="folder_page" background="vmu_frame" >
 				
 				<panel x="170" y="60" width="300" height="40" >
 					<label width="300" height="40" font="m23" color="#FFFFFF" text="ENTER NAME NEW FOLDER" align="center" valign="center"/>
