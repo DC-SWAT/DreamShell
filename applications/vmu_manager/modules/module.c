@@ -336,8 +336,21 @@ static void show_slots(int port)
 	}
 }
 
-static void show_port(int port, uint32_t functions)
+static void show_port(int port, maple_device_t *dev)
 {
+	if(!dev) {
+		GUI_ProgressBarSetPosition(self.img_cont[port], 0.0);	
+		GUI_WidgetSetEnabled(self.vmu[port][0], 0);
+		GUI_WidgetSetEnabled(self.vmu[port][1], 0);
+		//return normal inactive slots when controller disconnect
+		GUI_ButtonSetDisabledImage(self.vmu[port][0], self.vmu_d);
+		GUI_ButtonSetDisabledImage(self.vmu[port][1], self.vmu_d);
+		return;
+	}
+	
+	uint32_t functions = dev->info.functions;
+	char *name = dev->info.product_name;
+	
 	if(functions & (MAPLE_FUNC_LIGHTGUN | MAPLE_FUNC_ARGUN)) {
 		GUI_ProgressBarSetImage2(self.img_cont[port], self.lightgun);
 		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
@@ -356,14 +369,6 @@ static void show_port(int port, uint32_t functions)
 		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
 		show_slots(port);
 	}
-	else {
-		GUI_ProgressBarSetPosition(self.img_cont[port], 0.0);	
-		GUI_WidgetSetEnabled(self.vmu[port][0], 0);
-		GUI_WidgetSetEnabled(self.vmu[port][1], 0);
-		//return normal inactive slots when controller disconnect
-		GUI_ButtonSetDisabledImage(self.vmu[port][0], self.vmu_d);
-		GUI_ButtonSetDisabledImage(self.vmu[port][1], self.vmu_d);
-	}
 }
 
 static void *maple_scan()
@@ -377,7 +382,7 @@ static void *maple_scan()
 		for(port = 0; port < 4; ++port) {
 
 			dev = maple_enum_dev(port, 0);
-			show_port(port, dev != NULL ? dev->info.functions : 0);
+			show_port(port, dev);
 		}	
 		if(GUI_CardStackGetIndex(self.pages) != 0) {
 			break;
@@ -463,7 +468,7 @@ void Vmu_Manager_Init(App_t* app)
 	self.mic = (GUI_Surface *) GetElement("mic", LIST_ITEM_GUI_SURFACE, 0);
 	self.dreameyemic = (GUI_Surface *) GetElement("dreameyemic", LIST_ITEM_GUI_SURFACE, 0);
 	self.vibro_pack = (GUI_Surface *) GetElement("vibro_pack", LIST_ITEM_GUI_SURFACE, 0);
-    self.vmu_d = (GUI_Surface *) GetElement("vmu_d", LIST_ITEM_GUI_SURFACE, 0);
+	self.vmu_d = (GUI_Surface *) GetElement("vmu_d", LIST_ITEM_GUI_SURFACE, 0);
 
 	self.progres_img = (GUI_Surface *) GetElement("progressbar", LIST_ITEM_GUI_SURFACE, 0);
 	self.progres_img_b = (GUI_Surface *) GetElement("progressbar_back", LIST_ITEM_GUI_SURFACE, 0);
