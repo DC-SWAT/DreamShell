@@ -336,6 +336,12 @@ static void show_slots(int port)
 	}
 }
 
+static void dev_widget_set_img(GUI_Widget *w, GUI_Surface *s)
+{
+	GUI_ProgressBarSetImage2(w, s);
+	GUI_ProgressBarSetPosition(w, 1.0);
+}
+
 static void show_port(int port, maple_device_t *dev)
 {
 	if(!dev) {
@@ -352,23 +358,58 @@ static void show_port(int port, maple_device_t *dev)
 	char *name = dev->info.product_name;
 	
 	if(functions & (MAPLE_FUNC_LIGHTGUN | MAPLE_FUNC_ARGUN)) {
-		GUI_ProgressBarSetImage2(self.img_cont[port], self.lightgun);
-		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
-		show_slots(port);
+		dev_widget_set_img(self.img_cont[port], self.lightgun);
 	}
 	else if(functions & MAPLE_FUNC_KEYBOARD) {
-		GUI_ProgressBarSetImage2(self.img_cont[port], self.keyboard);
-		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+		dev_widget_set_img(self.img_cont[port], self.keyboard);
 	}
 	else if(functions & MAPLE_FUNC_MOUSE) {
-		GUI_ProgressBarSetImage2(self.img_cont[port], self.mouse);
-		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
+		dev_widget_set_img(self.img_cont[port], self.mouse);
 	}
 	else if(functions & MAPLE_FUNC_CONTROLLER) {
-		GUI_ProgressBarSetImage2(self.img_cont[port], self.controller);
-		GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
-		show_slots(port);
+		if (!strncmp(name, "Arcade Stick", 12)) {
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "ASCII STICK", 11)) {
+			// six button controller, megadrive style
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "Racing Controller", 17)) {
+			// racing whell
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "Dreamcast Fishing Controller", 28)) {
+			// fishing rod
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "Twin Stick", 10)) {
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "Maracas Controller", 18)) {
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "pop'n music controller", 22)) {
+			// pop'n music or dance mat
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "ASCII ANALOG STICK", 18)) {
+			// Ascii Mission Stick
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "TAITO 001 Controller", 20)) {
+			// Densya de Go!! Controller
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else if (!strncmp(name, "XBOX360 Controller", 18)) {
+			// usb4maple with x360 controller
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
+		else {
+			dev_widget_set_img(self.img_cont[port], self.controller);
+		}
 	}
+	
+	show_slots(port);
 }
 
 static void *maple_scan()
