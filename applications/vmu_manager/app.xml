@@ -24,6 +24,17 @@
 		<image src="images/dreameyemic.png" name="dreameyemic" />
 		<image src="images/vibro_pack.png" name="vibro_pack" />
 		<image src="images/controller.png" name="controller" />
+		<image src="images/arcadestick.png" name="arcadestick" />
+		<image src="images/ASCIIPadFT.png" name="asciipad" />
+		<image src="images/DenshadeGo.png" name="densha" />
+		<image src="images/FishingRod.png" name="fishingrod" />
+		<image src="images/maracas.png" name="maracas" />
+		<image src="images/MissionStick.png" name="missionstick" />
+		<image src="images/PantherDC.png" name="pantherdc" />
+		<image src="images/Popnmusic.png" name="popnmusic" />
+		<image src="images/TwinStick.png" name="twinstick" />
+		<image src="images/whell.png" name="whell" />
+		<image src="images/x360.png" name="x360" />
 		<image src="images/lightgun.png" name="lightgun" />
 		<image src="images/keyboard.png" name="keyboard" />
 		<image src="images/mouse.png" name="mouse" />
