@@ -64,6 +64,17 @@ static struct {
 	SDL_Surface *vmu_icon;
 
 	GUI_Surface *controller;
+	GUI_Surface *arcade;
+	GUI_Surface *asciipad;
+	GUI_Surface *whell;
+	GUI_Surface *fishrod;
+	GUI_Surface *twin;
+	GUI_Surface *maracas;
+	GUI_Surface *popnmusic;
+	GUI_Surface *missionstick;
+	GUI_Surface *panther;
+	GUI_Surface *densha;
+	GUI_Surface *x360;
 	GUI_Surface *lightgun;
 	GUI_Surface *keyboard;
 	GUI_Surface *mouse;
@@ -313,11 +324,6 @@ static void show_slots(int port)
 			GUI_ButtonSetDisabledImage(self.vmu[port][slot - 1], self.vmu_d);
 			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
 		}
-		else if(dev->info.functions & MAPLE_FUNC_CAMERA) {
-			GUI_ProgressBarSetImage2(self.img_cont[port], self.dreameye);
-			GUI_ProgressBarSetPosition(self.img_cont[port], 1.0);
-			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 0);
-		}
 		else if(dev->info.functions & MAPLE_FUNC_MEMCARD) {
 			GUI_ButtonSetDisabledImage(self.vmu[port][slot - 1], self.vmu_d);
 			GUI_WidgetSetEnabled(self.vmu[port][slot - 1], 1);
@@ -368,41 +374,45 @@ static void show_port(int port, maple_device_t *dev)
 	}
 	else if(functions & MAPLE_FUNC_CONTROLLER) {
 		if (!strncmp(name, "Arcade Stick", 12)) {
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.arcade);
 		}
 		else if (!strncmp(name, "ASCII STICK", 11)) {
 			// six button controller, megadrive style
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.asciipad);
 		}
 		else if (!strncmp(name, "Racing Controller", 17)) {
 			// racing whell
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.whell);
 		}
 		else if (!strncmp(name, "Dreamcast Fishing Controller", 28)) {
 			// fishing rod
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.fishrod);
 		}
 		else if (!strncmp(name, "Twin Stick", 10)) {
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.twin);
 		}
 		else if (!strncmp(name, "Maracas Controller", 18)) {
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.maracas);
 		}
 		else if (!strncmp(name, "pop'n music controller", 22)) {
 			// pop'n music or dance mat
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.popnmusic);
 		}
 		else if (!strncmp(name, "ASCII ANALOG STICK", 18)) {
 			// Ascii Mission Stick
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.missionstick);
 		}
 		else if (!strncmp(name, "TAITO 001 Controller", 20)) {
-			// Densya de Go!! Controller
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			// Densha de Go!! Controller
+			dev_widget_set_img(self.img_cont[port], self.densha);
 		}
 		else if (!strncmp(name, "XBOX360 Controller", 18)) {
 			// usb4maple with x360 controller
-			dev_widget_set_img(self.img_cont[port], self.controller);
+			dev_widget_set_img(self.img_cont[port], self.x360);
+		}
+		else if (!strncmp(name, "Dreamcast Camera", 16)) {
+			// DreamEYE
+			dev_widget_set_img(self.img_cont[port], self.dreameye);
 		}
 		else {
 			dev_widget_set_img(self.img_cont[port], self.controller);
@@ -502,6 +512,17 @@ void Vmu_Manager_Init(App_t* app)
 	self.logo = (GUI_Surface *) GetElement("logo", LIST_ITEM_GUI_SURFACE, 0);
 	self.dump_icon = (GUI_Surface *) GetElement("dump_icon", LIST_ITEM_GUI_SURFACE, 0);
 	self.controller = (GUI_Surface *) GetElement("controller", LIST_ITEM_GUI_SURFACE, 0);
+	self.arcade = (GUI_Surface *) GetElement("arcadestick", LIST_ITEM_GUI_SURFACE, 0);
+	self.asciipad = (GUI_Surface *) GetElement("asciipad", LIST_ITEM_GUI_SURFACE, 0);
+	self.densha = (GUI_Surface *) GetElement("densha", LIST_ITEM_GUI_SURFACE, 0);
+	self.fishrod = (GUI_Surface *) GetElement("fishingrod", LIST_ITEM_GUI_SURFACE, 0);
+	self.maracas = (GUI_Surface *) GetElement("maracas", LIST_ITEM_GUI_SURFACE, 0);
+	self.missionstick = (GUI_Surface *) GetElement("missionstick", LIST_ITEM_GUI_SURFACE, 0);
+	self.panther = (GUI_Surface *) GetElement("pantherdc", LIST_ITEM_GUI_SURFACE, 0);
+	self.popnmusic = (GUI_Surface *) GetElement("popnmusic", LIST_ITEM_GUI_SURFACE, 0);
+	self.twin = (GUI_Surface *) GetElement("twinstick", LIST_ITEM_GUI_SURFACE, 0);
+	self.whell = (GUI_Surface *) GetElement("whell", LIST_ITEM_GUI_SURFACE, 0);
+	self.x360 = (GUI_Surface *) GetElement("x360", LIST_ITEM_GUI_SURFACE, 0);
 	self.lightgun = (GUI_Surface *) GetElement("lightgun", LIST_ITEM_GUI_SURFACE, 0);
 	self.keyboard = (GUI_Surface *) GetElement("keyboard", LIST_ITEM_GUI_SURFACE, 0);
 	self.mouse = (GUI_Surface *) GetElement("mouse", LIST_ITEM_GUI_SURFACE, 0);
