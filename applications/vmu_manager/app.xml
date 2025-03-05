@@ -37,6 +37,7 @@
 		<image src="images/x360.png" name="x360" />
 		<image src="images/lightgun.png" name="lightgun" />
 		<image src="images/keyboard.png" name="keyboard" />
+		<image src="images/keyboardjp.png" name="keyboardjp" />
 		<image src="images/mouse.png" name="mouse" />
 		<image src="images/dreameye.png" name="dreameye" />
 		<image src="images/confirm.png" name="confirmimg" />
