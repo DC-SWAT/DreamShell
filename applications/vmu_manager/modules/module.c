@@ -77,6 +77,7 @@ static struct {
 	GUI_Surface *x360;
 	GUI_Surface *lightgun;
 	GUI_Surface *keyboard;
+	GUI_Surface *keyboardjp;
 	GUI_Surface *mouse;
 	GUI_Surface *dreameye;
 	GUI_Surface *mic;
@@ -367,8 +368,13 @@ static void show_port(int port, maple_device_t *dev)
 		dev_widget_set_img(self.img_cont[port], self.lightgun);
 	}
 	else if(functions & MAPLE_FUNC_KEYBOARD) {
-		dev_widget_set_img(self.img_cont[port], self.keyboard);
-	}
+        if (dev->info.area_code == 2) {
+            dev_widget_set_img(self.img_cont[port], self.keyboardjp);
+        }
+        else {
+            dev_widget_set_img(self.img_cont[port], self.keyboard);
+        }
+    }
 	else if(functions & MAPLE_FUNC_MOUSE) {
 		dev_widget_set_img(self.img_cont[port], self.mouse);
 	}
@@ -525,6 +531,7 @@ void Vmu_Manager_Init(App_t* app)
 	self.x360 = (GUI_Surface *) GetElement("x360", LIST_ITEM_GUI_SURFACE, 0);
 	self.lightgun = (GUI_Surface *) GetElement("lightgun", LIST_ITEM_GUI_SURFACE, 0);
 	self.keyboard = (GUI_Surface *) GetElement("keyboard", LIST_ITEM_GUI_SURFACE, 0);
+	self.keyboardjp = (GUI_Surface *) GetElement("keyboardjp", LIST_ITEM_GUI_SURFACE, 0);
 	self.mouse = (GUI_Surface *) GetElement("mouse", LIST_ITEM_GUI_SURFACE, 0);
 	self.dreameye = (GUI_Surface *) GetElement("dreameye", LIST_ITEM_GUI_SURFACE, 0);
 	self.mic = (GUI_Surface *) GetElement("mic", LIST_ITEM_GUI_SURFACE, 0);
