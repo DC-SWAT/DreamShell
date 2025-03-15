@@ -64,6 +64,7 @@ static struct {
 	SDL_Surface *vmu_icon;
 
 	GUI_Surface *controller;
+	GUI_Surface *treamcast;
 	GUI_Surface *arcade;
 	GUI_Surface *asciipad;
 	GUI_Surface *whell;
@@ -75,7 +76,10 @@ static struct {
 	GUI_Surface *panther;
 	GUI_Surface *densha;
 	GUI_Surface *x360;
+	GUI_Surface *psx;
 	GUI_Surface *lightgun;
+	GUI_Surface *lightgunus;
+	GUI_Surface *treamcastgun;
 	GUI_Surface *keyboard;
 	GUI_Surface *keyboardjp;
 	GUI_Surface *mouse;
@@ -365,8 +369,19 @@ static void show_port(int port, maple_device_t *dev)
 	char *name = dev->info.product_name;
 	
 	if(functions & (MAPLE_FUNC_LIGHTGUN | MAPLE_FUNC_ARGUN)) {
-		dev_widget_set_img(self.img_cont[port], self.lightgun);
-	}
+        if (dev->info.standby_power == 0xA0 && dev->info.max_power == 0xFA) {
+            // Treamcast gun
+            dev_widget_set_img(self.img_cont[port], self.treamcastgun);
+        }
+        else if (dev->info.area_code == 1) {
+            // NTSC-U or 3rd party lightgun
+            dev_widget_set_img(self.img_cont[port], self.lightgunus);
+        }
+        else {
+            // NTSC-J or PAL lightgun
+            dev_widget_set_img(self.img_cont[port], self.lightgun);
+        }
+    }
 	else if(functions & MAPLE_FUNC_KEYBOARD) {
         if (dev->info.area_code == 2) {
             dev_widget_set_img(self.img_cont[port], self.keyboardjp);
@@ -413,16 +428,23 @@ static void show_port(int port, maple_device_t *dev)
 			dev_widget_set_img(self.img_cont[port], self.densha);
 		}
 		else if (!strncmp(name, "XBOX360 Controller", 18)) {
-			// usb4maple with x360 controller
-			dev_widget_set_img(self.img_cont[port], self.x360);
-		}
+            // usb4maple with x360 controller
+            dev_widget_set_img(self.img_cont[port], self.x360);
+        }
+        else if (!strncmp(name, "PlayStation", 11)) {
+            // usb4maple with PS controller
+            dev_widget_set_img(self.img_cont[port], self.psx);
+        }
 		else if (!strncmp(name, "Dreamcast Camera", 16)) {
 			// DreamEYE
 			dev_widget_set_img(self.img_cont[port], self.dreameye);
 		}
-		else {
-			dev_widget_set_img(self.img_cont[port], self.controller);
-		}
+		else if (dev->info.function_data[1] == 0x400 && !strncmp(name, "Dreamcast Controller", 20)) {
+            dev_widget_set_img(self.img_cont[port], self.treamcast);
+        }
+        else {
+            dev_widget_set_img(self.img_cont[port], self.controller);
+        }
 	}
 	
 	show_slots(port);
@@ -518,6 +540,7 @@ void Vmu_Manager_Init(App_t* app)
 	self.logo = (GUI_Surface *) GetElement("logo", LIST_ITEM_GUI_SURFACE, 0);
 	self.dump_icon = (GUI_Surface *) GetElement("dump_icon", LIST_ITEM_GUI_SURFACE, 0);
 	self.controller = (GUI_Surface *) GetElement("controller", LIST_ITEM_GUI_SURFACE, 0);
+	self.treamcast = (GUI_Surface *) GetElement("treamcast", LIST_ITEM_GUI_SURFACE, 0);
 	self.arcade = (GUI_Surface *) GetElement("arcadestick", LIST_ITEM_GUI_SURFACE, 0);
 	self.asciipad = (GUI_Surface *) GetElement("asciipad", LIST_ITEM_GUI_SURFACE, 0);
 	self.densha = (GUI_Surface *) GetElement("densha", LIST_ITEM_GUI_SURFACE, 0);
@@ -529,7 +552,10 @@ void Vmu_Manager_Init(App_t* app)
 	self.twin = (GUI_Surface *) GetElement("twinstick", LIST_ITEM_GUI_SURFACE, 0);
 	self.whell = (GUI_Surface *) GetElement("whell", LIST_ITEM_GUI_SURFACE, 0);
 	self.x360 = (GUI_Surface *) GetElement("x360", LIST_ITEM_GUI_SURFACE, 0);
+	self.psx = (GUI_Surface *) GetElement("psx", LIST_ITEM_GUI_SURFACE, 0);
 	self.lightgun = (GUI_Surface *) GetElement("lightgun", LIST_ITEM_GUI_SURFACE, 0);
+	self.lightgunus = (GUI_Surface *) GetElement("lightgunus", LIST_ITEM_GUI_SURFACE, 0);
+	self.treamcastgun = (GUI_Surface *) GetElement("treamcastgun", LIST_ITEM_GUI_SURFACE, 0);
 	self.keyboard = (GUI_Surface *) GetElement("keyboard", LIST_ITEM_GUI_SURFACE, 0);
 	self.keyboardjp = (GUI_Surface *) GetElement("keyboardjp", LIST_ITEM_GUI_SURFACE, 0);
 	self.mouse = (GUI_Surface *) GetElement("mouse", LIST_ITEM_GUI_SURFACE, 0);

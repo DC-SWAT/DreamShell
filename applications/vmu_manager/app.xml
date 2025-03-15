@@ -24,6 +24,7 @@
 		<image src="images/dreameyemic.png" name="dreameyemic" />
 		<image src="images/vibro_pack.png" name="vibro_pack" />
 		<image src="images/controller.png" name="controller" />
+		<image src="images/treamcast.png" name="treamcast" />
 		<image src="images/arcadestick.png" name="arcadestick" />
 		<image src="images/ASCIIPadFT.png" name="asciipad" />
 		<image src="images/DenshadeGo.png" name="densha" />
@@ -35,7 +36,10 @@
 		<image src="images/TwinStick.png" name="twinstick" />
 		<image src="images/whell.png" name="whell" />
 		<image src="images/x360.png" name="x360" />
+		<image src="images/psx.png" name="psx" />
 		<image src="images/lightgun.png" name="lightgun" />
+		<image src="images/lightgunus.png" name="lightgunus" />
+		<image src="images/treamcastgun.png" name="treamcastgun" />
 		<image src="images/keyboard.png" name="keyboard" />
 		<image src="images/keyboardjp.png" name="keyboardjp" />
 		<image src="images/mouse.png" name="mouse" />
