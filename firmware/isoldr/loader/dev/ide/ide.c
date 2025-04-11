@@ -169,6 +169,9 @@ static u32 g1_pio_total = 0;
 static u32 g1_pio_avail = 0;
 static u32 g1_pio_trans = 0;
 
+static u64 g1_lba28_sector = 0;
+static u32 g1_lba28_count = 0;
+static u8 g1_lba28_cmd = 0;
 
 #define g1_ata_wait_status(n) \
     do {} while((IN8(G1_ATA_ALTSTATUS) & (n)))
@@ -208,6 +211,8 @@ u32 g1_dma_transfered(void) {
 static void delay_1ms() {
 	timer_spin_sleep_bios(1);
 }
+
+static void g1_ata_set_sector_and_count(u64 sector, u32 count, u8 drive, int lba28);
 
 #ifdef HAVE_EXPT
 
@@ -260,6 +265,24 @@ void *g1_dma_handler(void *passer, register_stack *stack, void *current_vector) 
 	if (status & ASIC_NRM_GD_DMA) {
 		/* Ack DMA IRQ. */
 		ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT] = ASIC_NRM_GD_DMA;
+
+		if (g1_lba28_count > 256) {
+
+			/* Setup next DMA transfer in LBA28 chain */
+			g1_lba28_sector += 256;
+			g1_lba28_count -= 256;
+			u32 nb_sectors = (g1_lba28_count > 256) ? 256 : g1_lba28_count;
+
+			g1_ata_set_sector_and_count(g1_lba28_sector, nb_sectors, 1, 1);
+
+			OUT32(G1_ATA_DMA_ADDRESS, IN32(G1_ATA_DMA_ADDRESS) + 256 * 512);
+			OUT32(G1_ATA_DMA_LENGTH, nb_sectors * 512);
+			OUT8(G1_ATA_DMA_DIRECTION, !(g1_lba28_cmd == ATA_CMD_WRITE_DMA));
+
+			OUT8(G1_ATA_COMMAND_REG, g1_lba28_cmd);
+			OUT8(G1_ATA_DMA_STATUS, 1);
+			return my_exception_finish;
+		}
 
 		/* Processing filesystem */
 		poll_all(0);
@@ -677,128 +700,128 @@ static s32 g1_dev_scan(void)
 
 #ifdef DEV_TYPE_IDE
 
+static void g1_ata_set_sector_and_count(u64 sector, u32 count, u8 drive, int lba28) {
+	u8 dev = (drive & 1) << 4;
+
+	if (!lba28) {
+		OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | dev));
+
+		OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
+		OUT8(G1_ATA_LBA_LOW, (u8)((sector >> 24) & 0xFF));
+		OUT8(G1_ATA_LBA_MID, (u8)((sector >> 32) & 0xFF));
+		OUT8(G1_ATA_LBA_HIGH, (u8)((sector >> 40) & 0xFF));
+
+		OUT8(G1_ATA_SECTOR_COUNT, (u8)count);
+	}
+	else {
+		OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | dev | ((sector >> 24) & 0x0F)));
+
+		OUT8(G1_ATA_SECTOR_COUNT, (u8)count);
+	}
+
+	OUT8(G1_ATA_LBA_LOW, (u8)((sector >> 0) & 0xFF));
+	OUT8(G1_ATA_LBA_MID, (u8)((sector >> 8) & 0xFF));
+	OUT8(G1_ATA_LBA_HIGH, (u8)((sector >> 16) & 0xFF));
+}
+
+static inline int can_use_lba28(u64 sector, u32 count) {
+	return ((sector + count) < 0x0FFFFFFF) && (count <= 256);
+}
+
 static s32 g1_ata_access(struct ide_req *req) {
 	struct ide_device *dev = req->dev;
 	u8 *buff = req->buff;
 	u32 count = req->count;
-	u32 len;
 	u64 lba = req->lba;
-	u8 lba_io[6];
-	u8 head;
 	u16 cmd;
 	const u32 sector_size = 512;
+	int is_dma = (req->cmd & 2) != 0;
+	int is_write = (req->cmd & 1) != 0;
+	int is_lba48 = dev->lba48 && !can_use_lba28(lba, count);
+	u32 max_sectors = is_lba48 ? 65536 : 256;
+	u32 len;
+
+	if (is_dma && ((u32)buff & 0x1f)) {
+		LOGFF("Unaligned output address: 0x%08lx (32 byte)\n", (u32)buff);
+		req->cmd = G1_READ_PIO;
+		req->async = 0;
+		is_dma = 0;
+	}
 
 #ifdef LOG
-	if ((req->cmd & 2)) {
-		if ((u32)buff & 0x1f) {
-			LOGFF("Unaligned output address: 0x%08lx (32 byte)\n", (u32)buff);
-			// return -1;
-			req->cmd = G1_READ_PIO;
-			req->async = 0;
-		}
-	}
 	if (IN8(G1_ATA_ALTSTATUS) & ATA_SR_DRQ) {
 		LOGF("G1_ATA_STATUS=0x%lx\n", IN8(G1_ATA_ALTSTATUS));
 	}
 #endif
 
+	if (is_dma) {
+		cmd = is_write ? 
+			(is_lba48 ? ATA_CMD_WRITE_DMA_EXT : ATA_CMD_WRITE_DMA) :
+			(is_lba48 ? ATA_CMD_READ_DMA_EXT : ATA_CMD_READ_DMA);
+	}
+	else {
+		cmd = is_write ? 
+			(is_lba48 ? ATA_CMD_WRITE_PIO_EXT : ATA_CMD_WRITE_PIO) :
+			(is_lba48 ? ATA_CMD_READ_PIO_EXT : ATA_CMD_READ_PIO);
+	}
+
 	g1_ata_wait_bsydrq();
-	
-	while (count) {
-		// (I) Select one from LBA28, LBA48;
-		if (dev->lba48) {
-			// LBA48:
-			lba_io[0] = (lba & 0x000000FF) >> 0;
-			lba_io[1] = (lba & 0x0000FF00) >> 8;
-			lba_io[2] = (lba & 0x00FF0000) >> 16;
-			lba_io[3] = (lba & 0xFF000000) >> 24;
-			lba_io[4] = 0; // LBA28 is integer, so 32-bits are enough to access 2TB.
-			lba_io[5] = 0; // LBA28 is integer, so 32-bits are enough to access 2TB.
-			head      = 0; // Lower 4-bits of HDDEVSEL are not used here.
-		}
-		else {
-			// LBA28:
-			lba_io[0] = (lba & 0x00000FF) >> 0;
-			lba_io[1] = (lba & 0x000FF00) >> 8;
-			lba_io[2] = (lba & 0x0FF0000) >> 16;
-			lba_io[3] = 0; // These Registers are not used here.
-			lba_io[4] = 0; // These Registers are not used here.
-			lba_io[5] = 0; // These Registers are not used here.
-			head      = (lba & 0xF000000) >> 24;
-		}
+
+	/* Manage CPU cache if DMA is used on cacheable memory */
+	if (is_dma && ((u32)buff >> 24) == 0x8c) {
+		u32 buffer_size = req->bytes ? req->bytes : (count * sector_size);
 		
-		OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4) | head));
-		
-		if (dev->lba48) {
-			len = (count > 65535) ? 65535 : count;
-			count -= len;
-			
-			if ((req->cmd & 2))
-				cmd = (req->cmd & 1) ? ATA_CMD_WRITE_DMA_EXT : ATA_CMD_READ_DMA_EXT;
-			else
-				cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO_EXT : ATA_CMD_READ_PIO_EXT;
-
-			OUT8(G1_ATA_SECTOR_COUNT, (u8)(len >> 8));
-			OUT8(G1_ATA_LBA_LOW, lba_io[3]);
-			OUT8(G1_ATA_LBA_MID, lba_io[4]);
-			OUT8(G1_ATA_LBA_HIGH, lba_io[5]);
+		if (!is_write) {
+			dcache_inval_range((u32)buff, buffer_size);
 		}
-		else {
-			len = (count > 255) ? 255 : count;
-			count -= len;
-
-			if ((req->cmd & 2))
-				cmd = (req->cmd & 1) ? ATA_CMD_WRITE_DMA : ATA_CMD_READ_DMA;
-			else
-				cmd = (req->cmd & 1) ? ATA_CMD_WRITE_PIO : ATA_CMD_READ_PIO;
-		}
-
-		OUT8(G1_ATA_SECTOR_COUNT, (u8)(len & 0xff));
-		OUT8(G1_ATA_LBA_LOW,  lba_io[0]);
-		OUT8(G1_ATA_LBA_MID,  lba_io[1]);
-		OUT8(G1_ATA_LBA_HIGH, lba_io[2]);
-
-		if ((req->cmd & 2)) {
-			if(((u32)buff >> 24) == 0x8c) {
-				if (req->cmd == G1_READ_DMA) {
-					/* Invalidate the dcache over the range of the data. */
-					dcache_inval_range((u32) buff, req->bytes ? req->bytes : (len * sector_size));
-				}
 #if _FS_READONLY == 0
-				else {
-					/* Flush the dcache over the range of the data. */
-					dcache_purge_range((u32) buff, len * sector_size);
-				}
+		else {
+			dcache_purge_range((u32)buff, buffer_size);
+		}
 #endif
-			}
+	}
 
-			/* Set the DMA parameters up. */
+	/* Setup LBA28 async DMA chain transfer */
+	if (!is_lba48 && is_dma && req->async && count > 256) {
+		g1_lba28_cmd = cmd;
+		g1_lba28_sector = lba;
+		g1_lba28_count = count;
+	}
+
+	/* Process transfers in chunks */
+	while (count > 0) {
+		len = (count > max_sectors) ? max_sectors : count;
+		g1_ata_set_sector_and_count(lba, len, dev->drive, !is_lba48);
+
+		/* Setup DMA transfer */
+		if (is_dma) {
 			OUT8(G1_ATA_DMA_ENABLE, 0);
 			g1_ata_wait_dma();
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 			OUT32(G1_ATA_DMA_ADDRESS, PHYS_ADDR((u32)buff));
 			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * sector_size));
-			OUT8(G1_ATA_DMA_DIRECTION, (req->cmd == G1_READ_DMA));
-
-			 /* Enable G1 DMA. */
+			OUT8(G1_ATA_DMA_DIRECTION, !is_write);
 			OUT8(G1_ATA_DMA_ENABLE, 1);
 		}
 
+		/* Send command to device */
 		g1_ata_wait_nbsy();
 		g1_ata_wait_drdy();
 
 		OUT8(G1_ATA_COMMAND_REG, cmd);
 
+		/* Check if previous transfer was aborted */
 		if (g1_ata_aborted) {
 			g1_ata_wait_nerr();
 			g1_ata_aborted = 0;
 			g1_ata_requested = 0;
 		}
 
-		if (req->cmd == G1_READ_PIO) {
+		/* Process transfer based on mode */
+		if (!is_dma && !is_write) {
+			/* READ PIO mode */
 			g1_ata_irq_disable();
 			g1_pio_reset(len * sector_size);
-			// g1_pio_xfer((u32)buff, len * sector_size);
 			g1_pio_trans = 1;
 
 			for (u32 i = 0; i < len; ++i) {
@@ -812,22 +835,27 @@ static s32 g1_ata_access(struct ide_req *req) {
 #endif
 					break;
 				}
+
 				for (u32 w = 0; w < (sector_size >> 1); ++w) {
 					u16 word = IN16(G1_ATA_DATA);
 					buff[0] = word;
-                	buff[1] = word >> 8;
+					buff[1] = word >> 8;
 					buff += 2;
 				}
 			}
+
+			/* Cleanup PIO read */
 			g1_ata_ack_irq();
 			g1_ata_wait_bsydrq();
 			g1_pio_reset(0);
 			g1_ata_irq_enable();
 		}
 #if _FS_READONLY == 0
-		else if (req->cmd == G1_WRITE_PIO) {
+		else if (!is_dma && is_write) {
+			/* WRITE PIO mode */
 			g1_ata_irq_disable();
 
+			/* Write each sector */
 			for (u32 i = 0; i < len; i++) {
 				g1_ata_wait_nbsy();
 
@@ -836,21 +864,24 @@ static s32 g1_ata_access(struct ide_req *req) {
 					buff += 2;
 				}
 			}
-			OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
+
+			/* Flush ATA cache and cleanup */
+			OUT8(G1_ATA_COMMAND_REG, is_lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
 			g1_ata_wait_bsydrq();
 			g1_ata_ack_irq();
 			g1_ata_irq_enable();
 		}
 #endif
-		else {
-			/* Start the DMA transfer. */
+		else if (is_dma) {
+			/* Start DMA transfer */
 			OUT8(G1_ATA_DMA_STATUS, 1);
 
+			/* For async mode, return immediately after the first transfer is started */
 			if (req->async) {
 				return 0;
 			}
 
-			buff += len;
+			/* In sync mode, wait for completion */
 			g1_ata_wait_dma();
 			OUT8(G1_ATA_DMA_ENABLE, 0);
 
@@ -859,8 +890,14 @@ static s32 g1_ata_access(struct ide_req *req) {
 			}
 
 			g1_ata_wait_bsydrq();
+
+			buff += len * sector_size;
 		}
+
+		lba += len;
+		count -= len;
 	}
+
 	return 0;
 }
 
@@ -1070,10 +1107,6 @@ s32 g1_ata_pre_read_lba(u64 sector, size_t count) {
 
 	g1_ata_wait_bsydrq();
 	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4)));
-
-	if (count > 65535) {
-		count = 65535;
-	}
 
 	OUT8(G1_ATA_SECTOR_COUNT, (u8)(count >> 8));
 	OUT8(G1_ATA_LBA_LOW, lba_io[3]);
