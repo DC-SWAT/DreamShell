@@ -140,7 +140,7 @@ static int LoadSettingsVMU() {
 		return 0;
 	}
 
-	if(vmu_pkg_parse(data, &pkg) < 0) {
+	if(vmu_pkg_parse(data, size, &pkg) < 0) {
 		free(data);
 		return 0;
 	}
@@ -218,7 +218,7 @@ static int SaveSettingsVMU() {
 	pkg.icon_cnt = 1;
 	pkg.icon_anim_speed = 0;
 	memcpy(pkg.icon_pal, DS_pal, 32);
-	pkg.icon_data = DS_data;
+	pkg.icon_data = (uint8 *)DS_data;
 	pkg.eyecatch_type = VMUPKG_EC_16BIT;
 	pkg.data_len = sizeof(current_set);
 	pkg.data = (void *)&current_set;
