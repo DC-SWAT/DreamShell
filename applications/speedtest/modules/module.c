@@ -304,8 +304,6 @@ readtest:
 
 	if(!read_only) { 
 		fs_unlink(name);
-	} else {
-		cdrom_spin_down();
 	}
 
 	snprintf(result, sizeof(result), 
