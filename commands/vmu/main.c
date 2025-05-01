@@ -276,7 +276,7 @@ int main(int argc, char *argv[]) {
 			pkg.icon_cnt = 1;
 			pkg.icon_anim_speed = 0;
 			memcpy(pkg.icon_pal, DS_pal, 32);
-			pkg.icon_data = DS_data;
+			pkg.icon_data = (uint8 *)DS_data;
 			pkg.eyecatch_type = VMUPKG_EC_16BIT; //VMUPKG_EC_NONE;
 			pkg.data_len = siz;
 			pkg.data = vmdata;
@@ -294,7 +294,7 @@ int main(int argc, char *argv[]) {
 		if(normal) { 
 
 			ds_printf("DS_PROCESS: Convert %s to normal file...\n", file);
-			vmu_pkg_parse(vmdata, &pkg);
+			vmu_pkg_parse(vmdata, siz, &pkg);
 			fs_write(fd, pkg.data, pkg.data_len);
 			fs_close(fd);
 			free(vmdata);
