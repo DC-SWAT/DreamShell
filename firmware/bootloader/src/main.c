@@ -14,6 +14,7 @@
 extern uint8 romdisk[];
 KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
 #else
+# ifndef __NAOMI__
 static void early_init(void) {
 	/*
 		Older KallistiOS doesn't get back the Master after working with G1 ATA.
@@ -23,6 +24,7 @@ static void early_init(void) {
 	g1_ata_select_device(G1_ATA_MASTER);
 }
 KOS_INIT_EARLY(early_init);
+# endif
 KOS_INIT_FLAGS(INIT_DEFAULT);
 #endif
 
@@ -197,11 +199,15 @@ int main(int argc, char **argv) {
 	
 	if(vid_check_cable() == CT_VGA) {
 		vid_set_mode(DM_640x480_VGA, PM_RGB565);
-	} else if(flashrom_get_region_only() == FLASHROM_REGION_EUROPE) {
+	}
+#ifndef __NAOMI__
+	else if(flashrom_get_region_only() == FLASHROM_REGION_EUROPE) {
 		vid_set_mode(DM_640x480_PAL_IL, PM_RGB565);
-	} else {
+	}
+	else {
 		vid_set_mode(DM_640x480_NTSC_IL, PM_RGB565);
 	}
+#endif
 
 #ifndef EMU
 
