@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Memory allocation
- * (c)2022-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2022-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef __MALLOC_H
@@ -19,6 +19,7 @@ uint32 malloc_heap_pos();
 void *malloc(uint32 size);
 void free(void *data);
 void *realloc(void *data, uint32 size);
+void *aligned_alloc(size_t alignment, size_t size);
 
 __END_DECLS
 

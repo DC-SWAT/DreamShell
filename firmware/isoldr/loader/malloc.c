@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Memory allocation
- * (c)2022-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2022-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -385,4 +385,14 @@ void *realloc(void *data, uint32 size) {
     {
         return internal_realloc(data, size);
     }
+}
+
+// FIXME: This is a hack to get aligned memory.
+void *aligned_alloc(size_t alignment, size_t size) {
+    void *ptr = malloc(size + alignment);
+    if (ptr) {
+        void *aligned_ptr = (void*)(((uintptr_t)ptr + alignment - 1) & ~(alignment - 1));
+        return aligned_ptr;
+    }
+    return NULL;
 }
