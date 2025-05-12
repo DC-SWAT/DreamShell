@@ -1,0 +1,3 @@
+[submodule "lib/fatfs"]
+	path = lib/fatfs
+	url = https://github.com/DC-SWAT/FatFs.git

@@ -6,9 +6,9 @@
 
 _SUBDIRS = libcfg/src libparallax SDL_rtf \
 	lua SDL SDL_gfx SDL_image SDL_ttf \
-	libtsunami
+	libtsunami fatfs/fatfs
 
-_SUBDIRS_CLEAN = $(_SUBDIRS) freetype mxml
+_SUBDIRS_CLEAN = $(_SUBDIRS) freetype mxml fatfs/fatfs
 
 all: build_freetype build_mxml $(patsubst %, _dir_%, $(_SUBDIRS))
 

@@ -24,6 +24,7 @@ include dc/sound/sound.h
 
 include ds.h
 include fs.h
+include fatfs.h
 include img/SegaPVRImage.h
 include img/decode.h
 include img/load.h
@@ -2088,12 +2089,6 @@ sdc_get_size
 sdc_print_ident
 sdc_blockdev_for_partition
 sdc_blockdev_for_device
-#
-# Ext2 Filesystem
-fs_ext2_init
-fs_ext2_shutdown
-fs_ext2_mount
-fs_ext2_unmount
 #
 # FAT Filesystem
 fs_fat_init

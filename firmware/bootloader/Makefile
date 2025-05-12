@@ -1,10 +1,10 @@
 #
 # DreamShell boot loader
-# (c)2011-2024 SWAT
+# (c)2011-2025 SWAT
 #
 
 TARGET = bootloader
-VERSION = 2.7
+VERSION = 2.8
 TARGET_NAME = DreamShell_$(TARGET)_v$(VERSION)
 TARGET_CD = cd/1DS_BOOT.BIN
 KOS_ROMDISK_DIR = romdisk
@@ -22,22 +22,18 @@ rm-elf:
 
 include ../../sdk/Makefile.cfg
 
-FATFS = $(DS_BASE)/src/fs/fat
-DRIVERS = $(DS_BASE)/src/drivers
 UTILS = $(DS_BASE)/src/utils
 
 OBJS = src/main.o src/spiral.o src/menu.o src/descramble.o \
-		$(DRIVERS)/spi.o $(DRIVERS)/sd.o \
-		$(FATFS)/option/ccsbcs.o $(FATFS)/option/syscall.o \
-		$(FATFS)/ff.o $(FATFS)/dc.o $(FATFS)/../fs.o \
+		$(DS_BASE)/src/fs/fs.o \
 		$(UTILS)/memcpy.op $(UTILS)/memset.op romdisk.o
 
-KOS_CFLAGS += -I$(DS_BASE)/include -I$(DS_BASE)/include/fatfs -I./include -DVERSION="$(VERSION)"
+KOS_CFLAGS += -I$(DS_BASE)/include -I$(DS_BASE)/lib/fatfs/include -I./include -DVERSION="$(VERSION)"
 
 $(TARGET).bin: $(TARGET).elf
 $(TARGET).elf: $(OBJS)
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $(TARGET).elf \
-		$(OBJS) $(OBJEXTRA) -lkosext2fs -lz -lkmg $(KOS_LIBS)
+		$(OBJS) $(OBJEXTRA) -lz -lkmg -lfatfs $(KOS_LIBS)
 	$(KOS_STRIP) $(TARGET).elf
 	$(KOS_OBJCOPY) -R .stack -O binary $(TARGET).elf $(TARGET).bin
 

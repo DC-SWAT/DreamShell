@@ -36,6 +36,8 @@ git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
 cp ds/sdk/toolchain/environ.sh environ.sh
 cp ds/sdk/toolchain/patches/*.diff utils/dc-chain/patches
+cd /usr/local/dc/kos/kos/ds
+git submodule update --init --recursive
 ```
 ##### Toolchain
 ```console
@@ -91,6 +93,10 @@ make toolchain
 ##### Core and libraries only
 ```console
 make
+```
+##### Libraries only
+```console
+cd ${KOS_BASE}/ds/lib && make
 ```
 ##### Modules, applications and commands only
 ```console

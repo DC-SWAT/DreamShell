@@ -18,7 +18,7 @@ TARGET_BIN_CD = 1$(TARGET_BIN)
 TRAGET_VERSION = -DVER_MAJOR=4 \
 				-DVER_MINOR=0 \
 				-DVER_MICRO=2 \
-				-DVER_BUILD=0x11
+				-DVER_BUILD=0x12
 # TARGET_DEBUG = 1 # or 2 for GDB
 # TARGET_EMU = 1
 # TARGET_PROF = 1
@@ -34,7 +34,8 @@ SRC_DIR = $(DS_BASE)/src
 LIB_DIR = $(DS_BASE)/lib
 
 KOS_LDFLAGS += -L$(LIB_DIR)
-KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/img -I$(INC_DIR)/SDL -I$(INC_DIR)/fatfs \
+KOS_CFLAGS += -I$(INC_DIR) -I$(INC_DIR)/img -I$(INC_DIR)/SDL \
+			-I$(LIB_DIR)/fatfs/include \
 			-I$(INC_DIR)/tsunami \
 			-DHAVE_SDLIMAGE $(TRAGET_VERSION)
 
@@ -57,7 +58,7 @@ TSUNAMI_VER = 2.0.0
 PARALLAX_VER = 2.0.0
 FREETYPE_VER = 2.4.4
 
-EXTRA_LIBS = -lcfg -lmxml
+EXTRA_LIBS = -lcfg -lmxml -lfatfs
 
 SDL_LIBS = -lSDL_$(SDL_VER) \
 			-lSDL_image_$(SDL_IMAGE_VER) \
@@ -68,7 +69,7 @@ SDL_LIBS = -lSDL_$(SDL_VER) \
 
 IMAGE_LIBS = -lkmg -ljpeg -lpng -lz
 LUA_LIBS = -llua_$(LUA_VER)
-KLIBS = -lkosext2fs -lpthread -lkosutils -lstdc++ -lm
+KLIBS = -lpthread -lkosutils -lstdc++ -lm
 GRAPHICS_LIBS = -ltsunami_$(TSUNAMI_VER) \
 				-lparallax_$(PARALLAX_VER)
 
@@ -96,10 +97,6 @@ DRIVERS_OBJ = $(SRC_DIR)/drivers/spi.o $(SRC_DIR)/drivers/sd.o \
 				$(SRC_DIR)/drivers/enc28j60.o $(SRC_DIR)/drivers/asic.o \
 				$(SRC_DIR)/drivers/rtc.o
 
-FATFS_DIR = $(SRC_DIR)/fs/fat
-FATFS = $(FATFS_DIR)/option/ccsbcs.o $(FATFS_DIR)/option/syscall.o \
-		$(FATFS_DIR)/ff.o $(FATFS_DIR)/dc.o
-	
 UTILS_DIR = $(SRC_DIR)/utils
 UTILS_OBJ = $(SRC_DIR)/utils.o $(UTILS_DIR)/gmtime.o $(UTILS_DIR)/strftime.o \
 			$(UTILS_DIR)/debug_console.o $(UTILS_DIR)/memcpy.op \
@@ -117,7 +114,7 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \
 		$(SRC_DIR)/settings.o $(SRC_DIR)/sfx.o \
 		$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
-		$(UTILS_OBJ) $(FATFS) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
+		$(UTILS_OBJ) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o
 
 ifdef TARGET_PROF
@@ -216,6 +213,7 @@ release: build cdi
 update:
 	@echo Fetching DreamShell from GitHub...
 	@git fetch && git checkout origin/master
+	@git submodule update --init --recursive
 	@echo Fetching KallistiOS from GitHub...
 	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt`
 	@echo Fetching kos-ports from GitHub...
@@ -224,6 +222,7 @@ update:
 update-build:
 	@echo Fetching DreamShell from GitHub...
 	@git fetch && git checkout origin/master
+	@git submodule update --init --recursive
 	@echo Fetching and build KallistiOS from GitHub...
 	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt` && make clean && make
 	@echo Fetching and build kos-ports from GitHub...
