@@ -1,6 +1,6 @@
 /** 
  * mkbios.c 
- * Copyright (c) 2022 SWAT
+ * Copyright (c) 2022, 2025 SWAT
  */
 
 #include <stdlib.h>
@@ -8,13 +8,13 @@
 #include <stdint.h>
 #include <unistd.h>
 
-#define BIOS_OFFSET 65536
+#define DEFAULT_BIOS_OFFSET 65536
 
 int main(int argc, char *argv[]) {
 
     if (argc < 3) {
-        printf("BIOS maker v0.1 by SWAT\n");
-        printf("Usage: %s file.bios program.bin", argv[0]);
+        printf("BIOS maker v0.2 by SWAT\n");
+        printf("Usage: %s file.bios program.bin [offset]\n", argv[0]);
         return 0;
     }
 
@@ -48,12 +48,13 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    printf("Writing to %s by offset %d size %zu\n", argv[1], BIOS_OFFSET, size);
+    int offset = argc > 3 ? atoi(argv[3]) : DEFAULT_BIOS_OFFSET;
+    printf("Writing to %s by offset %d size %zu\n", argv[1], offset, size);
 
     fread(buff, sizeof(char), size, fr);
     fclose(fr);
 
-    fseek(fw, BIOS_OFFSET, SEEK_SET);
+    fseek(fw, offset, SEEK_SET);
     fwrite(buff, sizeof(char), size, fw);
     fclose(fw);
 
