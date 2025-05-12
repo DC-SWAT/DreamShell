@@ -19,6 +19,10 @@
 #include <sys/time.h>
 #endif
 
+#if defined(_arch_dreamcast)
+#   include <kos/thread.h>
+#endif
+
 /* min and max macros */
 #ifndef MIN
 #define MIN(x, y) ((x) < (y) ? x : y)

@@ -46,6 +46,10 @@
 
 #include <fcntl.h>
 
+#if defined(_arch_dreamcast)
+#   include <kos/thread.h>
+#endif
+
 long OsCreateThread( OS_THREAD_T *th, OS_THREAD threadfunc, void *param) {
 #ifdef NATV_WIN32
     unsigned        tid;

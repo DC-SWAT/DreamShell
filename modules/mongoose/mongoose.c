@@ -256,6 +256,10 @@ typedef int socklen_t;
 #define MSG_NOSIGNAL 0
 #endif
 
+#if defined(_arch_dreamcast)
+#   include <kos/thread.h>
+#endif
+
 typedef void * (*mg_thread_func_t)(void *);
 
 static const char *http_500_error = "Internal Server Error";

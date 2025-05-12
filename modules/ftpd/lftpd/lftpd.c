@@ -38,25 +38,25 @@ typedef struct {
 	int (*handler) (lftpd_client_t* client, const char* arg);
 } command_t;
 
-static int cmd_cwd();
-static int cmd_dele();
-static int cmd_epsv();
-static int cmd_feat();
-static int cmd_list();
-static int cmd_mkd();
-static int cmd_nlst();
-static int cmd_noop();
-static int cmd_pass();
-static int cmd_pasv();
-static int cmd_pwd();
-static int cmd_quit();
-static int cmd_rmd();
-static int cmd_retr();
-static int cmd_size();
-static int cmd_stor();
-static int cmd_syst();
-static int cmd_type();
-static int cmd_user();
+static int cmd_cwd(lftpd_client_t* client, const char* arg);
+static int cmd_dele(lftpd_client_t* client, const char* arg);
+static int cmd_epsv(lftpd_client_t* client, const char* arg);
+static int cmd_feat(lftpd_client_t* client, const char* arg);
+static int cmd_list(lftpd_client_t* client, const char* arg);
+static int cmd_mkd(lftpd_client_t* client, const char* arg);
+static int cmd_nlst(lftpd_client_t* client, const char* arg);
+static int cmd_noop(lftpd_client_t* client, const char* arg);
+static int cmd_pass(lftpd_client_t* client, const char* arg);
+static int cmd_pasv(lftpd_client_t* client, const char* arg);
+static int cmd_pwd(lftpd_client_t* client, const char* arg);
+static int cmd_quit(lftpd_client_t* client, const char* arg);
+static int cmd_rmd(lftpd_client_t* client, const char* arg);
+static int cmd_retr(lftpd_client_t* client, const char* arg);
+static int cmd_size(lftpd_client_t* client, const char* arg);
+static int cmd_stor(lftpd_client_t* client, const char* arg);
+static int cmd_syst(lftpd_client_t* client, const char* arg);
+static int cmd_type(lftpd_client_t* client, const char* arg);
+static int cmd_user(lftpd_client_t* client, const char* arg);
 
 static command_t commands[] = {
 	{ "CWD",  cmd_cwd },

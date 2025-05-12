@@ -8,7 +8,8 @@
 */
 
 #include "ds.h"
-#include "drivers/sd.h"
+#include <dc/sd.h>
+#include <kos/blockdev.h>
 
 DEFAULT_MODULE_EXPORTS(app_speedtest);
 
@@ -109,7 +110,7 @@ int test_sd_io(void) {
 	if(!buf) {
 		return -1;
 	}
-	if(sdc_blockdev_for_partition(0, &bdev, &pt)) {
+	if(sd_blockdev_for_partition(0, &bdev, &pt)) {
 		dbglog(DBG_DEBUG, "Couldn't get blockdev for partition!\n");
 		free(buf);
 		return -1;

@@ -1,6 +1,7 @@
-#include <assert.h>
 #include <string.h>
 #include <stdlib.h>
+#include <kos/fs.h>
+#include <kos/thread.h>
 
 #include "SDL_gui.h"
 

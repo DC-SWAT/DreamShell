@@ -275,10 +275,11 @@ getstatus:
 	cdrom_spin_down();
 }
 
-static void *check_gdrom()
+static void *check_gdrom(void *arg)
 {
 	int status, disc_type, cd_status;
 	self.kill_gdrom_thd = 0;
+	(void)arg;
 
 	while(self.kill_gdrom_thd == 0)
 	{

@@ -16,6 +16,7 @@
 
 #if defined(__DREAMCAST__)
 #include <malloc.h>
+#include <kos/fs.h>
 #endif
 
 // Twiddle

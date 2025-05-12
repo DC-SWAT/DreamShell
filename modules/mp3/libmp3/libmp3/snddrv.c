@@ -94,7 +94,8 @@ static void *snddrv_callback(snd_stream_hnd_t hnd, int len, int * actual) {
 
 }
 
-static void *snddrv_thread() {
+static void *snddrv_thread(void *arg) {
+    (void)arg;
 
     printf("SNDDRV: Rate - %i, Channels - %i\n", snddrv.rate, snddrv.channels);
     

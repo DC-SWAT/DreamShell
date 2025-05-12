@@ -450,8 +450,9 @@ static void show_port(int port, maple_device_t *dev)
 	show_slots(port);
 }
 
-static void *maple_scan()
+static void *maple_scan(void *arg)
 {
+	(void)arg;
 	self.thread_kill = 0;
 	int port;
 	maple_device_t *dev;

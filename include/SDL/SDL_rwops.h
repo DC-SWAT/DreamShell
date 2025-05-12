@@ -31,6 +31,11 @@
 #include "SDL_error.h"
 
 #include "begin_code.h"
+
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
+#include <kos/fs.h>
+#endif
+
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {

@@ -9,6 +9,10 @@
 #ifndef QUE_H_INCLUDED
 #define QUE_H_INCLUDED
 
+#if defined(_arch_dreamcast)
+#   include <kos/sem.h>
+#endif
+
 #define     QUE_NO_LIMIT    -1
 
 typedef struct  _qmsg   QMSG;

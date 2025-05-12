@@ -575,7 +575,7 @@ static OS_THREAD_FUNC taskthread( void *vp) {
     OsSetThreadData( threadDataKey, vp );
     te = ( TASK_ENTRY * ) vp;
 
-#ifndef NATV_WIN32
+#if 0//ndef NATV_WIN32
     pthread_setcanceltype( PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
     pthread_cleanup_push( taskCleanup, te);
 #endif
@@ -612,7 +612,7 @@ static OS_THREAD_FUNC taskthread( void *vp) {
     
     OsLockMutex( tlMutex, INFINITE);
     
-#ifndef NATV_WIN32
+#if 0//ndef NATV_WIN32
     pthread_cleanup_pop( 0);
 #endif
 

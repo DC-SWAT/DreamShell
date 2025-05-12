@@ -288,7 +288,8 @@ int sndmp3_start_block(const char * fname) {
 	return 0;
 }
 
-void *snddrv_mp3_thread() {
+void *snddrv_mp3_thread(void *arg) {
+    (void)arg;
 	while( snddrv.dec_status != SNDDEC_STATUS_DONE && snddrv.dec_status != SNDDEC_STATUS_ERROR ) {
 
         /* A request has been made to access the decoder handle */

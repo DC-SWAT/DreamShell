@@ -315,7 +315,8 @@ static void ShowDateTime(int force) {
 	memcpy(&self.datetime, datetime, sizeof(*datetime));
 }
 
-static void *ClockThread() {
+static void *ClockThread(void *arg) {
+    (void)arg;
 
 	while(self.app->state & APP_STATE_OPENED) {
 		ShowDateTime(0);

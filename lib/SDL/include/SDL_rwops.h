@@ -31,6 +31,11 @@
 #include "SDL_error.h"
 
 #include "begin_code.h"
+
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
+#include <kos/fs.h>
+#endif
+
 /* Set up for C function definitions, even when using C++ */
 #ifdef __cplusplus
 extern "C" {
@@ -106,7 +111,7 @@ extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFile(const char *file, const char 
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFP(FILE *fp, int autoclose);
 #endif
 
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFD(file_t fd, int autoclose);
 #endif
 

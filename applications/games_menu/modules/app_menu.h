@@ -81,7 +81,7 @@ const char* GetCoversPath(uint8 device);
 void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack *send_message_optimizer
 	, PostPVRCoverCallBack *post_pvr_cover, PostOptimizerCoverCallBack *post_optimizer_cover);
 void DestroyMenuData();
-bool CheckGdiOptimized();
+bool CheckGdiOptimized(int game_index);
 const char *GetFullGamePathByIndex(int game_index);
 void StopCDDA();
 bool CheckCDDA(int game_index);
