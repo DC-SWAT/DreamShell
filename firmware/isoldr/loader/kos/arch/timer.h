@@ -139,6 +139,10 @@ void timer_spin_sleep(int ms);
 /* Spin-loop kernel sleep func: uses the first timer in the
    SH-4 to very accurately delay even when interrupts are disabled */
 void timer_spin_sleep_bios(int ms);
+#define thd_sleep timer_spin_sleep_bios
+
+/* Not accurate, but it's a hack to get a delay function */
+void timer_spin_delay_ns(uint32 ns);
 
 /** \brief  Enable high-priority timer interrupts.
 

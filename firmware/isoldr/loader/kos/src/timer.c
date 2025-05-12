@@ -253,3 +253,9 @@ inline uint64 timer_ns_gettime64() {
 	uint64 cycles = perf_cntr_count(PRFC0);
 	return cycles * NS_PER_CYCLE;
 }
+
+void timer_spin_delay_ns(uint32 ns) {
+    for(uint32 i = 0; i < ns * 5; i++) {
+        __asm__ __volatile__("nop");
+    }
+}
