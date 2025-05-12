@@ -68,7 +68,7 @@ SDL_LIBS = -lSDL_$(SDL_VER) \
 
 IMAGE_LIBS = -lkmg -ljpeg -lpng -lz
 LUA_LIBS = -llua_$(LUA_VER)
-KLIBS = -lkosext2fs -lkosutils -lstdc++ -lm
+KLIBS = -lkosext2fs -lpthread -lkosutils -lstdc++ -lm
 GRAPHICS_LIBS = -ltsunami_$(TSUNAMI_VER) \
 				-lparallax_$(PARALLAX_VER)
 

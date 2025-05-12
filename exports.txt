@@ -1969,8 +1969,6 @@ rwsem_init
 #
 pthread_condattr_init
 pthread_condattr_destroy
-pthread_condattr_getpshared
-pthread_condattr_setpshared
 pthread_cond_init
 pthread_cond_destroy
 pthread_cond_signal
@@ -1980,8 +1978,6 @@ pthread_cond_timedwait
 #
 pthread_mutexattr_init
 pthread_mutexattr_destroy
-pthread_mutexattr_getpshared
-pthread_mutexattr_setpshared
 pthread_mutex_init
 pthread_mutex_destroy
 pthread_mutex_lock
@@ -2001,16 +1997,12 @@ pthread_attr_init
 pthread_attr_destroy
 pthread_attr_getstacksize
 pthread_attr_setstacksize
-pthread_attr_getstackaddr
-pthread_attr_setstackaddr
 pthread_attr_getdetachstate
 pthread_attr_setdetachstate
 pthread_cancel
 pthread_setcancelstate
 pthread_setcanceltype
 pthread_testcancel
-pthread_cleanup_push
-pthread_cleanup_pop
 #
 pthread_once
 pthread_key_create
@@ -2049,17 +2041,6 @@ library_by_libid
 library_list
 #
 asic_evt_remove_handler
-#
-# CD-Rom
-cdrom_init
-cdrom_shutdown
-cdrom_set_sector_size
-cdrom_get_status
-cdrom_exec_cmd
-cdrom_change_dataype
-cdrom_reinit_ex
-cdrom_read_sectors_ex
-cdrom_get_subcode
 #
 # FlashRom
 flashrom_get_block
