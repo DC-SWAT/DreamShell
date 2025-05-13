@@ -1,7 +1,7 @@
 /* KallistiOS ##version##
 
    g2bus.c
-   Copyright (C)2000-2002,2004 Dan Potter
+   (c)2000-2002 Megan Potter
 */
 
 /*
@@ -19,194 +19,174 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <arch/irq.h>
 #include <dc/g2bus.h>
-
-//CVSID("$Id: g2bus.c,v 1.5 2003/02/14 06:33:47 bardtx Exp $");
-
-/* These two macros are based on NetBSD's DC port */
-
-/*
-   G2 bus cycles must not be interrupted by IRQs or G2 DMA.
-   The following paired macros will take the necessary precautions.
- */
-
-#define DMAC_CHCR3 *((vuint32 *)0xffa0003c)
-
-#define G2_LOCK(/*OLD1, */OLD2) \
-	do { \
-		/*OLD1 = irq_disable();*/ \
-		/* suspend any G2 DMA here... */ \
-		OLD2 = DMAC_CHCR3; \
-		DMAC_CHCR3 = OLD2 & ~1; \
-		while((*(vuint32 *)0xa05f688c) & 0x20) \
-			; \
-	} while(0)
-
-#define G2_UNLOCK(/*OLD1, */OLD2) \
-	do { \
-		/* resume any G2 DMA here... */ \
-		DMAC_CHCR3 = OLD2; \
-		/*irq_restore(OLD1);*/ \
-	} while(0)
 
 /* Always use these functions to access G2 bus memory (includes the SPU
    and the expansion port, e.g., BBA) */
 
 /* Read one byte from G2 */
-uint8 g2_read_8(uint32 address) {
-	int /*old1, */old2;
-	uint8 out;
+uint8_t g2_read_8(uintptr_t address) {
+    g2_ctx_t ctx;
+    uint8 out;
 
-	G2_LOCK(/*old1, */old2);
-	out = *((vuint8*)address);
-	G2_UNLOCK(/*old1, */old2);
-	
-	return out;
+    ctx = g2_lock();
+    out = *((vuint8*)address);
+    g2_unlock(ctx);
+
+    return out;
 }
 
 /* Write one byte to G2 */
-void g2_write_8(uint32 address, uint8 value) {
-	int /*old1, */old2;
+void g2_write_8(uintptr_t address, uint8_t value) {
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
-	*((vuint8*)address) = value;
-	G2_UNLOCK(/*old1, */old2);
+    ctx = g2_lock();
+    *((vuint8*)address) = value;
+    g2_unlock(ctx);
 }
 
 /* Read one word from G2 */
-uint16 g2_read_16(uint32 address) {
-	int /*old1, */old2;
-	uint16 out;
+uint16_t g2_read_16(uintptr_t address) {
+    g2_ctx_t ctx;
+    uint16 out;
 
-	G2_LOCK(/*old1, */old2);
-	out = *((vuint16*)address);
-	G2_UNLOCK(/*old1, */old2);
+    ctx = g2_lock();
+    out = *((vuint16*)address);
+    g2_unlock(ctx);
 
-	return out;
+    return out;
 }
 
 /* Write one word to G2 */
-void g2_write_16(uint32 address, uint16 value) {
-	int /*old1, */old2;
+void g2_write_16(uintptr_t address, uint16_t value) {
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
-	*((vuint16*)address) = value;
-	G2_UNLOCK(/*old1, */old2);
+    ctx = g2_lock();
+    *((vuint16*)address) = value;
+    g2_unlock(ctx);
 }
 
 /* Read one dword from G2 */
-uint32 g2_read_32(uint32 address) {
-	int /*old1, */old2;
-	uint32 out;
+uint32_t g2_read_32(uintptr_t address) {
+    g2_ctx_t ctx;
+    uint32 out;
 
-	G2_LOCK(/*old1, */old2);
-	out = *((vuint32*)address);
-	G2_UNLOCK(/*old1, */old2);
+    ctx = g2_lock();
+    out = *((vuint32*)address);
+    g2_unlock(ctx);
 
-	return out;
+    return out;
 }
 
 /* Write one dword to G2 */
-void g2_write_32(uint32 address, uint32 value) {
-	int /*old1, */old2;
+void g2_write_32(uintptr_t address, uint32_t value) {
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
-	*((vuint32*)address) = value;
-	G2_UNLOCK(/*old1, */old2);
+    ctx = g2_lock();
+    *((vuint32*)address) = value;
+    g2_unlock(ctx);
 }
 
 /* Read a block of 8-bit values from G2 */
-void g2_read_block_8(uint8 * output, uint32 address, int amt) {
-	const vuint8 * input = (const vuint8 *)address;
-	int /*old1, */old2;
+void g2_read_block_8(uint8_t * output, uintptr_t address, size_t amt) {
+    const vuint8 * input = (const vuint8 *)address;
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
+    ctx = g2_lock();
 
-	while (amt--) {
-		*output++ = *input++;
-	}
+    while(amt--) {
+        *output++ = *input++;
+    }
 
-	G2_UNLOCK(/*old1, */old2);
+    g2_unlock(ctx);
 }
 
 /* Write a block 8-bit values to G2 */
-void g2_write_block_8(const uint8 * input, uint32 address, int amt) {
-	vuint8 * output = (vuint8 *)address;
-	int /*old1, */old2;
+void g2_write_block_8(const uint8 * input, uintptr_t address, size_t amt) {
+    vuint8 * output = (vuint8 *)address;
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
+    ctx = g2_lock();
 
-	while (amt--) {
-		*output++ = *input++;
-	}
+    while(amt--) {
+        *output++ = *input++;
+    }
 
-	G2_UNLOCK(/*old1, */old2);
+    g2_unlock(ctx);
 }
 
 /* Read a block of 16-bit values from G2 */
-void g2_read_block_16(uint16 * output, uint32 address, int amt) {
-	const vuint16 * input = (const vuint16 *)address;
-	int /*old1, */old2;
+void g2_read_block_16(uint16_t * output, uintptr_t address, size_t amt) {
+    const vuint16 * input = (const vuint16 *)address;
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
+    ctx = g2_lock();
 
-	while (amt--) {
-		*output++ = *input++;
-	}
+    while(amt--) {
+        *output++ = *input++;
+    }
 
-	G2_UNLOCK(/*old1, */old2);
+    g2_unlock(ctx);
 }
 
 /* Write a block of 16-bit values to G2 */
-void g2_write_block_16(const uint16 * input, uint32 address, int amt) {
-        vuint16 * output = (vuint16 *)address;
-	int /*old1, */old2;
+void g2_write_block_16(const uint16_t * input, uintptr_t address, size_t amt) {
+    vuint16 * output = (vuint16 *)address;
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
+    ctx = g2_lock();
 
-	while (amt--) {
-		*output++ = *input++;
-	}
+    while(amt--) {
+        *output++ = *input++;
+    }
 
-	G2_UNLOCK(/*old1, */old2);
+    g2_unlock(ctx);
 }
 
 /* Read a block of 32-bit values from G2 */
-void g2_read_block_32(uint32 * output, uint32 address, int amt) {
-	const vuint32 * input = (const vuint32 *)address;
-	int /*old1, */old2;
+void g2_read_block_32(uint32_t * output, uintptr_t address, size_t amt) {
+    const vuint32 * input = (const vuint32 *)address;
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
+    ctx = g2_lock();
 
-	while (amt--) {
-		*output++ = *input++;
-	}
+    while(amt--) {
+        *output++ = *input++;
+    }
 
-	G2_UNLOCK(/*old1, */old2);
+    g2_unlock(ctx);
 }
 
 /* Write a block of 32-bit values to G2 */
-void g2_write_block_32(const uint32 * input, uint32 address, int amt) {
-	vuint32 * output = (vuint32 *)address;
-	int /*old1, */old2;
+void g2_write_block_32(const uint32_t * input, uintptr_t address, size_t amt) {
+    vuint32 * output = (vuint32 *)address;
+    g2_ctx_t ctx;
 
-	G2_LOCK(/*old1, */old2);
+    ctx = g2_lock();
 
-	while (amt--) {
-		*output++ = *input++;
-	}
+    while(amt--) {
+        *output++ = *input++;
+    }
 
-	G2_UNLOCK(/*old1, */old2);
+    g2_unlock(ctx);
+}
+
+/* A memset-like function for G2 */
+void g2_memset_8(uintptr_t address, uint8_t c, size_t amt) {
+    vuint8 * output = (vuint8 *)address;
+    g2_ctx_t ctx;
+
+    ctx = g2_lock();
+
+    while(amt--) {
+        *output++ = c;
+    }
+
+    g2_unlock(ctx);
 }
 
 /* When writing to the SPU RAM, this is required at least every 8 32-bit
    writes that you execute */
-void g2_fifo_wait() {
-	vuint32 const *g2_fifo = (vuint32*)0xa05f688c;
-	int i;
-
-	for (i=0; i<0x1800; i++) {
-		if (!(*g2_fifo & 0x11)) break;
-	}
+void g2_fifo_wait(void) {
+    while(FIFO_STATUS & (FIFO_AICA | FIFO_G2));
 }
