@@ -1,8 +1,10 @@
 /**
  * DreamShell ISO Loader 
  * disk I/O for FatFs
- * (c)2009-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017, 2025 SWAT <http://www.dc-swat.ru>
  */
+#include <arch/rtc.h>
+#include <time.h>
 #include <main.h>
 #include "diskio.h"
 
@@ -14,6 +16,55 @@
 #include <ide/ide.h>
 #endif
 
+#if _FS_READONLY == 0
+
+/* gmtime() implementation */
+#define YEAR0           1900                    /* the first year */
+#define EPOCH_YR        1970            /* EPOCH = Jan 1 1970 00:00:00 */
+#define SECS_DAY        (24L * 60L * 60L)
+#define LEAPYEAR(year)  (!((year) % 4) && (((year) % 100) || !((year) % 400)))
+#define YEARSIZE(year)  (LEAPYEAR(year) ? 366 : 365)
+#define FIRSTSUNDAY(timp)       (((timp)->tm_yday - (timp)->tm_wday + 420) % 7)
+#define FIRSTDAYOF(timp)        (((timp)->tm_wday - (timp)->tm_yday + 420) % 7)
+#define TIME_MAX        ULONG_MAX
+#define ABB_LEN         3
+
+const int _ytab[2][12] = {
+	{ 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 },
+	{ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 }
+};
+
+struct tm *gmtime(const time_t *timer)
+{
+        static struct tm br_time;
+        struct tm *timep = &br_time;
+        time_t time = *timer;
+        unsigned long dayclock, dayno;
+        int year = EPOCH_YR;
+
+        dayclock = (unsigned long)time % SECS_DAY;
+        dayno = (unsigned long)time / SECS_DAY;
+
+        timep->tm_sec = dayclock % 60;
+        timep->tm_min = (dayclock % 3600) / 60;
+        timep->tm_hour = dayclock / 3600;
+        timep->tm_wday = (dayno + 4) % 7;       /* day 0 was a thursday */
+        while (dayno >= (unsigned long)YEARSIZE(year)) {
+                dayno -= YEARSIZE(year);
+                year++;
+        }
+        timep->tm_year = year - YEAR0;
+        timep->tm_yday = dayno;
+        timep->tm_mon = 0;
+        while (dayno >= (unsigned long)_ytab[LEAPYEAR(year)][timep->tm_mon]) {
+                dayno -= _ytab[LEAPYEAR(year)][timep->tm_mon];
+                timep->tm_mon++;
+        }
+        timep->tm_mday = dayno + 1;
+        timep->tm_isdst = 0;
+
+        return timep;
+}
 
 /*--------------------------------------------------------------------------
 
@@ -23,25 +74,25 @@
 
 DWORD get_fattime ()
 {
-#if 0
-    ulong now;
-    struct _time_block *tm;
-    DWORD tmr;
-    
-    now = rtc_secs();
-    tm = conv_gmtime(now);
-    tmr =  (((DWORD)tm->year - 60) << 25)
-		| ((DWORD)tm->mon << 21)
-		| ((DWORD)tm->day << 16)
-		| (WORD)(tm->hour << 11)
-		| (WORD)(tm->min << 5)
-		| (WORD)(tm->sec >> 1);
+    struct tm *time;
+    time_t unix_time;
+    DWORD tmr = 0;
+
+    unix_time = rtc_unix_secs();
+    time = gmtime(&unix_time);
+
+    if (time != NULL) {
+        tmr = (((DWORD)(time->tm_year - 80)) << 25)   /* tm_year is years since 1900; FAT starts from 1980 */
+             | ((DWORD)(time->tm_mon + 1) << 21)      /* tm_mon ranges from 0 to 11; add 1 for FAT */
+             | ((DWORD)(time->tm_mday) << 16)         /* tm_mday ranges from 1 to 31 */
+             | ((DWORD)(time->tm_hour) << 11)         /* tm_hour ranges from 0 to 23 */
+             | ((DWORD)(time->tm_min) << 5)           /* tm_min ranges from 0 to 59 */
+             | ((DWORD)(time->tm_sec / 2));           /* tm_sec ranges from 0 to 59; FAT stores seconds in 2-second steps */
+    }
     return tmr;
-#else
-	return 0;
-#endif
 }
 
+#endif /* _FS_READONLY == 0 */
 
 /*-----------------------------------------------------------------------*/
 /* Inidialize a Drive                                                    */
