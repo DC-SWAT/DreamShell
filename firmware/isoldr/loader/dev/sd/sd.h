@@ -2,23 +2,19 @@
 
    sd.h
    Copyright (C) 2012 Lawrence Sebald
-   Copyright (C) 2013-2016 SWAT
+   Copyright (C) 2013-2016, 2025 SWAT (Ruslan Rostovtsev)
 */
 
-#ifndef __DC_SD_H
-#define __DC_SD_H
+/** \file    sd.h
+    \brief   Block-level access to an SD card attached to the SCI or SCIF port.
+    \ingroup vfs_sd
 
-#include <sys/cdefs.h>
-__BEGIN_DECLS
-
-#include <arch/types.h>
-
-/** \file   sd.h
-    \brief  Block-level access to an SD card attached to the SCIF port.
-
-    This file contains the interface to working with the SD card reader that was
-    designed by jj1odm. The SD card reader itself connects to the SCIF port and
-    uses it basically as a simple SPI bus.
+    This file contains the interface to working with SD card readers.
+    The original SD card reader designed by jj1odm connects to the SCIF port,
+    while the SCI port implementation was developed by SWAT (Ruslan Rostovtsev). 
+    The SCIF implementation uses bit-banging technique to emulate SPI protocol,
+    while the SCI implementation utilizes the synchronous mode of this interface,
+    which is very similar to SPI.
 
     For reference, all I/O through this code should be done in the order of SD
     card blocks (which are 512 bytes a piece). Also, this should adequately
@@ -42,6 +38,35 @@ __BEGIN_DECLS
     \see    scif.h
 */
 
+#ifndef __DC_SD_H
+#define __DC_SD_H
+
+#include <sys/cdefs.h>
+__BEGIN_DECLS
+
+#include <arch/types.h>
+#include <kos/blockdev.h>
+#include <stdbool.h>
+
+/** \defgroup vfs_sd    SD Card
+    \brief              VFS driver for accessing SD cards over the SCIF or SCI port
+    \ingroup            vfs
+
+    @{
+*/
+
+/** \brief  SD card interface type */
+typedef enum {
+    SD_IF_SCIF = 0,    /**< Use SCIF interface */
+    SD_IF_SCI = 1      /**< Use SCI interface */
+} sd_interface_t;
+
+/** \brief  SD card initialization parameters */
+typedef struct {
+    sd_interface_t interface;  /**< Interface to use (SCIF or SCI) */
+    bool check_crc;           /**< Enable CRC checking (true) or disable (false) */
+} sd_init_params_t;
+
 /** \brief  Calculate a SD/MMC-style CRC over a block of data.
 
     This function calculates a 7-bit CRC over a given block of data. The
@@ -56,23 +81,24 @@ __BEGIN_DECLS
 */
 uint8 sd_crc7(const uint8 *data, int size, uint8 crc);
 
-/** \brief Calculate crc16
+/** \brief  Initialize the SD card with extended parameters.
 
-    \param  data            The block of data to calculate the CRC over.
-    \param  size            The number of bytes in the block of data.
-    \param  crc             The starting value of the calculation. If you're
-                            passing in a full block, this will probably be 0.
-    \return                 The calculated CRC.
+    This function initializes the SD card with specified parameters. This includes
+    all steps of the basic initialization sequence for SPI mode, as documented in
+    the SD card spec and at http://elm-chan.org/docs/mmc/mmc_e.html.
+
+    \param  params          Pointer to initialization parameters.
+    \retval 0               On success.
+    \retval -1              On failure. This could indicate any number of
+                            problems, but probably means that no SD card was
+                            detected.
 */
-uint16 sd_crc16(const uint8 *data, int size, uint16 start);
+int sd_init_ex(const sd_init_params_t *params);
 
 /** \brief  Initialize the SD card for use.
 
-    This function initializes the SD card for first use. This includes all steps
-    of the basic initialization sequence for SPI mode, as documented in the SD
-    card spec and at http://elm-chan.org/docs/mmc/mmc_e.html . This also will
-    call scif_sd_init() for you, so you don't have to worry about that ahead of
-    time.
+    This function initializes the SD card for first use using default parameters
+    (SCIF interface and CRC checking enabled).
 
     \retval 0               On success.
     \retval -1              On failure. This could indicate any number of
@@ -142,7 +168,7 @@ int sd_write_blocks(uint32 block, size_t count, const uint8 *buf, int blocked);
     This is the raw size of the card, not its formatted capacity. To get the
     number of blocks from this, divide by 512.
 
-    \return                 On succes, the raw size of the SD card in bytes. On
+    \return                 On success, the raw size of the SD card in bytes. On
                             error, (uint64)-1.
 
     \par    Error Conditions:

@@ -5,6 +5,7 @@
 *.elf
 *.op
 *.os
+*.o3
 *.build
 *.log
 *.lo

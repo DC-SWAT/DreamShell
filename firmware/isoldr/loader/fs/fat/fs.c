@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * FAT file system
- * (c)2011-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2011-202 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -90,12 +90,22 @@ int fs_init() {
 
 		LOGF("Mounting FAT filesystem...\n");
 
-		if(f_mount(_fat_fs, path, 1) != FR_OK) {
-			return -1;
+		if(f_mount(_fat_fs, path, 1) == FR_OK) {
+			return 0;
 		}
-
-		return 0;
 	}
+
+#ifdef DEV_TYPE_SD
+	/* Try SCI-SPI interface */
+	if(disk_initialize(1) == 0) {
+
+		LOGF("Mounting FAT filesystem...\n");
+
+		if(f_mount(_fat_fs, path, 1) == FR_OK) {
+			return 0;
+		}
+	}
+#endif
 
 	printf("Error, can't init "DEV_NAME".\n");
 	return -1;

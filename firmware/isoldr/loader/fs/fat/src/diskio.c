@@ -102,14 +102,16 @@ DSTATUS disk_initialize (
 )
 {
 
-	(void)drv;
-
 #ifdef DEV_TYPE_SD
-	return sd_init() ? STA_NOINIT : 0;
+	sd_init_params_t params = {
+		.interface = (drv == 0 ? SD_IF_SCIF : SD_IF_SCI),
+		.check_crc = false
+	};
+	return sd_init_ex(&params) ? STA_NOINIT : 0;
 #endif
 
-
 #ifdef DEV_TYPE_IDE
+	(void)drv;
 	return g1_bus_init() ? STA_NOINIT : 0;
 #endif
 
