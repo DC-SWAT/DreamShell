@@ -1,12 +1,12 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _ISO_LOADER_H
 #define _ISO_LOADER_H
 
-#if defined(LOG) && (defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD))
+#if defined(LOG)
 #include <dc/scif.h>
 #endif
 

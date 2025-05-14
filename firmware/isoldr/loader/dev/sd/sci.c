@@ -17,12 +17,13 @@
 // #include <stdlib.h>
 
 /* Midifications for ISO Loader */
-#include <malloc.h>
+#include <main.h>
 #include "sci.h"
 
 #ifdef LOG
 void dbglog(int level, const char *fmt, ...) {
     va_list args;
+    char log_buff[128];
 
     va_start(args, fmt);
     vsnprintf(log_buff, sizeof(log_buff), fmt, args);

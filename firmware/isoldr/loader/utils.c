@@ -724,29 +724,12 @@ int check_digit (char c) {
 
 static char log_buff[128];
 
-#if _FS_READONLY == 0 && defined(LOG_FILE)
-static int log_fd = FS_ERR_SYSERR;
-static int open_log_file() {
-	int fd = open(LOG_FILE, O_WRONLY | O_APPEND);
-	if (fd > FS_ERR_SYSERR) {
-		write(fd, "--- Start log ---\n", 18);
-		ioctl(fd, FS_IOCTL_SYNC, NULL);
-	}
-	return fd;
-}
-#endif /* _FS_READONLY */
-
 int OpenLog() {
 
 	memset(log_buff, 0, sizeof(log_buff));
 
-#if _FS_READONLY == 0 && defined(LOG_FILE)
-	log_fd = open_log_file();
-#endif
-
-#if defined(DEV_TYPE_DCL) || defined(LOG_DCL)
-	dcload_init();
-#elif !defined(LOG_SCREEN)
+	// TODO: Add log to SCI for SD on SCIF-SPI
+#if !defined(LOG_SCREEN)
 	scif_init();
 #endif
 	return 1;
@@ -756,21 +739,10 @@ static int PutLog(char *buff) {
 
 	int len = strlen(buff);
 
-#if _FS_READONLY == 0 && defined(LOG_FILE)
-	if (log_fd == FS_ERR_SYSERR) {
-		log_fd = open_log_file();
-	}
-	if(log_fd > FS_ERR_SYSERR) {
-		write(log_fd, buff, len);
-		ioctl(fd, FS_IOCTL_SYNC, NULL);
-	}
-#endif
-
 #if defined(LOG_SCREEN)
 	printf(buff);
-#elif defined(DEV_TYPE_DCL) || defined(LOG_DCL)
-	dcload_write_buffer((uint8 *)buff, len);
 #else
+	// TODO: Add log to SCI for SD on SCIF-SPI`
 	if(!exception_inside_int() || IsoInfo->exec.type != BIN_TYPE_WINCE) {
 		scif_write_buffer((uint8 *)buff, len, 1);
 	}

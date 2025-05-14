@@ -15,6 +15,10 @@
 //#define SD_DEBUG 1
 #define DISCARD_CRC16 1
 
+#ifdef SD_DEBUG
+#include <main.h>
+#endif
+
 #define MAX_RETRIES     500000
 #define READ_RETRIES    50000
 #define WRITE_RETRIES   150000

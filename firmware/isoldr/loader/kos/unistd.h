@@ -15,9 +15,8 @@ __BEGIN_DECLS
 
 #include <stddef.h>
 #include <arch/types.h>
-
-#define true (1)
-#define false (0)
+#include <stdint.h>
+#include <stdbool.h>
 
 void usleep(unsigned long usec);
 

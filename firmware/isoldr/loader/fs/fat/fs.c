@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * FAT file system
- * (c)2011-202 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -96,6 +96,7 @@ int fs_init() {
 	}
 
 #ifdef DEV_TYPE_SD
+	OpenLog();
 	/* Try SCI-SPI interface */
 	if(disk_initialize(1) == 0) {
 
