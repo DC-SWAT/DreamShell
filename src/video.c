@@ -593,7 +593,8 @@ static void *VideoThread(void *ptr) {
 		LockVideo();
 
 		if(screen_changed && draw_screen) {
-			// pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+			pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+			/*
 			dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
 			do {
 				int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
@@ -604,6 +605,7 @@ static void *VideoThread(void *ptr) {
 				}
 				break;
 			} while(1);
+			*/
 			screen_changed = 0;
 		}
 
