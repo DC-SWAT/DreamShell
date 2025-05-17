@@ -72,10 +72,10 @@ extern "C"
 #endif
 
 Texture* TSU_TextureCreate(int w, int h, int fmt);
-Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, bool yflip, uint flags);
+Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, bool yflip, unsigned int flags);
 Texture* TSU_TextureCreateEmpty();
 void TSU_TextureDestroy(Texture **texture_ptr);
-bool TSU_TextureLoadFromFile(Texture *texture_ptr, const char *texture_path, bool use_alpha, bool yflip, uint flags);
+bool TSU_TextureLoadFromFile(Texture *texture_ptr, const char *texture_path, bool use_alpha, bool yflip, unsigned int flags);
 
 #ifdef __cplusplus
 };
