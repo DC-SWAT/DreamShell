@@ -6,7 +6,6 @@
 */
 
 #include <ds.h>
-#include <drivers/rtc.h>
 
 DEFAULT_MODULE_EXPORTS(app_main);
 
@@ -283,11 +282,11 @@ static void ShowVersion(GUI_Widget *widget) {
 static void ShowDateTime(int force) {
 
 	char str[32];
-	struct timeval tv;
+	time_t unix_time;
 	struct tm *datetime;
 
-	rtc_gettimeofday(&tv);
-	datetime = localtime(&tv.tv_sec);
+	unix_time = rtc_unix_secs();
+	datetime = localtime(&unix_time);
 	
 	if(force || datetime->tm_mday != self.datetime.tm_mday) {
 		

@@ -13,7 +13,6 @@
 #include "app_module.h"
 #include "app_definition.h"
 #include <kos/md5.h>
-#include <drivers/rtc.h>
 #include <isoldr.h>
 #include <dc/video.h>
 #include <tsunami/tsudefinition.h>

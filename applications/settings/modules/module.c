@@ -5,7 +5,6 @@
 */
 
 #include "ds.h"
-#include <drivers/rtc.h>
 
 DEFAULT_MODULE_EXPORTS(app_settings);
 

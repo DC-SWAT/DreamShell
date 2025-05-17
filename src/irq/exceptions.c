@@ -8,7 +8,6 @@
 #include "ds.h"
 #include <arch/irq.h>
 #include "setjmp.h"
-#include "drivers/asic.h"
 
 /*
  * This is the table where context is saved when an exception occure
