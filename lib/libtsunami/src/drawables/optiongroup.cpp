@@ -1,3 +1,12 @@
+/*
+   Tsunami for KallistiOS ##version##
+
+   rectangle.cpp
+
+   Copyright (C) 2024-2025 Maniac Vera
+
+*/
+
 #include "drawables/optiongroup.h"
 #include "genmenu.h"
 #include "tsudefinition.h"
@@ -5,7 +14,7 @@
 #include <cstring>
 #include <string>
 
-OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float height) {
+OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float height, const Color &body_color) {
 	setObjectType(ObjectTypeEnum::OPTIONGROUP_TYPE);
 
 	m_display_font = display_font;
@@ -18,6 +27,7 @@ OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float 
 	m_text_animation = nullptr;
 	m_left_triangle = nullptr;
 	m_right_triangle = nullptr;
+	m_body_color = body_color.a ? body_color : Color(DEFAULT_BODY_COLOR);
 
 	if (text_size == 0) {
 		text_size = 20;
@@ -30,7 +40,7 @@ OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float 
 		float radius = 0;		
 
 		Vector position = this->getTranslate();
-		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, background_color, z_index, border_width, border_color, radius);
+		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, m_body_color, z_index, border_width, border_color, radius);
 
 		background_color.r = 1.0f;
 		background_color.g = 1.0f;
@@ -69,7 +79,7 @@ OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float 
 		display_label_control.z = z_index + 1;
 		m_display_label->setTranslate(display_label_control);
 
-		Color triangle_color = {1.0f, 0.22f, 0.06f, 0.25f};	
+		Color triangle_color = m_body_color;
 
 		m_left_triangle = new Triangle(PVR_LIST_OP_POLY, 
 				10, 0,
@@ -410,9 +420,9 @@ OptionValueStruct* OptionGroup::getOptionByIndex(int index) {
 
 extern "C"
 {
-	OptionGroup* TSU_OptionGroupCreate(Font *display_font, uint text_size, float width, float height)
+	OptionGroup* TSU_OptionGroupCreate(Font *display_font, uint text_size, float width, float height, Color *body_color)
 	{
-		return new OptionGroup(display_font, text_size, width, height);
+		return new OptionGroup(display_font, text_size, width, height, *body_color);
 	}
 
 	void TSU_OptionGroupDestroy(OptionGroup **optiongroup_ptr)

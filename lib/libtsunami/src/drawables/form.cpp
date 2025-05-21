@@ -1,8 +1,18 @@
+/*
+   Tsunami for KallistiOS ##version##
+
+   rectangle.cpp
+
+   Copyright (C) 2024-2025 Maniac Vera
+
+*/
+
 #include "drawables/form.h"
 #include "tsudefinition.h"
 #include <algorithm>
 
-Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bool visible_title, bool visible_bottom, Font *title_font,
+Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, int radius, bool visible_title, bool visible_bottom, Font *title_font,
+	const Color &border_color, const Color &title_background_color, const Color &body_color, const Color &bottom_background_color,
 	ViewIndexChangedEventPtr view_index_changed_event)  {
 
 	setObjectType(ObjectTypeEnum::FORM_TYPE);
@@ -11,6 +21,7 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 	m_current_view_index = 0;
 	m_current_column = m_current_row = 0;
 	m_is_popup = is_popup;
+	m_main_box = nullptr;
 	m_body_rectangle = nullptr;
 	m_background_rectangle = nullptr;
 	m_title_rectangle = nullptr;
@@ -34,6 +45,11 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 		m_zIndex += ML_POPUP;
 	}
 
+	m_radius = radius;
+	if (m_radius < 0) {
+		m_radius = 0;
+	}
+
 	m_x = x;
 	m_y = y;
 	m_width = width;
@@ -46,8 +62,12 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bo
 		m_title_label = new Label(title_font, "", 20, true, false);
 	}
 
-	m_title_background_color = {1, 0.22f, 0.06f, 0.25f};
-	m_bottom_background_color = {1, 0.22f, 0.06f, 0.25f};
+	m_background_color = DEFAULT_SHADOW_COLOR;
+	m_border_color = border_color.a ? border_color : Color(DEFAULT_BORDER_COLOR);
+	m_title_background_color = title_background_color.a ? title_background_color : Color(DEFAULT_TOP_COLOR);
+	m_body_color = body_color.a ? body_color : Color(DEFAULT_BODY_COLOR);
+	m_bottom_background_color = bottom_background_color.a ? bottom_background_color : Color(DEFAULT_BOTTOM_COLOR);
+
 	createForm();
 }
 
@@ -90,6 +110,10 @@ Form::~Form() {
 	if (m_title_rectangle != nullptr) {
 		m_title_rectangle->setFinished();
 	}
+
+	if (m_main_box != nullptr) {
+		m_main_box->setFinished();
+	}
 	
 	if (m_body_rectangle != nullptr) {
 		m_body_rectangle->setFinished();
@@ -127,6 +151,11 @@ Form::~Form() {
 	if (m_title_rectangle != nullptr) {
 		delete m_title_rectangle;
 		m_title_rectangle = nullptr;
+	}
+
+	if (m_main_box != nullptr) {
+		delete m_main_box;
+		m_main_box = nullptr;
 	}
 	
 	if (m_body_rectangle != nullptr) {
@@ -310,31 +339,33 @@ void Form::createForm() {
 		body_size -= bottom_size;
 	}
 
+	float last_y = 0;
 	float bottom_y = m_y;
 	float body_y = bottom_y - bottom_size;
 	float title_y = body_y - body_size;
 	
-	m_color = {1, 0.0f, 0.0f, 0.0f};
-	m_border_color = {1, 1.0f, 1.0f, 1.0f};
-	m_background_color = {0.7, 0.0f, 0.0f, 0.0f};
-	
 	if (m_is_popup) {
 		m_background_rectangle = new Rectangle(PVR_LIST_TR_POLY, 0, 480, 640, 480, m_background_color, m_zIndex, 0, m_border_color, 0);
-		subAdd(m_background_rectangle);
+		subAdd(m_background_rectangle);		
 	}
 
 	if (m_visible_title) {
-		m_title_rectangle = new Rectangle(PVR_LIST_OP_POLY, m_x, title_y, m_width, title_size, m_title_background_color, m_zIndex + 2, 3, m_border_color, 0);
-		subAdd(m_title_rectangle);
+		m_title_rectangle = new Rectangle(PVR_LIST_OP_POLY, m_x, title_y, m_width, title_size, m_title_background_color, m_zIndex + 2, 0, m_border_color, 0);
+		subAdd(m_title_rectangle);		
 	}
 
-	m_body_rectangle = new Rectangle(PVR_LIST_OP_POLY, m_x, body_y, m_width, body_size, m_color, m_zIndex + 1, 3, m_border_color, 0);
+	m_body_rectangle = new Rectangle(PVR_LIST_OP_POLY, m_x, body_y, m_width, body_size, m_body_color, m_zIndex + 1, 0, m_border_color, 0);
 	subAdd(m_body_rectangle);
+	last_y = body_y;
 
 	if (m_visible_bottom) {
-		m_bottom_rectangle = new Rectangle(PVR_LIST_OP_POLY, m_x, bottom_y, m_width, bottom_size, m_bottom_background_color, m_zIndex + 2, 3, m_border_color, 0);
+		m_bottom_rectangle = new Rectangle(PVR_LIST_OP_POLY, m_x, bottom_y, m_width, bottom_size, m_bottom_background_color, m_zIndex + 2, 0, m_border_color, 0);
 		subAdd(m_bottom_rectangle);
+		last_y = bottom_y;
 	}
+
+	m_main_box = new Box(PVR_LIST_OP_POLY, m_x, last_y, m_width, title_size + body_size + bottom_size - 3, 3, m_border_color, m_zIndex + 3, m_radius);
+	subAdd(m_main_box);
 
 	if (m_title_label) {
 		Vector title_vector;
@@ -1171,15 +1202,18 @@ void Form::getObjectsCurrentViewEvent(GetObjectsCurrentViewEventPtr func_ptr) {
 
 extern "C"
 {
-	Form* TSU_FormCreate(int x, int y, uint width, uint height, bool is_popup, int z_index,
+	Form* TSU_FormCreate(int x, int y, uint width, uint height, bool is_popup, int z_index, int radius,
 		bool visible_title, bool visible_bottom, Font *title_font,
+		Color *border_color, Color *title_background_color, Color *body_color, Color *bottom_background_color,
 		ViewIndexChangedEventPtr view_index_changed_event_ptr)
 	{
-		return new Form(x, y, width, height, is_popup, z_index, 
-				visible_title, visible_bottom, title_font, view_index_changed_event_ptr);
+		return new Form(x, y, width, height, is_popup, z_index, radius,
+				visible_title, visible_bottom, title_font, 
+				*border_color, *title_background_color, *body_color, *bottom_background_color,
+				view_index_changed_event_ptr);
 	}
 
-	void TSU_FormtSetAttributes(Form *form_ptr, uint number_columns, uint number_rows, uint columns_size, uint rows_size)
+	void TSU_FormSetAttributes(Form *form_ptr, uint number_columns, uint number_rows, uint columns_size, uint rows_size)
 	{
 		if (form_ptr != NULL)
 		{

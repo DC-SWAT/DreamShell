@@ -3,7 +3,7 @@
 
    form.h
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -36,11 +36,12 @@ private:
 	int m_option_selected;
 	Label *m_display_label;
 	Rectangle *m_control_rectangle, *m_rectangle;
+	Color m_body_color;
 	std::string m_on_text, m_off_text;
 
 public:
-	CheckBox(Font *display_font, uint text_size, float width, float height);
-	CheckBox(Font *display_font, uint text_size, float width, float height, const char *on_text, const char *off_text);
+	CheckBox(Font *display_font, uint text_size, float width, float height, const Color &body_color);
+	CheckBox(Font *display_font, uint text_size, float width, float height, const Color &body_color, const char *on_text, const char *off_text);
 	virtual ~CheckBox();
 
 	void inputEvent(int event_type, int key);
@@ -64,8 +65,8 @@ extern "C"
 {
 #endif
 
-	CheckBox* TSU_CheckBoxCreate(Font *display_font, uint text_size, float width, float height);
-	CheckBox* TSU_CheckBoxCreateWithCustomText(Font *display_font, uint text_size, float width, float height, const char *on_text, const char *off_text);
+	CheckBox* TSU_CheckBoxCreate(Font *display_font, uint text_size, float width, float height, Color *body_color);
+	CheckBox* TSU_CheckBoxCreateWithCustomText(Font *display_font, uint text_size, float width, float height, Color *body_color, const char *on_text, const char *off_text);
 	void TSU_CheckBoxDestroy(CheckBox **checkbox_ptr);
 	void TSU_CheckBoxInputEvent(CheckBox *checkbox_ptr, int event_type, int key);
 	const char* TSU_CheckBoxGetText(CheckBox *checkbox_ptr);

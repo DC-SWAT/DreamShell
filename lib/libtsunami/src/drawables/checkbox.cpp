@@ -1,14 +1,23 @@
+/*
+   Tsunami for KallistiOS ##version##
+
+   rectangle.cpp
+
+   Copyright (C) 2024-2025 Maniac Vera
+
+*/
+
 #include "drawables/checkbox.h"
 #include "genmenu.h"
 #include "tsudefinition.h"
 #include <algorithm>
 #include <cstring>
 
-CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height)
-	: CheckBox(display_font, text_size, width, height, nullptr, nullptr) {
+CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height, const Color &body_color)
+	: CheckBox(display_font, text_size, width, height, body_color, nullptr, nullptr) {
 }
 
-CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height, const char *on_text, const char *off_text) {
+CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height, const Color &body_color, const char *on_text, const char *off_text) {
 	setObjectType(ObjectTypeEnum::CHECKBOX_TYPE);
 	m_z_index = 0;
 	m_border_width = 2;
@@ -22,6 +31,7 @@ CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height
 	m_display_label = nullptr;
 	m_on_text = "ON";
 	m_off_text = "OFF";
+	m_body_color = body_color.a ? body_color : Color(DEFAULT_BODY_COLOR);
 
 	if (on_text != nullptr) {
 		m_on_text = on_text;
@@ -36,17 +46,14 @@ CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height
 	}
 
 	if (display_font) {
-		Color background_color = {1, 0.22f, 0.06f, 0.25f};
 		Color border_color = {1, 1.0f, 1.0f, 1.0f};		
 		m_z_index = 0;
 		float radius = 0;
 
 		Vector position = this->getTranslate();
-		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, background_color, m_z_index, m_border_width, border_color, radius);
+		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, m_body_color, m_z_index, m_border_width, border_color, radius);
 
-		background_color.r = 1.0f;
-		background_color.g = 1.0f;
-		background_color.b = 1.0f;
+		Color background_color = { 1, 1.0f, 1.0f, 1.0f };
 		m_rectangle = new Rectangle (PVR_LIST_OP_POLY, (position.x - width/2) - 10, position.y + height/2 + 2, 10, height -2, background_color, m_z_index, m_border_width, border_color, radius);
 
 		this->subAdd(m_control_rectangle);
@@ -188,14 +195,14 @@ void CheckBox::setOff() {
 
 extern "C"
 {
-	CheckBox* TSU_CheckBoxCreate(Font *display_font, uint text_size, float width, float height)
+	CheckBox* TSU_CheckBoxCreate(Font *display_font, uint text_size, float width, float height, Color *body_color)
 	{
-		return new CheckBox(display_font, text_size, width, height);
+		return new CheckBox(display_font, text_size, width, height, *body_color);
 	}
 
-	CheckBox* TSU_CheckBoxCreateWithCustomText(Font *display_font, uint text_size, float width, float height, const char *on_text, const char *off_text)
+	CheckBox* TSU_CheckBoxCreateWithCustomText(Font *display_font, uint text_size, float width, float height, Color *body_color, const char *on_text, const char *off_text)
 	{
-		return new CheckBox(display_font, text_size, width, height, on_text, off_text);
+		return new CheckBox(display_font, text_size, width, height, *body_color, on_text, off_text);
 	}
 
 	void TSU_CheckBoxDestroy(CheckBox **checkbox_ptr)

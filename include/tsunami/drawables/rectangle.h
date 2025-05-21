@@ -4,7 +4,7 @@
    banner.h
 
    Copyright (C) 2002 Megan Potter
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -40,8 +40,8 @@ private:
 	pvr_poly_hdr_t hdr;
 	pvr_poly_cxt_t cxt;
 
-	void drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex);
-	void drawRectangle(float x, float y, float width, float height, uint32 color, float zIndex);	
+	void drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex, int radius);
+	void drawRectangle(float x, float y, float width, float height, uint32 color, float zIndex, int radius);
 };
 
 #else

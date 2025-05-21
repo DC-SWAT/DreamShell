@@ -1,3 +1,12 @@
+/*
+   Tsunami for KallistiOS ##version##
+
+   rectangle.cpp
+
+   Copyright (C) 2024-2025 Maniac Vera
+
+*/
+
 #include "drawables/textbox.h"
 #include "genmenu.h"
 #include "tsudefinition.h"
@@ -5,7 +14,7 @@
 #include <cstring>
 #include <string>
 
-TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width, float height, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
+TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width, float height, const Color &body_color, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
 		bool enable_chars_type_number, bool enable_chars_type_symbol) {
 
 	setObjectType(ObjectTypeEnum::TEXTBOX_TYPE);
@@ -21,6 +30,7 @@ TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width,
 	m_char_type_index = -1;
 	m_text_cursor = nullptr;
 	m_control_rectangle = nullptr;
+	m_body_color = body_color.a ? body_color : Color(DEFAULT_BODY_COLOR);
 
 	if (!enable_chars_type_letter && !enable_chars_type_cap_letter && !enable_chars_type_number && !enable_chars_type_symbol) {
 		m_enable_chars_type = (1<<CharTypeEnum::CT_LETTER) | (1<<CharTypeEnum::CT_CAP_LETTER);
@@ -48,17 +58,12 @@ TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width,
 	}
 
 	if (display_font) {
-		Color background_color = {1, 0.22f, 0.06f, 0.25f};
 		Color border_color = {1, 1.0f, 1.0f, 1.0f};
 		float z_index = 0;
 		float radius = 0;
 
 		Vector position = this->getTranslate();
-		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, background_color, z_index, m_border_width, border_color, radius);
-
-		background_color.r = 1.0f;
-		background_color.g = 1.0f;
-		background_color.b = 1.0f;
+		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, m_body_color, z_index, m_border_width, border_color, radius);
 		this->subAdd(m_control_rectangle);
 
 		m_display_label = new Label(display_font, "", text_size, centered, false);
@@ -584,10 +589,10 @@ int TextBox::getIndex() {
 
 extern "C"
 {
-	TextBox* TSU_TextBoxCreate(Font *display_font, uint text_size, bool centered, float width, float height, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
+	TextBox* TSU_TextBoxCreate(Font *display_font, uint text_size, bool centered, float width, float height, Color *body_color, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
 		bool enable_chars_type_number, bool enable_chars_type_symbol)
 	{
-		return new TextBox(display_font, text_size, centered, width, height, enable_chars_type_letter, enable_chars_type_cap_letter, 
+		return new TextBox(display_font, text_size, centered, width, height, *body_color, enable_chars_type_letter, enable_chars_type_cap_letter, 
 				enable_chars_type_number, enable_chars_type_symbol);
 	}
 
