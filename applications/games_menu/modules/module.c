@@ -1091,25 +1091,17 @@ static void ReloadPage()
 		
 		if (menu_data.category[0] != '\0')
 		{
-			int first_game = -1;
+			menu_data.last_game_played_index = 0;
 			GameItemStruct *game_ptr = NULL;
 			for (int icount = 0; icount < menu_data.games_array_ptr_count; icount++)
 			{
 				game_ptr = GetGamePtrByIndex(icount);
-				
-				if (first_game == -1)
-					first_game = game_ptr->game_index_tmp;
 
 				if (game_ptr->game_index_tmp == game_index)
 				{
 					menu_data.last_game_played_index = icount;
 					break;
 				}
-			}
-
-			if (menu_data.last_game_played_index == -1)
-			{
-				menu_data.last_game_played_index = first_game;
 			}
 		}
 		else
