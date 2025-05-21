@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Games Menu" icon="images/icon.png" version="0.1.0">
+<app name="Games Menu" icon="images/icon.png" version="0.9.0">
 	<resources>
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" />

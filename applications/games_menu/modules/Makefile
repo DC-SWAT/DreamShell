@@ -11,7 +11,7 @@ DBG_LIBS = -lds -lisofs -lisoldr -lwave
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
-VER_MINOR = 1
+VER_MINOR = 9
 VER_MICRO = 0
 
 all: rm-elf
