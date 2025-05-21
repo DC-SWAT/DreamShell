@@ -1,8 +1,8 @@
 /* DreamShell ##version##
 
-   utils.c - ISO Loader app utils
+   utils.c - app utils
    Copyright (C) 2022-2024 SWAT
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -13,72 +13,133 @@
 #include "app_utils.h"
 #include "audio/wav.h"
 
+char *StrdupSafe(const char *string)
+{
+	if (!string)
+		return NULL;
+
+	size_t len = strlen(string) + 1;
+	char *copy = malloc(len);
+	if (!copy)
+	{
+		return NULL;
+	}
+
+	memcpy(copy, string, len);
+	return copy;
+}
+
+const char *GetFileName(const char *path)
+{
+	// LINUX, MAC..
+	const char *slash = strrchr(path, '/');
+
+// WINDOWS
+#ifdef _WIN32
+	const char *backslash = strrchr(path, '\\');
+	if (!slash || (backslash && backslash > slash))
+	{
+		slash = backslash;
+	}
+#endif
+
+	return slash ? slash + 1 : path;
+}
+
+bool EndsWith(const char *filename, const char *ext)
+{
+	size_t len = strlen(filename);
+	size_t ext_len = strlen(ext);
+	return len >= ext_len && strcasecmp(filename + len - ext_len, ext) == 0;
+}
+
+void TrimSlashes(char *path)
+{
+	int length = strlen(path);
+
+	// REMOVE TRAILING '/' OR '\'
+	while (length > 0 && (path[length - 1] == '/' || path[length - 1] == '\\'))
+	{
+		path[length - 1] = '\0';
+		length--;
+	}
+
+	// REMOVE LEADING '/' OR '\' BY SHIFTING CHARACTERS TO THE LEFT
+	while (*path == '/' || *path == '\\')
+	{
+		memmove(path, path + 1, strlen(path));
+	}
+}
+
 /* Trim begin/end spaces and copy into output buffer */
 void TrimSpaces(char *input, char *output, int size)
 {
-    char *p;
-    char *o;
-    int s = 0;
-    size--;
+	char *p;
+	char *o;
+	int s = 0;
+	size--;
 
-    p = input;
-    o = output;
+	p = input;
+	o = output;
 
-    if (*p == '\0')
-    {
-        *o = '\0';
-        return;
-    }
+	if (*p == '\0')
+	{
+		*o = '\0';
+		return;
+	}
 
-    while (*p == ' ' && size > 0)
-    {
-        p++;
-        size--;
-    }
+	while (*p == ' ' && size > 0)
+	{
+		p++;
+		size--;
+	}
 
-    if (!size)
-    {
-        *o = '\0';
-        return;
-    }
+	if (!size)
+	{
+		*o = '\0';
+		return;
+	}
 
-    while (size--)
-    {
-        *o++ = *p++;
-        s++;
-    }
+	while (size--)
+	{
+		*o++ = *p++;
+		s++;
+	}
 
-    *o = '\0';
-    o--;
+	*o = '\0';
+	o--;
 
-    while (*o == ' ' && s > 0)
-    {
-        *o = '\0';
-        o--;
-        s--;
-    }
+	while (*o == ' ' && s > 0)
+	{
+		*o = '\0';
+		o--;
+		s--;
+	}
 }
 
 char *Trim(char *string)
 {
-    // trim prefix
-    while ((*string) == ' ' ) {
-         string ++;
-    }
+	// trim prefix
+	while ((*string) == ' ')
+	{
+		string++;
+	}
 
-    // find end of original string
-    char *c = string;
-    while (*c) {
-         c ++;
-    }
-    c--;
+	// find end of original string
+	char *c = string;
+	while (*c)
+	{
+		c++;
+	}
+	c--;
 
-    // trim suffix
-    while ((*c) == ' ' ) {
-        *c = '\0';
-        c--;
-    }
-    return string;
+	// trim suffix
+	while ((*c) == ' ')
+	{
+		*c = '\0';
+		c--;
+	}
+	return string;
 }
 
 char *TrimSpaces2(char *txt)
@@ -192,30 +253,48 @@ bool IsGdiOptimized(const char *full_path_game)
 
 		char game[NAME_MAX];
 		memset(game, 0, NAME_MAX);
-		strcpy(game, GetLastPart(full_path_game, '/', 0));	
+		strcpy(game, GetLastPart(full_path_game, '/', 0));
 
 		memset(result, 0, NAME_MAX);
 		memset(path, 0, NAME_MAX);
 
 		strncpy(path, full_path_game, strlen(full_path_game) - (strlen(game) + 1));
 		snprintf(result, NAME_MAX, "%s/track03.iso", path);
-		
+
 		is_optimized = (FileExists(result) == 1);
 	}
 	return is_optimized;
 }
 
-const char* GetLastPart(const char *source, const char separator, int option_path)
+void GoUpDirectory(const char *original_path, int levels, char *result)
+{
+	strncpy(result, original_path, NAME_MAX);
+	for (int i = 0; i < levels; i++)
+	{
+		char *last_slash = strrchr(result, '/');
+		if (last_slash != NULL && last_slash != result)
+		{
+			*last_slash = '\0';
+		}
+		else
+		{
+			strcpy(result, "/");
+			break;
+		}
+	}
+}
+
+const char *GetLastPart(const char *source, const char separator, int option_path)
 {
 	static char path[NAME_MAX];
 	memset(path, 0, NAME_MAX);
-	
+
 	char *last_folder = strrchr(source, separator);
 	if (last_folder != NULL)
 	{
 		strcpy(path, last_folder + 1);
 	}
-	else 
+	else
 	{
 		strcpy(path, source);
 	}
@@ -236,7 +315,7 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 				*c = 'a'; // Maniac Vera: BUG toupper in the letter a, it does not convert it
 		}
 	}
-	
+
 	return path;
 }
 
@@ -247,16 +326,16 @@ bool ContainsOnlyNumbers(const char *string)
 	if (string == NULL)
 		return false;
 
-	if (*string == 0) 
-		return false; 
+	if (*string == 0)
+		return false;
 
-	while ((c=*(string++))!=0)
-	{ 
-		if (c<'0' || c>'9') 
-			return false; 
+	while ((c = *(string++)) != 0)
+	{
+		if (c < '0' || c > '9')
+			return false;
 	}
 
-	return true; 
+	return true;
 }
 
 int GetDeviceType(const char *dir)
@@ -324,7 +403,7 @@ void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data)
 	}
 }
 
-bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full_path_game, bool show_name, const char* game_cover_path, int width, int height, bool yflip)
+bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full_path_game, bool show_name, const char *game_cover_path, int width, int height, bool yflip)
 {
 	FILE *fd;
 	char save_file[NAME_MAX];
@@ -337,12 +416,12 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 	}
 	else
 	{
-		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/_%s.dsc", device_dir, preset->shortcut_name);		
+		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/_%s.dsc", device_dir, preset->shortcut_name);
 	}
 
 	fd = fopen(save_file, "w");
 
-	if(!fd)
+	if (!fd)
 	{
 		ds_printf("DS_ERROR: Can't save shortcut\n");
 		return false;
@@ -353,7 +432,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 	fprintf(fd, "module -o -f %s/modules/isoldr.klf\n", device_dir);
 
 	strcpy(cmd, "isoldr");
-	strcat(cmd, preset->fastboot ? " -s" : " -i" );
+	strcat(cmd, preset->fastboot ? " -s" : " -i");
 
 	if (preset->use_dma)
 	{
@@ -382,7 +461,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 		strcat(cmd, async);
 	}
 
-	if(strncmp(preset->device, "auto", 4) != 0)
+	if (strncmp(preset->device, "auto", 4) != 0)
 	{
 		strcat(cmd, " -d ");
 		strcat(cmd, preset->device);
@@ -390,8 +469,8 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 
 	const char *memory_tmp;
 
-	if(strlen(preset->memory) < 8)
-	{		
+	if (strlen(preset->memory) < 8)
+	{
 		char text[24];
 		memset(text, 0, sizeof(text));
 		strncpy(text, preset->memory, 10);
@@ -400,7 +479,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 		strcat(cmd, " -x ");
 		strcat(cmd, memory_tmp);
 	}
-	else 
+	else
 	{
 		strcat(cmd, " -x ");
 		strcat(cmd, preset->memory);
@@ -424,12 +503,13 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 	strcat(cmd, os);
 
 	char patchstr[24];
-	for(i = 0; i < 2 ; ++i)
+	for (i = 0; i < 2; ++i)
 	{
-		if(preset->pa[i] & 0xffffff) {
-			sprintf(patchstr," --pa%d 0x%s", i + 1, preset->patch_a[i]);
+		if (preset->pa[i] & 0xffffff)
+		{
+			sprintf(patchstr, " --pa%d 0x%s", i + 1, preset->patch_a[i]);
 			strcat(cmd, patchstr);
-			sprintf(patchstr," --pv%d 0x%s", i + 1, preset->patch_v[i]);
+			sprintf(patchstr, " --pv%d 0x%s", i + 1, preset->patch_v[i]);
 			strcat(cmd, patchstr);
 		}
 	}
@@ -447,8 +527,8 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 		char mode[24];
 		sprintf(mode, " -h %d", i);
 		strcat(cmd, mode);
-	} 
-	else 
+	}
+	else
 	{
 		char *addr = preset->heap_memory;
 		strcat(cmd, " -h ");
@@ -469,7 +549,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 		strcat(cmd, hotkey);
 	}
 
-	if(preset->alt_boot)
+	if (preset->alt_boot)
 	{
 		char boot_file[24];
 		sprintf(boot_file, " -b %s", ALT_BOOT_FILE);
@@ -489,7 +569,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 		snprintf(save_file, NAME_MAX, "%s/apps/main/images/_%s.png", device_dir, preset->shortcut_name);
 	}
 
-	if(FileExists(save_file))
+	if (FileExists(save_file))
 	{
 		fs_unlink(save_file);
 	}
@@ -502,7 +582,7 @@ bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full
 	return true;
 }
 
-char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name)
+char *MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name)
 {
 	char dev[8];
 	static char filename[NAME_MAX];
@@ -520,11 +600,11 @@ char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 
 	}
 
 	snprintf(filename, sizeof(filename),
-			"%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-			default_dir, app_name, dev, md5[0],
-			md5[1], md5[2], md5[3], md5[4], md5[5],
-			md5[6], md5[7], md5[8], md5[9], md5[10],
-			md5[11], md5[12], md5[13], md5[14], md5[15]);
+			 "%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
+			 default_dir, app_name, dev, md5[0],
+			 md5[1], md5[2], md5[3], md5[4], md5[5],
+			 md5[6], md5[7], md5[8], md5[9], md5[10],
+			 md5[11], md5[12], md5[13], md5[14], md5[15]);
 
 	return filename;
 }
@@ -536,7 +616,7 @@ const char *GetFolderPathFromFile(const char *full_path_file)
 	char *filename = (char *)malloc(NAME_MAX);
 	memset(filename, 0, NAME_MAX);
 	strcpy(filename, GetLastPart(full_path_file, '/', 0));
-	
+
 	memset(path, 0, NAME_MAX);
 
 	strncpy(path, full_path_file, strlen(full_path_file) - (strlen(filename) + 1));
@@ -553,12 +633,12 @@ size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result)
 	char *game = (char *)malloc(NAME_MAX);
 	memset(game, 0, NAME_MAX);
 	strcpy(game, GetLastPart(full_path_game, '/', 0));
-	
+
 	if (*result == NULL)
 	{
 		*result = (char *)malloc(NAME_MAX);
 	}
-	
+
 	memset(*result, 0, NAME_MAX);
 	memset(path, 0, NAME_MAX);
 
@@ -567,7 +647,7 @@ size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result)
 	free(game);
 	free(path);
 	size = FileSize(*result);
-	
+
 	if (size > 0)
 	{
 		return size;

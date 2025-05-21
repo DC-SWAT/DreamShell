@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
-   preset.h
-   Copyright (C) 2024 Maniac Vera
+   preset.c
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -20,7 +20,7 @@
 #include <tsunami/drawables/checkbox.h>
 #include <tsunami/drawables/textbox.h>
 
-extern struct menu_structure menu_data;
+extern struct MenuStructure menu_data;
 
 enum PatchEnum
 {
@@ -90,7 +90,7 @@ static struct
 	TextBox *patch_address1_option;
 	TextBox *patch_value1_option;
 	TextBox *patch_address2_option;	
-	TextBox *patchvalue2_option;
+	TextBox *patch_value2_option;
 	
 	CheckBox *altboot_option;
 	CheckBox *screenshot_option;
@@ -126,7 +126,7 @@ void CreatePresetMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font 
 	self.preset_menu_form = NULL;
 	self.menu_init_animation = NULL;
 	self.menu_end_animation = NULL;
-	self.body_letter_size = 16;
+	self.body_letter_size = 18;
 	self.body_height_size = 22;
 
 	char font_path[NAME_MAX];
@@ -398,7 +398,7 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 void CreateGeneralView(Form *form_ptr)
 {
-	TSU_FormtSetAttributes(form_ptr, 4, 9, 100, 34);
+	TSU_FormSetAttributes(form_ptr, 4, 9, 100, 34);
 
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
 	TSU_FormSetColumnSize(form_ptr, 1, 120);
@@ -417,7 +417,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)save_label, true);
 		TSU_FormAddBodyLabel(form_ptr, save_label, 1, 1);
 
-		self.save_preset_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size);
+		self.save_preset_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.save_preset_option, SAVE_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.save_preset_option, 2, 1);
@@ -442,7 +442,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)dma_label, true);
 		TSU_FormAddBodyLabel(form_ptr, dma_label, 1, 2);
 
-		self.dma_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size);
+		self.dma_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.dma_option, DMA_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.dma_option, 2, 2);
@@ -462,7 +462,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)async_label, true);
 		TSU_FormAddBodyLabel(form_ptr, async_label, 1, 3);
 
-		self.async_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 80, body_height_size);
+		self.async_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 80, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.async_option, ASYNC_CONTROL_ID);
 
 		if (TSU_CheckBoxGetValue(self.dma_option))
@@ -501,7 +501,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)bypass_label, true);
 		TSU_FormAddBodyLabel(form_ptr, bypass_label, 1, 4);
 
-		self.bypass_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size);
+		self.bypass_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.bypass_option, BYPASS_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.bypass_option, 2, 4);
@@ -521,7 +521,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)irq_label, true);
 		TSU_FormAddBodyLabel(form_ptr, irq_label, 1, 5);
 
-		self.irq_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size);
+		self.irq_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.irq_option, IRQ_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.irq_option, 2, 5);
@@ -541,7 +541,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)loader_label, true);
 		TSU_FormAddBodyLabel(form_ptr, loader_label, 1, 6);
 
-		self.loader_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size);
+		self.loader_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.loader_option, LOADER_CONTROL_ID);
 
 		TSU_OptionGroupSetStates(self.loader_option, SA_CONTROL + LOADER_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -569,7 +569,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)os_label, true);
 		TSU_FormAddBodyLabel(form_ptr, os_label, 3, 2);
 
-		self.os_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size);
+		self.os_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.os_option, OS_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_AUTO, "AUTO");
@@ -594,7 +594,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)boot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, boot_label, 3, 3);
 
-		self.boot_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 120, body_height_size);
+		self.boot_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 120, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.boot_option, BOOT_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.boot_option, BOOT_MODE_DIRECT, "DIRECT");
@@ -618,7 +618,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)fast_label, true);
 		TSU_FormAddBodyLabel(form_ptr, fast_label, 3, 4);
 
-		self.fast_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size);
+		self.fast_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.fast_option, FASTBOOT_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.fast_option, 4, 4);
@@ -638,7 +638,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)lowlevel_label, true);
 		TSU_FormAddBodyLabel(form_ptr, lowlevel_label, 3, 5);
 
-		self.lowlevel_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size);
+		self.lowlevel_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.lowlevel_option, LOWLEVEL_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.lowlevel_option, 4, 5);
@@ -658,7 +658,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)memory_label, true);
 		TSU_FormAddBodyLabel(form_ptr, memory_label, 1, 7);
 
-		self.memory_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size);
+		self.memory_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.memory_option, MEMORY_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.memory_option, 1, "0x8c000100");
@@ -710,7 +710,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// CUSTOM MEMORY
-		self.custom_memory_option = TSU_TextBoxCreate(self.textbox_font, (uint)body_letter_size, false, 130, body_height_size, true, false, true, false);
+		self.custom_memory_option = TSU_TextBoxCreate(self.textbox_font, (uint)body_letter_size, false, 130, body_height_size, &menu_data.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.custom_memory_option, CUSTOM_MEMORY_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.custom_memory_option, SA_CONTROL + CUSTOM_MEMORY_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -726,7 +726,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)heap_label, true);
 		TSU_FormAddBodyLabel(form_ptr, heap_label, 1, 9);
 
-		self.heap_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 320, body_height_size);
+		self.heap_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 320, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.heap_option, HEAP_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.heap_option, HEAP_MODE_AUTO, "AUTO");
@@ -763,7 +763,7 @@ void CreateGeneralView(Form *form_ptr)
 
 void CreateCDDAView(Form *form_ptr)
 {
-	TSU_FormtSetAttributes(form_ptr, 4, 3, 100, 42);
+	TSU_FormSetAttributes(form_ptr, 4, 3, 100, 42);
 
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
 	TSU_FormSetColumnSize(form_ptr, 1, 110);
@@ -778,7 +778,7 @@ void CreateCDDAView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)cdda_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_label, 1, 1);
 
-		self.cdda_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size, 50, self.body_height_size);
+		self.cdda_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size, 50, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.cdda_option, CDDA_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.cdda_option, 2, 1);
@@ -798,7 +798,7 @@ void CreateCDDAView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)cdda_source_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_source_label, 1, 2);
 
-		self.cdda_source_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size);
+		self.cdda_source_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.cdda_source_option, CDDA_SOURCE_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.cdda_source_option, CDDA_MODE_SRC_PIO, "PIO");
@@ -829,7 +829,7 @@ void CreateCDDAView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)cdda_destination_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_destination_label, 3, 2);
 
-		self.cdda_destination_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size);
+		self.cdda_destination_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.cdda_destination_option, CDDA_DESTINATION_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_PIO, "PIO");
@@ -865,7 +865,7 @@ void CreateCDDAView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)cdda_position_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_position_label, 1, 3);
 
-		self.cdda_position_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size);
+		self.cdda_position_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.cdda_position_option, CDDA_POSITION_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.cdda_position_option, CDDA_MODE_POS_TMU1, "TMU1");
@@ -896,7 +896,7 @@ void CreateCDDAView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)cdda_channel_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_channel_label, 3, 3);
 
-		self.cdda_channel_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size);
+		self.cdda_channel_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size, 120, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.cdda_channel_option, CDDA_CHANNEL_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.cdda_channel_option, CDDA_MODE_CH_ADAPT, "Fixed");
@@ -924,7 +924,7 @@ void CreateCDDAView(Form *form_ptr)
 
 void CreatePatchView(Form *form_ptr)
 {
-	TSU_FormtSetAttributes(form_ptr, 2, 4, 100, 42);
+	TSU_FormSetAttributes(form_ptr, 2, 4, 100, 42);
 
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
 	TSU_FormSetColumnSize(form_ptr, 1, 220);
@@ -937,7 +937,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_addres1_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_addres1_label, 1, 1);
 
-		self.patch_address1_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, true, false, true, true);
+		self.patch_address1_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_address1_option, PATCH_ADDRESS1_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_address1_option, SA_CONTROL + PATCH_ADDRESS1_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -960,7 +960,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_value1_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_value1_label, 1, 2);
 
-		self.patch_value1_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, true, false, true, true);
+		self.patch_value1_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_value1_option, PATCH_VALUE1_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_value1_option, SA_CONTROL + PATCH_VALUE1_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -983,7 +983,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_addres2_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_addres2_label, 1, 3);
 
-		self.patch_address2_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, true, false, true, true);
+		self.patch_address2_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_address2_option, PATCH_ADDRESS2_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_address2_option, SA_CONTROL + PATCH_ADDRESS2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -1006,18 +1006,18 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_value2_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_value2_label, 1, 4);
 
-		self.patchvalue2_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, true, false, true, true);
-		TSU_DrawableSetId((Drawable *)self.patchvalue2_option, PATCH_VALUE2_CONTROL_ID);
+		self.patch_value2_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
+		TSU_DrawableSetId((Drawable *)self.patch_value2_option, PATCH_VALUE2_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.patchvalue2_option, SA_CONTROL + PATCH_VALUE2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
-		TSU_FormAddBodyTextBox(form_ptr, self.patchvalue2_option, 2, 4);
-		TSU_DrawableEventSetClick((Drawable *)self.patchvalue2_option, &PatchValue2OptionClick);
+		TSU_TextBoxSetStates(self.patch_value2_option, SA_CONTROL + PATCH_VALUE2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_FormAddBodyTextBox(form_ptr, self.patch_value2_option, 2, 4);
+		TSU_DrawableEventSetClick((Drawable *)self.patch_value2_option, &PatchValue2OptionClick);
 
 		if (menu_data.preset->pv[1] == 0) {
-			TSU_TextBoxSetText(self.patchvalue2_option, "00000000");
+			TSU_TextBoxSetText(self.patch_value2_option, "00000000");
 		}
 		else {
-			TSU_TextBoxSetText(self.patchvalue2_option, menu_data.preset->patch_v[1]);			
+			TSU_TextBoxSetText(self.patch_value2_option, menu_data.preset->patch_v[1]);			
 		}
 
 		patch_value2_label = NULL;
@@ -1026,7 +1026,7 @@ void CreatePatchView(Form *form_ptr)
 
 void CreateExtensionsView(Form *form_ptr)
 {
-	TSU_FormtSetAttributes(form_ptr, 5, 6, 100, 42);
+	TSU_FormSetAttributes(form_ptr, 5, 6, 100, 42);
 
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
 	TSU_FormSetColumnSize(form_ptr, 1, 250);
@@ -1041,7 +1041,7 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)alterboot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, alterboot_label, 1, 1);
 
-		self.altboot_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size);
+		self.altboot_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.altboot_option, ALTERBOOT_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.altboot_option, 2, 1);
@@ -1065,7 +1065,7 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)screenshot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, screenshot_label, 1, 2);
 
-		self.screenshot_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size);
+		self.screenshot_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.screenshot_option, SCREENSHOT_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.screenshot_option, 2, 2);
@@ -1085,7 +1085,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	Vector init_button_position, start_button_vector, a_button_vector;
 	{
-		self.button_start_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 3, 52, self.body_height_size - 6, "START", "START");
+		self.button_start_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 3, 52, self.body_height_size - 6, &menu_data.control_body_color, "START", "START");
 		TSU_DrawableSetId((Drawable *)self.button_start_option, BUTTON_START_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_start_option, 1, 3);
@@ -1102,7 +1102,7 @@ void CreateExtensionsView(Form *form_ptr)
 	}
 
 	{
-		self.button_x_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "x", "x");
+		self.button_x_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "x", "x");
 		TSU_DrawableSetId((Drawable *)self.button_x_option, BUTTON_X_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_x_option, 2, 3);
@@ -1118,7 +1118,7 @@ void CreateExtensionsView(Form *form_ptr)
 	}
 
 	{
-		self.button_y_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "y", "y");
+		self.button_y_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "y", "y");
 		TSU_DrawableSetId((Drawable *)self.button_y_option, BUTTON_Y_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_y_option, 3, 3);
@@ -1134,7 +1134,7 @@ void CreateExtensionsView(Form *form_ptr)
 	}
 
 	{
-		self.button_z_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "z", "z");
+		self.button_z_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "z", "z");
 		TSU_DrawableSetId((Drawable *)self.button_z_option, BUTTON_Z_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_z_option, 4, 3);
@@ -1151,7 +1151,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	if (1 != 1) // DISABLED
 	{
-		self.button_lt_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "lt", "lt");
+		self.button_lt_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "lt", "lt");
 		TSU_DrawableSetId((Drawable *)self.button_lt_option, BUTTON_LT_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_lt_option, 5, 3);
@@ -1168,7 +1168,7 @@ void CreateExtensionsView(Form *form_ptr)
 	
 	init_button_position.x += 160;
 	{
-		self.button_a_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "a", "a");
+		self.button_a_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "a", "a");
 		TSU_DrawableSetId((Drawable *)self.button_a_option, BUTTON_A_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_a_option, 2, 4);
@@ -1185,7 +1185,7 @@ void CreateExtensionsView(Form *form_ptr)
 	}
 
 	{
-		self.button_b_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "b", "b");
+		self.button_b_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "b", "b");
 		TSU_DrawableSetId((Drawable *)self.button_b_option, BUTTON_B_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_b_option, 3, 4);
@@ -1201,7 +1201,7 @@ void CreateExtensionsView(Form *form_ptr)
 	}
 
 	{
-		self.button_c_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "c", "c");
+		self.button_c_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "c", "c");
 		TSU_DrawableSetId((Drawable *)self.button_c_option, BUTTON_C_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_c_option, 4, 4);
@@ -1218,7 +1218,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	if (1 != 1) // DISABLED
 	{
-		self.button_rt_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, "rt", "rt");
+		self.button_rt_option = TSU_CheckBoxCreateWithCustomText(form_font, (uint)self.body_letter_size - 2, 36, self.body_height_size - 6, &menu_data.control_body_color, "rt", "rt");
 		TSU_DrawableSetId((Drawable *)self.button_rt_option, BUTTON_RT_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_rt_option, 5, 4);
@@ -1239,7 +1239,7 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)vmu_label, true);
 		TSU_FormAddBodyLabel(form_ptr, vmu_label, 1, 5);
 
-		self.vmu_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 130, self.body_height_size, false, false, true, false);
+		self.vmu_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 130, self.body_height_size, &menu_data.control_body_color, false, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.vmu_option, VMU_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.vmu_option, SA_CONTROL + VMU_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -1264,7 +1264,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	{
 		// VMU SELECTOR MODE
-		self.vmu_selector_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size - 2, 320, self.body_height_size);
+		self.vmu_selector_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size - 2, 320, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.vmu_selector_option, VMUSELECTOR_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.vmu_selector_option, 0, "Disable");
@@ -1289,7 +1289,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 void CreateShortcutView(Form *form_ptr)
 {
-	TSU_FormtSetAttributes(form_ptr, 3, 6, 100, 42);
+	TSU_FormSetAttributes(form_ptr, 3, 6, 100, 42);
 
 	Font* form_font = TSU_FormGetTitleFont(form_ptr);
 	TSU_FormSetColumnSize(form_ptr, 1, 170);
@@ -1304,7 +1304,7 @@ void CreateShortcutView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)shortcut_size_label, true);
 		TSU_FormAddBodyLabel(form_ptr, shortcut_size_label, 1, 1);
 
-		self.shortcut_size_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size - 2, 170, self.body_height_size);
+		self.shortcut_size_option = TSU_OptionGroupCreate(form_font, (uint)self.body_letter_size - 2, 170, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.shortcut_size_option, SHORTCUT_SIZE_CONTROL_ID);
 
 		TSU_OptionGroupAdd(self.shortcut_size_option, 1, "48x48");
@@ -1335,7 +1335,7 @@ void CreateShortcutView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)screenshot_rotateimage_label, true);
 		TSU_FormAddBodyLabel(form_ptr, screenshot_rotateimage_label, 1, 2);
 
-		self.shortcut_rotate_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size);
+		self.shortcut_rotate_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.shortcut_rotate_option, SHORTCUT_ROTATE_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.shortcut_rotate_option, 2, 2);
@@ -1357,7 +1357,7 @@ void CreateShortcutView(Form *form_ptr)
 		TSU_FormAddBodyLabel(form_ptr, shortcut_name_label, 1, 3);
 		name_label_vector = TSU_DrawableGetPosition((Drawable *)shortcut_name_label);
 
-		self.shortcut_name_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 300, self.body_height_size, true, false, true, false);
+		self.shortcut_name_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 300, self.body_height_size, &menu_data.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.shortcut_name_option, SHORTCUT_NAME_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.shortcut_name_option, SA_CONTROL + SHORTCUT_NAME_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -1389,7 +1389,7 @@ void CreateShortcutView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)shortcut_dontshowname_label, true);
 		TSU_FormAddBodyLabel(form_ptr, shortcut_dontshowname_label, 1, 5);
 
-		self.shortcut_dontshowname_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size);
+		self.shortcut_dontshowname_option = TSU_CheckBoxCreate(form_font, (uint)self.body_letter_size - 2, 50, self.body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.shortcut_dontshowname_option, SHORTCUT_DONTSHOWNAME_CONTROL_ID);
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.shortcut_dontshowname_option, 2, 5);
@@ -1508,36 +1508,40 @@ void ShowPresetMenu(int game_index)
 			snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/default.txf");
 
 			Font *form_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
+			Color body_color = { 1, 0, 0, 0 };
 
-			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 612, 455, true, 3, true, true, form_font, &OnViewIndexChangedEvent);
+			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 612, 455, true, 3, DEFAULT_RADIUS, true, true, form_font, 
+				&menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
+				&OnViewIndexChangedEvent);
+
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
 			{
-				Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 12, false, false);
+				Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 14, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, general_label);
 				general_label = NULL;
 			}
 
 			{
-				Label *cdda_label = TSU_LabelCreate(form_font, "CDDA", 12, false, false);
+				Label *cdda_label = TSU_LabelCreate(form_font, "CDDA", 14, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, cdda_label);
 				cdda_label = NULL;
 			}
 
 			{
-				Label *patch_label = TSU_LabelCreate(form_font, "PATCH", 12, false, false);
+				Label *patch_label = TSU_LabelCreate(form_font, "PATCH", 14, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, patch_label);
 				patch_label = NULL;
 			}
 
 			{
-				Label *extensions_label = TSU_LabelCreate(form_font, "EXTS.", 12, false, false);
+				Label *extensions_label = TSU_LabelCreate(form_font, "EXTS.", 14, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, extensions_label);
 				extensions_label = NULL;
 			}
 
 			{
-				Label *shortcut_label = TSU_LabelCreate(form_font, "SHORTCUT", 11, false, false);
+				Label *shortcut_label = TSU_LabelCreate(form_font, "SHORTCUT", 13, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, shortcut_label);
 				shortcut_label = NULL;
 			}
@@ -1731,7 +1735,7 @@ void PatchAddress2OptionClick(Drawable *drawable)
 
 void PatchValue2OptionClick(Drawable *drawable)
 {
-	TSU_TextBoxSetFocus(self.patchvalue2_option, true);
+	TSU_TextBoxSetFocus(self.patch_value2_option, true);
 }
 
 void AlterBootOptionClick(Drawable *drawable)
@@ -2166,10 +2170,10 @@ void PatchValue2InputEvent(int type, int key)
 {
 	if (key == KeyCancel)
 	{
-		SetPatchByType(self.patchvalue2_option, PATCH_VALUE_TYPE, menu_data.preset->patch_v[1], &menu_data.preset->pv[1]);
+		SetPatchByType(self.patch_value2_option, PATCH_VALUE_TYPE, menu_data.preset->patch_v[1], &menu_data.preset->pv[1]);
 	}
 
-	TSU_TextBoxInputEvent(self.patchvalue2_option, type, key);
+	TSU_TextBoxInputEvent(self.patch_value2_option, type, key);
 }
 
 void AlterBootInputEvent(int type, int key)

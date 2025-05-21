@@ -1,7 +1,8 @@
 /* DreamShell ##version##
 
-   utils.h - ISO Loader app utils
-   Copyright (C) 2024 Maniac Vera
+   utils.c - app utils
+   Copyright (C) 2022-2024 SWAT
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -9,6 +10,8 @@
 #define __APP_UTILS_H
 
 #include "app_definition.h"
+
+#define TO_UPPER_SAFE(c) ((c) == 'a' ? 'A' : toupper((unsigned char)(c)))
 
 /* Indexes of devices  */
 enum {
@@ -26,8 +29,10 @@ enum {
 	CONF_ULONG,
 };
 
-
-
+char *StrdupSafe(const char *string);
+const char* GetFileName(const char* path);
+bool EndsWith(const char *filename, const char *ext);
+void TrimSlashes(char *path);
 char *Trim(char *string);
 void TrimSpaces(char *input, char *output, int size);
 char *TrimSpaces2(char *txt);
@@ -35,6 +40,7 @@ char *FixSpaces(char *str);
 bool MakeShortcut(PresetStruct *preset, const char* device_dir, const char* full_path_game, bool show_name, const char* game_cover_path, int width, int height, bool yflip);
 int ConfigParse(isoldr_conf *cfg, const char *filename);
 bool IsGdiOptimized(const char *full_path_game);
+void GoUpDirectory(const char *original_path, int levels, char *result);
 const char* GetLastPart(const char *source, const char separator, int option_path);
 bool ContainsOnlyNumbers(const char *string);
 int  GetDeviceType(const char *dir);

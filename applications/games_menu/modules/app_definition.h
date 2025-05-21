@@ -1,26 +1,33 @@
 /*
-   Tsunami for KallistiOS ##version##
+   DreamShell ##version##
 
-   menudefinition.h
+   app_definition.h
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
 #ifndef __APP_DEFINITION_H
 #define __APP_DEFINITION_H
 
-#define MAX_SIZE_ITEMS 12
+#define CATEGORY_BLOCK_SIZE 8
+#define CACHE_BLOCK_SIZE 128
+#define FILE_BLOCK_SIZE 128
+#define MAX_SIZE_ITEMS 14
 #define MAX_BUTTONS 7
-#define MAX_SCAN_COUNT 2
 #define MAX_MENU 3
 #define FIRMWARE_SIZE 8
 #define MAX_VMU 999
 #define DEFAULT_VMU_NUMBER "001"
 #define SCREENSHOT_HOTKEY (CONT_START | CONT_A | CONT_B)
 #define ALT_BOOT_FILE "2ND_READ.BIN"
+#define DEFAULT_THEME "DEFAULT"
+#define PSYCHEDELIC_THEME "PSYCHEDELIC"
+#define MINT_THEME "MINT"
+#define CUSTOM_THEME "CUSTOM"
 
 #include <stdbool.h>
+#include <uthash.h>
 
 enum PresetControlEnum
 {
@@ -72,6 +79,20 @@ enum PresetControlEnum
 	SHORTCUT_COVER_CONTROL_ID,
 };
 
+enum SystemMenuControlEnum
+{
+	CATEGORY_CONTROL_ID = 200,
+	THEME_CONTROL_ID,
+	BACKGROUND_COLOR_CONTROL_ID,
+	BORDER_COLOR_CONTROL_ID,
+	TITLE_COLOR_CONTROL_ID,
+	BODY_COLOR_CONTROL_ID,
+	AREA_COLOR_CONTROL_ID,
+	CONTROL_TOP_COLOR_CONTROL_ID,
+	CONTROL_BODY_COLOR_CONTROL_ID,
+	CONTROL_BOTTOM_COLOR_CONTROL_ID,
+};
+
 enum StateAppEnum
 {
 	SA_NONE = 0,
@@ -100,6 +121,13 @@ enum SearchCoverEnum
 	SC_DEFAULT = 2
 };
 
+enum GameAttributeEnum
+{
+	GAE_IS_FOLDER_NAME = (1 << 0),
+	GAE_IS_GDI_OPTIMIZED = (1 << 1),
+	GAE_IS_CDDA = (1 << 2)
+};
+
 enum CoverStatusEnum
 {
 	CSE_EXISTS = 1,
@@ -114,6 +142,26 @@ enum CheckCDDAGameEnum
 	CCGE_CDDA_BIG_SIZE = 2,
 	CCGE_NOT_CDDA = 3,
 	CCGE_CANDIDATE = 4
+};
+
+typedef struct ThemeStructure
+{
+	const char *theme;
+	uint32 background_color;
+	uint32 border_color;
+	uint32 title_color;
+	uint32 area_color;
+	uint32 body_color;
+	uint32 control_top_color;
+	uint32 control_body_color;
+	uint32 control_bottom_color;
+} ThemeStruct;
+
+static const ThemeStruct ThemeList[] = 
+{
+	{ DEFAULT_THEME, 0xFF00A8E2, 0xFF00A8E2, 0xFFA5D3EF, 0xFFA5D3EF, 0xFF0086B3, 0xFF0086B3, 0xFF0F6683, 0xFF0086B3 },
+	{ PSYCHEDELIC_THEME, 0xFF4B0082, 0xFFFFFF35, 0xFF380F40, 0xFF7D2181, 0xFF380F40, 0xFF380F40, 0xFF380F40, 0xFF380F40 },
+	{ MINT_THEME, 0xFF1BAAC9, 0xFF9BFAB0, 0xFFD0DDD7, 0xFFD0DDD7, 0xFF3EA99B, 0xFF1BAAC9, 0xFF1BAAC9, 0xFF1BAAC9 }
 };
 
 typedef struct FirmwareStructure
@@ -181,8 +229,31 @@ typedef struct MenuOptionStructure
 	float image_size;
 } MenuOptionStruct;
 
+typedef struct CacheStructure
+{
+	char game[255];
+	uint8 attributes;
+} CacheStruct;
+
+typedef struct CategoryStructure
+{
+	char category[32];
+	int games_count;
+	int *games_index;
+	UT_hash_handle hh;
+} CategoryStruct;
+
+typedef struct CoverStructure
+{
+	char cover[NAME_MAX];
+	uint8 device;
+	uint8 menu_type;
+	uint8 image_type[MAX_MENU];
+} CoverStruct;
+
 typedef struct GameItemStructure
 {
+	int game_index_tmp; // ONLY USED FOR CATEGORIES
 	uint8 device;
 	char *game;
 	char *folder;
@@ -192,26 +263,25 @@ typedef struct GameItemStructure
 	uint64 cover_type;
 	bool check_pvr;
 	bool is_pvr_cover;
-	bool check_optimized;
+	bool checked_optimized;
 	bool is_gdi_optimized;
 	int16 is_cdda;
+	CoverStruct cover;
 
 } GameItemStruct;
-
-typedef struct CoverStructure
-{
-	char *cover;
-	uint8 device;
-	uint8 menu_type;
-	uint8 image_type[MAX_MENU];
-
-} CoverStruct;
 
 typedef struct ImageDimensionStructure
 {
 	unsigned int width;
 	unsigned int height;
 } ImageDimensionStruct;
+
+typedef struct GameTrampolineStructure
+{
+	char full_path_folder[NAME_MAX];
+	char folder[NAME_MAX];
+	int level;
+} GameTrampolineStruct;
 
 #pragma pack(push, 4)
 typedef struct CoverScannedStructure
@@ -227,6 +297,7 @@ typedef struct CoverScannedStructure
 #pragma pack(push, 4)
 typedef struct AppConfigStructure
 {
+	char games_path[100];
 	int initial_view;
 	int save_preset;
 	int cover_background;
@@ -234,6 +305,15 @@ typedef struct AppConfigStructure
 	int start_in_last_game;
 	char last_game[NAME_MAX];
 	int last_device;
+	uint32 background_color;
+	uint32 border_color;
+	uint32 title_color;
+	uint32 body_color;
+	uint32 area_color;
+	uint32 control_top_color;
+	uint32 control_body_color;
+	uint32 control_bottom_color;
+	int enable_cache;
 } AppConfigStruct;
 #pragma pack(pop)
 
