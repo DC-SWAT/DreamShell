@@ -3,10 +3,11 @@
 
    box.cpp
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
    
 */
 
+#include <dc/fmath.h>
 #include "drawables/box.h"
 
 Box::Box(int list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius = 0) {
@@ -44,48 +45,112 @@ void Box::setSize(float w, float h) {
 	height = h;
 }
 
-
-void Box::drawRectangle(float x, float y, float width, float height, uint32 color, float zIndex) {
-	pvr_vertex_t vert;
-
-	vert.flags = PVR_CMD_VERTEX;
-	vert.x = x;
-	vert.y = y;
-	vert.z = zIndex;
-	vert.u = vert.v = 0.0f;
-	// vert.argb = PVR_PACK_COLOR(1.0f, color / 255.0f, color / 255.0f, color / 255.0f);
-	vert.argb = color;
-	vert.oargb = 0;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.x = x;
-	vert.y = y - height;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.x = x + width;
-	vert.y = y;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.flags = PVR_CMD_VERTEX_EOL;
-	vert.x = x + width;
-	vert.y = y - height;
-	pvr_prim(&vert, sizeof(vert));
-}
-
-void Box::drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex)
+void Box::drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex, int radius)
 {
-	// HORIZONTAL LINES	
-	drawRectangle(x, y + lineWidth, width, lineWidth, color, zIndex); // DOWN
-	drawRectangle(x, y - height, width, lineWidth, color, zIndex); // UP
+	const float PI_2 = F_PI / 2;
+	float dx = 0, dy = 0;
+	radius = radius <= 0 ? 0 : radius + 5;
 
-	// VERTICAL LINES
-	drawRectangle(x - lineWidth, y, lineWidth, height, color, zIndex); // LEFT
-	drawRectangle(x + width, y, lineWidth, height, color, zIndex); // RIGHT
+	float quantity_slices = PI_2 / (float)(radius - 1);
+	x -= lineWidth;
+	y += lineWidth;
+	width += lineWidth * 2;
+	height += lineWidth * 2;
 
-	drawRectangle(x + width, y + lineWidth, lineWidth, lineWidth, color, zIndex); // RIGHT CORNER DOWN
-	drawRectangle(x - lineWidth, y - height, lineWidth, lineWidth, color, zIndex); // LEFT CORNER UP
-	drawRectangle(x - lineWidth, y + lineWidth, lineWidth, lineWidth, color, zIndex); // LEFT CORNER DOWN
-	drawRectangle(x + width, y - height, lineWidth, lineWidth, color, zIndex); // RIGHT CORNER UP
+	// LEFT BOTTOM VERTICES
+	plx_vert_inp(PLX_VERT, x, (y - radius), zIndex, color);
+
+	// LEFT BOTTOM CORNER
+	if (radius > 0)
+	{
+		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		{
+			dx = (x + radius) - fcos(slices_count) * radius;
+			dy = (y - radius) + fsin(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+
+			dx = (x + (radius + lineWidth)) - fcos(slices_count) * radius;
+			dy = (y - (radius + lineWidth)) + fsin(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+		}
+	}
+
+	// FINISH LEFT BOTTOM CORNER
+	plx_vert_inp(PLX_VERT, x + radius, (y - lineWidth), zIndex, color);
+	plx_vert_inp(PLX_VERT, x + radius, y, zIndex, color);
+
+	// RIGHT BOTTOM VERTICES
+	plx_vert_inp(PLX_VERT, x + width - radius, (y - lineWidth), zIndex, color);
+	plx_vert_inp(PLX_VERT, x + width - radius, y, zIndex, color);
+
+	// RIGHT BOTTOM CORNER
+	if (radius > 0)
+	{
+		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		{
+			dx = (x + width - radius) + fsin(slices_count) * radius;
+			dy = (y - radius) + fcos(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+
+			dx = (x + width - (radius + lineWidth)) + fsin(slices_count) * radius;
+			dy = (y - (radius + lineWidth)) + fcos(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+		}
+	}
+
+	// FINISH RIGHT BOTTOM CORNER
+	plx_vert_inp(PLX_VERT, x + width, (y - radius), zIndex, color);
+	plx_vert_inp(PLX_VERT, x + width - lineWidth, (y - radius), zIndex, color);
+
+	// TOP BOTTOM VERTICES
+	plx_vert_inp(PLX_VERT, x + width, (y - height + radius), zIndex, color);
+	plx_vert_inp(PLX_VERT, x + width - lineWidth, (y - height + radius), zIndex, color);
+
+	// RIGHT TOP CORNER
+	if (radius > 0)
+	{
+		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		{
+			dx = (x + width - radius) + fcos(slices_count) * radius;
+			dy = (y - height + radius) - fsin(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+
+			dx = (x + width - (radius + lineWidth)) + fcos(slices_count) * radius;
+			dy = (y - height + (radius + lineWidth)) - fsin(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+		}
+	}
+
+	// FINISH RIGHT TOP CORNER
+	plx_vert_inp(PLX_VERT, x + width - radius, y - height, zIndex, color);
+	plx_vert_inp(PLX_VERT, x + width - radius, (y - height + lineWidth), zIndex, color);
+
+	// LEFT TOP VERTICES
+	plx_vert_inp(PLX_VERT, x + radius, y - height, zIndex, color);
+	plx_vert_inp(PLX_VERT, x + radius, (y - height + lineWidth), zIndex, color);
+
+	// LEFT TOP CORNER
+	if (radius > 0)
+	{
+		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		{
+			dx = (x + radius) - fsin(slices_count) * radius;
+			dy = (y - height + radius) - fcos(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+
+			dx = (x + (radius + lineWidth)) - fsin(slices_count) * radius;
+			dy = (y - height + (radius + lineWidth)) - fcos(slices_count) * radius;
+			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
+		}
+	}
+
+	// FINISH LEFT TOP CORNER
+	plx_vert_inp(PLX_VERT, x + lineWidth, (y - height + radius), zIndex, color);
+	plx_vert_inp(PLX_VERT, x, (y - height + radius), zIndex, color);
+
+	// LEFT LINE
+	plx_vert_inp(PLX_VERT, x + lineWidth, (y - radius), zIndex, color);
+	plx_vert_inp(PLX_VERT_EOS, x, (y - radius), zIndex, color);
 }
 
 void Box::draw(int list) {
@@ -93,6 +158,7 @@ void Box::draw(int list) {
 		return;
 
 	pvr_poly_cxt_col(&cxt, list);
+	cxt.gen.culling = PVR_CULLING_NONE;
 	pvr_poly_compile(&hdr, &cxt);
 	pvr_prim(&hdr, sizeof(hdr));
 
@@ -121,7 +187,7 @@ void Box::draw(int list) {
 	}
 	vert.oargb = 0;
 	
-	drawBox(tv.x, tv.y, w, h, borderWidth, vert.argb, tv.z);
+	drawBox(tv.x, tv.y, w, h, borderWidth, vert.argb, tv.z, radius);
 
 	Drawable::draw(list);
 }

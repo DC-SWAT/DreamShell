@@ -3,7 +3,7 @@
 
    form.h
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -49,9 +49,10 @@ private:
 	Label *m_display_label;
 	Rectangle *m_control_rectangle, *m_left_rectangle, *m_right_rectangle;
 	Triangle *m_left_triangle, *m_right_triangle;
+	Color m_body_color;
 
 public:
-	OptionGroup(Font *font_ptr, uint text_size, float width, float height);
+	OptionGroup(Font *font_ptr, uint text_size, float width, float height, const Color &body_color);
 	virtual ~OptionGroup();
 
 	void setStates(int control_state, int previous_state, int *change_state);
@@ -95,7 +96,7 @@ extern "C"
 {
 #endif
 
-	OptionGroup* TSU_OptionGroupCreate(Font *display_font, uint text_size, float width, float height);
+	OptionGroup* TSU_OptionGroupCreate(Font *display_font, uint text_size, float width, float height, Color *body_color);
 	void TSU_OptionGroupDestroy(OptionGroup **optiongroup_ptr);
 	void TSU_OptionGroupSetStates(OptionGroup *optiongroup_ptr, int control_state, int previous_state, int *change_state);
 	int TSU_OptionGroupGetControlState(OptionGroup *optiongroup_ptr);

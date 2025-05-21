@@ -3,7 +3,7 @@
 
    menudefinition.h
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -11,6 +11,11 @@
 #define __TSUDEFINITION_H
 
 #define IMAGE_TYPE_MASK 0XFFFF
+#define DEFAULT_SHADOW_COLOR { 0.7, 0.0f, 0.0f, 0.0f }
+#define DEFAULT_TOP_COLOR { 1, 0.22f, 0.06f, 0.25f }
+#define DEFAULT_BOTTOM_COLOR { 1, 0.22f, 0.06f, 0.25f }
+#define DEFAULT_BORDER_COLOR { 1, 1.0f, 1.0f, 1.0f }
+#define DEFAULT_BODY_COLOR { 1, 0.22f, 0.06f, 0.25f }
 
 enum MenuTypeEnum
 {

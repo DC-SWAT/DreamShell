@@ -3,7 +3,7 @@
 
    form.h
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -65,14 +65,15 @@ private:
 	const float column_padding_left = 6;
 	const float cursor_padding_left = 2;
 	bool m_is_popup, m_enable, m_popup, m_visible_title, m_visible_bottom, m_cursor_animation_enable;
-	uint m_width, m_height, m_zIndex;
+	uint m_width, m_height, m_zIndex, m_radius;
 	uint m_body_height, m_title_height, m_bottom_height;
 	uint m_columns_size, m_rows_size;
 	int m_x, m_y;
 	int m_current_view_index;
 
-	Color m_color, m_title_background_color, m_bottom_background_color, m_border_color, m_background_color;
+	Color m_body_color, m_title_background_color, m_bottom_background_color, m_border_color, m_background_color;
 	Rectangle *m_background_rectangle, *m_title_rectangle, *m_body_rectangle, *m_bottom_rectangle, *m_cursor, *m_bottom_cursor;
+	Box *m_main_box;
 	Vector m_selector_translate, m_bottom_selector_translate;
 	
 	LogXYMover *m_cursor_animation, *m_bottom_cursor_animation;
@@ -96,7 +97,8 @@ private:
 	void freeObject(ObjectStruct *object_ptr);
 
 public:
-	Form(int x, int y, uint width, uint height, bool is_popup, int z_index, bool visible_title, bool visible_bottom, Font *title_font, 
+	Form(int x, int y, uint width, uint height, bool is_popup, int z_index, int radius, bool visible_title, bool visible_bottom, Font *title_font,
+			const Color &border_color, const Color &title_background_color, const Color &body_color, const Color &bottom_background_color,
 			ViewIndexChangedEventPtr view_index_changed_event);
 	virtual ~Form();
 
@@ -178,11 +180,12 @@ extern "C"
 {
 #endif
 
-	Form *TSU_FormCreate(int x, int y, uint width, uint height, bool is_popup, int z_index, 
-						 bool visible_title, bool visible_bottom, Font *title_font,
-						 ViewIndexChangedEventPtr view_index_changed_event_ptr);
+	Form *TSU_FormCreate(int x, int y, uint width, uint height, bool is_popup, int z_index, int radius, 
+						bool visible_title, bool visible_bottom, Font *title_font,
+						Color *border_color, Color *title_background_color, Color *body_color, Color *bottom_background_color,
+						ViewIndexChangedEventPtr view_index_changed_event_ptr);
 
-	void TSU_FormtSetAttributes(Form *form_ptr, uint number_columns, uint number_rows, uint columns_size, uint rows_size);	
+	void TSU_FormSetAttributes(Form *form_ptr, uint number_columns, uint number_rows, uint columns_size, uint rows_size);	
 	void TSU_FormRemove(Form *form_ptr);
 	void TSU_FormDestroy(Form **form_ptr);
 	void TSU_FormInputEvent(Form *form_ptr, int event_type, int key);

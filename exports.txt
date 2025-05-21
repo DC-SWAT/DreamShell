@@ -27,6 +27,7 @@ include dc/sound/sound.h
 include ds.h
 include fs.h
 include fatfs.h
+include uthash.h
 include img/SegaPVRImage.h
 include img/decode.h
 include img/load.h
@@ -1215,7 +1216,7 @@ TSU_SceneDestroy
 TSU_FormCreate
 TSU_FormRemove
 TSU_FormDestroy
-TSU_FormtSetAttributes
+TSU_FormSetAttributes
 TSU_FormGetTitleFont
 TSU_FormInputEvent
 TSU_FormSelectedEvent

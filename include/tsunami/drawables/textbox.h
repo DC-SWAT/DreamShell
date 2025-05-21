@@ -3,7 +3,7 @@
 
    form.h
 
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 
 */
 
@@ -83,9 +83,10 @@ private:
 
 	Label *m_display_label;
 	Rectangle *m_control_rectangle, *m_text_cursor;
+	Color m_body_color;
 
 public:
-	TextBox(Font *font_ptr, uint text_size, bool centered, float width, float height, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
+	TextBox(Font *font_ptr, uint text_size, bool centered, float width, float height, const Color &body_color, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
 		bool enable_chars_type_number, bool enable_chars_type_symbol);
 
 	virtual ~TextBox();
@@ -116,7 +117,7 @@ extern "C"
 {
 #endif
 
-	TextBox* TSU_TextBoxCreate(Font *display_font, uint text_size, bool centered, float width, float height, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
+	TextBox* TSU_TextBoxCreate(Font *display_font, uint text_size, bool centered, float width, float height, Color *body_color, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
 			bool enable_chars_type_number, bool enable_chars_type_symbol);
 	void TSU_TextBoxDestroy(TextBox **textbox_ptr);
 	void TSU_TextBoxSetStates(TextBox *textbox_ptr, int control_state, int previous_state, int *change_state);
