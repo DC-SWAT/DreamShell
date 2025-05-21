@@ -379,24 +379,32 @@ void *PlayCDDAThread(void *params)
 					char *track_file_path = (char *)malloc(NAME_MAX);
 					srand(time(NULL));
 
-					const int MAXIMUM_ATTEMPTS = 8;
-					int count_attemps = 0;
+					uint32 start_time = 0;
+					uint32 end_time = 0;
+					timer_ms_gettime(&start_time, NULL);
 
 					do
 					{
-						track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, &track_file_path);
+						track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, &track_file_path);						
 
 						// AVOID POSSIBLE CACHE STAGNATION
-						count_attemps++;
-						if (menu_data.started_with_cache && count_attemps <= MAXIMUM_ATTEMPTS)
+						if (menu_data.started_with_cache)
 						{
-							menu_data.games_array[game_index].is_cdda = CCGE_NOT_CDDA;
-							break;
+							timer_ms_gettime(&end_time, NULL);
+							if ((end_time - start_time) >= 5)
+							{
+								menu_data.games_array[game_index].is_cdda = CCGE_NOT_CDDA;
+								break;
+							}
 						}
 
 					} while (track_size == 0);
 
-					PlayCDDATrack(track_file_path, 3);
+					if (menu_data.games_array[game_index].is_cdda == CCGE_CDDA)
+					{						
+						PlayCDDATrack(track_file_path, 3);
+					}
+
 					free(track_file_path);
 				}
 			}
@@ -2646,6 +2654,11 @@ void RetrieveCovers(uint8 device, int menu_type)
 	free(covers_array);
 }
 
+static int CategoryCompare(CategoryStruct *a, CategoryStruct *b)
+{
+    return strcmp(a->category, b->category);
+}
+
 void CreateCategories()
 {
 	static bool category_flag = false;
@@ -2733,6 +2746,11 @@ void CreateCategories()
 			if (shrunk_array)
 				current_category->games_index = shrunk_array;
 		}
+	}
+
+	if (menu_data.categories_array_count > 0)
+	{
+		HASH_SORT(menu_data.categories_array, CategoryCompare);
 	}
 }
 
