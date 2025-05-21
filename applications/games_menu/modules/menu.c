@@ -3384,16 +3384,16 @@ bool RetrieveGames()
 
 	RetrieveGamesRecursive(GetGamesPath(menu_data.current_dev));
 
+	if (menu_data.ide && menu_data.sd && menu_data.current_dev != APP_DEVICE_SD)
+	{
+		RetrieveGamesRecursive(GetGamesPath(APP_DEVICE_SD));
+	}
+
 	if (menu_data.last_game_played_index > menu_data.games_array_count - 1)
 	{
 		menu_data.last_game_played_index = -1;
 		menu_data.last_device = 0;
 		memset(menu_data.last_game, 0, sizeof(menu_data.last_game));
-	}
-
-	if (menu_data.ide && menu_data.sd && menu_data.current_dev != APP_DEVICE_SD)
-	{
-		RetrieveGamesRecursive(GetGamesPath(APP_DEVICE_SD));
 	}
 
 	if (menu_data.cache_array_count > 0 && menu_data.enable_cache)
