@@ -608,6 +608,20 @@ static void RemoveViewTextPlane(bool remove_image_banner)
 	}
 }
 
+static void RefreshTotal()
+{
+	if (menu_data.menu_type == MT_PLANE_TEXT)
+	{
+		char label_text[20] = {0};
+		snprintf(label_text, sizeof(label_text), "PAGE: %d/%d", self.current_page, self.pages);
+		TSU_LabelSetText(self.page_label, label_text);
+
+		memset(label_text, 0, sizeof(label_text)); 
+		snprintf(label_text, sizeof(label_text), "GAMES: %d", menu_data.games_array_ptr_count);
+		TSU_LabelSetText(self.total_label, label_text);
+	}
+}
+
 static void CreateInfoButton(uint8 button_index, const char *button_file, const char *text, float x, float y)
 {
 	if(self.item_button[button_index] == NULL)
@@ -831,17 +845,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 				}
 			}
 
-			if (menu_data.menu_type == MT_PLANE_TEXT)
-			{
-				char label_text[20] = {0};
-				snprintf(label_text, sizeof(label_text), "PAGE: %d/%d", self.current_page, self.pages);
-				TSU_LabelSetText(self.page_label, label_text);
-
-				memset(label_text, 0, sizeof(label_text)); 
-				snprintf(label_text, sizeof(label_text), "GAMES: %d", menu_data.games_array_ptr_count);
-				TSU_LabelSetText(self.total_label, label_text);
-			}
-
+			RefreshTotal();
 			int cover_menu_type = 0;
 			int column = 0;
 			int page = 0;
@@ -2461,6 +2465,7 @@ static void RefreshMainView()
 	{
 		RemoveViewTextPlane(false);
 		CreateViewTextPlane();
+		RefreshTotal();
 	}
 	else
 	{
