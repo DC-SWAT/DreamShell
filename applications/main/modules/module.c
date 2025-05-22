@@ -42,7 +42,7 @@ typedef struct script_item {
 } script_item_t;
 
 static Event_t *slide_input_event;
-
+static int (*VirtualKeyboardIsVisible)(void) = NULL;
 static void Slide_EventHandler(void *ds_event, void *param, int action);
 
 static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
@@ -379,53 +379,52 @@ void MainApp_Init(App_t *app) {
 			self.app->thd = thd_create(0, ClockThread, NULL);
 		}
         
-        if(GetModuleByName("vkb")){
+		if(GetModuleByName("vkb")){
 			uintptr_t vkb = GET_EXPORT_ADDR("VirtKeyboardIsVisible");
-			int (*VirtKeyboardIsVisible)(void) = NULL;
-            VirtKeyboardIsVisible = (int (*)(void))vkb;
+			VirtualKeyboardIsVisible = (int (*)(void))vkb;
 		}
 
 		slide_input_event = AddEvent(
-		    "Slide_Input",
-		    EVENT_TYPE_INPUT,
-		    EVENT_PRIO_DEFAULT,
-		    Slide_EventHandler,
-		    NULL
+			"Slide_Input",
+			EVENT_TYPE_INPUT,
+			EVENT_PRIO_DEFAULT,
+			Slide_EventHandler,
+			NULL
 	    );
 	}
 }
 
 static void Slide_EventHandler(void *ds_event, void *param, int action) {
 
-    SDL_Event *event = (SDL_Event *) param;
-    static uint8_t prev_rtrig = 0, prev_ltrig = 0;
+	SDL_Event *event = (SDL_Event *) param;
+	static uint8_t prev_rtrig = 0, prev_ltrig = 0;
 
-    switch(event->type) {
+	switch(event->type) {
 
-        case SDL_JOYAXISMOTION:
+		case SDL_JOYAXISMOTION:
                 
-            switch(event->jaxis.axis) {
+			switch(event->jaxis.axis) {
 
-                case 2: // Right trigger press slide screen right once if virtual keyboard not active
-                    if ((prev_rtrig < 0xC0) && (event->jaxis.value >= 0xC0) && VirtKeyboardIsVisible != NULL && !VirtKeyboardIsVisible()){
-                        MainApp_SlideRight();
-                    }
-                    prev_rtrig = event->jaxis.value;
-                    break;
+				case 2: // Right trigger press slide screen right once if virtual keyboard not active
+					if ((prev_rtrig < 0xC0) && (event->jaxis.value >= 0xC0) && VirtualKeyboardIsVisible != NULL && !VirtualKeyboardIsVisible()){
+						MainApp_SlideRight();
+					}
+					prev_rtrig = event->jaxis.value;
+					break;
 
-                case 3: // Left trigger press slide screen right once if virtual keyboard not active
+				case 3: // Left trigger press slide screen right once if virtual keyboard not active
 
-                    if ((prev_ltrig < 0xC0) && (event->jaxis.value >= 0xC0) && VirtKeyboardIsVisible != NULL && !VirtKeyboardIsVisible()){
-                        MainApp_SlideLeft();
-                    }
-                    prev_ltrig = event->jaxis.value;
-                    break;
-            }
+					if ((prev_ltrig < 0xC0) && (event->jaxis.value >= 0xC0) && VirtualKeyboardIsVisible != NULL && !VirtualKeyboardIsVisible()){
+						MainApp_SlideLeft();
+					}
+					prev_ltrig = event->jaxis.value;
+					break;
+			}
 
-            break;
+			break;
 
-        default:
-            break;
-    }
+		default:
+			break;
+	}
 
 }
