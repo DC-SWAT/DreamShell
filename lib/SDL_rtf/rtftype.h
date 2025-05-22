@@ -7,6 +7,7 @@
 #define _RTFTYPE_H
 
 // typedef char bool;
+#include <stdbool.h>
 
 #define fTrue 1
 #define fFalse 0
