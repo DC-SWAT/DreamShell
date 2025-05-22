@@ -4,3 +4,4 @@ include app_module.h
 MainApp_Init
 MainApp_SlideLeft
 MainApp_SlideRight
+MainApp_Shutdown
