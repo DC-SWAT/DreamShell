@@ -348,7 +348,7 @@ void MainApp_SlideRight() {
 }
 
 void MainApp_Init(App_t *app) {
-	
+
 	if(app != NULL) {
 		
 		memset(&self, 0, sizeof(self));
@@ -427,4 +427,9 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 			break;
 	}
 
+}
+
+void MainApp_Shutdown(App_t *app) {
+	(void)app;
+	RemoveEvent(slide_input_event);
 }

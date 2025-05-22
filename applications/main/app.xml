@@ -13,7 +13,7 @@
 		<image src="images/right.png" name="right" />
 		<image src="images/right_hover.png" name="right-hover" />
 	</resources>
-	<body width="100%" height="100%" onload="export:MainApp_Init()" background="main-bg">
+	<body width="100%" height="100%" onload="export:MainApp_Init()" onunload="export:MainApp_Shutdown()" background="main-bg">
 		<panel width="100%" height="443" name="app-list" />
 		<panel width="100%" height="30">
 			<panel width="13%">
