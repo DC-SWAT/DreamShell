@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stddef.h>
-#include <stdbool.h>
 #include <ctype.h>
 #include "rtftype.h"
 #include "rtfdecl.h"
