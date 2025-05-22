@@ -16,6 +16,7 @@
 #include <kos/net.h>
 #include <kos/netcfg.h>
 #include <kos/thread.h>
+#include <kos/dbglog.h>
 #include "drivers/enc28j60.h"
 #include "drivers/spi.h"
 

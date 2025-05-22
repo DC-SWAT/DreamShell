@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <kos/fs.h>
+#include <kos/dbglog.h>
 #include "font.h"
 #include "prim.h"
 

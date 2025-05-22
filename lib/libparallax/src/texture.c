@@ -15,6 +15,7 @@
 #include <png/png.h>
 #include <jpeg/jpeg.h>
 #include <kmg/kmg.h>
+#include <kos/dbglog.h>
 
 int pvr_to_img(const char *file_name, kos_img_t *rv);
 

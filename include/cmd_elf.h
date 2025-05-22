@@ -13,10 +13,10 @@
 /* Kernel-specific definition of a loaded ELF binary */
 typedef struct cmd_elf_prog {
 	void	*data;		/* Data block containing the program */
-	uint32	size;		/* Memory image size (rounded up to page size) */
+	uint32_t	size;		/* Memory image size (rounded up to page size) */
 
 	/* Elf exports */
-	ptr_t	main;
+	uintptr_t	main;
 
 } cmd_elf_prog_t;
 

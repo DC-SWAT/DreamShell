@@ -9,6 +9,7 @@
 #include "sound.h"
 
 #include <cassert>
+#include <kos/dbglog.h>
 
 int Sound::m_default_vol = 240;
 
