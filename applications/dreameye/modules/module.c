@@ -1,6 +1,6 @@
 /* DreamShell ##version##
 
-   module.c - DreamEye app module
+   module.c - Dreameye app module
    Copyright (C) 2023, 2024 SWAT 
 */
 
@@ -133,7 +133,7 @@ static void UpdatePhotoCount(void) {
     GUI_LabelSetText(self.photo_count_text, cnt);
 }
 
-void DreamEyeApp_Init(App_t *app) {
+void DreameyeApp_Init(App_t *app) {
     self.app = app;
     self.action = APP_ACTION_IDLE;
     self.dev = maple_enum_type(0, MAPLE_FUNC_CAMERA);
@@ -166,17 +166,17 @@ void DreamEyeApp_Init(App_t *app) {
     UpdatePhotoCount();
 }
 
-void DreamEyeApp_Shutdown(App_t *app) {
+void DreameyeApp_Shutdown(App_t *app) {
     (void)app;
     HideCameraPreview();
 }
 
-void DreamEyeApp_Open(App_t *app) {
+void DreameyeApp_Open(App_t *app) {
     (void)app;
     ShowCameraPreview();
 }
 
-void DreamEyeApp_ShowMainPage(GUI_Widget *widget) {
+void DreameyeApp_ShowMainPage(GUI_Widget *widget) {
     (void)widget;
 
     int index = GUI_CardStackGetIndex(self.pages);
@@ -189,7 +189,7 @@ void DreamEyeApp_ShowMainPage(GUI_Widget *widget) {
     }
 }
 
-void DreamEyeApp_ShowPhotoPage(GUI_Widget *widget) {
+void DreameyeApp_ShowPhotoPage(GUI_Widget *widget) {
     (void)widget;
 
     int index = GUI_CardStackGetIndex(self.pages);
@@ -201,7 +201,7 @@ void DreamEyeApp_ShowPhotoPage(GUI_Widget *widget) {
     }
 }
 
-void DreamEyeApp_ExportPhoto(GUI_Widget *widget) {
+void DreameyeApp_ExportPhoto(GUI_Widget *widget) {
     (void)widget;
     HideCameraPreview();
     GUI_LabelSetText(self.progress_desc, "Exporting photos...");
@@ -209,7 +209,7 @@ void DreamEyeApp_ExportPhoto(GUI_Widget *widget) {
     self.action = APP_ACTION_PHOTO_EXPORT;
 }
 
-void DreamEyeApp_ErasePhoto(GUI_Widget *widget) {
+void DreameyeApp_ErasePhoto(GUI_Widget *widget) {
     (void)widget;
     HideCameraPreview();
     GUI_LabelSetText(self.progress_desc, "Erasing photos...");
@@ -217,7 +217,7 @@ void DreamEyeApp_ErasePhoto(GUI_Widget *widget) {
     self.action = APP_ACTION_PHOTO_ERASE;
 }
 
-void DreamEyeApp_ChangeResolution(GUI_Widget *widget) {
+void DreameyeApp_ChangeResolution(GUI_Widget *widget) {
 
     GUI_WidgetSetState(widget, 1);
 
@@ -234,7 +234,7 @@ void DreamEyeApp_ChangeResolution(GUI_Widget *widget) {
     ShowCameraPreview();
 }
 
-void DreamEyeApp_ToggleDetectQR(GUI_Widget *widget) {
+void DreameyeApp_ToggleDetectQR(GUI_Widget *widget) {
 
     HideCameraPreview();
 
@@ -248,11 +248,11 @@ void DreamEyeApp_ToggleDetectQR(GUI_Widget *widget) {
     ShowCameraPreview();
 }
 
-void DreamEyeApp_ToggleExecQR(GUI_Widget *widget) {
+void DreameyeApp_ToggleExecQR(GUI_Widget *widget) {
     self.qr_exec = GUI_WidgetGetState(widget);
 }
 
-void DreamEyeApp_FileBrowserItemClick(dirent_fm_t *fm_ent) {
+void DreameyeApp_FileBrowserItemClick(dirent_fm_t *fm_ent) {
     if(!fm_ent) {
         return;
     }
@@ -296,7 +296,7 @@ static void *ExportPhotos(void *param) {
     UpdateProgress(desc, 1.0f);
     GUI_FileManagerScan(self.file_browser);
     thd_sleep(ACTION_COMPLETE_TIMEOUT_MS);
-    DreamEyeApp_ShowPhotoPage(NULL);
+    DreameyeApp_ShowPhotoPage(NULL);
     return NULL;
 }
 
@@ -330,11 +330,11 @@ static void *ErasePhotos(void *param) {
 
     UpdateProgress(desc, 1.0f);
     thd_sleep(ACTION_COMPLETE_TIMEOUT_MS);
-    DreamEyeApp_ShowPhotoPage(NULL);
+    DreameyeApp_ShowPhotoPage(NULL);
     return NULL;
 }
 
-void DreamEyeApp_FileBrowserConfirm(GUI_Widget *widget) {
+void DreameyeApp_FileBrowserConfirm(GUI_Widget *widget) {
     if(!self.dev) {
         return;
     }
@@ -351,12 +351,12 @@ void DreamEyeApp_FileBrowserConfirm(GUI_Widget *widget) {
             thd_create(1, ErasePhotos, NULL);
             break;
         default:
-            DreamEyeApp_ShowPhotoPage(widget);
+            DreameyeApp_ShowPhotoPage(widget);
             break;
     }
 }
 
-void DreamEyeApp_Abort(GUI_Widget *widget) {
+void DreameyeApp_Abort(GUI_Widget *widget) {
     (void)widget;
     self.action = APP_ACTION_IDLE;
 }
