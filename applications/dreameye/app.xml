@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="DreamEye" version="0.3.0" icon="images/icon.png">
+<app name="Dreameye" version="0.3.0" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/quirc.klf" />
 		<module src="../../modules/dreameye.klf" />
@@ -92,17 +92,17 @@
 		</theme>
 	</resources>
 	<body width="100%" height="100%" background="#DDDDDD"
-		onload="export:DreamEyeApp_Init()"
-		onunload="export:DreamEyeApp_Shutdown()"
-		onopen="export:DreamEyeApp_Open()">
+		onload="export:DreameyeApp_Init()"
+		onunload="export:DreameyeApp_Shutdown()"
+		onopen="export:DreameyeApp_Open()">
 		<panel height="45" background="header-bg">
-			<label font="comic-22" color="#666666" text="DreamEye Manager" />
+			<label font="comic-22" color="#666666" text="Dreameye Manager" />
 		</panel>
 		<cardstack name="pages">
 			<panel name="main-page" y="30">
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_ShowPhotoPage()" align="center">
+						onclick="export:DreameyeApp_ShowPhotoPage()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Photo storage" />
 					</input>
 				</panel>
@@ -121,22 +121,22 @@
 				<panel width="140">
 					<panel x="25" y="50" height="75">
 						<label align="left" color="#31799F" font="comic-16" height="25" text="Resolution:" width="100%" />
-						<input width="100%" height="25" onclick="export:DreamEyeApp_ChangeResolution()"
+						<input width="100%" height="25" onclick="export:DreameyeApp_ChangeResolution()"
 							type="checkbox" name="isp-mode-qsif" checked="true">
 							<label align="left" color="#333333" font="comic-15" height="20" text="160x120" x="25" />
 						</input>
-						<input width="100%" height="25" onclick="export:DreamEyeApp_ChangeResolution()"
+						<input width="100%" height="25" onclick="export:DreameyeApp_ChangeResolution()"
 							type="checkbox" name="isp-mode-sif">
 							<label align="left" color="#333333" font="comic-15" height="20" text="320x240" x="25" />
 						</input>
 					</panel>
 					<panel x="25" y="125" height="75">
 						<label align="left" color="#31799F" font="comic-16" height="25" text="QR code:" width="100%" />
-						<input width="100%" height="25" onclick="export:DreamEyeApp_ToggleDetectQR()"
+						<input width="100%" height="25" onclick="export:DreameyeApp_ToggleDetectQR()"
 							type="checkbox" checked="true">
 							<label align="left" color="#333333" font="comic-15" height="20" text="Detect" x="25" />
 						</input>
-						<input width="100%" height="25" onclick="export:DreamEyeApp_ToggleExecQR()"
+						<input width="100%" height="25" onclick="export:DreameyeApp_ToggleExecQR()"
 							type="checkbox" checked="true">
 							<label align="left" color="#333333" font="comic-15" height="20" text="Execute" x="25" />
 						</input>
@@ -161,19 +161,19 @@
 			<panel name="photo-page" y="30">
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_ExportPhoto()" align="center" name="export-photo">
+						onclick="export:DreameyeApp_ExportPhoto()" align="center" name="export-photo">
 						<label font="comic-22" color="#EEEEEE" text="Export photos" />
 					</input>
 				</panel>
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_ErasePhoto()" align="center" name="erase-photo">
+						onclick="export:DreameyeApp_ErasePhoto()" align="center" name="erase-photo">
 						<label font="comic-22" color="#EEEEEE" text="Erase photos" />
 					</input>
 				</panel>
 				<panel height="65" width="100%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_ShowMainPage()" align="center">
+						onclick="export:DreameyeApp_ShowMainPage()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Back" />
 					</input>
 				</panel>
@@ -209,18 +209,18 @@
 						sbbdown_pressed="sbb-pressed"
 						sbbdown_disabled="sbb-disabled"
 						name="file-browser"
-						onclick="export:DreamEyeApp_FileBrowserItemClick()"
+						onclick="export:DreameyeApp_FileBrowserItemClick()"
 						path="/" />
 				</panel>
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_ShowPhotoPage()" align="center">
+						onclick="export:DreameyeApp_ShowPhotoPage()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Cancel" />
 					</input>
 				</panel>
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_FileBrowserConfirm()" align="center">
+						onclick="export:DreameyeApp_FileBrowserConfirm()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Confirm" />
 					</input>
 				</panel>
@@ -238,7 +238,7 @@
 				</panel>
 				<panel height="70" width="90%" x="3%" y="340">
 					<input type="button" width="280" height="60"
-						onclick="export:DreamEyeApp_Abort()" align="center">
+						onclick="export:DreameyeApp_Abort()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Abort" />
 					</input>
 				</panel>

@@ -2,16 +2,16 @@ include kos/exports.h
 include app_module.h
 
 # Main
-DreamEyeApp_Init
-DreamEyeApp_Shutdown
-DreamEyeApp_Open
-DreamEyeApp_ShowMainPage
-DreamEyeApp_ShowPhotoPage
-DreamEyeApp_ExportPhoto
-DreamEyeApp_ErasePhoto
-DreamEyeApp_FileBrowserItemClick
-DreamEyeApp_FileBrowserConfirm
-DreamEyeApp_ChangeResolution
-DreamEyeApp_ToggleDetectQR
-DreamEyeApp_ToggleExecQR
-DreamEyeApp_Abort
+DreameyeApp_Init
+DreameyeApp_Shutdown
+DreameyeApp_Open
+DreameyeApp_ShowMainPage
+DreameyeApp_ShowPhotoPage
+DreameyeApp_ExportPhoto
+DreameyeApp_ErasePhoto
+DreameyeApp_FileBrowserItemClick
+DreameyeApp_FileBrowserConfirm
+DreameyeApp_ChangeResolution
+DreameyeApp_ToggleDetectQR
+DreameyeApp_ToggleExecQR
+DreameyeApp_Abort
