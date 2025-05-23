@@ -995,7 +995,7 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent)
 #endif	
 					if(strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vmu",4) == 0) free_blocks(GUI_FileManagerGetPath(self.filebrowser2),1);
 					
-					//GUI_FileManagerScan(self.filebrowser2);
+					GUI_FileManagerScan(self.filebrowser2);
 					disable_high(LEFT_FM);
 				}				
 			}
@@ -1269,7 +1269,7 @@ void VMU_Manager_ItemContextClick(dirent_fm_t *fm_ent)
 	else if(strcmp(self.m_SelectedFile,ent->name) != 0 || strcmp(self.m_SelectedPath,GUI_FileManagerGetPath(fmw)) != 0) {
 		VMU_Manager_ItemClick(fm_ent);
 	}
-	else if(strncmp(self.m_SelectedPath,"/vmd",4) != 0 || !strncmp(self.m_SelectedPath,"/cd",3) != 0) {
+	else if(strncmp(self.m_SelectedPath,"/vmd",4) != 0 || strncmp(self.m_SelectedPath,"/cd",3) != 0) {
 		/* Delete file */
 		
 		sprintf(text, "Delete %s/%s", GUI_FileManagerGetPath(fmw), ent->name);
@@ -1291,6 +1291,7 @@ void VMU_Manager_ItemContextClick(dirent_fm_t *fm_ent)
 
 		reset_selected();
 		clr_statusbar();
+		GUI_FileManagerScan(fmw);
 		GUI_WidgetMarkChanged(self.vmu_page);
 	}	
 	return;
@@ -1354,7 +1355,7 @@ int VMU_Manager_Dump(GUI_Widget *widget)
 
 			fs_close(f);
 			free(vmdata);
-			
+
 			GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
 			GUI_FileManagerScan(self.filebrowser2);
 			
