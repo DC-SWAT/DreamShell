@@ -152,6 +152,7 @@ void ShowSystemMenu()
 		self.control_body_color = menu_data.control_body_color;
 		self.general_changes_flag = false;
 		self.style_changes_flag = false;
+		self.cache_changes_flag = false;
 
 		char font_path[NAME_MAX];
 		memset(font_path, 0, sizeof(font_path));
@@ -784,6 +785,12 @@ void ExitSystemMenuClick(Drawable *drawable)
 
 	if (self.cache_changes_flag && !config_saved)
 	{
+		if (!menu_data.rebuild_cache && menu_data.games_array_count > 0 && menu_data.cache_array_count == 0)
+		{
+			PopulateCache();
+			SaveCache();
+		}
+
 		SaveSystemMenuConfig();
 	}
 
