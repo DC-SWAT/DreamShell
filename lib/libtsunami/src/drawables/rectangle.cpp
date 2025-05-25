@@ -131,22 +131,16 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 	else
 	{
 		// LEFT BOTTOM VERTEX
-		plx_vert_inp(PLX_VERT, x, (y - radius), zIndex, color);
+		plx_vert_inp(PLX_VERT, x, y, zIndex, color);
 
 		// LEFT TOP VERTEX
-		plx_vert_inp(PLX_VERT, x, (y - height + radius), zIndex, color);
-
-		// MIDDLE RECTANGLE
-		plx_vert_inp(PLX_VERT, x + radius, y, zIndex, color);
-		plx_vert_inp(PLX_VERT, x + radius, y - height, zIndex, color);
-		plx_vert_inp(PLX_VERT, x + width - radius, y, zIndex, color);
-		plx_vert_inp(PLX_VERT, x + width - radius, y - height, zIndex, color);
+		plx_vert_inp(PLX_VERT, x, y - height, zIndex, color);
 
 		// RIGHT BOTTOM VERTEX
-		plx_vert_inp(PLX_VERT, x + width, y - radius, zIndex, color);
+		plx_vert_inp(PLX_VERT, x + width, y, zIndex, color);
 
 		// RIGHT TOP VERTEX (end of strip)
-		plx_vert_inp(PLX_VERT_EOS, x + width, y - height + radius, zIndex, color);
+		plx_vert_inp(PLX_VERT_EOS, x + width, y - height, zIndex, color);
 	}
 
 }
