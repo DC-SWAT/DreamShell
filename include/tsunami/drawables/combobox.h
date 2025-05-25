@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   scene.h
+   combobox.h
 
    Copyright (C) 2024 Maniac Vera
 

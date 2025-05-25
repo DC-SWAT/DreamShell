@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   animation.h
+   inputeventstate.h
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera

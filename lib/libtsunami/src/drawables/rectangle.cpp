@@ -87,9 +87,10 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 		float center_x = x + width / 2;
 		float center_y = y - height / 2;
 		
-		// LEFT BOTTOM VERTICES
+		// CENTER RECTANGLE
 		plx_vert_inp(PLX_VERT, center_x, center_y, zIndex, color);
-
+		
+		// LEFT CORNER BOTTOM VERTICES
 		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
 		{
 			dx = (x + radius) - fcos(slices_count) * radius;
@@ -99,6 +100,7 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 			plx_vert_inp(PLX_VERT, center_x, center_y, zIndex, color);
 		}
 
+		// RIGHT CORNER BOTTOM VERTICES
 		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
 		{
 			dx = (x + width - radius) + fsin(slices_count) * radius;
@@ -108,6 +110,7 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 			plx_vert_inp(PLX_VERT, center_x, center_y, zIndex, color);
 		}
 		
+		// RIGHT CORNER TOP VERTICES
 		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
 		{
 			dx = (x + width - radius) + fcos(slices_count) * radius;
@@ -117,6 +120,7 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 			plx_vert_inp(PLX_VERT, center_x, center_y, zIndex, color);
 		}
 
+		// LEFT CORNER TOP VERTICES
 		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
 		{
 			dx = (x + radius) - fsin(slices_count) * radius;
@@ -126,6 +130,7 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 			plx_vert_inp(PLX_VERT, center_x, center_y, zIndex, color);
 		}
 		
+		// CLOSE RECTANGLE
 		plx_vert_inp(PLX_VERT_EOS, (x + radius) - fcos(0) * radius, (y - radius) + fsin(0) * radius, zIndex, color);
 	}
 	else

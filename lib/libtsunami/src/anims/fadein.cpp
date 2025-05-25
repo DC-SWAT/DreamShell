@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   logxymover.cpp
+   fadein.cpp
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera

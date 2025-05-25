@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   menudefinition.h
+   tsudefinition.h
 
    Copyright (C) 2024-2025 Maniac Vera
 
