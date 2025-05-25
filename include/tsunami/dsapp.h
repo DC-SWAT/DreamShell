@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   dsmenu.h
+   dsapp.h
 
    Copyright (C) 2024 Maniac Vera
 

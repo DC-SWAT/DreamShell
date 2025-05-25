@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   rectangle.cpp
+   form.cpp
 
    Copyright (C) 2024-2025 Maniac Vera
 

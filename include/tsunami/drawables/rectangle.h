@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   banner.h
+   rectangle.h
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024-2025 Maniac Vera

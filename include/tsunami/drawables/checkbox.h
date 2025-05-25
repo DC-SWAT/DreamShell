@@ -1,7 +1,7 @@
 /*
    Tsunami for KallistiOS ##version##
 
-   form.h
+   checkbox.h
 
    Copyright (C) 2024-2025 Maniac Vera
 
