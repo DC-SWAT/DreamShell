@@ -308,18 +308,12 @@ static void *ErasePhotos(void *param) {
     if(!self.photo_count) {
         desc = "Nothing to erase.";
     }
-
-    for(i = 0; i < self.photo_count; i++) {
-        if(erase_photo(self.dev, i) < 0) {
-            desc = "Erasing failed.";
-            break;
-        }
-        if(self.action != APP_ACTION_PHOTO_ERASE) {
-            desc = "Erasing aborted.";
-            break;
-        }
-        UpdateProgress("Erasing photos...", (1.0f / self.photo_count) * i);
-    }
+   
+    UpdateProgress("Erasing photos...", 0.0f);
+    
+   if(erase_photo(self.dev, 0xFF-2) < 0) {
+      desc = "Erasing failed.";
+   }
 
     UpdateProgress("Checking...", 0.99f);
     self.photo_count = get_photo_count(self.dev);
