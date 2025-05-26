@@ -1,14 +1,28 @@
 /* DreamShell ##version##
 
    module.c - dreameye module
-   Copyright (C) 2015, 2023 SWAT
+   Copyright (C) 2015, 2023, 2025 SWAT
 
-*/          
+*/
 
 #include "ds.h"
 #include "drivers/dreameye.h"
 
-DEFAULT_MODULE_EXPORTS_CMD(dreameye, "Dreameye camera");
+int builtin_dreameye_cmd(int argc, char *argv[]);
+void dreameye_cleanup_all_states(void);
+
+DEFAULT_MODULE_HEADER(dreameye);
+
+int lib_open(klibrary_t *lib) {
+	AddCmd(lib_get_name(), "Dreameye camera", (CmdHandler *) builtin_dreameye_cmd);
+	return nmmgr_handler_add(&ds_dreameye_hnd.nmmgr);
+}
+
+int lib_close(klibrary_t *lib) {
+	RemoveCmd(GetCmdByName(lib_get_name()));
+	dreameye_cleanup_all_states();
+	return nmmgr_handler_remove(&ds_dreameye_hnd.nmmgr);
+}
 
 static int save_image(const char *fn, uint8 *buf, int size) {
 

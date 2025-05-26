@@ -1,7 +1,7 @@
 /** 
  * \file    dreameye.h
  * \brief   Dreameye driver extension
- * \date    2015, 2023, 2024
+ * \date    2015, 2023, 2024, 2025
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -212,6 +212,11 @@ int dreameye_stop_capturing(maple_device_t *dev);
  * 
  */
 int dreameye_poll(maple_device_t *dev);
+
+/** \brief  Get extended state from device
+ * 
+ */
+dreameye_state_ext_t *dreameye_get_state_ext(maple_device_t *dev);
 
 __END_DECLS
 

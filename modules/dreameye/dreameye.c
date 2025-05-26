@@ -1,9 +1,9 @@
 /* DreamShell ##version##
 
    dreameye.c - dreameye driver addons
-   Copyright (C) 2015, 2023, 2024 SWAT
+   Copyright (C) 2015, 2023, 2024, 2025 SWAT
 
-*/          
+*/
 
 #include <ds.h>
 #include <assert.h>
@@ -47,6 +47,7 @@ typedef struct dreameye_register {
 
 static dreameye_state_ext_t *first_state = NULL;
 static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext_t *state);
+static int dreameye_init_state_ext(maple_device_t *dev);
 
 /* Regs dump from Visual Park */
 static dreameye_register_t ic_regs[85] = {
@@ -373,7 +374,7 @@ int dreameye_req_video_frame(maple_device_t *dev) {
     assert(dev->unit == 1);
 
     dreameye_state_ext_t *de;
-    de = (dreameye_state_ext_t *)dev->status;
+    de = dreameye_get_state_ext(dev);
     first_state = de;
 
     de->img_transferring = 1;
@@ -413,7 +414,7 @@ fail:
 int dreameye_get_video_frame(maple_device_t *dev, uint8_t **data, int *img_sz) {
 
     dreameye_state_ext_t *de;
-    de = (dreameye_state_ext_t *)dev->status;
+    de = dreameye_get_state_ext(dev);
 
     if(!de->img_transferring) {
         dreameye_req_video_frame(dev);
@@ -475,9 +476,9 @@ static void dreameye_get_param_cb(maple_state_t *st, maple_frame_t *frame) {
     }
 
     if(resp->response == MAPLE_COMMAND_CAMCONTROL && respbuf8[4] == DREAMEYE_SUBCOMMAND_ERROR) {
-        dreameye_state_ext_t *de = (dreameye_state_ext_t *)frame->dev->status;
+        dreameye_state_ext_t *de = dreameye_get_state_ext(frame->dev);
         dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X value 0x%04X\n", 
-                __func__, respbuf8[5], respbuf8[6], respbuf8[7], de->value);
+                __func__, respbuf8[5], respbuf8[6], respbuf8[7], de ? de->value : 0);
     }
 
     /* Update the status that was requested. */
@@ -487,8 +488,10 @@ static void dreameye_get_param_cb(maple_state_t *st, maple_frame_t *frame) {
         assert(respbuf8[5] == 0x00);
 
         /* Update the data in the status. */
-        de = (dreameye_state_ext_t *)frame->dev->status;
-        de->value = respbuf8[10] | respbuf8[11] << 8;
+        de = dreameye_get_state_ext(frame->dev);
+        if (de) {
+            de->value = respbuf8[10] | respbuf8[11] << 8;
+        }
     }
 
     /* Wake up! */
@@ -531,8 +534,8 @@ int dreameye_get_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
     }
 
     if(value) {
-        de = (dreameye_state_ext_t *)dev->status;
-        *value = de->value;
+        de = dreameye_get_state_ext(dev);
+        *value = de ? de->value : 0;
     }
 
     return MAPLE_EOK;
@@ -551,9 +554,9 @@ static void dreameye_queue_param_cb(maple_state_t *st, maple_frame_t *frame) {
     respbuf8 = (uint8_t *)resp->data;
 
     if(resp->response == MAPLE_COMMAND_CAMCONTROL && respbuf8[4] == DREAMEYE_SUBCOMMAND_ERROR) {
-        dreameye_state_ext_t *de = (dreameye_state_ext_t *)frame->dev->status;
+        dreameye_state_ext_t *de = dreameye_get_state_ext(frame->dev);
         dbglog(DBG_ERROR, "%s: error 0x%02X 0x%02X 0x%02X value 0x%04X\n", 
-                __func__, respbuf8[5], respbuf8[6], respbuf8[7], de->value);
+                __func__, respbuf8[5], respbuf8[6], respbuf8[7], de ? de->value : 0);
         return;
     }
 
@@ -572,8 +575,10 @@ int dreameye_queue_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16
     if(maple_frame_lock(&dev->frame) < 0)
         return MAPLE_EAGAIN;
 
-    dreameye_state_ext_t *de = (dreameye_state_ext_t *)dev->status;
-    de->value = value;
+    dreameye_state_ext_t *de = dreameye_get_state_ext(dev);
+    if (de) {
+        de->value = value;
+    }
 
     /* Reset the frame */
     maple_frame_init(&dev->frame);
@@ -610,8 +615,10 @@ int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
     if(maple_frame_lock(&dev->frame) < 0)
         return MAPLE_EAGAIN;
 
-    dreameye_state_ext_t *de = (dreameye_state_ext_t *)dev->status;
-    de->value = value;
+    dreameye_state_ext_t *de = dreameye_get_state_ext(dev);
+    if (de) {
+        de->value = value;
+    }
 
     /* Reset the frame */
     maple_frame_init(&dev->frame);
@@ -643,7 +650,10 @@ int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
 
 static int dreameye_set_format(maple_device_t **devs, int isp_mode, int format) {
 
-    dreameye_state_ext_t *de = (dreameye_state_ext_t *)devs[0]->status;
+    dreameye_state_ext_t *de = dreameye_get_state_ext(devs[0]);
+    if (!de) {
+        return MAPLE_EFAIL;
+    }
     uint8_t pix_fmt = JANGGU_FMT_UNK7;
 
     switch(isp_mode) {
@@ -790,7 +800,7 @@ int dreameye_start_capturing(maple_device_t *dev, dreameye_frame_cb cb) {
     assert(dev != NULL);
     assert(dev->unit == 1);
 
-    de = (dreameye_state_ext_t *)dev->status;
+    de = dreameye_get_state_ext(dev);
 
     if(de->is_capturing || !cb) {
         return MAPLE_EFAIL;
@@ -825,7 +835,7 @@ int dreameye_stop_capturing(maple_device_t *dev) {
 
     assert(dev != NULL);
 
-    de = (dreameye_state_ext_t *)dev->status;
+    de = dreameye_get_state_ext(dev);
 
     if(!de->is_capturing) {
         return MAPLE_EFAIL;
@@ -909,3 +919,61 @@ static int dreameye_attach(maple_driver_t *drv, maple_device_t *dev) {
     return 0;
 }
 #endif
+
+static dreameye_state_ext_t *ext_states[MAPLE_PORT_COUNT * MAPLE_UNIT_COUNT] = {0};
+
+static int get_device_index(maple_device_t *dev) {
+    return dev->port * MAPLE_UNIT_COUNT + dev->unit;
+}
+
+dreameye_state_ext_t *dreameye_get_state_ext(maple_device_t *dev) {
+    if (!dev) return NULL;
+    int idx = get_device_index(dev);
+    if (idx < 0 || idx >= MAPLE_PORT_COUNT * MAPLE_UNIT_COUNT) return NULL;
+
+    if (!ext_states[idx]) {
+        dreameye_init_state_ext(dev);
+    }
+
+    return ext_states[idx];
+}
+
+static int dreameye_init_state_ext(maple_device_t *dev) {
+    if (!dev) return -1;
+
+    int idx = get_device_index(dev);
+    if (idx < 0 || idx >= MAPLE_PORT_COUNT * MAPLE_UNIT_COUNT) return -1;
+
+    if (ext_states[idx]) {
+        return 0;
+    }
+
+    dreameye_state_ext_t *ext = (dreameye_state_ext_t *)malloc(sizeof(dreameye_state_ext_t));
+    if (!ext) return -1;
+
+    memset(ext, 0, sizeof(dreameye_state_ext_t));
+
+    dreameye_state_t *std_state = (dreameye_state_t *)dev->status;
+    if (std_state) {
+        ext->image_count = std_state->image_count;
+        ext->image_count_valid = std_state->image_count_valid;
+        ext->transfer_count = std_state->transfer_count;
+        ext->img_transferring = std_state->img_transferring;
+        ext->img_buf = std_state->img_buf;
+        ext->img_size = std_state->img_size;
+        ext->img_number = std_state->img_number;
+    }
+
+    ext_states[idx] = ext;
+    return 0;
+}
+
+void dreameye_cleanup_all_states(void) {
+    int i;
+    for (i = 0; i < MAPLE_PORT_COUNT * MAPLE_UNIT_COUNT; i++) {
+        if (ext_states[i]) {
+            free(ext_states[i]);
+            ext_states[i] = NULL;
+        }
+    }
+}

@@ -13,3 +13,4 @@ dreameye_preview_shutdown
 dreameye_start_capturing
 dreameye_stop_capturing
 dreameye_poll
+dreameye_get_state_ext
