@@ -225,18 +225,18 @@ int builtin_dreameye_cmd(int argc, char *argv[]) {
 	/* Erase option */
 	if(erase) {
 		
-		if(num < 2 || num > 33) {
+		if(num < 2 || (num > 33 && num != 0xFF)) {
 			ds_printf("DS_ERROR: Wrong image index: %d\n", num);
 			return CMD_ERROR;
 		}
 
-		ds_printf("DS_PROCESS: Erasing %s...\n", (num > 1 ? "image" : "all images"));
+		ds_printf("DS_PROCESS: Erasing %s...\n", (num != 0xFF ? "image" : "all images"));
 
-		err = dreameye_erase_image(dreameye, (num > 1 ? num : 0xFF), 1);
+		err = dreameye_erase_image(dreameye, num, 1);
 
 		if(err != MAPLE_EOK) {
 			
-			if(num > -1) {
+			if(num != 0xFF) {
 				ds_printf("DS_ERROR: Couldn't erase image at index: %d\n", num);
 			} else {
 				ds_printf("DS_ERROR: Couldn't erase all images\n");
