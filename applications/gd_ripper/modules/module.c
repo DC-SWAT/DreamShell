@@ -1,7 +1,8 @@
 /* DreamShell ##version##
 
    module.c - GD Ripper app module
-   Copyright (C)2014 megavolt85 
+   Copyright (C)2014 megavolt85
+   Copyright (C)2025 SWAT
 
 */
 
@@ -10,11 +11,15 @@
 
 DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
-#define SEC_BUF_SIZE 8
+#define SEC_BUF_SIZE 32
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type);
 static void* gd_ripper_thread(void *arg);
 static int gdfiles(char *dst_folder,char *dst_file,char *text);
+static int get_disc_status_and_type(int *status, int *disc_type);
+static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type);
+static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type);
+static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type);
 
 static struct self 
 {
@@ -296,45 +301,18 @@ void gd_ripper_CancelRip()
 	}
 }
 
-static void* gd_ripper_thread(void *arg)
+static int get_disc_status_and_type(int *status, int *disc_type)
 {
-	file_t fd;
-	CDROM_TOC toc ;
-	int status, disc_type ,cdcr ,start ,s_end ,nsec ,type ,tn ,session, terr = 0;
-	char dst_folder[NAME_MAX];
-	char dst_file[NAME_MAX];
-	char riplabel[64];
-	char text[NAME_MAX];
-	uint64 stoptimer, starttimer, riptime;
+	int cdcr;
 	
-	starttimer = timer_ms_gettime64 (); // timer
-	
-	cdrom_reinit();
-	
-	snprintf(text ,NAME_MAX,"%s", GUI_TextEntryGetText(self.gname));
-	
-	if(GUI_WidgetGetState(self.sd_c)) 
-	{
-		snprintf(dst_folder, NAME_MAX, "/sd/%s", text);
-	}
-	else if(GUI_WidgetGetState(self.hdd_c)) 
-	{
-		snprintf(dst_folder, NAME_MAX, "/ide/%s", text);
-	}
-	else if(GUI_WidgetGetState(self.net_c)) 
-	{
-		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
-	}
-
 getstatus:	
-	if((cdcr = cdrom_get_status(&status, &disc_type)) != ERR_OK) 
+	if((cdcr = cdrom_get_status(status, disc_type)) != ERR_OK) 
 	{
 		switch (cdcr)
 		{
 			case ERR_NO_DISC :
 				ds_printf("DS_ERROR: Disk not inserted\n");
-				reset_rip_state();
-				return NULL;
+				return CMD_ERROR;
 			case ERR_DISC_CHG :
 				cdrom_reinit();
 				goto getstatus;
@@ -349,42 +327,50 @@ getstatus:
 				goto getstatus;
 			default:
 				ds_printf("DS_ERROR: GD-rom error: %d\n", cdcr);
-				reset_rip_state();
-				return NULL;
+				return CMD_ERROR;
 		}
 	}
+	
+	return CMD_OK;
+}
+
+static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type)
+{
+	file_t fd;
+	CDROM_TOC toc;
+	int terr = 0;
 	
 	if(disc_type == CD_CDROM_XA)
 	{
 		ds_printf("DS_DEBUG: Processing CD-ROM XA disc\n");
 rname:
-		snprintf(dst_file,NAME_MAX, "%s.iso", dst_folder);
-		if ((fd=fs_open(dst_file , O_RDONLY)) != FILEHND_INVALID) 
+		snprintf(dst_file, NAME_MAX, "%s.iso", dst_folder);
+		if ((fd=fs_open(dst_file, O_RDONLY)) != FILEHND_INVALID) 
 		{
-			fs_close(fd); strcpy(dst_file,"\0"); 
-			strcat(dst_folder , "0"); 
-			goto rname ;
+			fs_close(fd); 
+			strcpy(dst_file, "\0"); 
+			strcat(dst_folder, "0"); 
+			goto rname;
 		} 
 		else 
 		{
-			disc_type = 1;
+			return 1;
 		}
 	} 
 	else if (disc_type == CD_GDROM)
 	{
 		ds_printf("DS_DEBUG: Processing GD-ROM disc\n");
 rname1:
-		if ((fd=fs_open (dst_folder , O_DIR)) != FILEHND_INVALID) 
+		if ((fd=fs_open(dst_folder, O_DIR)) != FILEHND_INVALID) 
 		{
 			fs_close(fd); 
-			strcat(dst_folder , "0"); 
-			goto rname1 ;
+			strcat(dst_folder, "0"); 
+			goto rname1;
 		} 
 		else 
 		{
-			strcpy(dst_file,"\0");
-			snprintf(dst_file,NAME_MAX,"%s", dst_folder); 
-			disc_type = 2; 
+			strcpy(dst_file, "\0");
+			snprintf(dst_file, NAME_MAX, "%s", dst_folder); 
 			fs_mkdir(dst_file);
 		}
 		
@@ -396,21 +382,59 @@ rname1:
 			{
 				ds_printf("DS_ERROR: Toc read error for gdlast\n");
 				fs_rmdir(dst_folder);
-				reset_rip_state();
-				return NULL; 
+				return CMD_ERROR;
 			}
 		}
 		
-		terr=0;
 		self.lastgdtrack = TOC_TRACK(toc.last);
+		return 2;
 	} 
 	else 
 	{
-		ds_printf("DS_ERROR: This is not game disk\nInserted %d disk\n",disc_type);
-		reset_rip_state();
-		return NULL;
+		ds_printf("DS_ERROR: This is not game disk\nInserted %d disk\n", disc_type);
+		return CMD_ERROR;
 	}
+}
 
+static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type)
+{
+	file_t fd;
+	dirent_t *dir;
+	
+	if (disc_type == 1) 
+	{
+		if(fs_unlink(dst_file) != 0) 
+			ds_printf("Error delete file: %s\n", dst_file);
+	}
+	else 
+	{
+		if ((fd=fs_open(dst_folder, O_DIR)) == FILEHND_INVALID) 
+		{
+			ds_printf("Error folder '%s' not found\n", dst_folder);
+			return CMD_ERROR;
+		}
+		
+		while ((dir = fs_readdir(fd)))
+		{
+			if (!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
+			strcpy(dst_file, "\0");
+			snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
+			fs_unlink(dst_file);
+		}
+		
+		fs_close(fd);
+		fs_rmdir(dst_folder);
+	}
+	
+	return CMD_OK;
+}
+
+static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type)
+{
+	CDROM_TOC toc;
+	int start, s_end, nsec, type, tn, session, terr = 0;
+	char riplabel[64];
+	
 	ds_printf("DS_DEBUG: Starting session loop, disc_type: %d\n", disc_type);
 	
 	for(session = 0; session < disc_type; session++) 
@@ -418,8 +442,7 @@ rname1:
 		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
 		{
 			ds_printf("DS_INFO: Ripping cancelled by user\n");
-			reset_rip_state();
-			return NULL;
+			return CMD_ERROR;
 		}
 		
 		cdrom_set_sector_size(2048);
@@ -428,8 +451,7 @@ rname1:
 			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
 			{
 				ds_printf("DS_INFO: Ripping cancelled by user\n");
-				reset_rip_state();
-				return NULL;
+				return CMD_ERROR;
 			}
 			
 			terr++; 
@@ -442,35 +464,8 @@ rname1:
 			if (terr > 10) 
 			{ 
 				ds_printf("DS_ERROR: Toc read error\n");
-				if (disc_type == 1) 
-				{
-					if(fs_unlink(dst_file) != 0) 
-					ds_printf("Error delete file: %s\n" ,dst_file);
-				}
-				else 
-				{
-					if ((fd=fs_open (dst_folder , O_DIR)) == FILEHND_INVALID) 
-					{
-						ds_printf("Error folder '%s' not found\n" ,dst_folder);
-						reset_rip_state();
-						return NULL;
-					}
-					
-					dirent_t *dir;
-					
-					while ((dir = fs_readdir(fd)))
-					{
-						if (!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
-						strcpy(dst_file,"\0");
-						snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
-						fs_unlink(dst_file);
-					}
-					
-					fs_close(fd);
-					fs_rmdir(dst_folder);
-				}
-				reset_rip_state();
-				return NULL; 
+				cleanup_failed_rip(dst_folder, dst_file, disc_type);
+				return CMD_ERROR;
 			}
 		}
 		
@@ -484,8 +479,7 @@ rname1:
 			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
 			{
 				ds_printf("DS_INFO: Ripping cancelled by user\n");
-				reset_rip_state();
-				return NULL;
+				return CMD_ERROR;
 			}
 			
 			if (disc_type == 1) tn = last;
@@ -494,32 +488,32 @@ rname1:
 			
 			if (disc_type == 2) 
 			{
-				strcpy(dst_file,"\0"); 
-				snprintf(dst_file,NAME_MAX,"%s/track%02d.%s", dst_folder, tn, (type == 4 ? "iso" : "raw"));
+				strcpy(dst_file, "\0"); 
+				snprintf(dst_file, NAME_MAX, "%s/track%02d.%s", dst_folder, tn, (type == 4 ? "iso" : "raw"));
 			}
 			
 			start = TOC_LBA(toc.entry[tn-1]);
 			s_end = TOC_LBA((tn == last ? toc.leadout_sector : toc.entry[tn]));
 			nsec = s_end - start;
 			
-			if(disc_type == 1 && type == 4) nsec -= 2 ;
+			if(disc_type == 1 && type == 4) nsec -= 2;
 			else if(session==1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
 			else if(session==0 && type == 4) nsec -= 150;
 			
 			if(disc_type == 2 && session == 0) 
 			{
-				strcpy(riplabel,"\0"); 
-				sprintf(riplabel,"Track %d of %d\n",tn ,self.lastgdtrack );
+				strcpy(riplabel, "\0"); 
+				sprintf(riplabel, "Track %d of %d\n", tn, self.lastgdtrack);
 			}
 			else if(disc_type == 2 && session == 1 && tn != self.lastgdtrack) 
 			{
-				strcpy(riplabel,"\0"); 
-				sprintf(riplabel,"Track %d of %d\n",tn ,self.lastgdtrack );
+				strcpy(riplabel, "\0"); 
+				sprintf(riplabel, "Track %d of %d\n", tn, self.lastgdtrack);
 			} 
 			else 
 			{
-				strcpy(riplabel,"\0"); 
-				sprintf(riplabel,"Last track\n");
+				strcpy(riplabel, "\0"); 
+				sprintf(riplabel, "Last track\n");
 			}
 			
 			GUI_LabelSetText(self.track_label, riplabel);
@@ -527,42 +521,63 @@ rname1:
 			if (rip_sec(tn, start, nsec, type, dst_file, disc_type) != CMD_OK) 
 			{
 				GUI_LabelSetText(self.track_label, " ");
-				stoptimer = timer_ms_gettime64 (); // timer
 				GUI_ProgressBarSetPosition(self.pbar, 0.0);
 				cdrom_spin_down();
-				
-				if (disc_type == 1) 
-				{
-					if(fs_unlink(dst_file) != 0) ds_printf("Error delete file: %s\n" ,dst_file);
-				} 
-				else 
-				{
-					if((fd=fs_open (dst_folder , O_DIR)) == FILEHND_INVALID) 
-					{
-						ds_printf("Error folder '%s' not found\n" ,dst_folder);
-						self.rip_active = 0;
-						GUI_WidgetSetEnabled(self.start_btn, 1);
-						GUI_WidgetSetEnabled(self.cancel_btn, 0);
-						return NULL;
-					}
-					
-					dirent_t *dir;
-					while ((dir = fs_readdir(fd)))
-					{
-						if (!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
-						strcpy(dst_file,"\0");
-						snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
-						fs_unlink(dst_file);
-										}
-					fs_close(fd);
-					fs_rmdir(dst_folder);
-				}
-				reset_rip_state();
-				return NULL; 
+				cleanup_failed_rip(dst_folder, dst_file, disc_type);
+				return CMD_ERROR;
 			}
 			GUI_LabelSetText(self.track_label, " ");
 			GUI_ProgressBarSetPosition(self.pbar, 0.0);
 		}
+	}
+	
+	return CMD_OK;
+}
+
+static void* gd_ripper_thread(void *arg)
+{
+	int status, disc_type;
+	char dst_folder[NAME_MAX];
+	char dst_file[NAME_MAX];
+	char text[NAME_MAX];
+	uint64 stoptimer, starttimer, riptime;
+	
+	starttimer = timer_ms_gettime64();
+	
+	cdrom_reinit();
+	
+	snprintf(text, NAME_MAX, "%s", GUI_TextEntryGetText(self.gname));
+	
+	if(GUI_WidgetGetState(self.sd_c)) 
+	{
+		snprintf(dst_folder, NAME_MAX, "/sd/%s", text);
+	}
+	else if(GUI_WidgetGetState(self.hdd_c)) 
+	{
+		snprintf(dst_folder, NAME_MAX, "/ide/%s", text);
+	}
+	else if(GUI_WidgetGetState(self.net_c)) 
+	{
+		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
+	}
+
+	if(get_disc_status_and_type(&status, &disc_type) != CMD_OK)
+	{
+		reset_rip_state();
+		return NULL;
+	}
+	
+	disc_type = prepare_destination_paths(dst_folder, dst_file, text, disc_type);
+	if(disc_type == CMD_ERROR)
+	{
+		reset_rip_state();
+		return NULL;
+	}
+
+	if(process_sessions_and_tracks(dst_folder, dst_file, disc_type) != CMD_OK)
+	{
+		reset_rip_state();
+		return NULL;
 	}
 	
 	ds_printf("DS_DEBUG: All sessions completed\n");
@@ -575,26 +590,7 @@ rname1:
 		if (gdfiles(dst_folder, dst_file, text) != CMD_OK)
 		{
 			cdrom_spin_down();
-			
-			if ((fd=fs_open (dst_folder , O_DIR)) == FILEHND_INVALID)
-			{
-				ds_printf("Error folder '%s' not found\n" ,dst_folder);
-				reset_rip_state();
-				return NULL;
-			}
-			
-			dirent_t *dir;
-			
-			while ((dir = fs_readdir(fd)))
-			{
-				if(!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
-				
-				strcpy(dst_file,"\0");
-				snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
-				fs_unlink(dst_file);
-			}
-			fs_close(fd);
-			fs_rmdir(dst_folder);
+			cleanup_failed_rip(dst_folder, dst_file, disc_type);
 			reset_rip_state();
 			return NULL;	
 		}
@@ -602,11 +598,11 @@ rname1:
 
 	GUI_ProgressBarSetPosition(self.pbar, 0.0);
 	cdrom_spin_down();
-	stoptimer = timer_ms_gettime64 (); // timer
+	stoptimer = timer_ms_gettime64();
 	riptime = stoptimer - starttimer;
-	int ripmin = riptime / 60000 ;
-	int ripsec = riptime % 60 ;
-	ds_printf("DS_OK: End ripping. Save at %d:%d\n",ripmin,ripsec);
+	int ripmin = riptime / 60000;
+	int ripsec = riptime % 60;
+	ds_printf("DS_OK: End ripping. Save at %d:%d\n", ripmin, ripsec);
 	reset_rip_state();
 	return NULL;
 }
@@ -699,7 +695,6 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 			percent_last = percent;
 			GUI_ProgressBarSetPosition(self.pbar, percent);
 		}
-		
 	}
 
 	free(buffer);

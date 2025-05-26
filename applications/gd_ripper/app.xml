@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="GD Ripper" version="1.0.2" icon="images/icon.png">
+<app name="GD Ripper" version="1.1.0" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_gd_ripper.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="16" name="arial" />
