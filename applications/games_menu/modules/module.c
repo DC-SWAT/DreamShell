@@ -108,14 +108,14 @@ static struct
 	kthread_t *show_cover_thread;
 } self;
 
-
 static void* ShowCoverThread(void *params)
 {
 	int game_index = (int)params;
 	if (game_index >= 0)
 	{
 		srand(time(NULL));
-		uint time_elapsed = 0;
+		uint64_t start_time = 0;
+		uint64_t end_time = 0;
 		if (self.img_cover_game != NULL)
 		{
 			self.show_cover_game = false;
@@ -132,11 +132,12 @@ static void* ShowCoverThread(void *params)
 				TSU_DrawableAnimAdd((Drawable *)self.img_cover_game, (Animation *)self.fadeout_cover_animation);
 			}
 
-			const uint max_time = 200;			
-			while (!self.game_changed && menu_data.menu_type == MT_PLANE_TEXT && time_elapsed < max_time)
+			const uint32_t max_time = 200;
+			end_time = start_time = timer_ms_gettime64();
+			while (!self.game_changed && menu_data.menu_type == MT_PLANE_TEXT && (end_time - start_time) <= max_time)
 			{
-				thd_sleep(50);
-				time_elapsed += 50;
+				thd_pass();
+				end_time = timer_ms_gettime64();
 			}
 
 			if (self.game_changed || menu_data.menu_type != MT_PLANE_TEXT)
@@ -154,11 +155,14 @@ static void* ShowCoverThread(void *params)
 			TSU_TextureDestroy(&self.texture_cover_game);
 		}
 
-		const uint max_time = 400;
-		while (!self.game_changed && menu_data.menu_type == MT_PLANE_TEXT && time_elapsed < max_time)
+		const uint32_t max_time = 400;		
+		if (start_time == 0)
+			end_time = start_time = timer_ms_gettime64();
+
+		while (!self.game_changed && menu_data.menu_type == MT_PLANE_TEXT && (end_time - start_time) <= max_time)
 		{
-			thd_sleep(50);
-			time_elapsed += 50;
+			thd_pass();
+			end_time = timer_ms_gettime64();
 		}
 
 		if (self.game_changed || menu_data.menu_type != MT_PLANE_TEXT)
