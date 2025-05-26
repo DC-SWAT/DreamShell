@@ -5,6 +5,7 @@ gd_ripper_Init
 gd_ripper_toggleSavedevice
 gd_ripper_Gamename
 gd_ripper_StartRip
+gd_ripper_CancelRip
 gd_ripper_Delname
 gd_ripper_ipbin_name
 gd_ripper_Number_read

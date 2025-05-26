@@ -21,6 +21,8 @@ void gd_ripper_Init(App_t *app, const char* fileName);
 
 void gd_ripper_StartRip();
 
+void gd_ripper_CancelRip();
+
 int gdfiles(char *dst_folder,char *dst_file,char *text);
 
 void gd_ripper_Exit();

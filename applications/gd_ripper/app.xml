@@ -151,7 +151,19 @@
 			pressed="iStart"
 			disabled="iStart"
 			x="10" y="405" width="70" height="70"
-			onclick="export:gd_ripper_StartRip()" />
+			onclick="export:gd_ripper_StartRip()"
+			name="start_btn" />
+
+		<input type="button"
+			normal="bNorm"
+			highlight="bNormh"
+			pressed="bNorm"
+			disabled="bNorm"
+			x="90" y="425" width="80" height="30"
+			onclick="export:gd_ripper_CancelRip()"
+			name="cancel_btn">
+			<label font="arial" color="#000000" text="Cancel" align="center" />
+		</input>
 
 		<input type="button"
 			normal="iExitNorm"

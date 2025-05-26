@@ -13,6 +13,7 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 #define SEC_BUF_SIZE 8
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type);
+static void* gd_ripper_thread(void *arg);
 static int gdfiles(char *dst_folder,char *dst_file,char *text);
 
 static struct self 
@@ -27,14 +28,22 @@ static struct self
 	GUI_Widget *track_label;
 	GUI_Widget *read_error;
 	GUI_Widget *num_read;
+	GUI_Widget *start_btn;
+	GUI_Widget *cancel_btn;
 	int lastgdtrack;
+	volatile int rip_active;
 } self;
-
-static uint8_t rip_cancel = 0;
 
 static void cancel_callback(void)
 {
-	rip_cancel = 1;
+	self.rip_active = 0;
+}
+
+static void reset_rip_state(void)
+{
+	self.rip_active = 0;
+	GUI_WidgetSetEnabled(self.start_btn, 1);
+	GUI_WidgetSetEnabled(self.cancel_btn, 0);
 }
 
 void gd_ripper_toggleSavedevice(GUI_Widget *widget)
@@ -79,7 +88,6 @@ void gd_ripper_Gamename()
 	}
 	GUI_TextEntrySetText(self.gname, text);
 	//ds_printf("Image name - %s\n",text);
-	
 }
 
 void gd_ripper_Delname(GUI_Widget *widget)
@@ -91,7 +99,8 @@ void gd_ripper_ipbin_name()
 {
 	CDROM_TOC toc ;
 	int status = 0, disc_type = 0, cdcr = 0, x = 0;
-	char pbuff[2048] , text[NAME_MAX];
+	uint8 *pbuff;
+	char text[NAME_MAX];
 	uint32 lba;
 
 	cdrom_set_sector_size(2048);
@@ -107,36 +116,49 @@ void gd_ripper_ipbin_name()
 				return;
 		}
 	}
+
+	pbuff = (uint8 *)memalign(32, 2048);
+
+	if(!pbuff)
+	{
+		ds_printf("DS_ERROR: Failed to allocate buffer\n");
+		return;
+	}
 	
 	if (disc_type == CD_CDROM_XA) 
 	{
 		if(cdrom_read_toc(&toc, 0) != CMD_OK) 
 		{ 
 			ds_printf("DS_ERROR: Toc read error\n"); 
+			free(pbuff);
 			return; 
 		}
 		if(!(lba = cdrom_locate_data_track(&toc))) 
 		{
 			ds_printf("DS_ERROR: Error locate data track\n"); 
+			free(pbuff);
 			return;
 		}
-		if (cdrom_read_sectors(pbuff,lba , 1)) 
+		if (cdrom_read_sectors_ex(pbuff, lba, 1, CDROM_READ_DMA)) 
 		{
 			ds_printf("DS_ERROR: CD read error %d\n",lba); 
+			free(pbuff);
 			return;
 		}
 	} 
 	else if (disc_type == CD_GDROM) 
 	{
-		if (cdrom_read_sectors(pbuff,45150 , 1)) 
+		if (cdrom_read_sectors_ex(pbuff, 45150, 1, CDROM_READ_DMA)) 
 		{
 			ds_printf("DS_ERROR: GD read error\n"); 
+			free(pbuff);
 			return;
 		}
 	}
 	else 
 	{
-		ds_printf("DS_ERROR: not game disc\n");
+		ds_printf("DS_ERROR: not game disc\nInserted %d disk\n",disc_type);
+		free(pbuff);
 		return;
 	}
 	
@@ -184,6 +206,7 @@ void gd_ripper_ipbin_name()
 		GUI_TextEntrySetText(self.gname, text);
 	}
 	//ds_printf("Image name - %s\n",text);
+	free(pbuff);
 }
 
 void gd_ripper_Init(App_t *app, const char* fileName) 
@@ -203,6 +226,8 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 		self.track_label = APP_GET_WIDGET("track-label");
 		self.read_error = APP_GET_WIDGET("read_error");
 		self.num_read = APP_GET_WIDGET("num-read");
+		self.start_btn = APP_GET_WIDGET("start_btn");
+		self.cancel_btn = APP_GET_WIDGET("cancel_btn");
 		
 		if(!DirExists("/pc")) GUI_WidgetSetEnabled(self.net_c, 0);
 		else GUI_WidgetSetState(self.net_c, 1);
@@ -228,6 +253,8 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 			GUI_WidgetSetState(self.hdd_c, 1);
 		}
 		
+		GUI_WidgetSetEnabled(self.cancel_btn, 0);
+		
 		gd_ripper_ipbin_name();
 		
 		cont_btn_callback(0, CONT_X, (cont_btn_callback_t)cancel_callback);
@@ -242,6 +269,35 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 
 void gd_ripper_StartRip() 
 {
+	if(self.app->thd)
+	{
+		self.rip_active = 0;
+		thd_join(self.app->thd, NULL);
+		self.app->thd = NULL;
+	}
+
+	self.rip_active = 1;
+
+	GUI_WidgetSetEnabled(self.start_btn, 0);
+	GUI_WidgetSetEnabled(self.cancel_btn, 1);
+
+	self.app->thd = thd_create(0, gd_ripper_thread, NULL);
+}
+
+void gd_ripper_CancelRip()
+{
+	self.rip_active = 0;
+
+	if(self.app->thd)
+	{
+		thd_join(self.app->thd, NULL);
+		self.app->thd = NULL;
+		ds_printf("DS_INFO: Ripping cancelled\n");
+	}
+}
+
+static void* gd_ripper_thread(void *arg)
+{
 	file_t fd;
 	CDROM_TOC toc ;
 	int status, disc_type ,cdcr ,start ,s_end ,nsec ,type ,tn ,session, terr = 0;
@@ -250,8 +306,6 @@ void gd_ripper_StartRip()
 	char riplabel[64];
 	char text[NAME_MAX];
 	uint64 stoptimer, starttimer, riptime;
-	
-	rip_cancel = 0;
 	
 	starttimer = timer_ms_gettime64 (); // timer
 	
@@ -271,7 +325,7 @@ void gd_ripper_StartRip()
 	{
 		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
 	}
-//ds_printf("Dst file1 %s\n" ,dst_folder);	
+
 getstatus:	
 	if((cdcr = cdrom_get_status(&status, &disc_type)) != ERR_OK) 
 	{
@@ -279,7 +333,8 @@ getstatus:
 		{
 			case ERR_NO_DISC :
 				ds_printf("DS_ERROR: Disk not inserted\n");
-				return;
+				reset_rip_state();
+				return NULL;
 			case ERR_DISC_CHG :
 				cdrom_reinit();
 				goto getstatus;
@@ -293,14 +348,16 @@ getstatus:
 				thd_sleep(200);
 				goto getstatus;
 			default:
-				ds_printf("DS_ERROR: GD-rom error\n");
-				return;
+				ds_printf("DS_ERROR: GD-rom error: %d\n", cdcr);
+				reset_rip_state();
+				return NULL;
 		}
 	}
 	
 	if(disc_type == CD_CDROM_XA)
 	{
-	rname:
+		ds_printf("DS_DEBUG: Processing CD-ROM XA disc\n");
+rname:
 		snprintf(dst_file,NAME_MAX, "%s.iso", dst_folder);
 		if ((fd=fs_open(dst_file , O_RDONLY)) != FILEHND_INVALID) 
 		{
@@ -315,7 +372,8 @@ getstatus:
 	} 
 	else if (disc_type == CD_GDROM)
 	{
-	rname1:
+		ds_printf("DS_DEBUG: Processing GD-ROM disc\n");
+rname1:
 		if ((fd=fs_open (dst_folder , O_DIR)) != FILEHND_INVALID) 
 		{
 			fs_close(fd); 
@@ -337,8 +395,9 @@ getstatus:
 			if (terr > 100)
 			{
 				ds_printf("DS_ERROR: Toc read error for gdlast\n");
-				fs_rmdir(dst_folder); 
-				return; 
+				fs_rmdir(dst_folder);
+				reset_rip_state();
+				return NULL; 
 			}
 		}
 		
@@ -348,17 +407,36 @@ getstatus:
 	else 
 	{
 		ds_printf("DS_ERROR: This is not game disk\nInserted %d disk\n",disc_type);
-		return;
+		reset_rip_state();
+		return NULL;
 	}
-//ds_printf("Dst file %s\n" ,dst_file);
+
+	ds_printf("DS_DEBUG: Starting session loop, disc_type: %d\n", disc_type);
 	
 	for(session = 0; session < disc_type; session++) 
 	{
+		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
+		{
+			ds_printf("DS_INFO: Ripping cancelled by user\n");
+			reset_rip_state();
+			return NULL;
+		}
+		
 		cdrom_set_sector_size(2048);
 		while(cdrom_read_toc(&toc, session) != CMD_OK) 
 		{
+			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
+			{
+				ds_printf("DS_INFO: Ripping cancelled by user\n");
+				reset_rip_state();
+				return NULL;
+			}
+			
 			terr++; 
-			if(terr==5) cdrom_reinit(); 
+			if(terr==5) 
+			{
+				cdrom_reinit(); 
+			}
 			thd_sleep(500);
 			
 			if (terr > 10) 
@@ -373,8 +451,9 @@ getstatus:
 				{
 					if ((fd=fs_open (dst_folder , O_DIR)) == FILEHND_INVALID) 
 					{
-						ds_printf("Error folder '%s' not found\n" ,dst_folder); 
-						return;
+						ds_printf("Error folder '%s' not found\n" ,dst_folder);
+						reset_rip_state();
+						return NULL;
 					}
 					
 					dirent_t *dir;
@@ -390,7 +469,8 @@ getstatus:
 					fs_close(fd);
 					fs_rmdir(dst_folder);
 				}
-				return; 
+				reset_rip_state();
+				return NULL; 
 			}
 		}
 		
@@ -401,6 +481,13 @@ getstatus:
 		
 		for (tn = first; tn <= last; tn++ ) 
 		{
+			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
+			{
+				ds_printf("DS_INFO: Ripping cancelled by user\n");
+				reset_rip_state();
+				return NULL;
+			}
+			
 			if (disc_type == 1) tn = last;
 			
 			type = TOC_CTRL(toc.entry[tn-1]);
@@ -452,8 +539,11 @@ getstatus:
 				{
 					if((fd=fs_open (dst_folder , O_DIR)) == FILEHND_INVALID) 
 					{
-						ds_printf("Error folder '%s' not found\n" ,dst_folder); 
-						return;
+						ds_printf("Error folder '%s' not found\n" ,dst_folder);
+						self.rip_active = 0;
+						GUI_WidgetSetEnabled(self.start_btn, 1);
+						GUI_WidgetSetEnabled(self.cancel_btn, 0);
+						return NULL;
 					}
 					
 					dirent_t *dir;
@@ -463,30 +553,34 @@ getstatus:
 						strcpy(dst_file,"\0");
 						snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
 						fs_unlink(dst_file);
-					}
+										}
 					fs_close(fd);
 					fs_rmdir(dst_folder);
 				}
-				return ;
+				reset_rip_state();
+				return NULL; 
 			}
 			GUI_LabelSetText(self.track_label, " ");
 			GUI_ProgressBarSetPosition(self.pbar, 0.0);
 		}
 	}
 	
+	ds_printf("DS_DEBUG: All sessions completed\n");
 	GUI_LabelSetText(self.track_label, " ");
 	GUI_WidgetMarkChanged(self.app->body);
 	
 	if (disc_type == 2)
 	{
+		ds_printf("DS_DEBUG: Creating GDI files\n");
 		if (gdfiles(dst_folder, dst_file, text) != CMD_OK)
 		{
 			cdrom_spin_down();
 			
 			if ((fd=fs_open (dst_folder , O_DIR)) == FILEHND_INVALID)
 			{
-				ds_printf("Error folder '%s' not found\n" ,dst_folder); 
-				return;
+				ds_printf("Error folder '%s' not found\n" ,dst_folder);
+				reset_rip_state();
+				return NULL;
 			}
 			
 			dirent_t *dir;
@@ -501,12 +595,11 @@ getstatus:
 			}
 			fs_close(fd);
 			fs_rmdir(dst_folder);
-			return;	
+			reset_rip_state();
+			return NULL;	
 		}
-		
-		
 	}
-	
+
 	GUI_ProgressBarSetPosition(self.pbar, 0.0);
 	cdrom_spin_down();
 	stoptimer = timer_ms_gettime64 (); // timer
@@ -514,27 +607,25 @@ getstatus:
 	int ripmin = riptime / 60000 ;
 	int ripsec = riptime % 60 ;
 	ds_printf("DS_OK: End ripping. Save at %d:%d\n",ripmin,ripsec);
+	reset_rip_state();
+	return NULL;
 }
 
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type)
 {
-
 	double percent,percent_last = 0.0;
-	maple_device_t *cont;
-	cont_state_t *state;
 	file_t hnd;
-	int secbyte = (type == 4 ? 2048 : 2352) , i , count_old=count, bad=0, cdstat, readi;
+	int secbyte = (type == 4 ? 2048 : 2352) , count_old=count, bad=0, cdstat, readi;
 	uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
-	
-	GUI_WidgetMarkChanged(self.app->body);
-//	ds_printf("Track %d		First %d	Count %d	Type %d\n",tn,first,count,type);
-/*	if (secbyte == 2048) cdrom_set_sector_size (secbyte);
-	else _cdrom_reinit (1);
-*/
+
+	if(!buffer)
+	{
+		ds_printf("DS_ERROR: Failed to allocate buffer\n");
+		return CMD_ERROR;
+	}
+
 	cdrom_set_sector_size(secbyte);
-	
-	thd_sleep(200);
 	
 	if ((hnd = fs_open(dst_file,O_WRONLY | O_TRUNC | O_CREAT)) == FILEHND_INVALID)
 	{
@@ -544,134 +635,77 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 		return CMD_ERROR;
 	}
 	
-	LockVideo();
-	
 	while(count)
 	{
-	
-		if(rip_cancel == 1) 
+		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
 		{
-			SDL_WarpMouse(60, 400);
+			free(buffer);
+			fs_close(hnd);
 			return CMD_ERROR;
 		}
 		
 		int nsects = count > SEC_BUF_SIZE ? SEC_BUF_SIZE : count;
 		count -= nsects;
 		
+		cdstat = cdrom_read_sectors_ex(buffer, first, nsects, CDROM_READ_DMA);
 		
-		while((cdstat=cdrom_read_sectors(buffer, first, nsects)) != ERR_OK ) 
+		while(cdstat != ERR_OK) 
 		{
 			if (atoi(GUI_TextEntryGetText(self.num_read)) == 0) break;
-			readi++ ;
-			if (readi > 5) break ;
+			readi++;
+			
+			if (readi > 5) break;
+			
+			if (readi == 3) {
+				cdrom_reinit();
+				cdrom_set_sector_size(secbyte);
+			}
+			
 			thd_sleep(200);
+			
+			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
+			{
+				free(buffer);
+				fs_close(hnd);
+				return CMD_ERROR;
+			}
+			
+			cdstat = cdrom_read_sectors_ex(buffer, first, nsects, CDROM_READ_DMA);
 		}
 		
 		readi = 0;
 		
 		if (cdstat != ERR_OK) 
 		{
-			if (!GUI_WidgetGetState(self.bad)) 
-			{
-				UnlockVideo();
-				GUI_ProgressBarSetPosition(self.read_error, 1.0);
-				for(;;) 
-				{
-					cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
-					
-					if(!cont) continue;
-					state = (cont_state_t *)maple_dev_status(cont);
-					
-					if(!state) continue;
-					
-					if(state->buttons & CONT_A) 
-					{
-						GUI_ProgressBarSetPosition(self.read_error, 0.0);
-						GUI_WidgetMarkChanged(self.app->body); 
-						ds_printf("DS_ERROR: Can't read sector %ld\n", first); 
-						free(buffer); 
-						fs_close(hnd); 
-						return CMD_ERROR;
-					} 
-					else if(state->buttons & CONT_B) 
-					{
-						GUI_ProgressBarSetPosition(self.read_error, 0.0);
-						GUI_WidgetMarkChanged(self.app->body); 
-						break;
-					} 
-					else if(state->buttons & CONT_Y) 
-					{
-						GUI_ProgressBarSetPosition(self.read_error, 0.0); 
-						GUI_WidgetSetState(self.bad, 1);
-						GUI_WidgetMarkChanged(self.app->body); 
-						break;
-					}
-				}
-			}
-			// Ошибка, попробуем по одному
-			uint8 *pbuffer = buffer;
-			LockVideo();
-			for(i = 0; i < nsects; i++) 
-			{
-				
-				while((cdstat=cdrom_read_sectors(pbuffer, first, 1)) != ERR_OK ) 
-				{
-					readi++ ;
-					if (readi > atoi(GUI_TextEntryGetText(self.num_read))) break ;
-					if (readi == 1 || readi == 6 || readi == 11 || readi == 16 || readi == 21 || readi == 26 || readi == 31 || readi == 36 || readi == 41 || readi == 46) cdrom_reinit();
-					thd_sleep(200);
-				}
-				readi = 0;
-				
-				if (cdstat != ERR_OK) 
-				{
-					// Ошибка, заполним нулями и игнорируем
-					UnlockVideo();
-					cdrom_reinit();
-					memset(pbuffer, 0, secbyte);
-					bad++;
-					ds_printf("DS_ERROR: Can't read sector %ld\n", first);
-					LockVideo();
-				}
-			
-				pbuffer += secbyte;
-				first++;
-			}
-		
-		} 
-		else 
-		{
-			// Все ок, идем дальше
-			first += nsects;
+			memset(buffer, 0, nsects * secbyte);
+			bad++;
+			ds_printf("DS_ERROR: Can't read sector %ld\n", first);
 		}
-	
+		
+		first += nsects;
+		
 		if(fs_write(hnd, buffer, nsects * secbyte) < 0) 
 		{
-			// Ошибка записи, печально, прерываем процесс
-			UnlockVideo();
+			ds_printf("DS_ERROR: Write error to file\n");
 			free(buffer);
 			fs_close(hnd);
 			return CMD_ERROR;
 		}
 		
-		UnlockVideo();
 		percent = 1-(float)(count) / count_old;
 		
 		if ((percent = ((int)(percent*100 + 0.5))/100.0) > percent_last) 
 		{
 			percent_last = percent;
 			GUI_ProgressBarSetPosition(self.pbar, percent);
-			LockVideo();
 		}
+		
 	}
 
-	UnlockVideo();
 	free(buffer);
 	fs_close(hnd);
-	ds_printf("%d Bad sectors on track\n", bad);
 	return CMD_OK;
 }
-
 
 int gdfiles(char *dst_folder,char *dst_file,char *text)
 {
@@ -768,6 +802,16 @@ int gdfiles(char *dst_folder,char *dst_file,char *text)
 
 void gd_ripper_Exit() 
 {
+	if(self.rip_active)
+	{
+		self.rip_active = 0;
+		if(self.app->thd)
+		{
+			thd_join(self.app->thd, NULL);
+			self.app->thd = NULL;
+		}
+	}
+	
 	cdrom_spin_down();
 }
 
