@@ -360,13 +360,15 @@ void *PlayCDDAThread(void *params)
 	if (game_index >= 0)
 	{
 		const char *full_path_game = GetFullGamePathByIndex(game_index);
-		const uint max_time = 2000;
-		uint time_elapsed = 0;
-
-		while (!menu_data.cdda_game_changed && time_elapsed < max_time)
+		const uint32_t max_time = 2;
+		uint32_t start_time = 0;
+		uint32_t end_time = 0;
+		timer_ms_gettime(&start_time, NULL);
+		end_time = start_time;
+		while (!menu_data.cdda_game_changed && (end_time - start_time) <= max_time)
 		{
-			thd_sleep(50);
-			time_elapsed += 50;
+			thd_pass();
+			timer_ms_gettime(&end_time, NULL);
 		}
 
 		if (!menu_data.cdda_game_changed)
@@ -377,10 +379,7 @@ void *PlayCDDAThread(void *params)
 				{
 					size_t track_size = 0;
 					char *track_file_path = (char *)malloc(NAME_MAX);
-					srand(time(NULL));
-
-					uint32 start_time = 0;
-					uint32 end_time = 0;
+					srand(time(NULL));					
 					timer_ms_gettime(&start_time, NULL);
 
 					do
