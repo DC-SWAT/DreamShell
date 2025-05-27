@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="GD Ripper" version="1.1.0" icon="images/icon.png">
+<app name="GD Ripper" version="1.5.0" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_gd_ripper.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="16" name="arial" />
@@ -44,6 +44,14 @@
 		<progressbar width="320" height="97" x="166" y="11" name="progress_bar" pos="0.0" pimage="images/sega.png" />
 		<progressbar width="320" height="120" x="160" y="160" name="read_error" pos="0.0" pimage="images/readerror.png" />
 		<label width="160" height="90" y="25" font="m23" color="#8ccf2c" name="track-label" text=" " />
+
+		<panel x="490" y="20" width="140" height="25">
+			<label width="140" height="20" font="arial" color="#000000" name="speed-label" text=" " align="left" />
+		</panel>
+
+		<panel x="490" y="50" width="140" height="25">
+			<label width="140" height="20" font="arial" color="#000000" name="time-label" text=" " align="left" />
+		</panel>
 
 		<panel x="40" y="115" width="360" height="80">
 			<label height="25" font="arial" color="#000000" text="Enter name image:" align="left" />

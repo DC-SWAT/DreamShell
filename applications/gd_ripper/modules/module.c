@@ -8,6 +8,7 @@
 
 #include "ds.h"
 #include "isofs/isofs.h"
+#include <stdint.h>
 
 DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
@@ -20,6 +21,18 @@ static int get_disc_status_and_type(int *status, int *disc_type);
 static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type);
 static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type);
+
+typedef struct {
+    int track_num;
+    int start_lba;
+    int sector_count;
+    int type;
+    char filename[NAME_MAX];
+} track_info_t;
+
+static int get_track_info(int session, int disc_type, track_info_t *tracks, int *track_count);
+static int calculate_total_sectors(int disc_type);
+static void update_speed_and_time_display(void);
 
 static struct self 
 {
@@ -35,8 +48,13 @@ static struct self
 	GUI_Widget *num_read;
 	GUI_Widget *start_btn;
 	GUI_Widget *cancel_btn;
+	GUI_Widget *speed_label;
+	GUI_Widget *time_label;
 	int lastgdtrack;
 	volatile int rip_active;
+	uint64_t start_time;
+	uint64_t total_sectors;
+	uint64_t processed_sectors;
 } self;
 
 static void cancel_callback(void)
@@ -49,6 +67,13 @@ static void reset_rip_state(void)
 	self.rip_active = 0;
 	GUI_WidgetSetEnabled(self.start_btn, 1);
 	GUI_WidgetSetEnabled(self.cancel_btn, 0);
+	GUI_LabelSetText(self.speed_label, " ");
+	GUI_LabelSetText(self.time_label, " ");
+	GUI_LabelSetText(self.track_label, " ");
+	GUI_ProgressBarSetPosition(self.pbar, 0.0);
+	self.start_time = 0;
+	self.total_sectors = 0;
+	self.processed_sectors = 0;
 }
 
 void gd_ripper_toggleSavedevice(GUI_Widget *widget)
@@ -233,6 +258,8 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 		self.num_read = APP_GET_WIDGET("num-read");
 		self.start_btn = APP_GET_WIDGET("start_btn");
 		self.cancel_btn = APP_GET_WIDGET("cancel_btn");
+		self.speed_label = APP_GET_WIDGET("speed-label");
+		self.time_label = APP_GET_WIDGET("time-label");
 		
 		if(!DirExists("/pc")) GUI_WidgetSetEnabled(self.net_c, 0);
 		else GUI_WidgetSetState(self.net_c, 1);
@@ -285,12 +312,17 @@ void gd_ripper_StartRip()
 
 	GUI_WidgetSetEnabled(self.start_btn, 0);
 	GUI_WidgetSetEnabled(self.cancel_btn, 1);
+	
+	GUI_LabelSetText(self.track_label, "Starting...");
+	GUI_LabelSetText(self.speed_label, "Preparing...");
+	GUI_LabelSetText(self.time_label, "Please wait");
 
 	self.app->thd = thd_create(0, gd_ripper_thread, NULL);
 }
 
 void gd_ripper_CancelRip()
 {
+	ds_printf("DS_PROCESS: Cancelling ripping\n");
 	self.rip_active = 0;
 
 	if(self.app->thd)
@@ -299,6 +331,9 @@ void gd_ripper_CancelRip()
 		self.app->thd = NULL;
 		ds_printf("DS_INFO: Ripping cancelled\n");
 	}
+	
+	cdrom_spin_down();
+	reset_rip_state();
 }
 
 static int get_disc_status_and_type(int *status, int *disc_type)
@@ -376,14 +411,26 @@ static int prepare_destination_paths(char *dst_folder, char *dst_file, char *tex
 
 		while(cdrom_read_toc(&toc, 1) != ERR_OK) 
 		{ 
-			terr++;
-			cdrom_reinit();
-			if (terr > 100)
-			{
-				ds_printf("DS_ERROR: Toc read error for gdlast\n");
+			if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
+				ds_printf("DS_INFO: Destination preparation cancelled\n");
 				fs_rmdir(dst_folder);
 				return CMD_ERROR;
 			}
+			
+			terr++;
+			if (terr == 5) {
+				ds_printf("DS_INFO: Reinitializing CDROM for gdlast TOC read\n");
+				cdrom_reinit();
+			}
+			
+			if (terr > 20)
+			{
+				ds_printf("DS_ERROR: Toc read error for gdlast after %d attempts\n", terr);
+				fs_rmdir(dst_folder);
+				return CMD_ERROR;
+			}
+			
+			thd_sleep(200);
 		}
 
 		self.lastgdtrack = TOC_TRACK(toc.last);
@@ -429,107 +476,154 @@ static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type)
 	return CMD_OK;
 }
 
+static int get_track_info(int session, int disc_type, track_info_t *tracks, int *track_count)
+{
+    CDROM_TOC toc;
+    int terr = 0;
+
+    while (cdrom_read_toc(&toc, session) != ERR_OK) {
+        if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
+            ds_printf("DS_INFO: Track info reading cancelled\n");
+            return CMD_ERROR;
+        }
+        
+        terr++;
+        if (terr == 3) {
+            ds_printf("DS_INFO: Reinitializing CDROM for TOC read\n");
+            cdrom_reinit();
+        }
+        
+        if (terr > 8) {
+            ds_printf("DS_ERROR: Failed to read TOC after %d attempts\n", terr);
+            return CMD_ERROR;
+        }
+        
+        thd_sleep(200);
+    }
+    
+    int first = TOC_TRACK(toc.first);
+    int last = TOC_TRACK(toc.last);
+    int count = 0;
+    
+    for (int tn = first; tn <= last; tn++) {
+        if (disc_type == 1) tn = last;
+        
+        int type = TOC_CTRL(toc.entry[tn-1]);
+        int start = TOC_LBA(toc.entry[tn-1]);
+        int s_end = TOC_LBA((tn == last ? toc.leadout_sector : toc.entry[tn]));
+        int nsec = s_end - start;
+        
+        if (disc_type == 1 && type == 4) nsec -= 2;
+        else if (session == 1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
+        else if (session == 0 && type == 4) nsec -= 150;
+        
+        tracks[count].track_num = tn;
+        tracks[count].start_lba = start;
+        tracks[count].sector_count = nsec;
+        tracks[count].type = type;
+        
+        if (disc_type == 2) {
+            snprintf(tracks[count].filename, NAME_MAX, "track%02d.%s", 
+                    tn, (type == 4 ? "iso" : "raw"));
+        }
+        
+        count++;
+        
+        if (disc_type == 1) break;
+    }
+    
+    *track_count = count;
+    return CMD_OK;
+}
+
+static int calculate_total_sectors(int disc_type)
+{
+    track_info_t tracks[32];
+    int track_count;
+    uint64_t total = 0;
+    
+    ds_printf("DS_PROCESS: Calculating total sectors for disc type %d\n", disc_type);
+    
+    for (int session = 0; session < disc_type; session++) {
+        if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
+            ds_printf("DS_INFO: Total sectors calculation cancelled\n");
+            return 0;
+        }
+        
+        ds_printf("DS_PROCESS: Processing session %d\n", session);
+        
+        if (get_track_info(session, disc_type, tracks, &track_count) != CMD_OK) {
+            ds_printf("DS_ERROR: Failed to get track info for session %d\n", session);
+            return 0;
+        }
+        
+        for (int i = 0; i < track_count; i++) {
+            total += tracks[i].sector_count;
+            ds_printf("DS_PROCESS: Track %d: %d sectors\n", tracks[i].track_num, tracks[i].sector_count);
+        }
+    }
+    
+    ds_printf("DS_PROCESS: Total sectors calculated: %u\n", (uint32_t)total);
+    return total;
+}
+
 static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type)
 {
-	CDROM_TOC toc;
-	int start, s_end, nsec, type, tn, session, terr = 0;
-	char riplabel[64];
-
-	for(session = 0; session < disc_type; session++) 
-	{
-		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-		{
-			ds_printf("DS_INFO: Ripping cancelled by user\n");
-			return CMD_ERROR;
-		}
-
-		cdrom_set_sector_size(2048);
-		while(cdrom_read_toc(&toc, session) != ERR_OK) 
-		{
-			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-			{
-				ds_printf("DS_INFO: Ripping cancelled by user\n");
-				return CMD_ERROR;
-			}
-
-			terr++; 
-			if(terr==5) 
-			{
-				cdrom_reinit(); 
-			}
-			thd_sleep(500);
-
-			if (terr > 10) 
-			{ 
-				ds_printf("DS_ERROR: Toc read error\n");
-				cleanup_failed_rip(dst_folder, dst_file, disc_type);
-				return CMD_ERROR;
-			}
-		}
-
-		terr = 0;
-
-		int first = TOC_TRACK(toc.first);
-		int last = TOC_TRACK(toc.last);
-
-		for (tn = first; tn <= last; tn++ ) 
-		{
-			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-			{
-				ds_printf("DS_INFO: Ripping cancelled by user\n");
-				return CMD_ERROR;
-			}
-
-			if (disc_type == 1) tn = last;
-			
-			type = TOC_CTRL(toc.entry[tn-1]);
-
-			if (disc_type == 2) 
-			{
-				strcpy(dst_file, "\0"); 
-				snprintf(dst_file, NAME_MAX, "%s/track%02d.%s", dst_folder, tn, (type == 4 ? "iso" : "raw"));
-			}
-
-			start = TOC_LBA(toc.entry[tn-1]);
-			s_end = TOC_LBA((tn == last ? toc.leadout_sector : toc.entry[tn]));
-			nsec = s_end - start;
-
-			if(disc_type == 1 && type == 4) nsec -= 2;
-			else if(session==1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
-			else if(session==0 && type == 4) nsec -= 150;
-
-			if(disc_type == 2 && session == 0) 
-			{
-				strcpy(riplabel, "\0"); 
-				sprintf(riplabel, "Track %d of %d\n", tn, self.lastgdtrack);
-			}
-			else if(disc_type == 2 && session == 1 && tn != self.lastgdtrack) 
-			{
-				strcpy(riplabel, "\0"); 
-				sprintf(riplabel, "Track %d of %d\n", tn, self.lastgdtrack);
-			} 
-			else 
-			{
-				strcpy(riplabel, "\0"); 
-				sprintf(riplabel, "Last track\n");
-			}
-
-			GUI_LabelSetText(self.track_label, riplabel);
-
-			if (rip_sec(tn, start, nsec, type, dst_file, disc_type) != CMD_OK) 
-			{
-				GUI_LabelSetText(self.track_label, " ");
-				GUI_ProgressBarSetPosition(self.pbar, 0.0);
-				cdrom_spin_down();
-				cleanup_failed_rip(dst_folder, dst_file, disc_type);
-				return CMD_ERROR;
-			}
-			GUI_LabelSetText(self.track_label, " ");
-			GUI_ProgressBarSetPosition(self.pbar, 0.0);
-		}
-	}
-
-	return CMD_OK;
+    track_info_t tracks[32];
+    int track_count;
+    char riplabel[64];
+    
+    for (int session = 0; session < disc_type; session++) {
+        if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
+            ds_printf("DS_INFO: Ripping cancelled by user\n");
+            return CMD_ERROR;
+        }
+        
+        if (get_track_info(session, disc_type, tracks, &track_count) != CMD_OK) {
+            ds_printf("DS_ERROR: Failed to get track info\n");
+            cleanup_failed_rip(dst_folder, dst_file, disc_type);
+            return CMD_ERROR;
+        }
+        
+        for (int i = 0; i < track_count; i++) {
+            if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
+                ds_printf("DS_INFO: Ripping cancelled by user\n");
+                return CMD_ERROR;
+            }
+            
+            int tn = tracks[i].track_num;
+            
+            if (disc_type == 2) {
+                snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, tracks[i].filename);
+            }
+            
+            if (disc_type == 2 && session == 0) {
+                snprintf(riplabel, sizeof(riplabel), "Track %d of %d\n", tn, self.lastgdtrack);
+            }
+            else if (disc_type == 2 && session == 1 && tn != self.lastgdtrack) {
+                snprintf(riplabel, sizeof(riplabel), "Track %d of %d\n", tn, self.lastgdtrack);
+            }
+            else {
+                snprintf(riplabel, sizeof(riplabel), "Last track\n");
+            }
+            
+            GUI_LabelSetText(self.track_label, riplabel);
+            
+            if (rip_sec(tn, tracks[i].start_lba, tracks[i].sector_count, 
+                       tracks[i].type, dst_file, disc_type) != CMD_OK) {
+                GUI_LabelSetText(self.track_label, " ");
+                GUI_ProgressBarSetPosition(self.pbar, 0.0);
+                cdrom_spin_down();
+                cleanup_failed_rip(dst_folder, dst_file, disc_type);
+                return CMD_ERROR;
+            }
+            
+            GUI_LabelSetText(self.track_label, " ");
+            GUI_ProgressBarSetPosition(self.pbar, 0.0);
+        }
+    }
+    
+    return CMD_OK;
 }
 
 static void* gd_ripper_thread(void *arg)
@@ -538,11 +632,14 @@ static void* gd_ripper_thread(void *arg)
 	char dst_folder[NAME_MAX];
 	char dst_file[NAME_MAX];
 	char text[NAME_MAX];
-	uint64 stoptimer, starttimer, riptime;
+	uint64_t stoptimer, starttimer, riptime;
 
 	ds_printf("DS_PROCESS: Starting disc ripping process\n");
 	starttimer = timer_ms_gettime64();
+	self.start_time = starttimer;
+	self.processed_sectors = 0;
 
+	GUI_LabelSetText(self.track_label, "Initializing...");
 	cdrom_reinit();
 
 	snprintf(text, NAME_MAX, "%s", GUI_TextEntryGetText(self.gname));
@@ -560,12 +657,14 @@ static void* gd_ripper_thread(void *arg)
 		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
 	}
 
+	GUI_LabelSetText(self.track_label, "Reading disc...");
 	if(get_disc_status_and_type(&status, &disc_type) != CMD_OK)
 	{
 		reset_rip_state();
 		return NULL;
 	}
 
+	GUI_LabelSetText(self.track_label, "Preparing files...");
 	ds_printf("DS_PROCESS: Preparing destination: %s\n", dst_folder);
 	disc_type = prepare_destination_paths(dst_folder, dst_file, text, disc_type);
 	if(disc_type < 0)
@@ -575,6 +674,11 @@ static void* gd_ripper_thread(void *arg)
 		return NULL;
 	}
 
+	GUI_LabelSetText(self.track_label, "Calculating size...");
+	self.total_sectors = calculate_total_sectors(disc_type);
+	ds_printf("DS_PROCESS: Total sectors to rip: %u\n", (uint32_t)self.total_sectors);
+
+	GUI_LabelSetText(self.track_label, "Starting rip...");
 	ds_printf("DS_PROCESS: Starting track extraction\n");
 	if(process_sessions_and_tracks(dst_folder, dst_file, disc_type) != CMD_OK)
 	{
@@ -608,6 +712,41 @@ static void* gd_ripper_thread(void *arg)
 	return NULL;
 }
 
+static void update_speed_and_time_display(void)
+{
+    uint64_t current_time = timer_ms_gettime64();
+    uint64_t elapsed_time = current_time - self.start_time;
+    
+    if (elapsed_time > 1000 && self.processed_sectors > 0) {
+        char speed_text[64];
+        char time_text[64];
+        
+        double speed_sectors_per_sec = (double)self.processed_sectors / (elapsed_time / 1000.0);
+        double speed_kb_per_sec = speed_sectors_per_sec * 2048 / 1024.0;
+        
+        snprintf(speed_text, sizeof(speed_text), "Speed: %.1f KB/s", speed_kb_per_sec);
+        
+        if (self.total_sectors > 0 && speed_sectors_per_sec > 0) {
+            uint32_t remaining_sectors = (uint32_t)(self.total_sectors - self.processed_sectors);
+            uint32_t remaining_time_sec = (uint32_t)(remaining_sectors / speed_sectors_per_sec);
+            uint32_t remaining_hours = remaining_time_sec / 3600;
+            uint32_t remaining_min = (remaining_time_sec % 3600) / 60;
+            
+            if (remaining_hours > 0) {
+                snprintf(time_text, sizeof(time_text), "Time left: %luh %lum", 
+                        (unsigned long)remaining_hours, (unsigned long)remaining_min);
+            } else {
+                snprintf(time_text, sizeof(time_text), "Time left: %lum", 
+                        (unsigned long)remaining_min);
+            }
+        } else {
+            snprintf(time_text, sizeof(time_text), "Time left: --");
+        }
+        
+        GUI_LabelSetText(self.speed_label, speed_text);
+        GUI_LabelSetText(self.time_label, time_text);
+    }
+}
 
 static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type)
 {
@@ -635,6 +774,7 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 	{
 		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
 		{
+			ds_printf("DS_INFO: Sector ripping cancelled at sector %d\n", first);
 			free(buffer);
 			fs_close(hnd);
 			return CMD_ERROR;
@@ -647,24 +787,26 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 
 		while(cdstat != ERR_OK) 
 		{
+			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
+			{
+				ds_printf("DS_INFO: Sector reading cancelled\n");
+				free(buffer);
+				fs_close(hnd);
+				return CMD_ERROR;
+			}
+			
 			if (atoi(GUI_TextEntryGetText(self.num_read)) == 0) break;
 			readi++;
 
 			if (readi > 5) break;
 
 			if (readi == 3) {
+				ds_printf("DS_INFO: Reinitializing CDROM for sector read\n");
 				cdrom_reinit();
 				cdrom_set_sector_size(secbyte);
 			}
 
-			thd_sleep(200);
-
-			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-			{
-				free(buffer);
-				fs_close(hnd);
-				return CMD_ERROR;
-			}
+			thd_sleep(100);
 
 			cdstat = cdrom_read_sectors_ex(buffer, first, nsects, CDROM_READ_DMA);
 		}
@@ -688,12 +830,23 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 			return CMD_ERROR;
 		}
 		
+		self.processed_sectors += nsects;
+		
 		percent = 1-(float)(count) / count_old;
 
-		if ((percent = ((int)(percent*100 + 0.5))/100.0) > percent_last) 
-		{
+		if ((percent = ((int)(percent*100 + 0.5))/100.0) > percent_last) {
 			percent_last = percent;
 			GUI_ProgressBarSetPosition(self.pbar, percent);
+			
+			update_speed_and_time_display();
+			
+			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
+			{
+				ds_printf("DS_INFO: Ripping cancelled during progress update\n");
+				free(buffer);
+				fs_close(hnd);
+				return CMD_ERROR;
+			}
 		}
 	}
 
