@@ -48,17 +48,19 @@ static char rcsid =
 #define MIN_FRAME_UPDATE 16
 
 const static unsigned short sdl_key[]= {
-	/*0*/	0 , 0  , 0  , 0  , 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i','j', 'k', 'l', 
-	/*10*/ 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z','1', '2', 
-	/*20*/ '3', '4', '5', '6', '7', '8', '9', '0',  
+	/* 0*/ SDLK_UNKNOWN, SDLK_UNKNOWN, SDLK_UNKNOWN, SDLK_UNKNOWN, SDLK_a, SDLK_b, SDLK_c, SDLK_d, 
+	/* 8*/ SDLK_e, SDLK_f, SDLK_g, SDLK_h, SDLK_i, SDLK_j, SDLK_k, SDLK_l, 
+	/*10*/ SDLK_m, SDLK_n, SDLK_o, SDLK_p, SDLK_q, SDLK_r, SDLK_s, SDLK_t, 
+	/*18*/ SDLK_u, SDLK_v, SDLK_w, SDLK_x, SDLK_y, SDLK_z, SDLK_1, SDLK_2, 
+	/*20*/ SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7, SDLK_8, SDLK_9, SDLK_0,  
 	/*28*/ SDLK_RETURN, SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_TAB, SDLK_SPACE, SDLK_MINUS, SDLK_PLUS, SDLK_LEFTBRACKET, 
-	/*30*/ SDLK_RIGHTBRACKET, SDLK_BACKSLASH , 0, SDLK_SEMICOLON, SDLK_QUOTE,'~', SDLK_COMMA, SDLK_PERIOD, 
+	/*30*/ SDLK_RIGHTBRACKET, SDLK_BACKSLASH , SDLK_UNKNOWN, SDLK_SEMICOLON, SDLK_QUOTE,'~', SDLK_COMMA, SDLK_PERIOD, 
 	/*38*/ SDLK_SLASH, SDLK_CAPSLOCK, SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
 	/*40*/ SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12, SDLK_PRINT, SDLK_SCROLLOCK, 
 	/*48*/ SDLK_PAUSE, SDLK_INSERT, SDLK_HOME, SDLK_PAGEUP, SDLK_DELETE, SDLK_END, SDLK_PAGEDOWN, SDLK_RIGHT, 
 	/*50*/ SDLK_LEFT, SDLK_DOWN, SDLK_UP, SDLK_NUMLOCK, SDLK_KP_DIVIDE, SDLK_KP_MULTIPLY, SDLK_KP_MINUS, SDLK_KP_PLUS, 
 	/*58*/ SDLK_KP_ENTER, SDLK_KP1, SDLK_KP2, SDLK_KP3, SDLK_KP4, SDLK_KP5, SDLK_KP6, SDLK_KP7,
-	/*60*/ SDLK_KP8, SDLK_KP9, SDLK_KP0, SDLK_KP_PERIOD, 0 , SDLK_RMETA/* S3 */
+	/*60*/ SDLK_KP8, SDLK_KP9, SDLK_KP0, SDLK_KP_PERIOD, SDLK_UNKNOWN, SDLK_RMETA/* S3 */
 };
 
 const static unsigned short sdl_shift[] = {
@@ -72,7 +74,7 @@ const static unsigned short sdl_shift[] = {
 #define	MOUSE_WHEELDOWN	(1<<5) 		// TODO (1<<7)
 
 static void mouse_update(void) {
-const	static char sdl_mousebtn[] = {
+const static char sdl_mousebtn[] = {
 	MOUSE_LEFTBUTTON,
 	MOUSE_RIGHTBUTTON,
 	MOUSE_SIDEBUTTON,
@@ -84,9 +86,9 @@ const	static char sdl_mousebtn[] = {
 
 	mouse_state_t * cond = NULL;
 	maple_device_t *mouse = NULL;
-	static int prev_buttons;
-	int buttons,changed;
-	int i,dx,dy;
+	static uint32_t prev_buttons;
+	uint32_t buttons, changed;
+	int i, dx, dy;
 	
 	if(!(mouse = maple_enum_type(0, MAPLE_FUNC_MOUSE))) {
 		return;
@@ -96,7 +98,7 @@ const	static char sdl_mousebtn[] = {
 		return;
 	}
 	
-	buttons = cond->buttons^0xff;
+	buttons = cond->buttons;
 	
 	if (cond->dz<0) buttons |= MOUSE_WHEELUP;
 	if (cond->dz>0) buttons |= MOUSE_WHEELDOWN;
@@ -104,11 +106,13 @@ const	static char sdl_mousebtn[] = {
 	dx = cond->dx;
 	dy = cond->dy;
 	
-	if (dx||dy) SDL_PrivateMouseMotion(0, 1, dx, dy);
+	if (dx || dy) {
+		SDL_PrivateMouseMotion(0, 1, dx, dy);
+	}
 
 	changed = buttons ^ prev_buttons;
 	
-	for(i=0;i<sizeof(sdl_mousebtn);i++) {
+	for(i = 0; i<sizeof(sdl_mousebtn); i++) {
 		if (changed & sdl_mousebtn[i]) {
 			//Do not flip state.
 			SDL_PrivateMouseButton((buttons & sdl_mousebtn[i]) ? SDL_PRESSED : SDL_RELEASED, i, 0, 0);
@@ -121,8 +125,9 @@ const	static char sdl_mousebtn[] = {
 static void keyboard_update(void) {
 	kbd_state_t	*state;
 	maple_device_t *kbd;
-	SDL_keysym keysym;
-
+	static SDL_keysym keysym;
+	static uint8_t last_modifiers = 0;
+	static key_state_t key_states[sizeof(sdl_key)] = {0};
 	int i;
 	
 	if (!(kbd = maple_enum_type(0, MAPLE_FUNC_KEYBOARD))) {
@@ -134,35 +139,39 @@ static void keyboard_update(void) {
 	}
 	
 	for(i=0; i<sizeof(sdl_shift); i++) {
-		if ((state->cond.modifiers.raw & (1 << i)) != (state->last_modifiers.raw & (1 << i))) {
+		if ((state->cond.modifiers.raw & (1 << i)) != (last_modifiers & (1 << i))) {
 			keysym.sym = sdl_shift[i];
 			SDL_PrivateKeyboard((state->cond.modifiers.raw & (1 << i)) ? SDL_PRESSED : SDL_RELEASED, &keysym);
 		}
 	}
-
-	for(i=0;i<sizeof(sdl_key);i++) {
-		if (state->key_states[i].is_down != state->key_states[i].was_down) {
+	
+	last_modifiers = state->cond.modifiers.raw;
+	
+	for(i = 0; i < sizeof(sdl_key); i++) {
+		if (state->key_states[i].is_down != key_states[i].is_down) {
 			int key = sdl_key[i];
 			if (key) {
-				keysym.sym = key;
+				keysym.unicode = keysym.sym = key;
 				SDL_PrivateKeyboard(state->key_states[i].is_down ? SDL_PRESSED : SDL_RELEASED, &keysym);
 			}
 		}
+		
+		key_states[i].raw = state->key_states[i].raw;
 	}
 }
 
 static __inline__ Uint32 myGetTicks(void) {
-	return ((timer_us_gettime64()>>10));
+	return ((timer_us_gettime64() >> 10));
 }
 
 void DC_PumpEvents(_THIS) {
 	static Uint32 last_time = 0;
 	Uint32 now = myGetTicks();
 	
-	if (now-last_time > MIN_FRAME_UPDATE) {
+	if ((now - last_time) > MIN_FRAME_UPDATE) {
 		keyboard_update();
 		mouse_update();
-		last_time=now;
+		last_time = now;
 	}
 }
 

@@ -521,13 +521,15 @@ printf("Keyboard event didn't change state - dropped!\n");
 		if (repeatable && (SDL_KeyRepeat.delay != 0)) {
 			SDL_KeyRepeat.evt = event;
 			SDL_KeyRepeat.firsttime = 1;
-			SDL_KeyRepeat.timestamp=SDL_GetTicks();
+			SDL_KeyRepeat.timestamp = SDL_GetTicks();
 		}
+		
 		if ( (SDL_EventOK == NULL) || SDL_EventOK(&event) ) {
 			posted = 1;
 			SDL_PushEvent(&event);
 		}
 	}
+	
 	return(posted);
 }
 

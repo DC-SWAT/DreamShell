@@ -87,88 +87,87 @@ SDL_Event* CON_Events(SDL_Event *event) {
 			// 	return NULL;
 			// }
 			switch (event->key.keysym.sym) {
-			case SDLK_HOME:
-				if(event->key.keysym.mod & KMOD_SHIFT) {
-					Topmost->ConsoleScrollBack = Topmost->LineBuffer-1;
+				case SDLK_HOME:
+					if(event->key.keysym.mod & KMOD_SHIFT) {
+						Topmost->ConsoleScrollBack = Topmost->LineBuffer-1;
+						CON_UpdateConsole(Topmost);
+					} else {
+						Cursor_Home(Topmost);
+					}
+					break;
+				case SDLK_END:
+					if(event->key.keysym.mod & KMOD_SHIFT) {
+						Topmost->ConsoleScrollBack = 0;
+						CON_UpdateConsole(Topmost);
+					} else {
+						Cursor_End(Topmost);
+					}
+					break;
+				case SDLK_PAGEUP:
+					Topmost->ConsoleScrollBack += CON_LINE_SCROLL;
+					if(Topmost->ConsoleScrollBack > Topmost->LineBuffer-1)
+						Topmost->ConsoleScrollBack = Topmost->LineBuffer-1;
+
 					CON_UpdateConsole(Topmost);
-				} else {
-					Cursor_Home(Topmost);
-				}
-				break;
-			case SDLK_END:
-				if(event->key.keysym.mod & KMOD_SHIFT) {
-					Topmost->ConsoleScrollBack = 0;
+					break;
+				case SDLK_PAGEDOWN:
+					Topmost->ConsoleScrollBack -= CON_LINE_SCROLL;
+					if(Topmost->ConsoleScrollBack < 0)
+						Topmost->ConsoleScrollBack = 0;
 					CON_UpdateConsole(Topmost);
-				} else {
-					Cursor_End(Topmost);
-				}
-				break;
-			case SDLK_PAGEUP:
-				Topmost->ConsoleScrollBack += CON_LINE_SCROLL;
-				if(Topmost->ConsoleScrollBack > Topmost->LineBuffer-1)
-					Topmost->ConsoleScrollBack = Topmost->LineBuffer-1;
+					break;
+				case SDLK_UP:
+					Command_Up(Topmost);
+					break;
+				case SDLK_DOWN:
+					Command_Down(Topmost);
+					break;
+				case SDLK_LEFT:
+					Cursor_Left(Topmost);
+					break;
+				case SDLK_RIGHT:
+					Cursor_Right(Topmost);
+					break;
+				case SDLK_BACKSPACE:
+					Cursor_BSpace(Topmost);
+					break;
+				case SDLK_DELETE:
+					Cursor_Del(Topmost);
+					break;
+				case SDLK_INSERT:
+					Topmost->InsMode = 1-Topmost->InsMode;
+					break;
+				case SDLK_TAB:
+					CON_TabCompletion(Topmost);
+					break;
+				case SDLK_RETURN:
+					if(strlen(Topmost->Command) > 0) {
+						CON_NewLineCommand(Topmost);
 
-				CON_UpdateConsole(Topmost);
-				break;
-			case SDLK_PAGEDOWN:
-				Topmost->ConsoleScrollBack -= CON_LINE_SCROLL;
-				if(Topmost->ConsoleScrollBack < 0)
-					Topmost->ConsoleScrollBack = 0;
-				CON_UpdateConsole(Topmost);
-				break;
-			case SDLK_UP:
-				Command_Up(Topmost);
-				break;
-			case SDLK_DOWN:
-				Command_Down(Topmost);
-				break;
-			case SDLK_LEFT:
-				Cursor_Left(Topmost);
-				break;
-			case SDLK_RIGHT:
-				Cursor_Right(Topmost);
-				break;
-			case SDLK_BACKSPACE:
-				Cursor_BSpace(Topmost);
-				break;
-			case SDLK_DELETE:
-				Cursor_Del(Topmost);
-				break;
-			case SDLK_INSERT:
-				Topmost->InsMode = 1-Topmost->InsMode;
-				break;
-			case SDLK_TAB:
-				CON_TabCompletion(Topmost);
-				break;
-			case SDLK_RETURN:
-				if(strlen(Topmost->Command) > 0) {
-					CON_NewLineCommand(Topmost);
+						/* copy the input into the past commands strings */
+						strcpy(Topmost->CommandLines[0], Topmost->Command);
 
-					/* copy the input into the past commands strings */
-					strcpy(Topmost->CommandLines[0], Topmost->Command);
+						/* display the command including the prompt */
+						CON_Out(Topmost, "%s%s", Topmost->Prompt, Topmost->Command);
 
-					/* display the command including the prompt */
-					CON_Out(Topmost, "%s%s", Topmost->Prompt, Topmost->Command);
+						CON_Execute(Topmost, Topmost->Command);
+						/* printf("Command: %s\n", Topmost->Command); */
 
-					CON_Execute(Topmost, Topmost->Command);
-					/* printf("Command: %s\n", Topmost->Command); */
-
-					Clear_Command(Topmost);
-					Topmost->CommandScrollBack = -1;
-				}
-				break;
-			// case SDLK_ESCAPE:
-			// 	/* deactivate Console */
-			// 	CON_Hide(Topmost);
-			// 	return NULL;
-			default:
-			
-				if(Topmost->InsMode)
-					Cursor_Add(Topmost, event);
-				else {
-					Cursor_Add(Topmost, event);
-					//Cursor_Del(Topmost);
-				}
+						Clear_Command(Topmost);
+						Topmost->CommandScrollBack = -1;
+					}
+					break;
+				// case SDLK_ESCAPE:
+				// 	/* deactivate Console */
+				// 	CON_Hide(Topmost);
+				// 	return NULL;
+				default:
+					if(Topmost->InsMode) {
+						Cursor_Add(Topmost, event);
+					}
+					else {
+						Cursor_Add(Topmost, event);
+					}
 			}
 		}
 		Topmost->WasUnicode = 1;
