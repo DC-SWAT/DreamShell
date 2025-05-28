@@ -168,7 +168,7 @@ printf("Mouse event didn't change state - dropped!\n");
 	SDL_MouseY = Y;
 	SDL_DeltaX += Xrel;
 	SDL_DeltaY += Yrel;
-        SDL_MoveCursor(SDL_MouseX, SDL_MouseY);
+	SDL_MoveCursor(SDL_MouseX, SDL_MouseY);
 
 	/* Post the event, if desired */
 	posted = 0;

@@ -47,167 +47,126 @@ static char rcsid =
 
 #define MIN_FRAME_UPDATE 16
 
-#if SDL_JOYSTICK_DISABLED
-
-extern int __sdl_dc_mouse_shift;
-
 const static unsigned short sdl_key[]= {
-	/*0*/	0, 0, 0, 0, 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i',
-		'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
-		'u', 'v', 'w', 'x', 'y', 'z',
-	/*1e*/	'1', '2', '3', '4', '5', '6', '7', '8', '9', '0',
-	/*28*/	SDLK_RETURN, SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_TAB, SDLK_SPACE, SDLK_MINUS, SDLK_PLUS, SDLK_LEFTBRACKET, 
-	SDLK_RIGHTBRACKET, SDLK_BACKSLASH , 0, SDLK_SEMICOLON, SDLK_QUOTE,
-	/*35*/	'~', SDLK_COMMA, SDLK_PERIOD, SDLK_SLASH, SDLK_CAPSLOCK, 
-	SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6, SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12,
-	/*46*/	SDLK_PRINT, SDLK_SCROLLOCK, SDLK_PAUSE, SDLK_INSERT, SDLK_HOME, SDLK_PAGEUP, SDLK_DELETE, SDLK_END, SDLK_PAGEDOWN, SDLK_RIGHT, SDLK_LEFT, SDLK_DOWN, SDLK_UP,
-	/*53*/	SDLK_NUMLOCK, SDLK_KP_DIVIDE, SDLK_KP_MULTIPLY, SDLK_KP_MINUS, SDLK_KP_PLUS, SDLK_KP_ENTER, 
-	SDLK_KP1, SDLK_KP2, SDLK_KP3, SDLK_KP4, SDLK_KP5, SDLK_KP6,
-	/*5f*/	SDLK_KP7, SDLK_KP8, SDLK_KP9, SDLK_KP0, SDLK_KP_PERIOD, 0 /* S3 */
+	/*0*/	0 , 0  , 0  , 0  , 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i','j', 'k', 'l', 
+	/*10*/ 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z','1', '2', 
+	/*20*/ '3', '4', '5', '6', '7', '8', '9', '0',  
+	/*28*/ SDLK_RETURN, SDLK_ESCAPE, SDLK_BACKSPACE, SDLK_TAB, SDLK_SPACE, SDLK_MINUS, SDLK_PLUS, SDLK_LEFTBRACKET, 
+	/*30*/ SDLK_RIGHTBRACKET, SDLK_BACKSLASH , 0, SDLK_SEMICOLON, SDLK_QUOTE,'~', SDLK_COMMA, SDLK_PERIOD, 
+	/*38*/ SDLK_SLASH, SDLK_CAPSLOCK, SDLK_F1, SDLK_F2, SDLK_F3, SDLK_F4, SDLK_F5, SDLK_F6,
+	/*40*/ SDLK_F7, SDLK_F8, SDLK_F9, SDLK_F10, SDLK_F11, SDLK_F12, SDLK_PRINT, SDLK_SCROLLOCK, 
+	/*48*/ SDLK_PAUSE, SDLK_INSERT, SDLK_HOME, SDLK_PAGEUP, SDLK_DELETE, SDLK_END, SDLK_PAGEDOWN, SDLK_RIGHT, 
+	/*50*/ SDLK_LEFT, SDLK_DOWN, SDLK_UP, SDLK_NUMLOCK, SDLK_KP_DIVIDE, SDLK_KP_MULTIPLY, SDLK_KP_MINUS, SDLK_KP_PLUS, 
+	/*58*/ SDLK_KP_ENTER, SDLK_KP1, SDLK_KP2, SDLK_KP3, SDLK_KP4, SDLK_KP5, SDLK_KP6, SDLK_KP7,
+	/*60*/ SDLK_KP8, SDLK_KP9, SDLK_KP0, SDLK_KP_PERIOD, 0 , SDLK_RMETA/* S3 */
 };
 
 const static unsigned short sdl_shift[] = {
-	SDLK_LCTRL,SDLK_LSHIFT,SDLK_LALT,0 /* S1 */,
-	SDLK_RCTRL,SDLK_RSHIFT,SDLK_RALT,0 /* S2 */,
+	SDLK_LCTRL,SDLK_LSHIFT,SDLK_LALT,SDLK_LSUPER /* S1 */,
+	SDLK_RCTRL,SDLK_RSHIFT,SDLK_RALT,SDLK_RSUPER /* S2 */,
 };
 
-#define	MOUSE_WHEELUP 	(1<<4)
-#define	MOUSE_WHEELDOWN	(1<<5)
+//#define	MOUSE_BACKWARD 	(1<<4) 	// TODO for usb4maple, need fix KOS
+//#define	MOUSE_FORWARD	(1<<5) 	// TODO for usb4maple, need fix KOS
+#define	MOUSE_WHEELUP 	(1<<4) 		// TODO (1<<6)
+#define	MOUSE_WHEELDOWN	(1<<5) 		// TODO (1<<7)
 
-static void mouse_update(void)
-{
+static void mouse_update(void) {
 const	static char sdl_mousebtn[] = {
 	MOUSE_LEFTBUTTON,
 	MOUSE_RIGHTBUTTON,
 	MOUSE_SIDEBUTTON,
+//	MOUSE_BACKWARD, 	// TODO for usb4maple, need fix KOS
+//	MOUSE_FORWARD, 		// TODO for usb4maple, need fix KOS
 	MOUSE_WHEELUP,
 	MOUSE_WHEELDOWN
 };
 
 	mouse_state_t * cond = NULL;
-
+	maple_device_t *mouse = NULL;
 	static int prev_buttons;
 	int buttons,changed;
 	int i,dx,dy;
 	
-	//DC: Check if any mouse is connected
-	int n = maple_enum_count();
-	for (i=0;i<n;i++){
-		maple_device_t *mouse = maple_enum_type(i, MAPLE_FUNC_MOUSE);  
-		if (mouse){
-			cond = (mouse_state_t *)maple_dev_status(mouse);
-			break;
-		}
+	if(!(mouse = maple_enum_type(0, MAPLE_FUNC_MOUSE))) {
+		return;
 	}
-	if (!cond) return;
+	
+	if (!(cond = (mouse_state_t *)maple_dev_status(mouse))) {
+		return;
+	}
 	
 	buttons = cond->buttons^0xff;
-	if (cond->dz<0) buttons|=MOUSE_WHEELUP;
-	if (cond->dz>0) buttons|=MOUSE_WHEELDOWN;
+	
+	if (cond->dz<0) buttons |= MOUSE_WHEELUP;
+	if (cond->dz>0) buttons |= MOUSE_WHEELDOWN;
 
-	dx=cond->dx;//>>__sdl_dc_mouse_shift;
-	dy=cond->dy;//>>__sdl_dc_mouse_shift;
-	if (dx||dy)
-		SDL_PrivateMouseMotion(0,1,dx,dy);
+	dx = cond->dx;
+	dy = cond->dy;
+	
+	if (dx||dy) SDL_PrivateMouseMotion(0, 1, dx, dy);
 
-	changed = buttons^prev_buttons;
+	changed = buttons ^ prev_buttons;
+	
 	for(i=0;i<sizeof(sdl_mousebtn);i++) {
 		if (changed & sdl_mousebtn[i]) {
 			//Do not flip state.
-			SDL_PrivateMouseButton((buttons & sdl_mousebtn[i])?SDL_PRESSED:SDL_RELEASED,i,0,0);
+			SDL_PrivateMouseButton((buttons & sdl_mousebtn[i]) ? SDL_PRESSED : SDL_RELEASED, i, 0, 0);
 		}
 	}
+	
 	prev_buttons = buttons;
 }
 
-static void keyboard_update(void)
-{
-	static kbd_state_t	old_state;
-	static uint8 old_addr;
-
+static void keyboard_update(void) {
 	kbd_state_t	*state;
-	uint8 addr;
-	int	port,unit;
-
-	int shiftkeys;
+	maple_device_t *kbd;
 	SDL_keysym keysym;
 
-	int i,p,u;
-	int found = 0;
-	//DC: Check if any keyboard is connected
-	for(p=0;p<MAPLE_PORT_COUNT;p++) {
-		for(u=0;u<MAPLE_UNIT_COUNT;u++) {
-			//Get device
-			maple_device_t *dev = maple_enum_dev(p,u);
-			//Check type
-			if (dev && dev->info.functions & MAPLE_FUNC_KEYBOARD) {
-				found = 1;
-				addr = maple_addr(p,u);
-				break;
-			}
-		}
-	}
-	if (found == 0) return;
-
-	if (addr!=old_addr) {
-		old_addr = addr;
-		memset(&old_state,0,sizeof(old_state));
+	int i;
+	
+	if (!(kbd = maple_enum_type(0, MAPLE_FUNC_KEYBOARD))) {
+		return;
 	}
 
-	maple_raddr(addr,&port,&unit);
-
-	state = (kbd_state_t *) maple_dev_status (maple_enum_dev(port,unit));
-	if (!state) return;
-
-	shiftkeys = state->shift_keys ^ old_state.shift_keys;
-	for(i=0;i<sizeof(sdl_shift);i++) {
-		if ((shiftkeys>>i)&1) {
+	if (!(state = (kbd_state_t *) kbd_get_state(kbd))) {
+		return;
+	}
+	
+	for(i=0; i<sizeof(sdl_shift); i++) {
+		if ((state->cond.modifiers.raw & (1 << i)) != (state->last_modifiers.raw & (1 << i))) {
 			keysym.sym = sdl_shift[i];
-			SDL_PrivateKeyboard(((state->shift_keys>>i)&1)?SDL_PRESSED:SDL_RELEASED,&keysym);
+			SDL_PrivateKeyboard((state->cond.modifiers.raw & (1 << i)) ? SDL_PRESSED : SDL_RELEASED, &keysym);
 		}
 	}
 
 	for(i=0;i<sizeof(sdl_key);i++) {
-		if (state->matrix[i]!=old_state.matrix[i]) {
+		if (state->key_states[i].is_down != state->key_states[i].was_down) {
 			int key = sdl_key[i];
 			if (key) {
 				keysym.sym = key;
-				SDL_PrivateKeyboard(state->matrix[i]?SDL_PRESSED:SDL_RELEASED,&keysym);
+				SDL_PrivateKeyboard(state->key_states[i].is_down ? SDL_PRESSED : SDL_RELEASED, &keysym);
 			}
 		}
 	}
-
-	old_state = *state;
 }
 
-static __inline__ Uint32 myGetTicks(void)
-{
+static __inline__ Uint32 myGetTicks(void) {
 	return ((timer_us_gettime64()>>10));
 }
 
-void DC_PumpEvents(_THIS)
-{
-	static Uint32 last_time=0;
-	Uint32 now=myGetTicks();
-	if (now-last_time>MIN_FRAME_UPDATE)
-	{
+void DC_PumpEvents(_THIS) {
+	static Uint32 last_time = 0;
+	Uint32 now = myGetTicks();
+	
+	if (now-last_time > MIN_FRAME_UPDATE) {
 		keyboard_update();
 		mouse_update();
 		last_time=now;
 	}
 }
 
-#else
-
-void DC_PumpEvents(_THIS)
-{
-	/* do nothing. */
-}
-
-#endif
-
-void DC_InitOSKeymap(_THIS)
-{
+void DC_InitOSKeymap(_THIS) {
 	/* do nothing. */
 }
 
