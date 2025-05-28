@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * main.c                   *
  * DreamShell main          *
- * (c)2004-2024 SWAT        *
+ * (c)2004-2025 SWAT        *
  * http://www.dc-swat.ru    *
  ***************************/
 
@@ -397,17 +397,6 @@ int main(int argc, char **argv) {
 	while(1) {
 
 		while(SDL_PollEvent(&event)) {
-
-			if((dev = maple_enum_type(0, MAPLE_FUNC_KEYBOARD))) {
-
-				key = kbd_queue_pop(dev, 1);
-
-				/* ASCII? */
-				if(!(key & 0xFFFFFF00)) {
-					event.key.keysym.unicode = key;
-				}
-			}
-
 			ProcessInputEvents(&event);
 		}
 
