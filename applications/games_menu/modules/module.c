@@ -2548,7 +2548,6 @@ void GamesApp_Open(App_t *app)
 		int my = 0;
 		SDL_GetMouseState(&mx, &my);
 		SDL_DC_EmulateMouse(SDL_FALSE);
-		SDL_DC_EmulateKeyboard(SDL_FALSE);
 
 		DisableScreen();
 		GUI_Disable();

@@ -98,26 +98,13 @@ struct joystick_hwdata {
  * It should return 0, or -1 on an unrecoverable fatal error.
  */
 
-int __sdl_dc_emulate_keyboard = 1, __sdl_dc_emulate_mouse = 1;
-
-void SDL_DC_EmulateKeyboard(SDL_bool value) {
-	__sdl_dc_emulate_keyboard = (int)value;
-}
+int __sdl_dc_emulate_mouse = 1;
 
 void SDL_DC_EmulateMouse(SDL_bool value) {
 	__sdl_dc_emulate_mouse = (int)value;
 }
 
-
 int SDL_SYS_JoystickInit(void) {
-	if (maple_enum_type(0, MAPLE_FUNC_KEYBOARD)) {
-		__sdl_dc_emulate_keyboard = 0;
-	}
-	/*
-	if (maple_enum_type(0, MAPLE_FUNC_MOUSE)) {
-		__sdl_dc_emulate_mouse = 0;
-	}
-	*/
 	return MAX_JOYSTICKS;
 }
 
@@ -234,22 +221,6 @@ static void joyUpdate(SDL_Joystick *joystick) {
 					SDL_PrivateMouseButton(act?SDL_PRESSED:SDL_RELEASED,i,0,0);
 				}
 			}
-			
-			if (__sdl_dc_emulate_keyboard) {
-				if (act) {
-					max++;
-				}
-				
-				if (max==4) {
-					keysym.sym = SDLK_ESCAPE;
-					SDL_PrivateKeyboard(SDL_PRESSED,&keysym);
-					max=0;
-					escaped=1;
-				}
-				
-				keysym.sym = _dc_sdl_key[joystick->index][i];
-				SDL_PrivateKeyboard(act?SDL_PRESSED:SDL_RELEASED,&keysym);
-			}
 		}
 	}
 	
@@ -261,30 +232,6 @@ static void joyUpdate(SDL_Joystick *joystick) {
 		}
 		else {
 			escaped=2;
-		}
-	}
-
-	//If we emulate keyboard, check for SDL_DC DPAD
-	//Also here invert the states!
-	if (__sdl_dc_emulate_keyboard) {
-		if (changed & CONT_DPAD_UP) {
-			keysym.sym=_dc_sdl_key[joystick->index][9];
-			SDL_PrivateKeyboard((buttons & CONT_DPAD_UP)?SDL_PRESSED:SDL_RELEASED,&keysym);
-		}
-		
-		if (changed & CONT_DPAD_DOWN) {
-			keysym.sym=_dc_sdl_key[joystick->index][10];
-			SDL_PrivateKeyboard((buttons & CONT_DPAD_DOWN)?SDL_PRESSED:SDL_RELEASED,&keysym);
-		}
-		
-		if (changed & CONT_DPAD_LEFT) {
-			keysym.sym=_dc_sdl_key[joystick->index][11];
-			SDL_PrivateKeyboard((buttons & CONT_DPAD_LEFT)?SDL_PRESSED:SDL_RELEASED,&keysym);
-		}
-		
-		if (changed & CONT_DPAD_RIGHT) {
-			keysym.sym=_dc_sdl_key[joystick->index][12];
-			SDL_PrivateKeyboard((buttons & CONT_DPAD_RIGHT)?SDL_PRESSED:SDL_RELEASED,&keysym);
 		}
 	}
 
@@ -328,27 +275,10 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	//Check L and R triggers
 	//In this case, do not flip the PRESSED/RELEASED!
 	if (cond->rtrig != prev_rtrig) {
-		if (__sdl_dc_emulate_keyboard) {
-			if (((prev_rtrig) && (!cond->rtrig)) ||
-		    	    ((!prev_rtrig) && (cond->rtrig)))
-			{
-				keysym.sym=_dc_sdl_key[joystick->index][7];
-				SDL_PrivateKeyboard((cond->rtrig)?SDL_PRESSED:SDL_RELEASED,&keysym);
-			}
-		}
-		
 		SDL_PrivateJoystickAxis(joystick, 2, cond->rtrig);
 	}
 	
 	if (cond->ltrig!=prev_ltrig) {
-		if (__sdl_dc_emulate_keyboard) {
-			if ((( prev_ltrig) && (!cond->ltrig)) ||
-				((!prev_ltrig) && ( cond->ltrig))) {
-				keysym.sym=_dc_sdl_key[joystick->index][8];
-				SDL_PrivateKeyboard((cond->ltrig)?SDL_PRESSED:SDL_RELEASED,&keysym);
-			}
-		}
-		
 		SDL_PrivateJoystickAxis(joystick, 3, cond->ltrig);
 	}
 	//Check Joystick Axis P2

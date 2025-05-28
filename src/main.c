@@ -386,9 +386,7 @@ void ShutdownDS() {
 
 int main(int argc, char **argv) {
 
-	SDL_Event event;
-	maple_device_t *dev;
-	int key;
+	static SDL_Event event;
 
 	if(InitDS()) {
 		return -1;

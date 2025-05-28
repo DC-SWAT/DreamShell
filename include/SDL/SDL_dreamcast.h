@@ -33,7 +33,6 @@ typedef enum {
 } SDL_DC_button;
 
 void SDL_DC_MapKey(int joy, SDL_DC_button button, SDLKey key);
-void SDL_DC_EmulateKeyboard(SDL_bool value);
 void SDL_DC_EmulateMouse(SDL_bool value);
 
 void SDL_DC_SetSoundBuffer(void *buffer);

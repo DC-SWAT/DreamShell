@@ -395,7 +395,6 @@ int InitVideo(int w, int h, int bpp) {
 	SDL_DC_ShowAskHz(SDL_TRUE);
 	SDL_DC_Default60Hz(SDL_FALSE);
 	SDL_DC_VerticalWait(SDL_TRUE);
-	SDL_DC_EmulateKeyboard(SDL_FALSE);
 	SDL_DC_EmulateMouse(SDL_TRUE);
 
 	sdl_init_flags = SDL_INIT_VIDEO|SDL_INIT_JOYSTICK;
@@ -413,7 +412,6 @@ int InitVideo(int w, int h, int bpp) {
     }
 	
 	//SDL_DC_EmulateMouse(SDL_TRUE);
-	//SDL_DC_EmulateKeyboard(SDL_TRUE);
 	SDL_JoystickOpen(0);
 	SDL_JoystickEventState(SDL_ENABLE);
 	SDL_EnableUNICODE(SDL_ENABLE);
