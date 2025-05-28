@@ -8,12 +8,12 @@
 			<blit surface="images/background.jpg" />
 		</surface>
 
-		<surface width="200" height="20" name="input-normal">
+		<surface width="220" height="20" name="input-normal">
 			<fill color="#FFFFFF" />
 		</surface>
-		<surface width="200" height="20" name="input-focus">
+		<surface width="220" height="20" name="input-focus">
 			<fill color="#29B1EA" />
-			<fill x="2" y="2" width="198" height="18" color="#7CFFC1" />
+			<fill x="2" y="2" width="218" height="18" color="#7CFFC1" />
 		</surface>
 		<surface width="35" height="20" name="inputsmall-normal">
 			<fill color="#FFFFFF" />
@@ -42,28 +42,29 @@
 	<body width="640" height="480" background="bg" onload="export:gd_ripper_Init()" onunload="export:gd_ripper_Exit()">
 
 		<progressbar width="320" height="97" x="166" y="11" name="progress_bar" pos="0.0" pimage="images/progressbar.png" />
-		<progressbar width="320" height="120" x="160" y="160" name="read_error" pos="0.0" pimage="images/readerror.png" />
 
-		<panel x="166" y="49" width="320" height="20">
-			<label width="100%" height="100%" font="arial" color="#FFFFFF" name="sectors-label" text=" " align="center" />
+		<panel y="18" x="5" width="160" height="90">
+			<label width="100%" height="100%" font="m23" color="#444444" name="track-label" text="GD Ripper" />
 		</panel>
 
-		<panel y="25" width="160" height="90">
-			<label width="100%" height="100%" font="m23" color="#333333" name="track-label" text=" " />
-		</panel>
-
-        <panel x="490" y="20" width="140" height="25">
-			<label width="100%" height="20" font="arial" color="#333333" name="speed-label" text=" " align="left" />
-		</panel>
-
-		<panel x="490" y="50" width="140" height="25">
-			<label width="100%" height="20" font="arial" color="#333333" name="time-label" text=" " align="left" />
+        <panel x="490" y="15" width="150" height="100">
+			<panel width="150" height="20">
+				<label width="100%" height="20" font="arial" color="#333333" name="speed-label" align="left" />
+			</panel>
+			<panel y="20" width="150" height="20">
+				<label width="100%" height="20" font="arial" color="#333333" name="time-label" align="left" />
+			</panel>
+			<panel y="50" width="150" height="20">
+				<label width="100%" height="20" font="arial" color="#333333" name="sectors-total-label" align="left" />
+			</panel>
+			<panel y="70" width="150" height="20">
+				<label width="100%" height="20" font="arial" color="#333333" name="sectors-processed-label" align="left" />
+			</panel>
 		</panel>
 
 		<panel x="40" y="115" width="360" height="50">
 			<label height="25" font="arial" color="#333333" text="Enter image name:" align="left" />
 			<input type="text"
-				onfocus="export:gd_ripper_Delname()"
 				onblur="export:gd_ripper_Gamename()"
 				font="arial"
 				fontcolor="#333333"
@@ -136,7 +137,6 @@
 
 			<panel y="55" width="360" height="20">
 				<input type="text"
-					onfocus="export:gd_ripper_Delname()"
 					onblur="export:gd_ripper_Number_read()"
 					font="arial"
 					fontcolor="#333333"

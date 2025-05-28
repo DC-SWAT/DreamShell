@@ -15,28 +15,29 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 #define SEC_BUF_SIZE 16
 #define UI_UPDATE_INTERVAL 500
 
-static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type);
+static int rip_sec(int tn,int first,int count,int type,char *dst_file);
 static void* gd_ripper_thread(void *arg);
 static int gdfiles(char *dst_folder,char *dst_file,char *text);
 static int get_disc_status_and_type(int *status, int *disc_type);
+static int safe_cdrom_read_toc(CDROM_TOC *toc, int session);
+static int get_session_count(int disc_type);
 static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type);
-static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type);
+static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type, int session_count);
 
 typedef struct {
-    int track_num;
-    int start_lba;
-    int sector_count;
-    int type;
+    uint32_t track_num;
+    uint32_t start_lba;
+    uint32_t sector_count;
+    uint32_t type;
     char filename[NAME_MAX];
 } track_info_t;
 
-static int get_track_info(int session, int disc_type, track_info_t *tracks, int *track_count);
-static int calculate_total_sectors(int disc_type);
+static int get_track_info(int session, int disc_type, track_info_t *tracks, uint32_t *track_count);
+static int calculate_total_sectors(int disc_type, int session_count);
 static void update_ui_display(double progress_percent);
 
-static struct self 
-{
+static struct self {
 	App_t *app;
 	GUI_Widget *bad;
 	GUI_Widget *sd_c;
@@ -45,35 +46,31 @@ static struct self
 	GUI_Widget *gname;
 	GUI_Widget *pbar;
 	GUI_Widget *track_label;
-	GUI_Widget *read_error;
 	GUI_Widget *num_read;
 	GUI_Widget *start_btn;
 	GUI_Widget *cancel_btn;
 	GUI_Widget *speed_label;
 	GUI_Widget *time_label;
-	GUI_Widget *sectors_label;
-	int lastgdtrack;
+	GUI_Widget *sectors_total_label;
+	GUI_Widget *sectors_processed_label;
+	uint32_t last_track;
 	volatile int rip_active;
 	uint64_t start_time;
 	uint64_t total_sectors;
 	uint64_t processed_sectors;
 	uint64_t last_ui_update;
+	track_info_t tracks[99];
 } self;
 
-static void cancel_callback(void)
-{
-	self.rip_active = 0;
-}
-
-static void reset_rip_state(void)
-{
+static void reset_rip_state(void) {
 	self.rip_active = 0;
 	GUI_WidgetSetEnabled(self.start_btn, 1);
 	GUI_WidgetSetEnabled(self.cancel_btn, 0);
 	GUI_LabelSetText(self.speed_label, " ");
 	GUI_LabelSetText(self.time_label, " ");
-	GUI_LabelSetText(self.track_label, " ");
-	GUI_LabelSetText(self.sectors_label, " ");
+	GUI_LabelSetText(self.track_label, "GD Ripper");
+	GUI_LabelSetText(self.sectors_total_label, " ");
+	GUI_LabelSetText(self.sectors_processed_label, " ");
 	GUI_ProgressBarSetPosition(self.pbar, 0.0);
 	self.start_time = 0;
 	self.total_sectors = 0;
@@ -106,34 +103,31 @@ void gd_ripper_Number_read()
 
 void gd_ripper_Gamename()
 {
-	int x ;
-	char text[NAME_MAX];
-	char txt[NAME_MAX];
-	strcpy(txt,"\0");
-	snprintf(txt,NAME_MAX,"%s", GUI_TextEntryGetText(self.gname));
-	
-	if(strlen(txt) == 0) 
-		strcpy(txt,"Game");
-		
-	snprintf(text,NAME_MAX,"%s",txt);
-	
-	for (x=0;text[x] !=0;x++) 
-	{
-		if (text[x] == ' ') text[x] = '_' ;
-	}
-	GUI_TextEntrySetText(self.gname, text);
-}
+    char text[NAME_MAX];
+    const char *input = GUI_TextEntryGetText(self.gname);
 
-void gd_ripper_Delname(GUI_Widget *widget)
-{
-	GUI_TextEntrySetText(widget, "");
+    if (!input || strlen(input) == 0) {
+        strcpy(text, "RIPPED_GAME_DISC");
+    }
+    else {
+        strncpy(text, input, NAME_MAX - 1);
+        text[NAME_MAX - 1] = '\0';
+    }
+
+    for (char *p = text; *p; p++) {
+        if (*p == ' ') {
+            *p = '_';
+        }
+    }
+
+    GUI_TextEntrySetText(self.gname, text);
 }
 
 void gd_ripper_ipbin_name()
 {
 	CDROM_TOC toc ;
 	int status = 0, disc_type = 0, cdcr = 0, x = 0;
-	uint8 *pbuff;
+	uint8_t *pbuff;
 	char text[NAME_MAX];
 	uint32 lba;
 
@@ -151,7 +145,7 @@ void gd_ripper_ipbin_name()
 		}
 	}
 
-	pbuff = (uint8 *)memalign(32, 2048);
+	pbuff = (uint8_t *)memalign(32, 2048);
 
 	if(!pbuff)
 	{
@@ -161,7 +155,7 @@ void gd_ripper_ipbin_name()
 	
 	if (disc_type == CD_CDROM_XA) 
 	{
-		if(cdrom_read_toc(&toc, 0) != ERR_OK) 
+		if(safe_cdrom_read_toc(&toc, 0) != CMD_OK) 
 		{ 
 			ds_printf("DS_ERROR: Toc read error\n"); 
 			free(pbuff);
@@ -258,16 +252,15 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 		self.hdd_c = APP_GET_WIDGET("hdd_c");
 		self.net_c = APP_GET_WIDGET("net_c");
 		self.track_label = APP_GET_WIDGET("track-label");
-		self.read_error = APP_GET_WIDGET("read_error");
 		self.num_read = APP_GET_WIDGET("num-read");
 		self.start_btn = APP_GET_WIDGET("start_btn");
 		self.cancel_btn = APP_GET_WIDGET("cancel_btn");
 		self.speed_label = APP_GET_WIDGET("speed-label");
 		self.time_label = APP_GET_WIDGET("time-label");
-		self.sectors_label = APP_GET_WIDGET("sectors-label");
-		
-		if(!DirExists("/pc")) GUI_WidgetSetEnabled(self.net_c, 0);
-		else GUI_WidgetSetState(self.net_c, 1);
+		self.sectors_total_label = APP_GET_WIDGET("sectors-total-label");
+		self.sectors_processed_label = APP_GET_WIDGET("sectors-processed-label");
+
+		GUI_WidgetSetState(self.net_c, DirExists("/pc"));
 		
 		if(!DirExists("/sd")) 
 		{
@@ -289,12 +282,9 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 			GUI_WidgetSetState(self.net_c, 0);
 			GUI_WidgetSetState(self.hdd_c, 1);
 		}
-		
+
 		GUI_WidgetSetEnabled(self.cancel_btn, 0);
-		
 		gd_ripper_ipbin_name();
-		
-		cont_btn_callback(0, CONT_X, (cont_btn_callback_t)cancel_callback);
 	} 
 	else 
 	{
@@ -336,9 +326,9 @@ void gd_ripper_CancelRip()
 		self.app->thd = NULL;
 		ds_printf("DS_INFO: Ripping cancelled\n");
 	}
-	
-	cdrom_spin_down();
+
 	reset_rip_state();
+	cdrom_spin_down();
 }
 
 static int get_disc_status_and_type(int *status, int *disc_type)
@@ -374,121 +364,13 @@ getstatus:
 	return CMD_OK;
 }
 
-static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type)
+static int safe_cdrom_read_toc(CDROM_TOC *toc, int session)
 {
-	file_t fd;
-	CDROM_TOC toc;
-	int terr = 0;
-
-	if(disc_type == CD_CDROM_XA)
-	{
-		snprintf(dst_file, NAME_MAX, "%s.iso", dst_folder);
-		if ((fd=fs_open(dst_file, O_RDONLY)) != FILEHND_INVALID) 
-		{
-			fs_close(fd); 
-			if(fs_unlink(dst_file) != 0) 
-			{
-				ds_printf("DS_ERROR: Failed to remove old file: %s\n", dst_file);
-				return CMD_ERROR;
-			}
-		}
-		return 1;
-	} 
-	else if (disc_type == CD_GDROM)
-	{
-		if ((fd=fs_open(dst_folder, O_DIR)) != FILEHND_INVALID) 
-		{
-			fs_close(fd);
-			if(cleanup_failed_rip(dst_folder, dst_file, 2) != CMD_OK)
-			{
-				ds_printf("DS_ERROR: Failed to remove old folder: %s\n", dst_folder);
-				return CMD_ERROR;
-			}
-		}
-
-		strcpy(dst_file, "\0");
-		snprintf(dst_file, NAME_MAX, "%s", dst_folder); 
-		if(fs_mkdir(dst_file) != 0) 
-		{
-			ds_printf("DS_ERROR: Failed to create folder: %s\n", dst_file);
-			return CMD_ERROR;
-		}
-
-		while(cdrom_read_toc(&toc, 1) != ERR_OK) 
-		{ 
-			if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
-				ds_printf("DS_INFO: Destination preparation cancelled\n");
-				fs_rmdir(dst_folder);
-				return CMD_ERROR;
-			}
-			
-			terr++;
-			if (terr == 5) {
-				ds_printf("DS_INFO: Reinitializing CDROM for gdlast TOC read\n");
-				cdrom_reinit();
-			}
-			
-			if (terr > 20)
-			{
-				ds_printf("DS_ERROR: Toc read error for gdlast after %d attempts\n", terr);
-				fs_rmdir(dst_folder);
-				return CMD_ERROR;
-			}
-			
-			thd_sleep(200);
-		}
-
-		self.lastgdtrack = TOC_TRACK(toc.last);
-		return 2;
-	} 
-	else 
-	{
-		ds_printf("DS_ERROR: This is not game disk\nInserted %d disk\n", disc_type);
-		return CMD_ERROR;
-	}
-}
-
-static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type)
-{
-	file_t fd;
-	dirent_t *dir;
-
-	if (disc_type == 1) 
-	{
-		if(fs_unlink(dst_file) != 0) 
-			ds_printf("Error delete file: %s\n", dst_file);
-	}
-	else 
-	{
-		if ((fd=fs_open(dst_folder, O_DIR)) == FILEHND_INVALID) 
-		{
-			ds_printf("Error folder '%s' not found\n", dst_folder);
-			return CMD_ERROR;
-		}
-
-		while ((dir = fs_readdir(fd)))
-		{
-			if (!strcmp(dir->name,".") || !strcmp(dir->name,"..")) continue;
-			strcpy(dst_file, "\0");
-			snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
-			fs_unlink(dst_file);
-		}
-
-		fs_close(fd);
-		fs_rmdir(dst_folder);
-	}
-
-	return CMD_OK;
-}
-
-static int get_track_info(int session, int disc_type, track_info_t *tracks, int *track_count)
-{
-    CDROM_TOC toc;
     int terr = 0;
 
-    while (cdrom_read_toc(&toc, session) != ERR_OK) {
+    while (cdrom_read_toc(toc, session) != ERR_OK) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
-            ds_printf("DS_INFO: Track info reading cancelled\n");
+            ds_printf("DS_INFO: TOC reading cancelled\n");
             return CMD_ERROR;
         }
         
@@ -506,202 +388,279 @@ static int get_track_info(int session, int disc_type, track_info_t *tracks, int 
         thd_sleep(200);
     }
     
-    int first = TOC_TRACK(toc.first);
-    int last = TOC_TRACK(toc.last);
-    int count = 0;
-    
-    for (int tn = first; tn <= last; tn++) {
-        if (disc_type == 1) tn = last;
-        
-        int type = TOC_CTRL(toc.entry[tn-1]);
-        int start = TOC_LBA(toc.entry[tn-1]);
-        int s_end = TOC_LBA((tn == last ? toc.leadout_sector : toc.entry[tn]));
-        int nsec = s_end - start;
-        
-        if (disc_type == 1 && type == 4) nsec -= 2;
+    return CMD_OK;
+}
+
+static int get_session_count(int disc_type)
+{
+	if (disc_type == CD_CDROM_XA)
+		return 1;
+	else if (disc_type == CD_GDROM)
+		return 2;
+	else
+		return 0;
+}
+
+static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type) {
+	file_t fd;
+
+	if (disc_type == CD_CDROM_XA) {
+		snprintf(dst_file, NAME_MAX, "%s.iso", dst_folder);
+		fd = fs_open(dst_file, O_RDONLY);
+
+		if (fd != FILEHND_INVALID) {
+			fs_close(fd);
+			if (fs_unlink(dst_file) != 0) {
+				ds_printf("DS_ERROR: Failed to remove old file: %s\n", dst_file);
+				return CMD_ERROR;
+			}
+		}
+		return CMD_OK;
+	}
+
+	if (disc_type == CD_GDROM) {
+		fd = fs_open(dst_folder, O_DIR);
+		if (fd != FILEHND_INVALID) {
+			fs_close(fd);
+			if (cleanup_failed_rip(dst_folder, dst_file, disc_type) != CMD_OK) {
+				ds_printf("DS_ERROR: Failed to remove old folder: %s\n", dst_folder);
+				return CMD_ERROR;
+			}
+		}
+
+		memset(dst_file, 0, NAME_MAX);
+		snprintf(dst_file, NAME_MAX, "%s", dst_folder);
+
+		if (fs_mkdir(dst_file) != 0) {
+			ds_printf("DS_ERROR: Failed to create folder: %s\n", dst_file);
+			return CMD_ERROR;
+		}
+		return CMD_OK;
+	}
+
+	ds_printf("DS_ERROR: This is not game disk\nInserted %d disk\n", disc_type);
+	return CMD_ERROR;
+}
+
+static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type) {
+	if (disc_type == CD_CDROM_XA) {
+		if (fs_unlink(dst_file) != 0) {
+			ds_printf("DS_ERROR: Failed to delete file: %s\n", dst_file);
+		}
+		return CMD_OK;
+	}
+
+	file_t fd = fs_open(dst_folder, O_DIR);
+	if (fd == FILEHND_INVALID) {
+		ds_printf("DS_ERROR: Folder '%s' not found\n", dst_folder);
+		return CMD_ERROR;
+	}
+
+	dirent_t *dir;
+	while ((dir = fs_readdir(fd))) {
+		if (!strcmp(dir->name, ".") || !strcmp(dir->name, "..")) {
+			continue;
+		}
+
+		snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
+		if (fs_unlink(dst_file) != 0) {
+			ds_printf("DS_ERROR: Failed to delete file: %s\n", dst_file);
+		}
+	}
+
+	fs_close(fd);
+	fs_rmdir(dst_folder);
+	return CMD_OK;
+}
+
+static int get_track_info(int session, int disc_type, track_info_t *tracks, uint32_t *track_count) {
+    CDROM_TOC toc;
+
+    if (safe_cdrom_read_toc(&toc, session) != CMD_OK) {
+        return CMD_ERROR;
+    }
+
+    uint32_t first = TOC_TRACK(toc.first);
+    uint32_t last = TOC_TRACK(toc.last);
+    uint32_t count = 0;
+
+    for (uint32_t tn = first; tn <= last; tn++) {
+        if (disc_type == CD_CDROM_XA) tn = last;
+
+        uint32_t type = TOC_CTRL(toc.entry[tn-1]);
+        uint32_t start = TOC_LBA(toc.entry[tn-1]);
+        uint32_t s_end = TOC_LBA((tn == last ? toc.leadout_sector : toc.entry[tn]));
+        uint32_t nsec = s_end - start;
+
+        if (disc_type == CD_CDROM_XA && type == 4) nsec -= 2;
         else if (session == 1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
         else if (session == 0 && type == 4) nsec -= 150;
-        
+
         tracks[count].track_num = tn;
         tracks[count].start_lba = start;
         tracks[count].sector_count = nsec;
         tracks[count].type = type;
-        
-        if (disc_type == 2) {
-            snprintf(tracks[count].filename, NAME_MAX, "track%02d.%s", 
+
+        if (disc_type == CD_GDROM) {
+            snprintf(tracks[count].filename, NAME_MAX, "track%02ld.%s", 
                     tn, (type == 4 ? "iso" : "raw"));
         }
-        
+
         count++;
-        
-        if (disc_type == 1) break;
+
+        if (disc_type == CD_CDROM_XA) break;
     }
-    
+
     *track_count = count;
     return CMD_OK;
 }
 
-static int calculate_total_sectors(int disc_type)
-{
-    track_info_t tracks[32];
-    int track_count;
+static int calculate_total_sectors(int disc_type, int session_count) {
+    uint32_t track_count;
     uint64_t total = 0;
-    
-    ds_printf("DS_PROCESS: Calculating total sectors for disc type %d\n", disc_type);
-    
-    for (int session = 0; session < disc_type; session++) {
+
+    ds_printf("DS_PROCESS: Calculating total sectors for disc type %d\n", session_count);
+
+    for (int session = 0; session < session_count; session++) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
             ds_printf("DS_INFO: Total sectors calculation cancelled\n");
             return 0;
         }
-        
+
         ds_printf("DS_PROCESS: Processing session %d\n", session);
-        
-        if (get_track_info(session, disc_type, tracks, &track_count) != CMD_OK) {
+
+        if (get_track_info(session, disc_type, self.tracks, &track_count) != CMD_OK) {
             ds_printf("DS_ERROR: Failed to get track info for session %d\n", session);
             return 0;
         }
-        
+
         for (int i = 0; i < track_count; i++) {
-            total += tracks[i].sector_count;
-            ds_printf("DS_PROCESS: Track %d: %d sectors\n", tracks[i].track_num, tracks[i].sector_count);
+            total += self.tracks[i].sector_count;
+            ds_printf("DS_PROCESS: Track %d: %d sectors\n", self.tracks[i].track_num, self.tracks[i].sector_count);
         }
     }
-    
+
     ds_printf("DS_PROCESS: Total sectors calculated: %u\n", (uint32_t)total);
     return total;
 }
 
-static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type)
-{
-    track_info_t tracks[32];
-    int track_count;
+static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type, int session_count) {
+    uint32_t track_count;
     char riplabel[64];
-    
-    for (int session = 0; session < disc_type; session++) {
+
+    for (int session = 0; session < session_count; session++) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
-            ds_printf("DS_INFO: Ripping cancelled by user\n");
             return CMD_ERROR;
         }
-        
-        if (get_track_info(session, disc_type, tracks, &track_count) != CMD_OK) {
+
+        if (get_track_info(session, disc_type, self.tracks, &track_count) != CMD_OK) {
             ds_printf("DS_ERROR: Failed to get track info\n");
-            cleanup_failed_rip(dst_folder, dst_file, disc_type);
             return CMD_ERROR;
         }
-        
+
         for (int i = 0; i < track_count; i++) {
             if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
-                ds_printf("DS_INFO: Ripping cancelled by user\n");
-                return CMD_ERROR;
-            }
-            
-            int tn = tracks[i].track_num;
-            
-            if (disc_type == 2) {
-                snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, tracks[i].filename);
-            }
-            
-            if (disc_type == 2 && session == 0) {
-                snprintf(riplabel, sizeof(riplabel), "Track %d of %d\n", tn, self.lastgdtrack);
-            }
-            else if (disc_type == 2 && session == 1 && tn != self.lastgdtrack) {
-                snprintf(riplabel, sizeof(riplabel), "Track %d of %d\n", tn, self.lastgdtrack);
-            }
-            else {
-                snprintf(riplabel, sizeof(riplabel), "Last track\n");
-            }
-            
-            GUI_LabelSetText(self.track_label, riplabel);
-            
-            if (rip_sec(tn, tracks[i].start_lba, tracks[i].sector_count, 
-                       tracks[i].type, dst_file, disc_type) != CMD_OK) {
-                reset_rip_state();
-                cdrom_spin_down();
-                cleanup_failed_rip(dst_folder, dst_file, disc_type);
                 return CMD_ERROR;
             }
 
-            GUI_LabelSetText(self.track_label, " ");
-            GUI_ProgressBarSetPosition(self.pbar, 0.0);
+            int tn = self.tracks[i].track_num;
+
+            if (disc_type == CD_GDROM) {
+                snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, self.tracks[i].filename);
+            }
+
+            snprintf(riplabel, sizeof(riplabel), "Track %d of %ld", tn, self.last_track);
+            GUI_LabelSetText(self.track_label, riplabel);
+            thd_pass();
+
+            if (rip_sec(tn, self.tracks[i].start_lba, self.tracks[i].sector_count, 
+                       self.tracks[i].type, dst_file) != CMD_OK) {
+                return CMD_ERROR;
+            }
         }
     }
 
     return CMD_OK;
 }
 
-static void* gd_ripper_thread(void *arg)
-{
+static void* gd_ripper_thread(void *arg) {
 	int status, disc_type;
 	char dst_folder[NAME_MAX];
 	char dst_file[NAME_MAX];
 	char text[NAME_MAX];
+	int session_count;
 
 	ds_printf("DS_PROCESS: Starting disc ripping process\n");
 	self.start_time = timer_ms_gettime64();
 	self.processed_sectors = 0;
 
 	GUI_LabelSetText(self.track_label, "Initializing...");
+	thd_pass();
 	cdrom_reinit();
 
 	snprintf(text, NAME_MAX, "%s", GUI_TextEntryGetText(self.gname));
 
-	if(GUI_WidgetGetState(self.sd_c)) 
-	{
+	if(GUI_WidgetGetState(self.sd_c)) {
 		snprintf(dst_folder, NAME_MAX, "/sd/%s", text);
 	}
-	else if(GUI_WidgetGetState(self.hdd_c)) 
-	{
+	else if(GUI_WidgetGetState(self.hdd_c)) {
 		snprintf(dst_folder, NAME_MAX, "/ide/%s", text);
 	}
-	else if(GUI_WidgetGetState(self.net_c)) 
-	{
+	else if(GUI_WidgetGetState(self.net_c)) {
 		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
 	}
 
-	if(get_disc_status_and_type(&status, &disc_type) != CMD_OK)
-	{
-		reset_rip_state();
-		return NULL;
+	if(get_disc_status_and_type(&status, &disc_type) != CMD_OK) {
+		goto out;
 	}
 
 	GUI_LabelSetText(self.track_label, "Preparing...");
 	ds_printf("DS_PROCESS: Preparing destination: %s\n", dst_folder);
-	disc_type = prepare_destination_paths(dst_folder, dst_file, text, disc_type);
-	if(disc_type < 0)
-	{
+	thd_pass();
+
+	if(prepare_destination_paths(dst_folder, dst_file, text, disc_type) != CMD_OK) {
 		ds_printf("DS_ERROR: Failed to prepare destination paths\n");
-		reset_rip_state();
-		return NULL;
+		goto out;
 	}
 
+	session_count = get_session_count(disc_type);
+	if(session_count == 0) {
+		ds_printf("DS_ERROR: Unknown disc type\n");
+		goto out;
+	}
+
+	CDROM_TOC toc;
+	if (safe_cdrom_read_toc(&toc, disc_type == CD_GDROM ? 1 : 0) != CMD_OK) {
+		goto out;
+	}
+	self.last_track = TOC_TRACK(toc.last);
+
 	GUI_LabelSetText(self.track_label, "Calculating...");
-	self.total_sectors = calculate_total_sectors(disc_type);
+	thd_pass();
+	self.total_sectors = calculate_total_sectors(disc_type, session_count);
 	ds_printf("DS_PROCESS: Total sectors to rip: %u\n", (uint32_t)self.total_sectors);
 
 	GUI_LabelSetText(self.track_label, "Starting...");
 	ds_printf("DS_PROCESS: Starting track extraction\n");
-	if(process_sessions_and_tracks(dst_folder, dst_file, disc_type) != CMD_OK)
-	{
-		reset_rip_state();
-		return NULL;
-	}
+	thd_pass();
 
-	GUI_LabelSetText(self.track_label, " ");
-	GUI_WidgetMarkChanged(self.app->body);
+	if(process_sessions_and_tracks(dst_folder, dst_file, disc_type, session_count) != CMD_OK) {
+		cleanup_failed_rip(dst_folder, dst_file, disc_type);
+		goto out;
+	}
 	
-	if (disc_type == 2)
-	{
+	if (disc_type == CD_GDROM) {
 		ds_printf("DS_PROCESS: Creating GDI files\n");
-		if (gdfiles(dst_folder, dst_file, text) != CMD_OK)
-		{
-			cdrom_spin_down();
+		GUI_LabelSetText(self.track_label, "Creating GDI");
+		thd_pass();
+
+		if (gdfiles(dst_folder, dst_file, text) != CMD_OK) {
 			cleanup_failed_rip(dst_folder, dst_file, disc_type);
-			reset_rip_state();
-			return NULL;	
+			goto out;
 		}
 	}
 
+out:
 	reset_rip_state();
 	cdrom_spin_down();
 	return NULL;
@@ -723,7 +682,8 @@ static void update_ui_display(double progress_percent) {
 
 	char speed_text[64];
 	char time_text[64];
-	char sectors_text[64];
+	char total_sectors_text[64];
+	char processed_sectors_text[64];
 
 	double speed_sectors_per_sec = (double)self.processed_sectors / (elapsed_time / 1000.0);
 	double speed_kb_per_sec = speed_sectors_per_sec * 2048 / 1024.0;
@@ -731,13 +691,13 @@ static void update_ui_display(double progress_percent) {
 	snprintf(speed_text, sizeof(speed_text), "Speed: %.1f KB/s", speed_kb_per_sec);
 
 	if (self.total_sectors > 0) {
-		snprintf(sectors_text, sizeof(sectors_text), "%llu / %llu sectors", 
-				self.processed_sectors, self.total_sectors);
+		snprintf(total_sectors_text, sizeof(total_sectors_text), "Total: %llu", self.total_sectors);
 	}
 	else {
-		snprintf(sectors_text, sizeof(sectors_text), "%llu sectors", 
-				self.processed_sectors);
+		snprintf(total_sectors_text, sizeof(total_sectors_text), "Total: --");
 	}
+	
+	snprintf(processed_sectors_text, sizeof(processed_sectors_text), "Done: %llu", self.processed_sectors);
 
 	if (self.total_sectors > 0 && speed_sectors_per_sec > 0) {
 		uint64_t remaining_sectors = self.total_sectors - self.processed_sectors;
@@ -759,39 +719,36 @@ static void update_ui_display(double progress_percent) {
 
 	GUI_LabelSetText(self.speed_label, speed_text);
 	GUI_LabelSetText(self.time_label, time_text);
-	GUI_LabelSetText(self.sectors_label, sectors_text);
+	GUI_LabelSetText(self.sectors_total_label, total_sectors_text);
+	GUI_LabelSetText(self.sectors_processed_label, processed_sectors_text);
 
 	self.last_ui_update = current_time;
 }
 
-static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_type)
-{
+static int rip_sec(int tn,int first,int count,int type,char *dst_file) {
 	double percent;
 	file_t hnd;
 	int secbyte = (type == 4 ? 2048 : 2352) , count_old=count, bad=0, cdstat, readi;
 	int secmode = type == 4 ? CDROM_READ_DMA : CDROM_READ_PIO;
-	uint8 *buffer = (uint8 *)memalign(32, SEC_BUF_SIZE * secbyte);
+	uint8_t *buffer = (uint8_t *)memalign(32, SEC_BUF_SIZE * secbyte);
 
-	if(!buffer)
-	{
+	if(!buffer) {
 		ds_printf("DS_ERROR: Failed to allocate buffer\n");
 		return CMD_ERROR;
 	}
 
 	cdrom_set_sector_size(secbyte);
+	hnd = fs_open(dst_file, O_WRONLY | O_TRUNC | O_CREAT);
 
-	if ((hnd = fs_open(dst_file,O_WRONLY | O_TRUNC | O_CREAT)) == FILEHND_INVALID)
-	{
+	if (hnd == FILEHND_INVALID) {
 		ds_printf("Error open file %s\n" ,dst_file); 
 		cdrom_spin_down(); 
 		free(buffer); 
 		return CMD_ERROR;
 	}
-	while(count)
-	{
-		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-		{
-			ds_printf("DS_INFO: Sector ripping cancelled at sector %d\n", first);
+
+	while(count) {
+		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
 			free(buffer);
 			fs_close(hnd);
 			return CMD_ERROR;
@@ -802,10 +759,8 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 
 		cdstat = cdrom_read_sectors_ex(buffer, first, nsects, secmode);
 
-		while(cdstat != ERR_OK) 
-		{
-			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-			{
+		while(cdstat != ERR_OK) {
+			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
 				ds_printf("DS_INFO: Sector reading cancelled\n");
 				free(buffer);
 				fs_close(hnd);
@@ -829,8 +784,7 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 
 		readi = 0;
 
-		if (cdstat != ERR_OK) 
-		{
+		if (cdstat != ERR_OK) {
 			memset(buffer, 0, nsects * secbyte);
 			bad++;
 			ds_printf("DS_ERROR: Can't read sector %ld\n", first);
@@ -838,26 +792,17 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file, int disc_
 
 		first += nsects;
 
-		if(fs_write(hnd, buffer, nsects * secbyte) < 0) 
-		{
+		if(fs_write(hnd, buffer, nsects * secbyte) < 0) {
 			ds_printf("DS_ERROR: Write error to file\n");
 			free(buffer);
 			fs_close(hnd);
 			return CMD_ERROR;
 		}
-		
+
 		self.processed_sectors += nsects;
-		
+
 		percent = 1-(float)(count) / count_old;
 		update_ui_display(percent);
-		
-		if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) 
-		{
-			ds_printf("DS_INFO: Ripping cancelled during progress update\n");
-			free(buffer);
-			fs_close(hnd);
-			return CMD_ERROR;
-		}
 	}
 
 	free(buffer);
@@ -873,7 +818,7 @@ int gdfiles(char *dst_folder,char *dst_file,char *text)
 	CDROM_TOC gdtoc;
 	CDROM_TOC cdtoc;
 	int track ,lba ,gdtype ,cdtype;
-	uint8 *buff = memalign(32, 32768);
+	uint8_t *buff = memalign(32, 32768);
 
 	if(!buff)
 	{
@@ -882,16 +827,16 @@ int gdfiles(char *dst_folder,char *dst_file,char *text)
 	}
 
 	cdrom_set_sector_size(2048);
-	if(cdrom_read_toc(&cdtoc, 0) != ERR_OK) 
+	if(safe_cdrom_read_toc(&cdtoc, 0) != CMD_OK) 
 	{ 
-		ds_printf("DS_ERROR:CD Toc read error\n"); 
+		ds_printf("DS_ERROR: CD Toc read error\n"); 
 		free(buff); 
 		return CMD_ERROR; 
 	}
 
-	if(cdrom_read_toc(&gdtoc, 1) != ERR_OK) 
+	if(safe_cdrom_read_toc(&gdtoc, 1) != CMD_OK) 
 	{ 
-		ds_printf("DS_ERROR:GD Toc read error\n"); 
+		ds_printf("DS_ERROR: GD Toc read error\n"); 
 		free(buff); 
 		return CMD_ERROR; 
 	}

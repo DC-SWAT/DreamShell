@@ -13,8 +13,6 @@ void gd_ripper_Number_read();
 
 void gd_ripper_Gamename();
 
-void gd_ripper_Delname(GUI_Widget *widget);
-
 void gd_ripper_ipbin_name();
 
 void gd_ripper_Init(App_t *app, const char* fileName);
