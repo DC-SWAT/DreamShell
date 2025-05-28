@@ -7,6 +7,9 @@
 		<surface width="640" height="480" name="bg">
 			<blit surface="images/background.jpg" />
 		</surface>
+		<surface width="640" height="480" name="browser-bg">
+			<fill color="#DDDDDD" />
+		</surface>
 
 		<surface width="220" height="20" name="input-normal">
 			<fill color="#FFFFFF" />
@@ -21,6 +24,84 @@
 		<surface width="35" height="20" name="inputsmall-focus">
 			<fill color="#29B1EA" />
 			<fill x="2" y="2" width="33" height="18" color="#7CFFC1" />
+		</surface>
+		<surface width="100" height="25" name="browse-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="21" color="#31799F" />
+		</surface>
+		<surface width="100" height="25" name="browse-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="21" color="#61BDEC" />
+		</surface>
+		<surface width="100" height="25" name="browse-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="21" color="#D4F129" />
+		</surface>
+		<surface width="280" height="60" name="button-large-normal">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
+			<fill x="5" y="5" width="270" height="50" color="#31799F" />
+		</surface>
+		<surface width="280" height="60" name="button-large-hl">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
+			<fill x="5" y="5" width="270" height="50" color="#61BDEC" />
+		</surface>
+		<surface width="280" height="60" name="button-large-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
+			<fill x="5" y="5" width="270" height="50" color="#D4F129" />
+		</surface>
+		<surface width="200" height="60" name="button-medium-normal">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="192" height="52" color="#BBBBBB" />
+			<fill x="5" y="5" width="190" height="50" color="#31799F" />
+		</surface>
+		<surface width="200" height="60" name="button-medium-hl">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="192" height="52" color="#BBBBBB" />
+			<fill x="5" y="5" width="190" height="50" color="#61BDEC" />
+		</surface>
+		<surface width="200" height="60" name="button-medium-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="192" height="52" color="#BBBBBB" />
+			<fill x="5" y="5" width="190" height="50" color="#D4F129" />
+		</surface>
+		<surface height="30" name="item-normal" width="100%">
+			<fill color="#C9DADE" />
+			<fill color="#EEEEEE" height="2" y="28" />
+		</surface>
+		<surface height="30" name="item-focus" width="100%">
+			<fill color="#61BDEC" />
+			<fill color="#EEEEEE" height="2" y="28" />
+		</surface>
+		<surface height="30" name="item-selected" width="100%">
+			<fill color="#D4F129" />
+			<fill color="#EEEEEE" height="2" y="28" />
+		</surface>
+		<surface width="18" height="20" name="sbb-normal">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#31799F" />
+		</surface>
+		<surface width="18" height="20" name="sbb-focus">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#61BDEC" />
+		</surface>
+		<surface width="18" height="20" name="sbb-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#D4F129" />
+		</surface>
+		<surface width="18" height="20" name="sbb-disabled">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#CCE4F0" />
+		</surface>
+		<surface width="18" height="40" name="sb-knob">
+			<fill color="#EEEEEE" />
+			<fill x="1" y="1" width="17" height="38" color="#31799F" />
+		</surface>
+		<surface width="18" height="260" name="sb-back">
+			<fill color="#EEEEEE" />
+			<fill width="1" color="#CCE4F0" />
 		</surface>
 		<image src="./images/start.png" name="iStart" />
 		<image src="./images/starth.png" name="iStarth" />
@@ -40,151 +121,173 @@
 		</surface>
 	</resources>
 	<body width="640" height="480" background="bg" onload="export:gd_ripper_Init()" onunload="export:gd_ripper_Exit()">
+		<cardstack name="pages">
+			<panel name="main-page">
+				<progressbar width="320" height="97" x="166" y="11" name="progress_bar" pos="0.0" pimage="images/progressbar.png" />
 
-		<progressbar width="320" height="97" x="166" y="11" name="progress_bar" pos="0.0" pimage="images/progressbar.png" />
+				<panel y="18" x="5" width="160" height="90">
+					<label width="100%" height="100%" font="m23" color="#444444" name="track-label" text="GD Ripper" />
+				</panel>
 
-		<panel y="18" x="5" width="160" height="90">
-			<label width="100%" height="100%" font="m23" color="#444444" name="track-label" text="GD Ripper" />
-		</panel>
+				<panel x="490" y="15" width="150" height="100">
+					<panel width="150" height="20">
+						<label width="100%" height="20" font="arial" color="#333333" name="speed-label" align="left" />
+					</panel>
+					<panel y="20" width="150" height="20">
+						<label width="100%" height="20" font="arial" color="#333333" name="time-label" align="left" />
+					</panel>
+					<panel y="50" width="150" height="20">
+						<label width="100%" height="20" font="arial" color="#333333" name="sectors-total-label" align="left" />
+					</panel>
+					<panel y="70" width="150" height="20">
+						<label width="100%" height="20" font="arial" color="#333333" name="sectors-processed-label" align="left" />
+					</panel>
+				</panel>
 
-        <panel x="490" y="15" width="150" height="100">
-			<panel width="150" height="20">
-				<label width="100%" height="20" font="arial" color="#333333" name="speed-label" align="left" />
+				<panel x="40" y="115" width="360" height="50">
+					<label height="25" font="arial" color="#333333" text="Enter image name:" align="left" />
+					<input type="text"
+						onblur="export:gd_ripper_Gamename()"
+						font="arial"
+						fontcolor="#333333"
+						value="Game"
+						size="30"
+						height="20"
+						name="gname-text"
+						normal="input-normal"
+						highlight="input-normal"
+						focus="input-focus" />
+				</panel>
+				
+				<panel x="40" y="170" width="360" height="75">
+					<label height="25" font="arial" color="#333333" text="Destination folder:" align="left" />
+					<panel y="25" width="360" height="25">
+						<label width="360" height="25" font="arial" color="#333333" name="destination-path" text="/sd" align="left" />
+					</panel>
+					<panel y="50" width="360" height="25">
+						<input type="button" width="100" height="25"
+							normal="browse-normal" highlight="browse-hl" pressed="browse-pressed"
+							onclick="export:gd_ripper_ShowFileBrowser()">
+							<label font="arial" color="#EEEEEE" text="Browse..." align="center" />
+						</input>
+					</panel>
+				</panel>
+
+				<panel x="40" y="255" width="360" height="80">
+					<panel height="20">
+						<label font="arial" color="#333333" text="Read options:" align="left" />
+					</panel>
+					
+					<input type="checkbox"
+							checked="no"
+							onnormal="iCheck"
+							onhighlight="iCheckh"
+							offnormal="iUncheck"
+							offhighlight="iUncheckh"
+							y="25"
+							width="200"
+							height="25"
+							name="bad_btn">
+						<label x="25" height="20" font="arial" color="#333333" text="Skip bad sectors" align="left" />
+					</input>
+
+					<panel y="55" width="360" height="20">
+						<input type="text"
+							onblur="export:gd_ripper_Number_read()"
+							font="arial"
+							fontcolor="#333333"
+							value="10"
+							size="30"
+							width="35"
+							height="20"
+							name="num-read"
+							normal="inputsmall-normal"
+							highlight="inputsmall-normal"
+							focus="inputsmall-focus" />
+						<label width="280" height="20" x="42" font="arial" color="#333333" text="Bad sector read attempts" align="left" />
+					</panel>
+				</panel>
+
+				<input type="button"
+					normal="iStart"
+					highlight="iStarth"
+					pressed="iStart"
+					disabled="iStart"
+					x="10" y="410" width="128" height="64"
+					onclick="export:gd_ripper_StartRip()"
+					name="start_btn" />
+				
+				<input type="button"
+					normal="iReadname"
+					highlight="iReadnameh"
+					pressed="iReadname"
+					disabled="iReadname"
+					x="148" y="410" width="128" height="64"
+					onclick="export:gd_ripper_ipbin_name()"
+					name="Read-name" />
+
+				<input type="button"
+					normal="iStop"
+					highlight="iStoph"
+					pressed="iStop"
+					disabled="iStop"
+					x="286" y="410" width="128" height="64"
+					onclick="export:gd_ripper_CancelRip()"
+					name="cancel_btn" />
+
+				<input type="button"
+					normal="iExit"
+					highlight="iExith"
+					pressed="iExit"
+					disabled="iExit"
+					x="505" y="410" width="128" height="64"
+					onclick="console:app -o -n Main" />
 			</panel>
-			<panel y="20" width="150" height="20">
-				<label width="100%" height="20" font="arial" color="#333333" name="time-label" align="left" />
+
+			<panel name="file-browser-page" background="browser-bg">
+				<panel width="100%" height="30" y="10">
+					<label align="center" color="#444444" font="m23" height="30"
+						text="Choose destination folder" />
+				</panel>
+				<panel width="90%" height="320" x="5%" y="50">
+					<filemanager width="100%" height="300"
+						item_disabled="item-selected"
+						item_font="arial"
+						item_font_color="#333333"
+						item_highlight="item-focus"
+						item_normal="item-normal"
+						item_pressed="item-focus"
+						sb_knob="sb-knob"
+						sb_back="sb-back"
+						sbbup_normal="sbb-normal"
+						sbbup_highlight="sbb-focus"
+						sbbup_pressed="sbb-pressed"
+						sbbup_disabled="sbb-disabled"
+						sbbdown_normal="sbb-normal"
+						sbbdown_highlight="sbb-focus"
+						sbbdown_pressed="sbb-pressed"
+						sbbdown_disabled="sbb-disabled"
+						name="file-browser"
+						onclick="export:gd_ripper_FileBrowserItemClick()"
+						path="/" />
+				</panel>
+				<panel width="100%" height="70" y="380">
+					<panel width="50%" height="70">
+						<input type="button" width="280" height="60"
+							normal="button-large-normal" highlight="button-large-hl" pressed="button-large-pressed"
+							onclick="export:gd_ripper_FileBrowserConfirm()" align="center">
+							<label font="m23" color="#EEEEEE" text="Confirm" />
+						</input>
+					</panel>
+					<panel width="50%" height="70">
+						<input type="button" width="280" height="60"
+							normal="button-large-normal" highlight="button-large-hl" pressed="button-large-pressed"
+							onclick="export:gd_ripper_ShowMainPage()" align="center">
+							<label font="m23" color="#EEEEEE" text="Cancel" />
+						</input>
+					</panel>
+				</panel>
 			</panel>
-			<panel y="50" width="150" height="20">
-				<label width="100%" height="20" font="arial" color="#333333" name="sectors-total-label" align="left" />
-			</panel>
-			<panel y="70" width="150" height="20">
-				<label width="100%" height="20" font="arial" color="#333333" name="sectors-processed-label" align="left" />
-			</panel>
-		</panel>
-
-		<panel x="40" y="115" width="360" height="50">
-			<label height="25" font="arial" color="#333333" text="Enter image name:" align="left" />
-			<input type="text"
-				onblur="export:gd_ripper_Gamename()"
-				font="arial"
-				fontcolor="#333333"
-				value="Game"
-				size="30"
-				height="20"
-				name="gname-text"
-				normal="input-normal"
-				highlight="input-normal"
-				focus="input-focus" />
-		</panel>
-		
-        <panel x="40" y="180" width="300" height="120">
-			<label width="150" height="20" font="arial" color="#333333" text="Select device to save :" align="left" />
-			<input type="checkbox"
-				onclick="export:gd_ripper_toggleSavedevice()"
-				onnormal="iCheck"
-				onhighlight="iCheckh"
-				offnormal="iUncheck"
-				offhighlight="iUncheckh"
-				y="30"
-				width="100"
-				height="25"
-				name="sd_c">
-				<label height="20" x="25" font="arial" color="#333333" text="SD" align="left" />
-			</input>
-			<input type="checkbox"
-				onclick="export:gd_ripper_toggleSavedevice()" 
-				onnormal="iCheck"
-				onhighlight="iCheckh"
-				offnormal="iUncheck"
-				offhighlight="iUncheckh"
-				y="60"
-				width="100"
-				height="25"
-				name="hdd_c">
-				<label height="20" x="25" font="arial" color="#333333" text="HDD" align="left" />
-			</input>
-			<input type="checkbox"
-				onclick="export:gd_ripper_toggleSavedevice()" 
-				onnormal="iCheck"
-				onhighlight="iCheckh"
-				offnormal="iUncheck"
-				offhighlight="iUncheckh"
-				y="90"
-				width="100"
-				height="25"
-				name="net_c">
-				<label height="20" x="25" font="arial" color="#333333" text="PC" align="left" />
-			</input>
-		</panel>
-
-        <panel x="40" y="305" width="360" height="80">
-			<panel height="20">
-				<label font="arial" color="#333333" text="Read options:" align="left" />
-			</panel>
-			
-			<input type="checkbox"
-					checked="no"
-					onnormal="iCheck"
-					onhighlight="iCheckh"
-					offnormal="iUncheck"
-					offhighlight="iUncheckh"
-					y="25"
-					width="200"
-					height="25"
-					name="bad_btn">
-				<label x="25" height="20" font="arial" color="#333333" text="Skip bad sectors" align="left" />
-			</input>
-
-			<panel y="55" width="360" height="20">
-				<input type="text"
-					onblur="export:gd_ripper_Number_read()"
-					font="arial"
-					fontcolor="#333333"
-					value="10"
-					size="30"
-					width="35"
-					height="20"
-					name="num-read"
-					normal="inputsmall-normal"
-					highlight="inputsmall-normal"
-					focus="inputsmall-focus" />
-				<label width="280" height="20" x="42" font="arial" color="#333333" text="Attempts of reading bad sectors" align="left" />
-			</panel>
-		</panel>
-
-		<input type="button"
-			normal="iStart"
-			highlight="iStarth"
-			pressed="iStart"
-			disabled="iStart"
-			x="10" y="410" width="128" height="64"
-			onclick="export:gd_ripper_StartRip()"
-			name="start_btn" />
-        
-        <input type="button"
-			normal="iReadname"
-			highlight="iReadnameh"
-			pressed="iReadname"
-			disabled="iReadname"
-			x="148" y="410" width="128" height="64"
-			onclick="export:gd_ripper_ipbin_name()"
-			name="Read-name" />
-
-		<input type="button"
-			normal="iStop"
-			highlight="iStoph"
-			pressed="iStop"
-			disabled="iStop"
-			x="286" y="410" width="128" height="64"
-			onclick="export:gd_ripper_CancelRip()"
-			name="cancel_btn" />
-
-		<input type="button"
-			normal="iExit"
-			highlight="iExith"
-			pressed="iExit"
-			disabled="iExit"
-			x="505" y="410" width="128" height="64"
-			onclick="console:app -o -n Main" />
+		</cardstack>
 	</body>
 </app>

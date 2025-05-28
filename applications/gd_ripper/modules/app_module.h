@@ -17,10 +17,20 @@ void gd_ripper_ipbin_name();
 
 void gd_ripper_Init(App_t *app, const char* fileName);
 
-void gd_ripper_StartRip();
+void gd_ripper_StartRip(GUI_Widget *widget);
 
-void gd_ripper_CancelRip();
+void gd_ripper_CancelRip(GUI_Widget *widget);
 
 int gdfiles(char *dst_folder,char *dst_file,char *text);
 
 void gd_ripper_Exit();
+
+void gd_ripper_ShowFileBrowser(GUI_Widget *widget);
+
+void gd_ripper_ShowMainPage(GUI_Widget *widget);
+
+void gd_ripper_FileBrowserItemClick(GUI_Widget *widget);
+
+void gd_ripper_FileBrowserConfirm(GUI_Widget *widget);
+
+void gd_ripper_ShowFileBrowser(GUI_Widget *widget);

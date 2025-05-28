@@ -40,9 +40,6 @@ static void update_ui_display(double progress_percent);
 static struct self {
 	App_t *app;
 	GUI_Widget *bad;
-	GUI_Widget *sd_c;
-	GUI_Widget *hdd_c;
-	GUI_Widget *net_c;
 	GUI_Widget *gname;
 	GUI_Widget *pbar;
 	GUI_Widget *track_label;
@@ -53,6 +50,9 @@ static struct self {
 	GUI_Widget *time_label;
 	GUI_Widget *sectors_total_label;
 	GUI_Widget *sectors_processed_label;
+	GUI_Widget *destination_path;
+	GUI_Widget *file_browser;
+	GUI_Widget *pages;
 	uint32_t last_track;
 	volatile int rip_active;
 	uint64_t start_time;
@@ -60,6 +60,7 @@ static struct self {
 	uint64_t processed_sectors;
 	uint64_t last_ui_update;
 	track_info_t tracks[99];
+	char selected_path[NAME_MAX];
 } self;
 
 static void reset_rip_state(void) {
@@ -76,14 +77,6 @@ static void reset_rip_state(void) {
 	self.total_sectors = 0;
 	self.processed_sectors = 0;
 	self.last_ui_update = 0;
-}
-
-void gd_ripper_toggleSavedevice(GUI_Widget *widget)
-{
-    GUI_WidgetSetState(self.sd_c, 0);
-    GUI_WidgetSetState(self.hdd_c, 0);
-    GUI_WidgetSetState(self.net_c, 0);
-    GUI_WidgetSetState(widget, 1);
 }
 
 void gd_ripper_Number_read()
@@ -248,9 +241,6 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 		self.bad = APP_GET_WIDGET("bad_btn");
 		self.gname = APP_GET_WIDGET("gname-text");
 		self.pbar = APP_GET_WIDGET("progress_bar");
-		self.sd_c = APP_GET_WIDGET("sd_c");
-		self.hdd_c = APP_GET_WIDGET("hdd_c");
-		self.net_c = APP_GET_WIDGET("net_c");
 		self.track_label = APP_GET_WIDGET("track-label");
 		self.num_read = APP_GET_WIDGET("num-read");
 		self.start_btn = APP_GET_WIDGET("start_btn");
@@ -259,30 +249,24 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 		self.time_label = APP_GET_WIDGET("time-label");
 		self.sectors_total_label = APP_GET_WIDGET("sectors-total-label");
 		self.sectors_processed_label = APP_GET_WIDGET("sectors-processed-label");
+		self.destination_path = APP_GET_WIDGET("destination-path");
+		self.file_browser = APP_GET_WIDGET("file-browser");
+		self.pages = APP_GET_WIDGET("pages");
 
-		GUI_WidgetSetState(self.net_c, DirExists("/pc"));
-		
-		if(!DirExists("/sd")) 
-		{
-			GUI_WidgetSetEnabled(self.sd_c, 0);
+		if(DirExists("/ide")) {
+			strcpy(self.selected_path, "/ide");
 		}
-		else 
-		{
-			GUI_WidgetSetState(self.net_c, 0);
-			GUI_WidgetSetState(self.sd_c, 1);
+		else if(DirExists("/sd")) {
+			strcpy(self.selected_path, "/sd");
 		}
-		
-		if(!DirExists("/ide")) 
-		{
-			GUI_WidgetSetEnabled(self.hdd_c, 0);
+		else if(DirExists("/pc")) {
+			strcpy(self.selected_path, "/pc");
 		}
-		else 
-		{
-			GUI_WidgetSetState(self.sd_c, 0);
-			GUI_WidgetSetState(self.net_c, 0);
-			GUI_WidgetSetState(self.hdd_c, 1);
+		else {
+			strcpy(self.selected_path, "/ram");
 		}
 
+		GUI_LabelSetText(self.destination_path, self.selected_path);
 		GUI_WidgetSetEnabled(self.cancel_btn, 0);
 		gd_ripper_ipbin_name();
 	} 
@@ -294,8 +278,9 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 }
 
 
-void gd_ripper_StartRip() 
+void gd_ripper_StartRip(GUI_Widget *widget) 
 {
+	(void)widget;
 	if(self.app->thd)
 	{
 		self.rip_active = 0;
@@ -315,8 +300,9 @@ void gd_ripper_StartRip()
 	self.app->thd = thd_create(0, gd_ripper_thread, NULL);
 }
 
-void gd_ripper_CancelRip()
+void gd_ripper_CancelRip(GUI_Widget *widget)
 {
+	(void)widget;
 	ds_printf("DS_PROCESS: Cancelling ripping\n");
 	self.rip_active = 0;
 
@@ -571,7 +557,6 @@ static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int dis
 
             snprintf(riplabel, sizeof(riplabel), "Track %d of %ld", tn, self.last_track);
             GUI_LabelSetText(self.track_label, riplabel);
-            thd_pass();
 
             if (rip_sec(tn, self.tracks[i].start_lba, self.tracks[i].sector_count, 
                        self.tracks[i].type, dst_file) != CMD_OK) {
@@ -595,20 +580,10 @@ static void* gd_ripper_thread(void *arg) {
 	self.processed_sectors = 0;
 
 	GUI_LabelSetText(self.track_label, "Initializing...");
-	thd_pass();
 	cdrom_reinit();
 
 	snprintf(text, NAME_MAX, "%s", GUI_TextEntryGetText(self.gname));
-
-	if(GUI_WidgetGetState(self.sd_c)) {
-		snprintf(dst_folder, NAME_MAX, "/sd/%s", text);
-	}
-	else if(GUI_WidgetGetState(self.hdd_c)) {
-		snprintf(dst_folder, NAME_MAX, "/ide/%s", text);
-	}
-	else if(GUI_WidgetGetState(self.net_c)) {
-		snprintf(dst_folder, NAME_MAX, "/net/%s", text);
-	}
+	snprintf(dst_folder, NAME_MAX, "%s/%s", self.selected_path, text);
 
 	if(get_disc_status_and_type(&status, &disc_type) != CMD_OK) {
 		goto out;
@@ -616,7 +591,6 @@ static void* gd_ripper_thread(void *arg) {
 
 	GUI_LabelSetText(self.track_label, "Preparing...");
 	ds_printf("DS_PROCESS: Preparing destination: %s\n", dst_folder);
-	thd_pass();
 
 	if(prepare_destination_paths(dst_folder, dst_file, text, disc_type) != CMD_OK) {
 		ds_printf("DS_ERROR: Failed to prepare destination paths\n");
@@ -634,25 +608,17 @@ static void* gd_ripper_thread(void *arg) {
 		goto out;
 	}
 	self.last_track = TOC_TRACK(toc.last);
-
-	GUI_LabelSetText(self.track_label, "Calculating...");
-	thd_pass();
 	self.total_sectors = calculate_total_sectors(disc_type, session_count);
-	ds_printf("DS_PROCESS: Total sectors to rip: %u\n", (uint32_t)self.total_sectors);
-
-	GUI_LabelSetText(self.track_label, "Starting...");
 	ds_printf("DS_PROCESS: Starting track extraction\n");
-	thd_pass();
 
 	if(process_sessions_and_tracks(dst_folder, dst_file, disc_type, session_count) != CMD_OK) {
 		cleanup_failed_rip(dst_folder, dst_file, disc_type);
 		goto out;
 	}
-	
+
 	if (disc_type == CD_GDROM) {
 		ds_printf("DS_PROCESS: Creating GDI files\n");
 		GUI_LabelSetText(self.track_label, "Creating GDI");
-		thd_pass();
 
 		if (gdfiles(dst_folder, dst_file, text) != CMD_OK) {
 			cleanup_failed_rip(dst_folder, dst_file, disc_type);
@@ -909,18 +875,50 @@ int gdfiles(char *dst_folder,char *dst_file,char *text)
 	return CMD_OK;	
 }
 
-void gd_ripper_Exit() 
-{
-	if(self.rip_active)
-	{
+void gd_ripper_Exit()  {
+	if(self.rip_active) {
 		self.rip_active = 0;
-		if(self.app->thd)
-		{
+
+		if(self.app->thd) {
 			thd_join(self.app->thd, NULL);
 			self.app->thd = NULL;
 		}
 	}
-
 	cdrom_spin_down();
 }
 
+void gd_ripper_ShowFileBrowser(GUI_Widget *widget) {
+	(void)widget;
+	if (self.pages) {
+		GUI_CardStackShowIndex(self.pages, 1);
+	}
+}
+
+void gd_ripper_ShowMainPage(GUI_Widget *widget) {
+	(void)widget;
+	if (self.pages) {
+		GUI_CardStackShowIndex(self.pages, 0);
+	}
+}
+
+void gd_ripper_FileBrowserItemClick(dirent_fm_t *fm_ent) {
+	if (!fm_ent) {
+		return;
+	}
+	dirent_t *ent = &fm_ent->ent;
+	GUI_FileManagerChangeDir(self.file_browser, ent->name, ent->size);
+}
+
+void gd_ripper_FileBrowserConfirm(GUI_Widget *widget) {
+	(void)widget;
+
+	if (self.file_browser && self.destination_path && self.pages) {
+		const char *path = GUI_FileManagerGetPath(self.file_browser);
+		if (path) {
+			strncpy(self.selected_path, path, NAME_MAX - 1);
+			self.selected_path[NAME_MAX - 1] = '\0';
+			GUI_LabelSetText(self.destination_path, self.selected_path);
+		}
+		GUI_CardStackShowIndex(self.pages, 0);
+	}
+}

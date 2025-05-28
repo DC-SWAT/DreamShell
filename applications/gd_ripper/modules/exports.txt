@@ -2,10 +2,13 @@ include kos/exports.h
 include app_module.h
 
 gd_ripper_Init
-gd_ripper_toggleSavedevice
 gd_ripper_Gamename
 gd_ripper_StartRip
 gd_ripper_CancelRip
 gd_ripper_ipbin_name
 gd_ripper_Number_read
 gd_ripper_Exit
+gd_ripper_ShowFileBrowser
+gd_ripper_ShowMainPage
+gd_ripper_FileBrowserItemClick
+gd_ripper_FileBrowserConfirm
