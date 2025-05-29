@@ -13,6 +13,7 @@
 #define VIRT_KB_SURFACE_KEYS_CAPS  1
 #define VIRT_KB_SURFACE_NUMS       2
 
+static int inited = 0;
 
 typedef struct virt_kb_section {
 	
@@ -171,7 +172,11 @@ error:
 
 
 int VirtKeyboardInit() {
-
+	
+	if (inited) {
+		return 0;
+	}
+	
 	memset(&vkb, 0, sizeof(vkb));
 
 //	if(VirtKeyboardLoading(0) < 0) {
@@ -220,7 +225,11 @@ int VirtKeyboardInit() {
 
 void VirtKeyboardShutdown() {
 	int i;
-
+	
+	if (!inited) {
+		return;
+	}
+	
 	if(VirtKeyboardIsVisible()) {
 		VirtKeyboardHide();
 	}
