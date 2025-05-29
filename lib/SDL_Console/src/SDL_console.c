@@ -1082,7 +1082,7 @@ void Cursor_Add(ConsoleInformation *console, SDL_Event *event) {
 	//int ch = kbd_get_key();
 
 	/* Again: the commandline has to hold the command and the cursor (+1) */
-	if(strlen(Topmost->Command) + 1 < CON_CHARS_PER_LINE && isascii(event->key.keysym.unicode)) {
+	if(strlen(Topmost->Command) + 1 < CON_CHARS_PER_LINE && isprint(event->key.keysym.unicode)) {
 		Topmost->CursorPos++;
 		len = strlen(Topmost->LCommand);
 		Topmost->LCommand[len] = (char)event->key.keysym.unicode; //(char)ch;
