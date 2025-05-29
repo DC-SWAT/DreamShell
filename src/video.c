@@ -11,6 +11,7 @@
 #include "img/load.h"
 #include <kmg/kmg.h>
 #include <zlib/zlib.h>
+#include <dc/sci.h>
 
 static int sdl_dc_no_ask_60hz = 0;
 static int sdl_dc_default_60hz = 0;
@@ -23,6 +24,7 @@ static mutex_t video_mutex = MUTEX_INITIALIZER;
 static kthread_t *video_thd;
 static int video_inited = 0;
 static int video_mode = -1;
+static int video_dma = 1;
 
 static float screen_opacity = 1.0f;
 static float scr_fade_text_opacity = 1.0f;
@@ -464,8 +466,14 @@ int InitVideo(int w, int h, int bpp) {
 	if(plx_fnt) {
 		plx_cxt = plx_fcxt_create(plx_fnt, PVR_LIST_TR_POLY);
 		plx_fcxt_setcolor4f(plx_cxt, scr_fade_text_opacity, 0.9f, 0.9f, 0.9f);
-	} else {
+	}
+	else {
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
+	}
+
+	/* Disable PVR DMA if SCI-SPI DMA is used due to conflict (?) */
+	if(sci_spi_rw_byte(0, NULL) != SCI_ERR_NOT_INITIALIZED) {
+		video_dma = 0;
 	}
 
 	mutex_init((mutex_t *)&video_mutex, MUTEX_TYPE_NORMAL);
@@ -591,19 +599,21 @@ static void *VideoThread(void *ptr) {
 		LockVideo();
 
 		if(screen_changed && draw_screen) {
-			pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
-			/*
-			dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-			do {
-				int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
-					sdl_dc_wtex * sdl_dc_htex * 2, 1, NULL, 0);
-				if(rs < 0 && errno == EINPROGRESS) {
-					thd_pass();
-					continue;
-				}
-				break;
-			} while(1);
-			*/
+			if(video_dma) {
+				dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+				do {
+					int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
+						sdl_dc_wtex * sdl_dc_htex * 2, 1, NULL, 0);
+					if(rs < 0 && errno == EINPROGRESS) {
+						thd_pass();
+						continue;
+					}
+					break;
+				} while(1);
+			}
+			else {
+				pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+			}
 			screen_changed = 0;
 		}
 
