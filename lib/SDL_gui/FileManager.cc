@@ -615,7 +615,36 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 					break;
 			}
 			break;
+		
+		case SDL_MOUSEMOTION:
+			if (event->motion.z) {
+				int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+				int sp_old = scrollbar->GetVerticalPosition();
+				int sp = sp_old;
+				int val = event->motion.z;
+				int step = (scroll_height / panel->GetWidgetCount());
+				
+				if (val < 0) {
+					sp -= step;
+				} else if(val > 0) {
+					sp += step;
+				} else {
+					break;
+				}
+				
+				if(sp > scroll_height) {
+					sp = scroll_height;
+				} else if(sp < 0) {
+					sp = 0;
+				}
 
+				if(sp_old != sp) {
+					scrollbar->SetVerticalPosition(sp);
+					AdjustScrollbar(NULL);
+				}
+			}
+			break;
+		
 		case SDL_JOYAXISMOTION:
 
 			switch(event->jaxis.axis) {
