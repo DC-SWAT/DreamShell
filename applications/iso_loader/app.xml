@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app extensions=".iso .cso .cdi .gdi" icon="images/icon.png" name="ISO Loader" version="0.8.1">
+<app extensions=".iso .cso .cdi .gdi" icon="images/icon.png" name="ISO Loader" version="0.8.2">
 	<resources>
 		<module src="../../modules/minilzo.klf" />
 		<module src="../../modules/isofs.klf" />

@@ -1539,9 +1539,9 @@ int isoLoader_LoadPreset() {
 		return -1;
 	}
 
-	char *filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
+	char *filename = findPresetFile(GUI_FileManagerGetPath(self.filebrowser), self.md5);
 
-	if (FileSize(filename) < 5) {
+	if (filename == NULL) {
 		isoLoader_DefaultPreset();
 		return -1;
 	}
@@ -1711,6 +1711,7 @@ int isoLoader_LoadPreset() {
 		}
 	}
 
+	ds_printf("DS_OK: Applied %s\n", filename);
 	return 0;
 }
 
@@ -2039,6 +2040,7 @@ void isoLoader_ResizeUI()
 void isoLoader_Shutdown(App_t *app) {
 	(void)app;
 	StopCDDATrack();
+	unmountAllPresetsRomdisks();
 
 	if(self.isoldr) {
 		free(self.isoldr);

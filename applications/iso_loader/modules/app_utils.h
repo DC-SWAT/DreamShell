@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    utils.h - ISO Loader app utils
-   Copyright (C) 2022-2023 SWAT
+   Copyright (C) 2022-2025 SWAT
 
 */
 
@@ -35,6 +35,11 @@ int conf_parse(isoldr_conf *cfg, const char *filename);
 int getDeviceType(const char *dir);
 int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename);
 char *makePresetFilename(const char *dir, uint8 *md5);
+
+int mountPresetsRomdisk(int device_type);
+void unmountPresetsRomdisk(int device_type);
+void unmountAllPresetsRomdisks();
+char *findPresetFile(const char *dir, uint8 *md5);
 
 size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, char *result);
 void PlayCDDATrack(const char *file, int loop);
