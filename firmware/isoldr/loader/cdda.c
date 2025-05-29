@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback emulation
- * (c)2014-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -242,7 +242,11 @@ static void setup_pcm_buffer(void) {
 	cdda->end_tm = is_va0 ? 36277 : 36185;
 	cdda->size = 0x8000;
 
-	size_t ram_usage = cdda->size >> (cdda->trans_method >= PCM_TRANS_SQ_SPLIT ? 1 : 0);
+	uint32 shift = 0;
+	if(cdda->channels == 1 || cdda->trans_method >= PCM_TRANS_SQ_SPLIT) {
+		shift += 1;
+	}
+	size_t ram_usage = cdda->size >> shift;
 	uint32 avail_mem = cdda->size;
 	malloc_stat(&avail_mem, &avail_mem);
 
@@ -257,7 +261,7 @@ static void setup_pcm_buffer(void) {
 			cdda->size >>= 1;
 			cdda->end_tm = is_va0 ? 72559 : 72376;
 
-			if(avail_mem < cdda->size) {
+			if(avail_mem < ram_usage) {
 				ram_usage >>= 1;
 				cdda->size >>= 1;
 				cdda->end_tm = is_va0 ? 36277 : 36185;
@@ -274,10 +278,10 @@ static void setup_pcm_buffer(void) {
 				cdda->size >>= 1;
 				cdda->end_tm = is_va0 ? 18136 : 18090;
 			}
-			if(avail_mem < cdda->size) {
-				uint32 s = (exception_inited() ? 1 : 2);
-				ram_usage >>= s;
-				cdda->size >>= s;
+			if(avail_mem < ram_usage) {
+				shift = (exception_inited() ? 1 : 2);
+				ram_usage >>= shift;
+				cdda->size >>= shift;
 				cdda->end_tm = is_va0 ? 9065 : 9043;
 			}
 			break;
@@ -289,7 +293,7 @@ static void setup_pcm_buffer(void) {
 
 	cdda->buff[PCM_TMP_BUFF] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
 	if(cdda->trans_method < PCM_TRANS_SQ_SPLIT) {
-		cdda->buff[PCM_DMA_BUFF] = cdda->buff[0] + (cdda->size >> 1);
+		cdda->buff[PCM_DMA_BUFF] = cdda->buff[PCM_TMP_BUFF] + (ram_usage >> 1);
 	} else {
 		cdda->buff[PCM_DMA_BUFF] = NULL;
 	}
@@ -1041,16 +1045,18 @@ static void play_track(uint32 track) {
 		if ((wav_format != WAVE_FMT_PCM && wav_format != WAVE_FMT_YAMAHA_ADPCM)
 			|| (cdda->bitsize != 16 && cdda->bitsize != 4)
 			|| freq != 44100
-			|| channels != 2
+			|| channels > 2
 		) {
 			close(cdda->fd);
 			return;
 		}
 
 		cdda->aica_format = (cdda->bitsize == 16 ? AICA_SM_16BIT : AICA_SM_ADPCM_LS);
+		cdda->channels = channels;
 
 	} else {
 		cdda->bitsize = 16;
+		cdda->channels = 2;
 		cdda->aica_format = AICA_SM_16BIT;
 	}
 
@@ -1075,8 +1081,8 @@ static void play_track(uint32 track) {
 		cdda->track_size = total(cdda->fd) - cdda->offset - (cdda->size >> 1);
 	}
 
-	LOGFF("Track #%lu, %d bits/sample, %lu bytes total, LBA %ld\n",
-		track, cdda->bitsize, cdda->track_size, cdda->lba);
+	LOGFF("Track #%lu, %d bits/sample, %d channels, %lu bytes total, LBA %ld\n",
+		track, cdda->bitsize, cdda->channels, cdda->track_size, cdda->lba);
 
 #ifdef DEV_TYPE_SD
 	if(cdda->bitsize == 4) {
@@ -1092,7 +1098,7 @@ static void play_track(uint32 track) {
 #endif
 
 	if(cdda->trans_method != PCM_TRANS_DMA) {
-		if(cdda->bitsize == 16) {
+		if(cdda->bitsize == 16 && cdda->channels == 2) {
 			if(cdda->trans_method == PCM_TRANS_SQ) {
 				cdda->trans_method = PCM_TRANS_SQ_SPLIT;
 			}
@@ -1339,7 +1345,8 @@ static void read_callback(size_t size) {
 static void fill_pcm_buff() {
 
 	uint32 remain_bytes;
-	uint32 read_bytes = cdda->size >> 1;
+	uint32 read_bytes = cdda->size >> (cdda->channels == 2 ? 1 : 2);
+	uint8 *buff = cdda->buff[cdda->channels == 2 ? PCM_TMP_BUFF : cdda->cur_buff];
 
 	if(cdda->last_lba > 0) {
 
@@ -1366,9 +1373,9 @@ static void fill_pcm_buff() {
 
 #ifdef _FS_ASYNC
 	cdda->stat = CDDA_STAT_WAIT;
-	int rc = read_async(cdda->fd, cdda->buff[PCM_TMP_BUFF], read_bytes, read_callback);
+	int rc = read_async(cdda->fd, buff, read_bytes, read_callback);
 #else
-	int rc = read(cdda->fd, cdda->buff[PCM_TMP_BUFF], read_bytes);
+	int rc = read(cdda->fd, buff, read_bytes);
 	cdda->stat = CDDA_STAT_PREP;
 #endif
 
@@ -1429,7 +1436,7 @@ void CDDA_MainLoop(void) {
 		cdda->cur_offset = tell(cdda->fd) - cdda->offset;
 		GDS->lba = cdda->lba + (cdda->cur_offset / RAW_SECTOR_SIZE);
 
-		if(cdda->trans_method < PCM_TRANS_SQ_SPLIT) {
+		if(cdda->channels == 2 && cdda->trans_method < PCM_TRANS_SQ_SPLIT) {
 			aica_pcm_split(cdda->buff[PCM_TMP_BUFF], cdda->buff[PCM_DMA_BUFF], cdda->size >> 1);
 		}
 		cdda->stat = CDDA_STAT_POS;
@@ -1470,22 +1477,29 @@ void CDDA_MainLoop(void) {
 			unlock_cdda();
 			return;
 		}
-		else {
-			aica_transfer(cdda->buff[PCM_DMA_BUFF], cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
-			cdda->stat = CDDA_STAT_SNDR;
+		uint8 *buff = cdda->buff[cdda->channels == 2 ? PCM_DMA_BUFF : cdda->cur_buff];
+		aica_transfer(buff, cdda->aica_left[cdda->cur_buff], cdda->size >> 2);
+		cdda->stat = CDDA_STAT_SNDR;
 
-			if(cdda->restore) {
-				do { } while(aica_dma_in_progress());
-			} else {
-				unlock_cdda();
-				return;
-			}
+		if(cdda->restore) {
+			do { } while(aica_dma_in_progress());
+		}
+		else {
+			unlock_cdda();
+			return;
 		}
 	}
 	/* If transfer of left channel is done, start for right channel */
 	if(cdda->stat == CDDA_STAT_SNDR && aica_dma_in_progress() == 0) {
 		uint32 size = cdda->size >> 2;
-		aica_transfer(cdda->buff[PCM_DMA_BUFF] + size, cdda->aica_right[cdda->cur_buff], size);
+		uint8 *buff;
+		if(cdda->channels == 2) {
+			buff = cdda->buff[PCM_DMA_BUFF] + size;
+		}
+		else {
+			buff = cdda->buff[cdda->cur_buff];
+		}
+		aica_transfer(buff, cdda->aica_right[cdda->cur_buff], size);
 		cdda->cur_buff = !cdda->cur_buff;
 		cdda->stat = CDDA_STAT_FILL;
 	}
