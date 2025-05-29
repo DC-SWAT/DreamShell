@@ -125,10 +125,11 @@ typedef struct SDL_KeyboardEvent {
 
 /* Mouse motion event structure */
 typedef struct SDL_MouseMotionEvent {
-	Uint8 type;	/* SDL_MOUSEMOTION */
+	Uint8 type;		/* SDL_MOUSEMOTION */
 	Uint8 which;	/* The mouse device index */
 	Uint8 state;	/* The current button state */
 	Uint16 x, y;	/* The X/Y coordinates of the mouse */
+	Sint16 z;		/* The Z coordinates of the mouse (whell) */
 	Sint16 xrel;	/* The relative motion in the X direction */
 	Sint16 yrel;	/* The relative motion in the Y direction */
 } SDL_MouseMotionEvent;

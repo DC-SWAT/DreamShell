@@ -56,7 +56,7 @@ extern Uint8 SDL_ProcessEvents[SDL_NUMEVENTS];
  */
 extern int SDL_PrivateAppActive(Uint8 gain, Uint8 state);
 extern int SDL_PrivateMouseMotion(Uint8 buttonstate, int relative,
-						Sint16 x, Sint16 y);
+						Sint16 x, Sint16 y, Sint16 z);
 extern int SDL_PrivateMouseButton(Uint8 state, Uint8 button,Sint16 x,Sint16 y);
 extern int SDL_PrivateKeyboard(Uint8 state, SDL_keysym *key);
 extern int SDL_PrivateResize(int w, int h);

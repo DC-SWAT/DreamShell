@@ -100,7 +100,7 @@ static void ClipOffset(Sint16 *x, Sint16 *y)
 }
 
 /* These are global for SDL_eventloop.c */
-int SDL_PrivateMouseMotion(Uint8 buttonstate, int relative, Sint16 x, Sint16 y)
+int SDL_PrivateMouseMotion(Uint8 buttonstate, int relative, Sint16 x, Sint16 y, Sint16 z)
 {
 	int posted;
 	Uint16 X, Y;
@@ -155,7 +155,7 @@ int SDL_PrivateMouseMotion(Uint8 buttonstate, int relative, Sint16 x, Sint16 y)
 	}
 
 	/* Drop events that don't change state */
-	if ( ! Xrel && ! Yrel ) {
+	if ( ! Xrel && ! Yrel && !z) {
 #if 0
 printf("Mouse event didn't change state - dropped!\n");
 #endif
@@ -179,6 +179,7 @@ printf("Mouse event didn't change state - dropped!\n");
 		event.motion.state = buttonstate;
 		event.motion.x = X;
 		event.motion.y = Y;
+		event.motion.z = z;
 		event.motion.xrel = Xrel;
 		event.motion.yrel = Yrel;
 		if ( (SDL_EventOK == NULL) || (*SDL_EventOK)(&event) ) {
@@ -258,6 +259,7 @@ int SDL_PrivateMouseButton(Uint8 state, Uint8 button, Sint16 x, Sint16 y)
 			SDL_PushEvent(&event);
 		}
 	}
+	
 	return(posted);
 }
 

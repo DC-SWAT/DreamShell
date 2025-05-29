@@ -247,7 +247,7 @@ static void joyUpdate(SDL_Joystick *joystick) {
 			}
 			
 			if (count_cond) {
-				SDL_PrivateMouseMotion(changed>>1,1,(Sint16)(mx),(Sint16)(my));
+				SDL_PrivateMouseMotion(changed>>1,1,(Sint16)(mx),(Sint16)(my), 0);
 			}
 			
 			count++;

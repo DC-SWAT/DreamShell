@@ -70,25 +70,25 @@ const static unsigned short sdl_shift[] = {
 
 //#define	MOUSE_BACKWARD 	(1<<4) 	// TODO for usb4maple, need fix KOS
 //#define	MOUSE_FORWARD	(1<<5) 	// TODO for usb4maple, need fix KOS
-#define	MOUSE_WHEELUP 	(1<<4) 		// TODO (1<<6)
-#define	MOUSE_WHEELDOWN	(1<<5) 		// TODO (1<<7)
+//#define	MOUSE_WHEELUP 	(1<<4) 		// TODO (1<<6)
+//#define	MOUSE_WHEELDOWN	(1<<5) 		// TODO (1<<7)
 
 static void mouse_update(void) {
 const static char sdl_mousebtn[] = {
 	MOUSE_LEFTBUTTON,
 	MOUSE_RIGHTBUTTON,
-	MOUSE_SIDEBUTTON,
+	MOUSE_SIDEBUTTON//,
 //	MOUSE_BACKWARD, 	// TODO for usb4maple, need fix KOS
 //	MOUSE_FORWARD, 		// TODO for usb4maple, need fix KOS
-	MOUSE_WHEELUP,
-	MOUSE_WHEELDOWN
+//	MOUSE_WHEELUP,
+//	MOUSE_WHEELDOWN
 };
 
 	mouse_state_t * cond = NULL;
 	maple_device_t *mouse = NULL;
 	static uint32_t prev_buttons;
 	uint32_t buttons, changed;
-	int i, dx, dy;
+	int i, dx, dy, dz;
 	
 	if(!(mouse = maple_enum_type(0, MAPLE_FUNC_MOUSE))) {
 		return;
@@ -100,14 +100,15 @@ const static char sdl_mousebtn[] = {
 	
 	buttons = cond->buttons;
 	
-	if (cond->dz<0) buttons |= MOUSE_WHEELUP;
-	if (cond->dz>0) buttons |= MOUSE_WHEELDOWN;
+	//if (cond->dz<0) buttons |= MOUSE_WHEELUP;
+	//if (cond->dz>0) buttons |= MOUSE_WHEELDOWN;
 
 	dx = cond->dx;
 	dy = cond->dy;
+	dz = cond->dz;
 	
-	if (dx || dy) {
-		SDL_PrivateMouseMotion(0, 1, dx, dy);
+	if (dx || dy || dz) {
+		SDL_PrivateMouseMotion(0, 1, dx, dy, dz);
 	}
 
 	changed = buttons ^ prev_buttons;
