@@ -229,7 +229,6 @@ static void play_loop(void* yarr)
 static void start_audio()
 {
   aud_set = 1;
-  //snd_stream_prefill(shnd);
   snd_stream_start(shnd, sample_rate, chans-1);
   loop_thread = thd_create(play_loop, NULL);
 }
@@ -256,16 +255,13 @@ static void *oss_open(char *filename, int freq, int channels, int format, int en
   sample_rate = freq;
   sample_fudge = (int)((double)freq * fudge_factor ); /*Fudge this a tad... */
   sbsize = size;
-    snd_init();
-   sndptr = last_read = snd_ct = 0;
-   waiting_for_data = 1;
-   sb_min = (freq*2*channels/4 > sbsize) ? freq*2*channels/4 : sbsize; /* 1/4 second or size, whichever is bigger. */
-	snd_init();
-	
-	snd_stream_init();
+  sndptr = last_read = snd_ct = 0;
+  waiting_for_data = 1;
+  sb_min = (freq*2*channels/4 > sbsize) ? freq*2*channels/4 : sbsize; /* 1/4 second or size, whichever is bigger. */
+	// snd_init();
+	// snd_stream_init();
     	
 	shnd = snd_stream_alloc(mpv_callback, sbsize);
-	//snd_stream_prefill(shnd);
 	if (audio_cond == NULL) audio_cond = cond_create();
   return oss_out;
 }
@@ -396,19 +392,14 @@ static void *mp3_open(char *filename, int freq, int channels, int format, int en
   chans = channels;
   sample_rate = freq;
   sbsize = size;
-    snd_init();
-   sndptr = last_read = snd_ct = 0;
-	
+  sndptr = last_read = snd_ct = 0;
+
 	memset (tmpbuf, 0, 65534*2);
-	
-	snd_init();
-	
-	snd_stream_init();
-	
-    	
+
+	// snd_init();
+	// snd_stream_init();
+
 	shnd = snd_stream_alloc(mpg_callback, sbsize);
-	snd_stream_prefill(shnd);
-	
 	snd_stream_start(shnd, sample_rate, chans-1);	
 	
   return oss_out;

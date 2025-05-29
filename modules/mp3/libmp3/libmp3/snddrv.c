@@ -113,7 +113,7 @@ static void *snddrv_thread(void *arg) {
     snddrv.drv_status = SNDDRV_STATUS_NULL;
 
     snd_stream_destroy(shnd);
-	snd_stream_shutdown();
+	// snd_stream_shutdown();
 
     printf("SNDDRV: Finished\n");
 	return NULL;
@@ -133,8 +133,7 @@ int snddrv_start( int rate, int chans ) {
 
     snddrv.drv_status = SNDDRV_STATUS_INITIALIZING;
 
-    snd_stream_init();
-        
+    // snd_stream_init();
     snddrv_thd = thd_create(0, snddrv_thread, NULL );
     
     return snddrv.drv_status;

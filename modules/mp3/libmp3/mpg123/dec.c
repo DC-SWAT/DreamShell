@@ -188,7 +188,6 @@ static int mp3_thread() {
          break;
       case SPU_STATUS_INITIALIZED:
          snd_stream_set_callback(stream_hnd, mp3_decode);
-         snd_stream_prefill( stream_hnd );
          if( spu_status != SPU_STATUS_DONE )
             spu_status = SPU_STATUS_READY;
          break;

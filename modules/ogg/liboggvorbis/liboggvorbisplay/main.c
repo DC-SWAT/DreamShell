@@ -15,8 +15,8 @@ int sndoggvorbis_init() {
 		return -1;
 	}
 
-	if (snd_stream_init() < 0)
-		return -1;
+	// if (snd_stream_init() < 0)
+	// 	return -1;
 
 	printf("sndserver: initializing sndoggvorbis 0.7 [OggVorbis 1.0 based]\n");
 	thd = thd_create(0, sndserver_thread, NULL);

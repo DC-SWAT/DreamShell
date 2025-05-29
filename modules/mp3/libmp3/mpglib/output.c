@@ -223,7 +223,6 @@ static void *play_loop(void* yarr)
 static void start_audio()
 {
   aud_set = 1;
-  //snd_stream_prefill(shnd);
   snd_stream_start(shnd, sample_rate, chans-1);
   loop_thread = thd_create(0, play_loop, NULL);
 }
@@ -254,12 +253,10 @@ static void *oss_open(char *filename, int freq, int channels, int format, int en
    sndptr = last_read = snd_ct = 0;
    waiting_for_data = 1;
 	
-	snd_init();
-	
-	snd_stream_init();
+	// snd_init();
+	// snd_stream_init();
     	
 	shnd = snd_stream_alloc(mpv_callback, sbsize);
-	snd_stream_prefill(shnd);	
 	
   return oss_out;
 }
@@ -361,13 +358,10 @@ static void *mp3_open(char *filename, int freq, int channels, int format, int en
 	
 	memset (tmpbuf, 0, 65534*2);
 	
-	snd_init();
-	
-	snd_stream_init();
-	
+	// snd_init();
+	// snd_stream_init();
     	
 	shnd = snd_stream_alloc(mpg_callback, sbsize);
-	snd_stream_prefill(shnd);
 	
 	snd_stream_start(shnd, sample_rate, chans-1);	
 	
