@@ -68,20 +68,20 @@ const static unsigned short sdl_shift[] = {
 	SDLK_RCTRL,SDLK_RSHIFT,SDLK_RALT,SDLK_RSUPER /* S2 */,
 };
 
-//#define	MOUSE_BACKWARD 	(1<<4) 	// TODO for usb4maple, need fix KOS
-//#define	MOUSE_FORWARD	(1<<5) 	// TODO for usb4maple, need fix KOS
-//#define	MOUSE_WHEELUP 	(1<<4) 		// TODO (1<<6)
-//#define	MOUSE_WHEELDOWN	(1<<5) 		// TODO (1<<7)
+#define	MOUSE_BACKWARD 	(1<<4) 	// TODO for usb4maple, need fix KOS
+#define	MOUSE_FORWARD	(1<<5) 	// TODO for usb4maple, need fix KOS
+#define	MOUSE_WHEELUP 	(1<<6) 		// TODO (1<<6)
+#define	MOUSE_WHEELDOWN	(1<<7) 		// TODO (1<<7)
 
 static void mouse_update(void) {
 const static char sdl_mousebtn[] = {
 	MOUSE_LEFTBUTTON,
 	MOUSE_RIGHTBUTTON,
-	MOUSE_SIDEBUTTON//,
-//	MOUSE_BACKWARD, 	// TODO for usb4maple, need fix KOS
-//	MOUSE_FORWARD, 		// TODO for usb4maple, need fix KOS
-//	MOUSE_WHEELUP,
-//	MOUSE_WHEELDOWN
+	MOUSE_SIDEBUTTON,
+	MOUSE_BACKWARD, 	// TODO for usb4maple, need fix KOS
+	MOUSE_FORWARD, 		// TODO for usb4maple, need fix KOS
+	MOUSE_WHEELUP,
+	MOUSE_WHEELDOWN
 };
 
 	mouse_state_t * cond = NULL;
@@ -100,8 +100,8 @@ const static char sdl_mousebtn[] = {
 	
 	buttons = cond->buttons;
 	
-	//if (cond->dz<0) buttons |= MOUSE_WHEELUP;
-	//if (cond->dz>0) buttons |= MOUSE_WHEELDOWN;
+	if (cond->dz<0) buttons |= MOUSE_WHEELUP;
+	if (cond->dz>0) buttons |= MOUSE_WHEELDOWN;
 
 	dx = cond->dx;
 	dy = cond->dy;

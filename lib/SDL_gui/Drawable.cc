@@ -122,6 +122,10 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 	{
 		case SDL_MOUSEBUTTONDOWN:
 		{
+			if (event->button.button > SDL_BUTTON_RIGHT) {
+				break;
+			}
+			
 			int x = event->button.x - xoffset;
 			int y = event->button.y - yoffset;
 			if ((flags & WIDGET_DISABLED) == 0 &&
@@ -135,6 +139,10 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 		}		
 		case SDL_MOUSEBUTTONUP:
 		{
+			if (event->button.button > SDL_BUTTON_RIGHT) {
+				break;
+			}
+			
 			int x = event->button.x - xoffset;
 			int y = event->button.y - yoffset;
 			if ((flags & WIDGET_DISABLED) == 0 &&
@@ -143,10 +151,18 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 				if (flags & WIDGET_PRESSED)
 					if (Inside(x, y, &area))
 						if (focus == 0 || focus == this) {
-							if(event->button.button != 1) {
-								Clicked(x, y);
-							} else {
-								ContextClicked(x, y);
+							switch (event->button.button)
+							{
+								case SDL_BUTTON_LEFT:
+									Clicked(x, y);
+									break;
+								
+								case SDL_BUTTON_RIGHT:
+									ContextClicked(x, y);
+									break;
+								
+								default:
+									break;
 							}
 						}
 			}
@@ -156,8 +172,7 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			break;
 		}
 		case SDL_MOUSEMOTION:
-		{		
-
+		{
 			int x = event->motion.x - xoffset;
 			int y = event->motion.y - yoffset;
 			if (focus == 0 || focus == this)

@@ -110,25 +110,28 @@ extern DECLSPEC void SDLCALL SDL_FreeCursor(SDL_Cursor *cursor);
 extern DECLSPEC int SDLCALL SDL_ShowCursor(int toggle);
 
 /* Used as a mask when testing buttons in buttonstate
-   Button 1:	Left mouse button
-   Button 2:	Middle mouse button
-   Button 3:	Right mouse button
-   Button 4:	Mouse wheel up	 (may also be a real button)
-   Button 5:	Mouse wheel down (may also be a real button)
+   Button 0:	Left mouse button
+   Button 1:	Middle mouse button
+   Button 2:	Right mouse button
+   Button 3:	Backward mouse button (usb4maple)
+   Button 4:	Forward mouse button (usb4maple)
+   Button 5:	Mouse wheel up	 (may also be a real button)
+   Button 6:	Mouse wheel down (may also be a real button)
  */
-#define SDL_BUTTON(X)		(1 << ((X)-1))
-#define SDL_BUTTON_LEFT		1
-#define SDL_BUTTON_MIDDLE	2
-#define SDL_BUTTON_RIGHT	3
-#define SDL_BUTTON_WHEELUP	4
-#define SDL_BUTTON_WHEELDOWN	5
-#define SDL_BUTTON_X1		6
-#define SDL_BUTTON_X2		7
+#define SDL_BUTTON(X)			(1 << X)
+#define SDL_BUTTON_LEFT			0
+#define SDL_BUTTON_RIGHT		1
+#define SDL_BUTTON_MIDDLE		2
+#define SDL_BUTTON_BACKWARD		3
+#define SDL_BUTTON_FORWARD		4
+#define SDL_BUTTON_WHEELUP		5
+#define SDL_BUTTON_WHEELDOWN	6
 #define SDL_BUTTON_LMASK	SDL_BUTTON(SDL_BUTTON_LEFT)
-#define SDL_BUTTON_MMASK	SDL_BUTTON(SDL_BUTTON_MIDDLE)
 #define SDL_BUTTON_RMASK	SDL_BUTTON(SDL_BUTTON_RIGHT)
-#define SDL_BUTTON_X1MASK	SDL_BUTTON(SDL_BUTTON_X1)
-#define SDL_BUTTON_X2MASK	SDL_BUTTON(SDL_BUTTON_X2)
+#define SDL_BUTTON_MMASK	SDL_BUTTON(SDL_BUTTON_MIDDLE)
+#define SDL_BUTTON_BWDMASK	SDL_BUTTON(SDL_BUTTON_BACKWARD)
+#define SDL_BUTTON_FWDMASK	SDL_BUTTON(SDL_BUTTON_FORWARD)
+
 
 
 /* Ends C function definitions when using C++ */
