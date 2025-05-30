@@ -4,7 +4,7 @@
    Copyright (C)2000,2001,2003 Dan Potter
    Copyright (C)2001 Andrew Kieschnick
    Copyright (C)2002 Bero
-   Copyright (C)2011-2024 SWAT
+   Copyright (C)2011-2025 SWAT
 */
 
 #include <ds.h>
@@ -506,7 +506,22 @@ static int get_toc_and_lba(isofs_t *ifs) {
 		case ISOFS_IMAGE_TYPE_GDI:
 
 			gdi_get_toc(ifs->gdi, &ifs->toc);
-			return 45150;
+
+			/* Original GD-ROM, use track with LBA 45000 */
+			for (int i = 0; i < ifs->gdi->track_count; i++) {
+				if (ifs->gdi->tracks[i]->start_lba == 45000 && 
+					(ifs->gdi->tracks[i]->flags & 0x0F) == 4) {
+					return ifs->gdi->tracks[i]->start_lba + 150;
+				}
+			}
+			/* ISO in GDI format - find first data track */
+			for (int i = 0; i < ifs->gdi->track_count; i++) {
+				if ((ifs->gdi->tracks[i]->flags & 0x0F) == 4) {
+					return ifs->gdi->tracks[i]->start_lba + 150;
+				}
+			}
+
+			return TOC_LBA(ifs->toc.first);
 
 		case ISOFS_IMAGE_TYPE_CSO:
 		case ISOFS_IMAGE_TYPE_ZSO:

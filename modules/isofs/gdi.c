@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2014, 2015, 2024 SWAT <www.dc-swat.ru>
+ * Copyright (c) 2014, 2015, 2024, 2025 SWAT <www.dc-swat.ru>
  *
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -45,29 +45,29 @@ static char *fs_gets(file_t fd, char *buffer, int count) {
 }
 
 static int check_gdi_image(file_t fd) {
-    
-    char line[NAME_MAX];
-    uint32 track_count;
+	
+	char line[NAME_MAX];
+	uint32 track_count;
 
-    fs_seek(fd, 0, SEEK_SET);
+	fs_seek(fd, 0, SEEK_SET);
 	
-    if(fs_gets(fd, line, NAME_MAX) == NULL) {
+	if(fs_gets(fd, line, NAME_MAX) == NULL) {
 #ifdef DEBUG
-        dbglog(DBG_DEBUG, "%s: Not a GDI image\n", __func__);
+		dbglog(DBG_DEBUG, "%s: Not a GDI image\n", __func__);
 #endif
-        return -1;
-    }
+		return -1;
+	}
 	
-    track_count = strtoul(line, NULL, 0);
+	track_count = strtoul(line, NULL, 0);
 	
-    if(track_count == 0 || track_count > 99) {
+	if(track_count == 0 || track_count > 99) {
 #ifdef DEBUG
-        dbglog(DBG_DEBUG, "%s: Invalid GDI image\n", __func__);
+		dbglog(DBG_DEBUG, "%s: Invalid GDI image\n", __func__);
 #endif
-        return -1;
-    }
+		return -1;
+	}
 
-    return (int)track_count;
+	return (int)track_count;
 }
 
 
@@ -178,13 +178,13 @@ int gdi_get_toc(GDI_header_t *hdr, CDROM_TOC *toc) {
 
 	int i, ft_no = 0;
 	uint8 ctrl = 0, adr = 1;
-	GDI_track_t *first_track = hdr->tracks[0];
+	GDI_track_t *first_track = NULL;
 	
 	for(i = 0; i < hdr->track_count; i++) {
 		
 		toc->entry[i] = ((hdr->tracks[i]->flags & 0x0F) << 28) | adr << 24 | (hdr->tracks[i]->start_lba + 150);
 		
-		if(hdr->tracks[i]->start_lba == 45000) {
+		if(hdr->tracks[i]->start_lba == 45000 && (hdr->tracks[i]->flags & 0x0F) == 4) {
 			first_track = hdr->tracks[i];
 			ft_no = i+1;
 		}
@@ -193,10 +193,13 @@ int gdi_get_toc(GDI_header_t *hdr, CDROM_TOC *toc) {
 #endif
 	}
 	
-	for(i = hdr->track_count - 1; i > -1; i--) {
-		if(hdr->tracks[i]->start_lba == 45000) {
-			first_track = hdr->tracks[i];
-			break;
+	if(first_track == NULL) {
+		for(i = 0; i < hdr->track_count; i++) {
+			if((hdr->tracks[i]->flags & 0x0F) == 4) {
+				first_track = hdr->tracks[i];
+				ft_no = i+1;
+				break;
+			}
 		}
 	}
 	
@@ -214,11 +217,11 @@ int gdi_get_toc(GDI_header_t *hdr, CDROM_TOC *toc) {
 	}
 	
 #ifdef DEBUG
-    dbglog(DBG_DEBUG, "%s:\n First track %08lx\n Last track %08lx\n Leadout    %08lx\n", 
-        __func__, toc->first, toc->last, toc->leadout_sector);
+	dbglog(DBG_DEBUG, "%s:\n First track %08lx\n Last track %08lx\n Leadout    %08lx\n", 
+		__func__, toc->first, toc->last, toc->leadout_sector);
 #endif
 
-    return 0;
+	return 0;
 }
 
 
@@ -275,16 +278,16 @@ GDI_track_t *gdi_get_last_data_track(GDI_header_t *hdr) {
 
 uint32 gdi_get_offset(GDI_header_t *hdr, uint32 lba, uint16 *sector_size) {
 	
-    GDI_track_t *track = gdi_get_track(hdr, lba);
+	GDI_track_t *track = gdi_get_track(hdr, lba);
 
-    if(track == NULL) {
-        return -1;
-    }
+	if(track == NULL) {
+		return -1;
+	}
 
-    uint32 offset = (lba - track->start_lba) * track->sector_size;
-    *sector_size = gdi_track_sector_size(track);
+	uint32 offset = (lba - track->start_lba) * track->sector_size;
+	*sector_size = gdi_track_sector_size(track);
 	
-    return offset;
+	return offset;
 }
 
 
