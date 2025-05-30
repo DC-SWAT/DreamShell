@@ -137,8 +137,7 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	SDL_keysym keysym;
 	int count_cond;
 	static int count=1;
-	static int mx=2048,my=2048;
-	static int escaped=0;
+	static int mx = 2048, my = 2048;
 	const	int sdl_buttons[] = {
 		CONT_C,
 		CONT_B,
@@ -213,17 +212,6 @@ static void joyUpdate(SDL_Joystick *joystick) {
 						(sdl_buttons[i] == CONT_A) ? SDL_BUTTON_LEFT : SDL_BUTTON_RIGHT, 0, 0);
 				}
 			}
-		}
-	}
-	
-	if (escaped) {
-		if (escaped==2) {
-			keysym.sym = SDLK_ESCAPE;
-			SDL_PrivateKeyboard(SDL_RELEASED,&keysym);
-			escaped=0;
-		}
-		else {
-			escaped=2;
 		}
 	}
 
