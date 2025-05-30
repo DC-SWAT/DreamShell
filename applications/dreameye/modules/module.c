@@ -322,7 +322,7 @@ static void *ErasePhotos(void *param) {
             desc = "Erasing aborted.";
             break;
         }
-        UpdateProgress("Erasing photos...", (32 - self.photo_count) * 0,03125f);
+        UpdateProgress("Erasing photos...", (32 - self.photo_count) * 0.03125f);
 	}
 
     UpdateProgress("Checking...", 0.99f);
