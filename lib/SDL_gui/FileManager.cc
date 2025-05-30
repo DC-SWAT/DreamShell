@@ -684,7 +684,10 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 			break;
 			
 		case SDL_JOYHATMOTION:
-		
+			if (event->jhat.hat) { // skip second d-pad
+				break;
+			}
+			
 			if(flags & WIDGET_PRESSED) {
 
 				int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
@@ -692,24 +695,26 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 				int step = (scroll_height / panel->GetWidgetCount()) * 2;
 
 				switch(event->jhat.value) {
-					case 0x0E: // UP
+					case SDL_HAT_UP: // UP
 						sp -= step;
 						break;
-					case 0x0B: // DOWN
+					case SDL_HAT_DOWN: // DOWN
 						sp += step;
 						break;
-					case 0x07: // LEFT
+					case SDL_HAT_LEFT: // LEFT
 						sp -= step * ((panel->GetHeight() / item_area.h) - 1);
 						break;
-					case 0x0D: // RIGHT
+					case SDL_HAT_RIGHT: // RIGHT
 						sp += step * ((panel->GetHeight() / item_area.h) - 1);
 						break;
 					default:
 						break;
 				}
+				
 				if(sp > scroll_height) {
 					sp = scroll_height;
 				}
+				
 				if(sp < 0) {
 					sp = 0;
 				}

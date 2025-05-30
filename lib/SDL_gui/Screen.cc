@@ -287,12 +287,14 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 		switch(event->type) {
 			case SDL_JOYHATMOTION:
 			{
+				if (event->jhat.hat) { // skip second d-pad
+					break;
+				}
 				
 				if (contents) {
-
 					switch(event->jhat.value) {
-						case 0x0E: //UP
-						case 0x0B: //DOWN
+						case SDL_HAT_UP: //UP
+						case SDL_HAT_DOWN: //DOWN
 							
 							int i;
 							
@@ -305,7 +307,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 							
 							if(joysel_size) {
 							
-								if(event->jhat.value == 0x0E) {
+								if(event->jhat.value == SDL_HAT_UP) {
 									if(joysel_cur <= 0) joysel_cur = joysel_size - 1;
 									else joysel_cur--;
 								} else {
@@ -325,15 +327,15 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 							
 							break;
 							
-						case 0x07: //LEFT
-						case 0x0D: //RIGHT
+						case SDL_HAT_LEFT: //LEFT
+						case SDL_HAT_RIGHT: //RIGHT
 						
 							for(i = 0; i < joysel_size; i++) {
 								joysel[i] = NULL;
 							}
 							joysel_size = 0;
 							find_widget_rec((GUI_Container *)contents);
-							joysel_cur = event->jhat.value == 0x07 ? 0 : joysel_size - 1;
+							joysel_cur = event->jhat.value == SDL_HAT_LEFT ? 0 : joysel_size - 1;
 							
 							if(joysel_size && joysel[joysel_cur]) {
 								evt.type = SDL_MOUSEMOTION;
