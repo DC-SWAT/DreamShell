@@ -509,19 +509,24 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 				break;
 			
 			case SDL_JOYHATMOTION:
-			
+				if (event->jhat.hat) { // skip second d-pad
+					break;
+				}
+				
 				switch(event->jhat.value) {
-					case 0x0E:
+					case SDL_HAT_UP:
 						vkb.event.key.keysym.sym = SDLK_UP;
 						break;
-					case 0x0B:
+					case SDL_HAT_DOWN:
 						vkb.event.key.keysym.sym = SDLK_DOWN;
 						break;
-					case 0x07:
+					case SDL_HAT_LEFT:
 						vkb.event.key.keysym.sym = SDLK_LEFT;
 						break;
-					case 0x0D:    
+					case SDL_HAT_RIGHT:    
 						vkb.event.key.keysym.sym = SDLK_RIGHT;
+						break;
+					default:
 						break;
 				}
 				
