@@ -181,27 +181,27 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	changed = buttons ^ prev_buttons;
 
 	//Check Directions for HAT
-	if ((changed)&(CONT_DPAD_UP|CONT_DPAD_DOWN|CONT_DPAD_LEFT|CONT_DPAD_RIGHT)) {
+	if (changed & (CONT_DPAD_UP | CONT_DPAD_DOWN | CONT_DPAD_LEFT | CONT_DPAD_RIGHT)) {
 		int hat = SDL_HAT_CENTERED;
-		if (!(buttons&CONT_DPAD_UP)) hat|=SDL_HAT_UP;
-		if (!(buttons&CONT_DPAD_DOWN)) hat|=SDL_HAT_DOWN;
-		if (!(buttons&CONT_DPAD_LEFT)) hat|=SDL_HAT_LEFT;
-		if (!(buttons&CONT_DPAD_RIGHT)) hat|=SDL_HAT_RIGHT;
+		if (buttons & CONT_DPAD_UP   ) hat |= SDL_HAT_UP;
+		if (buttons & CONT_DPAD_DOWN ) hat |= SDL_HAT_DOWN;
+		if (buttons & CONT_DPAD_LEFT ) hat |= SDL_HAT_LEFT;
+		if (buttons & CONT_DPAD_RIGHT) hat |= SDL_HAT_RIGHT;
 		SDL_PrivateJoystickHat(joystick, 0, hat);
 	}
 	
-	if ((changed)&(CONT_DPAD2_UP|CONT_DPAD2_DOWN|CONT_DPAD2_LEFT|CONT_DPAD2_RIGHT)) {
+	if (changed & (CONT_DPAD2_UP | CONT_DPAD2_DOWN | CONT_DPAD2_LEFT | CONT_DPAD2_RIGHT)) {
 		int hat = SDL_HAT_CENTERED;
-		if (!(buttons&CONT_DPAD2_UP)) hat|=SDL_HAT_UP;
-		if (!(buttons&CONT_DPAD2_DOWN)) hat|=SDL_HAT_DOWN;
-		if (!(buttons&CONT_DPAD2_LEFT)) hat|=SDL_HAT_LEFT;
-		if (!(buttons&CONT_DPAD2_RIGHT)) hat|=SDL_HAT_RIGHT;
+		if (buttons & CONT_DPAD2_UP   ) hat |= SDL_HAT_UP;
+		if (buttons & CONT_DPAD2_DOWN ) hat |= SDL_HAT_DOWN;
+		if (buttons & CONT_DPAD2_LEFT ) hat |= SDL_HAT_LEFT;
+		if (buttons & CONT_DPAD2_RIGHT) hat |= SDL_HAT_RIGHT;
 		SDL_PrivateJoystickHat(joystick, 1, hat);
 	}
 	
 	//Check buttons
 	//"buttons" is zero based: so invert the PRESSED/RELEASED way.
-	for(i=0, max=0; i<sizeof(sdl_buttons)/sizeof(sdl_buttons[0]); i++) {
+	for(i=0, max=0; i < sizeof(sdl_buttons) / sizeof(sdl_buttons[0]); i++) {
 		if (changed & sdl_buttons[i]) {
 			int act = (buttons & sdl_buttons[i]);
 			SDL_PrivateJoystickButton(joystick, i, act ? SDL_PRESSED : SDL_RELEASED);
