@@ -146,21 +146,22 @@ static void GetTOC() {
 
 		if(GDS->param[0] == 0) { /* Session 1 */
 
-			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ||
+			if(IsoInfo->image_type != ISOFS_IMAGE_TYPE_CDI &&
 				IsoInfo->track_lba[0] == 45150) {
 
 				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
 				toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
 
-				for(int i = 2; i < 99; i++) {
+				for(int i = 2; i < 99; ++i) {
 					toc->entry[i] = (uint32)-1;
 				}
 
 				toc->leadout_sector = 0x01001A2C;
 
-			} else {
+			}
+			else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
 
-				for(int i = 99; i > 0; i--) {
+				for(int i = 99; i > 0; --i) {
 
 					if(TOC_CTRL(toc->entry[i - 1]) == 4) {
 						toc->entry[i - 1] = (uint32)-1;
@@ -170,23 +171,44 @@ static void GetTOC() {
 				int lt = (toc->last & 0x000f0000) >> 16;
 				toc->last = (toc->last & 0xfff0ffff) | (--lt << 16);
 			}
+			else {
+				int skip = 0;
+				int lt = 0;
 
-		} else { /* Session 2 */
+				for(int i = 0; i < 99; ++i) {
+					if(TOC_CTRL(toc->entry[i]) == 4) {
+						if(!skip) {
+							skip++;
+						}
+						else {
+							toc->entry[i] = (uint32)-1;
+							continue;
+						}
+					}
+					if(toc->entry[i] != (uint32)-1) {
+						lt = i + 1;
+					}
+				}
+
+				if(lt > 0) {
+					toc->last = (toc->last & 0xfff0ffff) | (lt << 16);
+				}
+			}
+		}
+		else { /* Session 2 */
 
 			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
 
 				toc->entry[0] = (uint32)-1;
 
-				for(int i = 99; i > 0; i--) {
+				for(int i = 99; i > 0; --i) {
 
 					if(TOC_CTRL(toc->entry[i - 1]) == 4) {
 						toc->first = (toc->first & 0xfff0ffff) | (i << 16);
 					}
 				}
-
-			} else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ||
-				IsoInfo->track_lba[0] == 45150) {
-
+			}
+			else if(IsoInfo->track_lba[0] == 45150) {
 				toc->entry[0] = (uint32)-1;
 				toc->entry[1] = (uint32)-1;
 			}

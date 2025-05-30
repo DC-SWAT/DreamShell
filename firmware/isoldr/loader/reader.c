@@ -24,7 +24,7 @@ static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *
 static void open_iso(gd_state_t *GDS) {
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
-		
+
 		DBGFF("track=%d fd=%d fd[0]=%d fd[1]=%d fd[2]=%d\n",
 				GDS->data_track, iso_fd, _iso_fd[0], _iso_fd[1], _iso_fd[2]);
 
@@ -32,25 +32,26 @@ static void open_iso(gd_state_t *GDS) {
 		 * This magic for GDI with 2 data tracks (keep open both).
 		 * Also keep open first track if we can use additional fd.
 		 */
-		if(GDS->data_track < 3 && _iso_fd[0] > -1) {
-
+		if(GDS->data_track == 1 && _iso_fd[0] > -1) {
 			iso_fd = _iso_fd[0];
 			return;
-
-		} else if(GDS->data_track == 3 && _iso_fd[1] > -1) {
-			
+		}
+		else if(GDS->data_track == 2 && _iso_fd[1] > -1) {
 			iso_fd = _iso_fd[1];
-			
+			return;
+		}
+		else if(GDS->data_track == 3 && _iso_fd[1] > -1) {
+			iso_fd = _iso_fd[1];
+
 			if(IsoInfo->emu_cdda && _iso_fd[0] > -1) {
 				close(_iso_fd[0]);
 				_iso_fd[0] = -1;
 			}
 			return;
-
-		} else if(GDS->data_track > 3 && _iso_fd[2] > -1) {
-			
+		}
+		else if(GDS->data_track > 3 && _iso_fd[2] > -1) {
 			iso_fd = _iso_fd[2];
-			
+
 			if(IsoInfo->emu_cdda && _iso_fd[0] > -1) {
 				close(_iso_fd[0]);
 				_iso_fd[0] = -1;
@@ -58,17 +59,19 @@ static void open_iso(gd_state_t *GDS) {
 			return;
 		}
 	}
-	
+
 	LOGF("Opening file: %s\n", IsoInfo->image_file);
 	iso_fd = open(IsoInfo->image_file, O_RDONLY);
-	
+
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 
-		if(GDS->data_track < 3) {
+		if(GDS->data_track == 1) {
 			_iso_fd[0] = iso_fd;
-		} else if(GDS->data_track == 3) {
+		}
+		else if(GDS->data_track == 2 || GDS->data_track == 3) {
 			_iso_fd[1] = iso_fd;
-		} else if(GDS->data_track > 3) {
+		}
+		else if(GDS->data_track > 3) {
 			_iso_fd[2] = iso_fd;
 		}
 	}
@@ -147,12 +150,31 @@ int InitReader() {
 #endif
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 		len -= (IsoInfo->image_file[len - 7] != 'k' ? 7 : 6);
-		if(IsoInfo->sector_size == 2048) {
-			memcpy(&IsoInfo->image_file[len], "03.iso\0", 7);
-		} else {
-			memcpy(&IsoInfo->image_file[len], "03.bin\0", 7);
+
+		int first_data_track = 3;
+
+		if(IsoInfo->track_lba[0] != 45150) {
+			/* ISO in GDI format - find first data track */
+			for(int i = 0; i < 99; i++) {
+				if(IsoInfo->toc.entry[i] == (uint32)-1) break;
+				if(TOC_CTRL(IsoInfo->toc.entry[i]) == 4) {
+					first_data_track = i + 1;
+					break;
+				}
+			}
 		}
-		GDS->data_track = 3;
+
+		if(IsoInfo->sector_size == 2048) {
+			IsoInfo->image_file[len] = (first_data_track / 10) + '0';
+			IsoInfo->image_file[len + 1] = (first_data_track % 10) + '0';
+			memcpy(&IsoInfo->image_file[len + 2], ".iso", 5);
+		}
+		else {
+			IsoInfo->image_file[len] = (first_data_track / 10) + '0';
+			IsoInfo->image_file[len + 1] = (first_data_track % 10) + '0';
+			memcpy(&IsoInfo->image_file[len + 2], ".bin", 5);
+		}
+		GDS->data_track = first_data_track;
 	}
 	else {
 		GDS->data_track = 1;
@@ -261,7 +283,15 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 			if(sec) {
 
 				switch_gdi_data_track(sec, GDS);
-				lba = sec - ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
+
+				if(IsoInfo->track_lba[0] != 45150) {
+					/* ISO in GDI format */
+					lba = sec - IsoInfo->track_lba[0];
+				}
+				else {
+					/* Original GD-ROM format */
+					lba = sec - ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
+				}
 
 				/* Check for data exists */
 				if(GDS->data_track > 3 && lba > IsoInfo->track_lba[1] + (total(iso_fd) / IsoInfo->sector_size)) {
@@ -319,7 +349,15 @@ int PreReadSectors(int sec, int num, int seek_only) {
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
 		switch_gdi_data_track(sec, GDS);
-		lba = ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
+
+		if(IsoInfo->track_lba[0] != 45150) {
+			/* ISO in GDI format */
+			lba = IsoInfo->track_lba[0];
+		}
+		else {
+			/* Original GD-ROM format */
+			lba = ( (uint32)sec < IsoInfo->track_lba[0] ? 150 : IsoInfo->track_lba[(GDS->data_track == 3 ? 0 : 1)] );
+		}
 	}
 
 	lseek(iso_fd, (sec - lba) * IsoInfo->sector_size, SEEK_SET);
