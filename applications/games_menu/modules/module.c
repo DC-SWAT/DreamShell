@@ -2250,32 +2250,40 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 	switch(event->type) {
 		case SDL_JOYBUTTONDOWN: {
 			switch(event->jbutton.button) {
-				case 1: // B
+				case SDL_DC_B: // B
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyCancel);
 					break;
 
-				case 2: // A				
+				case SDL_DC_A: // A				
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeySelect);
 					break;
 
-				case 5: // Y
+				case SDL_DC_Y: // Y
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscY);
 					break;
 
-				case 6: // X
+				case SDL_DC_X: // X
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscX);
 					break;
 
-				case 4: // Z
+				case SDL_DC_Z: // Z
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
 					break;
 
-				case 0: // C
+				case SDL_DC_C: // C
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
 					break;
 
-				case 3: // START
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyStart);			
+				case SDL_DC_START: // START
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyStart);
+					break;
+
+				case SDL_DC_L:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
+					break;
+
+				case SDL_DC_R:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
 					break;
 
 				default:
@@ -2284,41 +2292,11 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 		}
 		break;
 
-		case SDL_JOYAXISMOTION: {
-			switch(event->jaxis.axis) {
-				case 2: // RIGHT TRIGGER
-					{
-						static bool right_trigger_down = false;
-						if (!right_trigger_down && (event->jaxis.value >= MAX_TRIGGER_VALUE/3)) {
-							right_trigger_down = true;
-							StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
-						}
-						else if (event->jaxis.value < MAX_TRIGGER_VALUE/3) {
-							right_trigger_down = false;
-						}
-					}
-					break;
-
-				case 3: // LEFT TRIGGER
-					{
-						static bool left_trigger_down = false;
-						if (!left_trigger_down && (event->jaxis.value >= MAX_TRIGGER_VALUE/3)) {
-							left_trigger_down = true;
-							StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
-						}
-						else if (event->jaxis.value < MAX_TRIGGER_VALUE/3) {
-							left_trigger_down = false;
-						}
-					}					
-					break;
-			}
-		}
-
 		case SDL_JOYHATMOTION: {
 			if (event->jhat.hat) { // skip second d-pad
 				break;
 			}
-			
+
 			switch(event->jhat.value) {
 				case SDL_HAT_UP: // KEY UP
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyUp);
@@ -2339,6 +2317,60 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 				default:
 					break;
 			}
+		}
+		break;
+
+		case SDL_KEYDOWN: {
+			switch (event->key.keysym.sym) {
+				case SDLK_UP:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyUp);
+					break;
+				
+				case SDLK_DOWN:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyDown);
+					break;
+
+				case SDLK_RIGHT:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyRight);
+					break;
+
+				case SDLK_LEFT:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyLeft);
+					break;
+
+				case SDLK_PAGEUP:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
+					break;
+				
+				case SDLK_PAGEDOWN:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
+					break;
+
+				case SDLK_RETURN:
+				case SDLK_KP_ENTER:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeySelect);
+					break;
+
+				case SDLK_BACKSPACE:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyCancel);
+					break;
+
+				case SDLK_RMETA:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyStart);
+					break;
+				
+				case SDLK_SPACE:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscY);
+					break;
+
+				case SDLK_TAB:
+					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscX);
+					break;
+
+				default:
+					break;
+			}
+			
 		}
 		break;
 
