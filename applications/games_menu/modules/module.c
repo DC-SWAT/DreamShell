@@ -2315,20 +2315,24 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 		}
 
 		case SDL_JOYHATMOTION: {
+			if (event->jhat.hat) { // skip second d-pad
+				break;
+			}
+			
 			switch(event->jhat.value) {
-				case 0x0E: // KEY UP
+				case SDL_HAT_UP: // KEY UP
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyUp);
 					break;
 
-				case 0x0B: // KEY DOWN
+				case SDL_HAT_DOWN: // KEY DOWN
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyDown);
 					break;
 
-				case 0x07: // KEY LEFT
+				case SDL_HAT_LEFT: // KEY LEFT
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyLeft);
 					break;
 
-				case 0x0D: // KEY RIGHT
+				case SDL_HAT_RIGHT: // KEY RIGHT
 					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyRight);
 					break;
 
