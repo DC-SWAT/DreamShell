@@ -591,8 +591,8 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		case SDL_JOYBUTTONDOWN:
 		
 			switch(event->jbutton.button) {
-				case 5: // Y
-				case 6: // X
+				case SDL_DC_Y: // Y
+				case SDL_DC_X: // X
 					SetFlags(WIDGET_PRESSED);
 					SDL_DC_EmulateMouse(SDL_FALSE);
 					GUI_GetScreen()->SetJoySelectState(0);
@@ -605,8 +605,8 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		case SDL_JOYBUTTONUP:
 
 			switch(event->jbutton.button) {
-				case 5: // Y
-				case 6: // X
+				case SDL_DC_Y: // Y
+				case SDL_DC_X: // X
 					ClearFlags(WIDGET_PRESSED);
 					SDL_DC_EmulateMouse(SDL_TRUE);
 					GUI_GetScreen()->SetJoySelectState(1);

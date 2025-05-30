@@ -58,26 +58,6 @@ extern unsigned __sdl_dc_mouse_shift;
 
 #define	JOYNAMELEN	8
 
-static SDLKey _dc_sdl_key[MAX_JOYSTICKS][13]= {
-  { SDLK_ESCAPE, SDLK_LALT, SDLK_LCTRL, SDLK_RETURN, SDLK_3, SDLK_SPACE, SDLK_LSHIFT,
-	  SDLK_TAB, SDLK_BACKSPACE, SDLK_UP, SDLK_DOWN, SDLK_LEFT, SDLK_RIGHT },
-  { SDLK_ESCAPE, SDLK_q,    SDLK_e,     SDLK_z,      SDLK_3, SDLK_x,     SDLK_c,
-	  SDLK_1,   SDLK_2,         SDLK_w,  SDLK_s,    SDLK_a,    SDLK_d },
-  { SDLK_ESCAPE, SDLK_r,    SDLK_y,     SDLK_v,      SDLK_3, SDLK_b,     SDLK_n,
-	  SDLK_4,   SDLK_5,         SDLK_t,  SDLK_g,    SDLK_f,    SDLK_h },
-  { SDLK_ESCAPE, SDLK_u,    SDLK_o,     SDLK_m,      SDLK_3, SDLK_COMMA, SDLK_PERIOD,
-	  SDLK_8,   SDLK_9,         SDLK_i,  SDLK_k,    SDLK_j,    SDLK_l }
-};
-
-void SDL_DC_MapKey(int joy, SDL_DC_button button, SDLKey key) {
-	if ((joy < MAX_JOYSTICKS) && (joy >= 0)) {
-		if (((int)button < 13) && ((int)button >= 0)) {
-			_dc_sdl_key[joy][(int)button] = key;
-		}
-	}
-}
-
-
 /* array to hold devices */
 //static maple_device_t * SYS_Joystick_addr[MAX_JOYSTICKS];
 
@@ -150,6 +130,8 @@ int SDL_SYS_JoystickOpen(SDL_Joystick *joystick) {
  * but instead should call SDL_PrivateJoystick*() to deliver events
  * and update joystick device state.
  */
+#define CONT_LTRIG	(1 << 16)
+#define CONT_RTRIG	(1 << 17)
 
 static void joyUpdate(SDL_Joystick *joystick) {
 	SDL_keysym keysym;
@@ -165,7 +147,9 @@ static void joyUpdate(SDL_Joystick *joystick) {
 		CONT_Z,
 		CONT_Y,
 		CONT_X,
-		CONT_D
+		CONT_D,
+		CONT_LTRIG,
+		CONT_RTRIG
 	};
 
 	cont_state_t *cond;
@@ -185,6 +169,15 @@ static void joyUpdate(SDL_Joystick *joystick) {
 
 	//Check changes on cont_state_t->buttons
 	buttons = cond->buttons;
+	
+	if (cond->ltrig > 192) {
+		buttons |= CONT_LTRIG;
+	}
+	
+	if (cond->rtrig > 192) {
+		buttons |= CONT_RTRIG;
+	}
+	
 	prev_buttons = joystick->hwdata->prev_buttons;
 	changed = buttons ^ prev_buttons;
 
@@ -209,16 +202,15 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	
 	//Check buttons
 	//"buttons" is zero based: so invert the PRESSED/RELEASED way.
-	for(i=0,max=0;i<sizeof(sdl_buttons)/sizeof(sdl_buttons[0]);i++) {
+	for(i=0, max=0; i<sizeof(sdl_buttons)/sizeof(sdl_buttons[0]); i++) {
 		if (changed & sdl_buttons[i]) {
-			int act=(buttons & sdl_buttons[i]);
-			SDL_PrivateJoystickButton(joystick, i, act?SDL_PRESSED:SDL_RELEASED);
+			int act = (buttons & sdl_buttons[i]);
+			SDL_PrivateJoystickButton(joystick, i, act ? SDL_PRESSED : SDL_RELEASED);
 			
 			if (__sdl_dc_emulate_mouse) {
-				if(sdl_buttons[i] != CONT_START &&
-					sdl_buttons[i] != CONT_X &&
-					sdl_buttons[i] != CONT_Y) {
-					SDL_PrivateMouseButton(act?SDL_PRESSED:SDL_RELEASED,i,0,0);
+				if (sdl_buttons[i] == CONT_A || sdl_buttons[i] == CONT_B) {
+					SDL_PrivateMouseButton(act ? SDL_PRESSED : SDL_RELEASED, 
+						(sdl_buttons[i] == CONT_A) ? SDL_BUTTON_LEFT : SDL_BUTTON_RIGHT, 0, 0);
 				}
 			}
 		}
@@ -238,16 +230,16 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	//Emulating mouse
 	//"joyx", "joyy", "joy2x", and "joy2y" are all zero based
 	if ((__sdl_dc_emulate_mouse) && (!joystick->index)) {
-		count_cond=!(count&0x1);
+		count_cond = !(count & 0x1);
 		if (cond->joyx!=0 || cond->joyy!=0 || count_cond) {
 			{
 				register unsigned s= __sdl_dc_mouse_shift+1;
-				mx=(cond->joyx)>>s;
-				my=(cond->joyy)>>s;
+				mx = (cond->joyx) >> s;
+				my = (cond->joyy) >> s;
 			}
 			
 			if (count_cond) {
-				SDL_PrivateMouseMotion(changed>>1,1,(Sint16)(mx),(Sint16)(my), 0);
+				SDL_PrivateMouseMotion(changed >> 1, 1, (Sint16)(mx), (Sint16)(my), 0);
 			}
 			
 			count++;
@@ -264,11 +256,11 @@ static void joyUpdate(SDL_Joystick *joystick) {
 
 	//Check Joystick Axis P1
 	//"joyx", "joyy", "joy2x", and "joy2y" are all zero based
-	if (cond->joyx!=prev_joyx) {
+	if (cond->joyx != prev_joyx) {
 		SDL_PrivateJoystickAxis(joystick, 0, cond->joyx);
 	}
 	
-	if (cond->joyy!=prev_joyy) {
+	if (cond->joyy != prev_joyy) {
 		SDL_PrivateJoystickAxis(joystick, 1, cond->joyy);
 	}
 	
@@ -278,15 +270,15 @@ static void joyUpdate(SDL_Joystick *joystick) {
 		SDL_PrivateJoystickAxis(joystick, 2, cond->rtrig);
 	}
 	
-	if (cond->ltrig!=prev_ltrig) {
+	if (cond->ltrig != prev_ltrig) {
 		SDL_PrivateJoystickAxis(joystick, 3, cond->ltrig);
 	}
 	//Check Joystick Axis P2
-	if (cond->joy2x!=prev_joy2x) {
+	if (cond->joy2x != prev_joy2x) {
 		SDL_PrivateJoystickAxis(joystick, 4, cond->joy2x);
 	}
 	
-	if (cond->joy2y!=prev_joy2y) {
+	if (cond->joy2y != prev_joy2y) {
 		SDL_PrivateJoystickAxis(joystick, 5, cond->joy2y);
 	}
 

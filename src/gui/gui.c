@@ -48,11 +48,19 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 	}
 }
 
-static uint8_t last_joy_state = 0;
-static uint8_t cur_joy_state = 0;
+static uint8_t scr_joy_state = 0;
 static int scr_num = 0;
 
 static void screenshot_callback(void)  {
+	static uint32_t last_time = 0;
+	uint32_t now = timer_us_gettime64() >> 10;
+	
+	scr_joy_state = 0;
+	
+	if ((now - last_time) < 1000) {
+		return;
+	}
+	
 	char path[NAME_MAX];
 	char *root_dir = getenv("PATH");
 	int try_cnt = 99;
@@ -75,6 +83,8 @@ static void screenshot_callback(void)  {
 	LockVideo();
 	dsystemf("screenshot %s png", path);
 	UnlockVideo();
+	
+	last_time = now;
 }
 
 
@@ -86,39 +96,38 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 	switch(event->type) {
 		case SDL_JOYBUTTONDOWN:
 			switch(event->jbutton.button) {
-				case 6: // X button
-					cur_joy_state |= 1;
+				case SDL_DC_X: // X button
+					scr_joy_state |= 1;
 					break;
+				
+				case SDL_DC_L: // ltrig
+					scr_joy_state |= 4;
+					break;
+				
+				case SDL_DC_R: // rtrig
+					scr_joy_state |= 2;
+					break;
+				
 				default:
-					cur_joy_state ^= 1;
+					scr_joy_state = 0;
 					break;
 			}
 			break;
-		case SDL_JOYAXISMOTION:
-			switch(event->jaxis.axis) {
-				case 2: // rtrig
-					if(event->jaxis.value)
-						cur_joy_state |= 2;
-					else
-						cur_joy_state ^= 2;
-					break;
-				case 3: // ltrig
-					if(event->jaxis.value)
-						cur_joy_state |= 4;
-					else
-						cur_joy_state ^= 4;
-					break;
+		
+		case SDL_KEYDOWN:
+			if (event->key.keysym.unicode == SDLK_PRINT) {
+				scr_joy_state = 7;
 			}
 			break;
+		
 		default:
-			cur_joy_state = 0;
+			scr_joy_state = 0;
 			break;
 	}
 
-	if(cur_joy_state != last_joy_state && last_joy_state == 7) {
+	if(scr_joy_state == 7) {
 		screenshot_callback();
 	}
-	last_joy_state = cur_joy_state;
 }
 
 

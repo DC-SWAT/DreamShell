@@ -19,20 +19,18 @@ void SDL_DC_ShowAskHz(SDL_bool value);
 void SDL_DC_Default60Hz(SDL_bool value);
 
 typedef enum {
-    SDL_DC_START=3,
-    SDL_DC_A=2,
-    SDL_DC_B=1,
-    SDL_DC_X=5,
-    SDL_DC_Y=6,
-    SDL_DC_L=7,
-    SDL_DC_R=8,
-    SDL_DC_LEFT=11,
-    SDL_DC_RIGHT=12,
-    SDL_DC_UP=9,
-    SDL_DC_DOWN=10
+	SDL_DC_C,
+	SDL_DC_B,
+	SDL_DC_A,
+	SDL_DC_START,
+	SDL_DC_Z,
+	SDL_DC_Y,
+	SDL_DC_X,
+	SDL_DC_D,
+	SDL_DC_L,
+	SDL_DC_R
 } SDL_DC_button;
 
-void SDL_DC_MapKey(int joy, SDL_DC_button button, SDLKey key);
 void SDL_DC_EmulateMouse(SDL_bool value);
 
 void SDL_DC_SetSoundBuffer(void *buffer);

@@ -410,18 +410,22 @@ static int ButtonToKey(int but) {
 	int key = 0;
 	
 	switch(but) {
-		case 1:
+		case SDL_DC_B:
 			key = 2;
 			break;
-		case 2:
+		
+		case SDL_DC_A:
 			key = 3;
 			break;
-		case 5:
+		
+		case SDL_DC_Y:
 			key = 1;
 			break;
-		case 6:
+		
+		case SDL_DC_X:
 			key = 0;
 			break;
+		
 		default:
 			break;
 	}
@@ -452,10 +456,10 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 			case SDL_JOYBUTTONDOWN:
 				
 				switch(event->jbutton.button) {
-					case 1: 
-					case 2:
-					case 5:
-					case 6:
+					case SDL_DC_B: 
+					case SDL_DC_A:
+					case SDL_DC_Y:
+					case SDL_DC_X:
 					
 						vkb.event.key.keysym.sym = ButtonToKey(event->jbutton.button);
 						
@@ -595,7 +599,7 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 
 	} else {
 		
-		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == 3 && ScreenIsEnabled()) {
+		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == SDL_DC_START && ScreenIsEnabled()) {
 			VirtKeyboardToggle();
 		}
 	}

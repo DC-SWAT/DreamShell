@@ -143,11 +143,11 @@ static void EventHandler(void *ds_event, void *param, int action) {
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
             switch(event->jbutton.button) {
-                case 1:
-                case 2:
-                case 5:
-                case 6:
-                // case 3:
+                case SDL_DC_B:
+                case SDL_DC_A:
+                case SDL_DC_Y:
+                case SDL_DC_X:
+                // case SDL_DC_START:
                     onPreviewClick();
                     break;
             }
