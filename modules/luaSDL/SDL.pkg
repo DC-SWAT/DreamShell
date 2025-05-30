@@ -675,11 +675,11 @@ extern int SDL_ShowCursor(int toggle);
 #define SDL_BUTTON_FORWARD		4
 #define SDL_BUTTON_WHEELUP		5
 #define SDL_BUTTON_WHEELDOWN	6
-#define SDL_BUTTON_LMASK	SDL_BUTTON(SDL_BUTTON_LEFT)
-#define SDL_BUTTON_RMASK	SDL_BUTTON(SDL_BUTTON_RIGHT)
-#define SDL_BUTTON_MMASK	SDL_BUTTON(SDL_BUTTON_MIDDLE)
-#define SDL_BUTTON_BWDMASK	SDL_BUTTON(SDL_BUTTON_BACKWARD)
-#define SDL_BUTTON_FWDMASK	SDL_BUTTON(SDL_BUTTON_FORWARD)
+#define SDL_BUTTON_LMASK	(1 << SDL_BUTTON_LEFT)
+#define SDL_BUTTON_RMASK	(1 << SDL_BUTTON_RIGHT)
+#define SDL_BUTTON_MMASK	(1 << SDL_BUTTON_MIDDLE)
+#define SDL_BUTTON_BWDMASK	(1 << SDL_BUTTON_BACKWARD)
+#define SDL_BUTTON_FWDMASK	(1 << SDL_BUTTON_FORWARD)
 
 
 
@@ -761,11 +761,12 @@ typedef struct {
 } SDL_KeyboardEvent;
 
 /* Mouse motion event structure */
-typedef struct SDL_MouseMotionEvent {
+typedef struct {
 	Uint8 type;		/* SDL_MOUSEMOTION */
 	Uint8 which;	/* The mouse device index */
 	Uint8 state;	/* The current button state */
-	Uint16 x, y;	/* The X/Y coordinates of the mouse */
+	Uint16 x;
+	Uint16 y;		/* The X/Y coordinates of the mouse */
 	Sint16 z;		/* The Z coordinates of the mouse (whell) */
 	Sint16 xrel;	/* The relative motion in the X direction */
 	Sint16 yrel;	/* The relative motion in the Y direction */
