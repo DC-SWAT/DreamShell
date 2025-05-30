@@ -15,9 +15,9 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 #define SEC_BUF_SIZE 16
 #define UI_UPDATE_INTERVAL 500
 
-static int rip_sec(int tn,int first,int count,int type,char *dst_file);
+static int rip_sec(int tn ,int first, int count, int type, char *dst_file);
 static void* gd_ripper_thread(void *arg);
-static int gdfiles(char *dst_folder,char *dst_file,char *text);
+static int gdfiles(char *dst_folder, char *dst_file, char *text);
 static int get_disc_status_and_type(int *status, int *disc_type);
 static int safe_cdrom_read_toc(CDROM_TOC *toc, int session);
 static int get_session_count(int disc_type);
@@ -776,103 +776,98 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file) {
 	return CMD_OK;
 }
 
-int gdfiles(char *dst_folder,char *dst_file,char *text)
-{
+int gdfiles(char *dst_folder, char *dst_file, char *text) {
 	file_t gdfd;
 	FILE *gdifd;
+	CDROM_TOC gdtoc, cdtoc;
+	int track, lba, gdtype, cdtype;
+	uint8_t *buff;
 
-	CDROM_TOC gdtoc;
-	CDROM_TOC cdtoc;
-	int track ,lba ,gdtype ,cdtype;
-	uint8_t *buff = memalign(32, 32768);
+	cdrom_set_sector_size(2048);
 
-	if(!buff)
-	{
+	if (safe_cdrom_read_toc(&cdtoc, 0) != ERR_OK) {
+		ds_printf("DS_ERROR: CD TOC read error\n");
+		return CMD_ERROR;
+	}
+
+	if (safe_cdrom_read_toc(&gdtoc, 1) != ERR_OK) {
+		ds_printf("DS_ERROR: GD TOC read error\n");
+		return CMD_ERROR;
+	}
+
+	buff = memalign(32, 32768);
+
+	if (!buff) {
 		ds_printf("DS_ERROR: Failed to allocate buffer\n");
 		return CMD_ERROR;
 	}
 
-	cdrom_set_sector_size(2048);
-	if(safe_cdrom_read_toc(&cdtoc, 0) != CMD_OK) 
-	{ 
-		ds_printf("DS_ERROR: CD Toc read error\n"); 
-		free(buff); 
-		return CMD_ERROR; 
-	}
+	ds_printf("DS_PROCESS: Reading IP.BIN\n");
+	int cdstat = cdrom_read_sectors_ex(buff, 45150, 16, CDROM_READ_DMA);
 
-	if(safe_cdrom_read_toc(&gdtoc, 1) != CMD_OK) 
-	{ 
-		ds_printf("DS_ERROR: GD Toc read error\n"); 
-		free(buff); 
-		return CMD_ERROR; 
-	}
-
-	if(cdrom_read_sectors(buff,45150,16)) 
-	{ 
-		ds_printf("DS_ERROR: IP.BIN read error\n"); 
-		free(buff); 
-		return CMD_ERROR; 
-	}
-
-	strcpy(dst_file,"\0"); 
-	snprintf(dst_file,NAME_MAX,"%s/IP.BIN",dst_folder); 
-
-	if ((gdfd=fs_open(dst_file,O_WRONLY | O_TRUNC | O_CREAT)) == FILEHND_INVALID) 
-	{ 
-		ds_printf("DS_ERROR: Error open IP.BIN for write\n"); 
-		free(buff); 
-		return CMD_ERROR; 
-	}
-
-	if (fs_write(gdfd,buff,32768) == -1) 
-	{
-		ds_printf("DS_ERROR: Error write IP.BIN\n"); 
-		free(buff); 
-		fs_close(gdfd); 
+	if (cdstat != ERR_OK) {
+		ds_printf("DS_ERROR: Failed to read IP.BIN\n");
+		free(buff);
 		return CMD_ERROR;
 	}
 
-	fs_close(gdfd); 
+	ds_printf("DS_OK: IP.BIN read successfully\n");
+
+	snprintf(dst_file, NAME_MAX, "%s/IP.BIN", dst_folder);
+	gdfd = fs_open(dst_file, O_WRONLY | O_TRUNC | O_CREAT);
+
+	if (gdfd == FILEHND_INVALID) {
+		ds_printf("DS_ERROR: Error open IP.BIN for write\n");
+		free(buff);
+		return CMD_ERROR;
+	}
+
+	if (fs_write(gdfd, buff, 32768) != 32768) {
+		ds_printf("DS_ERROR: Error write IP.BIN\n");
+		free(buff);
+		fs_close(gdfd);
+		return CMD_ERROR;
+	}
+
+	fs_close(gdfd);
 	free(buff);
-	ds_printf("IP.BIN succes dumped\n");
+	ds_printf("DS_OK: IP.BIN dumped successfully\n");
 
-	fs_chdir(dst_folder);
-	strcpy(dst_file,"\0"); 
-	snprintf(dst_file,NAME_MAX,"%s.gdi",text);
+	snprintf(dst_file, NAME_MAX, "%s/%s.gdi", dst_folder, text);
 
-	if ((gdifd=fopen(dst_file,"w")) == NULL)
-	{
-		ds_printf("DS_ERROR: Error open %s.gdi for write\n",text); 
-		return CMD_ERROR; 
+	gdifd = fopen(dst_file, "w");
+	if (!gdifd) {
+		ds_printf("DS_ERROR: Error open %s.gdi for write\n", text);
+		return CMD_ERROR;
 	}
 
 	int cdfirst = TOC_TRACK(cdtoc.first);
 	int cdlast = TOC_TRACK(cdtoc.last);
 	int gdfirst = TOC_TRACK(gdtoc.first);
 	int gdlast = TOC_TRACK(gdtoc.last);
-	fprintf(gdifd,"%d\n",gdlast);
 
-	for (track=cdfirst; track <= cdlast; track++ ) 
-	{
-		lba = TOC_LBA(cdtoc.entry[track-1]);
-		lba -= 150;
-		cdtype = TOC_CTRL(cdtoc.entry[track-1]);
-		fprintf(gdifd, "%d %d %d %d track%02d.%s 0\n",track,lba,cdtype,(cdtype == 4 ? 2048 : 2352),track,(cdtype == 4 ? "iso" : "raw"));
+	fprintf(gdifd, "%d\n", gdlast);
+
+	for (track = cdfirst; track <= cdlast; track++) {
+		lba = TOC_LBA(cdtoc.entry[track - 1]) - 150;
+		cdtype = TOC_CTRL(cdtoc.entry[track - 1]);
+		fprintf(gdifd, "%d %d %d %d track%02d.%s 0\n", 
+			track, lba, cdtype, (cdtype == 4 ? 2048 : 2352), 
+			track, (cdtype == 4 ? "iso" : "raw"));
 	}
 
-	for (track=gdfirst; track <= gdlast; track++ ) 
-	{
-		lba = TOC_LBA(gdtoc.entry[track-1]);
-		lba -= 150;
-		gdtype = TOC_CTRL(gdtoc.entry[track-1]);
-		fprintf(gdifd, "%d %d %d %d track%02d.%s 0\n",track,lba,gdtype,(gdtype == 4 ? 2048 : 2352),track,(gdtype == 4 ? "iso" : "raw"));
+	for (track = gdfirst; track <= gdlast; track++) {
+		lba = TOC_LBA(gdtoc.entry[track - 1]) - 150;
+		gdtype = TOC_CTRL(gdtoc.entry[track - 1]);
+		fprintf(gdifd, "%d %d %d %d track%02d.%s 0\n", 
+			track, lba, gdtype, (gdtype == 4 ? 2048 : 2352), 
+			track, (gdtype == 4 ? "iso" : "raw"));
 	}
 
-	fclose(gdifd); 
-	fs_chdir("/");
-	ds_printf("%s.gdi succes writen\n",text);
+	fclose(gdifd);
+	ds_printf("DS_OK: %s.gdi created successfully\n", text);
 
-	return CMD_OK;	
+	return CMD_OK;
 }
 
 void gd_ripper_Exit()  {
