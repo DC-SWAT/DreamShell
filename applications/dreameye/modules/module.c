@@ -312,9 +312,18 @@ static void *ErasePhotos(void *param) {
    
     UpdateProgress("Erasing photos...", 0.0f);
     
-   if(erase_photo(self.dev, 0xFF-2) < 0) {
-      desc = "Erasing failed.";
-   }
+	if(erase_photo(self.dev, 0xFF-2) < 0) {
+		desc = "Erasing failed.";
+		goto exit_with_err;
+	}
+	
+	while ((self.photo_count = get_photo_count(self.dev)) > 0) {
+		if(self.action != APP_ACTION_PHOTO_ERASE) {
+            desc = "Erasing aborted.";
+            break;
+        }
+        UpdateProgress("Erasing photos...", (32 - self.photo_count) * 0,03125f);
+	}
 
     UpdateProgress("Checking...", 0.99f);
     self.photo_count = get_photo_count(self.dev);
@@ -323,6 +332,7 @@ static void *ErasePhotos(void *param) {
        desc = "Not all photos have been erased.";
     }
 
+exit_with_err:
     UpdateProgress(desc, 1.0f);
     thd_sleep(ACTION_COMPLETE_TIMEOUT_MS);
     DreameyeApp_ShowPhotoPage(NULL);
