@@ -193,6 +193,7 @@ void DreameyeApp_ShowPhotoPage(GUI_Widget *widget) {
     (void)widget;
 
     int index = GUI_CardStackGetIndex(self.pages);
+    UpdatePhotoCount();
     GUI_CardStackShowIndex(self.pages, 1);
     self.action = APP_ACTION_IDLE;
 
