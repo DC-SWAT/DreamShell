@@ -397,32 +397,46 @@ void MainApp_Init(App_t *app) {
 static void Slide_EventHandler(void *ds_event, void *param, int action) {
 
 	SDL_Event *event = (SDL_Event *) param;
-	static uint8_t prev_rtrig = 0, prev_ltrig = 0;
-
+	
+	if (VirtualKeyboardIsVisible != NULL && 
+		VirtualKeyboardIsVisible()) {
+		return;
+	}
+	
 	switch(event->type) {
-
-		case SDL_JOYAXISMOTION:
-                
-			switch(event->jaxis.axis) {
-
-				case 2: // Right trigger press slide screen right once if virtual keyboard not active
-					if ((prev_rtrig < 0xC0) && (event->jaxis.value >= 0xC0) && VirtualKeyboardIsVisible != NULL && !VirtualKeyboardIsVisible()){
-						MainApp_SlideRight();
-					}
-					prev_rtrig = event->jaxis.value;
+		
+		case SDL_JOYBUTTONDOWN:
+			switch(event->jbutton.button) {
+				case SDL_DC_L:
+					MainApp_SlideLeft();
 					break;
-
-				case 3: // Left trigger press slide screen right once if virtual keyboard not active
-
-					if ((prev_ltrig < 0xC0) && (event->jaxis.value >= 0xC0) && VirtualKeyboardIsVisible != NULL && !VirtualKeyboardIsVisible()){
-						MainApp_SlideLeft();
-					}
-					prev_ltrig = event->jaxis.value;
+				
+				case SDL_DC_R:
+					MainApp_SlideRight();
+					break;
+				
+				default:
 					break;
 			}
-
 			break;
-
+		
+		case SDL_KEYDOWN:
+			switch (event->key.keysym.sym)
+			{
+				case SDLK_COMMA:
+					MainApp_SlideLeft();
+					break;
+				
+				case SDLK_PERIOD:
+					MainApp_SlideRight();
+					break;
+				
+				default:
+					break;
+			}
+			
+			break;
+		
 		default:
 			break;
 	}
