@@ -222,7 +222,7 @@ extern "C"
 		}
 	}
 
-		const char* TSU_CheckBoxGetText(CheckBox *checkbox_ptr)
+	const char* TSU_CheckBoxGetText(CheckBox *checkbox_ptr)
 	{
 		if (checkbox_ptr != NULL) {
 			static char text[51] = {0};
