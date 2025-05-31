@@ -139,9 +139,15 @@ static void keyboard_update(void) {
 		return;
 	}
 	
+	kbd_region_t region = state->region;
+	kbd_mods_t mods = state->cond.modifiers;
+	kbd_leds_t leds;
+	leds.raw = 0;
+	
 	for(i=0; i<sizeof(sdl_shift); i++) {
 		if ((state->cond.modifiers.raw & (1 << i)) != (last_modifiers & (1 << i))) {
 			keysym.sym = sdl_shift[i];
+			keysym.unicode = 0;
 			SDL_PrivateKeyboard((state->cond.modifiers.raw & (1 << i)) ? SDL_PRESSED : SDL_RELEASED, &keysym);
 		}
 	}
@@ -152,7 +158,9 @@ static void keyboard_update(void) {
 		if (state->key_states[i].is_down != key_states[i].is_down) {
 			int key = sdl_key[i];
 			if (key) {
-				keysym.unicode = keysym.sym = key;
+				keysym.sym = key;
+				keysym.unicode = kbd_key_to_ascii(i, region, mods, leds);
+				
 				SDL_PrivateKeyboard(state->key_states[i].is_down ? SDL_PRESSED : SDL_RELEASED, &keysym);
 			}
 		}

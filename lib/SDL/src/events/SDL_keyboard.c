@@ -345,10 +345,12 @@ Uint8 * SDL_GetKeyState (int *numkeys)
 		*numkeys = SDLK_LAST;
 	return(SDL_KeyState);
 }
+
 SDLMod SDL_GetModState (void)
 {
 	return(SDL_ModState);
 }
+
 void SDL_SetModState (SDLMod modstate)
 {
 	SDL_ModState = modstate;
@@ -515,6 +517,14 @@ printf("Keyboard event didn't change state - dropped!\n");
 	if ( SDL_ProcessEvents[event.type] == SDL_ENABLE ) {
 		event.key.state = state;
 		event.key.keysym = *keysym;
+		if((modstate & KMOD_CAPS) && isalpha(event.key.keysym.unicode)) {
+			if (modstate & (KMOD_LSHIFT | KMOD_RSHIFT)) {
+				event.key.keysym.unicode = tolower(event.key.keysym.unicode);
+			}
+			else {
+				event.key.keysym.unicode = toupper(event.key.keysym.unicode);
+			}
+		}
 		/*
 		 * jk 991215 - Added
 		 */
