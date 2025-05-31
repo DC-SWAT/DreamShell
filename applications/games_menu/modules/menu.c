@@ -878,9 +878,6 @@ bool GetGameCoverPath(int game_index, char **game_cover_path, int menu_type)
 	*game_cover_path = NULL;
 	if (game_index >= 0)
 	{
-		*game_cover_path = (char *)malloc(NAME_MAX);
-		memset(*game_cover_path, 0, NAME_MAX);
-
 		if (menu_data.games_array[game_index].exists_cover[menu_type - 1] == SC_EXISTS)
 		{
 			char *game = NULL;
@@ -894,6 +891,9 @@ bool GetGameCoverPath(int game_index, char **game_cover_path, int menu_type)
 				{
 					if (ContainsCoverType(game_index, menu_type, image_count))
 					{
+						*game_cover_path = (char *)malloc(NAME_MAX);
+						memset(*game_cover_path, 0, NAME_MAX);
+
 						snprintf(*game_cover_path, NAME_MAX, "%s%s/%s%s", GetCoversPath(menu_data.current_dev), cover_folder, game, GetCoverExtensionFromType(image_count));
 						break;
 					}
@@ -910,6 +910,9 @@ bool GetGameCoverPath(int game_index, char **game_cover_path, int menu_type)
 		{
 			if (menu_data.games_array[game_index].exists_cover[menu_type - 1] == SC_DEFAULT)
 			{
+				*game_cover_path = (char *)malloc(NAME_MAX);
+				memset(*game_cover_path, 0, NAME_MAX);
+
 				if (ContainsCoverType(game_index, menu_type, IT_JPG))
 				{
 					snprintf(*game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/gd.jpg");
@@ -1301,11 +1304,12 @@ PresetStruct *LoadPresetGame(int game_index)
 			fs_iso_unmount("/iso_game");
 
 			bool exists_preset = false;
+			int game_device_type = GetDeviceType(full_path_game);
 			int app_name_count = 0;
 			const char *app_name_array[3] = {"games_menu", "iso_loader", NULL};
 			while (app_name_array[app_name_count] != NULL)
 			{
-				if (GetDeviceType(full_path_game) == APP_DEVICE_SD)
+				if (game_device_type == APP_DEVICE_SD)
 				{
 					full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_SD), GetDefaultDir(APP_DEVICE_SD), sector_data.md5, app_name_array[app_name_count]);
 					if (!FileExists(full_preset_file_name) && menu_data.ide)
@@ -1313,7 +1317,7 @@ PresetStruct *LoadPresetGame(int game_index)
 						full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_SD), sector_data.md5, app_name_array[app_name_count]);
 					}
 				}
-				else if (GetDeviceType(full_path_game) == APP_DEVICE_IDE)
+				else if (game_device_type == APP_DEVICE_IDE)
 				{
 					full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_IDE), sector_data.md5, app_name_array[app_name_count]);
 				}
@@ -1333,10 +1337,9 @@ PresetStruct *LoadPresetGame(int game_index)
 
 			if (!exists_preset)
 			{
-				int device_type = GetDeviceType(getenv("PATH"));
-				if (MountPresetsRomdisk(device_type) == 0)
+				if (MountPresetsRomdisk(game_device_type) == 0)
 				{
-					full_preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5, NULL);
+					full_preset_file_name = MakePresetFilename(GetDefaultDir(game_device_type), GetDefaultDir(game_device_type), sector_data.md5, NULL);
 				}
 			}
 		}
@@ -3200,9 +3203,10 @@ void RetrieveGamesRecursive(const char *initial_path)
 
 				if (menu_data.games_array_count % GAMES_ALLOC_BLOCK == 0)
 				{
-					menu_data.games_array = realloc(menu_data.games_array, (menu_data.games_array_count + GAMES_ALLOC_BLOCK) * sizeof(GameItemStruct));
-					if (!menu_data.games_array)
+					GameItemStruct *tmp = realloc(menu_data.games_array, (menu_data.games_array_count + GAMES_ALLOC_BLOCK) * sizeof(GameItemStruct));
+					if (!tmp)
 						break;
+					menu_data.games_array = tmp;
 				}
 
 				GameItemStruct *game_item = &menu_data.games_array[menu_data.games_array_count++];
@@ -3217,7 +3221,10 @@ void RetrieveGamesRecursive(const char *initial_path)
 						free(game_cache->folder);
 					if (game_cache->folder_name)
 						free(game_cache->folder_name);
+
 					free(game_cache);
+					game_cache = NULL;
+
 					continue;
 				}
 

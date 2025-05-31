@@ -749,7 +749,7 @@ void UnmountPresetsRomdisk(int device_type)
 
 void UnmountAllPresetsRomdisks()
 {
-	for (int i = 0; i < sizeof(mount_points) / sizeof(mount_points[0]); ++i)
+	for (int i = 0; i < sizeof(mount_points) / sizeof(mount_points[0]); i++)
 	{
 		UnmountPresetsRomdisk(i);
 	}
