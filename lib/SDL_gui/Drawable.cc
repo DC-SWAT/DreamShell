@@ -130,10 +130,11 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			int y = event->button.y - yoffset;
 			if ((flags & WIDGET_DISABLED) == 0 &&
 				(flags & WIDGET_HIDDEN) == 0) {
-				if (Inside(x, y, &area))
+				if (Inside(x, y, &area)) {
 					if (focus == 0 || focus == this) {
 						SetFlags(WIDGET_PRESSED);
 					}
+				}
 			}
 			break;
 		}		
@@ -168,6 +169,73 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			}
 			if (flags & WIDGET_PRESSED) {
 				ClearFlags(WIDGET_PRESSED);
+			}
+			break;
+		}
+		case SDL_KEYDOWN:
+		{
+			if (event->key.keysym.sym == SDLK_BACKSPACE || 
+				event->key.keysym.sym == SDLK_RETURN || 
+				event->key.keysym.sym == SDLK_KP_ENTER) {
+				
+				int x;
+				int y;
+				
+				SDL_GetMouseState(&x, &y);
+				
+				x -= xoffset;
+				y -= yoffset;
+				
+				if ((flags & WIDGET_DISABLED) == 0 &&
+					(flags & WIDGET_HIDDEN) == 0) {
+					if (Inside(x, y, &area)) {
+						if (focus == 0 || focus == this) {
+							SetFlags(WIDGET_PRESSED);
+						}
+					}
+				}
+			}
+			break;
+		}
+		case SDL_KEYUP:
+		{
+			if (event->key.keysym.sym == SDLK_BACKSPACE || 
+				event->key.keysym.sym == SDLK_RETURN || 
+				event->key.keysym.sym == SDLK_KP_ENTER) {
+				
+				int x;
+				int y;
+				
+				SDL_GetMouseState(&x, &y);
+				
+				x -= xoffset;
+				y -= yoffset;
+				
+				if ((flags & WIDGET_DISABLED) == 0 &&
+					(flags & WIDGET_HIDDEN) == 0)
+				{
+					if (flags & WIDGET_PRESSED)
+						if (Inside(x, y, &area))
+							if (focus == 0 || focus == this) {
+								switch (event->key.keysym.sym)
+								{
+									case SDLK_RETURN:
+									case SDLK_KP_ENTER:
+										Clicked(x, y);
+										break;
+									
+									case SDLK_BACKSPACE:
+										ContextClicked(x, y);
+										break;
+									
+									default:
+										break;
+								}
+							}
+				}
+				if (flags & WIDGET_PRESSED) {
+					ClearFlags(WIDGET_PRESSED);
+				}
 			}
 			break;
 		}

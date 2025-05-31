@@ -644,9 +644,55 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 				}
 			}
 			break;
-		
-		case SDL_JOYAXISMOTION:
 
+		case SDL_KEYDOWN:
+			switch (event->key.keysym.sym) {
+				default:
+					break;
+
+				case SDLK_HOME:
+				{
+					scrollbar->SetVerticalPosition(0);
+					AdjustScrollbar(NULL);
+					break;
+				}
+
+				case SDLK_END:
+				{
+					int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+					scrollbar->SetVerticalPosition(scroll_height);
+					AdjustScrollbar(NULL);
+					break;
+				}
+
+				case SDLK_PAGEUP:
+				case SDLK_PAGEDOWN:
+					int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+					int sp_old = scrollbar->GetVerticalPosition();
+					int sp = sp_old;
+					int step = (scroll_height / panel->GetWidgetCount());
+					
+					if (event->key.keysym.sym == SDLK_PAGEUP) {
+						sp -= step;
+					} else {
+						sp += step;
+					}
+					
+					if(sp > scroll_height) {
+						sp = scroll_height;
+					} else if(sp < 0) {
+						sp = 0;
+					}
+
+					if(sp_old != sp) {
+						scrollbar->SetVerticalPosition(sp);
+						AdjustScrollbar(NULL);
+					}
+					break;
+			}
+			break;
+
+		case SDL_JOYAXISMOTION:
 			switch(event->jaxis.axis) {
 				case 1: // Analog joystick
 					if(flags & WIDGET_PRESSED) {
@@ -682,7 +728,7 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 					break;
 			}
 			break;
-			
+
 		case SDL_JOYHATMOTION:
 			if (event->jhat.hat) { // skip second d-pad
 				break;
