@@ -115,7 +115,7 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 			break;
 		
 		case SDL_KEYDOWN:
-			if (event->key.keysym.unicode == SDLK_PRINT) {
+			if (event->key.keysym.sym == SDLK_PRINT) {
 				scr_joy_state = 7;
 			}
 			break;
