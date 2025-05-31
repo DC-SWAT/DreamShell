@@ -13,6 +13,9 @@
 #include "app_utils.h"
 #include "audio/wav.h"
 
+static uint8 *romdisk_data[3] = {NULL, NULL, NULL};
+static const char *mount_points[] = {"/presets_cd", "/presets_sd", "/presets_ide"};
+
 char *StrdupSafe(const char *string)
 {
 	if (!string)
@@ -599,9 +602,20 @@ char *MakePresetFilename(const char *default_dir, const char *device_dir, uint8 
 		dev[3] = '\0';
 	}
 
+	char presets_dir[100] = {0};
+	if (app_name == NULL)
+	{
+		int device_type = GetDeviceType(default_dir);
+		strcpy(presets_dir, mount_points[device_type]);
+	}
+	else
+	{
+		snprintf(presets_dir, sizeof(presets_dir), "%s/apps/%s/presets", default_dir, app_name);		
+	}
+
 	snprintf(filename, sizeof(filename),
-			 "%s/apps/%s/presets/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-			 default_dir, app_name, dev, md5[0],
+			 "%s/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
+			 presets_dir, dev, md5[0],
 			 md5[1], md5[2], md5[3], md5[4], md5[5],
 			 md5[6], md5[7], md5[8], md5[9], md5[10],
 			 md5[11], md5[12], md5[13], md5[14], md5[15]);
@@ -688,5 +702,55 @@ void PlayCDDATrack(const char *file, int loop)
 		}
 		ds_printf("DS_OK: Start playing: %s\n", file);
 		wav_play(wav_hnd);
+	}
+}
+
+int MountPresetsRomdisk(int device_type)
+{
+	char romdisk_path[NAME_MAX];
+	const char *romdisk_names[] = {"presets_cd.romfs", "presets_sd.romfs", "presets_ide.romfs"};
+
+	if (device_type < 0 || device_type >= 3 || romdisk_data[device_type])
+	{
+		return 0;
+	}
+
+	snprintf(romdisk_path, NAME_MAX, "%s/apps/iso_loader/resources/%s",
+			 getenv("PATH"), romdisk_names[device_type]);
+
+	if (fs_load(romdisk_path, (void **)&romdisk_data[device_type]) <= 0)
+	{
+		ds_printf("DS_ERROR: Failed to load romdisk %s\n", romdisk_path);
+		return -1;
+	}
+
+	if (fs_romdisk_mount(mount_points[device_type], romdisk_data[device_type], 1) < 0)
+	{
+		ds_printf("DS_ERROR: Failed to mount romdisk %s\n", mount_points[device_type]);
+		free(romdisk_data[device_type]);
+		romdisk_data[device_type] = NULL;
+		return -1;
+	}
+
+	return 0;
+}
+
+void UnmountPresetsRomdisk(int device_type)
+{
+	if (device_type < 0 || device_type >= 3 || !romdisk_data[device_type])
+	{
+		return;
+	}
+
+	fs_romdisk_unmount(mount_points[device_type]);
+	free(romdisk_data[device_type]);
+	romdisk_data[device_type] = NULL;
+}
+
+void UnmountAllPresetsRomdisks()
+{
+	for (int i = 0; i < sizeof(mount_points) / sizeof(mount_points[0]); ++i)
+	{
+		UnmountPresetsRomdisk(i);
 	}
 }
