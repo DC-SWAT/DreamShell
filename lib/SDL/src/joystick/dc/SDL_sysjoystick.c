@@ -134,11 +134,10 @@ int SDL_SYS_JoystickOpen(SDL_Joystick *joystick) {
 #define CONT_RTRIG	(1 << 17)
 
 static void joyUpdate(SDL_Joystick *joystick) {
-	SDL_keysym keysym;
 	int count_cond;
 	static int count=1;
 	static int mx = 2048, my = 2048;
-	const	int sdl_buttons[] = {
+	const int sdl_buttons[] = {
 		CONT_C,
 		CONT_B,
 		CONT_A,
@@ -153,8 +152,8 @@ static void joyUpdate(SDL_Joystick *joystick) {
 
 	cont_state_t *cond;
 	maple_device_t * dev;
-	int buttons,prev_buttons,i,max,changed;
-	int prev_ltrig,prev_rtrig,prev_joyx,prev_joyy,prev_joy2x,prev_joy2y;
+	int i, changed, buttons;
+	int prev_ltrig, prev_rtrig, prev_joyx, prev_joyy, prev_joy2x, prev_joy2y;
 	
 	//Get buttons of the Controller
 	if(!(dev = maple_enum_type(joystick->index, MAPLE_FUNC_CONTROLLER))) {
@@ -177,8 +176,7 @@ static void joyUpdate(SDL_Joystick *joystick) {
 		buttons |= CONT_RTRIG;
 	}
 	
-	prev_buttons = joystick->hwdata->prev_buttons;
-	changed = buttons ^ prev_buttons;
+	changed = buttons ^ joystick->hwdata->prev_buttons;
 
 	//Check Directions for HAT
 	if (changed & (CONT_DPAD_UP | CONT_DPAD_DOWN | CONT_DPAD_LEFT | CONT_DPAD_RIGHT)) {
@@ -201,7 +199,7 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	
 	//Check buttons
 	//"buttons" is zero based: so invert the PRESSED/RELEASED way.
-	for(i=0, max=0; i < sizeof(sdl_buttons) / sizeof(sdl_buttons[0]); i++) {
+	for(i = 0; i < sizeof(sdl_buttons) / sizeof(sdl_buttons[0]); i++) {
 		if (changed & sdl_buttons[i]) {
 			int act = (buttons & sdl_buttons[i]);
 			SDL_PrivateJoystickButton(joystick, i, act ? SDL_PRESSED : SDL_RELEASED);

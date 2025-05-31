@@ -61,23 +61,15 @@ SDL_Surface * SDL_LoadBMP_RW (SDL_RWops *src, int freesrc)
 
 	/* The Win32 BMP file header (14 bytes) */
 	char   magic[2];
-	Uint32 bfSize;
-	Uint16 bfReserved1;
-	Uint16 bfReserved2;
 	Uint32 bfOffBits;
 
 	/* The Win32 BITMAPINFOHEADER struct (40 bytes) */
 	Uint32 biSize;
 	Sint32 biWidth;
 	Sint32 biHeight;
-	Uint16 biPlanes;
 	Uint16 biBitCount;
 	Uint32 biCompression;
-	Uint32 biSizeImage;
-	Sint32 biXPelsPerMeter;
-	Sint32 biYPelsPerMeter;
 	Uint32 biClrUsed;
-	Uint32 biClrImportant;
 
 	/* Make sure we are passed a valid data source */
 	surface = NULL;
@@ -100,9 +92,9 @@ SDL_Surface * SDL_LoadBMP_RW (SDL_RWops *src, int freesrc)
 		was_error = 1;
 		goto done;
 	}
-	bfSize		= SDL_ReadLE32(src);
-	bfReserved1	= SDL_ReadLE16(src);
-	bfReserved2	= SDL_ReadLE16(src);
+	(void) SDL_ReadLE32(src);
+	(void) SDL_ReadLE16(src);
+	(void) SDL_ReadLE16(src);
 	bfOffBits	= SDL_ReadLE32(src);
 
 	/* Read the Win32 BITMAPINFOHEADER */
@@ -110,25 +102,21 @@ SDL_Surface * SDL_LoadBMP_RW (SDL_RWops *src, int freesrc)
 	if ( biSize == 12 ) {
 		biWidth		= (Uint32)SDL_ReadLE16(src);
 		biHeight	= (Uint32)SDL_ReadLE16(src);
-		biPlanes	= SDL_ReadLE16(src);
+		(void) SDL_ReadLE16(src);
 		biBitCount	= SDL_ReadLE16(src);
 		biCompression	= BI_RGB;
-		biSizeImage	= 0;
-		biXPelsPerMeter	= 0;
-		biYPelsPerMeter	= 0;
 		biClrUsed	= 0;
-		biClrImportant	= 0;
 	} else {
 		biWidth		= SDL_ReadLE32(src);
 		biHeight	= SDL_ReadLE32(src);
-		biPlanes	= SDL_ReadLE16(src);
+		(void) SDL_ReadLE16(src);
 		biBitCount	= SDL_ReadLE16(src);
 		biCompression	= SDL_ReadLE32(src);
-		biSizeImage	= SDL_ReadLE32(src);
-		biXPelsPerMeter	= SDL_ReadLE32(src);
-		biYPelsPerMeter	= SDL_ReadLE32(src);
+		(void) SDL_ReadLE32(src);
+		(void) SDL_ReadLE32(src);
+		(void) SDL_ReadLE32(src);
 		biClrUsed	= SDL_ReadLE32(src);
-		biClrImportant	= SDL_ReadLE32(src);
+		(void) SDL_ReadLE32(src);
 	}
 
 	/* Check for read error */

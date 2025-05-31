@@ -1,8 +1,8 @@
 #GL=1
 
-KOS_CFLAGS += -Iinclude -Isrc -Isrc/audio -Isrc/cdrom -Isrc/endian
+KOS_CFLAGS += -Iinclude -Isrc -Isrc/endian
 KOS_CFLAGS += -Isrc/events -Isrc/joystick -Isrc/thread/dc -Isrc/thread -Isrc/timer
-KOS_CFLAGS += -Isrc/video -DNO_SIGNAL_H -DENABLE_DC
+KOS_CFLAGS += -Isrc/video -DNO_SIGNAL_H -DENABLE_DC -DSDL_AUDIO_DISABLED=1 -DSDL_CDROM_DISABLED=1
 
 ifdef GL
 KOS_CFLAGS += -DHAVE_KGL
@@ -12,17 +12,6 @@ TARGET = ../libSDL_1.2.13.a
 endif
 
 OBJS = \
-	src/audio/dc/SDL_dcaudio.o \
-	src/audio/dc/aica.o \
-	src/audio/SDL_audio.o \
-	src/audio/SDL_audiocvt.o \
-	src/audio/SDL_audiodev.o \
-	src/audio/SDL_mixer.o \
-	src/audio/SDL_wave.o \
-	src/audio/dummy/SDL_dummyaudio.o \
-	src/audio/disk/SDL_diskaudio.o \
-	src/cdrom/dc/SDL_syscdrom.o \
-	src/cdrom/SDL_cdrom.o \
 	src/stdlib/SDL_string.o \
 	src/events/SDL_active.o \
 	src/events/SDL_events.o \

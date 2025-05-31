@@ -368,24 +368,24 @@ static void *sdl_dc_dblfreed=NULL;
 static void *sdl_dc_dblmem=NULL;
 static unsigned sdl_dc_dblsize=0;
 
-
+/*
 static void sdl_dc_set_video_region(void)
 {
-/*
+
 	if (flashrom_get_region()==FLASHROM_REGION_EUROPE)
 	{
 		volatile uint32 *r = (uint32*)0xA05F8000;
 		r[0x34]=((r[0x34]&0xFFFFF3F)|0x00000080);
 	}
-*/
-}
+
+}*/
 
 static int __sdl_dc_is_60hz=0;
 
 SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 				int width, int height, int bpp, Uint32 flags)
 {
-	int disp_mode,pixel_mode,pitch;
+	int pitch;
 	Uint32 Rmask, Gmask, Bmask;
 
 
@@ -477,20 +477,20 @@ SDL_Surface *DC_SetVideoMode(_THIS, SDL_Surface *current,
 	}
 */
 	switch(bpp) {
-	case 15: pixel_mode = PM_RGB555; pitch = width*2;
+	case 15: pitch = width*2;
 		/* 5-5-5 */
 		Rmask = 0x00007c00;
 		Gmask = 0x000003e0;
 		Bmask = 0x0000001f;
 		break;
-	case 16: pixel_mode = PM_RGB565; pitch = width*2;
+	case 16: pitch = width*2;
 		/* 5-6-5 */
 		Rmask = 0x0000f800;
 		Gmask = 0x000007e0;
 		Bmask = 0x0000001f;
 		break;
 	case 24: bpp = 32;
-	case 32: pixel_mode = PM_RGB888; pitch = width*4;
+	case 32: pitch = width*4;
 		Rmask = 0x00ff0000;
 		Gmask = 0x0000ff00;
 		Bmask = 0x000000ff;
