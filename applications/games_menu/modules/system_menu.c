@@ -68,7 +68,6 @@ static struct
 
 	Font *message_font;
 	Font *menu_font;
-	Font *textbox_font;
 } self;
 
 void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font, void (*RefreshMainView)(), void (*ReloadPage)())
@@ -86,12 +85,6 @@ void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font 
 	self.cache_changes_flag = false;
 	self.refresh_main_view = RefreshMainView;
 	self.reload_page = ReloadPage;
-
-	char font_path[NAME_MAX];
-	memset(font_path, 0, sizeof(font_path));
-	snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/default.txf");
-
-	self.textbox_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 }
 
 void DestroySystemMenu()
@@ -104,7 +97,6 @@ void DestroySystemMenu()
 	self.scene_ptr = NULL;
 	self.message_font = NULL;
 	self.menu_font = NULL;
-	TSU_FontDestroy(&self.textbox_font);
 }
 
 void SystemMenuRemoveAll()
@@ -417,7 +409,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 2);
 
-		self.background_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.background_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.background_color_option, BACKGROUND_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.background_color_option, SA_CONTROL + BACKGROUND_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -442,7 +434,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 3);
 
-		self.title_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.title_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.title_color_option, TITLE_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.title_color_option , SA_CONTROL + TITLE_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -467,7 +459,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 4);
 
-		self.border_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.border_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.border_color_option, BORDER_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.border_color_option , SA_CONTROL + BORDER_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -492,7 +484,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 5);
 
-		self.area_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.area_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.area_color_option, AREA_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.area_color_option , SA_CONTROL + AREA_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -517,7 +509,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 6);
 
-		self.body_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.body_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.body_color_option, BODY_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.body_color_option , SA_CONTROL + BODY_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -542,7 +534,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 7);
 
-		self.control_top_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.control_top_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.control_top_color_option, CONTROL_TOP_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.control_top_color_option , SA_CONTROL + CONTROL_TOP_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -567,7 +559,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 8);
 
-		self.control_body_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.control_body_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.control_body_color_option, CONTROL_BODY_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.control_body_color_option, SA_CONTROL + CONTROL_BODY_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
@@ -592,7 +584,7 @@ void CreateStyleView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 9);
 
-		self.control_bottom_color_option = TSU_TextBoxCreate(self.textbox_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
+		self.control_bottom_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.control_bottom_color_option, CONTROL_BOTTOM_COLOR_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.control_bottom_color_option, SA_CONTROL + CONTROL_BOTTOM_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
