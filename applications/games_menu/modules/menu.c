@@ -21,7 +21,7 @@ struct MenuStructure menu_data;
 
 void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack *send_message_optimizer, PostPVRCoverCallBack *post_pvr_cover, PostOptimizerCoverCallBack *post_optimizer_cover)
 {
-	menu_data.save_preset = true;
+	menu_data.save_preset = false;
 	menu_data.cover_background = true;
 	menu_data.change_page_with_pad = false;
 	menu_data.start_in_last_game = false;
@@ -144,6 +144,7 @@ void DestroyMenuData()
 	FreeGames();
 	FreeCategories();
 	FreeCache();
+	UnmountAllPresetsRomdisks();
 
 	memset(&menu_data, 0, sizeof(struct MenuStructure));
 }
@@ -1288,8 +1289,8 @@ PresetStruct *LoadPresetGame(int game_index)
 		memset(preset, 0, sizeof(PresetStruct));
 
 		preset->game_index = game_index;
-		const char *full_path_game = GetFullGamePathByIndex(game_index);
 
+		const char *full_path_game = GetFullGamePathByIndex(game_index);		
 		char *full_preset_file_name = NULL;
 		SectorDataStruct sector_data;
 		memset(&sector_data, 0, sizeof(SectorDataStruct));
@@ -1299,6 +1300,7 @@ PresetStruct *LoadPresetGame(int game_index)
 			GetMD5HashISO("/iso_game", &sector_data);
 			fs_iso_unmount("/iso_game");
 
+			bool exists_preset = false;
 			int app_name_count = 0;
 			const char *app_name_array[3] = {"games_menu", "iso_loader", NULL};
 			while (app_name_array[app_name_count] != NULL)
@@ -1322,10 +1324,20 @@ PresetStruct *LoadPresetGame(int game_index)
 
 				if (FileSize(full_preset_file_name) >= 5)
 				{
+					exists_preset = true;
 					break;
 				}
 
 				++app_name_count;
+			}
+
+			if (!exists_preset)
+			{
+				int device_type = GetDeviceType(getenv("PATH"));
+				if (MountPresetsRomdisk(device_type) == 0)
+				{
+					full_preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5, NULL);
+				}
 			}
 		}
 
@@ -1658,7 +1670,7 @@ void LoadDefaultMenuConfig()
 {
 	strcpy(menu_data.app_config.games_path, GAMES_FOLDER);
 	menu_data.app_config.initial_view = menu_data.menu_type = MT_PLANE_TEXT;
-	menu_data.app_config.save_preset = 1;
+	menu_data.app_config.save_preset = 0;
 	menu_data.app_config.cover_background = 1;
 	menu_data.app_config.change_page_with_pad = 0;
 	menu_data.app_config.start_in_last_game = 0;

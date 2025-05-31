@@ -51,5 +51,8 @@ const char *GetFolderPathFromFile(const char *full_path_file);
 size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result);
 void PlayCDDATrack(const char *file, int loop);
 void StopCDDATrack();
+int MountPresetsRomdisk(int device_type);
+void UnmountPresetsRomdisk(int device_type);
+void UnmountAllPresetsRomdisks();
 
 #endif // __APP_UTILS_H
