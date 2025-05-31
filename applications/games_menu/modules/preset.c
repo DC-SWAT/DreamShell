@@ -65,7 +65,6 @@ static struct
 
 	Font *message_font;
 	Font *menu_font;
-	Font *textbox_font;
 
 	CheckBox *save_preset_option;
 	CheckBox *dma_option;
@@ -129,12 +128,6 @@ void CreatePresetMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font 
 	self.body_letter_size = 18;
 	self.body_height_size = 22;
 
-	char font_path[NAME_MAX];
-	memset(font_path, 0, sizeof(font_path));
-	snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/default.txf");
-
-	self.textbox_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
-
 	memset(self.full_path_game, 0, NAME_MAX);
 	self.cover_texture = NULL;
 	self.cover_banner = NULL;
@@ -150,8 +143,6 @@ void DestroyPresetMenu()
 	self.scene_ptr = NULL;
 	self.message_font = NULL;
 	self.menu_font = NULL;
-	
-	TSU_FontDestroy(&self.textbox_font);
 
 	if (menu_data.preset != NULL)
 	{
@@ -710,7 +701,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// CUSTOM MEMORY
-		self.custom_memory_option = TSU_TextBoxCreate(self.textbox_font, (uint)body_letter_size, false, 130, body_height_size, &menu_data.control_body_color, true, false, true, false);
+		self.custom_memory_option = TSU_TextBoxCreate(self.menu_font, (uint)body_letter_size, false, 130, body_height_size, &menu_data.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.custom_memory_option, CUSTOM_MEMORY_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.custom_memory_option, SA_CONTROL + CUSTOM_MEMORY_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -937,7 +928,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_addres1_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_addres1_label, 1, 1);
 
-		self.patch_address1_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
+		self.patch_address1_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_address1_option, PATCH_ADDRESS1_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_address1_option, SA_CONTROL + PATCH_ADDRESS1_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -960,7 +951,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_value1_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_value1_label, 1, 2);
 
-		self.patch_value1_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
+		self.patch_value1_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_value1_option, PATCH_VALUE1_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_value1_option, SA_CONTROL + PATCH_VALUE1_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -983,7 +974,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_addres2_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_addres2_label, 1, 3);
 
-		self.patch_address2_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
+		self.patch_address2_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_address2_option, PATCH_ADDRESS2_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_address2_option, SA_CONTROL + PATCH_ADDRESS2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -1006,7 +997,7 @@ void CreatePatchView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)patch_value2_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_value2_label, 1, 4);
 
-		self.patch_value2_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
+		self.patch_value2_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_value2_option, PATCH_VALUE2_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.patch_value2_option, SA_CONTROL + PATCH_VALUE2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -1239,7 +1230,7 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_DrawableSetReadOnly((Drawable*)vmu_label, true);
 		TSU_FormAddBodyLabel(form_ptr, vmu_label, 1, 5);
 
-		self.vmu_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 130, self.body_height_size, &menu_data.control_body_color, false, false, true, false);
+		self.vmu_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size - 2, false, 130, self.body_height_size, &menu_data.control_body_color, false, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.vmu_option, VMU_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.vmu_option, SA_CONTROL + VMU_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
@@ -1357,7 +1348,7 @@ void CreateShortcutView(Form *form_ptr)
 		TSU_FormAddBodyLabel(form_ptr, shortcut_name_label, 1, 3);
 		name_label_vector = TSU_DrawableGetPosition((Drawable *)shortcut_name_label);
 
-		self.shortcut_name_option = TSU_TextBoxCreate(self.textbox_font, (uint)self.body_letter_size - 2, false, 300, self.body_height_size, &menu_data.control_body_color, true, false, true, false);
+		self.shortcut_name_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size - 2, false, 300, self.body_height_size, &menu_data.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.shortcut_name_option, SHORTCUT_NAME_CONTROL_ID);
 
 		TSU_TextBoxSetStates(self.shortcut_name_option, SA_CONTROL + SHORTCUT_NAME_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);

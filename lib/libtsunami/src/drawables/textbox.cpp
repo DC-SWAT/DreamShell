@@ -139,6 +139,8 @@ int TextBox::getControlState() {
 }
 
 void TextBox::setFocus(bool focus) {
+	m_display_label->getFont();
+
 	if (focus) {
 		*m_change_state = m_control_state;
 		Color text_color = {1, 1.0f, 1.0f, 0.1f};
@@ -456,6 +458,7 @@ void TextBox::inputEvent(int event_type, int key) {
 	if (event_type != GenericMenu::Event::EvtKeypress)
 		return;
 
+	m_display_label->getFont();
 	char new_char = 0;
 
 	switch (key)
