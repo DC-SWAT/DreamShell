@@ -83,7 +83,7 @@ void Rectangle::drawRectangle(float x, float y, float width, float height, uint3
 	{
 		const float PI_2 = F_PI / 2;
 		float dx = 0, dy = 0;
-		float quantity_slices = PI_2 / (float)(radius);
+		float quantity_slices = PI_2 / (float)(radius - 1);
 		float center_x = x + width / 2;
 		float center_y = y - height / 2;
 		

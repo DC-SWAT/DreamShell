@@ -497,11 +497,16 @@ extern "C"
 	const char* TSU_OptionGroupGetTextSelected(OptionGroup *optiongroup_ptr)
 	{
 		if (optiongroup_ptr != NULL) {
-			static char text[255] = {0};
-			std::string selected_text = optiongroup_ptr->getTextSelected();
+			static char *text = NULL;
+			
+			if (text != NULL) {
+				free(text);
+				text = NULL;
+			}
 
-			strncpy(text, selected_text.c_str(), sizeof(text) - 1);
-			text[sizeof(text) - 1] = '\0';
+			text = (char *)malloc(optiongroup_ptr->getTextSelected().length() + 1);
+			memset(text, 0, optiongroup_ptr->getTextSelected().length() + 1);
+			strcpy(text, optiongroup_ptr->getTextSelected().c_str());
 
 			return text;
 		}

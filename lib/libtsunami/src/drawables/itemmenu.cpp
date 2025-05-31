@@ -389,20 +389,23 @@ extern "C"
 		}
 	}
 
-	const char *TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr)
+	const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr)
 	{
-		if (item_menu_ptr != NULL)
-		{
-			static char text[255] = {0};
+		if (item_menu_ptr != NULL) {  
+			static char *text = NULL;
+			
+			if (text != NULL) {
+				free(text);
+				text = NULL;
+			}
 
-    		std::string label_text = item_menu_ptr->GetLabel()->getText();
-    		strncpy(text, label_text.c_str(), sizeof(text) - 1);
-    		text[sizeof(text) - 1] = '\0';
+			text = (char *)malloc(item_menu_ptr->GetLabel()->getText().length() + 1);
+			memset(text, 0, item_menu_ptr->GetLabel()->getText().length() + 1);
+			strcpy(text, item_menu_ptr->GetLabel()->getText().c_str());
 
 			return text;
 		}
-		else
-		{
+		else {
 			return NULL;
 		}
 	}

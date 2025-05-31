@@ -644,11 +644,16 @@ extern "C"
 	const char* TSU_TextBoxGetText(TextBox *textbox_ptr)
 	{
 		if (textbox_ptr != NULL) {
-			static char text[255] = {0};
+			static char *text = NULL;
+			
+			if (text != NULL) {
+				free(text);
+				text = NULL;
+			}
 
-			std::string str = textbox_ptr->getText();
-			strncpy(text, str.c_str(), sizeof(text) - 1);
-			text[sizeof(text) - 1] = '\0';
+			text = (char *)malloc(textbox_ptr->getText().length() + 1);
+			memset(text, 0, textbox_ptr->getText().length() + 1);
+			strcpy(text, textbox_ptr->getText().c_str());
 
 			return text;
 		}

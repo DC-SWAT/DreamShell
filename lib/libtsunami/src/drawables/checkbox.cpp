@@ -222,13 +222,19 @@ extern "C"
 		}
 	}
 
-		const char* TSU_CheckBoxGetText(CheckBox *checkbox_ptr)
+	const char* TSU_CheckBoxGetText(CheckBox *checkbox_ptr)
 	{
 		if (checkbox_ptr != NULL) {
-			static char text[51] = {0};
-			std::string tmp = checkbox_ptr->getText();
-			strncpy(text, tmp.c_str(), sizeof(text) - 1);
-			text[sizeof(text) - 1] = '\0';
+			static char *text = NULL;
+			
+			if (text != NULL) {
+				free(text);
+				text = NULL;
+			}
+
+			text = (char *)malloc(checkbox_ptr->getText().length() + 1);
+			memset(text, 0, checkbox_ptr->getText().length() + 1);
+			strcpy(text, checkbox_ptr->getText().c_str());
 
 			return text;
 		}
