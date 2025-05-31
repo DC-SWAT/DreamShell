@@ -214,7 +214,6 @@ typedef struct SectorDataStructure
 	int sector_size;
 	uint8 md5[16];
 	uint8 boot_sector[2048];
-	uint32 *addr;
 } SectorDataStruct;
 
 typedef struct MenuOptionStructure
