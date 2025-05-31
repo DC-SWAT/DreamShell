@@ -123,16 +123,11 @@ extern "C"
 	const char* TSU_LabelGetText(Label *label_ptr)
 	{
 		if (label_ptr != NULL) {
-			static char *text = NULL;
-			
-			if (text != NULL) {
-				free(text);
-				text = NULL;
-			}
+			static char text[255] = {0};
+			const std::string &src = label_ptr->getText();
 
-			text = (char *)malloc(label_ptr->getText().length() + 1);
-			memset(text, 0, label_ptr->getText().length() + 1);
-			strcpy(text, label_ptr->getText().c_str());
+			strncpy(text, src.c_str(), sizeof(text) - 1);
+			text[sizeof(text) - 1] = '\0';
 
 			return text;
 		}
