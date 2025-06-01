@@ -135,6 +135,14 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 					}
 					break;
 				
+				case SDLK_DELETE:
+					if (  event->key.keysym.mod & KMOD_CTRL &&
+						  event->key.keysym.mod & KMOD_ALT  &&
+						!(event->key.keysym.mod & KMOD_SHIFT)) {
+						arch_menu();
+					}
+					break;
+				
 				default:
 					break;
 			}
