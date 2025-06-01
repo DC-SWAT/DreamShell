@@ -1,6 +1,6 @@
 /* DreamShell ##version##
 
-   qr_code.c - DreamEye app QR Code scanner
+   qr_code.c - Dreameye app QR Code scanner
    Copyright (C) 2024 SWAT 
 */
 

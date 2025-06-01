@@ -1,22 +1,38 @@
 /* DreamShell ##version##
 
    module.c - Dreameye app module
-   Copyright (C) 2023, 2024 SWAT 
+   Copyright (C) 2023-2025 SWAT 
 */
 
 #include <ds.h>
+#include <kos.h>
+#include <dc/maple.h>
 #include <drivers/dreameye.h>
 #include <stdbool.h>
 #include "qr_code.h"
 #include "photo.h"
+#include "gallery.h"
 
 DEFAULT_MODULE_EXPORTS(app_dreameye);
 
 typedef enum {
-    APP_ACTION_IDLE,
+    APP_ACTION_IDLE = 0,
     APP_ACTION_PHOTO_EXPORT,
-    APP_ACTION_PHOTO_ERASE
+    APP_ACTION_PHOTO_EXPORT_SINGLE,
+    APP_ACTION_PHOTO_ERASE,
+    APP_ACTION_PHOTO_ERASE_SINGLE
 } app_action_t;
+
+typedef enum {
+    APP_PAGE_MAIN = 0,
+    APP_PAGE_PHOTO,
+    APP_PAGE_GALLERY,
+    APP_PAGE_PHOTO_VIEWER,
+    APP_PAGE_FULLSCREEN_VIEWER,
+    APP_PAGE_FILE_BROWSER,
+    APP_PAGE_PROGRESS,
+    APP_PAGE_CONFIRM_DELETE,
+} app_page_t;
 
 static struct {
 
@@ -32,15 +48,32 @@ static struct {
     GUI_Widget *pages;
     GUI_Widget *filebrowser_page;
     GUI_Widget *progress_page;
+    GUI_Widget *gallery_page;
+    GUI_Widget *photo_viewer_page;
 
     GUI_Widget *progress_bar;
     GUI_Widget *progress_text;
     GUI_Widget *progress_desc;
 
     GUI_Widget *qr_data;
-    GUI_Widget *photo_count_text;
+    GUI_Widget *photo_count_main_page;
+    GUI_Widget *photo_count_photo_page;
     GUI_Widget *file_browser;
     GUI_Widget *isp_mode[2];
+
+    GUI_Widget *viewer_status;
+    GUI_Widget *viewer_photo_info;
+    GUI_Widget *gallery_page_info;
+    GUI_Widget *fullscreen_status;
+    GUI_Widget *fullscreen_info;
+    GUI_Widget *fullscreen_photo;
+    GUI_Widget *confirm_delete_text;
+    GUI_Widget *header_panel;
+
+    GUI_Widget *thumb_widgets[GALLERY_THUMBS_PER_PAGE];
+    GUI_Widget *thumb_labels[GALLERY_THUMBS_PER_PAGE];
+    GUI_Widget *thumb_buttons[GALLERY_THUMBS_PER_PAGE];
+    GUI_Widget *photo_viewer_button;
 
 } self;
 
@@ -127,10 +160,40 @@ static void frame_callback(maple_device_t *dev, uint8_t *frame, size_t len) {
     }
 }
 
-static void UpdatePhotoCount(void) {
+static void UpdatePhotoCountLabels(void) {
     char cnt[32];
     snprintf(cnt, sizeof(cnt), "%d photos", self.photo_count);
-    GUI_LabelSetText(self.photo_count_text, cnt);
+    GUI_LabelSetText(self.photo_count_main_page, cnt);
+    GUI_LabelSetText(self.photo_count_photo_page, cnt);
+}
+
+static void UpdateProgress(const char *desc, float progress) {
+    char msg[16];
+    snprintf(msg, sizeof(msg), "%d%%", (int)(progress * 100));
+    GUI_LabelSetText(self.progress_text, msg);
+    GUI_LabelSetText(self.progress_desc, desc);
+    GUI_ProgressBarSetPosition(self.progress_bar, progress);
+}
+
+static void on_photo_loaded(GUI_Surface *surface) {
+    GUI_LabelSetText(self.viewer_status, " ");
+    GUI_WidgetSetEnabled(self.photo_viewer_button, 1);
+
+    if (surface) {
+        GUI_ButtonSetNormalImage(self.photo_viewer_button, surface);
+    }
+}
+
+static void LoadPhotoIntoViewer(int photo_index) {
+    GUI_LabelSetText(self.viewer_status, "Loading...");
+    GUI_WidgetSetEnabled(self.photo_viewer_button, 0);
+    
+    char photo_info[32];
+    snprintf(photo_info, sizeof(photo_info), "Photo %d/%d", 
+            photo_index + 1, (int)self.photo_count);
+    GUI_LabelSetText(self.viewer_photo_info, photo_info);
+
+    gallery_load_photo(photo_index, 380, 280, on_photo_loaded);
 }
 
 void DreameyeApp_Init(App_t *app) {
@@ -141,16 +204,44 @@ void DreameyeApp_Init(App_t *app) {
     self.pages = APP_GET_WIDGET("pages");
     self.filebrowser_page = APP_GET_WIDGET("file-browser-page");
     self.progress_page = APP_GET_WIDGET("progress-page");
+    self.gallery_page = APP_GET_WIDGET("gallery-page");
+    self.photo_viewer_page = APP_GET_WIDGET("photo-viewer-page");
 
     self.qr_data = APP_GET_WIDGET("qr-data");
     self.file_browser = APP_GET_WIDGET("file-browser");
     self.progress_bar = APP_GET_WIDGET("progress-bar");
     self.progress_text = APP_GET_WIDGET("progress-text");
     self.progress_desc = APP_GET_WIDGET("progress-desc");
-    self.photo_count_text = APP_GET_WIDGET("photo-count");
+    self.photo_count_main_page = APP_GET_WIDGET("photo-count-main-page");
+    self.photo_count_photo_page = APP_GET_WIDGET("photo-count-photo-page");
 
     self.isp_mode[0] = APP_GET_WIDGET("isp-mode-qsif");
     self.isp_mode[1] = APP_GET_WIDGET("isp-mode-sif");
+
+    self.viewer_status = APP_GET_WIDGET("viewer-status");
+    self.viewer_photo_info = APP_GET_WIDGET("viewer-photo-info");
+    self.gallery_page_info = APP_GET_WIDGET("gallery-page-info");
+    self.fullscreen_status = APP_GET_WIDGET("fullscreen-status");
+    self.fullscreen_info = APP_GET_WIDGET("fullscreen-info");
+    self.fullscreen_photo = APP_GET_WIDGET("fullscreen-photo");
+    self.confirm_delete_text = APP_GET_WIDGET("confirm-delete-text");
+    self.header_panel = APP_GET_WIDGET("header-panel");
+
+    for (int i = 0; i < GALLERY_THUMBS_PER_PAGE; i++) {
+        char widget_name[32];
+        char label_name[32];
+        char button_name[32];
+
+        snprintf(widget_name, sizeof(widget_name), "thumb-%d", i);
+        snprintf(label_name, sizeof(label_name), "thumb-label-%d", i);
+        snprintf(button_name, sizeof(button_name), "thumb-button-%d", i);
+
+        self.thumb_widgets[i] = APP_GET_WIDGET(widget_name);
+        self.thumb_labels[i] = APP_GET_WIDGET(label_name);
+        self.thumb_buttons[i] = APP_GET_WIDGET(button_name);
+    }
+
+    self.photo_viewer_button = APP_GET_WIDGET("photo-viewer-button");
 
     self.preview.isp_mode = DREAMEYE_ISP_MODE_QSIF;
     self.preview.bpp = 12;
@@ -163,12 +254,15 @@ void DreameyeApp_Init(App_t *app) {
     self.qr_exec = true;
     self.qr_detected = false;
     self.photo_count = get_photo_count(self.dev);
-    UpdatePhotoCount();
+    UpdatePhotoCountLabels();
+
+    gallery_init(self.dev);
 }
 
 void DreameyeApp_Shutdown(App_t *app) {
     (void)app;
     HideCameraPreview();
+    gallery_shutdown();
 }
 
 void DreameyeApp_Open(App_t *app) {
@@ -180,11 +274,10 @@ void DreameyeApp_ShowMainPage(GUI_Widget *widget) {
     (void)widget;
 
     int index = GUI_CardStackGetIndex(self.pages);
-    UpdatePhotoCount();
-    GUI_CardStackShowIndex(self.pages, 0);
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_MAIN);
     self.action = APP_ACTION_IDLE;
 
-    if(index > 1) {
+    if(index > APP_PAGE_PHOTO) {
         ShowCameraPreview();
     }
 }
@@ -193,11 +286,10 @@ void DreameyeApp_ShowPhotoPage(GUI_Widget *widget) {
     (void)widget;
 
     int index = GUI_CardStackGetIndex(self.pages);
-    UpdatePhotoCount();
-    GUI_CardStackShowIndex(self.pages, 1);
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO);
     self.action = APP_ACTION_IDLE;
 
-    if(index > 1) {
+    if(index > APP_PAGE_PHOTO) {
         ShowCameraPreview();
     }
 }
@@ -206,15 +298,15 @@ void DreameyeApp_ExportPhoto(GUI_Widget *widget) {
     (void)widget;
     HideCameraPreview();
     GUI_LabelSetText(self.progress_desc, "Exporting photos...");
-    GUI_CardStackShowIndex(self.pages, 2);
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_FILE_BROWSER);
     self.action = APP_ACTION_PHOTO_EXPORT;
 }
 
 void DreameyeApp_ErasePhoto(GUI_Widget *widget) {
     (void)widget;
     HideCameraPreview();
-    GUI_LabelSetText(self.progress_desc, "Erasing photos...");
-    GUI_CardStackShowIndex(self.pages, 2);
+    GUI_LabelSetText(self.confirm_delete_text, "Delete all photos?");
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_CONFIRM_DELETE);
     self.action = APP_ACTION_PHOTO_ERASE;
 }
 
@@ -261,14 +353,6 @@ void DreameyeApp_FileBrowserItemClick(dirent_fm_t *fm_ent) {
     GUI_FileManagerChangeDir(self.file_browser, ent->name, ent->size);
 }
 
-static void UpdateProgress(const char *desc, float progress) {
-    char msg[16];
-    snprintf(msg, sizeof(msg), "%d%%", (int)(progress * 100));
-    GUI_LabelSetText(self.progress_text, msg);
-    GUI_LabelSetText(self.progress_desc, desc);
-    GUI_ProgressBarSetPosition(self.progress_bar, progress);
-}
-
 static void *ExportPhotos(void *param) {
     int i;
     const char *dir = GUI_FileManagerGetPath(self.file_browser);
@@ -301,8 +385,67 @@ static void *ExportPhotos(void *param) {
     return NULL;
 }
 
+static void *ExportSinglePhoto(void *param) {
+    gallery_state_t *state = gallery_get_state();
+    const char *dir = GUI_FileManagerGetPath(self.file_browser);
+    char *desc = "Photo exported.";
+    (void)param;
+
+    if(strlen(dir) < 2 || state->current_photo < 0) {
+        desc = "Export failed.";
+    }
+    else {
+        UpdateProgress("Exporting photo...", 0.0f);
+        if(export_photo(self.dev, dir, state->current_photo) < 0) {
+            desc = "Export failed.";
+        }
+    }
+
+    UpdateProgress(desc, 1.0f);
+    GUI_FileManagerScan(self.file_browser);
+    thd_sleep(ACTION_COMPLETE_TIMEOUT_MS);
+
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+    return NULL;
+}
+
+static void *EraseSinglePhoto(void *param) {
+    gallery_state_t *state = gallery_get_state();
+    char *desc = "Photo deleted.";
+    (void)param;
+
+    if (state->current_photo < 0) {
+        desc = "Delete failed.";
+    }
+    else {
+        UpdateProgress("Deleting photo...", 0.0f);
+        if(erase_photo(self.dev, state->current_photo) < 0) {
+            desc = "Delete failed.";
+        }
+        else {
+            self.photo_count = get_photo_count(self.dev);
+            gallery_clear_cache();
+            UpdatePhotoCountLabels();
+        }
+    }
+
+    UpdateProgress(desc, 1.0f);
+    thd_sleep(ACTION_COMPLETE_TIMEOUT_MS);
+
+    if (self.photo_count == 0) {
+        DreameyeApp_ShowPhotoPage(NULL);
+    }
+    else {
+        if (state->current_photo >= (int)self.photo_count) {
+            state->current_photo = self.photo_count - 1;
+        }
+        GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+        LoadPhotoIntoViewer(state->current_photo);
+    }
+    return NULL;
+}
+
 static void *ErasePhotos(void *param) {
-    int i;
     char *desc = "Erasing completed.";
     (void)param;
 
@@ -310,26 +453,26 @@ static void *ErasePhotos(void *param) {
         desc = "Nothing to erase.";
     }
 
-	for(i = 0; i < self.photo_count; i++) {
-		if(erase_photo(self.dev, i) < 0) {
-			desc = "Erasing failed.";
-			break;
+    for(int i = 0; i < self.photo_count; i++) {
+        if(erase_photo(self.dev, i) < 0) {
+            desc = "Erasing failed.";
+            break;
         }
         if(self.action != APP_ACTION_PHOTO_ERASE) {
             desc = "Erasing aborted.";
             break;
         }
-		
-		do {
-			if(self.action != APP_ACTION_PHOTO_ERASE) {
-				desc = "Erasing aborted.";
-				self.photo_count = get_photo_count(self.dev);
-				goto exit_usr_abort;
-			}
-			thd_pass();
-		} while (get_photo_count(self.dev) != (self.photo_count - i - 1));
-		
-		UpdateProgress("Erasing photos...", (1.0f / self.photo_count) * i);
+        
+        do {
+            if(self.action != APP_ACTION_PHOTO_ERASE) {
+                desc = "Erasing aborted.";
+                self.photo_count = get_photo_count(self.dev);
+                goto exit_usr_abort;
+            }
+            thd_pass();
+        } while (get_photo_count(self.dev) != (self.photo_count - i - 1));
+        
+        UpdateProgress("Erasing photos...", (1.0f / self.photo_count) * i);
     }
 
     UpdateProgress("Checking...", 0.99f);
@@ -340,7 +483,11 @@ static void *ErasePhotos(void *param) {
     }
 
 exit_usr_abort:
+
+    gallery_clear_cache();
+    UpdatePhotoCountLabels();
     UpdateProgress(desc, 1.0f);
+
     thd_sleep(ACTION_COMPLETE_TIMEOUT_MS);
     DreameyeApp_ShowPhotoPage(NULL);
     return NULL;
@@ -351,7 +498,7 @@ void DreameyeApp_FileBrowserConfirm(GUI_Widget *widget) {
         return;
     }
 
-    GUI_CardStackShowIndex(self.pages, 3);
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PROGRESS);
     UpdateProgress("Retrieving photo count...", 0.0f);
     self.photo_count = get_photo_count(self.dev);
 
@@ -359,10 +506,11 @@ void DreameyeApp_FileBrowserConfirm(GUI_Widget *widget) {
         case APP_ACTION_PHOTO_EXPORT:
             thd_create(1, ExportPhotos, NULL);
             break;
-        case APP_ACTION_PHOTO_ERASE:
-            thd_create(1, ErasePhotos, NULL);
+        case APP_ACTION_PHOTO_EXPORT_SINGLE:
+            thd_create(1, ExportSinglePhoto, NULL);
             break;
         default:
+            UpdatePhotoCountLabels();
             DreameyeApp_ShowPhotoPage(widget);
             break;
     }
@@ -371,4 +519,216 @@ void DreameyeApp_FileBrowserConfirm(GUI_Widget *widget) {
 void DreameyeApp_Abort(GUI_Widget *widget) {
     (void)widget;
     self.action = APP_ACTION_IDLE;
+}
+
+static void on_thumb_loaded(int thumb_index, GUI_Surface *surface) {
+    if (thumb_index >= 0 && thumb_index < GALLERY_THUMBS_PER_PAGE) {
+        GUI_WidgetSetEnabled(self.thumb_widgets[thumb_index], 1);
+        GUI_LabelSetText(self.thumb_labels[thumb_index], GUI_ObjectGetName((GUI_Object *)surface));
+
+        if (surface && self.thumb_buttons[thumb_index]) {
+            GUI_ButtonSetNormalImage(self.thumb_buttons[thumb_index], surface);
+        }
+    }
+}
+
+static void SwitchGalleryPage(int new_page) {
+    gallery_state_t *state = gallery_get_state();
+
+    for (int i = 0; i < GALLERY_THUMBS_PER_PAGE; i++) {
+        GUI_WidgetSetEnabled(self.thumb_widgets[i], 0);
+        GUI_LabelSetText(self.thumb_labels[i], "Loading...");
+    }
+
+    char page_info[32];
+    snprintf(page_info, sizeof(page_info), "Page %d/%d", new_page + 1, state->total_pages);
+    GUI_LabelSetText(self.gallery_page_info, page_info);
+
+    gallery_load_page(new_page, on_thumb_loaded);
+}
+
+void DreameyeApp_ShowGalleryPage(GUI_Widget *widget) {
+    (void)widget;
+    HideCameraPreview();
+
+    gallery_state_t *state = gallery_get_state();
+    state->total_photos = self.photo_count;
+    state->total_pages = (self.photo_count + GALLERY_THUMBS_PER_PAGE - 1) / GALLERY_THUMBS_PER_PAGE;
+
+    if (state->total_pages == 0) {
+        state->total_pages = 1;
+    }
+
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_GALLERY);
+    self.action = APP_ACTION_IDLE;
+    
+    SwitchGalleryPage(0);
+}
+
+void DreameyeApp_GalleryPrevPage(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    if (state->current_page > 0 && !state->loading) {
+        SwitchGalleryPage(state->current_page - 1);
+    }
+}
+
+void DreameyeApp_GalleryNextPage(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    if (state->current_page < state->total_pages - 1 && !state->loading) {
+        SwitchGalleryPage(state->current_page + 1);
+    }
+}
+
+void DreameyeApp_ViewPhoto(GUI_Widget *widget) {
+    int thumb_index = -1;
+
+    for (int i = 0; i < GALLERY_THUMBS_PER_PAGE; i++) {
+        if (self.thumb_buttons[i] == widget) {
+            thumb_index = i;
+            break;
+        }
+    }
+
+    if (thumb_index < 0) {
+        return;
+    }
+
+    gallery_state_t *state = gallery_get_state();
+    int global_photo_index = (state->current_page * GALLERY_THUMBS_PER_PAGE) + thumb_index;
+
+    if (global_photo_index >= (int)self.photo_count) {
+        return;
+    }
+
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+    LoadPhotoIntoViewer(global_photo_index);
+}
+
+void DreameyeApp_ViewPrevPhoto(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    if (state->current_photo > 0 && !state->loading) {
+        LoadPhotoIntoViewer(state->current_photo - 1);
+    }
+}
+
+void DreameyeApp_ViewNextPhoto(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    if (state->current_photo < (int)self.photo_count - 1 && !state->loading) {
+        LoadPhotoIntoViewer(state->current_photo + 1);
+    }
+}
+
+void DreameyeApp_DeleteCurrentPhoto(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    if (!state->loading) {
+        char confirm_text[64];
+        snprintf(confirm_text, sizeof(confirm_text), "Delete photo %d/%d?", 
+                state->current_photo + 1, (int)self.photo_count);
+        GUI_LabelSetText(self.confirm_delete_text, confirm_text);
+        GUI_CardStackShowIndex(self.pages, APP_PAGE_CONFIRM_DELETE);
+        self.action = APP_ACTION_PHOTO_ERASE_SINGLE;
+    }
+}
+
+void DreameyeApp_ExportCurrentPhoto(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    if (!state->loading) {
+        GUI_CardStackShowIndex(self.pages, APP_PAGE_FILE_BROWSER);
+        self.action = APP_ACTION_PHOTO_EXPORT_SINGLE;
+    }
+}
+
+void DreameyeApp_CancelDelete(GUI_Widget *widget) {
+    (void)widget;
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+    self.action = APP_ACTION_IDLE;
+}
+
+void DreameyeApp_CancelDeleteFromViewer(GUI_Widget *widget) {
+    (void)widget;
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+    self.action = APP_ACTION_IDLE;
+}
+
+void DreameyeApp_CancelDeleteFromGallery(GUI_Widget *widget) {
+    (void)widget;
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_GALLERY);
+    self.action = APP_ACTION_IDLE;
+}
+
+void DreameyeApp_CancelExportFromGallery(GUI_Widget *widget) {
+    (void)widget;
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_GALLERY);
+    self.action = APP_ACTION_IDLE;
+}
+
+void DreameyeApp_CancelExport(GUI_Widget *widget) {
+    (void)widget;
+
+    if (self.action == APP_ACTION_PHOTO_EXPORT_SINGLE) {
+        GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+    }
+    else {
+        GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO);
+    }
+
+    self.action = APP_ACTION_IDLE;
+}
+
+void DreameyeApp_ConfirmDelete(GUI_Widget *widget) {
+    (void)widget;
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PROGRESS);
+
+    if (self.action == APP_ACTION_PHOTO_ERASE) {
+        thd_create(1, ErasePhotos, NULL);
+    }
+    else if (self.action == APP_ACTION_PHOTO_ERASE_SINGLE) {
+        thd_create(1, EraseSinglePhoto, NULL);
+    }
+}
+
+static void on_fullscreen_loaded(GUI_Surface *surface) {
+    GUI_LabelSetText(self.fullscreen_status, " ");
+
+    if (surface) {
+        GUI_PanelSetBackground(self.fullscreen_photo, surface);
+    }
+}
+
+void DreameyeApp_ShowFullscreenPhoto(GUI_Widget *widget) {
+    (void)widget;
+
+    gallery_state_t *state = gallery_get_state();
+    GUI_LabelSetText(self.fullscreen_status, "Loading...");
+    char photo_info[64];
+    snprintf(photo_info, sizeof(photo_info), "Photo %d/%d - Click to exit", 
+            state->current_photo + 1, (int)self.photo_count);
+    GUI_LabelSetText(self.fullscreen_info, photo_info);
+
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_FULLSCREEN_VIEWER);
+    GUI_ContainerRemove(self.app->body, self.header_panel);
+    GUI_WidgetSetPosition(self.pages, 0, 0);
+    GUI_WidgetMarkChanged(self.app->body);
+
+    gallery_load_photo(state->current_photo, 0, 0, on_fullscreen_loaded);
+}
+
+void DreameyeApp_ExitFullscreen(GUI_Widget *widget) {
+    (void)widget;
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
+    GUI_ContainerAdd(self.app->body, self.header_panel);
+    GUI_WidgetSetPosition(self.pages, 0, 45);
+    GUI_WidgetMarkChanged(self.app->body);
 }

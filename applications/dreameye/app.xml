@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Dreameye" version="0.3.0" icon="images/icon.png">
+<app name="Dreameye" version="1.0.0" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/quirc.klf" />
 		<module src="../../modules/dreameye.klf" />
@@ -32,6 +32,51 @@
 			<fill color="#EEEEEE" />
 			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
 			<fill x="5" y="5" width="270" height="50" color="#CCCCCC" />
+		</surface>
+		<surface width="150" height="40" name="but-medium-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="146" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="144" height="34" color="#31799F" />
+		</surface>
+		<surface width="150" height="40" name="but-medium-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="146" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="144" height="34" color="#61BDEC" />
+		</surface>
+		<surface width="150" height="40" name="but-medium-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="146" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="144" height="34" color="#D4F129" />
+		</surface>
+		<surface width="100" height="40" name="but-small-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#31799F" />
+		</surface>
+		<surface width="100" height="40" name="but-small-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#61BDEC" />
+		</surface>
+		<surface width="100" height="40" name="but-small-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#D4F129" />
+		</surface>
+		<surface width="140" height="110" name="but-thumb-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="136" height="106" color="#BBBBBB" />
+			<fill x="3" y="3" width="134" height="104" color="#31799F" />
+		</surface>
+		<surface width="140" height="110" name="but-thumb-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="136" height="106" color="#BBBBBB" />
+			<fill x="3" y="3" width="134" height="104" color="#61BDEC" />
+		</surface>
+		<surface width="140" height="110" name="but-thumb-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="136" height="106" color="#BBBBBB" />
+			<fill x="3" y="3" width="134" height="104" color="#D4F129" />
 		</surface>
 		<image src="../../gui/buttons/checkbox2/check.png" name="check-on" />
 		<image src="../../gui/buttons/checkbox2/check_hl.png" name="check-on-hl" />
@@ -84,6 +129,16 @@
 			<fill x="4" y="4" width="320" height="240" color="#BBBBBB" />
 			<fill x="5" y="5" width="318" height="238" color="#31799F" />
 		</surface>
+		<surface width="380" height="280" name="viewer-back">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="372" height="272" color="#BBBBBB" />
+			<fill x="5" y="5" width="370" height="270" color="#31799F" />
+		</surface>
+		<surface width="640" height="480" name="fullscreen-back">
+			<fill color="#EEEEEE" />
+			<fill x="4" y="4" width="632" height="472" color="#BBBBBB" />
+			<fill x="5" y="5" width="630" height="470" color="#31799F" />
+		</surface>
 		<theme>
 			<input type="button" normal="but-large-normal" highlight="but-large-hl"
 				pressed="but-large-pressed" disabled="but-large-disabled" />
@@ -95,7 +150,7 @@
 		onload="export:DreameyeApp_Init()"
 		onunload="export:DreameyeApp_Shutdown()"
 		onopen="export:DreameyeApp_Open()">
-		<panel height="45" background="header-bg">
+		<panel height="45" background="header-bg" name="header-panel">
 			<label font="comic-22" color="#666666" text="Dreameye Manager" />
 		</panel>
 		<cardstack name="pages">
@@ -146,7 +201,7 @@
 							text="Storage:" width="100%" />
 						<panel>
 							<label align="left" color="#333333" font="comic-15" width="100%" height="25"
-								text="0 photos" name="photo-count" />
+								text="0 photos" name="photo-count-main-page" />
 						</panel>
 					</panel>
 				</panel>
@@ -171,10 +226,16 @@
 						<label font="comic-22" color="#EEEEEE" text="Erase photos" />
 					</input>
 				</panel>
-				<panel height="65" width="100%">
+				<panel height="70" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_ShowGalleryPage()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="View gallery" />
+					</input>
+				</panel>
+				<panel height="70" width="50%">
 					<input type="button" width="280" height="60"
 						onclick="export:DreameyeApp_ShowMainPage()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="Back" />
+						<label font="comic-22" color="#EEEEEE" text="Back to main" />
 					</input>
 				</panel>
 				<panel width="328" height="248" x="156" y="141">
@@ -184,13 +245,169 @@
 						<label font="comic-22" color="#EEEEEE" text="Camera preview" />
 					</input>
 				</panel>
+				<panel x="25" y="140" height="50" width="100">
+					<label align="left" color="#31799F" font="comic-16" height="25"
+						text="Storage:" width="100%" />
+					<panel>
+						<label align="left" color="#333333" font="comic-15" width="100%" height="25"
+							text="0 photos" name="photo-count-photo-page" />
+					</panel>
+				</panel>
+			</panel>
+			<panel name="gallery-page" y="10">
+				<panel height="45" width="100%">
+					<panel width="25%">
+						<input type="button" width="150" height="40"
+							onclick="export:DreameyeApp_GalleryPrevPage()" align="right" name="gallery-prev"
+							normal="but-medium-normal" highlight="but-medium-hl" pressed="but-medium-pressed">
+							<label font="comic-16" color="#EEEEEE" text="Prev" />
+						</input>
+					</panel>
+					<panel width="50%">
+						<label font="comic-16" color="#333333" align="center" valign="center"
+							text="Page 1/1" name="gallery-page-info" />
+					</panel>
+					<panel width="25%">
+						<input type="button" width="150" height="40"
+							onclick="export:DreameyeApp_GalleryNextPage()" align="left" name="gallery-next"
+							normal="but-medium-normal" highlight="but-medium-hl" pressed="but-medium-pressed">
+							<label font="comic-16" color="#EEEEEE" text="Next" />
+						</input>
+					</panel>
+				</panel>
+				<panel width="100%" height="285" y="60" name="gallery-grid">
+					<panel x="90" y="15" width="140" height="110" name="thumb-0">
+						<input type="button" width="140" height="110" name="thumb-button-0"
+							onclick="export:DreameyeApp_ViewPhoto()"
+							normal="but-thumb-normal" highlight="but-thumb-hl" pressed="but-thumb-pressed">
+							<label font="comic-14" color="#EEEEEE" text="Empty" align="center" name="thumb-label-0" />
+						</input>
+					</panel>
+					<panel x="250" y="15" width="140" height="110" name="thumb-1">
+						<input type="button" width="140" height="110" name="thumb-button-1"
+							onclick="export:DreameyeApp_ViewPhoto()"
+							normal="but-thumb-normal" highlight="but-thumb-hl" pressed="but-thumb-pressed">
+							<label font="comic-14" color="#EEEEEE" text="Empty" align="center" name="thumb-label-1" />
+						</input>
+					</panel>
+					<panel x="410" y="15" width="140" height="110" name="thumb-2">
+						<input type="button" width="140" height="110" name="thumb-button-2"
+							onclick="export:DreameyeApp_ViewPhoto()"
+							normal="but-thumb-normal" highlight="but-thumb-hl" pressed="but-thumb-pressed">
+							<label font="comic-14" color="#EEEEEE" text="Empty" align="center" name="thumb-label-2" />
+						</input>
+					</panel>
+					<panel x="90" y="145" width="140" height="110" name="thumb-3">
+						<input type="button" width="140" height="110" name="thumb-button-3"
+							onclick="export:DreameyeApp_ViewPhoto()"
+							normal="but-thumb-normal" highlight="but-thumb-hl" pressed="but-thumb-pressed">
+							<label font="comic-14" color="#EEEEEE" text="Empty" align="center" name="thumb-label-3" />
+						</input>
+					</panel>
+					<panel x="250" y="145" width="140" height="110" name="thumb-4">
+						<input type="button" width="140" height="110" name="thumb-button-4"
+							onclick="export:DreameyeApp_ViewPhoto()"
+							normal="but-thumb-normal" highlight="but-thumb-hl" pressed="but-thumb-pressed">
+							<label font="comic-14" color="#EEEEEE" text="Empty" align="center" name="thumb-label-4" />
+						</input>
+					</panel>
+					<panel x="410" y="145" width="140" height="110" name="thumb-5">
+						<input type="button" width="140" height="110" name="thumb-button-5"
+							onclick="export:DreameyeApp_ViewPhoto()"
+							normal="but-thumb-normal" highlight="but-thumb-hl" pressed="but-thumb-pressed">
+							<label font="comic-14" color="#EEEEEE" text="Empty" align="center" name="thumb-label-5" />
+						</input>
+					</panel>
+				</panel>
+				<panel height="65" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_ShowPhotoPage()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Back to storage" />
+					</input>
+				</panel>
+				<panel height="65" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_ShowMainPage()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Back to main" />
+					</input>
+				</panel>
+			</panel>
+			<panel name="photo-viewer-page" y="10">
+				<panel height="45" width="100%">
+					<panel width="20%">
+						<input type="button" width="100" height="40"
+							onclick="export:DreameyeApp_ViewPrevPhoto()" align="center" name="viewer-prev"
+							normal="but-small-normal" highlight="but-small-hl" pressed="but-small-pressed">
+							<label font="comic-16" color="#EEEEEE" text="Prev" />
+						</input>
+					</panel>
+					<panel width="20%">
+						<input type="button" width="100" height="40"
+							onclick="export:DreameyeApp_DeleteCurrentPhoto()" align="center" name="viewer-delete"
+							normal="but-small-normal" highlight="but-small-hl" pressed="but-small-pressed">
+							<label font="comic-16" color="#EEEEEE" text="Delete" />
+						</input>
+					</panel>
+					<panel width="20%">
+						<label font="comic-16" color="#333333" align="center" valign="center"
+							text="Photo 1/1" name="viewer-photo-info" />
+					</panel>
+					<panel width="20%">
+						<input type="button" width="100" height="40"
+							onclick="export:DreameyeApp_ExportCurrentPhoto()" align="center" name="viewer-export"
+							normal="but-small-normal" highlight="but-small-hl" pressed="but-small-pressed">
+							<label font="comic-16" color="#EEEEEE" text="Export" />
+						</input>
+					</panel>
+					<panel width="20%">
+						<input type="button" width="100" height="40"
+							onclick="export:DreameyeApp_ViewNextPhoto()" align="center" name="viewer-next"
+							normal="but-small-normal" highlight="but-small-hl" pressed="but-small-pressed">
+							<label font="comic-16" color="#EEEEEE" text="Next" />
+						</input>
+					</panel>
+				</panel>
+				<panel width="380" height="295" x="130" y="50" name="photo-viewer">
+					<input type="button" width="380" height="280" name="photo-viewer-button"
+						onclick="export:DreameyeApp_ShowFullscreenPhoto()"
+						normal="viewer-back" highlight="viewer-back"
+						pressed="viewer-back" disabled="viewer-back">
+						<label font="comic-22" color="#EEEEEE" text="Loading..."
+							align="center" name="viewer-status" />
+					</input>
+				</panel>
+				<panel height="65" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_ShowGalleryPage()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Back to gallery" />
+					</input>
+				</panel>
+				<panel height="65" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_ShowMainPage()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Back to main" />
+					</input>
+				</panel>
+			</panel>
+			<panel name="fullscreen-viewer-page">
+				<panel width="640" height="480" name="fullscreen-photo">
+					<input type="button" width="640" height="480" name="fullscreen-photo-button"
+						onclick="export:DreameyeApp_ExitFullscreen()"
+						normal="fullscreen-back" highlight="fullscreen-back" pressed="fullscreen-back">
+						<label font="comic-22" color="#EEEEEE" text="Loading..." align="center" name="fullscreen-status" />
+					</input>
+				</panel>
+				<panel width="640" height="25" y="455">
+					<label font="comic-16" color="#FFFFFF" align="center" valign="center"
+						text="Photo 1/1 - Click to exit" name="fullscreen-info" />
+				</panel>
 			</panel>
 			<panel name="file-browser-page" y="10">
 				<panel width="100%" height="25">
 					<label align="center" color="#31799F" font="comic-22" height="25"
-						name="file-browser-title" text="Choose photo directory" />
+						text="Choose photo directory" />
 				</panel>
-				<panel width="90%" height="320" x="5%" y="30">
+				<panel width="90%" height="315" x="5%" y="30">
 					<filemanager width="100%" height="300"
 						item_disabled="item-selected"
 						item_font="comic-22"
@@ -212,13 +429,13 @@
 						onclick="export:DreameyeApp_FileBrowserItemClick()"
 						path="/" />
 				</panel>
-				<panel height="70" width="50%">
+				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:DreameyeApp_ShowPhotoPage()" align="center">
+						onclick="export:DreameyeApp_CancelExport()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Cancel" />
 					</input>
 				</panel>
-				<panel height="70" width="50%">
+				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
 						onclick="export:DreameyeApp_FileBrowserConfirm()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Confirm" />
@@ -240,6 +457,23 @@
 					<input type="button" width="280" height="60"
 						onclick="export:DreameyeApp_Abort()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Abort" />
+					</input>
+				</panel>
+			</panel>
+			<panel name="confirm-delete-page">
+				<panel height="50" width="90%" x="5%" y="70">
+					<label color="#333333" font="comic-22" height="50" name="confirm-delete-text" text="Delete this photo?" width="100%" />
+				</panel>
+				<panel height="70" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_CancelDeleteFromViewer()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Cancel" />
+					</input>
+				</panel>
+				<panel height="70" width="50%">
+					<input type="button" width="280" height="60"
+						onclick="export:DreameyeApp_ConfirmDelete()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Delete" />
 					</input>
 				</panel>
 			</panel>
