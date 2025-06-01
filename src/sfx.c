@@ -51,10 +51,13 @@ static void *snd_stream_thread(void *params) {
 	return NULL;
 }
 
-static void *load_raw_gz(const char *filename, size_t size) {
+static void *load_raw_gz(const char *filename, size_t *sz) {
 	gzFile fp;
 	void *data = NULL;
-
+	size_t size;
+	
+	size = gzip_get_file_size(filename);
+	
 	if(size == 0 || size > (2 << 20)) {
 		return data;
 	}
@@ -74,13 +77,51 @@ static void *load_raw_gz(const char *filename, size_t size) {
 		data = NULL;
 	}
 	gzclose(fp);
+	
+	*sz = size;
+	
 	return data;
 }
 
+static void *load_raw_adpcm(const char *filename, size_t *sz) {
+	file_t fp;
+	void *data = NULL;
+	size_t size;
+	
+	size = FileSize(filename);
+	
+	if(size == 0 || size > (2 << 20)) {
+		return data;
+	}
+	fp = fs_open(filename, O_RDONLY);
+
+	if(fp == FILEHND_INVALID) {
+		return data;
+	}
+	data = memalign(32, size);
+
+	if(data == NULL) {
+		fs_close(fp);
+		return data;
+	}
+	if(fs_read(fp, data, size) != size) {
+		free(data);
+		data = NULL;
+	}
+	fs_close(fp);
+	
+	*sz = size;
+	
+	return data;
+}
+
+/* filename of raw adpcm file in DS/sfx/ directory 
+	or filename of raw adpcm packed to GZ (.gz extension) in /rd/ directory */
 static char *stream_sfx_name[DS_SFX_LAST_STREAM] = {
-	"/rd/startup.raw.gz"
+	"startup.raw.gz"
 };
 
+/* filename of wav file (without extension) in DS/sfx/ directory*/
 static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
 	"click",
 	"click2",
@@ -90,14 +131,27 @@ static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
 sfxhnd_t sys_sfx_hnd[DS_SFX_LAST - DS_SFX_LAST_STREAM] = { SFXHND_INVALID, SFXHND_INVALID };
 
 static int ds_sfx_play_stream(ds_sfx_t sfx) {
+	char sfx_path[NAME_MAX];
+	
 	if(sfx >= DS_SFX_LAST_STREAM) {
 		return -1;
 	}
 	
+	if(!strncmp(&stream_sfx_name[sfx][strlen(stream_sfx_name[sfx])-3], ".gz", 3)) {
+		snprintf(sfx_path, NAME_MAX, "/rd/%s", stream_sfx_name[sfx]);
+		
+		if(!(snd_stream_buf = load_raw_gz(sfx_path, &snd_stream_buf_size))) {
+			return -1;
+		}
+	}
+	else {
+		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s", getenv("PATH"), sys_sfx_name[sfx]);
+		if(!(snd_stream_buf = load_raw_adpcm(sfx_path, &snd_stream_buf_size))) {
+			return -1;
+		}
+	}
+	
 	snd_stream_buf_pos = 0;
-	snd_stream_buf_size = gzip_get_file_size(stream_sfx_name[sfx]);
-	snd_stream_buf = load_raw_gz(stream_sfx_name[sfx], snd_stream_buf_size);
-
 	snd_stream_hnd_t snd_stream_hnd = snd_stream_alloc(snd_stream_callback, SND_STREAM_BUFFER_MAX / 2);
 
 	if(snd_stream_hnd < 0) {
