@@ -8,7 +8,7 @@
 #include "ds.h"
 #include "gui.h"
 #include "console.h"
-
+#include "sfx.h"
 
 typedef struct TrashItem {
 
@@ -81,6 +81,7 @@ static void screenshot_callback(void)  {
 	}
 
 	LockVideo();
+	ds_sfx_play(DS_SFX_SCRSHOT);
 	dsystemf("screenshot %s png", path);
 	UnlockVideo();
 	

@@ -8,6 +8,7 @@
 #include <sfx.h>
 #include <utils.h>
 
+#include <stdlib.h>
 #include <kos/thread.h>
 #include <dc/sound/stream.h>
 
@@ -76,16 +77,26 @@ static void *load_raw_gz(const char *filename, size_t size) {
 	return data;
 }
 
-int ds_sfx_play(ds_sfx_t sfx) {
-	const char *startup_fn = "/rd/startup.raw.gz";
+static char *stream_sfx_name[DS_SFX_LAST_STREAM] = {
+	"/rd/startup.raw.gz"
+};
 
-	if(sfx != DS_SFX_STARTUP) {
+static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
+	"click",
+	"click2",
+	"screenshot"
+};
+
+sfxhnd_t sys_sfx_hnd[DS_SFX_LAST - DS_SFX_LAST_STREAM] = { SFXHND_INVALID, SFXHND_INVALID };
+
+static int ds_sfx_play_stream(ds_sfx_t sfx) {
+	if(sfx >= DS_SFX_LAST_STREAM) {
 		return -1;
 	}
-
+	
 	snd_stream_buf_pos = 0;
-	snd_stream_buf_size = gzip_get_file_size(startup_fn);
-	snd_stream_buf = load_raw_gz(startup_fn, snd_stream_buf_size);
+	snd_stream_buf_size = gzip_get_file_size(stream_sfx_name[sfx]);
+	snd_stream_buf = load_raw_gz(stream_sfx_name[sfx], snd_stream_buf_size);
 
 	snd_stream_hnd_t snd_stream_hnd = snd_stream_alloc(snd_stream_callback, SND_STREAM_BUFFER_MAX / 2);
 
@@ -98,4 +109,32 @@ int ds_sfx_play(ds_sfx_t sfx) {
 
 	thd_create(1, snd_stream_thread, (void *)snd_stream_hnd);
 	return 0;
+	
 }
+
+int ds_sfx_play(ds_sfx_t sfx) {
+	if(sfx >= DS_SFX_LAST) {
+		return -1;
+	}
+
+	if (sfx < DS_SFX_LAST_STREAM) {
+		return ds_sfx_play_stream(sfx);
+	}
+	
+	int sfx_sel = sfx - DS_SFX_LAST_STREAM;
+	
+	if (sys_sfx_hnd[sfx_sel] == SFXHND_INVALID) {
+		char sfx_path[NAME_MAX];
+		
+		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s.wav", getenv("PATH"), sys_sfx_name[sfx_sel]);
+		
+		if ((sys_sfx_hnd[sfx_sel] = snd_sfx_load(sfx_path)) == SFXHND_INVALID) {
+			return -1;
+		}
+	}
+	
+	snd_sfx_play(sys_sfx_hnd[sfx_sel], 230, 128);
+	
+	return 0;
+}
+

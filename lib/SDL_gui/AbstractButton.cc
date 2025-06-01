@@ -4,6 +4,11 @@
 
 #include "SDL_gui.h"
 
+extern "C"
+{
+	#include "sfx.h"
+}
+
 GUI_AbstractButton::GUI_AbstractButton(const char *aname, int x, int y, int w, int h)
 : GUI_Widget(aname, x, y, w, h)
 {
@@ -84,18 +89,23 @@ void GUI_AbstractButton::Notify(int mask)
 
 void GUI_AbstractButton::Clicked(int x, int y)
 {
-	if (click)
+	if (click) {
+		ds_sfx_play(DS_SFX_CLICK);
 		click->Call(this);
+	}
 }
 
 void GUI_AbstractButton::ContextClicked(int x, int y)
 {
-	if (context_click)
+	if (context_click) {
+		ds_sfx_play(DS_SFX_CLICK);
 		context_click->Call(this);
+	}
 }
 
 void GUI_AbstractButton::Highlighted(int x, int y)
 {
+	ds_sfx_play(DS_SFX_CLICK2);
 	if (hover)
 		hover->Call(this);
 }

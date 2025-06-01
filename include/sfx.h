@@ -12,8 +12,12 @@
 
 typedef enum {
 
-	DS_SFX_STARTUP
-
+	DS_SFX_STARTUP,
+	DS_SFX_LAST_STREAM,
+	DS_SFX_CLICK = DS_SFX_LAST_STREAM,
+	DS_SFX_CLICK2,
+	DS_SFX_SCRSHOT,
+	DS_SFX_LAST
 } ds_sfx_t;
 
 int ds_sfx_play(ds_sfx_t sfx);
