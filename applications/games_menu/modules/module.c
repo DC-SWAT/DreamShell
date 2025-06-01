@@ -78,7 +78,6 @@ static struct
 	LogXYMover *item_selector_animation;
 	Rectangle *item_selector;
 	Font *menu_font;
-	Font *message_font;
 	Death *exit_trigger_list[MAX_SIZE_ITEMS];
 	LogXYMover *run_animation;
 	ExpXYMover *exit_animation_list[MAX_SIZE_ITEMS];
@@ -1072,13 +1071,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 			draw_message = false;
 			memset(game_cover_path, 0, sizeof(game_cover_path));
 
-			char font_path[NAME_MAX];
-			memset(font_path, 0, sizeof(font_path));
-			snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/message.txf");
-
 			TSU_LabelDestroy(&self.title);
-			TSU_FontDestroy(&self.menu_font);
-			self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 			
 			snprintf(game_cover_path, sizeof(game_cover_path), "\n\nYou need put the games here:\n%s\n\nand images here:\n%s\n\nor change games_path in\napps/games_menu/menu_games.cfg", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));			
 			SetTitle(-1, game_cover_path, false);
@@ -1130,10 +1123,6 @@ static void InitMenu()
 	memset(font_path, 0, sizeof(font_path));
 	snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/default.txf");
 	self.menu_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
-
-	memset(font_path, 0, sizeof(font_path));
-	snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/message.txf");
-	self.message_font = TSU_FontCreate(font_path, PVR_LIST_TR_POLY);
 
 	SetMenuType(menu_data.menu_type);
 	self.exit_app = false;
@@ -2133,7 +2122,6 @@ static void FreeAppData()
 	DestroyPresetMenu();
 
 	TSU_FontDestroy(&self.menu_font);
-	TSU_FontDestroy(&self.message_font);
 	TSU_AppDestroy(&self.dsapp_ptr);
 	self.scene_ptr = NULL;
 
@@ -2577,8 +2565,8 @@ void GamesApp_Init(App_t *app)
 		
 		InitMenu();
 
-		CreateSystemMenu(self.dsapp_ptr, self.scene_ptr, self.menu_font, self.message_font, &RefreshMainView, &ReloadPage);
-		CreatePresetMenu(self.dsapp_ptr, self.scene_ptr, self.menu_font, self.message_font);
+		CreateSystemMenu(self.dsapp_ptr, self.scene_ptr, self.menu_font, self.menu_font, &RefreshMainView, &ReloadPage);
+		CreatePresetMenu(self.dsapp_ptr, self.scene_ptr, self.menu_font, self.menu_font);
 	}
 }
 
