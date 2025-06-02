@@ -324,12 +324,7 @@ static void dreameye_get_video_frame_cb(maple_state_t *st, maple_frame_t *frame)
             first_state->img_transferring = 0;
             first_state->last_request = timer_ns_gettime64();
              /* FIXME: Better framebuffers sync */
-            if(first_state->width >= 320) {
-                timer_spin_sleep(10);
-            }
-            else {
-                timer_spin_sleep(2);
-            }
+            timer_spin_sleep(5);
         }
         return;
     }
