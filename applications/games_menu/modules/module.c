@@ -6,6 +6,7 @@
 */
 
 #include <ds.h>
+#include <sfx.h>
 #include "app_menu.h"
 #include "app_system_menu.h"
 #include "app_preset.h"
@@ -398,6 +399,9 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 
 static void SetCursor()
 {
+	if (!self.first_menu_load)
+		ds_sfx_play(DS_SFX_CLICK2);
+	
 	static Vector selector_translate = {0, 0, ML_CURSOR, 1};
 
 	if (self.item_selector_animation != NULL)
@@ -805,6 +809,10 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 		if (self.current_page != self.previous_page || change_view)
 		{
+			// DISABLE SLIDE SOUND
+			if (1 != 1 && !change_view && !self.first_menu_load)
+				ds_sfx_play(DS_SFX_SLIDE);
+
 			for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 			{
 				if (self.item_game_animation[i] != NULL)
