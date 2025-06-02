@@ -150,7 +150,6 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 			break;
 		
 		default:
-			scr_joy_state = 0;
 			break;
 	}
 
