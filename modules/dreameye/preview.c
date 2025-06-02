@@ -151,6 +151,12 @@ static void EventHandler(void *ds_event, void *param, int action) {
                     onPreviewClick();
                     break;
             }
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            if(event->button.button == SDL_BUTTON_LEFT || event->button.button == SDL_BUTTON_RIGHT) {
+                onPreviewClick();
+            }
+            break;
         default:
             break;
     }
