@@ -160,14 +160,14 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua
 	@mkdir -p $(DS_BUILD)/screenshot
 	@mkdir -p $(DS_BUILD)/vmu
 	@mkdir -p $(DS_BUILD)/sfx
-	ffmpeg -i $(DS_RES)/sfx/click.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click.wav
-	ffmpeg -i $(DS_RES)/sfx/click2.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click2.wav
-	ffmpeg -i $(DS_RES)/sfx/screenshot.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/screenshot.wav
-	ffmpeg -i $(DS_RES)/sfx/move.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/move.wav
-	ffmpeg -i $(DS_RES)/sfx/chpage.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/chpage.wav
-	ffmpeg -i $(DS_RES)/sfx/slide.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/slide.wav
-	ffmpeg -i $(DS_RES)/sfx/error.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/error.wav
-	ffmpeg -i $(DS_RES)/sfx/success.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/success.wav
+	ffmpeg -y -i $(DS_RES)/sfx/click.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click.wav
+	ffmpeg -y -i $(DS_RES)/sfx/click2.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click2.wav
+	ffmpeg -y -i $(DS_RES)/sfx/screenshot.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/screenshot.wav
+	ffmpeg -y -i $(DS_RES)/sfx/move.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/move.wav
+	ffmpeg -y -i $(DS_RES)/sfx/chpage.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/chpage.wav
+	ffmpeg -y -i $(DS_RES)/sfx/slide.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/slide.wav
+	ffmpeg -y -i $(DS_RES)/sfx/error.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/error.wav
+	ffmpeg -y -i $(DS_RES)/sfx/success.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/success.wav
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
