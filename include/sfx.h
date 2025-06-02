@@ -1,14 +1,12 @@
 /** 
  * \file    sfx.h
  * \brief   DreamShell sound FX
- * \date    2024
+ * \date    2024-2025
  * \author  SWAT www.dc-swat.ru
  */
 
 #ifndef _DS_SFX_H
 #define _DS_SFX_H
-
-#include <kos.h>
 
 typedef enum {
 

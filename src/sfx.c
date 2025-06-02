@@ -2,23 +2,46 @@
 
    sfx.c
    DreamShell sound FX
-   Copyright (C) 2024 SWAT
+   Copyright (C) 2024-2025 SWAT
+   Copyright (C) 2025 megavolt85
 */
+
+#include <stdlib.h>
+#include <string.h>
+
+#include <kos/thread.h>
+#include <dc/sound/stream.h>
+#include <dc/sound/sfxmgr.h>
+#include <zlib/zlib.h>
 
 #include <sfx.h>
 #include <utils.h>
 
-#include <stdlib.h>
-#include <kos/thread.h>
-#include <dc/sound/stream.h>
+/* Filename of raw ADPCM file in DS/sfx/ directory 
+   or filename of raw ADPCM packed to gzipped file (.gz extension) in /rd directory
+*/
+static char *stream_sfx_name[DS_SFX_LAST_STREAM] = {
+	"startup.raw.gz"
+};
 
-#include <zlib/zlib.h>
+/* Filename of wav file (without extension) in DS/sfx directory */
+static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
+	"click",
+	"click2",
+	"screenshot"
+};
+
+static sfxhnd_t sys_sfx_hnd[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
+	SFXHND_INVALID,
+	SFXHND_INVALID,
+	SFXHND_INVALID
+};
 
 static void *snd_stream_buf;
 static int snd_stream_buf_pos;
 static size_t snd_stream_buf_size;
 
-static void *snd_stream_callback(snd_stream_hnd_t hnd, int req, int* done) {
+static void *snd_stream_callback(snd_stream_hnd_t hnd, int req, int *done) {
 
 	if(snd_stream_buf == NULL) {
 		*done = 0;
@@ -66,7 +89,7 @@ static void *load_raw_gz(const char *filename, size_t *sz) {
 	if(fp == NULL) {
 		return data;
 	}
-	data = memalign(32, size);
+	data = aligned_alloc(32, size);
 
 	if(data == NULL) {
 		gzclose(fp);
@@ -98,7 +121,7 @@ static void *load_raw_adpcm(const char *filename, size_t *sz) {
 	if(fp == FILEHND_INVALID) {
 		return data;
 	}
-	data = memalign(32, size);
+	data = aligned_alloc(32, size);
 
 	if(data == NULL) {
 		fs_close(fp);
@@ -115,44 +138,30 @@ static void *load_raw_adpcm(const char *filename, size_t *sz) {
 	return data;
 }
 
-/* filename of raw adpcm file in DS/sfx/ directory 
-	or filename of raw adpcm packed to GZ (.gz extension) in /rd/ directory */
-static char *stream_sfx_name[DS_SFX_LAST_STREAM] = {
-	"startup.raw.gz"
-};
-
-/* filename of wav file (without extension) in DS/sfx/ directory*/
-static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
-	"click",
-	"click2",
-	"screenshot"
-};
-
-sfxhnd_t sys_sfx_hnd[DS_SFX_LAST - DS_SFX_LAST_STREAM] = { SFXHND_INVALID, SFXHND_INVALID };
-
 static int ds_sfx_play_stream(ds_sfx_t sfx) {
 	char sfx_path[NAME_MAX];
 	
 	if(sfx >= DS_SFX_LAST_STREAM) {
 		return -1;
 	}
-	
-	if(!strncmp(&stream_sfx_name[sfx][strlen(stream_sfx_name[sfx])-3], ".gz", 3)) {
+
+	int pos = strlen(stream_sfx_name[sfx]) - 3;
+
+	if(!strncmp(&stream_sfx_name[sfx][pos], ".gz", 3)) {
 		snprintf(sfx_path, NAME_MAX, "/rd/%s", stream_sfx_name[sfx]);
-		
-		if(!(snd_stream_buf = load_raw_gz(sfx_path, &snd_stream_buf_size))) {
-			return -1;
-		}
+		snd_stream_buf = load_raw_gz(sfx_path, &snd_stream_buf_size);
 	}
 	else {
 		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s", getenv("PATH"), sys_sfx_name[sfx]);
-		if(!(snd_stream_buf = load_raw_adpcm(sfx_path, &snd_stream_buf_size))) {
-			return -1;
-		}
+		snd_stream_buf = load_raw_adpcm(sfx_path, &snd_stream_buf_size);
 	}
-	
+
+	if(!snd_stream_buf) {
+		return -1;
+	}
+
 	snd_stream_buf_pos = 0;
-	snd_stream_hnd_t snd_stream_hnd = snd_stream_alloc(snd_stream_callback, SND_STREAM_BUFFER_MAX / 2);
+	snd_stream_hnd_t snd_stream_hnd = snd_stream_alloc(snd_stream_callback, SND_STREAM_BUFFER_MAX_ADPCM);
 
 	if(snd_stream_hnd < 0) {
 		return -1;
@@ -163,7 +172,6 @@ static int ds_sfx_play_stream(ds_sfx_t sfx) {
 
 	thd_create(1, snd_stream_thread, (void *)snd_stream_hnd);
 	return 0;
-	
 }
 
 int ds_sfx_play(ds_sfx_t sfx) {
@@ -174,21 +182,20 @@ int ds_sfx_play(ds_sfx_t sfx) {
 	if (sfx < DS_SFX_LAST_STREAM) {
 		return ds_sfx_play_stream(sfx);
 	}
-	
+
 	int sfx_sel = sfx - DS_SFX_LAST_STREAM;
-	
+
 	if (sys_sfx_hnd[sfx_sel] == SFXHND_INVALID) {
 		char sfx_path[NAME_MAX];
-		
+
 		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s.wav", getenv("PATH"), sys_sfx_name[sfx_sel]);
-		
-		if ((sys_sfx_hnd[sfx_sel] = snd_sfx_load(sfx_path)) == SFXHND_INVALID) {
+		sys_sfx_hnd[sfx_sel] = snd_sfx_load(sfx_path);
+
+		if (sys_sfx_hnd[sfx_sel] == SFXHND_INVALID) {
 			return -1;
 		}
 	}
-	
+
 	snd_sfx_play(sys_sfx_hnd[sfx_sel], 230, 128);
-	
 	return 0;
 }
-
