@@ -48,6 +48,7 @@ include png/png.h
 include jpeg/jpeglib.h
 include jpeg/jpeg.h
 include tsunami/tsunami.h
+include sfx.h
 
 start
 expt_init
@@ -57,6 +58,7 @@ expt_print_place
 longjmp
 setjmp
 #
+ds_sfx_play
 SetVersion
 GetVersion
 GetVersionBuildTypeString
