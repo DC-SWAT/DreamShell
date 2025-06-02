@@ -390,16 +390,14 @@
 				</panel>
 			</panel>
 			<panel name="fullscreen-viewer-page">
-				<panel width="640" height="480" name="fullscreen-photo">
+				<panel width="640" height="480">
 					<input type="button" width="640" height="480" name="fullscreen-photo-button"
 						onclick="export:DreameyeApp_ExitFullscreen()"
-						normal="fullscreen-back" highlight="fullscreen-back" pressed="fullscreen-back">
+						normal="fullscreen-back" highlight="fullscreen-back"
+						pressed="fullscreen-back" disabled="fullscreen-back"
+					>
 						<label font="comic-22" color="#EEEEEE" text="Loading..." align="center" name="fullscreen-status" />
 					</input>
-				</panel>
-				<panel width="640" height="25" y="455">
-					<label font="comic-16" color="#FFFFFF" align="center" valign="center"
-						text="Photo 1/1 - Click to exit" name="fullscreen-info" />
 				</panel>
 			</panel>
 			<panel name="file-browser-page" y="10">

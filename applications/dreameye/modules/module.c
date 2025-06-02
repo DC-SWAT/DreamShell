@@ -65,7 +65,6 @@ static struct {
     GUI_Widget *viewer_photo_info;
     GUI_Widget *gallery_page_info;
     GUI_Widget *fullscreen_status;
-    GUI_Widget *fullscreen_info;
     GUI_Widget *fullscreen_photo;
     GUI_Widget *confirm_delete_text;
     GUI_Widget *header_panel;
@@ -74,6 +73,9 @@ static struct {
     GUI_Widget *thumb_labels[GALLERY_THUMBS_PER_PAGE];
     GUI_Widget *thumb_buttons[GALLERY_THUMBS_PER_PAGE];
     GUI_Widget *photo_viewer_button;
+
+    GUI_Surface *default_thumb_surface;
+    GUI_Surface *default_thumb_hl_surface;
 
 } self;
 
@@ -175,16 +177,31 @@ static void UpdateProgress(const char *desc, float progress) {
     GUI_ProgressBarSetPosition(self.progress_bar, progress);
 }
 
-static void on_photo_loaded(GUI_Surface *surface) {
+static void on_photo_loaded(GUI_Surface *surface, GUI_Surface *hl_surface) {
+
+    LockVideo();
     GUI_LabelSetText(self.viewer_status, " ");
     GUI_WidgetSetEnabled(self.photo_viewer_button, 1);
 
     if (surface) {
         GUI_ButtonSetNormalImage(self.photo_viewer_button, surface);
+        GUI_ObjectDecRef((GUI_Object*)surface);
+        
+        if (hl_surface) {
+            GUI_ButtonSetHighlightImage(self.photo_viewer_button, hl_surface);
+
+            if (hl_surface != surface) {
+                GUI_ObjectDecRef((GUI_Object*)hl_surface);
+            }
+        }
     }
+    UnlockVideo();
 }
 
 static void LoadPhotoIntoViewer(int photo_index) {
+    gallery_state_t *state = gallery_get_state();
+    state->current_photo = photo_index;
+
     GUI_LabelSetText(self.viewer_status, "Loading...");
     GUI_WidgetSetEnabled(self.photo_viewer_button, 0);
     
@@ -222,8 +239,7 @@ void DreameyeApp_Init(App_t *app) {
     self.viewer_photo_info = APP_GET_WIDGET("viewer-photo-info");
     self.gallery_page_info = APP_GET_WIDGET("gallery-page-info");
     self.fullscreen_status = APP_GET_WIDGET("fullscreen-status");
-    self.fullscreen_info = APP_GET_WIDGET("fullscreen-info");
-    self.fullscreen_photo = APP_GET_WIDGET("fullscreen-photo");
+    self.fullscreen_photo = APP_GET_WIDGET("fullscreen-photo-button");
     self.confirm_delete_text = APP_GET_WIDGET("confirm-delete-text");
     self.header_panel = APP_GET_WIDGET("header-panel");
 
@@ -257,12 +273,21 @@ void DreameyeApp_Init(App_t *app) {
     UpdatePhotoCountLabels();
 
     gallery_init(self.dev);
+
+    self.default_thumb_surface = GUI_ButtonGetNormalImage(self.thumb_buttons[0]);
+    GUI_ObjectIncRef((GUI_Object *)self.default_thumb_surface);
+
+    self.default_thumb_hl_surface = GUI_ButtonGetHighlightImage(self.thumb_buttons[0]);
+    GUI_ObjectIncRef((GUI_Object *)self.default_thumb_hl_surface);
 }
 
 void DreameyeApp_Shutdown(App_t *app) {
     (void)app;
     HideCameraPreview();
     gallery_shutdown();
+
+    GUI_ObjectDecRef((GUI_Object *)self.default_thumb_surface);
+    GUI_ObjectDecRef((GUI_Object *)self.default_thumb_hl_surface);
 }
 
 void DreameyeApp_Open(App_t *app) {
@@ -272,6 +297,8 @@ void DreameyeApp_Open(App_t *app) {
 
 void DreameyeApp_ShowMainPage(GUI_Widget *widget) {
     (void)widget;
+
+    gallery_load_abort();
 
     int index = GUI_CardStackGetIndex(self.pages);
     GUI_CardStackShowIndex(self.pages, APP_PAGE_MAIN);
@@ -284,6 +311,8 @@ void DreameyeApp_ShowMainPage(GUI_Widget *widget) {
 
 void DreameyeApp_ShowPhotoPage(GUI_Widget *widget) {
     (void)widget;
+
+    gallery_load_abort();
 
     int index = GUI_CardStackGetIndex(self.pages);
     GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO);
@@ -521,23 +550,49 @@ void DreameyeApp_Abort(GUI_Widget *widget) {
     self.action = APP_ACTION_IDLE;
 }
 
-static void on_thumb_loaded(int thumb_index, GUI_Surface *surface) {
-    if (thumb_index >= 0 && thumb_index < GALLERY_THUMBS_PER_PAGE) {
-        GUI_WidgetSetEnabled(self.thumb_widgets[thumb_index], 1);
-        GUI_LabelSetText(self.thumb_labels[thumb_index], GUI_ObjectGetName((GUI_Object *)surface));
+static void on_thumb_loaded(int thumb_index, GUI_Surface *surface, GUI_Surface *hl_surface) {
+    if (thumb_index < 0 || thumb_index >= GALLERY_THUMBS_PER_PAGE) {
+        return;
+    }
 
-        if (surface && self.thumb_buttons[thumb_index]) {
-            GUI_ButtonSetNormalImage(self.thumb_buttons[thumb_index], surface);
+    if (surface) {
+        GUI_LabelSetText(self.thumb_labels[thumb_index], GUI_ObjectGetName((GUI_Object *)surface));
+        GUI_ButtonSetNormalImage(self.thumb_buttons[thumb_index], surface);
+
+        if (hl_surface) {
+            GUI_ButtonSetHighlightImage(self.thumb_buttons[thumb_index], hl_surface);
         }
+
+        GUI_WidgetSetEnabled(self.thumb_widgets[thumb_index], 1);
+    }
+    else {
+        GUI_LabelSetText(self.thumb_labels[thumb_index], "Empty");
     }
 }
 
 static void SwitchGalleryPage(int new_page) {
     gallery_state_t *state = gallery_get_state();
+    int start_photo = new_page * GALLERY_THUMBS_PER_PAGE;
 
-    for (int i = 0; i < GALLERY_THUMBS_PER_PAGE; i++) {
+    gallery_load_abort();
+
+    int photos_on_page = self.photo_count - start_photo;
+    if (photos_on_page > GALLERY_THUMBS_PER_PAGE) {
+        photos_on_page = GALLERY_THUMBS_PER_PAGE;
+    }
+
+    for (int i = 0; i < GALLERY_THUMBS_PER_PAGE; ++i) {
         GUI_WidgetSetEnabled(self.thumb_widgets[i], 0);
-        GUI_LabelSetText(self.thumb_labels[i], "Loading...");
+
+        GUI_ButtonSetNormalImage(self.thumb_buttons[i], self.default_thumb_surface);
+        GUI_ButtonSetHighlightImage(self.thumb_buttons[i], self.default_thumb_hl_surface);
+
+        if (i < photos_on_page) {
+            GUI_LabelSetText(self.thumb_labels[i], "Loading...");
+        }
+        else {
+            GUI_LabelSetText(self.thumb_labels[i], "Empty");
+        }
     }
 
     char page_info[32];
@@ -550,6 +605,8 @@ static void SwitchGalleryPage(int new_page) {
 void DreameyeApp_ShowGalleryPage(GUI_Widget *widget) {
     (void)widget;
     HideCameraPreview();
+
+    gallery_load_abort();
 
     gallery_state_t *state = gallery_get_state();
     state->total_photos = self.photo_count;
@@ -699,36 +756,53 @@ void DreameyeApp_ConfirmDelete(GUI_Widget *widget) {
     }
 }
 
-static void on_fullscreen_loaded(GUI_Surface *surface) {
+static void on_fullscreen_loaded(GUI_Surface *surface, GUI_Surface *hl_surface) {
+
+    LockVideo();
     GUI_LabelSetText(self.fullscreen_status, " ");
 
     if (surface) {
-        GUI_PanelSetBackground(self.fullscreen_photo, surface);
+        GUI_ButtonSetNormalImage(self.fullscreen_photo, surface);
+        GUI_ObjectDecRef((GUI_Object*)surface);
+
+        if (hl_surface) {
+            GUI_ButtonSetHighlightImage(self.fullscreen_photo, hl_surface);
+
+            if (hl_surface != surface) {
+                GUI_ObjectDecRef((GUI_Object*)hl_surface);
+            }
+        }
     }
+
+    GUI_WidgetSetEnabled(self.fullscreen_photo, 1);
+    UnlockVideo();
 }
 
 void DreameyeApp_ShowFullscreenPhoto(GUI_Widget *widget) {
     (void)widget;
 
-    gallery_state_t *state = gallery_get_state();
+    LockVideo();
+    GUI_WidgetSetEnabled(self.fullscreen_photo, 0);
     GUI_LabelSetText(self.fullscreen_status, "Loading...");
-    char photo_info[64];
-    snprintf(photo_info, sizeof(photo_info), "Photo %d/%d - Click to exit", 
-            state->current_photo + 1, (int)self.photo_count);
-    GUI_LabelSetText(self.fullscreen_info, photo_info);
-
     GUI_CardStackShowIndex(self.pages, APP_PAGE_FULLSCREEN_VIEWER);
     GUI_ContainerRemove(self.app->body, self.header_panel);
     GUI_WidgetSetPosition(self.pages, 0, 0);
     GUI_WidgetMarkChanged(self.app->body);
+    UnlockVideo();
 
+    gallery_state_t *state = gallery_get_state();
     gallery_load_photo(state->current_photo, 0, 0, on_fullscreen_loaded);
 }
 
 void DreameyeApp_ExitFullscreen(GUI_Widget *widget) {
     (void)widget;
-    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
-    GUI_ContainerAdd(self.app->body, self.header_panel);
+
+    LockVideo();
     GUI_WidgetSetPosition(self.pages, 0, 45);
+    GUI_ContainerRemove(self.app->body, self.pages);
+    GUI_ContainerAdd(self.app->body, self.header_panel);
+    GUI_ContainerAdd(self.app->body, self.pages);
+    GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
     GUI_WidgetMarkChanged(self.app->body);
+    UnlockVideo();
 }

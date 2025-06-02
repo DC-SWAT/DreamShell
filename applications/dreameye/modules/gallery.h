@@ -21,11 +21,14 @@ typedef struct {
     int current_page;
     int current_photo;
     volatile bool loading;
+    volatile bool loading_abort;
     volatile int loading_progress;
 } gallery_state_t;
 
-typedef void (*gallery_thumb_callback_t)(int thumb_index, GUI_Surface *surface);
-typedef void (*gallery_photo_callback_t)(GUI_Surface *surface);
+typedef void (*gallery_thumb_callback_t)(int thumb_index, GUI_Surface *surface,
+    GUI_Surface *hl_surface);
+typedef void (*gallery_photo_callback_t)(GUI_Surface *surface,
+    GUI_Surface *hl_surface);
 
 int gallery_init(maple_device_t *device);
 void gallery_shutdown(void);

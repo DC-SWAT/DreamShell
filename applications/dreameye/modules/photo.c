@@ -120,7 +120,13 @@ GUI_Surface *create_photo_surface(uint8_t *jpeg_data, size_t jpeg_size,
         return GUI_SurfaceFrom(name, scaled);
     }
 
-    SDL_Surface *final = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 16, 0xF800, 0x07E0, 0x001F, 0);
+    SDL_Surface *screen = GetScreen();
+    SDL_Surface *final = SDL_CreateRGBSurface(SDL_SWSURFACE, width, height, 
+        screen->format->BitsPerPixel,
+        screen->format->Rmask,
+        screen->format->Gmask,
+        screen->format->Bmask,
+        screen->format->Amask);
     if (!final) {
         SDL_FreeSurface(scaled);
         return NULL;
@@ -140,3 +146,4 @@ GUI_Surface *create_photo_surface(uint8_t *jpeg_data, size_t jpeg_size,
 
     return GUI_SurfaceFrom(name, final);
 }
+
