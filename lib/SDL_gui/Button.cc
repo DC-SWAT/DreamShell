@@ -77,6 +77,26 @@ void GUI_Button::SetDisabledImage(GUI_Surface *surface)
 		MarkChanged();
 }
 
+GUI_Surface *GUI_Button::GetNormalImage()
+{
+	return normal;
+}
+
+GUI_Surface *GUI_Button::GetHighlightImage()
+{
+	return highlight;
+}
+
+GUI_Surface *GUI_Button::GetPressedImage()
+{
+	return pressed;
+}
+
+GUI_Surface *GUI_Button::GetDisabledImage()
+{
+	return disabled;
+}
+
 extern "C"
 {
 
@@ -149,6 +169,26 @@ void GUI_ButtonSetMouseover(GUI_Widget *widget, GUI_Callback *callback)
 void GUI_ButtonSetMouseout(GUI_Widget *widget, GUI_Callback *callback)
 {
 	((GUI_Button *) widget)->SetMouseout(callback);
+}
+
+GUI_Surface *GUI_ButtonGetNormalImage(GUI_Widget *widget)
+{
+	return ((GUI_Button *) widget)->GetNormalImage();
+}
+
+GUI_Surface *GUI_ButtonGetHighlightImage(GUI_Widget *widget)
+{
+	return ((GUI_Button *) widget)->GetHighlightImage();
+}
+
+GUI_Surface *GUI_ButtonGetPressedImage(GUI_Widget *widget)
+{
+	return ((GUI_Button *) widget)->GetPressedImage();
+}
+
+GUI_Surface *GUI_ButtonGetDisabledImage(GUI_Widget *widget)
+{
+	return ((GUI_Button *) widget)->GetDisabledImage();
 }
 
 }

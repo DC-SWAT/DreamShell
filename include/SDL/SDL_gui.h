@@ -483,6 +483,10 @@ class GUI_Button : public GUI_AbstractButton
 		void SetHighlightImage(GUI_Surface *surface);
 		void SetPressedImage(GUI_Surface *surface);
 		void SetDisabledImage(GUI_Surface *surface);
+		GUI_Surface *GetNormalImage();
+		GUI_Surface *GetHighlightImage();
+		GUI_Surface *GetPressedImage();
+		GUI_Surface *GetDisabledImage();
 };
 
 class GUI_ToggleButton : public GUI_AbstractButton
@@ -1089,6 +1093,10 @@ void GUI_ButtonSetNormalImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ButtonSetHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ButtonSetPressedImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ButtonSetDisabledImage(GUI_Widget *widget, GUI_Surface *surface);
+GUI_Surface *GUI_ButtonGetNormalImage(GUI_Widget *widget);
+GUI_Surface *GUI_ButtonGetHighlightImage(GUI_Widget *widget);
+GUI_Surface *GUI_ButtonGetPressedImage(GUI_Widget *widget);
+GUI_Surface *GUI_ButtonGetDisabledImage(GUI_Widget *widget);
 void GUI_ButtonSetCaption(GUI_Widget *widget, GUI_Widget *caption);
 void GUI_ButtonSetCaption2(GUI_Widget *widget, GUI_Widget *caption);
 GUI_Widget *GUI_ButtonGetCaption(GUI_Widget *widget);

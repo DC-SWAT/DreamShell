@@ -1032,6 +1032,10 @@ GUI_ButtonSetNormalImage
 GUI_ButtonSetHighlightImage
 GUI_ButtonSetPressedImage
 GUI_ButtonSetDisabledImage
+GUI_ButtonGetNormalImage
+GUI_ButtonGetHighlightImage
+GUI_ButtonGetPressedImage
+GUI_ButtonGetDisabledImage
 GUI_ButtonSetCaption
 GUI_ButtonSetCaption2
 GUI_ButtonGetCaption
