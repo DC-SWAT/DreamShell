@@ -7,6 +7,7 @@
 
 #include <ds.h>
 #include <gui.h>
+#include <sfx.h>
 
 DEFAULT_MODULE_EXPORTS(app_main);
 
@@ -334,6 +335,7 @@ static void *ClockThread(void *arg) {
 
 void MainApp_SlideLeft() {
 	if(self.cur_x > 0) {
+		ds_sfx_play(DS_SFX_SLIDE);
 		self.cur_x -= self.panel_area.w;
 		GUI_PanelSetXOffset(self.panel, self.cur_x);
 	}
@@ -341,6 +343,7 @@ void MainApp_SlideLeft() {
 
 void MainApp_SlideRight() {
 	if(self.x > self.cur_x) {
+		ds_sfx_play(DS_SFX_SLIDE);
 		self.cur_x += self.panel_area.w;
 		GUI_PanelSetXOffset(self.panel, self.cur_x);
 	}
