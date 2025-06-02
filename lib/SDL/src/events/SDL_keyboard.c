@@ -63,7 +63,7 @@ int SDL_KeyboardInit(void)
 	SDL_memset(SDL_KeyState, 0, sizeof(SDL_KeyState));
 	video->InitOSKeymap(this);
 
-	SDL_EnableKeyRepeat(0, 0);
+	SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 
 	/* Fill in the blanks in keynames */
 	keynames[SDLK_BACKSPACE] = "backspace";
