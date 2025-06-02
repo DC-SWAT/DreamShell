@@ -19,6 +19,7 @@ sudo apt install -y build-essential diffutils curl python3 rake
 sudo apt install -y genisoimage squashfs-tools texinfo git
 sudo apt install -y libgmp-dev libmpfr-dev libmpc-dev libelf-dev libisofs-dev
 sudo apt install -y libpng-dev libjpeg-dev liblzo2-dev liblua5.2-dev
+sudo apt install -y ffmpeg
 cd /tmp
 git clone https://github.com/LuaDist/tolua.git
 cd /tmp/tolua && mkdir build && cd ./build
