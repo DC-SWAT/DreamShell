@@ -115,12 +115,12 @@ void GUI_Surface::ThickLine(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint8 wi
 	thickLineColor(surface, x1, y1, x2, y2, width, __builtin_bswap32(c));
 }
 
-void GUI_Surface::Rectagle(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
+void GUI_Surface::Rectangle(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 {
 	rectangleColor(surface, x1, y1, x2, y2, __builtin_bswap32(c));
 }
 
-void GUI_Surface::RectagleRouded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
+void GUI_Surface::RectangleRounded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
 {
 	roundedRectangleColor(surface, x1, y1, x2, y2, rad, __builtin_bswap32(c));
 }
@@ -415,14 +415,14 @@ void GUI_SurfaceThickLine(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2,
 	surface->ThickLine(x1, y1, x2, y2, width, c);
 }
 
-void GUI_SurfaceRectagle(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
+void GUI_SurfaceRectangle(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 {
-	surface->Rectagle(x1, y1, x2, y2, c);
+	surface->Rectangle(x1, y1, x2, y2, c);
 }
 
-void GUI_SurfaceRectagleRouded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
+void GUI_SurfaceRectangleRounded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
 {
-	surface->RectagleRouded(x1, y1, x2, y2, rad, c);
+	surface->RectangleRounded(x1, y1, x2, y2, rad, c);
 }
 
 void GUI_SurfaceBox(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)

@@ -59,7 +59,7 @@ static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
 		sdl->format->Amask);
 
 	GUI_SurfaceBoxRouded(s, 0, 0, w - 1, h - 1, 10, GUI_SurfaceMapRGBA(s, 212, 241, 21, 220));
-	GUI_SurfaceRectagleRouded(s, 1, 1, w - 2, h - 2, 10, GUI_SurfaceMapRGBA(s, 212, 241, 41, 255));
+	GUI_SurfaceRectangleRounded(s, 1, 1, w - 2, h - 2, 10, GUI_SurfaceMapRGBA(s, 212, 241, 41, 255));
 
 	dst.x = dst.y = ICON_HIGHLIGHT_PADDING / 2;
 	dst.w = GUI_SurfaceGetWidth(src);
@@ -398,7 +398,7 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 			return;
 		}
 	}
-	
+
 	switch(event->type) {
 		
 		case SDL_JOYBUTTONDOWN:

@@ -924,8 +924,8 @@ GUI_SurfaceLineAA
 GUI_SurfaceLineH
 GUI_SurfaceLineV
 GUI_SurfaceThickLine
-GUI_SurfaceRectagle
-GUI_SurfaceRectagleRouded
+GUI_SurfaceRectangle
+GUI_SurfaceRectangleRounded
 GUI_SurfaceBox
 GUI_SurfaceBoxRouded
 GUI_SurfaceCircle

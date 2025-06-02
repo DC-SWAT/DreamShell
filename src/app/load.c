@@ -859,7 +859,7 @@ static void parseAppSurfaceRect(App_t *app, mxml_node_t *node, GUI_Surface *surf
 #ifdef APP_LOAD_DEBUG
 	ds_printf("Rect surface: x1=%d y1=%d x2=%d y2=%d color=%08x\n", x1, y1, x2, y2, c);
 #endif
-	GUI_SurfaceRectagle(surface, x1, y1, x2, y2, c);
+	GUI_SurfaceRectangle(surface, x1, y1, x2, y2, c);
 }
 
 
