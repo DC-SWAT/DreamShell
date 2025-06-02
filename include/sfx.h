@@ -15,6 +15,8 @@ typedef enum {
 	DS_SFX_CLICK = DS_SFX_LAST_STREAM,
 	DS_SFX_CLICK2,
 	DS_SFX_SCRSHOT,
+	DS_SFX_MOVE,
+	DS_SFX_CH_PAGE,
 	DS_SFX_LAST
 } ds_sfx_t;
 

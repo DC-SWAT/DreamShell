@@ -28,10 +28,14 @@ static char *stream_sfx_name[DS_SFX_LAST_STREAM] = {
 static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
 	"click",
 	"click2",
-	"screenshot"
+	"screenshot",
+	"move",
+	"chpage"
 };
 
 static sfxhnd_t sys_sfx_hnd[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
+	SFXHND_INVALID,
+	SFXHND_INVALID,
 	SFXHND_INVALID,
 	SFXHND_INVALID,
 	SFXHND_INVALID

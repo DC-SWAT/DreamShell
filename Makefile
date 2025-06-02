@@ -163,6 +163,8 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua
 	ffmpeg -i $(DS_RES)/sfx/click.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click.wav
 	ffmpeg -i $(DS_RES)/sfx/click2.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click2.wav
 	ffmpeg -i $(DS_RES)/sfx/screenshot.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/screenshot.wav
+	ffmpeg -i $(DS_RES)/sfx/move.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/move.wav
+	ffmpeg -i $(DS_RES)/sfx/chpage.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/chpage.wav
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
