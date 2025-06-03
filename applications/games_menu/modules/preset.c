@@ -10,6 +10,8 @@
 #include "app_menu.h"
 #include "app_utils.h"
 #include <isoldr.h>
+#include <sfx.h>
+#include <settings.h>
 #include <tsunami/dsapp.h>
 #include <tsunami/font.h>
 #include <tsunami/anims/logxymover.h>
@@ -1504,6 +1506,22 @@ void ShowPresetMenu(int game_index)
 			self.preset_menu_form = TSU_FormCreate(640/2 - 618/2, 480/2 + 450/2, 612, 455, true, 3, DEFAULT_RADIUS, true, true, form_font, 
 				&menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
 				&OnViewIndexChangedEvent);
+
+			char sfx_path[50];
+			int volume = GetVolumeFromSettings();
+			if (ds_sfx_is_enabled(DS_SFX_CLICK2))
+			{
+				ds_sfx_get_wav(sfx_path, DS_SFX_CLICK2 - DS_SFX_LAST_STREAM);
+				TSU_FormSetSfxCursor(self.preset_menu_form, sfx_path);				
+				TSU_FormSetSfxVolume(self.preset_menu_form, volume);
+			}
+
+			if (ds_sfx_is_enabled(DS_SFX_CLICK))
+			{
+				ds_sfx_get_wav(sfx_path, DS_SFX_CLICK - DS_SFX_LAST_STREAM);
+				TSU_FormSetSfxClick(self.preset_menu_form, sfx_path);				
+				TSU_FormSetSfxVolume(self.preset_menu_form, volume);
+			}
 
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
