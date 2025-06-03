@@ -26,6 +26,8 @@ TRAGET_VERSION = -DVER_MAJOR=4 \
 all: rm-elf $(TARGET)
 
 KOS_ROMDISK_DIR = romdisk
+SFX_FILES = click click2 screenshot move chpage slide error success
+SFX_TARGETS = $(addprefix $(DS_BUILD)/sfx/,$(addsuffix .wav,$(SFX_FILES)))
 
 include sdk/Makefile.cfg
 
@@ -142,16 +144,20 @@ $(KOS_ROMDISK_DIR)/logo.kmg.gz: $(DS_RES)/logo_sq.png
 	gzip -9 logo.kmg
 	mv logo.kmg.gz $(KOS_ROMDISK_DIR)/logo.kmg.gz
 
-sfx: $(KOS_ROMDISK_DIR)/startup.raw.gz
+sfx: $(KOS_ROMDISK_DIR)/startup.raw.gz $(SFX_TARGETS)
 $(KOS_ROMDISK_DIR)/startup.raw.gz: $(DS_RES)/sfx/startup.wav
 	ffmpeg -i $(DS_RES)/sfx/startup.wav -af "apad=pad_dur=2" $(DS_RES)/sfx/startup_pad.wav
 	ffmpeg -i $(DS_RES)/sfx/startup_pad.wav -acodec adpcm_yamaha -fs 327680 -f s16le $(KOS_ROMDISK_DIR)/startup.raw
 	rm -f $(DS_RES)/sfx/startup_pad.wav
 	gzip -9 $(KOS_ROMDISK_DIR)/startup.raw
 
+$(DS_BUILD)/sfx/%.wav: $(DS_RES)/sfx/%.wav
+	@mkdir -p $(DS_BUILD)/sfx
+	ffmpeg -y -i $< -acodec adpcm_yamaha $@ 2>/dev/null
+
 make-build: $(DS_BUILD)/lua/startup.lua
 
-$(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua
+$(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua $(SFX_TARGETS)
 	@echo Creating build directory...
 	@mkdir -p $(DS_BUILD)
 	@mkdir -p $(DS_BUILD)/apps
@@ -159,15 +165,6 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua
 	@mkdir -p $(DS_BUILD)/modules
 	@mkdir -p $(DS_BUILD)/screenshot
 	@mkdir -p $(DS_BUILD)/vmu
-	@mkdir -p $(DS_BUILD)/sfx
-	ffmpeg -y -i $(DS_RES)/sfx/click.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click.wav
-	ffmpeg -y -i $(DS_RES)/sfx/click2.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/click2.wav
-	ffmpeg -y -i $(DS_RES)/sfx/screenshot.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/screenshot.wav
-	ffmpeg -y -i $(DS_RES)/sfx/move.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/move.wav
-	ffmpeg -y -i $(DS_RES)/sfx/chpage.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/chpage.wav
-	ffmpeg -y -i $(DS_RES)/sfx/slide.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/slide.wav
-	ffmpeg -y -i $(DS_RES)/sfx/error.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/error.wav
-	ffmpeg -y -i $(DS_RES)/sfx/success.wav -acodec adpcm_yamaha $(DS_BUILD)/sfx/success.wav
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
