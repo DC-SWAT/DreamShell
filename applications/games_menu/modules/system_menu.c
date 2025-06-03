@@ -9,6 +9,8 @@
 #include "app_definition.h"
 #include "app_menu.h"
 #include "app_utils.h"
+#include <sfx.h>
+#include <settings.h>
 #include <tsunami/dsapp.h>
 #include <tsunami/font.h>
 #include <tsunami/drawables/scene.h>
@@ -157,6 +159,22 @@ void ShowSystemMenu()
 		self.system_menu_form = TSU_FormCreate(640 / 2 - width / 2, 480 / 2 + (height - 10) / 2, width, height, true, 3, DEFAULT_RADIUS
 		, true, true, form_font, &menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
 		&OnSystemViewIndexChangedEvent);
+
+		char sfx_path[50];
+		int volume = GetVolumeFromSettings();
+		if (ds_sfx_is_enabled(DS_SFX_CLICK2))
+		{
+			ds_sfx_get_wav(sfx_path, DS_SFX_CLICK2 - DS_SFX_LAST_STREAM);
+			TSU_FormSetSfxCursor(self.system_menu_form, sfx_path);				
+			TSU_FormSetSfxVolume(self.system_menu_form, volume);
+		}
+
+		if (ds_sfx_is_enabled(DS_SFX_CLICK))
+		{
+			ds_sfx_get_wav(sfx_path, DS_SFX_CLICK - DS_SFX_LAST_STREAM);
+			TSU_FormSetSfxClick(self.system_menu_form, sfx_path);				
+			TSU_FormSetSfxVolume(self.system_menu_form, volume);
+		}
 
 		{
 			Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 14, false, false);

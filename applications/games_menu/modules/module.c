@@ -809,9 +809,8 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 		if (self.current_page != self.previous_page || change_view)
 		{
-			// DISABLE SLIDE SOUND
-			if (1 != 1 && !change_view && !self.first_menu_load)
-				ds_sfx_play(DS_SFX_SLIDE);
+			if (!change_view && !self.first_menu_load)
+				ds_sfx_play(DS_SFX_CLICK);
 
 			for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 			{
@@ -1220,6 +1219,7 @@ static void StartExit()
 	StopCDDA();
 	StopShowCover();
 	RemoveAll();
+	ds_sfx_play(DS_SFX_CLICK);
 
 	float y = 1.0f;
 	self.game_index_selected = -1;
