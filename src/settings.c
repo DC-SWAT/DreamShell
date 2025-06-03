@@ -194,7 +194,9 @@ int LoadSettings() {
 	if(loaded) {
 		if(current_set.version != GetVersion()) {
 			dbglog(DBG_DEBUG, "%s: Settings file found with different version\n", __func__);
-		} else {
+			ResetSettings();
+		}
+		else {
 			dbglog(DBG_DEBUG, "%s: Settings file found\n", __func__);
 		}
 	}
@@ -276,4 +278,12 @@ int SaveSettings() {
 		return 1;
 	}
 	return SaveSettingsFile(fn);
+}
+
+int GetVolumeFromSettings() {
+    Settings_t *settings = GetSettings();
+    if(!settings) {
+        return -1;
+    }
+    return settings->audio.volume;
 }

@@ -7,6 +7,7 @@
             
 #include "ds.h"
 #include <oggvorbis/sndoggvorbis.h>
+#include "settings.h"
 
 DEFAULT_MODULE_HEADER(oggvorbis);
 
@@ -64,6 +65,11 @@ static int builtin_oggvorbis(int argc, char *argv[]) {
        if(sndoggvorbis_start(file, loop) < 0) {
           ds_printf("DS_ERROR: Can't play file: %s\n", file);
           return CMD_ERROR; 
+       }
+       
+       int volume_setting = GetVolumeFromSettings();
+       if(volume_setting >= 0) {
+           sndoggvorbis_volume(volume_setting);
        }
     }
     

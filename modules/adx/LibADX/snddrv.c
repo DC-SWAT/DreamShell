@@ -27,6 +27,7 @@
 #include <dc/sound/stream.h>
 
 #include "audio/snddrv.h"
+#include "settings.h"
 
 snd_stream_hnd_t shnd;
 kthread_t * snddrv_thd;
@@ -102,6 +103,13 @@ static void *snddrv_thread(void *arg) {
 	shnd = snd_stream_alloc(snddrv_callback, SND_STREAM_BUFFER_MAX/4);
 	
     snd_stream_start(shnd, snddrv.rate, snddrv.channels-1);
+    
+    int volume = GetVolumeFromSettings();
+    if(volume >= 0) {
+        snddrv_vol = volume;
+        snd_stream_volume(shnd, snddrv_vol);
+    }
+    
     snddrv.drv_status = SNDDRV_STATUS_STREAMING;
 
 	while( snddrv.drv_status != SNDDRV_STATUS_DONE && snddrv.drv_status != SNDDRV_STATUS_ERROR ) {

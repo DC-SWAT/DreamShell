@@ -6,6 +6,7 @@
 
 #include "ds.h"
 #include <dc/sound/sound.h>
+#include "settings.h"
 
 #include "aica.h"
 #include "drivers/aica_cmd_iface.h"
@@ -255,7 +256,12 @@ static void audio_write(AVCodecContext *audio, void *buf, size_t size) {
 
 	if (!aud->playing) {
 		int mode;
-		int vol = 240;
+		int vol = GetVolumeFromSettings();
+
+		if(vol < 0) {
+			vol = 240;
+		}
+
 		aud->playing = 1;
 
 		switch(aud->bits) {

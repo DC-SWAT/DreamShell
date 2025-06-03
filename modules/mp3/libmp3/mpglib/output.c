@@ -224,6 +224,12 @@ static void start_audio()
 {
   aud_set = 1;
   snd_stream_start(shnd, sample_rate, chans-1);
+
+  int volume = GetVolumeFromSettings();
+  if(volume >= 0) {
+    snd_stream_volume(shnd, volume);
+  }
+
   loop_thread = thd_create(0, play_loop, NULL);
 }
 
@@ -346,6 +352,8 @@ void *mpg_callback(snd_stream_hnd_t hnd, int len, int * actual)
      return tmpbuf;
 }
 
+#include "settings.h"
+
 static void *mp3_open(char *filename, int freq, int channels, int format, int endian, uint64_t size)
 {
   struct oss_out *oss_out = (struct oss_out *)malloc(sizeof(struct oss_out) + (filename ? (strlen(filename) + 1) : 0));
@@ -353,8 +361,7 @@ static void *mp3_open(char *filename, int freq, int channels, int format, int en
   chans = channels;
   sample_rate = freq;
   sbsize = size;
-    snd_init();
-   sndptr = last_read = snd_ct = 0;
+  sndptr = last_read = snd_ct = 0;
 	
 	memset (tmpbuf, 0, 65534*2);
 	
@@ -363,8 +370,12 @@ static void *mp3_open(char *filename, int freq, int channels, int format, int en
     	
 	shnd = snd_stream_alloc(mpg_callback, sbsize);
 	
-	snd_stream_start(shnd, sample_rate, chans-1);	
-	
+	snd_stream_start(shnd, sample_rate, chans-1);
+
+	int volume = GetVolumeFromSettings();
+	if(volume >= 0) {
+		snd_stream_volume(shnd, volume);
+	}
   return oss_out;
 }
 

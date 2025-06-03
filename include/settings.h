@@ -84,4 +84,6 @@ void ResetSettings();
 int LoadSettings();
 int SaveSettings();
 
+int GetVolumeFromSettings();
+
 #endif /* _DS_SETTINGS_H */

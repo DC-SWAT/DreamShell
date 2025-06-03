@@ -315,6 +315,7 @@ SetSettings
 ResetSettings
 LoadSettings
 SaveSettings
+GetVolumeFromSettings
 #
 splitline
 hex_to_int

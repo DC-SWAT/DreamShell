@@ -6,6 +6,7 @@
 
 #include "ds.h"
 #include "audio/wav.h"
+#include "settings.h"
 
 DEFAULT_MODULE_HEADER(wave);
 
@@ -19,6 +20,12 @@ static int start_playback(const char *file, int loop) {
         ds_printf("DS_ERROR: Can't play file: %s\n", file);
         return CMD_ERROR;
     }
+    
+    int volume = GetVolumeFromSettings();
+    if(volume >= 0) {
+        wav_volume(wav_hnd, volume);
+    }
+    
     wav_play(wav_hnd);
     return CMD_OK;
 }
