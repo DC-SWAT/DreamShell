@@ -11,6 +11,11 @@
 #include "tsudefinition.h"
 #include <algorithm>
 
+extern "C"
+{
+	#include "../sfx.h"
+}
+
 Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, int radius, bool visible_title, bool visible_bottom, Font *title_font,
 	const Color &border_color, const Color &title_background_color, const Color &body_color, const Color &bottom_background_color,
 	ViewIndexChangedEventPtr view_index_changed_event)  {
@@ -918,6 +923,8 @@ void Form::setCursorSize(float width, float height) {
 
 void Form::setCursor(Drawable *drawable) {
 	if (drawable && !drawable->isReadOnly()) {
+		ds_sfx_play(DS_SFX_CLICK2);
+
 		if (m_current_object_selected) {
 			m_current_object_selected = nullptr;
 		}
