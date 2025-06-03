@@ -6,6 +6,7 @@
 */          
 
 #include "ds.h"
+#include "sfx.h"
 #include "drivers/dreameye.h"
 
 /* u_block + v_block + y_block = 64 + 64 + 256 = 384 for YUV420 */
@@ -107,18 +108,22 @@ static void DrawHandler(void *ds_event, void *param, int action) {
 }
 
 static void onPreviewClick(void) {
+
     if(is_fullscreen) {
+        ds_sfx_play(DS_SFX_CLICK);
+
         if(back_to_window) {
             is_fullscreen = 0;
             frame_x = frame_x_old;
             frame_y = frame_y_old;
             EnableScreen();
             GUI_Enable();
-        } else {
+        }
+        else {
             dreameye_preview_shutdown(dreameye);
         }
-    } else {
-
+    }
+    else {
         int mx = 0;
         int my = 0;
 
@@ -126,12 +131,15 @@ static void onPreviewClick(void) {
 
         if(mx >= frame_x && mx <= frame_x + (frame_txr_width * frame_scale) &&
             my >= frame_y && my <= frame_y + (frame_txr_height * frame_scale)) {
+            ds_sfx_play(DS_SFX_CLICK);
+
             is_fullscreen = 1;
             back_to_window = 1;
             frame_x_old = frame_x;
             frame_y_old = frame_y;
             frame_x = 0.0f;
             frame_y = 0.0f;
+
             DisableScreen();
             GUI_Disable();
         }
