@@ -10,6 +10,7 @@
 #ifndef __TSUNAMI_DRW_FORM_H
 #define __TSUNAMI_DRW_FORM_H
 
+#include "../sound.h"
 #include "../drawable.h"
 #include "../font.h"
 #include "../color.h"
@@ -33,6 +34,8 @@ typedef void (*ViewIndexChangedEventPtr) (Drawable *form_ptr, int view_index);
 typedef void (*GetObjectsCurrentViewEventPtr) (uint loop_index, int id, Drawable *drawable, uint type, uint row, uint column, int view_index);
 
 #ifdef __cplusplus
+
+#include <filesystem>
 
 typedef struct ObjectStructure
 {
@@ -70,7 +73,9 @@ private:
 	uint m_columns_size, m_rows_size;
 	int m_x, m_y;
 	int m_current_view_index;
-
+	int m_sfx_volume;
+	
+	Sound *m_sfx_cursor, *m_sfx_click;
 	Color m_body_color, m_title_background_color, m_bottom_background_color, m_border_color, m_background_color;
 	Rectangle *m_background_rectangle, *m_title_rectangle, *m_body_rectangle, *m_bottom_rectangle, *m_cursor, *m_bottom_cursor;
 	Box *m_main_box;
@@ -166,7 +171,9 @@ public:
 
 	void onViewIndexChangedEvent();
 	void onGetObjectsCurrentViewEvent();
-	
+	void setSfxClick(const std::filesystem::path &fn);
+	void setSfxCursor(const std::filesystem::path &fn);
+	void setSfxVolume(int volume);
 };
 
 #else
@@ -186,6 +193,9 @@ extern "C"
 						ViewIndexChangedEventPtr view_index_changed_event_ptr);
 
 	void TSU_FormSetAttributes(Form *form_ptr, uint number_columns, uint number_rows, uint columns_size, uint rows_size);	
+	void TSU_FormSetSfxClick(Form *form_ptr, const char *file);
+	void TSU_FormSetSfxCursor(Form *form_ptr, const char *file);
+	void TSU_FormSetSfxVolume(Form *form_ptr, int volume);
 	void TSU_FormRemove(Form *form_ptr);
 	void TSU_FormDestroy(Form **form_ptr);
 	void TSU_FormInputEvent(Form *form_ptr, int event_type, int key);

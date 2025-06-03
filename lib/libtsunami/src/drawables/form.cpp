@@ -11,10 +11,6 @@
 #include "tsudefinition.h"
 #include <algorithm>
 
-extern "C"
-{
-	#include "../sfx.h"
-}
 
 Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, int radius, bool visible_title, bool visible_bottom, Font *title_font,
 	const Color &border_color, const Color &title_background_color, const Color &body_color, const Color &bottom_background_color,
@@ -22,6 +18,9 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, in
 
 	setObjectType(ObjectTypeEnum::FORM_TYPE);
 
+	m_sfx_volume = -1;
+	m_sfx_click = NULL;
+	m_sfx_cursor = NULL;
 	m_cursor_animation_enable = false;
 	m_current_view_index = 0;
 	m_current_column = m_current_row = 0;
@@ -76,7 +75,15 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, in
 	createForm();
 }
 
-Form::~Form() {	
+Form::~Form() {
+
+	if (m_sfx_click) {
+		delete m_sfx_click;
+	}
+
+	if (m_sfx_cursor) {
+		delete m_sfx_cursor;
+	}
 
 	if (m_columns_attributes != nullptr) {
 		free(m_columns_attributes);
@@ -923,7 +930,13 @@ void Form::setCursorSize(float width, float height) {
 
 void Form::setCursor(Drawable *drawable) {
 	if (drawable && !drawable->isReadOnly()) {
-		ds_sfx_play(DS_SFX_CLICK2);
+
+		if (m_sfx_cursor) {
+			if (m_sfx_volume == -1)
+				m_sfx_cursor->play();
+			else if (m_sfx_volume > 0)
+				m_sfx_cursor->play(m_sfx_volume);
+		}
 
 		if (m_current_object_selected) {
 			m_current_object_selected = nullptr;
@@ -1102,6 +1115,13 @@ void Form::inputEvent(int event_type, int key) {
 		case GenericMenu::Event::KeySelect:
 		{
 			if (m_current_object_selected) {
+				if (m_sfx_click) {
+					if (m_sfx_volume == -1)
+						m_sfx_click->play();
+					else if (m_sfx_volume > 0)
+						m_sfx_click->play(m_sfx_volume);
+				}
+				
 				m_current_object_selected->click();
 			}
 		}
@@ -1206,6 +1226,30 @@ void Form::getObjectsCurrentViewEvent(GetObjectsCurrentViewEventPtr func_ptr) {
 	}
 }
 
+void Form::setSfxClick(const std::filesystem::path &fn) {
+	file_t f = fs_open(fn.c_str(), O_RDONLY);
+	if(f != FILEHND_INVALID) {
+		fs_close(f);
+		
+		m_sfx_click = new Sound(fn);
+	}
+}
+
+void Form::setSfxCursor(const std::filesystem::path &fn) {
+	file_t f = fs_open(fn.c_str(), O_RDONLY);
+	if(f != FILEHND_INVALID) {
+		fs_close(f);
+		
+		m_sfx_cursor = new Sound(fn);
+	}
+}
+
+void Form::setSfxVolume(int volume) {
+	if (volume >= 0) {
+		m_sfx_volume = volume;
+	}
+}
+
 
 extern "C"
 {
@@ -1226,6 +1270,30 @@ extern "C"
 		{
 			form_ptr->setAttributes(number_columns, number_rows, columns_size, rows_size);
 		}
+	}
+
+	void TSU_FormSetSfxClick(Form *form_ptr, const char *file)
+	{
+		if (form_ptr != NULL && file != NULL)
+		{
+			form_ptr->setSfxClick(file);
+		}
+	}
+
+	void TSU_FormSetSfxCursor(Form *form_ptr, const char *file)
+	{
+		if (form_ptr != NULL && file != NULL)
+		{
+			form_ptr->setSfxCursor(file);
+		}
+	}
+
+	void TSU_FormSetSfxVolume(Form *form_ptr, int volume)
+	{
+		if (form_ptr != NULL && volume >= 0)
+		{
+			form_ptr->setSfxVolume(volume);
+		}		
 	}
 
 	void TSU_FormRemove(Form *form_ptr)
