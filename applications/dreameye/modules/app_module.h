@@ -59,3 +59,5 @@ void DreameyeApp_ShowFullscreenPhoto(GUI_Widget *widget);
 void DreameyeApp_ExitFullscreen(GUI_Widget *widget);
 
 void DreameyeApp_CancelExport(GUI_Widget *widget);
+
+void DreameyeApp_ChangeBpp(GUI_Widget *widget);

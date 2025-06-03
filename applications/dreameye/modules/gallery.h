@@ -8,7 +8,7 @@
 #include <dc/maple.h>
 #include <stdbool.h>
 
-#define GALLERY_CACHE_PAGES 2
+#define GALLERY_CACHE_PAGES 6
 #define GALLERY_THUMB_WIDTH 140
 #define GALLERY_THUMB_HEIGHT 110
 

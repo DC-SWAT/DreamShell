@@ -13,6 +13,7 @@ DreameyeApp_FileBrowserItemClick
 DreameyeApp_FileBrowserConfirm
 DreameyeApp_CancelExport
 DreameyeApp_ChangeResolution
+DreameyeApp_ChangeBpp
 DreameyeApp_ToggleDetectQR
 DreameyeApp_ToggleExecQR
 DreameyeApp_Abort

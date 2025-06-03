@@ -60,6 +60,7 @@ static struct {
     GUI_Widget *photo_count_photo_page;
     GUI_Widget *file_browser;
     GUI_Widget *isp_mode[2];
+    GUI_Widget *bpp_mode[2];
 
     GUI_Widget *viewer_status;
     GUI_Widget *viewer_photo_info;
@@ -80,7 +81,7 @@ static struct {
 } self;
 
 #define NO_QR_CODE_TEXT "QR code is not detected"
-#define ACTION_COMPLETE_TIMEOUT_MS 2000
+#define ACTION_COMPLETE_TIMEOUT_MS 1500
 
 static void HideCameraPreview(void) {
     dreameye_preview_shutdown(self.dev);
@@ -234,6 +235,9 @@ void DreameyeApp_Init(App_t *app) {
 
     self.isp_mode[0] = APP_GET_WIDGET("isp-mode-qsif");
     self.isp_mode[1] = APP_GET_WIDGET("isp-mode-sif");
+    
+    self.bpp_mode[0] = APP_GET_WIDGET("bpp-12");
+    self.bpp_mode[1] = APP_GET_WIDGET("bpp-16");
 
     self.viewer_status = APP_GET_WIDGET("viewer-status");
     self.viewer_photo_info = APP_GET_WIDGET("viewer-photo-info");
@@ -356,6 +360,21 @@ void DreameyeApp_ChangeResolution(GUI_Widget *widget) {
     ShowCameraPreview();
 }
 
+void DreameyeApp_ChangeBpp(GUI_Widget *widget) {
+
+    GUI_WidgetSetState(widget, 1);
+
+    if(self.bpp_mode[0] == widget) {
+        self.preview.bpp = 12;
+        GUI_WidgetSetState(self.bpp_mode[1], 0);
+    } else {
+        self.preview.bpp = 16;
+        GUI_WidgetSetState(self.bpp_mode[0], 0);
+    }
+
+    ShowCameraPreview();
+}
+
 void DreameyeApp_ToggleDetectQR(GUI_Widget *widget) {
 
     HideCameraPreview();
@@ -424,7 +443,7 @@ static void *ExportSinglePhoto(void *param) {
         desc = "Export failed.";
     }
     else {
-        UpdateProgress("Exporting photo...", 0.0f);
+        UpdateProgress("Exporting photo...", 0.5f);
         if(export_photo(self.dev, dir, state->current_photo) < 0) {
             desc = "Export failed.";
         }
@@ -447,7 +466,6 @@ static void *EraseSinglePhoto(void *param) {
         desc = "Delete failed.";
     }
     else {
-        UpdateProgress("Deleting photo...", 0.0f);
         if(erase_photo(self.dev, state->current_photo) < 0) {
             desc = "Delete failed.";
         }
@@ -500,11 +518,11 @@ static void *ErasePhotos(void *param) {
             }
             thd_pass();
         } while (get_photo_count(self.dev) != (self.photo_count - i - 1));
-        
+
         UpdateProgress("Erasing photos...", (1.0f / self.photo_count) * i);
     }
 
-    UpdateProgress("Checking...", 0.99f);
+    UpdateProgress("Checking...", 1.0f);
     self.photo_count = get_photo_count(self.dev);
 
     if(self.photo_count) {
@@ -749,9 +767,11 @@ void DreameyeApp_ConfirmDelete(GUI_Widget *widget) {
     GUI_CardStackShowIndex(self.pages, APP_PAGE_PROGRESS);
 
     if (self.action == APP_ACTION_PHOTO_ERASE) {
+        UpdateProgress("Erasing photos...", 0.0f);
         thd_create(1, ErasePhotos, NULL);
     }
     else if (self.action == APP_ACTION_PHOTO_ERASE_SINGLE) {
+        UpdateProgress("Deleting photo...", 0.0f);
         thd_create(1, EraseSinglePhoto, NULL);
     }
 }
