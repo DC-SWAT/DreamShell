@@ -574,7 +574,8 @@ static void on_thumb_loaded(int thumb_index, GUI_Surface *surface, GUI_Surface *
     }
 
     if (surface) {
-        GUI_LabelSetText(self.thumb_labels[thumb_index], GUI_ObjectGetName((GUI_Object *)surface));
+        // GUI_LabelSetText(self.thumb_labels[thumb_index], GUI_ObjectGetName((GUI_Object *)surface));
+        GUI_LabelSetText(self.thumb_labels[thumb_index], " ");
         GUI_ButtonSetNormalImage(self.thumb_buttons[thumb_index], surface);
 
         if (hl_surface) {

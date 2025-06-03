@@ -215,6 +215,14 @@
 						<label font="comic-22" color="#EEEEEE" text="Camera preview" />
 					</input>
 				</panel>
+				<panel x="500" y="320" height="25" width="140">
+					<label align="left" color="#333333" font="comic-14" height="25"
+						text="Click preview to" width="100%" />
+				</panel>
+				<panel x="500" y="345" height="25" width="140">
+					<label align="left" color="#333333" font="comic-14" height="25"
+						text="open fullscreen" width="100%" />
+				</panel>
 				<panel x="500" y="135" height="50" width="120">
 					<label align="left" color="#31799F" font="comic-16" height="25"
 						text="Storage:" width="100%" />
