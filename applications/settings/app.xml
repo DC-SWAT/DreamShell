@@ -52,6 +52,14 @@
 			<fill x="0" y="0" width="25" height="20" color="#29B1EA" />
 			<fill x="2" y="2" width="23" height="18" color="#7CFFC1" />
 		</surface>
+		<surface width="200" height="20" name="slider-bg">
+			<fill x="0" y="0" width="200" height="20" color="#CCCCCC" />
+			<fill x="2" y="2" width="196" height="16" color="#EEEEEE" />
+		</surface>
+		<surface width="20" height="20" name="slider-knob">
+			<fill x="0" y="0" width="20" height="20" color="#31799F" />
+			<fill x="2" y="2" width="16" height="16" color="#61BDEC" />
+		</surface>
 		<theme>
 			<input type="button" normal="but-normal" highlight="but-hl" pressed="but-pressed" disabled="but-disabled" />
 			<input type="checkbox" onnormal="check-on" onhighlight="check-on-hl" offnormal="check-off" offhighlight="check-off-hl" />
@@ -75,6 +83,11 @@
 					</input>
 				</panel>
 				<panel height="70" width="50%">
+					<input type="button" width="280" height="60" onclick="export:SettingsApp_ShowPage()" name="sound-but" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Sound settings" />
+					</input>
+				</panel>
+				<panel height="70" width="50%">
 					<input type="button" width="280" height="60" onclick="export:SaveSettings()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Save to VMU or Root" />
 					</input>
@@ -94,7 +107,7 @@
 						<label font="comic-22" color="#EEEEEE" text="Reboot" />
 					</input>
 				</panel>
-				<panel height="70" width="100%">
+				<panel height="70" width="50%">
 					<input type="button" width="280" height="60" onclick="console:app -o -n Main" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Exit" />
 					</input>
@@ -330,6 +343,56 @@
 				</panel>
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60" onclick="export:SettingsApp_ShowPage()" name="main-but-clock" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Back to main page" />
+					</input>
+				</panel>
+
+			</panel>
+			<panel name="sound-page" y="10">
+
+				<panel x="5%" y="20" width="40%" height="25">
+					<label width="100%" height="100%" font="comic-22" color="#31799F" text="Master volume" align="left" />
+				</panel>
+
+				<panel x="5%" y="45" width="40%" height="25">
+					<scrollbar x="0" y="2" width="200" height="20" name="volume-slider" onmove="export:SettingsApp_VolumeChange" background="slider-bg" knob="slider-knob" />
+					<label x="210" width="50" height="25" font="arial" color="#333333" text="200" align="left" name="volume-label" />
+				</panel>
+
+				<panel x="5%" y="85" width="40%" height="25">
+					<label width="200" height="25" font="comic-22" color="#31799F" text="General" align="left" />
+				</panel>
+
+				<panel x="5%" y="110" width="40%" height="25">
+					<input type="checkbox" x="0" y="2" width="180" height="25" onclick="export:SettingsApp_ToggleStartupSound()" name="startup-chk">
+						<label x="25" height="20" font="arial" color="#333333" text="Startup sound" align="left" />
+					</input>
+				</panel>
+
+				<panel x="5%" y="135" width="40%" height="25">
+					<input type="checkbox" x="0" y="2" width="200" height="25" onclick="export:SettingsApp_ToggleSfx()" name="sfx-chk">
+						<label x="25" height="20" font="arial" color="#333333" text="Sound effects" align="left" />
+					</input>
+				</panel>
+
+				<panel x="5%" y="175" width="40%" height="25">
+					<label width="250" height="25" font="comic-22" color="#31799F" text="Mouse cursor" align="left" />
+				</panel>
+
+				<panel x="5%" y="200" width="40%" height="25">
+					<input type="checkbox" x="0" y="2" width="150" height="25" onclick="export:SettingsApp_ToggleClick()" name="click-chk">
+						<label x="25" height="20" font="arial" color="#333333" text="Click sounds" align="left" />
+					</input>
+				</panel>
+
+				<panel x="5%" y="225" width="40%" height="25">
+					<input type="checkbox" x="0" y="2" width="150" height="25" onclick="export:SettingsApp_ToggleHover()" name="hover-chk">
+						<label x="25" height="20" font="arial" color="#333333" text="Hover sounds" align="left" />
+					</input>
+				</panel>
+
+				<panel height="60" y="290">
+					<input type="button" width="280" height="60" onclick="export:SettingsApp_ShowPage()" name="main-but-sound" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Back to main page" />
 					</input>
 				</panel>

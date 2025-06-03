@@ -16,6 +16,7 @@
 
 #include <sfx.h>
 #include <utils.h>
+#include <settings.h>
 
 /* Filename of raw ADPCM file in DS/sfx/ directory 
    or filename of raw ADPCM packed to gzipped file (.gz extension) in /rd directory
@@ -148,6 +149,35 @@ static void *load_raw_adpcm(const char *filename, size_t *sz) {
 	return data;
 }
 
+static int ds_sfx_is_enabled(ds_sfx_t sfx) {
+	Settings_t *settings = GetSettings();
+
+	if(!settings || settings->audio.volume == 0) {
+		return 0;
+	}
+
+	switch(sfx) {
+		case DS_SFX_STARTUP:
+			return settings->audio.startup_enabled;
+		case DS_SFX_CLICK:
+			return settings->audio.sfx_enabled && settings->audio.click_enabled;
+		case DS_SFX_CLICK2:
+			return settings->audio.sfx_enabled && settings->audio.hover_enabled;
+		default:
+			return settings->audio.sfx_enabled;
+	}
+}
+
+static int ds_sfx_get_volume() {
+	Settings_t *settings = GetSettings();
+	
+	if(!settings) {
+		return 230;
+	}
+	
+	return settings->audio.volume;
+}
+
 static int ds_sfx_play_stream(ds_sfx_t sfx) {
 	char sfx_path[NAME_MAX];
 	
@@ -178,7 +208,7 @@ static int ds_sfx_play_stream(ds_sfx_t sfx) {
 	}
 
 	snd_stream_start_adpcm(snd_stream_hnd, 44100, 1);
-	snd_stream_volume(snd_stream_hnd, 230);
+	snd_stream_volume(snd_stream_hnd, ds_sfx_get_volume());
 
 	thd_create(1, snd_stream_thread, (void *)snd_stream_hnd);
 	return 0;
@@ -187,6 +217,10 @@ static int ds_sfx_play_stream(ds_sfx_t sfx) {
 int ds_sfx_play(ds_sfx_t sfx) {
 	if(sfx >= DS_SFX_LAST) {
 		return -1;
+	}
+
+	if(!ds_sfx_is_enabled(sfx)) {
+		return 0;
 	}
 
 	if (sfx < DS_SFX_LAST_STREAM) {
@@ -206,6 +240,6 @@ int ds_sfx_play(ds_sfx_t sfx) {
 		}
 	}
 
-	snd_sfx_play(sys_sfx_hnd[sfx_sel], 230, 128);
+	snd_sfx_play(sys_sfx_hnd[sfx_sel], ds_sfx_get_volume(), 128);
 	return 0;
 }

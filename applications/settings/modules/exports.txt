@@ -18,3 +18,9 @@ SettingsApp_ToggleStartup
 SettingsApp_Time
 SettingsApp_Time_Clr
 SettingsApp_TimeChange
+# Audio
+SettingsApp_ToggleSfx
+SettingsApp_ToggleClick
+SettingsApp_ToggleHover
+SettingsApp_ToggleStartupSound
+SettingsApp_VolumeChange

@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Settings app module
-   Copyright (C)2016-2022, 2024 SWAT 
+   Copyright (C)2016-2025 SWAT 
 */
 
 #include "ds.h"
@@ -38,11 +38,24 @@ static struct {
 	Settings_t *settings;
 	GUI_Widget *pages;
 	GUI_Widget *sysdate[6];
+	GUI_Widget *volume_knob;
+	GUI_Widget *volume_label;
+	GUI_Widget *sfx_chk;
+	GUI_Widget *click_chk;
+	GUI_Widget *hover_chk;
+	GUI_Widget *startup_chk;
+	
+	int prev_sfx_enabled;
+	int prev_click_enabled;
+	int prev_hover_enabled;
+	int prev_startup_enabled;
+	int volume_was_zero;
 	
 } self;
 
 static void SetupVideoSettings();
 static void SetupBootSettings();
+static void SetupAudioSettings();
 
 static int UncheckBesides(GUI_Widget *widget, char *label) {
 
@@ -100,8 +113,22 @@ void SettingsApp_Init(App_t *app) {
 		self.sysdate[3] = APP_GET_WIDGET("hours");
 		self.sysdate[4] = APP_GET_WIDGET("minute");
 		
+		self.volume_knob = APP_GET_WIDGET("volume-slider");
+		self.volume_label = APP_GET_WIDGET("volume-label");
+		self.sfx_chk = APP_GET_WIDGET("sfx-chk");
+		self.click_chk = APP_GET_WIDGET("click-chk");
+		self.hover_chk = APP_GET_WIDGET("hover-chk");
+		self.startup_chk = APP_GET_WIDGET("startup-chk");
+		
+		self.prev_sfx_enabled = 1;
+		self.prev_click_enabled = 1;
+		self.prev_hover_enabled = 1;
+		self.prev_startup_enabled = 1;
+		self.volume_was_zero = 0;
+		
 		SetupVideoSettings();
 		SetupBootSettings();
+		SetupAudioSettings();
 	}
 }
 
@@ -132,6 +159,7 @@ void SettingsApp_ResetSettings(GUI_Widget *widget) {
 	ResetSettings();
 	SetupBootSettings();
 	SetupVideoSettings();
+	SetupAudioSettings();
 	SetScreenMode(self.settings->video.virt_width, self.settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 	SetScreenFilter(self.settings->video.tex_filter);
 }
@@ -315,14 +343,17 @@ void SettingsApp_ToggleRoot(GUI_Widget *widget) {
 
 
 void SettingsApp_ToggleStartup(GUI_Widget *widget) {
-
 	UncheckBesides(widget, NULL);
 	GUI_Widget *label = GUI_ToggleButtonGetCaption(widget);
 	
 	if(label) {
 		char *value = GUI_LabelGetText(label);
-		strncpy(self.settings->startup, value, sizeof(self.settings->root));
+		strncpy(self.settings->startup, value, sizeof(self.settings->startup));
 	}
+}
+
+void SettingsApp_ToggleStartupSound(GUI_Widget *widget) {
+	self.settings->audio.startup_enabled = GUI_WidgetGetState(widget);
 }
 
 
@@ -483,5 +514,152 @@ void SettingsApp_Time(GUI_Widget *widget)
 void SettingsApp_Time_Clr(GUI_Widget *widget)
 {
 	GUI_TextEntrySetText(widget, "");
+}
+
+static void SetupAudioSettings() {
+	
+	if(self.volume_knob && self.volume_label) {
+		int volume = self.settings->audio.volume;
+		int knob_pos = (volume * 180) / 255;
+		char buf[8];
+		
+		GUI_ScrollBarSetHorizontalPosition(self.volume_knob, knob_pos);
+		sprintf(buf, "%d", volume);
+		GUI_LabelSetText(self.volume_label, buf);
+	}
+	
+	int volume_enabled = (self.settings->audio.volume > 0);
+	int sfx_and_volume_enabled = volume_enabled && self.settings->audio.sfx_enabled;
+	
+	if(self.sfx_chk) {
+		GUI_WidgetSetState(self.sfx_chk, self.settings->audio.sfx_enabled);
+		GUI_WidgetSetEnabled(self.sfx_chk, volume_enabled);
+	}
+	
+	if(self.click_chk) {
+		GUI_WidgetSetState(self.click_chk, self.settings->audio.click_enabled);
+		GUI_WidgetSetEnabled(self.click_chk, sfx_and_volume_enabled);
+	}
+	
+	if(self.hover_chk) {
+		GUI_WidgetSetState(self.hover_chk, self.settings->audio.hover_enabled);
+		GUI_WidgetSetEnabled(self.hover_chk, sfx_and_volume_enabled);
+	}
+
+	if(self.startup_chk) {
+		GUI_WidgetSetState(self.startup_chk, self.settings->audio.startup_enabled);
+		GUI_WidgetSetEnabled(self.startup_chk, volume_enabled);
+	}
+}
+
+void SettingsApp_ToggleSfx(GUI_Widget *widget) {
+	int enabled = GUI_WidgetGetState(widget);
+	self.settings->audio.sfx_enabled = enabled;
+	
+	if(!enabled) {
+		self.settings->audio.click_enabled = 0;
+		self.settings->audio.hover_enabled = 0;
+		
+		if(self.click_chk) {
+			GUI_WidgetSetState(self.click_chk, 0);
+			GUI_WidgetSetEnabled(self.click_chk, 0);
+		}
+		if(self.hover_chk) {
+			GUI_WidgetSetState(self.hover_chk, 0);
+			GUI_WidgetSetEnabled(self.hover_chk, 0);
+		}
+	}
+	else {
+		self.settings->audio.click_enabled = 1;
+		self.settings->audio.hover_enabled = 1;
+		
+		if(self.click_chk) {
+			GUI_WidgetSetState(self.click_chk, 1);
+			GUI_WidgetSetEnabled(self.click_chk, 1);
+		}
+		if(self.hover_chk) {
+			GUI_WidgetSetState(self.hover_chk, 1);
+			GUI_WidgetSetEnabled(self.hover_chk, 1);
+		}
+	}
+}
+
+void SettingsApp_ToggleClick(GUI_Widget *widget) {
+	self.settings->audio.click_enabled = GUI_WidgetGetState(widget);
+}
+
+void SettingsApp_ToggleHover(GUI_Widget *widget) {
+	self.settings->audio.hover_enabled = GUI_WidgetGetState(widget);
+}
+
+void SettingsApp_VolumeChange(GUI_Widget *widget) {
+	
+	if(self.volume_knob && self.volume_label) {
+		int knob_pos = GUI_ScrollBarGetHorizontalPosition(self.volume_knob);
+		int volume = (knob_pos * 255) / 180;
+		char buf[8];
+		
+		if(volume < 0) volume = 0;
+		if(volume > 255) volume = 255;
+		
+		int was_zero = (self.settings->audio.volume == 0);
+		int is_zero = (volume == 0);
+		
+		if(!was_zero && is_zero) {
+			self.prev_sfx_enabled = self.settings->audio.sfx_enabled;
+			self.prev_click_enabled = self.settings->audio.click_enabled;
+			self.prev_hover_enabled = self.settings->audio.hover_enabled;
+			self.prev_startup_enabled = self.settings->audio.startup_enabled;
+			
+			self.settings->audio.sfx_enabled = 0;
+			self.settings->audio.click_enabled = 0;
+			self.settings->audio.hover_enabled = 0;
+			self.settings->audio.startup_enabled = 0;
+			
+			if(self.sfx_chk) {
+				GUI_WidgetSetState(self.sfx_chk, 0);
+				GUI_WidgetSetEnabled(self.sfx_chk, 0);
+			}
+			if(self.click_chk) {
+				GUI_WidgetSetState(self.click_chk, 0);
+				GUI_WidgetSetEnabled(self.click_chk, 0);
+			}
+			if(self.hover_chk) {
+				GUI_WidgetSetState(self.hover_chk, 0);
+				GUI_WidgetSetEnabled(self.hover_chk, 0);
+			}
+			if(self.startup_chk) {
+				GUI_WidgetSetState(self.startup_chk, 0);
+				GUI_WidgetSetEnabled(self.startup_chk, 0);
+			}
+		}
+		else if(was_zero && !is_zero) {
+			self.settings->audio.sfx_enabled = self.prev_sfx_enabled;
+			self.settings->audio.click_enabled = self.prev_click_enabled;
+			self.settings->audio.hover_enabled = self.prev_hover_enabled;
+			self.settings->audio.startup_enabled = self.prev_startup_enabled;
+			
+			if(self.sfx_chk) {
+				GUI_WidgetSetState(self.sfx_chk, self.settings->audio.sfx_enabled);
+				GUI_WidgetSetEnabled(self.sfx_chk, 1);
+			}
+			if(self.startup_chk) {
+				GUI_WidgetSetState(self.startup_chk, self.settings->audio.startup_enabled);
+				GUI_WidgetSetEnabled(self.startup_chk, 1);
+			}
+			if(self.click_chk) {
+				GUI_WidgetSetState(self.click_chk, self.settings->audio.click_enabled);
+				GUI_WidgetSetEnabled(self.click_chk, self.settings->audio.sfx_enabled);
+			}
+			if(self.hover_chk) {
+				GUI_WidgetSetState(self.hover_chk, self.settings->audio.hover_enabled);
+				GUI_WidgetSetEnabled(self.hover_chk, self.settings->audio.sfx_enabled);
+			}
+		}
+		
+		self.settings->audio.volume = volume;
+		sprintf(buf, "%d", volume);
+		GUI_LabelSetText(self.volume_label, buf);
+	}
 }
 

@@ -80,6 +80,7 @@ void ResetSettings() {
 
 	Settings_t *cur = &current_set;
 	VideoSettings_t *vid = &current_set.video;
+	AudioSettings_t *aud = &current_set.audio;
 	memset(&current_set, 0, sizeof(current_set));
 
 	vid->bpp = 16;
@@ -90,6 +91,12 @@ void ResetSettings() {
 
 	vid->virt_width = 640;
 	vid->virt_height = 480;
+
+	aud->volume = 230;
+	aud->sfx_enabled = 1;
+	aud->click_enabled = 1;
+	aud->hover_enabled = 1;
+	aud->startup_enabled = 1;
 
 	strncpy(cur->app, "Main", 4);
 	cur->app[4] = '\0';

@@ -1,7 +1,7 @@
 /** 
  * \file    settings.h
  * \brief   DreamShell settings
- * \date    2016
+ * \date    2016, 2025
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -32,6 +32,28 @@ typedef struct VideoSettings {
 }  VideoSettings_t;
 
 
+typedef struct AudioSettings {
+
+	/* Master volume (0-255) */
+	int volume;
+
+	/* Sound effects enable/disable */
+	int sfx_enabled;
+
+	/* Click sound enable/disable */
+	int click_enabled;
+
+	/* Hover sound enable/disable */
+	int hover_enabled;
+
+	/* Startup sound enable/disable */
+	int startup_enabled;
+
+	int reserved[15];
+
+}  AudioSettings_t;
+
+
 typedef struct Settings {
 
 	/* Core version */
@@ -48,6 +70,9 @@ typedef struct Settings {
 
 	/* Video */
 	VideoSettings_t video;
+
+	/* Audio */
+	AudioSettings_t audio;
 
 }  Settings_t;
 

@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    app_module.h - Settings app module header
-   Copyright (C)2016-2024 SWAT
+   Copyright (C)2016-2025 SWAT
 */
 
 #include "ds.h"
@@ -31,3 +31,13 @@ void SettingsApp_TimeChange(GUI_Widget *widget);
 void SettingsApp_Time(GUI_Widget *widget);
 
 void SettingsApp_Time_Clr(GUI_Widget *widget);
+
+void SettingsApp_ToggleSfx(GUI_Widget *widget);
+
+void SettingsApp_ToggleClick(GUI_Widget *widget);
+
+void SettingsApp_ToggleHover(GUI_Widget *widget);
+
+void SettingsApp_ToggleStartupSound(GUI_Widget *widget);
+
+void SettingsApp_VolumeChange(GUI_Widget *widget);
