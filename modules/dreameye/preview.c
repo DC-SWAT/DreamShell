@@ -8,8 +8,10 @@
 #include "ds.h"
 #include "drivers/dreameye.h"
 
-/* u_block + v_block + y_block = 64 + 64 + 256 = 384 */
-#define BYTE_SIZE_FOR_16x16_BLOCK 384
+/* u_block + v_block + y_block = 64 + 64 + 256 = 384 for YUV420 */
+/* u_block + v_block + y_block = 128 + 128 + 256 = 512 for YUV422 */
+#define BYTE_SIZE_FOR_16x16_BLOCK_420 384
+#define BYTE_SIZE_FOR_16x16_BLOCK_422 512
 
 #define PVR_YUV_FORMAT_YUV420 0
 #define PVR_YUV_FORMAT_YUV422 1
@@ -181,7 +183,9 @@ static int setup_pvr(void) {
     /* Setup YUV converter. */
     PVR_SET(PVR_YUV_ADDR, (((unsigned int)pvr_txr) & 0xffffff));
     /* Divide PVR texture width and texture height by 16 and subtract 1. */
-    PVR_SET(PVR_YUV_CFG, (PVR_YUV_FORMAT_YUV420 << 24) |
+    uint8_t yuv_format = (frame_format == DREAMEYE_FRAME_FMT_YUYV422) ? 
+                     PVR_YUV_FORMAT_YUV422 : PVR_YUV_FORMAT_YUV420;
+    PVR_SET(PVR_YUV_CFG, (yuv_format << 24) |
                          (PVR_YUV_MODE_SINGLE << 16) |
                          (((pvr_txr_height / 16) - 1) << 8) |
                          ((pvr_txr_width / 16) - 1));
@@ -200,7 +204,7 @@ static int setup_pvr(void) {
 
 static void yuv420p_to_yuv422(uint8_t *src) {
     int i, j, index, x_blk, y_blk;
-    size_t dummies = (BYTE_SIZE_FOR_16x16_BLOCK *
+    size_t dummies = (BYTE_SIZE_FOR_16x16_BLOCK_420 *
         ((pvr_txr_width >> 4) - (frame_txr_width >> 4))) >> 5;
 
     uint32_t *db = (uint32_t *)SQ_MASK_DEST_ADDR(PVR_TA_YUV_CONV);
@@ -222,8 +226,8 @@ static void yuv420p_to_yuv422(uint8_t *src) {
             for(i = 0; i < 8; ++i) {
                 index = (y_blk / 2 + i) * (frame_txr_width / 2) + 
                         (x_blk / 2);
-                *((uint64_t*)&u_block[i * 8]) = *((uint64_t*)&u_plane[index]);
-                if((i + 1) % 4 == 0) {
+                *((uint64_t *)&u_block[i * 8]) = *((uint64_t *)&u_plane[index]);
+                if(((i + 1) & 3) == 0) {
                     sq_flush(&u_block[i * 8]);
                 }
             }
@@ -232,8 +236,8 @@ static void yuv420p_to_yuv422(uint8_t *src) {
             for(i = 0; i < 8; ++i) {
                 index = (y_blk / 2 + i) * (frame_txr_width / 2) + 
                         (x_blk / 2);
-                *((uint64_t*)&v_block[i * 8]) = *((uint64_t*)&v_plane[index]);
-                if((i + 1) % 4 == 0) {
+                *((uint64_t *)&v_block[i * 8]) = *((uint64_t *)&v_plane[index]);
+                if(((i + 1) & 3) == 0) {
                     sq_flush(&v_block[i * 8]);
                 }
             }
@@ -243,9 +247,9 @@ static void yuv420p_to_yuv422(uint8_t *src) {
                 for(j = 0; j < 8; ++j) {
                     index = (y_blk + j + (i / 2 * 8)) * frame_txr_width + 
                              x_blk + (i % 2 * 8);
-                    *((uint64_t*)&y_block[i * 64 + j * 8]) = 
-                        *((uint64_t*)&y_plane[index]);
-                    if((j + 1) % 4 == 0) {
+                    *((uint64_t *)&y_block[i * 64 + j * 8]) = 
+                        *((uint64_t *)&y_plane[index]);
+                    if(((j + 1) & 3) == 0) {
                         sq_flush(&y_block[i * 64 + j * 8]);
                     }
                 }
@@ -261,6 +265,61 @@ static void yuv420p_to_yuv422(uint8_t *src) {
 
     sq_unlock();
     // sem_wait(&yuv_done);
+}
+
+/* FIXME: It's not effective as yuv420p_to_yuv422(), just works. */
+static void yuyv422_to_yuv422(uint8_t *src) {
+    int i, j, x_blk, y_blk;
+
+    uint8_t u_block[128] __attribute__((aligned(32)));
+    uint8_t v_block[128] __attribute__((aligned(32)));
+    uint8_t y_block[256] __attribute__((aligned(32)));
+
+    for(y_blk = 0; y_blk < frame_txr_height; y_blk += 16) {
+        for(x_blk = 0; x_blk < frame_txr_width; x_blk += 16) {
+
+            for(i = 0; i < 16; ++i) {
+                int row = y_blk + i;
+                for(j = 0; j < 8; ++j) {
+                    int x_pos = x_blk + j * 2;
+                    int yuyv_idx = (row * frame_txr_width + x_pos) * 2;
+                    u_block[i * 8 + j] = src[yuyv_idx + 1];
+                }
+            }
+
+            for(i = 0; i < 16; ++i) {
+                int row = y_blk + i;
+                for(j = 0; j < 8; ++j) {
+                    int x_pos = x_blk + j * 2;
+                    int yuyv_idx = (row * frame_txr_width + x_pos) * 2;
+                    v_block[i * 8 + j] = src[yuyv_idx + 3];
+                }
+            }
+
+            for(i = 0; i < 4; ++i) {
+                for(j = 0; j < 8; ++j) {
+                    int row = y_blk + j + (i / 2 * 8);
+                    for(int k = 0; k < 8; k += 2) {
+                        int x_pos = x_blk + k + (i % 2 * 8);
+                        int yuyv_idx = (row * frame_txr_width + x_pos) * 2;
+                        y_block[i * 64 + j * 8 + k] = src[yuyv_idx];
+                        y_block[i * 64 + j * 8 + k + 1] = src[yuyv_idx + 2];
+                    }
+                }
+            }
+
+            pvr_sq_load((void *)0, (void *)u_block, 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)0, (void *)v_block, 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)0, (void *)y_block, 128, PVR_DMA_YUV);
+            pvr_sq_load((void *)0, (void *)(u_block + 64), 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)0, (void *)(v_block + 64), 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)0, (void *)(y_block + 128), 128, PVR_DMA_YUV);
+        }
+
+        pvr_sq_set32((void *)PVR_TA_YUV_CONV, 0, 
+                     BYTE_SIZE_FOR_16x16_BLOCK_422 * 
+                     ((pvr_txr_width >> 4) - (frame_txr_width >> 4)), PVR_DMA_YUV);
+    }
 }
 
 
@@ -305,7 +364,7 @@ static void *capture_thread(void *param) {
                     yuv420p_to_yuv422(frame);
                     break;
                 case DREAMEYE_FRAME_FMT_YUYV422:
-                    // TODO: yuyv422_to_yuv422(frame);
+                    yuyv422_to_yuv422(frame);
                     break;
                 default:
                     got_frame = 0;

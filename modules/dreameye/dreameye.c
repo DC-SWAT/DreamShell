@@ -320,11 +320,25 @@ static void dreameye_get_video_frame_cb(maple_state_t *st, maple_frame_t *frame)
             dbglog(DBG_ERROR, "%s: Unexpected end of transfer, missing %d packets.\n",
                 __func__, first_state->transfer_count);
             first_state->img_transferring = -1;
-        } else {
+        }
+        else {
             first_state->img_transferring = 0;
             first_state->last_request = timer_ns_gettime64();
-             /* FIXME: Better framebuffers sync */
-            timer_spin_sleep(5);
+             /* FIXME: Better framebuffers sync.
+                Maybe need not touch the Root/Maple bus for a while?
+                Delay need exactly in this IRQ.
+              */
+            if(first_state->format == DREAMEYE_FRAME_FMT_YUYV422) {
+                if(first_state->width >= 320) {
+                    timer_spin_sleep(10);
+                }
+                else {
+                    timer_spin_sleep(7);
+                }
+            }
+            else {
+                timer_spin_sleep(5);
+            }
         }
         return;
     }
@@ -813,6 +827,7 @@ int dreameye_start_capturing(maple_device_t *dev, dreameye_frame_cb cb) {
     de->img_size = 0;
     de->img_number = 0;
     de->callback = cb;
+    de->last_request = 0;
 
     if(de->compressed) {
         de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE_COMPRESSED;
