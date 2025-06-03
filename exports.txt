@@ -49,6 +49,7 @@ include jpeg/jpeglib.h
 include jpeg/jpeg.h
 include tsunami/tsunami.h
 include sfx.h
+include audio/snddrv.h
 
 start
 expt_init
@@ -75,6 +76,8 @@ InitRomdisk
 SearchRoot
 RootDeviceIsSupported
 snd_init_firmware
+snddrv
+snd_sinfo
 vmu_draw_string
 vmu_draw_string_xy
 flashrom_get_region_only
