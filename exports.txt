@@ -60,6 +60,8 @@ longjmp
 setjmp
 #
 ds_sfx_play
+ds_sfx_is_enabled
+ds_sfx_get_wav
 SetVersion
 GetVersion
 GetVersionBuildTypeString
@@ -1226,6 +1228,9 @@ TSU_FormCreate
 TSU_FormRemove
 TSU_FormDestroy
 TSU_FormSetAttributes
+TSU_FormSetSfxClick
+TSU_FormSetSfxCursor
+TSU_FormSetSfxVolume
 TSU_FormGetTitleFont
 TSU_FormInputEvent
 TSU_FormSelectedEvent
