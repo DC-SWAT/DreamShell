@@ -149,7 +149,7 @@ static void *load_raw_adpcm(const char *filename, size_t *sz) {
 	return data;
 }
 
-static int ds_sfx_is_enabled(ds_sfx_t sfx) {
+int ds_sfx_is_enabled(ds_sfx_t sfx) {
 	Settings_t *settings = GetSettings();
 
 	if(!settings || settings->audio.volume == 0) {
@@ -176,6 +176,15 @@ static int ds_sfx_get_volume() {
 	}
 	
 	return settings->audio.volume;
+}
+
+void ds_sfx_get_wav(char sfx_path[], int sfx_sel) {
+	if (sfx_sel >= 0) {
+		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s.wav", getenv("PATH"), sys_sfx_name[sfx_sel]);
+	}
+	else {
+		sfx_path[0] = '\0';
+	}
 }
 
 static int ds_sfx_play_stream(ds_sfx_t sfx) {
@@ -231,8 +240,7 @@ int ds_sfx_play(ds_sfx_t sfx) {
 
 	if (sys_sfx_hnd[sfx_sel] == SFXHND_INVALID) {
 		char sfx_path[NAME_MAX];
-
-		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s.wav", getenv("PATH"), sys_sfx_name[sfx_sel]);
+		ds_sfx_get_wav(sfx_path, sfx_sel);
 		sys_sfx_hnd[sfx_sel] = snd_sfx_load(sfx_path);
 
 		if (sys_sfx_hnd[sfx_sel] == SFXHND_INVALID) {
