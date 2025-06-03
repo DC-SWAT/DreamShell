@@ -153,7 +153,7 @@ $(KOS_ROMDISK_DIR)/startup.raw.gz: $(DS_RES)/sfx/startup.wav
 
 $(DS_BUILD)/sfx/%.wav: $(DS_RES)/sfx/%.wav
 	@mkdir -p $(DS_BUILD)/sfx
-	ffmpeg -y -i $< -acodec adpcm_yamaha $@ 2>/dev/null
+	@$(KOS_BASE)/utils/wav2adpcm/wav2adpcm -t $< $@ 2>/dev/null
 
 make-build: $(DS_BUILD)/lua/startup.lua
 
