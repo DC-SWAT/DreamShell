@@ -160,7 +160,7 @@ void ShowSystemMenu()
 		, true, true, form_font, &menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
 		&OnSystemViewIndexChangedEvent);
 
-		char sfx_path[50];
+		char sfx_path[NAME_MAX];
 		int volume = GetVolumeFromSettings();
 		if (ds_sfx_is_enabled(DS_SFX_CLICK2))
 		{
