@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    utils.c - app utils
-   Copyright (C) 2022-2024 SWAT
+   Copyright (C) 2022-2025 SWAT
    Copyright (C) 2024-2025 Maniac Vera
 
 */
@@ -12,6 +12,7 @@
 #include <img/copy.h>
 #include "app_utils.h"
 #include "audio/wav.h"
+#include "settings.h"
 
 static uint8 *romdisk_data[3] = {NULL, NULL, NULL};
 static const char *mount_points[] = {"/presets_cd", "/presets_sd", "/presets_ide"};
@@ -701,6 +702,11 @@ void PlayCDDATrack(const char *file, int loop)
 			return;
 		}
 		ds_printf("DS_OK: Start playing: %s\n", file);
+
+		int volume = GetVolumeFromSettings();
+		if(volume >= 0) {
+			wav_volume(wav_hnd, volume);
+		}
 		wav_play(wav_hnd);
 	}
 }
@@ -724,7 +730,7 @@ int MountPresetsRomdisk(int device_type)
 		return -1;
 	}
 
-	if (fs_romdisk_mount(mount_points[device_type], romdisk_data[device_type], 1) < 0)
+	if (fs_romdisk_mount(mount_points[device_type], romdisk_data[device_type], 0) < 0)
 	{
 		ds_printf("DS_ERROR: Failed to mount romdisk %s\n", mount_points[device_type]);
 		free(romdisk_data[device_type]);
