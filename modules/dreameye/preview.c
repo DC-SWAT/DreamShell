@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    preview.c - dreameye preview
-   Copyright (C) 2023, 2024 SWAT
+   Copyright (C) 2023-2025 SWAT
 
 */          
 
@@ -147,23 +147,23 @@ static void onPreviewClick(void) {
 }
 
 static void EventHandler(void *ds_event, void *param, int action) {
-    
+
     SDL_Event *event = (SDL_Event *) param;
 
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
-            switch(event->jbutton.button) {
-                case SDL_DC_B:
-                case SDL_DC_A:
-                case SDL_DC_Y:
-                case SDL_DC_X:
-                // case SDL_DC_START:
-                    onPreviewClick();
-                    break;
+            if(is_fullscreen) {
+                switch(event->jbutton.button) {
+                    case SDL_DC_B:
+                    case SDL_DC_A:
+                        onPreviewClick();
+                        break;
+                }
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
-            if(event->button.button == SDL_BUTTON_LEFT || event->button.button == SDL_BUTTON_RIGHT) {
+            if(event->button.button == SDL_BUTTON_LEFT ||
+                event->button.button == SDL_BUTTON_RIGHT) {
                 onPreviewClick();
             }
             break;
