@@ -33,6 +33,12 @@ presets_cd.romfs: presets/
 
 romdisks: $(ROMDISKS)
 
+pack-presets:
+	@./pack_presets.sh
+
+pack-presets-add:
+	@./pack_presets.sh --no-replace
+
 clean:
 	cd modules && make clean && cd ../
 	-rm -f $(ROMDISKS)
