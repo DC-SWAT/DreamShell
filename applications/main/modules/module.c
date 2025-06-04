@@ -333,17 +333,21 @@ static void *ClockThread(void *arg) {
  * Global functions
  */
 
-void MainApp_SlideLeft() {
+void MainApp_SlideLeft(GUI_Widget *widget) {
 	if(self.cur_x > 0) {
-		ds_sfx_play(DS_SFX_SLIDE);
+		if(widget == NULL) {
+			ds_sfx_play(DS_SFX_SLIDE);
+		}
 		self.cur_x -= self.panel_area.w;
 		GUI_PanelSetXOffset(self.panel, self.cur_x);
 	}
 }
 
-void MainApp_SlideRight() {
+void MainApp_SlideRight(GUI_Widget *widget) {
 	if(self.x > self.cur_x) {
-		ds_sfx_play(DS_SFX_SLIDE);
+		if(widget == NULL) {
+			ds_sfx_play(DS_SFX_SLIDE);
+		}
 		self.cur_x += self.panel_area.w;
 		GUI_PanelSetXOffset(self.panel, self.cur_x);
 	}
@@ -407,11 +411,11 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 		case SDL_JOYBUTTONDOWN:
 			switch(event->jbutton.button) {
 				case SDL_DC_L:
-					MainApp_SlideLeft();
+					MainApp_SlideLeft(NULL);
 					break;
 				
 				case SDL_DC_R:
-					MainApp_SlideRight();
+					MainApp_SlideRight(NULL);
 					break;
 				
 				default:
@@ -423,11 +427,11 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 			switch (event->key.keysym.sym)
 			{
 				case SDLK_COMMA:
-					MainApp_SlideLeft();
+					MainApp_SlideLeft(NULL);
 					break;
 				
 				case SDLK_PERIOD:
-					MainApp_SlideRight();
+					MainApp_SlideRight(NULL);
 					break;
 				
 				default:
