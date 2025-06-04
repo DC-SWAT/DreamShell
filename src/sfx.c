@@ -178,8 +178,8 @@ static int ds_sfx_get_volume() {
 	return settings->audio.volume;
 }
 
-void ds_sfx_get_wav(char sfx_path[], int sfx_sel) {
-	if (sfx_sel >= 0) {
+void ds_sfx_get_wav(char sfx_path[], ds_sfx_t sfx_sel) {
+	if (sfx_sel >= 0 && sfx_sel < DS_SFX_LAST) {
 		snprintf(sfx_path, NAME_MAX, "%s/sfx/%s.wav", getenv("PATH"), sys_sfx_name[sfx_sel]);
 	}
 	else {

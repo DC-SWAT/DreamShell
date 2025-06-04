@@ -1507,7 +1507,7 @@ void ShowPresetMenu(int game_index)
 				&menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
 				&OnViewIndexChangedEvent);
 
-			char sfx_path[50];
+			char sfx_path[NAME_MAX];
 			int volume = GetVolumeFromSettings();
 			if (ds_sfx_is_enabled(DS_SFX_CLICK2))
 			{
