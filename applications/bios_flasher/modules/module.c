@@ -34,7 +34,7 @@ typedef enum OperationError
 	eDataMissmatch = 1
 }OperationError_t;
 
-static const uint16 CHUNK_SIZE = 32 * 1024;
+static const size_t CHUNK_SIZE = 128 << 10;
 
 #define UPDATE_GUI(state, progress, gui) do { if(gui) gui(state, progress); } while(0)
 
@@ -139,9 +139,27 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 		fs_close(pFile);
 		return eUnknownFail;
 	}
+	size_t readLen = 0;
+	size_t totalRead = 0;
+
+	while (totalRead < fileSize)
+	{
+		size_t toRead = (fileSize - totalRead > CHUNK_SIZE) ?
+			CHUNK_SIZE : fileSize - totalRead;
+		readLen = fs_read(pFile, data + totalRead, toRead);
+
+		if (readLen <= 0)
+		{
+			ds_printf("DS_ERROR: File wasn't loaded fully to memory\n");
+			fs_close(pFile);
+			return eFileFail;
+		}
+
+		totalRead += readLen;
+		UPDATE_GUI(eReading, (float)totalRead / fileSize, guiClbk);
+	}
 	
-	size_t readLen = fs_read(pFile, data, fileSize);
-	if (fileSize != readLen)
+	if (fileSize != totalRead)
 	{
 		ds_printf("DS_ERROR: File wasn't loaded fully to memory\n");
 		fs_close(pFile);
@@ -152,18 +170,7 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 	EXPT_GUARD_BEGIN;
 
 		// Erasing
-		if ((dev->flags & F_FLASH_ERASE_ALL) && (dev->size <= 2048))
-		{
-			/* Don't full erase on flash with more than 2MB.
-			 * Because other banks data may be usefull.
-			 */
-			if (bflash_erase_all(dev) < 0)
-			{
-				free(data);
-				EXPT_GUARD_RETURN eErasingFail;
-			}
-		}
-		else if(dev->flags & F_FLASH_ERASE_SECTOR)
+		if(dev->flags & F_FLASH_ERASE_SECTOR)
 		{
 			for (i = 0; i < dev->sec_count; ++i)
 			{
@@ -180,6 +187,16 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 					EXPT_GUARD_RETURN eErasingFail;
 				}
 			}
+		}
+		else if (dev->flags & F_FLASH_ERASE_ALL)
+		{
+			UPDATE_GUI(eErasing, 0.5f, guiClbk);
+			if (bflash_erase_all(dev) < 0)
+			{
+				free(data);
+				EXPT_GUARD_RETURN eErasingFail;
+			}
+			UPDATE_GUI(eErasing, 1.0f, guiClbk);
 		}
 
 		// Writing
@@ -595,6 +612,7 @@ void BiosFlasher_OnOperationProgress(OperationState_t state, float progress)
 
 	GUI_LabelSetText(self.m_LabelProgress, msg);
 	GUI_ProgressBarSetPosition(self.m_ProgressBar, progress);
+	thd_pass();
 }
 
 void BiosFlasher_EnableMainPage()
