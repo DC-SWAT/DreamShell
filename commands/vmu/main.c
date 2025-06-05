@@ -237,7 +237,7 @@ int main(int argc, char *argv[]) {
 			return CMD_ERROR;
 		} 
 
-		fd = fs_open(out, O_CREAT | O_WRONLY);
+		fd = fs_open(out, O_WRONLY | O_TRUNC | O_CREAT | O_META);
 
 		if(fd < 0) {
 			ds_printf("DS_ERROR: Can't open %s\n", out);
@@ -245,7 +245,7 @@ int main(int argc, char *argv[]) {
 		} 
 
 		siz = fs_total(f); 
-		vmdata = (uint8 *) malloc(siz); 
+		vmdata = (uint8 *) memalign(32, siz); 
 		fs_read(f, vmdata, siz); 
 		fs_close(f); 
 
