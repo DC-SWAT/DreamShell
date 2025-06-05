@@ -32,17 +32,17 @@ static struct {
 	struct tm datetime;
 	GUI_Widget *dateWidget;
 	GUI_Widget *timeWidget;
-	
+
+	Event_t *input_event;
 } self;
 
 typedef struct script_item {
-	
+
 	char name[64];
 	char file[NAME_MAX];
-	
+
 } script_item_t;
 
-static Event_t *slide_input_event;
 static void Slide_EventHandler(void *ds_event, void *param, int action);
 
 static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
@@ -385,8 +385,8 @@ void MainApp_Init(App_t *app) {
 			self.app->thd = thd_create(0, ClockThread, NULL);
 		}
 
-		slide_input_event = AddEvent(
-			"Slide_Input",
+		self.input_event = AddEvent(
+			"MainApp_Input",
 			EVENT_TYPE_INPUT,
 			EVENT_PRIO_DEFAULT,
 			Slide_EventHandler,
@@ -396,11 +396,8 @@ void MainApp_Init(App_t *app) {
 }
 
 static void Slide_EventHandler(void *ds_event, void *param, int action) {
-
 	SDL_Event *event = (SDL_Event *) param;
-
 	switch(event->type) {
-
 		case SDL_JOYBUTTONDOWN:
 			switch(event->jbutton.button) {
 				case SDL_DC_L:
@@ -409,34 +406,28 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 					}
 					MainApp_SlideLeft(NULL);
 					break;
-				
 				case SDL_DC_R:
 					if (IsVirtKeyboardVisible()) {
 						break;
 					}
 					MainApp_SlideRight(NULL);
 					break;
-
 				default:
 					break;
 			}
 			break;
-
 		case SDL_KEYDOWN:
 			switch (event->key.keysym.sym) {
 				case SDLK_COMMA:
 					MainApp_SlideLeft(NULL);
 					break;
-
 				case SDLK_PERIOD:
 					MainApp_SlideRight(NULL);
 					break;
-
 				default:
 					break;
 			}
 			break;
-
 		default:
 			break;
 	}
@@ -444,5 +435,5 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 
 void MainApp_Shutdown(App_t *app) {
 	(void)app;
-	RemoveEvent(slide_input_event);
+	RemoveEvent(self.input_event);
 }
