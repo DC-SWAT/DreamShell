@@ -22,6 +22,29 @@ DEFAULT_MODULE_EXPORTS(app_vmu_manager);
 #define LEFT_FM  0
 #define RIGHT_FM  1
 
+typedef enum {
+	DS_VMS = 0,
+	DS_VMD,
+	DS_VMI,
+	DS_DCI
+} save_type_t;
+
+typedef struct vm_root {
+	uint16_t size;
+	uint16_t partition;
+	uint16_t sys_block;
+	uint16_t fat_block;
+	uint16_t fat_cnt;
+	uint16_t file_info_block;
+	uint16_t file_info_cnt;
+	uint8_t  vol_icon;
+	uint8_t  reserved;
+	uint16_t extra_block;
+	uint16_t extra_cnt;
+	uint16_t exe_block;
+	uint16_t exe_cnt;
+} vm_root_t;
+
 void VMU_Manager_ItemContextClick(dirent_fm_t *fm_ent);
 int VMU_Manager_Dump(GUI_Widget *widget);
 void VMU_Manager_addfileman(GUI_Widget *widget);
@@ -144,35 +167,15 @@ static struct {
 } dci_t;
 
 static void* vmu_dev(const char* path) {
+
+	int port = path[5] - 'A';
+	int slot = path[6] - '0';
 	
-	maple_device_t *device = NULL;
-	
-	if (strncmp(path,"/vmu/A1",7) == 0) {
-		device = maple_enum_dev(0, 1);
-	}
-	else if (strncmp(path,"/vmu/A2",7) == 0) {
-		device = maple_enum_dev(0, 2);
-	}
-	else if (strncmp(path,"/vmu/B1",7) == 0) {
-		device = maple_enum_dev(1, 1);
-	}
-	else if (strncmp(path,"/vmu/B2",7) == 0) {
-		device = maple_enum_dev(1, 2);
-	}
-	else if (strncmp(path,"/vmu/C1",7) == 0) {
-		device = maple_enum_dev(2, 1);
-	}
-	else if (strncmp(path,"/vmu/C2",7) == 0) {
-		device = maple_enum_dev(2, 2);
-	}
-	else if (strncmp(path,"/vmu/D1",7) == 0) {
-		device = maple_enum_dev(3, 1);
-	}
-	else if (strncmp(path,"/vmu/D2",7) == 0) {
-		device = maple_enum_dev(3, 2);
+	if (port < 0 || port > 3 || slot < 1 || slot > 2) {
+		return NULL;
 	}
 	
-	return device;
+	return maple_enum_dev(port, slot);
 }
 
 static void rmdir_recursive(const char* folder) {
@@ -763,23 +766,85 @@ void VMU_Manager_Exit(GUI_Widget *widget) {
 	OpenApp(app, NULL);
 }
 
+static void copy_save(const char *src_fn, const char *dest_fn) {
+	size_t cnt, size, cur = 0, buf_size;
+	file_t src_fd, dest_fd;
+	uint8_t *buff;
+	int src_flag = O_RDONLY, dst_flag = O_WRONLY | O_CREAT | O_TRUNC;
+	
+	if (!strncmp(src_fn, "/vmu", 4)) {
+		src_flag |= O_META;
+	}
+	
+	if (!strncmp(dest_fn, "/vmu", 4)) {
+		dst_flag |= O_META;
+	}
+	
+	src_fd = fs_open(src_fn, src_flag);
+	
+	if (src_fd == FILEHND_INVALID) {
+		ds_printf("DS_ERROR: Can't open %s for read\n", src_fn);
+		return;
+	}
+	
+	dest_fd = fs_open(dest_fn, dst_flag);
+	
+	if (dest_fd == FILEHND_INVALID) {
+		ds_printf("DS_ERROR: Can't open %s for write\n", dest_fn);
+		fs_close(src_fd);
+		return;
+	}
+	
+	size = fs_total(src_fd) / 1024;
+
+	if(size >= 256) {
+		buf_size = 32 * 1024;
+	} else if(size < 32 && size > 8) {
+		buf_size = 1024;
+	} else if(size <= 8) {
+		buf_size = 512;
+	} else {
+		buf_size = 16 * 1024;
+	}
+
+	buff = (uint8 *) memalign(32, buf_size);
+
+	if(buff == NULL) {
+		ds_printf("DS_ERROR: No memory: %d bytes\n", buf_size); 
+		return;
+	}
+
+	while ((cnt = fs_read(src_fd, buff, buf_size)) > 0) {
+		
+		cur += cnt;
+		
+		if(fs_write(dest_fd, buff, cnt) < 0) {
+			break;
+		}
+	}
+
+	fs_close(dest_fd);
+	fs_close(src_fd);
+	free(buff);
+}
+
 void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 	
 	dirent_t *ent = &fm_ent->ent;
 	file_t f;
 	int xx, yy;
 	int flag = CMD_ERROR;
-	int flag_type = 0; // vms 0 ; vmd 1 ; vmi 2 ; dci 3
+	save_type_t flag_type = DS_VMS; // vms 0 ; vmd 1 ; vmi 2 ; dci 3
 	uint8 nyb;
-	char tmp[64];
-	char src[NAME_MAX];
-	char dst[NAME_MAX];
-	char size[64];
-	char text[1024];
+	static char tmp[64];
+	static char src[NAME_MAX];
+	static char dst[NAME_MAX];
+	static char size[64];
+	static char text[1024];
 	uint16 *tmpbuf = NULL;
-	uint8 buf[1024];
-	uint8 icon[512];
-	uint16 pal[16];
+	static uint8_t buf[1024];
+	static uint8_t icon[512];
+	static uint16_t pal[16];
 	GUI_Widget *fmw = (GUI_Widget*)fm_ent->obj;
 	int i;
 	GUI_Widget *panel, *w;
@@ -843,7 +908,6 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 				GUI_WidgetSetEnabled(self.button_dump, 0);	
 				GUI_FileManagerSetPath(self.filebrowser2, self.home_path);
 				GUI_FileManagerScan(self.filebrowser2);
-				
 			}
 			
 			reset_selected();
@@ -853,141 +917,61 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 		else if(strcmp(self.m_SelectedFile,ent->name) == 0 &&
 				strcmp(self.m_SelectedPath,GUI_FileManagerGetPath(fmw)) == 0 && 
 				GUI_ContainerContains(self.vmu_page, self.filebrowser2) == 1) {	// copy file
-						
-				if(strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0) {		// copy file to vmu
+
+			if(strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0) {		// copy file to vmu
+
+				if ((ent->name[strlen(ent->name) - 3] == 'v' || ent->name[strlen(ent->name) - 3] == 'V') && 
+					(ent->name[strlen(ent->name) - 2] == 'm' || ent->name[strlen(ent->name) - 2] == 'M') && 
+					(ent->name[strlen(ent->name) - 1] == 'i' || ent->name[strlen(ent->name) - 1] == 'I')) {
+
+					if((vmi_t.size/512) > self.vmu_freeblock) {
+						return;
+					}
+
+					sprintf(src, "%s/%1.8s.vms", GUI_FileManagerGetPath(fmw), vmi_t.source);
+					if(!FileExists(src)) sprintf(src, "%s/%1.8s.VMS", GUI_FileManagerGetPath(fmw), vmi_t.source);
 					
-					if ((ent->name[strlen(ent->name) - 3] == 'v' || ent->name[strlen(ent->name) - 3] == 'V') && 
-						(ent->name[strlen(ent->name) - 2] == 'm' || ent->name[strlen(ent->name) - 2] == 'M') && 
-						(ent->name[strlen(ent->name) - 1] == 'i' || ent->name[strlen(ent->name) - 1] == 'I')) {
-																	  
-						if((vmi_t.size/512) > self.vmu_freeblock) {
-							return;
-						}
-						
-						sprintf(src, "%s/%1.8s.vms", GUI_FileManagerGetPath(fmw), vmi_t.source);
-						if(!FileExists(src)) sprintf(src, "%s/%1.8s.VMS", GUI_FileManagerGetPath(fmw), vmi_t.source);
-						
-						if(!FileExists(src)) {
-							reset_selected();
-							disable_high(RIGHT_FM);
-							clr_statusbar();
-							return;
-						}
-						
-						sprintf(dst, "%s/%12.12s", GUI_FileManagerGetPath(self.filebrowser), vmi_t.name);
-					}
-					else if  ((ent->name[strlen(ent->name) - 3] == 'd' || ent->name[strlen(ent->name) - 3] == 'D') && 
-							  (ent->name[strlen(ent->name) - 2] == 'c' || ent->name[strlen(ent->name) - 2] == 'C') && 
-							  (ent->name[strlen(ent->name) - 1] == 'i' || ent->name[strlen(ent->name) - 1] == 'I')) {
-																	  
-						if(((ent->size-32)/512) > self.vmu_freeblock) {
-							return;
-						}
-						
-						sprintf(src, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
-						sprintf(dst, "%s/%12.12s", GUI_FileManagerGetPath(self.filebrowser), dci_t.name);
-						flag_type = 3;
-					}
-					else {
-						if((ent->size/512) > self.vmu_freeblock) {
-							return;
-						}
-						
-						sprintf(src, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
-						sprintf(dst, "%s/%12.12s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
-					}
-	
-					if (FileExists(dst) != 0) {
-		
-						sprintf(text, "Overwrite %s", dst);
-						GUI_LabelSetText(self.confirm_text, text);
-						flag = Confirm_Window();
-					}
-					else {
-						flag = CMD_OK;
+					if(!FileExists(src)) {
+						reset_selected();
+						disable_high(RIGHT_FM);
+						clr_statusbar();
+						return;
 					}
 					
-					if (flag == CMD_OK) {
-						GUI_ProgressBarSetImage1(self.progressbar, self.progres_img_b);
-						GUI_ProgressBarSetImage2(self.progressbar, self.progres_img);
-						GUI_ProgressBarSetPosition(self.progressbar, 1.0);
-						GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
-						GUI_WidgetMarkChanged(self.vmu_page);
-						LockVideo();
-#ifdef VMDEBUG
-						dbgio_printf("src: %s\ndst: %s\n", src, dst);
-						thd_sleep(2000);
-#else
-						if(flag_type == 3) {
-							uint8 *tmpvmsbuf = NULL, *vmsbuf = NULL;
-							uint32 cursize = ent->size - 32;
-							
-							tmpvmsbuf = (uint8* )calloc(1,cursize);
-							vmsbuf = (uint8* )calloc(1,cursize);
-							
-							if((f=fs_open(src, O_RDONLY)) == FILEHND_INVALID) {
-								GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-								GUI_WidgetMarkChanged(self.vmu_page);
-								UnlockVideo();
-								return;
-							}
-							
-							fs_seek(f,32,SEEK_SET);
-							fs_read(f, tmpvmsbuf, cursize);
-							fs_close(f);
-							
-							for (xx = 0; xx < cursize; xx += 4) {
-								for (yy = 3; yy >= 0; yy--) vmsbuf[xx + (3-yy)] = tmpvmsbuf[xx + yy];
-							}
-						
-							if((f = fs_open(dst, O_WRONLY)) == FILEHND_INVALID) {
-								GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-								GUI_WidgetMarkChanged(self.vmu_page);
-								UnlockVideo();
-								return;
-							}
-							
-							fs_write(f, vmsbuf, cursize);
-							fs_close(f);
-							free(tmpvmsbuf);
-							free(vmsbuf);
-						}
-						else {
-							CopyFile(src, dst, 0);
-						}
-#endif
-						free_blocks(GUI_FileManagerGetPath(self.filebrowser),0);
-						GUI_FileManagerScan(self.filebrowser);
-					}
+					sprintf(dst, "%s/%12.12s", GUI_FileManagerGetPath(self.filebrowser), vmi_t.name);
 				}
-				else if(strncmp(self.m_SelectedPath, "/cd",3) != 0 || strncmp(self.m_SelectedPath, "/vmd",4) != 0) { // copy file from vmu
+				else if  ((ent->name[strlen(ent->name) - 3] == 'd' || ent->name[strlen(ent->name) - 3] == 'D') && 
+						  (ent->name[strlen(ent->name) - 2] == 'c' || ent->name[strlen(ent->name) - 2] == 'C') && 
+						  (ent->name[strlen(ent->name) - 1] == 'i' || ent->name[strlen(ent->name) - 1] == 'I')) {
+
+					if(((ent->size-32)/512) > self.vmu_freeblock) {
+						return;
+					}
+
 					sprintf(src, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
-					
-					if(strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vmu",4) == 0) {
-						if((ent->size/512) > self.vmu_freeblock2) return;
-						
-						sprintf(dst, "%s/%s", GUI_FileManagerGetPath(self.filebrowser2), ent->name);
-						
-						if (FileExists(dst) != 0) {
-							sprintf(text, "Overwrite %s", dst);
-							GUI_LabelSetText(self.confirm_text, text);
-							
-							if(Confirm_Window() == CMD_ERROR) {
-								reset_selected();
-								clr_statusbar();
-								return;
-							}
-						}
+					sprintf(dst, "%s/%12.12s", GUI_FileManagerGetPath(self.filebrowser), dci_t.name);
+					flag_type = DS_DCI;
+				}
+				else {
+					if((ent->size/512) > self.vmu_freeblock) {
+						return;
 					}
-					else {
-						sprintf(dst, "%s/%12.12s.vms", GUI_FileManagerGetPath(self.filebrowser2), ent->name);
-						
-						for(i=1;i<99;i++) {
-							if(!FileExists(dst)) break;
-							sprintf(dst, "%s/%12.12s.%02d.vms", GUI_FileManagerGetPath(self.filebrowser2), ent->name, i);
-						}
-					}
-					
+
+					sprintf(src, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
+					sprintf(dst, "%s/%12.12s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
+				}
+
+				if (FileExists(dst) != 0) {
+
+					sprintf(text, "Overwrite %s", dst);
+					GUI_LabelSetText(self.confirm_text, text);
+					flag = Confirm_Window();
+				}
+				else {
+					flag = CMD_OK;
+				}
+
+				if (flag == CMD_OK) {
 					GUI_ProgressBarSetImage1(self.progressbar, self.progres_img_b);
 					GUI_ProgressBarSetImage2(self.progressbar, self.progres_img);
 					GUI_ProgressBarSetPosition(self.progressbar, 1.0);
@@ -997,168 +981,255 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 #ifdef VMDEBUG
 					dbgio_printf("src: %s\ndst: %s\n", src, dst);
 					thd_sleep(2000);
-#else					
-					CopyFile(src, dst, 0);
-#endif	
-					if(strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vmu",4) == 0) free_blocks(GUI_FileManagerGetPath(self.filebrowser2),1);
-					
-					GUI_FileManagerScan(self.filebrowser2);
-					disable_high(LEFT_FM);
-				}				
-			}
-			
-			reset_selected();
-			GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-			GUI_WidgetMarkChanged(self.vmu_page);			
-			clr_statusbar();
-			if (VideoIsLocked()) UnlockVideo();
-			return;
-		}
-		
-		if((strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
-			ent->name[name_len - 3] == 'v' && 
-			ent->name[name_len - 2] == 'm' && 
-			ent->name[name_len - 1] == 'd')) {		// This is VMD file
-			flag_type = 1;
-		}
-		else if((strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
-			(ent->name[name_len - 3] == 'v' || ent->name[name_len - 3] == 'V') && 
-			(ent->name[name_len - 2] == 'm' || ent->name[name_len - 2] == 'M') && 
-			(ent->name[name_len - 1] == 'i' || ent->name[name_len - 1] == 'I'))) {	// This is VMI file
-			flag_type = 2;
-		}
-		else if(strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
-			(ent->name[name_len - 3] == 'd' || ent->name[name_len - 3] == 'D') && 
-			(ent->name[name_len - 2] == 'c' || ent->name[name_len - 2] == 'C') && 
-			(ent->name[name_len - 1] == 'i' || ent->name[name_len - 1] == 'I')) {	// This is DCI file
-			flag_type = 3;
-		}
-		else if((strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
-			ent->name[name_len - 3] != 'v' && 
-			ent->name[name_len - 2] != 'm' && 
-			ent->name[name_len - 1] != 's' && 
-			strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vm", 3) != 0)) {	// This is VMS file and not vmd folder
-			disable_high(RIGHT_FM);
-			return;
-		}
+#else
+					if(flag_type == DS_DCI) {
+						uint8 *tmpvmsbuf = NULL, *vmsbuf = NULL;
+						uint32 cursize = ent->size - 32;
 
-		/* file not selected */
-		if(self.m_SelectedFile != NULL) {
-			free(self.m_SelectedFile);
-			free(self.m_SelectedPath);
-		}
-		self.m_SelectedFile = strdup(ent->name);
-		self.m_SelectedPath = strdup(GUI_FileManagerGetPath(fmw));
+						tmpvmsbuf = (uint8* )calloc(1,cursize);
+						vmsbuf = (uint8* )calloc(1,cursize);
+						f = fs_open(src, O_RDONLY);
+						
+						if(f == FILEHND_INVALID) {
+							GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+							GUI_WidgetMarkChanged(self.vmu_page);
+							UnlockVideo();
+							return;
+						}
 
-		panel = GUI_FileManagerGetItemPanel(fmw);
-		
-		for(i = 0; i < GUI_ContainerGetCount(panel); i++) {
-			
-			w = GUI_FileManagerGetItem(fmw, i);
-			if(strcmp(GUI_ObjectGetName(fmw), "file_browser") == 0) {
-				if(i != fm_ent->index) {
-					GUI_ButtonSetNormalImage(w, self.m_ItemNormal);
-					GUI_ButtonSetHighlightImage(w, self.m_ItemNormal);
-				}
-				else
-				{
-					GUI_ButtonSetNormalImage(w, self.m_ItemSelected);
-					GUI_ButtonSetHighlightImage(w, self.m_ItemSelected);
-				}
-			}
-			else
-			{
-				if(i != fm_ent->index) {
-					GUI_ButtonSetNormalImage(w, self.m_ItemNormal2);
-					GUI_ButtonSetHighlightImage(w, self.m_ItemNormal2);
-				}
-				else
-				{
-					GUI_ButtonSetNormalImage(w, self.m_ItemSelected2);
-					GUI_ButtonSetHighlightImage(w, self.m_ItemSelected2);
-				}
-			}
-		}
-		
-		if(strcmp(GUI_ObjectGetName(fmw), "file_browser") == 0) {
-			disable_high(RIGHT_FM);
-		}
-		else {
-			disable_high(LEFT_FM);
-		}
-		
-		if(flag_type != 1) {
-			if(!(tmpbuf = (uint16* )calloc(1, 2048))) {
-				return;
-			}
+						fs_seek(f,32,SEEK_SET);
+						fs_read(f, tmpvmsbuf, cursize);
+						fs_close(f);
 
-			sprintf(tmp, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
-			
-			if(flag_type == 2) {
-				f=fs_open(tmp, O_RDONLY);
-				fs_read(f, &vmi_t, 108);
-				fs_close(f);
-				sprintf(tmp, "%s/%1.8s.vms", GUI_FileManagerGetPath(fmw), vmi_t.source);
-				if(!FileExists(tmp)) sprintf(tmp, "%s/%1.8s.VMS", GUI_FileManagerGetPath(fmw), vmi_t.source);
+						for (xx = 0; xx < cursize; xx += 4) {
+							for (yy = 3; yy >= 0; yy--) vmsbuf[xx + (3-yy)] = tmpvmsbuf[xx + yy];
+						}
+						
+						f = fs_open(dst, O_WRONLY | O_META);
+						
+						if(f == FILEHND_INVALID) {
+							GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+							GUI_WidgetMarkChanged(self.vmu_page);
+							UnlockVideo();
+							return;
+						}
+
+						fs_write(f, vmsbuf, cursize);
+						fs_close(f);
+						free(tmpvmsbuf);
+						free(vmsbuf);
+					}
+					else {
+						copy_save(src, dst);
+					}
+#endif
+					free_blocks(GUI_FileManagerGetPath(self.filebrowser),0);
+					GUI_FileManagerScan(self.filebrowser);
+				}
 			}
+			else if(strncmp(self.m_SelectedPath, "/cd",3) != 0 || strncmp(self.m_SelectedPath, "/vmd",4) != 0) { // copy file from vmu
+				sprintf(src, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
+
+				if(strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vmu",4) == 0) {
+					if((ent->size/512) > self.vmu_freeblock2) return;
+
+					sprintf(dst, "%s/%s", GUI_FileManagerGetPath(self.filebrowser2), ent->name);
+
+					if (FileExists(dst) != 0) {
+						sprintf(text, "Overwrite %s", dst);
+						GUI_LabelSetText(self.confirm_text, text);
+
+						if(Confirm_Window() == CMD_ERROR) {
+							reset_selected();
+							clr_statusbar();
+							return;
+						}
+					}
+				}
+				else {
+					sprintf(dst, "%s/%12.12s.vms", GUI_FileManagerGetPath(self.filebrowser2), ent->name);
+
+					for(i=1;i<99;i++) {
+						if(!FileExists(dst)) break;
+						sprintf(dst, "%s/%12.12s.%02d.vms", GUI_FileManagerGetPath(self.filebrowser2), ent->name, i);
+					}
+				}
+
+				GUI_ProgressBarSetImage1(self.progressbar, self.progres_img_b);
+				GUI_ProgressBarSetImage2(self.progressbar, self.progres_img);
+				GUI_ProgressBarSetPosition(self.progressbar, 1.0);
+				GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
+				GUI_WidgetMarkChanged(self.vmu_page);
+				LockVideo();
 #ifdef VMDEBUG
-			dbgio_printf("VMS filename: %s flag_type: %d\n", tmp, flag_type);
-#endif		
-			if(flag_type != 3) {
-				if((f = fs_open(tmp, O_RDONLY)) == FILEHND_INVALID) {
-					dbgio_printf("flag_type != 3 FILEHND_INVALID\n");
-					reset_selected();
-					disable_high(RIGHT_FM);
-					free(tmpbuf);
-					return;
-				}
-				fs_read(f, buf, 1024);
-				fs_close(f);
+				dbgio_printf("src: %s\ndst: %s\n", src, dst);
+				thd_sleep(2000);
+#else					
+				copy_save(src, dst);
+#endif	
+				if(strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vmu",4) == 0) free_blocks(GUI_FileManagerGetPath(self.filebrowser2),1);
+
+				GUI_FileManagerScan(self.filebrowser2);
+				disable_high(LEFT_FM);
+			}				
+		}
+
+		reset_selected();
+		GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+		GUI_WidgetMarkChanged(self.vmu_page);			
+		clr_statusbar();
+		if (VideoIsLocked()) UnlockVideo();
+		return;
+	}
+
+	if((strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
+							ent->name[name_len - 3] == 'v' && 
+							ent->name[name_len - 2] == 'm' && 
+							ent->name[name_len - 1] == 'd')) {		// This is VMD file
+		flag_type = DS_VMD;
+	}
+	else if((strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
+							(ent->name[name_len - 3] == 'v' || ent->name[name_len - 3] == 'V') && 
+							(ent->name[name_len - 2] == 'm' || ent->name[name_len - 2] == 'M') && 
+							(ent->name[name_len - 1] == 'i' || ent->name[name_len - 1] == 'I'))) {	// This is VMI file
+		flag_type = DS_VMI;
+	}
+	else if(strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
+							(ent->name[name_len - 3] == 'd' || ent->name[name_len - 3] == 'D') && 
+							(ent->name[name_len - 2] == 'c' || ent->name[name_len - 2] == 'C') && 
+							(ent->name[name_len - 1] == 'i' || ent->name[name_len - 1] == 'I')) {	// This is DCI file
+		flag_type = DS_DCI;
+	}
+	else if((strcmp(GUI_ObjectGetName(fmw), "file_browser2") == 0 && 
+							ent->name[name_len - 3] != 'v' && 
+							ent->name[name_len - 2] != 'm' && 
+							ent->name[name_len - 1] != 's' && 
+							strncmp(GUI_FileManagerGetPath(self.filebrowser2), "/vm", 3) != 0)) {	// This is VMS file and not vmd folder
+		disable_high(RIGHT_FM);
+		return;
+	}
+
+	/* file not selected */
+	if(self.m_SelectedFile != NULL) {
+		free(self.m_SelectedFile);
+		free(self.m_SelectedPath);
+	}
+	self.m_SelectedFile = strdup(ent->name);
+	self.m_SelectedPath = strdup(GUI_FileManagerGetPath(fmw));
+
+	panel = GUI_FileManagerGetItemPanel(fmw);
+
+	for(i = 0; i < GUI_ContainerGetCount(panel); i++) {
+
+		w = GUI_FileManagerGetItem(fmw, i);
+		if(strcmp(GUI_ObjectGetName(fmw), "file_browser") == 0) {
+			if(i != fm_ent->index) {
+				GUI_ButtonSetNormalImage(w, self.m_ItemNormal);
+				GUI_ButtonSetHighlightImage(w, self.m_ItemNormal);
 			}
 			else {
-				f=fs_open(tmp, O_RDONLY);
-				fs_read(f, &dci_t, 1056);
-				fs_close(f);
-				
-				for (xx = 0; xx < 1024; xx += 4) {
-					for (yy = 3; yy >= 0; yy--) buf[xx + (3-yy)] = dci_t.vmsheader[xx + yy];
-				}		
+				GUI_ButtonSetNormalImage(w, self.m_ItemSelected);
+				GUI_ButtonSetHighlightImage(w, self.m_ItemSelected);
+			}
+		}
+		else {
+			if(i != fm_ent->index) {
+				GUI_ButtonSetNormalImage(w, self.m_ItemNormal2);
+				GUI_ButtonSetHighlightImage(w, self.m_ItemNormal2);
+			}
+			else {
+				GUI_ButtonSetNormalImage(w, self.m_ItemSelected2);
+				GUI_ButtonSetHighlightImage(w, self.m_ItemSelected2);
+			}
+		}
+	}
+
+	if(strcmp(GUI_ObjectGetName(fmw), "file_browser") == 0) {
+		disable_high(RIGHT_FM);
+	}
+	else {
+		disable_high(LEFT_FM);
+	}
+		
+	if(flag_type != DS_VMD) {
+		if(!(tmpbuf = (uint16* )calloc(1, 2048))) {
+			return;
+		}
+
+		sprintf(tmp, "%s/%s", GUI_FileManagerGetPath(fmw), ent->name);
+
+		if(flag_type == DS_VMI) {
+			f = fs_open(tmp, O_RDONLY);
+			fs_read(f, &vmi_t, 108);
+			fs_close(f);
+			sprintf(tmp, "%s/%1.8s.vms", GUI_FileManagerGetPath(fmw), vmi_t.source);
+			if(!FileExists(tmp)) sprintf(tmp, "%s/%1.8s.VMS", GUI_FileManagerGetPath(fmw), vmi_t.source);
+		}
+#ifdef VMDEBUG
+		dbgio_printf("VMS filename: %s flag_type: %d\n", tmp, flag_type);
+#endif		
+		if(flag_type != DS_DCI) {
+			if(flag_type == DS_VMS) {
+				f = fs_open(tmp, O_RDONLY | O_META);
+			}
+			else {
+				f = fs_open(tmp, O_RDONLY);
 			}
 			
-			memcpy(self.desc_short, buf, 16);
-			self.desc_short[16]=0;
-			memcpy(self.desc_long, buf+0x10, 32);
-			self.desc_long[32]=0;
-			if (strcmp(ent->name, "ICONDATA_VMS") == 0) {
+			if(f == FILEHND_INVALID) {
+				dbgio_printf("flag_type != 3 FILEHND_INVALID\n");
+				reset_selected();
+				disable_high(RIGHT_FM);
 				free(tmpbuf);
 				return;
 			}
-			else {
-				memcpy(pal, buf+0x60, 32);
-				memcpy(icon, buf+0x80, 512);
-			}
-			
-			for (yy=0; yy<VMU_ICON_WIDTH; yy++) {
-				for (xx=0; xx<VMU_ICON_HEIGHT; xx+=2) {
-					nyb=(icon[yy*16 + xx/2] & 0xf0) >> 4;
-					tmpbuf[xx+yy*32]=PACK_NYBBLE_RGB565(pal[nyb]);
-					nyb=(icon[yy*16 + xx/2] & 0x0f) >> 0;
-					tmpbuf[xx+1+yy*32]=PACK_NYBBLE_RGB565(pal[nyb]);
-				}
-			}
-			self.vmu_icon = SDL_CreateRGBSurfaceFrom(tmpbuf,32, 32, 16, 64,0, 0, 0, 0);
-			self.vmuicon = GUI_SurfaceFrom("vmuicon", self.vmu_icon);
-			free(tmpbuf);
+			fs_read(f, buf, 1024);
+			fs_close(f);
 		}
-		else {	
-			sprintf(self.desc_short, "VMU Dump");
-			sprintf(self.desc_long, "Dreamshell VMU Dump file");
+		else {
+			f = fs_open(tmp, O_RDONLY);
+			fs_read(f, &dci_t, 1056);
+			fs_close(f);
+
+			for (xx = 0; xx < 1024; xx += 4) {
+				for (yy = 3; yy >= 0; yy--) buf[xx + (3-yy)] = dci_t.vmsheader[xx + yy];
+			}		
 		}
 
-	if(flag_type == 2) {
+		memcpy(self.desc_short, buf, 16);
+		self.desc_short[16]=0;
+		memcpy(self.desc_long, buf+0x10, 32);
+		self.desc_long[32]=0;
+		if (strcmp(ent->name, "ICONDATA_VMS") == 0) {
+			free(tmpbuf);
+			return;
+		}
+		else {
+			memcpy(pal, buf+0x60, 32);
+			memcpy(icon, buf+0x80, 512);
+		}
+
+		for (yy = 0; yy < VMU_ICON_WIDTH; yy++) {
+			for (xx = 0; xx < VMU_ICON_HEIGHT; xx += 2) {
+				nyb=(icon[yy*16 + xx/2] & 0xf0) >> 4;
+				tmpbuf[xx+yy*32]=PACK_NYBBLE_RGB565(pal[nyb]);
+				nyb=(icon[yy*16 + xx/2] & 0x0f) >> 0;
+				tmpbuf[xx+1+yy*32]=PACK_NYBBLE_RGB565(pal[nyb]);
+			}
+		}
+		self.vmu_icon = SDL_CreateRGBSurfaceFrom(tmpbuf, 32, 32, 16, 64, 0, 0, 0, 0);
+		self.vmuicon = GUI_SurfaceFrom("vmuicon", self.vmu_icon);
+		free(tmpbuf);
+	}
+	else {	// is DS_VMD
+		sprintf(self.desc_short, "VMU Dump");
+		sprintf(self.desc_long, "Dreamshell VMU Dump file");
+	}
+
+	if(flag_type == DS_VMI) {
 		sprintf(size, "%ld  Block(s)", vmi_t.size / 512);
 	}
-	else if(flag_type == 3) {
+	else if(flag_type == DS_DCI) {
 		sprintf(size, "%d  Block(s)", (ent->size - 32) / 512);
 	}
 	else {
@@ -1172,7 +1243,7 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 	dbgio_printf("desclong: %s\n", self.desc_long);
 #endif
 
-	if(flag_type == 1) {
+	if(flag_type == DS_VMD) {
 		GUI_PictureSetImage(self.sicon, self.dump_icon);
 	}
 	else if(self.vmuicon) {
@@ -1377,9 +1448,6 @@ int VMU_Manager_Dump(GUI_Widget *widget) {
 #ifdef VMDEBUG
 			dbgio_printf("src name: %s\n", src);
 			dbgio_printf("SelectedPath: %s\nSelectedFile: %s\n", self.m_SelectedPath,self.m_SelectedFile);
-/*			GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-			GUI_WidgetMarkChanged(self.vmu_page);
-			return CMD_OK; */
 #endif			
 			f = fs_open(src, O_RDONLY);
 
@@ -1422,11 +1490,13 @@ int VMU_Manager_Dump(GUI_Widget *widget) {
 }
 
 void VMU_Manager_format(GUI_Widget *widget) {
-	file_t d;
-	dirent_t *de;
-	int num_files = 0, i = 0;
-	double progress = 0.0;
-	char path[NAME_MAX],del_file[NAME_MAX];
+
+	static uint8_t tmp_buf[512];
+	maple_device_t *vmu = vmu_dev(GUI_FileManagerGetPath(self.filebrowser));
+	
+	if (!vmu) {
+		return;
+	}
 	
 	GUI_LabelSetText(self.confirm_text, "ERASE VMU. WARNING all data on VMU lost");
 	if(Confirm_Window() == CMD_ERROR) return;
@@ -1435,38 +1505,85 @@ void VMU_Manager_format(GUI_Widget *widget) {
 	disable_high(LEFT_FM);
 	clr_statusbar();
 	
-	sprintf(path, "%s", GUI_FileManagerGetPath(self.filebrowser));
-	
-	d = fs_open(path, O_DIR);
-	
 	GUI_ProgressBarSetImage1(self.progressbar, self.progres_img_b);
 	GUI_ProgressBarSetImage2(self.progressbar, self.progres_img);
-	GUI_ProgressBarSetPosition(self.progressbar, progress);
+	GUI_ProgressBarSetPosition(self.progressbar, 0.0);
 	GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
 	GUI_WidgetMarkChanged(self.vmu_page);
 	
-	while (fs_readdir(d)) num_files++;
-	fs_close(d);
-	d = fs_open(path, O_DIR);
+	memset(tmp_buf, 0, 512);
 	
-	while ((de = fs_readdir(d)) ) {
-		sprintf(del_file, "%s/%s", path, de->name);
-		
-#ifdef VMDEBUG
-		dbgio_printf("Delete: %s\n", del_file);
-		thd_sleep(500);
-#else
-		if(fs_unlink(del_file) < 0) break;
-#endif	
-		i++;
-		progress = (double) ceil(i*10/num_files)/10 + 0.1;
-		GUI_ProgressBarSetPosition(self.progressbar, progress);
+	for (int i = 1; i < 14; i++) {
+		vmu_block_write(vmu, 240+i, tmp_buf);
+		GUI_ProgressBarSetPosition(self.progressbar, (double) i / 10);
 		GUI_WidgetMarkChanged(self.progressbar_container);
 	}
 	
+	uint16_t *tmp_ptr = (uint16_t *) tmp_buf;
+	
+	for (int i = 0; i < 241; i++)
+	{
+		*tmp_ptr++ = 0xFFFC;
+	}
+	
+	*tmp_ptr++ = 0xFFFA;
+	
+	for (int i = 0; i < 12; i++)
+	{
+		*tmp_ptr++ = 0xF1 + i;
+	}
+	
+	*tmp_ptr++ = 0xFFFA;
+	*tmp_ptr++ = 0xFFFA;
+	
+	vmu_block_write(vmu, 254, tmp_buf);
+	
+	GUI_ProgressBarSetPosition(self.progressbar, 0.93);
+	GUI_WidgetMarkChanged(self.progressbar_container);
+	
+	tmp_ptr = (uint16_t *) tmp_buf;
+	
+	memset(tmp_buf, 0, 512);
+	
+	for (int i = 0; i < 8; i++)
+	{
+		*tmp_ptr++ = 0x5555;
+	}
+	
+	*tmp_ptr++ = 0xFF01;
+	*tmp_ptr++ = 0xFFFF;
+	*tmp_ptr++ = 0x00FF;
+	
+	tmp_ptr = (uint16_t *) &tmp_buf[0x30];
+	
+	*tmp_ptr++ = 0x2420;
+	*tmp_ptr++ = 0x2503;
+	*tmp_ptr++ = 0x0022;
+	*tmp_ptr++ = 0x0038;
+	
+	vm_root_t *root = (vm_root_t *) &tmp_buf[0x40];
+	
+	root->size = 255;
+	root->partition = 0;
+	root->sys_block = 255;
+	root->fat_block = 254;
+	root->fat_cnt = 1;
+	root->file_info_block = 253;
+	root->file_info_cnt = 13;
+	root->vol_icon = 0;
+	root->reserved = 0;
+	root->extra_block = 200;
+	root->extra_cnt = 31;
+	root->exe_block = 0;
+	root->exe_cnt = 128;
+	
+	vmu_block_write(vmu, 255, tmp_buf);
+	
+	GUI_ProgressBarSetPosition(self.progressbar, 1.0);
+	GUI_WidgetMarkChanged(self.progressbar_container);
+	
 	GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-	fs_close(d);
-	free_blocks(GUI_FileManagerGetPath(self.filebrowser),0);
+	free_blocks(GUI_FileManagerGetPath(self.filebrowser), 0);
 	GUI_FileManagerScan(self.filebrowser);
 	GUI_WidgetMarkChanged(self.vmu_page);
 }
