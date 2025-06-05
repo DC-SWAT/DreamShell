@@ -25,8 +25,6 @@ static struct {
 	GUI_Widget *status;
 } self;
 
-static uint8 rd_buff[0x10000] __attribute__((aligned(32)));
-
 static void show_status_ok(char *msg) {
 	GUI_LabelSetTextColor(self.status, 28, 227, 70);
 	GUI_LabelSetText(self.status, msg);
@@ -152,8 +150,8 @@ int test_sd_io(void) {
 
 void Speedtest_Run(GUI_Widget *widget) {
 
-	uint8 *buff = (uint8*)0x8c400000;
-	size_t buff_size = 0x10000;
+	uint8 *buff = NULL;
+	size_t buff_size = 0x40000;
 	int size = 0x800000, cnt = 0, rs; 
 	int64 time_before, time_after;
 	uint32 t;
@@ -198,6 +196,7 @@ void Speedtest_Run(GUI_Widget *widget) {
 
 	show_status_ok("Testing FS write speed...");
 	GUI_LabelSetText(self.fs_write_text, "...");
+	thd_sleep(50);
 
 	snprintf(name, sizeof(name), "%s/%s.tst", wname, lib_get_name());
 
@@ -213,6 +212,8 @@ void Speedtest_Run(GUI_Widget *widget) {
 		show_status_error("Can't open file for write");
 		return;
 	}
+
+	buff = (uint8 *)0x8c400000;
 
 	ShutdownVideoThread(); 
 	time_before = timer_ns_gettime64();
@@ -278,8 +279,9 @@ readtest:
 	time_before = time_after = t = cnt = 0;
 	speed = 0.0f;
 	size = fs_total(fd);
-	buff = rd_buff;
+	buff = memalign(32, buff_size);
 
+	thd_sleep(50);
 	ShutdownVideoThread();
 	time_before = timer_ns_gettime64();
 
@@ -311,6 +313,7 @@ readtest:
 		"FS read: %.2f Kbytes/s or %.2f Mbit/s",
 		speed / 1024, ((speed / 1024) / 1024) * 8);
 
+	free(buff);
 	InitVideoThread();
 
 	ds_printf("DS_OK: Complete!\n"
@@ -322,13 +325,15 @@ readtest:
 		size / 1024, buff_size / 1024);
 
 	GUI_LabelSetText(self.fs_read_text, result);
-	show_status_ok("Complete!"); 
 
 	if(is_ide) {
 		test_ide_io();
 	}
 	else if(is_sd) {
 		test_sd_io();
+	}
+	else {
+		show_status_ok("Complete!");
 	}
 }
 
