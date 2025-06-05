@@ -26,6 +26,6 @@ typedef enum {
 int ds_sfx_play(ds_sfx_t sfx);
 int ds_sfx_is_enabled(ds_sfx_t sfx);
 void ds_sfx_get_wav(char sfx_path[], ds_sfx_t sfx_sel);
-
+void ds_sfx_preload(void);
 
 #endif /* _DS_SFX_H */

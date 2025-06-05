@@ -294,25 +294,25 @@ int InitDS() {
 		return -1;
 	}
 
+	/* Preload some sfx to avoid delay on first input */
+	ds_sfx_preload();
+
 #ifdef DS_DEBUG
 	uint64 t_end = timer_ms_gettime64();
 	dbglog(DBG_INFO, "Initializing time: %ld ms\n", (uint32)(t_end - t_start));
 #endif
 
 	if(settings->startup[0] == '/') {
-
 		snprintf(fn, NAME_MAX, "%s%s", getenv("PATH"), settings->startup);
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
-
-	} else if(settings->startup[0] == '#') {
-
+	}
+	else if(settings->startup[0] == '#') {
 		dsystem_buff(settings->startup);
-
-	} else if(settings->startup[0] != 0) {
-
+	}
+	else if(settings->startup[0] != 0) {
 		LuaDo(LUA_DO_STRING, settings->startup, GetLuaState());
-
-	} else {
+	}
+	else {
 		snprintf(fn, NAME_MAX, "%s/lua/startup.lua", getenv("PATH"));
 		LuaDo(LUA_DO_FILE, fn, GetLuaState());
 	}

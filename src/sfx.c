@@ -168,14 +168,9 @@ int ds_sfx_is_enabled(ds_sfx_t sfx) {
 	}
 }
 
-static int ds_sfx_get_volume() {
-	Settings_t *settings = GetSettings();
-	
-	if(!settings) {
-		return 230;
-	}
-	
-	return settings->audio.volume;
+static int ds_sfx_get_volume(void) {
+	int volume = GetVolumeFromSettings();
+	return volume < 0 ? 230 : volume;
 }
 
 void ds_sfx_get_wav(char sfx_path[], ds_sfx_t sfx_sel) {
@@ -221,6 +216,25 @@ static int ds_sfx_play_stream(ds_sfx_t sfx) {
 
 	thd_create(1, snd_stream_thread, (void *)snd_stream_hnd);
 	return 0;
+}
+
+void ds_sfx_preload(void) {
+	ds_sfx_t init_sfx[] = {DS_SFX_CLICK, DS_SFX_CLICK2, DS_SFX_SLIDE};
+	int init_count = sizeof(init_sfx) / sizeof(init_sfx[0]);
+
+	for(int i = 0; i < init_count; i++) {
+		if(!ds_sfx_is_enabled(init_sfx[i])) {
+			continue;
+		}
+
+		int sfx_sel = init_sfx[i] - DS_SFX_LAST_STREAM;
+
+		if(sys_sfx_hnd[sfx_sel] == SFXHND_INVALID) {
+			char sfx_path[NAME_MAX];
+			ds_sfx_get_wav(sfx_path, sfx_sel);
+			sys_sfx_hnd[sfx_sel] = snd_sfx_load(sfx_path);
+		}
+	}
 }
 
 int ds_sfx_play(ds_sfx_t sfx) {
