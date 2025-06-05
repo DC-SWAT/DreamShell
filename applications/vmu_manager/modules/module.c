@@ -893,8 +893,10 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 			GUI_PictureSetImage(self.image_confirm, self.confirmimg[1]);
 			flag = Confirm_Window();
 			GUI_PictureSetImage(self.image_confirm, self.confirmimg[0]);
-				
-			if (flag == CMD_OK) {
+			
+			sprintf(src,"%s/%s",GUI_FileManagerGetPath(fmw),ent->name);
+			
+			if (flag == CMD_OK && FileSize(src) == (2 << 16)) {
 				if ( VMU_Manager_Dump(GUI_FileManagerGetItem(self.filebrowser2, fm_ent->index)) == CMD_OK) {
 					free_blocks(GUI_FileManagerGetPath(self.filebrowser) , 0);
 					GUI_FileManagerScan(self.filebrowser);
@@ -902,7 +904,6 @@ void VMU_Manager_ItemClick(dirent_fm_t *fm_ent) {
 			}
 			else if (flag == CMD_NO_ARG) {
 				self.home_path = "/vmd";
-				sprintf(src,"%s/%s",GUI_FileManagerGetPath(fmw),ent->name);
 				
 				fs_vmd_vmdfile(src);
 				GUI_WidgetSetEnabled(self.button_dump, 0);	
@@ -1390,100 +1391,98 @@ int VMU_Manager_Dump(GUI_Widget *widget) {
 	dumpflg = strcmp(GUI_ObjectGetName(widget),"dump-button");
 	
 	if(dumpflg == 0) {			/*DUMP*/
-			GUI_ProgressBarSetImage1(self.progressbar, self.progres_img_b);
-			GUI_ProgressBarSetImage2(self.progressbar, self.progres_img);
-			GUI_ProgressBarSetPosition(self.progressbar, progress);
-			GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
+		GUI_ProgressBarSetImage1(self.progressbar, self.progres_img_b);
+		GUI_ProgressBarSetImage2(self.progressbar, self.progres_img);
+		GUI_ProgressBarSetPosition(self.progressbar, progress);
+		GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
 
-			sprintf(dst, "%s/vmu001.vmd", GUI_FileManagerGetPath(self.filebrowser2));
-			
-			for(i=2;i<999;i++) {
-				if(!FileExists(dst)) break;
-				sprintf(dst, "%s/vmu%03d.vmd", GUI_FileManagerGetPath(self.filebrowser2), i);
-			}
+		sprintf(dst, "%s/vmu001.vmd", GUI_FileManagerGetPath(self.filebrowser2));
+
+		for(i = 2; i < 999; i++) {
+			if(!FileExists(dst)) break;
+			sprintf(dst, "%s/vmu%03d.vmd", GUI_FileManagerGetPath(self.filebrowser2), i);
+		}
 			
 #ifdef VMDEBUG
-			dbgio_printf("dst name: %s\n", dst);
+		dbgio_printf("dst name: %s\n", dst);
 #endif
-			f = fs_open(dst, O_WRONLY | O_CREAT | O_TRUNC);
+		f = fs_open(dst, O_WRONLY | O_CREAT | O_TRUNC);
 
-			if(f < 0) {
-				dbgio_printf("DS_ERROR: Can't open %s\n", dst);
+		if(f < 0) {
+			dbgio_printf("DS_ERROR: Can't open %s\n", dst);
+			return CMD_ERROR;
+		}
+
+		vmdata = (uint8 *) calloc(1,512);
+
+		for (i = 0; i < 256; i++) {
+			if (vmu_block_read(dev, i, vmdata) < 0) {
+				dbgio_printf("DS_ERROR: Failed to read block %d\n", i);
+				fs_close(f);
+				free(vmdata);
+				GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+				GUI_WidgetMarkChanged(self.vmu_page);
 				return CMD_ERROR;
 			}
-
-			vmdata = (uint8 *) calloc(1,512);
-
-			for (i = 0; i < 256; i++) {
-				if (vmu_block_read(dev, i, vmdata) < 0) {
-					dbgio_printf("DS_ERROR: Failed to read block %d\n", i);
-					fs_close(f);
-					free(vmdata);
-					GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-					GUI_WidgetMarkChanged(self.vmu_page);
-					return CMD_ERROR;
-				}
-				fs_write(f, vmdata, 512);
-				progress = (double) ceil(i*10/256)/10 + 0.1;
-				GUI_ProgressBarSetPosition(self.progressbar, progress);
-				GUI_WidgetMarkChanged(self.progressbar_container);
-			}
-
-			fs_close(f);
-			free(vmdata);
-
-			GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-			GUI_FileManagerScan(self.filebrowser2);
-			
-		}
-		else {					/*RESTORE*/
-			progress = 1.0;
-			GUI_ProgressBarSetImage1(self.progressbar, self.progres_img);
-			GUI_ProgressBarSetImage2(self.progressbar, self.progres_img_b);
+			fs_write(f, vmdata, 512);
+			progress = (double) ceil(i*10/256)/10 + 0.1;
 			GUI_ProgressBarSetPosition(self.progressbar, progress);
-			GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
-			
-			sprintf(src, "%s/%s", self.m_SelectedPath , self.m_SelectedFile);
-			
-#ifdef VMDEBUG
-			dbgio_printf("src name: %s\n", src);
-			dbgio_printf("SelectedPath: %s\nSelectedFile: %s\n", self.m_SelectedPath,self.m_SelectedFile);
-#endif			
-			f = fs_open(src, O_RDONLY);
-
-			if(f < 0) {
-				dbgio_printf("DS_ERROR: Can't open %s\n", src);
-				return CMD_ERROR; 
-			}
-
-			vmdata = (uint8 *) calloc(1,512);
-
-			i = 0; 
-
-			while(fs_read(f, vmdata, 512) > 0) {
-#ifdef VMDEBUG	
-				thd_sleep(10);
-#else		
-				if(vmu_block_write(dev, i, vmdata) < 0) {
-					dbgio_printf("DS_ERROR: Failed to write block %d\n", i);
-					fs_close(f);
-					free(vmdata);
-					GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
-					GUI_WidgetMarkChanged(self.vmu_page);
-					return CMD_ERROR;
-				}
-#endif				
-				i++;
-				progress = (double) ceil((255-i)*10/256)/10 + 0.1;
-				GUI_ProgressBarSetPosition(self.progressbar, progress);
-				GUI_WidgetMarkChanged(self.progressbar_container);
-			}
-
-			fs_close(f);
-			free(vmdata);
-			GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+			GUI_WidgetMarkChanged(self.progressbar_container);
 		}
-		
+
+		fs_close(f);
+		free(vmdata);
+
+		GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+		GUI_FileManagerScan(self.filebrowser2);
+	}
+	else {					/*RESTORE*/
+		progress = 1.0;
+		GUI_ProgressBarSetImage1(self.progressbar, self.progres_img);
+		GUI_ProgressBarSetImage2(self.progressbar, self.progres_img_b);
+		GUI_ProgressBarSetPosition(self.progressbar, progress);
+		GUI_ContainerAdd(self.vmu_page, self.progressbar_container);
+
+		sprintf(src, "%s/%s", self.m_SelectedPath , self.m_SelectedFile);
+
+#ifdef VMDEBUG
+		dbgio_printf("src name: %s\n", src);
+		dbgio_printf("SelectedPath: %s\nSelectedFile: %s\n", self.m_SelectedPath,self.m_SelectedFile);
+#endif			
+		f = fs_open(src, O_RDONLY);
+
+		if(f < 0) {
+			dbgio_printf("DS_ERROR: Can't open %s\n", src);
+			return CMD_ERROR; 
+		}
+
+		vmdata = (uint8 *) calloc(1,512);
+
+		i = 0; 
+
+		while(fs_read(f, vmdata, 512) > 0) {
+#ifdef VMDEBUG	
+			thd_sleep(10);
+#else		
+			if(vmu_block_write(dev, i, vmdata) < 0) {
+				dbgio_printf("DS_ERROR: Failed to write block %d\n", i);
+				fs_close(f);
+				free(vmdata);
+				GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+				GUI_WidgetMarkChanged(self.vmu_page);
+				return CMD_ERROR;
+			}
+#endif
+			i++;
+			progress = (double) ceil((255-i)*10/256)/10 + 0.1;
+			GUI_ProgressBarSetPosition(self.progressbar, progress);
+			GUI_WidgetMarkChanged(self.progressbar_container);
+		}
+
+		fs_close(f);
+		free(vmdata);
+		GUI_ContainerRemove(self.vmu_page, self.progressbar_container);
+	}
 	
 	GUI_WidgetMarkChanged(self.vmu_page);
 	return CMD_OK;

@@ -67,8 +67,10 @@ typedef struct {
     uint8           custom_color[4];/**< \brief blue, green, red, alpha */
     uint8           pad1[27];       /**< \brief All zeros */
     vmd_timestamp_t timestamp;      /**< \brief BCD timestamp */
-    uint8           pad2[8];        /**< \brief All zeros */
-    uint8           unk1[6];        /**< \brief ??? */
+    uint8           pad2[8];        /**< \brief All zeros */   
+    uint16			size;			/**< \brief blocks count - 1 */
+    uint16			partition;		/**< \brief partition num */
+    uint16			root_loc;		/**< \brief Root location */
     uint16          fat_loc;        /**< \brief FAT location */
     uint16          fat_size;       /**< \brief FAT size in blocks */
     uint16          dir_loc;        /**< \brief Directory location */

@@ -102,10 +102,20 @@ static vmd_fh_t *vmd_open_file(const char *path, int mode) {
     int     realmode, rv;
     void        * data;
     int     datasize;
-
+	
+	realmode = mode & O_MODE_MASK;
+	
+	if (realmode == O_RDWR || realmode == O_WRONLY) {
+		return NULL;
+	}
+	
     /* Malloc a new fh struct */
     fd = malloc(sizeof(vmd_fh_t));
-
+    
+    if (!fd) {
+		return NULL;
+	}
+    
     /* Fill in the filehandle struct */
     fd->strtype = VMD_FILE;
     fd->mode = mode;
@@ -115,30 +125,19 @@ static vmd_fh_t *vmd_open_file(const char *path, int mode) {
 
     /* What mode are we opening in? If we're reading or writing without O_TRUNC
        then we need to read the old file if there is one. */
-    realmode = mode & O_MODE_MASK;
-
-    if(realmode == O_RDONLY || ((realmode == O_RDWR || realmode == O_WRONLY) && !(mode & O_TRUNC))) {
+    
+    if(realmode == O_RDONLY) {
         /* Try to open it */
         rv = vmdfs_read(vmdfile, fd->name, &data, &datasize);
 
         if(rv < 0) {
-            if(realmode == O_RDWR || realmode == O_WRONLY) {
-                /* In some modes failure is ok -- just setup a blank first block. */
-                data = malloc(512);
-                datasize = 512;
-                memset(data, 0, 512);
-            }
-            else {
-                free(fd);
-                return NULL;
-            }
+			free(fd);
+			return NULL;
         }
     }
     else {
-        /* We're writing with truncate... just setup a blank first block. */
-        data = malloc(512);
-        datasize = 512;
-        memset(data, 0, 512);
+		free(fd);
+		return NULL;
     }
 
     fd->data = (uint8 *)data;

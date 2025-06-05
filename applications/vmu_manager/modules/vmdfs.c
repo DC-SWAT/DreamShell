@@ -109,8 +109,8 @@ static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16 * fat_b
     fat_size = root->fat_size;
 
     /* We can't reliably handle VMDs with a larger FAT... */
-    if(fat_size > 1) {
-        dbglog(DBG_ERROR, "vmdfs_fat_read: VMD has >1 (%d) FAT blocks\n",(int)fat_size);
+    if(fat_size > 8) {
+        dbglog(DBG_ERROR, "vmdfs_fat_read: VMD has >8 (%d) FAT blocks\n",(int)fat_size);
         return -1;
     }
 
@@ -122,7 +122,7 @@ static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16 * fat_b
     }
 
     fs_seek(fd, fat_block * BLOCK_SIZE, SEEK_SET);
-    fs_read(fd, (uint8 *)fat_buf, BLOCK_SIZE);
+    fs_read(fd, (uint8 *)fat_buf, fat_size * BLOCK_SIZE);
     fs_close(fd);
 
     if(!*fat_buf) {
@@ -234,10 +234,8 @@ static int vmdfs_setup(const char *vmdfile, vmd_root_t * root, vmd_dir_t ** dir,
     vmdfs_mutex_lock();
 
     fs_seek(fd, -BLOCK_SIZE, SEEK_END);
-    size_t rd = fs_read(fd, (uint8 *)root, BLOCK_SIZE);
+    fs_read(fd, (uint8 *)root, BLOCK_SIZE);
     fs_close(fd);
-
-    dbglog(DBG_DEBUG, "vmdfs_setup: read %s %d\n", vmdfile, rd);
 
     if(dir) {
         /* Alloc enough space for the whole dir */
