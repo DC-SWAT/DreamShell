@@ -11,14 +11,24 @@
 #
 
 TARGET = DS
-TARGET_NAME = DreamShell_v4.0.2_RC1
+VER_MAJOR = 4
+VER_MINOR = 0
+VER_MICRO = 2
+# Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
+VER_BUILD = 0x22
+
+BUILD_TYPE_NAME = $(if $(filter 0x3%,$(VER_BUILD)),Release, \
+                     $(if $(filter 0x2%,$(VER_BUILD)),RC, \
+                       $(if $(filter 0x1%,$(VER_BUILD)),Beta, \
+                         $(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
+TARGET_NAME = DreamShell_v$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)_$(BUILD_TYPE_NAME)
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
-# Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
-TRAGET_VERSION = -DVER_MAJOR=4 \
-				-DVER_MINOR=0 \
-				-DVER_MICRO=2 \
-				-DVER_BUILD=0x21
+
+TRAGET_VERSION = -DVER_MAJOR=$(VER_MAJOR) \
+				-DVER_MINOR=$(VER_MINOR) \
+				-DVER_MICRO=$(VER_MICRO) \
+				-DVER_BUILD=$(VER_BUILD)
 # TARGET_DEBUG = 1 # or 2 for GDB
 # TARGET_EMU = 1
 # TARGET_PROF = 1
@@ -263,17 +273,20 @@ $(TARGET_BIN_CD): $(TARGET_BIN)
 cdi: $(TARGET).cdi
 
 $(TARGET).cdi: $(TARGET_BIN_CD) make-build
+	@echo Updating IP.BIN with current version and date...
+	@utils/update_ip_bin.sh $(DS_RES)/IP.BIN /tmp/IP_$(TARGET).BIN $(VER_MAJOR) $(VER_MINOR) $(VER_MICRO) $(VER_BUILD) >/dev/null
 	@echo Creating ISO...
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
 	@cp $(TARGET_BIN_CD) $(DS_BUILD)/$(TARGET_BIN_CD)
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
-	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
+	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G /tmp/IP_$(TARGET).BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
 	@$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi >/dev/null
 	@-rm -f $(TARGET).iso
 	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
+	@-rm -f /tmp/IP_$(TARGET).BIN
 
 # If you have problems with mkisofs try data/data image:
 # $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
