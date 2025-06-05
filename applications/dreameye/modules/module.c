@@ -80,7 +80,8 @@ static struct {
     GUI_Surface *default_thumb_surface;
     GUI_Surface *default_thumb_hl_surface;
 
-    Event_t *slide_input_event;
+    Event_t *input_event;
+    int fullscreen_entry_photo;
 
 } self;
 
@@ -221,7 +222,7 @@ static void LoadPhotoIntoViewer(int photo_index) {
 static void DreameyeApp_FullscreenPrevPhoto(void);
 static void DreameyeApp_FullscreenNextPhoto(void);
 
-static void Slide_EventHandler(void *ds_event, void *param, int action) {
+static void DreameyeApp_EventHandler(void *ds_event, void *param, int action) {
     SDL_Event *event = (SDL_Event *) param;
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
@@ -377,24 +378,25 @@ void DreameyeApp_Init(App_t *app) {
     self.default_thumb_hl_surface = GUI_ButtonGetHighlightImage(self.thumb_buttons[0]);
     GUI_ObjectIncRef((GUI_Object *)self.default_thumb_hl_surface);
 
-    self.slide_input_event = AddEvent(
-        "Slide_Input",
+    self.input_event = AddEvent(
+        "DreameyeApp_input",
         EVENT_TYPE_INPUT,
         EVENT_PRIO_DEFAULT,
-        Slide_EventHandler,
+        DreameyeApp_EventHandler,
         NULL
     );
 }
 
 void DreameyeApp_Shutdown(App_t *app) {
     (void)app;
+
+    RemoveEvent(self.input_event);
+
     HideCameraPreview();
     gallery_shutdown();
 
     GUI_ObjectDecRef((GUI_Object *)self.default_thumb_surface);
     GUI_ObjectDecRef((GUI_Object *)self.default_thumb_hl_surface);
-
-    RemoveEvent(self.slide_input_event);
 }
 
 void DreameyeApp_Open(App_t *app) {
@@ -913,6 +915,9 @@ static void on_fullscreen_loaded(GUI_Surface *surface, GUI_Surface *hl_surface) 
 void DreameyeApp_ShowFullscreenPhoto(GUI_Widget *widget) {
     (void)widget;
 
+    gallery_state_t *state = gallery_get_state();
+    self.fullscreen_entry_photo = state->current_photo;
+
     LockVideo();
     GUI_WidgetSetEnabled(self.fullscreen_photo, 0);
     GUI_LabelSetText(self.fullscreen_status, "Loading...");
@@ -922,7 +927,6 @@ void DreameyeApp_ShowFullscreenPhoto(GUI_Widget *widget) {
     GUI_WidgetMarkChanged(self.app->body);
     UnlockVideo();
 
-    gallery_state_t *state = gallery_get_state();
     gallery_load_photo(state->current_photo, 0, 0, on_fullscreen_loaded);
 }
 
@@ -937,6 +941,15 @@ void DreameyeApp_ExitFullscreen(GUI_Widget *widget) {
     GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
     GUI_WidgetMarkChanged(self.app->body);
     UnlockVideo();
+
+    // FIXME: Something wrong with sync with a bunch of these UI changes.
+    thd_sleep(100);
+    GUI_WidgetMarkChanged(self.app->body);
+
+    gallery_state_t *state = gallery_get_state();
+    if (state->current_photo != self.fullscreen_entry_photo) {
+        LoadPhotoIntoViewer(state->current_photo);
+    }
 }
 
 static void DreameyeApp_FullscreenPrevPhoto(void) {
