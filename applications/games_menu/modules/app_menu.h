@@ -159,7 +159,7 @@ bool LoadCache();
 bool SaveCache();
 void PatchParseText(PresetStruct *preset);
 PresetStruct* GetDefaultPresetGame(const char* full_path_game, SectorDataStruct *sector_data);
-PresetStruct* LoadPresetGame(int game_index);
+PresetStruct* LoadPresetGame(int game_index, bool default_preset);
 bool SavePresetGame(PresetStruct *preset);
 isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset);
 int IsHexadecimal(const char *text);

@@ -74,6 +74,7 @@ static struct
 	CheckBox *bypass_option;
 	CheckBox *cdda_option;
 	CheckBox *irq_option;
+	Label *default_preset_option;
 	OptionGroup *os_option;
 	OptionGroup *loader_option;
 	OptionGroup *boot_option;
@@ -554,6 +555,18 @@ void CreateGeneralView(Form *form_ptr)
 		}
 		
 		loader_label = NULL;
+	}
+
+	{
+		// GET DEFAULT PRESET
+		self.default_preset_option = TSU_LabelCreate(form_font, "GET DEFAULT PRESET", body_letter_size + 2, false, false);
+		TSU_FormAddBodyLabel(form_ptr, self.default_preset_option, 4, 1);
+
+		TSU_DrawableEventSetClick((Drawable *)self.default_preset_option, &DefaultPresetOptionClick);
+
+		Vector position = TSU_DrawableGetPosition((Drawable *)self.default_preset_option);
+		position.x -= 50;
+		TSU_DrawableSetTranslate((Drawable *)self.default_preset_option, &position);
 	}
 
 	{
@@ -1491,7 +1504,7 @@ void ShowPresetMenu(int game_index)
 					free(menu_data.preset);
 				}	
 				
-				menu_data.preset = LoadPresetGame(self.game_index);
+				menu_data.preset = LoadPresetGame(self.game_index, false);
 			}
 
 			SetModeScreenshot();
@@ -1665,6 +1678,28 @@ void CDDAOptionClick(Drawable *drawable)
 void IRQOptionClick(Drawable *drawable)
 {
 	IRQInputEvent(0, KeySelect);
+}
+
+void DefaultPresetOptionClick(Drawable *drawable)
+{
+	if (self.game_index >= 0)
+	{
+		Color press_color = {1, 1.0f, 1.0f, 0.1f};
+		Color drop_color = {1, 1.0f, 1.0f, 1.0f};
+
+		TSU_LabelSetTint(self.default_preset_option , &press_color);
+
+		if (menu_data.preset != NULL)
+		{
+			free(menu_data.preset);
+		}
+
+		menu_data.preset = LoadPresetGame(self.game_index, true);
+
+		TSU_FormClearBodyObjects(self.preset_menu_form);
+		OnViewIndexChangedEvent((Drawable *)self.preset_menu_form, GENERAL_VIEW);
+		TSU_LabelSetTint(self.default_preset_option, &drop_color);
+	}
 }
 
 void OSOptionClick(Drawable *drawable)

@@ -250,6 +250,7 @@ extern "C"
 	void TSU_FormIsEnable(Form *form_ptr);
 	void TSU_FormSetCursor(Form *form_ptr, Drawable *drawable_ptr);
 	void TSU_FormSetCursorSize(Form *form_ptr, float width, float height);
+	void TSU_FormClearBodyObjects(Form *form_ptr);
 
 #ifdef __cplusplus
 };

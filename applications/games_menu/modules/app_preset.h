@@ -42,6 +42,7 @@ void AsyncOptionClick(Drawable *drawable);
 void ByPassOptionClick(Drawable *drawable);
 void CDDAOptionClick(Drawable *drawable);
 void IRQOptionClick(Drawable *drawable);
+void DefaultPresetOptionClick(Drawable *drawable);
 void OSOptionClick(Drawable *drawable);
 
 void LoaderOptionClick(Drawable *drawable);
