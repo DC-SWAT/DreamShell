@@ -1698,5 +1698,13 @@ extern "C"
 			form_ptr->setCursorSize(width, height);
 		}
 	}
+
+	void TSU_FormClearBodyObjects(Form *form_ptr)
+	{
+		if (form_ptr != NULL)
+		{
+			form_ptr->clearObjects();
+		}
+	}
 	
 }

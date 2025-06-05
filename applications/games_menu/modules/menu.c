@@ -1282,7 +1282,7 @@ PresetStruct *GetDefaultPresetGame(const char *full_path_game, SectorDataStruct 
 	return preset;
 }
 
-PresetStruct *LoadPresetGame(int game_index)
+PresetStruct *LoadPresetGame(int game_index, bool default_preset)
 {
 	PresetStruct *preset = NULL;
 
@@ -1307,7 +1307,8 @@ PresetStruct *LoadPresetGame(int game_index)
 			int game_device_type = GetDeviceType(full_path_game);
 			int app_name_count = 0;
 			const char *app_name_array[3] = {"games_menu", "iso_loader", NULL};
-			while (app_name_array[app_name_count] != NULL)
+			
+			while (!default_preset && app_name_array[app_name_count] != NULL)
 			{
 				if (game_device_type == APP_DEVICE_SD)
 				{

@@ -1909,7 +1909,7 @@ static int LoadPreset()
 			free(menu_data.preset);
 		}
 
-		menu_data.preset = LoadPresetGame(self.game_index_selected);
+		menu_data.preset = LoadPresetGame(self.game_index_selected, false);
 	}
 
 	if ((self.isoldr = ParsePresetToIsoldr(self.game_index_selected, menu_data.preset)) == NULL)
