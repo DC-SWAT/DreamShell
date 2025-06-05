@@ -211,7 +211,7 @@ static int SaveSettingsVMU() {
 	int pkg_size;
 	file_t fd;
 
-	fd = fs_open(vmu_file, O_WRONLY | O_TRUNC | O_CREAT);
+	fd = fs_open(vmu_file, O_WRONLY | O_TRUNC | O_CREAT | O_META);
 
 	if(fd == FILEHND_INVALID) {
 		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, vmu_file);
