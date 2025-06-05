@@ -17,10 +17,9 @@ VER_MICRO = 2
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
 VER_BUILD = 0x22
 
-BUILD_TYPE_NAME = $(if $(filter 0x3%,$(VER_BUILD)),Release, \
-                     $(if $(filter 0x2%,$(VER_BUILD)),RC, \
-                       $(if $(filter 0x1%,$(VER_BUILD)),Beta, \
-                         $(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
+BUILD_TYPE_BASE = $(if $(filter 0x3%,$(VER_BUILD)),Release,$(if $(filter 0x2%,$(VER_BUILD)),RC,$(if $(filter 0x1%,$(VER_BUILD)),Beta,$(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
+BUILD_NUM = $(lastword $(subst 0x2,,$(subst 0x1,,$(subst 0x0,,$(subst 0x3,,$(VER_BUILD))))))
+BUILD_TYPE_NAME = $(if $(filter Release,$(BUILD_TYPE_BASE)),$(BUILD_TYPE_BASE),$(BUILD_TYPE_BASE)$(BUILD_NUM))
 TARGET_NAME = DreamShell_v$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)_$(BUILD_TYPE_NAME)
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
