@@ -270,42 +270,61 @@ static void clr_statusbar() {
 }
 
 static int Confirm_Window() {
-	maple_device_t *cont;
-	cont_state_t *state;
-	int y, flag = CMD_ERROR;
+	maple_device_t *controller_dev;
+	maple_device_t *mouse_dev;
+	int y, rv = CMD_ERROR;
 
 	SDL_GetMouseState(NULL, &y);
 	SDL_WarpMouse(0,0);
 	GUI_ContainerAdd(self.vmu_page, self.confirm);
 	GUI_WidgetMarkChanged(self.vmu_page);
-	LockVideo();
 
 	while(1) {
-		if(! (cont = maple_enum_type(0, MAPLE_FUNC_MOUSE)) ) {
-			if(!(cont = maple_enum_type(0, MAPLE_FUNC_CONTROLLER))) {
-				continue;
+		mouse_dev = maple_enum_type(0, MAPLE_FUNC_MOUSE);
+		controller_dev = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
+
+		if(mouse_dev) {
+			mouse_cond_t *state = (mouse_cond_t *)maple_dev_status(mouse_dev);
+
+			if(state) {
+				if(state->buttons & MOUSE_LEFTBUTTON) {
+					rv = CMD_OK;
+					break;
+				}
+				else if(state->buttons & MOUSE_RIGHTBUTTON) {
+					break;
+				}
+				else if(state->buttons & MOUSE_SIDEBUTTON) {
+					rv = CMD_NO_ARG;
+					break;
+				}
 			}
 		}
 
-		if(!(state = (cont_state_t *) maple_dev_status(cont))) {
+		if(controller_dev) {
+			cont_state_t *state = (cont_state_t *)maple_dev_status(controller_dev);
+
+			if(state) {
+				if(state->buttons & CONT_A) {
+					rv = CMD_OK;
+					break;
+				}
+				else if(state->buttons & CONT_B) {
+					break;
+				}
+				else if(state->buttons & CONT_X) {
+					rv = CMD_NO_ARG;
+					break;
+				}
+			}
+		}
+
+		if(!mouse_dev && !controller_dev) {
 			continue;
 		}
-		
-		if(state->buttons & CONT_A) {
-			flag = CMD_OK;
-			break;
-		}
-		else if(state->buttons & CONT_B) {
-			break;
-		}
-		else if(state->buttons & CONT_X) {
-			flag = CMD_NO_ARG;
-			break;
-		}
-		else {
-			thd_sleep(50);
-		}
-	}	
+
+		thd_sleep(50);
+	}
 
 	GUI_ContainerRemove(self.vmu_page, self.confirm);	
 	GUI_WidgetMarkChanged(self.m_App->body);
@@ -314,7 +333,7 @@ static int Confirm_Window() {
 	SDL_WarpMouse(270, y);
 	UnlockVideo();
 
-	return flag;
+	return rv;
 }
 
 static void show_slots(int port) {
