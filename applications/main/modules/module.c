@@ -398,52 +398,48 @@ void MainApp_Init(App_t *app) {
 static void Slide_EventHandler(void *ds_event, void *param, int action) {
 
 	SDL_Event *event = (SDL_Event *) param;
-	
-	if (GetModuleByName("vkb")) {
-		uintptr_t vkb = GET_EXPORT_ADDR("VirtKeyboardIsVisible");
-		if (((int (*)(void))vkb)()) {
-			return;
-		}
-	}
 
 	switch(event->type) {
-		
+
 		case SDL_JOYBUTTONDOWN:
 			switch(event->jbutton.button) {
 				case SDL_DC_L:
+					if (IsVirtKeyboardVisible()) {
+						break;
+					}
 					MainApp_SlideLeft(NULL);
 					break;
 				
 				case SDL_DC_R:
+					if (IsVirtKeyboardVisible()) {
+						break;
+					}
 					MainApp_SlideRight(NULL);
 					break;
-				
+
 				default:
 					break;
 			}
 			break;
-		
+
 		case SDL_KEYDOWN:
-			switch (event->key.keysym.sym)
-			{
+			switch (event->key.keysym.sym) {
 				case SDLK_COMMA:
 					MainApp_SlideLeft(NULL);
 					break;
-				
+
 				case SDLK_PERIOD:
 					MainApp_SlideRight(NULL);
 					break;
-				
+
 				default:
 					break;
 			}
-			
 			break;
-		
+
 		default:
 			break;
 	}
-
 }
 
 void MainApp_Shutdown(App_t *app) {

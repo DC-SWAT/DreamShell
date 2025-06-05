@@ -1,7 +1,7 @@
 /** 
  * \file    gui.h
  * \brief   DreamShell GUI
- * \date    2006-2023
+ * \date    2006-2025
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -12,8 +12,8 @@
 #include "video.h"
 #include "list.h"
 #include "events.h"
+#include "module.h"
 #include "SDL/SDL_gui.h"
-
 
 /* Virtual keyboard from vkb module */
 int VirtKeyboardInit();
@@ -24,6 +24,15 @@ void VirtKeyboardShow();
 void VirtKeyboardHide();
 void VirtKeyboardToggle();
 
+static inline int IsVirtKeyboardVisible() {
+    if (GetModuleByName("vkb")) {
+        uintptr_t vkb = GET_EXPORT_ADDR("VirtKeyboardIsVisible");
+        if (vkb) {
+            return ((int (*)(void))vkb)();
+        }
+    }
+    return 0;
+}
 
 /* Main GUI */
 int InitGUI();
@@ -34,7 +43,6 @@ void GUI_Enable();
 
 int GUI_Object2Trash(GUI_Object *object);
 void GUI_ClearTrash();
-
 
 /* GUI utils */
 Uint32 colorHexToRGB(char *color, SDL_Color *clr);
