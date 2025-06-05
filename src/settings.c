@@ -8,8 +8,8 @@
 
 #include <ds.h>
 
-static const char vmu_file[] = "/vmu/a1/DS_CORE4.CFG";
-static const char raw_file[] = "DS_CORE.CFG";
+#define DS_SAVE_FN "DSCONFIG.CFG"
+
 static Settings_t current_set;
 static int loaded = 0;
 
@@ -104,13 +104,13 @@ void ResetSettings() {
 	strncpy(cur->startup, "/lua/startup.lua", 16);
 	cur->startup[16] = '\0';
 
-	cur->version = GetVersion();
+	cur->version = DS_SETTIGS_VERSION;
 
 	if(loaded) {
 		char fn[NAME_MAX];
-		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
+		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
 		fs_unlink(fn);
-		fs_unlink(vmu_file);
+		fs_unlink(DS_SAVE_FN);
 	} else {
 		loaded = 1;
 	}
@@ -118,45 +118,45 @@ void ResetSettings() {
 
 static int LoadSettingsVMU() {
 
-	uint8 *data;
-	vmu_pkg_t pkg;
-	size_t size;
-	file_t fd;
-	int res;
-
-	fd = fs_open(vmu_file, O_RDONLY);
-
-	if(fd == FILEHND_INVALID) {
-		return 0;
+	char save_name[24];
+	maple_device_t *vmu;
+	file_t f;
+	int ret = 0;
+	static Settings_t tmp;
+	
+	for (int i = 0; i < 8; i++) {
+		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
+			// no more connected VMU's
+			return ret;
+		}
+		
+		// Try and load savefile
+		
+		snprintf(save_name, sizeof(save_name), "/vmu/%c%c/%s", vmu->port+'A', vmu->unit+'0', DS_SAVE_FN);
+		f = fs_open(save_name, O_RDONLY);
+		
+		if (f == FILEHND_INVALID) {
+			// save not found
+			continue;
+		}
+		
+		fs_read(f, &tmp, sizeof(Settings_t));
+		
+		if (tmp.version != DS_SETTIGS_VERSION) {
+			// settings not valid
+			fs_close(f);
+			fs_unlink(save_name);
+			continue;
+		}
+		
+		memcpy(&current_set, &tmp, sizeof(current_set));
+		
+		fs_close(f);
+		ret = 1;
+		break;
 	}
-
-	size = fs_total(fd);
-	data = calloc(1, size);
-
-	if(!data) {
-		fs_close(fd);
-		return 0;
-	}
-
-	memset(&pkg, 0, sizeof(pkg));
-	res = fs_read(fd, data, size);
-	fs_close(fd);
-
-	if (res <= 0) {
-		free(data);
-		return 0;
-	}
-
-	if(vmu_pkg_parse(data, size, &pkg) < 0) {
-		free(data);
-		return 0;
-	}
-
-	size = sizeof(current_set);
-	memcpy(&current_set, pkg.data, pkg.data_len > size ? size : pkg.data_len);
-	free(data);
-
-	return 1;
+	
+	return ret;
 }
 
 static int LoadSettingsFile(const char *filename) {
@@ -164,6 +164,10 @@ static int LoadSettingsFile(const char *filename) {
 	Settings_t sets;
 	file_t fd;
 	ssize_t res;
+
+	if (FileSize(filename) != sizeof(Settings_t)) {
+		return 0;
+	}
 
 	fd = fs_open(filename, O_RDONLY);
 
@@ -177,7 +181,12 @@ static int LoadSettingsFile(const char *filename) {
 	if (res <= 0) {
 		return 0;
 	}
-
+	
+	if (sets.version != DS_SETTIGS_VERSION) {
+		fs_unlink(filename);
+		return 0;
+	}
+	
 	memcpy(&current_set, &sets, sizeof(Settings_t));
 	return 1;
 }
@@ -187,63 +196,84 @@ int LoadSettings() {
 	loaded = LoadSettingsVMU();
 
 	if (!loaded) {
-		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
+		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
 		loaded = LoadSettingsFile(fn);
 	}
 
-	if(loaded) {
-		if(current_set.version != GetVersion()) {
-			dbglog(DBG_DEBUG, "%s: Settings file found with different version\n", __func__);
-			ResetSettings();
-		}
-		else {
-			dbglog(DBG_DEBUG, "%s: Settings file found\n", __func__);
-		}
+	if(!loaded) {
+		ResetSettings();
 	}
 	return loaded;
 }
 
-
 static int SaveSettingsVMU() {
 
-	uint8 *pkg_out;
-	vmu_pkg_t pkg;
+	char save_name[24];
+	maple_device_t *vmu;
+	file_t f;
+	int ret = 0;
 	int pkg_size;
-	file_t fd;
-
-	fd = fs_open(vmu_file, O_WRONLY | O_TRUNC | O_CREAT | O_META);
-
-	if(fd == FILEHND_INVALID) {
-		dbglog(DBG_DEBUG, "%s: Can't open for write %s\n", __func__, vmu_file);
-		return 0;
-	}
-
+	vmu_pkg_t pkg;
+	uint8_t *pkg_out;
+	
 	memset(&pkg, 0, sizeof(pkg));
 
-	strcpy(pkg.desc_short, "DreamShell Settings");
-	strcpy(pkg.desc_long, getenv("VERSION"));
+	strcpy(pkg.desc_short, getenv("VERSION"));
+	strcpy(pkg.desc_long, "DreamShell Settings");
 	strcpy(pkg.app_id, "DreamShell");
 
 	pkg.icon_cnt = 1;
 	pkg.icon_anim_speed = 0;
 	memcpy(pkg.icon_pal, DS_pal, 32);
 	pkg.icon_data = (uint8 *)DS_data;
-	pkg.eyecatch_type = VMUPKG_EC_16BIT;
+	pkg.eyecatch_type = VMUPKG_EC_NONE;
 	pkg.data_len = sizeof(current_set);
 	pkg.data = (void *)&current_set;
-
-	vmu_pkg_build(&pkg, &pkg_out, &pkg_size);
-
-	if(!pkg_out || pkg_size <= 0) {
-		dbglog(DBG_DEBUG, "%s: vmu_pkg_build failed\n", __func__);
-		return 0;
+	
+	if(vmu_pkg_build(&pkg, &pkg_out, &pkg_size) < 0) {
+		return ret;
 	}
-
-	fs_write(fd, pkg_out, pkg_size);
-	fs_close(fd);
+	
+	for (int i = 0; i < 8; i++) {
+		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
+			// no more connected VMU's
+			free(pkg_out);
+			return ret;
+		}
+		
+		sprintf(save_name, "/vmu/%c%c/%s", vmu->port+'A', vmu->unit+'0', DS_SAVE_FN);
+		
+		if (FileExists(save_name)) {
+			// save file found
+			fs_close(f);
+			fs_unlink(save_name);
+		}
+		
+		if((vmufs_free_blocks(vmu)*512) < pkg_size) {
+			// no free memory, try next vmu
+			continue;
+		}
+		
+		f = fs_open(save_name, O_WRONLY | O_META);
+		
+		if (f == FILEHND_INVALID) {
+			// can't create save file, try next vmu
+			continue;
+		}
+		
+		fs_write(f, pkg_out, pkg_size);
+		fs_close(f);
+		
+		vmu_beep_raw(vmu, 0x000065f0); // Turn on Beep
+		thd_sleep(500);
+		vmu_beep_raw(vmu, 0x00000000); // Turn off Beep
+		ret = 1;
+		break;
+	}
+	
 	free(pkg_out);
-
-	return 1;
+	
+	return ret;
 }
 
 static int SaveSettingsFile(const char *filename) {
@@ -268,15 +298,16 @@ int SaveSettings() {
 
 	char fn[NAME_MAX];
 
-	if(current_set.version != GetVersion()) {
-		current_set.version = GetVersion();
+	if(current_set.version != DS_SETTIGS_VERSION) {
+		current_set.version = DS_SETTIGS_VERSION;
 	}
-
-	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), raw_file);
 
 	if(SaveSettingsVMU()) {
 		return 1;
 	}
+	
+	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
+	
 	return SaveSettingsFile(fn);
 }
 
@@ -287,3 +318,4 @@ int GetVolumeFromSettings() {
     }
     return settings->audio.volume;
 }
+

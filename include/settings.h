@@ -10,6 +10,9 @@
 
 #include <kos.h>
 
+/* need increment when settings structure changed */
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('0')<<8 | '0')
+
 typedef struct VideoSettings {
 
 	/* Native video mode */
@@ -26,8 +29,6 @@ typedef struct VideoSettings {
 	// Virtual screen size
 	int virt_width;
 	int virt_height;
-
-	int reserved[16];
 
 }  VideoSettings_t;
 
@@ -48,8 +49,6 @@ typedef struct AudioSettings {
 
 	/* Startup sound enable/disable */
 	int startup_enabled;
-
-	int reserved[15];
 
 }  AudioSettings_t;
 
