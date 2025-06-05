@@ -20,7 +20,7 @@ void DreameyeApp_ExportPhoto(GUI_Widget *widget);
 
 void DreameyeApp_ErasePhoto(GUI_Widget *widget);
 
-void DreameyeApp_FileBrowserItemClick(GUI_Widget *widget);
+void DreameyeApp_FileBrowserItemClick(dirent_fm_t *fm_ent);
 
 void DreameyeApp_FileBrowserConfirm(GUI_Widget *widget);
 

@@ -5,6 +5,7 @@
 */
 
 #include <ds.h>
+#include <sfx.h>
 #include <kos.h>
 #include <dc/maple.h>
 #include <drivers/dreameye.h>
@@ -12,6 +13,7 @@
 #include "qr_code.h"
 #include "photo.h"
 #include "gallery.h"
+#include "app_module.h"
 
 DEFAULT_MODULE_EXPORTS(app_dreameye);
 
@@ -77,6 +79,8 @@ static struct {
 
     GUI_Surface *default_thumb_surface;
     GUI_Surface *default_thumb_hl_surface;
+
+    Event_t *slide_input_event;
 
 } self;
 
@@ -214,6 +218,95 @@ static void LoadPhotoIntoViewer(int photo_index) {
     gallery_load_photo(photo_index, 380, 280, on_photo_loaded);
 }
 
+static void DreameyeApp_FullscreenPrevPhoto(void);
+static void DreameyeApp_FullscreenNextPhoto(void);
+
+static void Slide_EventHandler(void *ds_event, void *param, int action) {
+    SDL_Event *event = (SDL_Event *) param;
+    switch(event->type) {
+        case SDL_JOYBUTTONDOWN:
+            switch(event->jbutton.button) {
+                case SDL_DC_L:
+                    if (IsVirtKeyboardVisible()) {
+                        break;
+                    }
+                    switch(GUI_CardStackGetIndex(self.pages)) {
+                        case APP_PAGE_GALLERY:
+                            DreameyeApp_GalleryPrevPage(NULL);
+                            break;
+                        case APP_PAGE_PHOTO_VIEWER:
+                            DreameyeApp_ViewPrevPhoto(NULL);
+                            break;
+                        case APP_PAGE_FULLSCREEN_VIEWER:
+                            DreameyeApp_FullscreenPrevPhoto();
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case SDL_DC_R:
+                    if (IsVirtKeyboardVisible()) {
+                        break;
+                    }
+                    switch(GUI_CardStackGetIndex(self.pages)) {
+                        case APP_PAGE_GALLERY:
+                            DreameyeApp_GalleryNextPage(NULL);
+                            break;
+                        case APP_PAGE_PHOTO_VIEWER:
+                            DreameyeApp_ViewNextPhoto(NULL);
+                            break;
+                        case APP_PAGE_FULLSCREEN_VIEWER:
+                            DreameyeApp_FullscreenNextPhoto();
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case SDL_KEYDOWN:
+            switch (event->key.keysym.sym) {
+                case SDLK_COMMA:
+                    switch(GUI_CardStackGetIndex(self.pages)) {
+                        case APP_PAGE_GALLERY:
+                            DreameyeApp_GalleryPrevPage(NULL);
+                            break;
+                        case APP_PAGE_PHOTO_VIEWER:
+                            DreameyeApp_ViewPrevPhoto(NULL);
+                            break;
+                        case APP_PAGE_FULLSCREEN_VIEWER:
+                            DreameyeApp_FullscreenPrevPhoto();
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case SDLK_PERIOD:
+                    switch(GUI_CardStackGetIndex(self.pages)) {
+                        case APP_PAGE_GALLERY:
+                            DreameyeApp_GalleryNextPage(NULL);
+                            break;
+                        case APP_PAGE_PHOTO_VIEWER:
+                            DreameyeApp_ViewNextPhoto(NULL);
+                            break;
+                        case APP_PAGE_FULLSCREEN_VIEWER:
+                            DreameyeApp_FullscreenNextPhoto();
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                default:
+                    break;
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 void DreameyeApp_Init(App_t *app) {
     self.app = app;
     self.action = APP_ACTION_IDLE;
@@ -283,6 +376,14 @@ void DreameyeApp_Init(App_t *app) {
 
     self.default_thumb_hl_surface = GUI_ButtonGetHighlightImage(self.thumb_buttons[0]);
     GUI_ObjectIncRef((GUI_Object *)self.default_thumb_hl_surface);
+
+    self.slide_input_event = AddEvent(
+        "Slide_Input",
+        EVENT_TYPE_INPUT,
+        EVENT_PRIO_DEFAULT,
+        Slide_EventHandler,
+        NULL
+    );
 }
 
 void DreameyeApp_Shutdown(App_t *app) {
@@ -292,6 +393,8 @@ void DreameyeApp_Shutdown(App_t *app) {
 
     GUI_ObjectDecRef((GUI_Object *)self.default_thumb_surface);
     GUI_ObjectDecRef((GUI_Object *)self.default_thumb_hl_surface);
+
+    RemoveEvent(self.slide_input_event);
 }
 
 void DreameyeApp_Open(App_t *app) {
@@ -642,7 +745,9 @@ void DreameyeApp_ShowGalleryPage(GUI_Widget *widget) {
 }
 
 void DreameyeApp_GalleryPrevPage(GUI_Widget *widget) {
-    (void)widget;
+    if(widget == NULL) {
+        ds_sfx_play(DS_SFX_SLIDE);
+    }
 
     gallery_state_t *state = gallery_get_state();
     if (state->current_page > 0 && !state->loading) {
@@ -651,7 +756,9 @@ void DreameyeApp_GalleryPrevPage(GUI_Widget *widget) {
 }
 
 void DreameyeApp_GalleryNextPage(GUI_Widget *widget) {
-    (void)widget;
+    if(widget == NULL) {
+        ds_sfx_play(DS_SFX_SLIDE);
+    }
 
     gallery_state_t *state = gallery_get_state();
     if (state->current_page < state->total_pages - 1 && !state->loading) {
@@ -685,7 +792,9 @@ void DreameyeApp_ViewPhoto(GUI_Widget *widget) {
 }
 
 void DreameyeApp_ViewPrevPhoto(GUI_Widget *widget) {
-    (void)widget;
+    if(widget == NULL) {
+        ds_sfx_play(DS_SFX_SLIDE);
+    }
 
     gallery_state_t *state = gallery_get_state();
     if (state->current_photo > 0 && !state->loading) {
@@ -694,7 +803,9 @@ void DreameyeApp_ViewPrevPhoto(GUI_Widget *widget) {
 }
 
 void DreameyeApp_ViewNextPhoto(GUI_Widget *widget) {
-    (void)widget;
+    if(widget == NULL) {
+        ds_sfx_play(DS_SFX_SLIDE);
+    }
 
     gallery_state_t *state = gallery_get_state();
     if (state->current_photo < (int)self.photo_count - 1 && !state->loading) {
@@ -819,11 +930,41 @@ void DreameyeApp_ExitFullscreen(GUI_Widget *widget) {
     (void)widget;
 
     LockVideo();
-    GUI_WidgetSetPosition(self.pages, 0, 45);
     GUI_ContainerRemove(self.app->body, self.pages);
     GUI_ContainerAdd(self.app->body, self.header_panel);
     GUI_ContainerAdd(self.app->body, self.pages);
+    GUI_WidgetSetPosition(self.pages, 0, 45);
     GUI_CardStackShowIndex(self.pages, APP_PAGE_PHOTO_VIEWER);
     GUI_WidgetMarkChanged(self.app->body);
     UnlockVideo();
+}
+
+static void DreameyeApp_FullscreenPrevPhoto(void) {
+    gallery_state_t *state = gallery_get_state();
+
+    if (state->current_photo > 0 && !state->loading) {
+
+        ds_sfx_play(DS_SFX_SLIDE);
+        state->current_photo--;
+
+        GUI_WidgetSetEnabled(self.fullscreen_photo, 0);
+        GUI_LabelSetText(self.fullscreen_status, "Loading...");
+
+        gallery_load_photo(state->current_photo, 0, 0, on_fullscreen_loaded);
+    }
+}
+
+static void DreameyeApp_FullscreenNextPhoto(void) {
+    gallery_state_t *state = gallery_get_state();
+
+    if (state->current_photo < (int)self.photo_count - 1 && !state->loading) {
+
+        ds_sfx_play(DS_SFX_SLIDE);
+        state->current_photo++;
+
+        GUI_WidgetSetEnabled(self.fullscreen_photo, 0);
+        GUI_LabelSetText(self.fullscreen_status, "Loading...");
+
+        gallery_load_photo(state->current_photo, 0, 0, on_fullscreen_loaded);
+    }
 }
