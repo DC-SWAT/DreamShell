@@ -39,7 +39,7 @@ char *makePresetFilename(const char *dir, uint8 *md5);
 int mountPresetsRomdisk(int device_type);
 void unmountPresetsRomdisk(int device_type);
 void unmountAllPresetsRomdisks();
-char *findPresetFile(const char *dir, uint8 *md5);
+char *findPresetFile(const char *dir, uint8 *md5, bool default_only);
 
 size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, char *result);
 void PlayCDDATrack(const char *file, int loop);

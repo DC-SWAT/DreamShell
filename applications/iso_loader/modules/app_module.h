@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    app_module.h - ISO Loader app module header
-   Copyright (C) 2023 SWAT
+   Copyright (C) 2023-2025 SWAT
 
 */
 
@@ -9,9 +9,11 @@
 
 void isoLoader_DefaultPreset();
 
-int isoLoader_LoadPreset();
+void isoLoader_RemovePreset(GUI_Widget *widget);
 
-int isoLoader_SavePreset();
+int isoLoader_LoadPreset(GUI_Widget *widget);
+
+int isoLoader_SavePreset(GUI_Widget *widget);
 
 void isoLoader_ResizeUI();
 

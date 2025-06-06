@@ -51,6 +51,7 @@ static struct {
 	GUI_Widget *run_pane;
 
 	GUI_Widget *preset;
+	GUI_Widget *preset_status;
 
 	GUI_Widget *dma;
 	GUI_Widget *cdda;
@@ -116,8 +117,9 @@ static struct {
 } self;
 
 void isoLoader_DefaultPreset();
-int isoLoader_LoadPreset();
-int isoLoader_SavePreset();
+void isoLoader_RemovePreset(GUI_Widget *widget);
+int isoLoader_LoadPreset(GUI_Widget *widget);
+int isoLoader_SavePreset(GUI_Widget *widget);
 void isoLoader_ResizeUI();
 void isoLoader_toggleMemory(GUI_Widget *widget);
 void isoLoader_toggleBootMode(GUI_Widget *widget);
@@ -166,6 +168,7 @@ void isoLoader_ShowPage(GUI_Widget *widget) {
 		GUI_CardStackShowIndex(self.pages, 0);
 		GUI_WidgetSetEnabled(self.games, 0);
 	} else if(widget == self.settings) {
+		GUI_LabelSetText(self.preset_status, " ");
 		GUI_CardStackShowIndex(self.pages, 1);
 		GUI_WidgetSetEnabled(self.settings, 0);
 	} else if(widget == self.extensions) {
@@ -197,7 +200,7 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 	} else {
 		ScreenFadeOutEx("Games", 1);
 	}
-	isoLoader_SavePreset();
+	isoLoader_SavePreset(NULL);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
@@ -1055,7 +1058,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	StopCDDATrack();
 
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
-		isoLoader_SavePreset();
+		isoLoader_SavePreset(NULL);
 	}
 
 	self.isoldr = isoldr_get_info(filepath, 0);
@@ -1246,7 +1249,7 @@ static void selectFile(char *name, int index) {
 	highliteDevice();
 	StopCDDATrack();
 	showCover();
-	isoLoader_LoadPreset();
+	isoLoader_LoadPreset(NULL);
 
 	if (GUI_WidgetGetState(self.cdda)) {
 		char filepath[NAME_MAX];
@@ -1413,9 +1416,30 @@ void isoLoader_DefaultPreset() {
 	}
 }
 
-int isoLoader_SavePreset() {
+void isoLoader_RemovePreset(GUI_Widget *widget) {
+	(void)widget;
 
-	if(!GUI_WidgetGetState(self.preset)) {
+	if (!self.filename[0]) {
+		return;
+	}
+
+	char *preset_filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
+
+	if (preset_filename != NULL) {
+		if (fs_unlink(preset_filename) == 0) {
+			ds_printf("DS_OK: Preset removed: %s\n", preset_filename);
+			GUI_LabelSetText(self.preset_status, "Removed");
+		}
+		else {
+			ds_printf("DS_INFO: No preset found: %s\n", preset_filename);
+			GUI_LabelSetText(self.preset_status, "Not found");
+		}
+	}
+}
+
+int isoLoader_SavePreset(GUI_Widget *widget) {
+
+	if(!self.filename[0] || (widget == NULL && !GUI_WidgetGetState(self.preset))) {
 		return 0;
 	}
 
@@ -1429,10 +1453,6 @@ int isoLoader_SavePreset() {
 	uint32 heap = HEAP_MODE_AUTO;
 	uint32 cdda_mode = CDDA_MODE_DISABLED;
 	int vmu_num = 0;
-
-	if(!self.filename[0]) {
-		return 0;
-	}
 
 	StopCDDATrack();
 	filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
@@ -1529,19 +1549,25 @@ int isoLoader_SavePreset() {
 	fs_write(fd, result, strlen(result));
 	fs_close(fd);
 
+	if(widget) {
+		GUI_LabelSetText(self.preset_status, "Saved");
+	}
 	return 0;
 }
 
-int isoLoader_LoadPreset() {
+int isoLoader_LoadPreset(GUI_Widget *widget) {
 
 	if (!self.filename[0]) {
 		isoLoader_DefaultPreset();
 		return -1;
 	}
 
-	char *filename = findPresetFile(GUI_FileManagerGetPath(self.filebrowser), self.md5);
+	char *filename = findPresetFile(GUI_FileManagerGetPath(self.filebrowser), self.md5, !!widget);
 
 	if (filename == NULL) {
+		if(widget) {
+			GUI_LabelSetText(self.preset_status, "Applied");
+		}
 		isoLoader_DefaultPreset();
 		return -1;
 	}
@@ -1712,6 +1738,9 @@ int isoLoader_LoadPreset() {
 	}
 
 	ds_printf("DS_OK: Applied %s\n", filename);
+	if(widget) {
+		GUI_LabelSetText(self.preset_status, "Applied");
+	}
 	return 0;
 }
 
@@ -1807,6 +1836,7 @@ void isoLoader_Init(App_t *app) {
 
 		self.memory_text = APP_GET_WIDGET("boot-memory-text");
 		self.heap_memory_text = APP_GET_WIDGET("heap-memory-text");
+		self.preset_status = APP_GET_WIDGET("preset_status");
 
 		w = APP_GET_WIDGET("async-panel");
 		self.async[0] = GUI_ContainerGetChild(w, 1);

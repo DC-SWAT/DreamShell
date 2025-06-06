@@ -313,12 +313,15 @@ char *makePresetFilename(const char *dir, uint8 *md5) {
 	return preset_filename;
 }
 
-char *findPresetFile(const char *dir, uint8 *md5) {
+char *findPresetFile(const char *dir, uint8 *md5, bool default_only) {
 	int device_type;
-	char *preset_file = makePresetFilename(dir, md5);
 
-	if (FileSize(preset_file) > 0) {
-		return preset_file;
+	if(!default_only) {
+		char *preset_file = makePresetFilename(dir, md5);
+
+		if (FileSize(preset_file) > 0) {
+			return preset_file;
+		}
 	}
 
 	device_type = getDeviceType(dir);

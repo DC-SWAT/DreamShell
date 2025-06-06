@@ -173,6 +173,19 @@
 			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
 		</surface>
 
+		<surface height="25" name="preset_btn" width="70">
+			<fill color="#FFFFFF" />
+			<fill color="#31799F" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+		<surface height="25" name="preset_btn_hl" width="70">
+			<fill color="#FFFFFF" />
+			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+		<surface height="25" name="preset_btn_pressed" width="70">
+			<fill color="#FFFFFF" />
+			<fill color="#85C4E2" height="86%" width="90%" x="7%" y="8%" />
+		</surface>
+
 		<surface height="50" width="50%" name="menu_bg">
 			<fill color="#FFFFFF" />
 			<fill color="#85C4E2" height="48" x="1" y="1" />
@@ -599,6 +612,22 @@
 
 					</cardstack>
 
+				</panel>
+
+				<panel height="30" width="75%" x="4%" y="335">
+					<label align="left" color="#FFFFFF" font="arial" height="25" text="Preset:" width="15%" y="2" />
+					<input type="button" height="25" width="70" x="60" onclick="export:isoLoader_SavePreset()" highlight="preset_btn_hl" normal="preset_btn" pressed="preset_btn_pressed">
+						<label align="center" color="#ffffff" font="arial" width="100%" height="100%" text="Save" />
+					</input>
+					<input type="button" height="25" width="70" x="135" onclick="export:isoLoader_RemovePreset()" highlight="preset_btn_hl" normal="preset_btn" pressed="preset_btn_pressed">
+						<label align="center" color="#ffffff" font="arial" width="100%" height="100%" text="Remove" />
+					</input>
+					<input type="button" height="25" width="70" x="210" onclick="export:isoLoader_LoadPreset()" highlight="preset_btn_hl" normal="preset_btn" pressed="preset_btn_pressed">
+						<label align="center" color="#ffffff" font="arial" width="100%" height="100%" text="Default" />
+					</input>
+					<panel height="25" width="70" x="290">
+						<label name="preset_status" align="left" color="#61BDEC" font="arial" width="100%" height="25" y="2" />
+					</panel>
 				</panel>
 			</panel>
 

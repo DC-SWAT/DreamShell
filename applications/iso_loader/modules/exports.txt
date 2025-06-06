@@ -23,6 +23,7 @@ isoLoader_toggleBootMode
 isoLoader_toggleMemory
 isoLoader_toggleOS
 isoLoader_DefaultPreset
+isoLoader_RemovePreset
 isoLoader_SavePreset
 isoLoader_LoadPreset
 isoLoader_toggleOptions
