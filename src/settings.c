@@ -116,7 +116,7 @@ void ResetSettings() {
 
 		for (int i = 0; i < 8; ++i) {
 			if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
-				continue;
+				break;
 			}
 			snprintf(save_name, sizeof(save_name),
 				"/vmu/%c%c/%s", vmu->port + 'A', vmu->unit + '0', DS_SAVE_FN);
@@ -138,7 +138,7 @@ static int LoadSettingsVMU() {
 
 	for (int i = 0; i < 8; ++i) {
 		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
-			continue;
+			break;
 		}
 
 		snprintf(save_name, sizeof(save_name), "/vmu/%c%c/%s",
@@ -242,7 +242,7 @@ static int SaveSettingsVMU() {
 
 	for (int i = 0; i < 8; i++) {
 		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
-			continue;
+			break;
 		}
 
 		snprintf(save_name, sizeof(save_name),
