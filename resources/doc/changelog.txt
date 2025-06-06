@@ -1,5 +1,10 @@
+** DreamShell 4.0.2.Release **
+	- http://www.dc-swat.ru/blog/dreamshell/1144.html
+	- https://github.com/DC-SWAT/DreamShell/releases/tag/v4.0.2.Release
+
 ** DreamShell 4.0.1.Release **
-	- WIP
+	- http://www.dc-swat.ru/blog/dreamshell/1142.html
+	- https://github.com/DC-SWAT/DreamShell/releases/tag/v4.0.1.Release
 
 ** DreamShell 4.0.0.Release **
 	- http://www.dc-swat.ru/blog/dreamshell/1141.html
