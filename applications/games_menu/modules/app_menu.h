@@ -191,7 +191,7 @@ void RemoveStaleCache();
 void PopulateCache();
 void RetrieveGamesByCategory(const char *category_name);
 void RetrieveCovers(uint8 device, int menu_type);
-void RetrieveGamesRecursive(const char *initial_path);
+void RetrieveGamesRecursive();
 bool RetrieveGames();
 uint16 GetCoverType(int game_index, int menu_type);
 const char* GetCoverExtensionFromType(uint16 image_type);
