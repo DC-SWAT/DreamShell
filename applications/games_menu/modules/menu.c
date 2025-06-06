@@ -3055,24 +3055,12 @@ void CopyDeepGame(const GameItemStruct *src, GameItemStruct *dest)
 	dest->cover = src->cover;
 }
 
-void RetrieveGamesRecursive(const char *initial_path)
+void RetrieveGamesRecursive()
 {
 	if (menu_data.cache_array_count > 0 && menu_data.enable_cache)
 	{
 		qsort(menu_data.cache_array, menu_data.cache_array_count, sizeof(CacheStruct), CompareCacheStructs);
 	}
-
-	int stack_capacity = 256;
-	int stack_top = 0;
-
-	GameTrampolineStruct *stack_trampoline = malloc(stack_capacity * sizeof(GameTrampolineStruct));
-	if (!stack_trampoline)
-		return;
-
-	snprintf(stack_trampoline[stack_top].full_path_folder, NAME_MAX, "%s", initial_path);
-	memset(stack_trampoline[stack_top].folder, '\0', sizeof(stack_trampoline[stack_top].folder));
-	stack_trampoline[stack_top].level = 0;
-	stack_top++;
 
 	char temp_folder_path[NAME_MAX];
 	char folder_game[NAME_MAX];
@@ -3088,247 +3076,261 @@ void RetrieveGamesRecursive(const char *initial_path)
 		cache_capacity = CACHE_BLOCK_SIZE;
 	}
 
-	while (stack_top > 0)
-	{
-		stack_top--;
-		GameTrampolineStruct frame = stack_trampoline[stack_top];
+	int stack_capacity = 256;
+	int stack_top = 0;
+	
+	const char *initial_paths[2] = { NULL, NULL };
+	int path_count = 0;
 
-		file_t fd = fs_open(frame.full_path_folder, O_RDONLY | O_DIR);
-		if (fd == FILEHND_INVALID)
+	initial_paths[path_count++] = GetGamesPath(menu_data.current_dev);
+
+	if (menu_data.ide && menu_data.sd && menu_data.current_dev != APP_DEVICE_SD)
+	{
+		initial_paths[path_count++] = GetGamesPath(APP_DEVICE_SD);
+	}
+
+	for (int i = 0; i < path_count; i++)
+	{
+		const char *initial_path = initial_paths[i];
+
+		if (!initial_path || !initial_path[0])
 			continue;
 
-		dirent_t *ent = NULL;
-		bool checked_unique_file = false;
-		int gdi_index = -1;
-		int unique_file = 0;
-		int unique_file_index = -1;
+		stack_top = 0;
+		GameTrampolineStruct *stack_trampoline = malloc(stack_capacity * sizeof(GameTrampolineStruct));
 
-		bool checked_optimized = false, gdi_optimized = false;
-		int gdi_cdda = CCGE_NOT_CHECKED;
+		snprintf(stack_trampoline[stack_top].full_path_folder, NAME_MAX, "%s", initial_path);
+		memset(stack_trampoline[stack_top].folder, '\0', sizeof(stack_trampoline[stack_top].folder));
+		stack_trampoline[stack_top].level = 0;
+		stack_top++;
 
-		GameItemStruct *game_cache = NULL;
-		bool exists_cache = false;
-
-		while ((ent = fs_readdir(fd)) != NULL)
+		while (stack_top > 0)
 		{
-			if (ent->name[0] == '.')
+			stack_top--;
+			GameTrampolineStruct frame = stack_trampoline[stack_top];
+
+			file_t fd = fs_open(frame.full_path_folder, O_RDONLY | O_DIR);
+			if (fd == FILEHND_INVALID)
 				continue;
 
-			if (strlen(frame.full_path_folder) + strlen(ent->name) >= NAME_MAX)
-				continue;
+			dirent_t *ent = NULL;
+			bool checked_unique_file = false;
+			int gdi_index = -1;
+			int unique_file = 0;
+			int unique_file_index = -1;
 
-			memset(temp_folder_path, 0, sizeof(temp_folder_path));
-			snprintf(temp_folder_path, NAME_MAX, "%s/%s", frame.full_path_folder, ent->name);
+			bool checked_optimized = false, gdi_optimized = false;
+			int gdi_cdda = CCGE_NOT_CHECKED;
 
-			const char *file_type = strrchr(ent->name, '.');
-			bool is_valid_game = false;
-			bool is_folder_name = false;
-			exists_cache = false;
-			upper_game_name[0] = '\0';
+			GameItemStruct *game_cache = NULL;
+			bool exists_cache = false;
 
-			if (menu_data.enable_cache &&
-				(ent->attr == O_DIR || (file_type && (EndsWith(ent->name, ".gdi") || EndsWith(ent->name, ".cdi") || EndsWith(ent->name, ".cso") || (EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0)))))
+			while ((ent = fs_readdir(fd)) != NULL)
 			{
-				game_cache = FindInCache(temp_folder_path);
-
-				if (game_cache != NULL)
-				{
-					exists_cache = true;
-					is_valid_game = true;
-				}
-			}
-
-			if (!exists_cache)
-			{
-				// GDI
-				if (file_type && EndsWith(ent->name, ".gdi"))
-				{
-					strcpy(upper_game_name, ent->name);
-					is_folder_name = frame.level > 0;
-					is_valid_game = true;
-				}
-				else if (file_type && (EndsWith(ent->name, ".cdi") ||
-									   (EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0) ||
-									   EndsWith(ent->name, ".cso")))
-				{
-					strcpy(upper_game_name, ent->name);
-					is_folder_name = (frame.level > 0 && unique_file == 0);
-					is_valid_game = true;
-				}
-				else if (strncasecmp(ent->name, "track", 5) == 0)
-				{
-					if (!checked_optimized && strncasecmp(ent->name, "track03", 7))
-					{
-						checked_optimized = true;
-						if (strcasecmp(file_type, ".iso") == 0)
-							gdi_optimized = true;
-					}
-
-					if (gdi_cdda != CCGE_CDDA)
-					{
-						if (strncasecmp(ent->name, "track06.wav", 11) == 0 || strncasecmp(ent->name, "track06.raw", 11) == 0)
-							gdi_cdda = CCGE_CDDA;
-						else if (strncasecmp(ent->name, "track04.wav", 11) == 0 || strncasecmp(ent->name, "track04.raw", 11) == 0)
-							gdi_cdda = CCGE_CANDIDATE;
-					}
-
+				if (ent->name[0] == '.')
 					continue;
-				}
-				else if (ent->attr == O_DIR)
+
+				if (strlen(frame.full_path_folder) + strlen(ent->name) >= NAME_MAX)
+					continue;
+
+				memset(temp_folder_path, 0, sizeof(temp_folder_path));
+				snprintf(temp_folder_path, NAME_MAX, "%s/%s", frame.full_path_folder, ent->name);
+
+				const char *file_type = strrchr(ent->name, '.');
+				bool is_valid_game = false;
+				bool is_folder_name = false;
+				exists_cache = false;
+				upper_game_name[0] = '\0';
+
+				if (menu_data.enable_cache &&
+					(ent->attr == O_DIR || (file_type && (EndsWith(ent->name, ".gdi") || EndsWith(ent->name, ".cdi") || EndsWith(ent->name, ".cso") || (EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0)))))
 				{
-					if (stack_top >= stack_capacity)
+					game_cache = FindInCache(temp_folder_path);
+
+					if (game_cache != NULL)
 					{
-						stack_capacity *= 2;
-						GameTrampolineStruct *new_stack = realloc(stack_trampoline, stack_capacity * sizeof(GameTrampolineStruct));
-						if (!new_stack)
+						exists_cache = true;
+						is_valid_game = true;
+					}
+				}
+
+				if (!exists_cache)
+				{
+					// GDI
+					if (file_type && EndsWith(ent->name, ".gdi"))
+					{
+						strcpy(upper_game_name, ent->name);
+						is_folder_name = frame.level > 0;
+						is_valid_game = true;
+					}
+					else if (file_type && (EndsWith(ent->name, ".cdi") ||
+										(EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0) ||
+										EndsWith(ent->name, ".cso")))
+					{
+						strcpy(upper_game_name, ent->name);
+						is_folder_name = (frame.level > 0 && unique_file == 0);
+						is_valid_game = true;
+					}
+					else if (strncasecmp(ent->name, "track", 5) == 0)
+					{
+						if (!checked_optimized && strncasecmp(ent->name, "track03", 7))
 						{
-							fs_close(fd);
-							free(stack_trampoline);
-							return;
+							checked_optimized = true;
+							if (strcasecmp(file_type, ".iso") == 0)
+								gdi_optimized = true;
 						}
-						stack_trampoline = new_stack;
+
+						if (gdi_cdda != CCGE_CDDA)
+						{
+							if (strncasecmp(ent->name, "track06.wav", 11) == 0 || strncasecmp(ent->name, "track06.raw", 11) == 0)
+								gdi_cdda = CCGE_CDDA;
+							else if (strncasecmp(ent->name, "track04.wav", 11) == 0 || strncasecmp(ent->name, "track04.raw", 11) == 0)
+								gdi_cdda = CCGE_CANDIDATE;
+						}
+
+						continue;
 					}
+					else if (ent->attr == O_DIR)
+					{
+						if (stack_top >= stack_capacity)
+						{
+							stack_capacity *= 2;
+							GameTrampolineStruct *new_stack = realloc(stack_trampoline, stack_capacity * sizeof(GameTrampolineStruct));
+							stack_trampoline = new_stack;
+						}
 
-					snprintf(stack_trampoline[stack_top].full_path_folder, NAME_MAX, "%s", temp_folder_path);
-					snprintf(stack_trampoline[stack_top].folder, NAME_MAX, "%s", ent->name);
-					stack_trampoline[stack_top].level = frame.level + 1;
-					stack_top++;
-					continue;
-				}
-			}
-
-			if (is_valid_game)
-			{
-				for (char *c = upper_game_name; *c; ++c)
-					*c = TO_UPPER_SAFE(*c);
-
-				if (menu_data.games_array_count % GAMES_ALLOC_BLOCK == 0)
-				{
-					GameItemStruct *tmp = realloc(menu_data.games_array, (menu_data.games_array_count + GAMES_ALLOC_BLOCK) * sizeof(GameItemStruct));
-					if (!tmp)
-						break;
-					menu_data.games_array = tmp;
+						snprintf(stack_trampoline[stack_top].full_path_folder, NAME_MAX, "%s", temp_folder_path);
+						snprintf(stack_trampoline[stack_top].folder, NAME_MAX, "%s", ent->name);
+						stack_trampoline[stack_top].level = frame.level + 1;
+						stack_top++;
+						continue;
+					}
 				}
 
-				GameItemStruct *game_item = &menu_data.games_array[menu_data.games_array_count++];
-
-				if (game_cache != NULL)
+				if (is_valid_game)
 				{
-					CopyDeepGame(game_cache, game_item);
-
-					if (game_cache->game)
-						free(game_cache->game);
-					if (game_cache->folder)
-						free(game_cache->folder);
-					if (game_cache->folder_name)
-						free(game_cache->folder_name);
-
-					free(game_cache);
-					game_cache = NULL;
-
-					continue;
-				}
-
-				memset(game_item, 0, sizeof(GameItemStruct));
-				game_item->game = StrdupSafe(upper_game_name);
-				game_item->is_folder_name = is_folder_name;
-				game_item->exists_cover[MT_PLANE_TEXT - 1] = SC_WITHOUT_SEARCHING;
-				game_item->exists_cover[MT_IMAGE_TEXT_64_5X2 - 1] = SC_WITHOUT_SEARCHING;
-				game_item->exists_cover[MT_IMAGE_128_4X3 - 1] = SC_WITHOUT_SEARCHING;
-				game_item->checked_optimized = false;
-				game_item->is_cdda = CCGE_NOT_CHECKED;
-				game_item->game_index_tmp = -1;
-				game_item->device = GetDeviceType(frame.full_path_folder);
-				memset(&game_item->cover, 0, sizeof(CoverStruct));
-
-				if (frame.folder[0])
-				{
-					const char *base_path = GetGamesPath(game_item->device);
-					snprintf(folder_game, NAME_MAX, "%s", frame.full_path_folder + strlen(base_path) + 1);
-
-					for (char *c = folder_game; *c; ++c)
+					for (char *c = upper_game_name; *c; ++c)
 						*c = TO_UPPER_SAFE(*c);
 
-					game_item->folder = StrdupSafe(folder_game);
-
-					if (is_folder_name)
+					if (menu_data.games_array_count % GAMES_ALLOC_BLOCK == 0)
 					{
-						const char *last = GetLastPart(folder_game, '/', 0);
-						game_item->folder_name = StrdupSafe(last);
-					}
-				}
-
-				if (file_type && strcasecmp(file_type, ".gdi") == 0)
-				{
-					gdi_index = menu_data.games_array_count - 1;
-				}
-				else
-				{
-					if (unique_file_index == -1)
-						unique_file_index = menu_data.games_array_count - 1;
-
-					if (!checked_unique_file && unique_file_index >= 0 && unique_file > 0)
-					{
-						checked_unique_file = true;
-						menu_data.games_array[unique_file_index].is_folder_name = false;
-						free(menu_data.games_array[unique_file_index].folder_name);
-						menu_data.games_array[unique_file_index].folder_name = NULL;
+						GameItemStruct *tmp = realloc(menu_data.games_array, (menu_data.games_array_count + GAMES_ALLOC_BLOCK) * sizeof(GameItemStruct));
+						menu_data.games_array = tmp;
 					}
 
-					game_item->is_cdda = CCGE_NOT_CDDA;
-				}
+					GameItemStruct *game_item = &menu_data.games_array[menu_data.games_array_count++];
 
-				if (menu_data.enable_cache && !exists_cache)
-				{
-					if (cache_count >= cache_capacity)
+					if (game_cache != NULL)
 					{
-						cache_capacity *= 2;
-						int *new_indexes = realloc(indexes_to_cache, cache_capacity * sizeof(int));
-						if (!new_indexes)
+						CopyDeepGame(game_cache, game_item);
+
+						if (game_cache->game)
+							free(game_cache->game);
+						if (game_cache->folder)
+							free(game_cache->folder);
+						if (game_cache->folder_name)
+							free(game_cache->folder_name);
+
+						free(game_cache);
+						game_cache = NULL;
+
+						continue;
+					}
+
+					memset(game_item, 0, sizeof(GameItemStruct));
+					game_item->game = StrdupSafe(upper_game_name);
+					game_item->is_folder_name = is_folder_name;
+					game_item->exists_cover[MT_PLANE_TEXT - 1] = SC_WITHOUT_SEARCHING;
+					game_item->exists_cover[MT_IMAGE_TEXT_64_5X2 - 1] = SC_WITHOUT_SEARCHING;
+					game_item->exists_cover[MT_IMAGE_128_4X3 - 1] = SC_WITHOUT_SEARCHING;
+					game_item->checked_optimized = false;
+					game_item->is_cdda = CCGE_NOT_CHECKED;
+					game_item->game_index_tmp = -1;
+					game_item->device = GetDeviceType(frame.full_path_folder);
+					memset(&game_item->cover, 0, sizeof(CoverStruct));
+
+					if (frame.folder[0])
+					{
+						const char *base_path = GetGamesPath(game_item->device);
+						snprintf(folder_game, NAME_MAX, "%s", frame.full_path_folder + strlen(base_path) + 1);
+
+						for (char *c = folder_game; *c; ++c)
+							*c = TO_UPPER_SAFE(*c);
+
+						game_item->folder = StrdupSafe(folder_game);
+
+						if (is_folder_name)
 						{
-							free(indexes_to_cache);
-							indexes_to_cache = NULL;
-							cache_count = 0;
+							const char *last = GetLastPart(folder_game, '/', 0);
+							game_item->folder_name = StrdupSafe(last);
 						}
-						else
+					}
+
+					if (file_type && strcasecmp(file_type, ".gdi") == 0)
+					{
+						gdi_index = menu_data.games_array_count - 1;
+					}
+					else
+					{
+						if (unique_file_index == -1)
+							unique_file_index = menu_data.games_array_count - 1;
+
+						if (!checked_unique_file && unique_file_index >= 0 && unique_file > 0)
 						{
+							checked_unique_file = true;
+							menu_data.games_array[unique_file_index].is_folder_name = false;
+							free(menu_data.games_array[unique_file_index].folder_name);
+							menu_data.games_array[unique_file_index].folder_name = NULL;
+						}
+
+						game_item->is_cdda = CCGE_NOT_CDDA;
+					}
+
+					if (menu_data.enable_cache && !exists_cache)
+					{
+						if (cache_count >= cache_capacity)
+						{
+							cache_capacity *= 2;
+							int *new_indexes = realloc(indexes_to_cache, cache_capacity * sizeof(int));
 							indexes_to_cache = new_indexes;
 						}
+
+						if (indexes_to_cache)
+						{
+							indexes_to_cache[cache_count++] = menu_data.games_array_count - 1;
+						}
 					}
 
-					if (indexes_to_cache)
-					{
-						indexes_to_cache[cache_count++] = menu_data.games_array_count - 1;
-					}
+					unique_file++;
+				}
+			}
+			fs_close(fd);
+
+			// GDI FINAL HANDLING
+			if (gdi_index >= 0)
+			{
+				GameItemStruct *gdi_item = &menu_data.games_array[gdi_index];
+				gdi_item->checked_optimized = true;
+				gdi_item->is_gdi_optimized = gdi_optimized;
+
+				if (gdi_cdda == CCGE_CANDIDATE)
+				{
+					char *track_file_path = malloc(NAME_MAX);
+					const char *full_path_game = GetFullGamePathByIndex(gdi_index);
+					size_t track_size = GetCDDATrackFilename(4, full_path_game, &track_file_path);
+					free(track_file_path);
+
+					if (track_size < 30 * 1024 * 1024 && track_size > 0)
+						gdi_cdda = CCGE_NOT_CDDA;
+					else
+						gdi_cdda = CCGE_CDDA;
 				}
 
-				unique_file++;
+				gdi_item->is_cdda = (gdi_cdda == CCGE_CDDA || gdi_cdda == CCGE_CANDIDATE) ? CCGE_CDDA : CCGE_NOT_CDDA;
 			}
 		}
-		fs_close(fd);
 
-		// GDI FINAL HANDLING
-		if (gdi_index >= 0)
-		{
-			GameItemStruct *gdi_item = &menu_data.games_array[gdi_index];
-			gdi_item->checked_optimized = true;
-			gdi_item->is_gdi_optimized = gdi_optimized;
-
-			if (gdi_cdda == CCGE_CANDIDATE)
-			{
-				char *track_file_path = malloc(NAME_MAX);
-				const char *full_path_game = GetFullGamePathByIndex(gdi_index);
-				size_t track_size = GetCDDATrackFilename(4, full_path_game, &track_file_path);
-				free(track_file_path);
-
-				if (track_size < 30 * 1024 * 1024 && track_size > 0)
-					gdi_cdda = CCGE_NOT_CDDA;
-				else
-					gdi_cdda = CCGE_CDDA;
-			}
-
-			gdi_item->is_cdda = (gdi_cdda == CCGE_CDDA || gdi_cdda == CCGE_CANDIDATE) ? CCGE_CDDA : CCGE_NOT_CDDA;
-		}
+		free(stack_trampoline);
 	}
 
 	if (indexes_to_cache != NULL)
@@ -3348,8 +3350,6 @@ void RetrieveGamesRecursive(const char *initial_path)
 
 		qsort(menu_data.cache_array, menu_data.cache_array_count, sizeof(CacheStruct), CompareCacheStructs);
 	}
-
-	free(stack_trampoline);
 
 	if (menu_data.games_array && menu_data.games_array_count > 0)
 	{
@@ -3401,12 +3401,7 @@ bool RetrieveGames()
 		LoadCache();
 	}
 
-	RetrieveGamesRecursive(GetGamesPath(menu_data.current_dev));
-
-	if (menu_data.ide && menu_data.sd && menu_data.current_dev != APP_DEVICE_SD)
-	{
-		RetrieveGamesRecursive(GetGamesPath(APP_DEVICE_SD));
-	}
+	RetrieveGamesRecursive();
 
 	if (menu_data.last_game_played_index > menu_data.games_array_count - 1)
 	{
