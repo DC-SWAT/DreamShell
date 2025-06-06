@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
 			pkg.icon_anim_speed = 0;
 			memcpy(pkg.icon_pal, DS_pal, 32);
 			pkg.icon_data = (uint8 *)DS_data;
-			pkg.eyecatch_type = VMUPKG_EC_16BIT; //VMUPKG_EC_NONE;
+			pkg.eyecatch_type = VMUPKG_EC_NONE;
 			pkg.data_len = siz;
 			pkg.data = vmdata;
 
