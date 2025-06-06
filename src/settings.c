@@ -108,10 +108,22 @@ void ResetSettings() {
 
 	if(loaded) {
 		char fn[NAME_MAX];
+		char save_name[24];
+		maple_device_t *vmu;
+		
 		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
 		fs_unlink(fn);
-		fs_unlink(DS_SAVE_FN);
-	} else {
+
+		for (int i = 0; i < 8; ++i) {
+			if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
+				continue;
+			}
+			snprintf(save_name, sizeof(save_name),
+				"/vmu/%c%c/%s", vmu->port + 'A', vmu->unit + '0', DS_SAVE_FN);
+			fs_unlink(save_name);
+		}
+	}
+	else {
 		loaded = 1;
 	}
 }
@@ -120,42 +132,36 @@ static int LoadSettingsVMU() {
 
 	char save_name[24];
 	maple_device_t *vmu;
-	file_t f;
+	file_t fd;
 	int ret = 0;
-	static Settings_t tmp;
-	
-	for (int i = 0; i < 8; i++) {
+	Settings_t sets;
+
+	for (int i = 0; i < 8; ++i) {
 		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
-			// no more connected VMU's
-			return ret;
-		}
-		
-		// Try and load savefile
-		
-		snprintf(save_name, sizeof(save_name), "/vmu/%c%c/%s", vmu->port+'A', vmu->unit+'0', DS_SAVE_FN);
-		f = fs_open(save_name, O_RDONLY);
-		
-		if (f == FILEHND_INVALID) {
-			// save not found
 			continue;
 		}
-		
-		fs_read(f, &tmp, sizeof(Settings_t));
-		
-		if (tmp.version != DS_SETTIGS_VERSION) {
-			// settings not valid
-			fs_close(f);
-			fs_unlink(save_name);
+
+		snprintf(save_name, sizeof(save_name), "/vmu/%c%c/%s",
+			vmu->port + 'A', vmu->unit + '0', DS_SAVE_FN);
+		fd = fs_open(save_name, O_RDONLY);
+
+		if (fd == FILEHND_INVALID) {
 			continue;
 		}
-		
-		memcpy(&current_set, &tmp, sizeof(current_set));
-		
-		fs_close(f);
+
+		fs_read(fd, &sets, sizeof(Settings_t));
+
+		if (sets.version != DS_SETTIGS_VERSION) {
+			fs_close(fd);
+			continue;
+		}
+
+		memcpy(&current_set, &sets, sizeof(current_set));
+		fs_close(fd);
 		ret = 1;
 		break;
 	}
-	
+
 	return ret;
 }
 
@@ -165,28 +171,28 @@ static int LoadSettingsFile(const char *filename) {
 	file_t fd;
 	ssize_t res;
 
-	if (FileSize(filename) != sizeof(Settings_t)) {
-		return 0;
-	}
-
 	fd = fs_open(filename, O_RDONLY);
 
 	if(fd == FILEHND_INVALID) {
 		return 0;
 	}
 
+	if(fs_total(fd) != sizeof(Settings_t)) {
+		fs_close(fd);
+		return 0;
+	}
+
 	res = fs_read(fd, &sets, sizeof(Settings_t));
 	fs_close(fd);
 
-	if (res <= 0) {
+	if (res != sizeof(Settings_t)) {
 		return 0;
 	}
-	
+
 	if (sets.version != DS_SETTIGS_VERSION) {
-		fs_unlink(filename);
 		return 0;
 	}
-	
+
 	memcpy(&current_set, &sets, sizeof(Settings_t));
 	return 1;
 }
@@ -210,12 +216,12 @@ static int SaveSettingsVMU() {
 
 	char save_name[24];
 	maple_device_t *vmu;
-	file_t f;
+	file_t fd;
 	int ret = 0;
 	int pkg_size;
 	vmu_pkg_t pkg;
 	uint8_t *pkg_out;
-	
+
 	memset(&pkg, 0, sizeof(pkg));
 
 	strcpy(pkg.desc_short, getenv("VERSION"));
@@ -229,50 +235,42 @@ static int SaveSettingsVMU() {
 	pkg.eyecatch_type = VMUPKG_EC_NONE;
 	pkg.data_len = sizeof(current_set);
 	pkg.data = (void *)&current_set;
-	
+
 	if(vmu_pkg_build(&pkg, &pkg_out, &pkg_size) < 0) {
 		return ret;
 	}
-	
+
 	for (int i = 0; i < 8; i++) {
 		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
-			// no more connected VMU's
-			free(pkg_out);
-			return ret;
-		}
-		
-		sprintf(save_name, "/vmu/%c%c/%s", vmu->port+'A', vmu->unit+'0', DS_SAVE_FN);
-		
-		if (FileExists(save_name)) {
-			// save file found
-			fs_close(f);
-			fs_unlink(save_name);
-		}
-		
-		if((vmufs_free_blocks(vmu)*512) < pkg_size) {
-			// no free memory, try next vmu
 			continue;
 		}
-		
-		f = fs_open(save_name, O_WRONLY | O_META);
-		
-		if (f == FILEHND_INVALID) {
-			// can't create save file, try next vmu
+
+		snprintf(save_name, sizeof(save_name),
+			"/vmu/%c%c/%s", vmu->port + 'A', vmu->unit + '0', DS_SAVE_FN);
+
+		fs_unlink(save_name);
+
+		if((vmufs_free_blocks(vmu) * 512) < pkg_size) {
 			continue;
 		}
-		
-		fs_write(f, pkg_out, pkg_size);
-		fs_close(f);
-		
+
+		fd = fs_open(save_name, O_WRONLY | O_META);
+
+		if (fd == FILEHND_INVALID) {
+			continue;
+		}
+
+		fs_write(fd, pkg_out, pkg_size);
+		fs_close(fd);
+
 		vmu_beep_raw(vmu, 0x000065f0); // Turn on Beep
 		thd_sleep(500);
 		vmu_beep_raw(vmu, 0x00000000); // Turn off Beep
 		ret = 1;
 		break;
 	}
-	
+
 	free(pkg_out);
-	
 	return ret;
 }
 
@@ -305,9 +303,8 @@ int SaveSettings() {
 	if(SaveSettingsVMU()) {
 		return 1;
 	}
-	
+
 	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
-	
 	return SaveSettingsFile(fn);
 }
 
@@ -318,4 +315,3 @@ int GetVolumeFromSettings() {
     }
     return settings->audio.volume;
 }
-
