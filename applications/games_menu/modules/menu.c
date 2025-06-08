@@ -3076,7 +3076,7 @@ void RetrieveGamesRecursive()
 		cache_capacity = CACHE_BLOCK_SIZE;
 	}
 
-	int stack_capacity = 256;
+	int stack_capacity = TRAMPOLINE_BLOCK_SIZE;
 	int stack_top = 0;
 	
 	const char *initial_paths[2] = { NULL, NULL };
@@ -3194,7 +3194,7 @@ void RetrieveGamesRecursive()
 					{
 						if (stack_top >= stack_capacity)
 						{
-							stack_capacity *= 2;
+							stack_capacity += TRAMPOLINE_BLOCK_SIZE;
 							GameTrampolineStruct *new_stack = realloc(stack_trampoline, stack_capacity * sizeof(GameTrampolineStruct));
 							stack_trampoline = new_stack;
 						}
@@ -3212,9 +3212,9 @@ void RetrieveGamesRecursive()
 					for (char *c = upper_game_name; *c; ++c)
 						*c = TO_UPPER_SAFE(*c);
 
-					if (menu_data.games_array_count % GAMES_ALLOC_BLOCK == 0)
+					if (menu_data.games_array_count % GAME_BLOCK_SIZE == 0)
 					{
-						GameItemStruct *tmp = realloc(menu_data.games_array, (menu_data.games_array_count + GAMES_ALLOC_BLOCK) * sizeof(GameItemStruct));
+						GameItemStruct *tmp = realloc(menu_data.games_array, (menu_data.games_array_count + GAME_BLOCK_SIZE) * sizeof(GameItemStruct));
 						menu_data.games_array = tmp;
 					}
 
@@ -3290,7 +3290,7 @@ void RetrieveGamesRecursive()
 					{
 						if (cache_count >= cache_capacity)
 						{
-							cache_capacity *= 2;
+							cache_capacity += CACHE_BLOCK_SIZE;
 							int *new_indexes = realloc(indexes_to_cache, cache_capacity * sizeof(int));
 							indexes_to_cache = new_indexes;
 						}
