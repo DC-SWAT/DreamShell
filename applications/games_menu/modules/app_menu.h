@@ -15,7 +15,6 @@
 #include "tsunami/tsudefinition.h"
 #include "tsunami/color.h"
 
-#define GAMES_ALLOC_BLOCK 128
 #define GAMES_FOLDER "games"
 
 #define IDE_PATH "/ide"
