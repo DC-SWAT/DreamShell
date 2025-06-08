@@ -380,12 +380,12 @@ void *PlayCDDAThread(void *params)
 				{
 					size_t track_size = 0;
 					char *track_file_path = (char *)malloc(NAME_MAX);
-					srand(time(NULL));					
+					srand(time(NULL));
 					timer_ms_gettime(&start_time, NULL);
 
 					do
 					{
-						track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, &track_file_path);						
+						track_size = GetCDDATrackFilename((random() % 15) + 4, full_path_game, &track_file_path);
 
 						// AVOID POSSIBLE CACHE STAGNATION
 						if (menu_data.started_with_cache)
@@ -401,7 +401,7 @@ void *PlayCDDAThread(void *params)
 					} while (track_size == 0);
 
 					if (menu_data.games_array[game_index].is_cdda == CCGE_CDDA)
-					{						
+					{
 						PlayCDDATrack(track_file_path, 3);
 					}
 
@@ -1293,7 +1293,7 @@ PresetStruct *LoadPresetGame(int game_index, bool default_preset)
 
 		preset->game_index = game_index;
 
-		const char *full_path_game = GetFullGamePathByIndex(game_index);		
+		const char *full_path_game = GetFullGamePathByIndex(game_index);
 		char *full_preset_file_name = NULL;
 		SectorDataStruct sector_data;
 		memset(&sector_data, 0, sizeof(SectorDataStruct));
@@ -1307,7 +1307,7 @@ PresetStruct *LoadPresetGame(int game_index, bool default_preset)
 			int game_device_type = GetDeviceType(full_path_game);
 			int app_name_count = 0;
 			const char *app_name_array[3] = {"games_menu", "iso_loader", NULL};
-			
+
 			while (!default_preset && app_name_array[app_name_count] != NULL)
 			{
 				if (game_device_type == APP_DEVICE_SD)
@@ -2089,7 +2089,9 @@ bool LoadScannedCover()
 
 bool SaveCache()
 {
-	if ((menu_data.current_dev != APP_DEVICE_SD && menu_data.current_dev != APP_DEVICE_IDE) || menu_data.cache_array_count == 0)
+	if ((menu_data.current_dev != APP_DEVICE_SD && menu_data.current_dev != APP_DEVICE_IDE) ||
+		menu_data.cache_array_count == 0 ||
+		!menu_data.cache_array)
 	{
 		return false;
 	}
@@ -2103,21 +2105,36 @@ bool SaveCache()
 		return false;
 	}
 
-	int written = 0;
-	while (written < menu_data.cache_array_count)
-	{
-		size_t block_to_write = (menu_data.cache_array_count - written > FILE_BLOCK_SIZE) ? FILE_BLOCK_SIZE : (menu_data.cache_array_count - written);
-		size_t result = fs_write(fd, &menu_data.cache_array[written], sizeof(CacheStruct) * block_to_write);
+	size_t total_size = sizeof(CacheStruct) * menu_data.cache_array_count;
 
-		if (result != sizeof(CacheStruct) * block_to_write)
+	CacheStruct *aligned_cache = (CacheStruct *)memalign(32, total_size);
+	if (!aligned_cache)
+	{
+		fs_close(fd);
+		return false;
+	}
+
+	memcpy(aligned_cache, menu_data.cache_array, total_size);
+
+	size_t bytes_written = 0;
+	uint8_t *ptr = (uint8_t *)aligned_cache;
+
+	while (bytes_written < total_size)
+	{
+		size_t chunk = (total_size - bytes_written > FILE_BLOCK_SIZE) ? FILE_BLOCK_SIZE : (total_size - bytes_written);
+		size_t result = fs_write(fd, ptr + bytes_written, chunk);
+
+		if (result != chunk)
 		{
+			free(aligned_cache);
 			fs_close(fd);
 			return false;
 		}
 
-		written += block_to_write;
+		bytes_written += result;
 	}
 
+	free(aligned_cache);
 	fs_close(fd);
 	return true;
 }
@@ -2671,7 +2688,7 @@ void RetrieveCovers(uint8 device, int menu_type)
 
 static int CategoryCompare(CategoryStruct *a, CategoryStruct *b)
 {
-    return strcmp(a->category, b->category);
+	return strcmp(a->category, b->category);
 }
 
 void CreateCategories()
@@ -2886,7 +2903,10 @@ void RemoveStaleCache()
 	{
 		CacheStruct *shrink_ptr = realloc(menu_data.cache_array, menu_data.cache_array_count * sizeof(CacheStruct));
 		if (shrink_ptr)
+		{
 			menu_data.cache_array = shrink_ptr;
+			qsort(menu_data.cache_array, menu_data.cache_array_count, sizeof(CacheStruct), CompareCacheStructs);
+		}
 	}
 
 	for (int i = 0; i < menu_data.games_array_count; i++)
@@ -3078,8 +3098,8 @@ void RetrieveGamesRecursive()
 
 	int stack_capacity = TRAMPOLINE_BLOCK_SIZE;
 	int stack_top = 0;
-	
-	const char *initial_paths[2] = { NULL, NULL };
+
+	const char *initial_paths[2] = {NULL, NULL};
 	int path_count = 0;
 
 	initial_paths[path_count++] = GetGamesPath(menu_data.current_dev);
@@ -3164,8 +3184,8 @@ void RetrieveGamesRecursive()
 						is_valid_game = true;
 					}
 					else if (file_type && (EndsWith(ent->name, ".cdi") ||
-										(EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0) ||
-										EndsWith(ent->name, ".cso")))
+										   (EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0) ||
+										   EndsWith(ent->name, ".cso")))
 					{
 						strcpy(upper_game_name, ent->name);
 						is_folder_name = (frame.level > 0 && unique_file == 0);
