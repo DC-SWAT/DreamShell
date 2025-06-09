@@ -172,27 +172,7 @@ static void GetTOC() {
 				toc->last = (toc->last & 0xfff0ffff) | (--lt << 16);
 			}
 			else {
-				int skip = 0;
-				int lt = 0;
-
-				for(int i = 0; i < 99; ++i) {
-					if(TOC_CTRL(toc->entry[i]) == 4) {
-						if(!skip) {
-							skip++;
-						}
-						else {
-							toc->entry[i] = (uint32)-1;
-							continue;
-						}
-					}
-					if(toc->entry[i] != (uint32)-1) {
-						lt = i + 1;
-					}
-				}
-
-				if(lt > 0) {
-					toc->last = (toc->last & 0xfff0ffff) | (lt << 16);
-				}
+				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
 			}
 		}
 		else { /* Session 2 */
