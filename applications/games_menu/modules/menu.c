@@ -2072,13 +2072,7 @@ bool LoadScannedCover()
 	}
 	fs_close(fd);
 
-	if (file_size <= 0)
-	{
-		memset(&menu_data.cover_scanned_app, 0, sizeof(CoverScannedStruct));
-		fs_unlink(file_name);
-	}
-
-	if (!HasAnyCover())
+	if (file_size <= 0 || !HasAnyCover())
 	{
 		memset(&menu_data.cover_scanned_app, 0, sizeof(CoverScannedStruct));
 		fs_unlink(file_name);
@@ -2166,6 +2160,16 @@ bool LoadCache()
 		menu_data.cache_array = tmp;
 
 		size_t num_read = fs_read(fd, menu_data.cache_array + total_read, sizeof(CacheStruct) * FILE_BLOCK_SIZE);
+
+		// CHECK IF THE FILE IS CORRUPTED
+		if (num_read % sizeof(CacheStruct) != 0)
+		{
+			free(menu_data.cache_array);
+			menu_data.cache_array = NULL;
+			fs_close(fd);
+			return false;
+		}
+
 		if (num_read == 0)
 			break;
 
@@ -2535,7 +2539,8 @@ bool HasAnyCover()
 			continue;
 
 		file_type = strrchr(ent->name, '.');
-		if (strcasecmp(file_type, ".jpg") == 0 || strcasecmp(file_type, ".png") == 0 || strcasecmp(file_type, ".pvr") == 0)
+		if (file_type != NULL 
+			&& (strcasecmp(file_type, ".jpg") == 0 || strcasecmp(file_type, ".png") == 0 || strcasecmp(file_type, ".pvr") == 0))
 		{
 			any_cover = true;
 			break;
@@ -2843,20 +2848,23 @@ static int CompareGamePaths(const void *a, const void *b)
 
 static int CompareCacheStructs(const void *a, const void *b)
 {
-	const CacheStruct *cache_left = (const CacheStruct *)a;
-	const CacheStruct *cache_right = (const CacheStruct *)b;
+	const CacheStruct *left = (const CacheStruct *)a;
+	const CacheStruct *right = (const CacheStruct *)b;
 
 	char game_left[NAME_MAX] = {0};
-	if (cache_left->attributes & GAE_IS_FOLDER_NAME)
-	{
-		GoUpDirectory(cache_left->game, 1, game_left);
-	}
-	else
-	{
-		strcpy(game_left, cache_left->game);
-	}
+	char game_right[NAME_MAX] = {0};
 
-	return CompareGameNames(game_left, cache_right);
+	if (left->attributes & GAE_IS_FOLDER_NAME)
+		GoUpDirectory(left->game, 1, game_left);
+	else
+		strcpy(game_left, left->game);
+
+	if (right->attributes & GAE_IS_FOLDER_NAME)
+		GoUpDirectory(right->game, 1, game_right);
+	else
+		strcpy(game_right, right->game);
+
+	return strcasecmp(game_left, game_right);
 }
 
 static int ComparePaths(const void *a, const void *b)
