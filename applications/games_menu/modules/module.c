@@ -308,7 +308,7 @@ static void SetTitle(int game_index, const char *text, bool limit_length)
 	}
 	else
 	{
-		int font_size = 20;
+		int font_size = 18;
 		Color color = { 1.0f, 1.0f, 1.0f, 0.35f };
 
 		self.title = TSU_LabelCreate(self.menu_font, titleText, font_size, false, true);
@@ -367,7 +367,7 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 		TSU_DrawableSetBorderColor(self.title_rectangle, &title_type_color);
 
 		static Vector vectorInit = {700, 36, ML_ITEM + 6, 1};
-		static Vector vector = {577, 36, ML_ITEM + 6, 1};
+		static Vector vector = {583, 36, ML_ITEM + 6, 1};
 
 		vectorInit.z = ML_ITEM + 6;
 
@@ -377,7 +377,7 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 		}
 		else
 		{
-			int font_size = 20;
+			int font_size = 18;
 			
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
 			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, false, true);
@@ -2490,9 +2490,9 @@ static void CreateMainView()
 	Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 
 	self.area_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 10, 480 - 18, 640 - 28, 415, &menu_data.area_color, ML_BACKGROUND + 1, DEFAULT_RADIUS);
-	self.title_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 12, 40, 640 - 33, 24, &menu_data.title_color, ML_BACKGROUND + 3, 3, &title_type_color, DEFAULT_RADIUS);
+	self.title_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 13, 40, 640 - 34, 24, &menu_data.title_color, ML_BACKGROUND + 3, 3, &title_type_color, DEFAULT_RADIUS);
 	self.title_background_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 5, 54, 640 - 18, 46, &menu_data.background_color, ML_BACKGROUND, DEFAULT_RADIUS);
-	self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 570, 39, 46, 20, &title_type_color, ML_ITEM + 2, 3, &title_type_color, 0);
+	self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 576, 39, 40, 20, &title_type_color, ML_ITEM + 2, 3, &title_type_color, 0);
 
 	TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
 	TSU_AppSubAddRectangle(self.dsapp_ptr, self.area_rectangle);
