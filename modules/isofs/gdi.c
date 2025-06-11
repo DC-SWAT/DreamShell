@@ -176,46 +176,34 @@ int gdi_close(GDI_header_t *hdr) {
 
 int gdi_get_toc(GDI_header_t *hdr, CDROM_TOC *toc) {
 
-	int i, ft_no = 0;
+	int i, ft_no = gdi_is_original(hdr) ? 3 : 1;
 	uint8 ctrl = 0, adr = 1;
-	GDI_track_t *first_track = NULL;
-	
+	GDI_track_t *first_track;
+	GDI_track_t *last_track = hdr->tracks[hdr->track_count - 1];
+	uint32 track_size = FileSize(last_track->filename) / last_track->sector_size;
+
+	first_track = hdr->tracks[ft_no - 1];
+
 	for(i = 0; i < hdr->track_count; i++) {
-		
-		toc->entry[i] = ((hdr->tracks[i]->flags & 0x0F) << 28) | adr << 24 | (hdr->tracks[i]->start_lba + 150);
-		
-		if(hdr->tracks[i]->start_lba == 45000 && (hdr->tracks[i]->flags & 0x0F) == 4) {
-			first_track = hdr->tracks[i];
-			ft_no = i+1;
-		}
+		ctrl = hdr->tracks[i]->flags & 0x0F;
+		toc->entry[i] = (ctrl << 28) | adr << 24 | (hdr->tracks[i]->start_lba + 150);
 #ifdef DEBUG
 		dbglog(DBG_DEBUG, "%s: Track%d %08lx\n", __func__, i, toc->entry[i]);
 #endif
 	}
-	
-	if(first_track == NULL) {
-		for(i = 0; i < hdr->track_count; i++) {
-			if((hdr->tracks[i]->flags & 0x0F) == 4) {
-				first_track = hdr->tracks[i];
-				ft_no = i+1;
-				break;
-			}
-		}
-	}
-	
-	GDI_track_t *last_track = hdr->tracks[hdr->track_count - 1];
-	uint32 track_size = FileSize(last_track->filename) / last_track->sector_size;
 
 	ctrl = first_track->flags & 0x0F;
 	toc->first = ctrl << 28 | adr << 24 | ft_no << 16;
+
 	ctrl = last_track->flags & 0x0F;
 	toc->last = ctrl << 28 | adr << 24 | hdr->track_count << 16;
+
 	toc->leadout_sector = ctrl << 28 | adr << 24 | (last_track->start_lba + track_size + 150);
 
 	for(i = hdr->track_count; i < 99; i++) {
 		toc->entry[i] = -1;
 	}
-	
+
 #ifdef DEBUG
 	dbglog(DBG_DEBUG, "%s:\n First track %08lx\n Last track %08lx\n Leadout    %08lx\n", 
 		__func__, toc->first, toc->last, toc->leadout_sector);
@@ -249,7 +237,7 @@ GDI_track_t *gdi_get_track(GDI_header_t *hdr, uint32 lba) {
 
 				hdr->track_fd = fs_open(hdr->tracks[i]->filename, O_RDONLY);
 				
-				if(hdr->track_fd < 0) {
+				if(hdr->track_fd == FILEHND_INVALID) {
 #ifdef DEBUG
 					dbglog(DBG_DEBUG, "%s: Can't open %s\n", __func__, hdr->tracks[i]->filename);
 #endif
@@ -306,4 +294,9 @@ int gdi_read_sectors(GDI_header_t *hdr, uint8 *buff, uint32 start, uint32 count)
 
 	fs_seek(hdr->track_fd, offset, SEEK_SET);
 	return read_sectors_data(hdr->track_fd, count, sector_size, buff);
+}
+
+int gdi_is_original(GDI_header_t *hdr) {
+	return hdr->track_count > 2 && hdr->tracks[2]->start_lba == 45000 &&
+		(hdr->tracks[2]->flags & 0x0F) == 4;
 }

@@ -501,37 +501,31 @@ static int get_toc_and_lba(isofs_t *ifs) {
 		case ISOFS_IMAGE_TYPE_CDI:
 
 			cdi_get_toc(ifs->cdi, &ifs->toc);
-			return cdrom_locate_data_track(&ifs->toc);
+			lba = cdrom_locate_data_track(&ifs->toc);
+			break;
 
 		case ISOFS_IMAGE_TYPE_GDI:
 
 			gdi_get_toc(ifs->gdi, &ifs->toc);
 
-			/* Original GD-ROM, use track with LBA 45000 */
-			for (int i = 0; i < ifs->gdi->track_count; i++) {
-				if (ifs->gdi->tracks[i]->start_lba == 45000 && 
-					(ifs->gdi->tracks[i]->flags & 0x0F) == 4) {
-					return ifs->gdi->tracks[i]->start_lba + 150;
-				}
+			/* Original GD disc image */
+			if(gdi_is_original(ifs->gdi)) {
+				lba = ifs->gdi->tracks[2]->start_lba + 150;
 			}
-			/* ISO in GDI format - find first data track */
-			for (int i = 0; i < ifs->gdi->track_count; i++) {
-				if ((ifs->gdi->tracks[i]->flags & 0x0F) == 4) {
-					return ifs->gdi->tracks[i]->start_lba + 150;
-				}
+			else {
+				/* Custom GD disc image */
+				lba = cdrom_locate_data_track(&ifs->toc);
 			}
-
-			return TOC_LBA(ifs->toc.first);
+			break;
 
 		case ISOFS_IMAGE_TYPE_CSO:
 		case ISOFS_IMAGE_TYPE_ZSO:
 
 			lba = get_lba_from_mki(ifs);
-			
+
 			if(lba <= 0) {
 				lba = 150; // TODO: isofile_find_lba(ifs);
 			}
-			
 			spoof_multi_toc_cso(&ifs->toc, ifs->ciso, lba);
 			break;
 
@@ -539,17 +533,17 @@ static int get_toc_and_lba(isofs_t *ifs) {
 		default:
 
 			lba = get_lba_from_mki(ifs);
-			
+
 			if(lba <= 0) {
 				lba = isofile_find_lba(ifs);
 			}
-			
-			if(lba >= 45150) {
+
+			if(lba == 45150) {
 				spoof_multi_toc_3track_gd(&ifs->toc);
-			} else {
+			}
+			else {
 				spoof_multi_toc_iso(&ifs->toc, ifs->fd, lba);
 			}
-
 			break;
 	}
 
@@ -1214,21 +1208,20 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			if(fh[fd].ifs->cdi == NULL) {
 				return -1;
 			}
-			
+
 			uint32 *offset = (uint32 *)data;
 			uint16 ssz = 0;
-			int i;
-			
-			for(i = 2; i < 99; i++) {
-				
+
+			for(int i = 0; i < 99; i++) {
+
 				if(fh[fd].ifs->toc.entry[i] == (uint32)-1)
 					break;
-					
+
 				if(TOC_CTRL(fh[fd].ifs->toc.entry[i]) == 0) {
 					offset[i] = cdi_get_offset(fh[fd].ifs->cdi, TOC_LBA(fh[fd].ifs->toc.entry[i]), &ssz);
 				}
 			}
-			
+
 			break;
 		}
 		case ISOFS_IOCTL_GET_TRACK_SECTOR_COUNT:

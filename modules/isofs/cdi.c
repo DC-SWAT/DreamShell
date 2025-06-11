@@ -302,10 +302,14 @@ int cdi_get_toc(CDI_header_t *hdr, CDROM_TOC *toc) {
 
     CDI_session_t *last_session = hdr->sessions[ hdr->session_count - 1 ];
     CDI_track_t *last_track = last_session->tracks[ last_session->track_count - 1 ];
+    CDI_track_t *first_track = hdr->sessions[0]->tracks[0];
+
+    ctrl = (first_track->mode == 0 ? 0 : 4);
+    toc->first = ctrl << 28 | adr << 24 | 1 << 16;
 
     ctrl = (last_track->mode == 0 ? 0 : 4);
-    toc->first = ctrl << 28 | adr << 24 | 1 << 16;
     toc->last  = ctrl << 28 | adr << 24 | total_tracks << 16;
+
     toc->leadout_sector = ctrl << 28 | adr << 24 | (last_track->start_lba + last_track->length + 150);
 
     for(i = total_tracks; i < 99; i++) {

@@ -204,9 +204,9 @@ file_t fs_iso_first_file(const char *mountpoint) {
 
 
 /**
- * Spoof TOC for GD session 1
+ * Spoof TOC for GD low density area
  */
-void spoof_toc_3track_gd_session_1(CDROM_TOC *toc) {
+void spoof_toc_gd_low_density_area(CDROM_TOC *toc) {
 
 	/**
 	 * Track 1
@@ -214,30 +214,30 @@ void spoof_toc_3track_gd_session_1(CDROM_TOC *toc) {
 	 * MSF = 00:02:00
 	 */
 	toc->entry[0] = 0x41000096;
-	
+
 	/**
 	 * Track 2
 	 * CTRL = 0, ADR = 1, FAD = 0x02EE (FAD 750, so LBA 600)
 	 * MSF = 00:10:00
 	 */
 	toc->entry[1] = 0x010002EE;
-	
+
 	/**
 	 * Ununsed / empty entries
 	 */
 	for(int i = 2; i < 99; i++)
 		toc->entry[i] = (uint32)-1;
-	
+
 	/**
 	 * First track 1 Data
 	 */
 	toc->first = 0x41010000;
-	
+
 	/**
 	 * Last track 2 Audio
 	 */
 	toc->last  = 0x01020000;
-	
+
 	/**
 	 * Leadout Audio
 	 * FAD = 0x1A2C (FAD 6700, so LBA 6850 decimal)
@@ -248,37 +248,37 @@ void spoof_toc_3track_gd_session_1(CDROM_TOC *toc) {
 
 
 /**
- * Spoof TOC for GD session 2
+ * Spoof TOC for GD high density area
  */
-void spoof_toc_3track_gd_session_2(CDROM_TOC *toc) {
+void spoof_toc_gd_high_density_area(CDROM_TOC *toc) {
 
 	/**
 	 * Track 1 and 2 is empty.
-	 * This is a low-density track, unused in GD session.
+	 * This is a low-density tracks, unused in GD area.
 	 */
 	toc->entry[0] = -1;
 	toc->entry[1] = -1;
-	
+
 	/**
 	 * Track 3 Data
 	 * CTRL = 4, ADR = 1, FAD = 0xB05E (FAD 45150, so LBA 45000)
 	 * MSF = 10:02:00
 	 */
 	toc->entry[2] = 0x4100B05E;
-	
+
 	/**
 	 * Ununsed / empty entries
 	 */
 	for(int i = 3; i < 99; i++) {
 		toc->entry[i] = (uint32)-1;
 	}
-	
+
 	/**
 	 * Track 3 Data
 	 */
 	toc->first = 0x41030000;
 	toc->last  = 0x41030000;
-	
+
 	/**
 	 * Data
 	 * FAD = 0x0861B4 (FAD 549300, so LBA 549150 decimal)
@@ -290,11 +290,11 @@ void spoof_toc_3track_gd_session_2(CDROM_TOC *toc) {
 
 void spoof_multi_toc_3track_gd(CDROM_TOC *toc) {
 
-	spoof_toc_3track_gd_session_2(toc);
-	
+	spoof_toc_gd_high_density_area(toc);
+
 	toc->entry[0] = 0x41000096;
 	toc->entry[1] = 0x010002EE;
-	
+
 	/* Need change before use */
 //	toc->first = 0x41010000;
 //	toc->last  = 0x01020000;

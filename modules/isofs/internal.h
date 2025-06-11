@@ -1,7 +1,7 @@
 /** 
  * \file    internal.h
  * \brief   isofs utils
- * \date    2014-2016
+ * \date    2014-2016, 2025
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -20,20 +20,11 @@
 int read_sectors_data(file_t fd, uint32 sector_count, 
 						uint16 sector_size, uint8 *buff);
 
-
-/**
- * Spoof TOC for GD session 1
- */
-void spoof_toc_3track_gd_session_1(CDROM_TOC *toc);
-
-/**
- * Spoof TOC for GD session 2
- */
-void spoof_toc_3track_gd_session_2(CDROM_TOC *toc);
+void spoof_toc_gd_low_density_area(CDROM_TOC *toc);
+void spoof_toc_gd_high_density_area(CDROM_TOC *toc);
 
 void spoof_multi_toc_3track_gd(CDROM_TOC *toc);
 void spoof_multi_toc_iso(CDROM_TOC *toc, file_t fd, uint32 lba);
 void spoof_multi_toc_cso(CDROM_TOC *toc, CISO_header_t *hdr, uint32 lba);
-
 
 #endif /* _ISOFS_INTERNAL_H */
