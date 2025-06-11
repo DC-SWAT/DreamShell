@@ -391,7 +391,7 @@ static int get_lba_from_mki(isofs_t *ifs) {
 //		} else if(ifs->gdi != NULL) {
 //			gdi_read_sectors(ifs->gdi, mki, s, 1);
 		} else {
-			fs_seek(ifs->fd, s << 1, SEEK_SET);
+			fs_seek(ifs->fd, s << 11, SEEK_SET);
 			fs_read(ifs->fd, mki, sizeof(mki));
 		}
 		
