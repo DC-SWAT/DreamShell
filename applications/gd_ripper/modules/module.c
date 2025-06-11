@@ -20,10 +20,10 @@ static void* gd_ripper_thread(void *arg);
 static int gdfiles(char *dst_folder, char *dst_file, char *text);
 static int get_disc_status_and_type(int *status, int *disc_type);
 static int safe_cdrom_read_toc(CDROM_TOC *toc, int session);
-static int get_session_count(int disc_type);
+static int get_area_count(int disc_type);
 static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type);
-static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type, int session_count);
+static int process_areas_and_tracks(char *dst_folder, char *dst_file, int disc_type, int area_count);
 
 typedef struct {
     uint32_t track_num;
@@ -33,8 +33,8 @@ typedef struct {
     char filename[NAME_MAX];
 } track_info_t;
 
-static int get_track_info(int session, int disc_type, track_info_t *tracks, uint32_t *track_count);
-static int calculate_total_sectors(int disc_type, int session_count);
+static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count);
+static int calculate_total_sectors(int disc_type, int area_count);
 static void update_ui_display(double progress_percent);
 
 static struct self {
@@ -377,7 +377,7 @@ static int safe_cdrom_read_toc(CDROM_TOC *toc, int session)
     return CMD_OK;
 }
 
-static int get_session_count(int disc_type)
+static int get_area_count(int disc_type)
 {
 	if (disc_type == CD_CDROM_XA)
 		return 1;
@@ -459,10 +459,10 @@ static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type) {
 	return CMD_OK;
 }
 
-static int get_track_info(int session, int disc_type, track_info_t *tracks, uint32_t *track_count) {
+static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count) {
     CDROM_TOC toc;
 
-    if (safe_cdrom_read_toc(&toc, session) != CMD_OK) {
+    if (safe_cdrom_read_toc(&toc, area) != CMD_OK) {
         return CMD_ERROR;
     }
 
@@ -479,8 +479,8 @@ static int get_track_info(int session, int disc_type, track_info_t *tracks, uint
         uint32_t nsec = s_end - start;
 
         if (disc_type == CD_CDROM_XA && type == 4) nsec -= 2;
-        else if (session == 1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
-        else if (session == 0 && type == 4) nsec -= 150;
+        else if (area == 1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
+        else if (area == 0 && type == 4) nsec -= 150;
 
         tracks[count].track_num = tn;
         tracks[count].start_lba = start;
@@ -501,22 +501,22 @@ static int get_track_info(int session, int disc_type, track_info_t *tracks, uint
     return CMD_OK;
 }
 
-static int calculate_total_sectors(int disc_type, int session_count) {
+static int calculate_total_sectors(int disc_type, int area_count) {
     uint32_t track_count;
     uint64_t total = 0;
 
-    ds_printf("DS_PROCESS: Calculating total sectors for disc type %d\n", session_count);
+    ds_printf("DS_PROCESS: Calculating total sectors for disc type %d\n", area_count);
 
-    for (int session = 0; session < session_count; session++) {
+    for (int area = 0; area < area_count; area++) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
             ds_printf("DS_INFO: Total sectors calculation cancelled\n");
             return 0;
         }
 
-        ds_printf("DS_PROCESS: Processing session %d\n", session);
+        ds_printf("DS_PROCESS: Processing area %d\n", area);
 
-        if (get_track_info(session, disc_type, self.tracks, &track_count) != CMD_OK) {
-            ds_printf("DS_ERROR: Failed to get track info for session %d\n", session);
+        if (get_track_info(area, disc_type, self.tracks, &track_count) != CMD_OK) {
+            ds_printf("DS_ERROR: Failed to get track info for area %d\n", area);
             return 0;
         }
 
@@ -530,16 +530,16 @@ static int calculate_total_sectors(int disc_type, int session_count) {
     return total;
 }
 
-static int process_sessions_and_tracks(char *dst_folder, char *dst_file, int disc_type, int session_count) {
+static int process_areas_and_tracks(char *dst_folder, char *dst_file, int disc_type, int area_count) {
     uint32_t track_count;
     char riplabel[64];
 
-    for (int session = 0; session < session_count; session++) {
+    for (int area = 0; area < area_count; area++) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
             return CMD_ERROR;
         }
 
-        if (get_track_info(session, disc_type, self.tracks, &track_count) != CMD_OK) {
+        if (get_track_info(area, disc_type, self.tracks, &track_count) != CMD_OK) {
             ds_printf("DS_ERROR: Failed to get track info\n");
             return CMD_ERROR;
         }
@@ -573,7 +573,7 @@ static void* gd_ripper_thread(void *arg) {
 	char dst_folder[NAME_MAX];
 	char dst_file[NAME_MAX];
 	char text[NAME_MAX];
-	int session_count;
+	int area_count;
 
 	ds_printf("DS_PROCESS: Starting disc ripping process\n");
 	self.start_time = timer_ms_gettime64();
@@ -597,8 +597,8 @@ static void* gd_ripper_thread(void *arg) {
 		goto out;
 	}
 
-	session_count = get_session_count(disc_type);
-	if(session_count == 0) {
+	area_count = get_area_count(disc_type);
+	if(area_count == 0) {
 		ds_printf("DS_ERROR: Unknown disc type\n");
 		goto out;
 	}
@@ -608,22 +608,22 @@ static void* gd_ripper_thread(void *arg) {
 		goto out;
 	}
 	self.last_track = TOC_TRACK(toc.last);
-	self.total_sectors = calculate_total_sectors(disc_type, session_count);
-	ds_printf("DS_PROCESS: Starting track extraction\n");
-
-	if(process_sessions_and_tracks(dst_folder, dst_file, disc_type, session_count) != CMD_OK) {
-		cleanup_failed_rip(dst_folder, dst_file, disc_type);
-		goto out;
-	}
+	self.total_sectors = calculate_total_sectors(disc_type, area_count);
 
 	if (disc_type == CD_GDROM) {
 		ds_printf("DS_PROCESS: Creating GDI files\n");
 		GUI_LabelSetText(self.track_label, "Creating GDI");
 
 		if (gdfiles(dst_folder, dst_file, text) != CMD_OK) {
-			cleanup_failed_rip(dst_folder, dst_file, disc_type);
 			goto out;
 		}
+	}
+
+	ds_printf("DS_PROCESS: Starting track extraction\n");
+
+	if(process_areas_and_tracks(dst_folder, dst_file, disc_type, area_count) != CMD_OK) {
+		cleanup_failed_rip(dst_folder, dst_file, disc_type);
+		goto out;
 	}
 
 out:
