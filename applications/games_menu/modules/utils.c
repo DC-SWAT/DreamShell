@@ -198,7 +198,7 @@ int ConfigParse(isoldr_conf *cfg, const char *filename)
 
 	size_t size = fs_total(fd);
 
-	char buf[512];
+	char buf[1024];
 	char *optname = NULL, *value = NULL;
 
 	if (fs_read(fd, buf, size) != size)
