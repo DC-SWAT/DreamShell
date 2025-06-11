@@ -349,22 +349,34 @@ static void showCover() {
 	} else {
 		setTitle(noext);
 	}
-
-	snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
-	if(FileExists(path)) {
-		use_cover = 1;
-	} else {
-		snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
+	
+	if (strstr(self.filename, ".gdi")) {
+		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+		char *c = strrchr(path, '/');
+		strcpy(c+1, "cover.png");
+		
+		if(FileExists(path)) {
+			use_cover = 1;
+		}
+	}
+	
+	if(!use_cover) {
+		snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
 		if(FileExists(path)) {
 			use_cover = 1;
 		} else {
-			memset(path, 0, sizeof(path));
-			strcpy(path, "/isocover/0GDTEX.PVR");
-			if (FileExists(path)) {
+			snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
+			if(FileExists(path)) {
 				use_cover = 1;
+			} else {
+				memset(path, 0, sizeof(path));
+				strcpy(path, "/isocover/0GDTEX.PVR");
+				if (FileExists(path)) {
+					use_cover = 1;
+				}
 			}
-		}
-	} 
+		} 
+	}
 
 	if (use_cover) {
 		s = GUI_SurfaceLoad(path);
