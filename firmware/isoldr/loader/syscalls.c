@@ -133,72 +133,47 @@ static void GetTOC() {
 	gd_state_t *GDS = get_GDS();
 	CDROM_TOC *toc = (CDROM_TOC*)GDS->param[1];
 	GDS->transfered = sizeof(CDROM_TOC);
+	GDS->status = CMD_STAT_COMPLETED;
 
 	memcpy(toc, &IsoInfo->toc, sizeof(CDROM_TOC));
-
-	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI ||
-		IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI ||
-		IsoInfo->track_lba[0] == 45150) {
-
-		LOGF("Get TOC from %cDI and prepare for session %d\n", 
-				(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI ? 'C' : 'G'),
-				GDS->param[0] + 1);
-
-		if(GDS->param[0] == 0) { /* Session 1 */
-
-			if(IsoInfo->image_type != ISOFS_IMAGE_TYPE_CDI &&
-				IsoInfo->track_lba[0] == 45150) {
-
-				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
-				toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
-
-				for(int i = 2; i < 99; ++i) {
-					toc->entry[i] = (uint32)-1;
-				}
-
-				toc->leadout_sector = 0x01001A2C;
-
-			}
-			else if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
-
-				for(int i = 99; i > 0; --i) {
-
-					if(TOC_CTRL(toc->entry[i - 1]) == 4) {
-						toc->entry[i - 1] = (uint32)-1;
-					}
-				}
-
-				int lt = (toc->last & 0x000f0000) >> 16;
-				toc->last = (toc->last & 0xfff0ffff) | (--lt << 16);
-			}
-			else {
-				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
-			}
+#ifdef LOG
+	for(int i = 0; i < 99; i++) {
+		if(toc->entry[i] != (uint32)-1) {
+			LOGF("Track %d: %08lx\n", i + 1, toc->entry[i]);
 		}
-		else { /* Session 2 */
-
-			if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_CDI) {
-
-				toc->entry[0] = (uint32)-1;
-
-				for(int i = 99; i > 0; --i) {
-
-					if(TOC_CTRL(toc->entry[i - 1]) == 4) {
-						toc->first = (toc->first & 0xfff0ffff) | (i << 16);
-					}
-				}
-			}
-			else if(IsoInfo->track_lba[0] == 45150) {
-				toc->entry[0] = (uint32)-1;
-				toc->entry[1] = (uint32)-1;
-			}
-		}
-
-	} else {
-		LOGF("Custom TOC with LBA %d\n", IsoInfo->track_lba[0]);
 	}
+	LOGF("First: %08lx, Last: %08lx, Leadout: %08lx\n", 
+		toc->first, toc->last, toc->leadout_sector);
+#endif
 
-	GDS->status = CMD_STAT_COMPLETED;
+	/* Check if this is an original GD disc */
+	if(IsoInfo->track_lba[0] == 45150 && IsoInfo->exec.type != BIN_TYPE_KOS) {
+
+		LOGF("Get GD TOC for area %d\n", GDS->param[0] + 1);
+
+		if(GDS->param[0] == 0) { /* Low density area */
+
+			toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
+			toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
+
+			for(int i = 2; i < 99; ++i) {
+				toc->entry[i] = (uint32)-1;
+			}
+
+			toc->leadout_sector = 0x01001A2C;
+		}
+		else { /* High density area */
+			toc->entry[0] = (uint32)-1;
+			toc->entry[1] = (uint32)-1;
+		}
+	}
+	else if(GDS->param[0] == 0) {
+		LOGF("Get CD TOC with data track LBA %d\n", IsoInfo->track_lba[0] - 150);
+	}
+	else {
+		LOGF("Requested CD TOC for high density area\n");
+		GDS->status = CMD_STAT_FAILED;
+	}
 }
 
 

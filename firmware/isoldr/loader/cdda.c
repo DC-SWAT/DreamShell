@@ -1159,13 +1159,12 @@ int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint32 loop) {
 
 	uint8 track = 0;
 
-	for(int i = 3; i < 99; ++i) {
-		if(IsoInfo->toc.entry[i] == (uint32)-1) {
-			break;
-		} else if(TOC_LBA(IsoInfo->toc.entry[i]) == TOC_LBA(first_lba)) {
+	for(uint32 i = TOC_TRACK(IsoInfo->toc.first) - 1; i < TOC_TRACK(IsoInfo->toc.last); ++i) {
+		if(TOC_LBA(IsoInfo->toc.entry[i]) == TOC_LBA(first_lba)) {
 			track = i + 1;
 			break;
-		} else if(TOC_LBA(IsoInfo->toc.entry[i]) > TOC_LBA(first_lba)) {
+		}
+		else if(TOC_LBA(IsoInfo->toc.entry[i]) > TOC_LBA(first_lba)) {
 			track = i;
 			break;
 		}

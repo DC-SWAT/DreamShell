@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ISO, CSO, CDI and GDI reader
- * (c)2009-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -155,10 +155,9 @@ int InitReader() {
 
 		if(IsoInfo->track_lba[0] != 45150) {
 			/* ISO in GDI format - find first data track */
-			for(int i = 0; i < 99; i++) {
-				if(IsoInfo->toc.entry[i] == (uint32)-1) break;
-				if(TOC_CTRL(IsoInfo->toc.entry[i]) == 4) {
-					first_data_track = i + 1;
+			for(uint32 i = TOC_TRACK(IsoInfo->toc.last); i >= TOC_TRACK(IsoInfo->toc.first); --i) {
+				if(TOC_CTRL(IsoInfo->toc.entry[i - 1]) == 4) {
+					first_data_track = i;
 					break;
 				}
 			}
@@ -217,7 +216,7 @@ void switch_gdi_data_track(uint32 lba, gd_state_t *GDS) {
 	uint32 old_track = GDS->data_track;
 #endif
 
-	for(req_track = TOC_TRACK(IsoInfo->toc.last); req_track > 0; --req_track) {
+	for(req_track = TOC_TRACK(IsoInfo->toc.last); req_track >= TOC_TRACK(IsoInfo->toc.first); --req_track) {
 		if(lba >= TOC_LBA(IsoInfo->toc.entry[req_track - 1]) - 150) {
 			is_raw = TOC_CTRL(IsoInfo->toc.entry[req_track - 1]) == 0;
 			break;
