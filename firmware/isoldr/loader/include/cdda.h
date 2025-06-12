@@ -92,8 +92,6 @@ typedef struct cdda_ctx {
 
 	/* CDDA syscall request data */
 	uint32 loop;
-	uint32 first_track;
-	uint32 last_track;
 	uint32 first_lba;
 	uint32 last_lba;
 
