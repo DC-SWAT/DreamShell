@@ -112,6 +112,10 @@ test_cd: clean $(TARGETS_CD)
 	-mkdir -p $(INSTALL_PATH)
 	cp $(BUILD)/cd*.bin $(INSTALL_PATH)
 
+test_cd_cdda: clean cd_cdda
+	-mkdir -p $(INSTALL_PATH)
+	cp $(BUILD)/cd*.bin $(INSTALL_PATH)
+
 test_ide: clean $(TARGETS_IDE)
 	-mkdir -p $(INSTALL_PATH)
 	cp $(BUILD)/ide*.bin $(INSTALL_PATH)
