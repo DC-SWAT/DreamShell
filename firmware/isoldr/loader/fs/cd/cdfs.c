@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * ISO9660 file system
- * (c)2011-2022 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2022, 2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -157,6 +157,7 @@ static struct {
 	unsigned int loc;   /* Current read position (in bytes) */
 	unsigned int len;   /* Length of file (in bytes)        */
 	unsigned int rcnt;
+	unsigned int nbyte;
 	void *rbuf;
 	int async;
 	fs_callback_f *poll_cb;
@@ -385,13 +386,9 @@ int poll(int fd) {
 		return 0;
 	}
 	
-	int transfered = g1_dma_transfered();
-	
 	if (g1_dma_in_progress()) {
-		return transfered;
+		return g1_dma_transfered();
 	} else {
-		
-		fh[fd].loc += transfered;
 		
 		if (fh[fd].rcnt) {
 			if (cdrom_read_sectors_part(fh[fd].rbuf, fh[fd].sec0 + (fh[fd].loc >> 11), fh[fd].loc % 2048, fh[fd].rcnt, 0) < 0) {
@@ -401,13 +398,13 @@ int poll(int fd) {
 				cb(-1);
 				return FS_ERR_SYSERR;
 			}
-			
-			return transfered + fh[fd].rcnt - 32;
 		}
+
+		fh[fd].loc += fh[fd].nbyte;
 
 		fs_callback_f *cb = fh[fd].poll_cb;
 		fh[fd].poll_cb = NULL;
-		cb(transfered);
+		cb(fh[fd].nbyte);
 		return 0;
 	}
 }
@@ -455,6 +452,12 @@ int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb) {
 		nbyte = fh[fd].len - fh[fd].loc;
 	}
 	
+	if(nbyte == 0) {
+		cb(0);
+		return 0;
+	}
+
+	fh[fd].nbyte = nbyte;
 	sector = fh[fd].sec0 + (fh[fd].loc >> 11);
 
 	/* If DMA is not possible, just use sync pio read */
