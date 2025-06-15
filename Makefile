@@ -267,7 +267,7 @@ $(TARGET_BIN): $(TARGET).elf
 
 $(TARGET_BIN_CD): $(TARGET_BIN)
 	@echo Scramble binary file...
-	@./sdk/bin/scramble $(TARGET_BIN) $(TARGET_BIN_CD)
+	@$(KOS_BASE)/utils/scramble/scramble $(TARGET_BIN) $(TARGET_BIN_CD)
 
 cdi: $(TARGET).cdi
 

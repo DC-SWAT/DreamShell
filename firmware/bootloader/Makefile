@@ -49,7 +49,7 @@ cdi: $(TARGET_CD)
 	@echo Updating IP.BIN with current bootloader version and date...
 	@../../utils/update_ip_bin.sh $(DS_RES)/IP.BIN /tmp/IP_$(TARGET).BIN $(VER_MAJOR) $(VER_MINOR) $(VER_MICRO) 0x30 bootloader >/dev/null
 	@mkdir -p ./cd
-	@$(DS_SDK)/bin/scramble $(TARGET).bin $(TARGET_CD)
+	@$(KOS_BASE)/utils/scramble/scramble $(TARGET).bin $(TARGET_CD)
 	@$(DS_SDK)/bin/mkisofs -V DreamShell -C 0,11702 -G /tmp/IP_$(TARGET).BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso ./cd
 	@echo Convert ISO to CDI...
 	@-rm -f $(TARGET).cdi
