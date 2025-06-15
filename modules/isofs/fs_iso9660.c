@@ -104,6 +104,11 @@ static int virt_iso_init_percd(isofs_t *ifs);
 static int virt_iso_reset(isofs_t *ifs);
 static void virt_iso_break_all(isofs_t *ifs);
 
+static int iso_tolower(int c) {
+	if (c >= 'A' && c <= 'Z')
+		return c + 32;
+	return c;
+}
 
 /********************************************************************************/
 /* Low-level Joliet utils */
@@ -162,7 +167,7 @@ static int ucscompare(const uint8 * isofn, const uint8 * normalfn, int isosize) 
 		if (c0 == ';') break;
 
 		/* Otherwise, compare the chars normally */
-		if (tolower(c0) != tolower(c1))
+		if (iso_tolower(c0) != iso_tolower(c1))
 			return -1;
 	}
 
@@ -613,7 +618,7 @@ static int fncompare(const char *isofn, int isosize, const char *normalfn) {
 			break;
 
 		/* Otherwise, compare the chars normally */
-		if (tolower((int)isofn[i]) != tolower((int)normalfn[i]))
+		if (iso_tolower((int)isofn[i]) != iso_tolower((int)normalfn[i]))
 			return -1;
 	}
 
@@ -956,7 +961,7 @@ static void fn_postprocess(char *fnin) {
 	char	* fn = fnin;
 
 	while (*fn && *fn != ';') {
-		*fn = tolower((int)*fn);
+		*fn = iso_tolower((int)*fn);
 		fn++;
 	}
 	*fn = 0;
@@ -1573,6 +1578,8 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 
 	mutex_unlock(&fh_mutex);
 	debugf("DS_ISOFS: Mounted %s\n", mountpoint);
+
+	
 	return 0;
 }
 
