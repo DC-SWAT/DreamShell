@@ -55,7 +55,6 @@ typedef struct {
 
 
 typedef struct isofs {
-        
     SLIST_ENTRY(isofs) list;
     vfs_handler_t *vfs;
     const char *fn;
@@ -76,7 +75,6 @@ typedef struct isofs {
 	CISO_header_t *ciso;
 	CDI_header_t  *cdi;
 	GDI_header_t  *gdi;
-
 } isofs_t;
 
 
@@ -105,8 +103,10 @@ static int virt_iso_reset(isofs_t *ifs);
 static void virt_iso_break_all(isofs_t *ifs);
 
 static int iso_tolower(int c) {
-	if (c >= 'A' && c <= 'Z')
+	if (c >= 'A' && c <= 'Z') {
 		return c + 32;
+	}
+	
 	return c;
 }
 
@@ -141,7 +141,10 @@ static void ucs2utfn(uint8 * utf, const uint8 * ucs, size_t len) {
 		len--;
 		c = (*ucs++) << 8;
 		c |= *ucs++;
-		if (c == ';') break;
+		if (c == ';') {
+			break;
+		}
+		
 		if (c <= 0x7f) {
 			*utf++ = c;
 		} else if (c <= 0x7ff) {
@@ -167,25 +170,27 @@ static int ucscompare(const uint8 * isofn, const uint8 * normalfn, int isosize) 
 		if (c0 == ';') break;
 
 		/* Otherwise, compare the chars normally */
-		if (iso_tolower(c0) != iso_tolower(c1))
+		if (iso_tolower(c0) != iso_tolower(c1)) {
 			return -1;
+		}
 	}
 
 	c1 = ((int)normalfn[i] << 8) | (normalfn[i+1]);
 
 	/* Catch ISO name shorter than normal name */
-	if (c1 != '/' && c1 != '\0')
+	if (c1 != '/' && c1 != '\0') {
 		return -1;
-	else
-		return 0;
+	}
+	
+	return 0;
 }
 
 static int isjoliet(char * p) {
 	if (p[0] == '%' && p[1] == '/') {
 		switch (p[2]) {
-		case '@': return 1;
-		case 'C': return 2;
-		case 'E': return 3;
+			case '@': return 1;
+			case 'C': return 2;
+			case 'E': return 3;
 		}
 	}
 	return 0;
@@ -212,7 +217,9 @@ static uint32 htohl_32(const void *data) {
 /* static uint8 virt_iso_711(const uint8 *from) { return (*from & 0xff); } */
 
 /* Read red-book section 7.3.3 number (32 bit LE / 32 bit BE) */
-static uint32 virt_iso_733(const uint8 *from) { return htohl_32(from); }
+static uint32 virt_iso_733(const uint8 *from) { 
+	return htohl_32(from);
+}
 
 /* Read sectors data */
 static int read_data(uint32 sector, uint32 count, void *data, isofs_t *ifs) {
@@ -230,7 +237,6 @@ static int read_data(uint32 sector, uint32 count, void *data, isofs_t *ifs) {
 			return read_sectors_data(ifs->fd, count, 2048, data);
 	}
 }
-
 
 #define ROOT_DIRECTORY_HORIZON 64
 
@@ -284,7 +290,7 @@ static int isofile_find_lba(isofs_t *ifs) {
 
 	debugf("DS_ISOFS: Root directory is at %d\n", sec);
 
-	sec = (buf1[5] << 24 | buf1[4] << 16 | buf1[3] << 8 | buf1[2]) + 150 - sec;
+	sec = htohl_32(&buf1[2]) + 150 - sec;
 	
 	debugf("DS_ISOFS: Session offset is %d\n", sec);
 
@@ -305,12 +311,15 @@ static void bgrad_cache(cache_block_t **cache, int block) {
 	cache_block_t	*tmp;
 	
 	/* Don't try it with the end block */
-	if (block < 0 || block >= (NUM_CACHE_BLOCKS-1)) return;
+	if (block < 0 || block >= (NUM_CACHE_BLOCKS-1)) {
+		return;
+	}
 	
 	/* Make a copy and scoot everything down */
 	tmp = cache[block];
-	for (i=block; i<(NUM_CACHE_BLOCKS - 1); i++)
+	for (i=block; i<(NUM_CACHE_BLOCKS - 1); i++) {
 		cache[i] = cache[i+1];
+	}
 	cache[NUM_CACHE_BLOCKS-1] = tmp;
 }
 
@@ -337,7 +346,9 @@ static int bread_cache(cache_block_t **cache, uint32 sector, isofs_t *ifs) {
 	}
 	
 	/* If we didn't find one, kick an LRU block out of cache */
-	if (i >= NUM_CACHE_BLOCKS) { i = 0; }
+	if (i >= NUM_CACHE_BLOCKS) {
+		i = 0;
+	}
 
 	j = read_data(sector, 1, cache[i]->data, ifs);
 	
@@ -400,11 +411,8 @@ static int get_lba_from_mki(isofs_t *ifs) {
 
 		if(ifs->ciso != NULL) {
 			ciso_read_sectors(ifs->ciso, ifs->fd, mki, s, 1);
-//		} else if(ifs->cdi != NULL) {
-//			cdi_read_sectors(ifs->cdi, ifs->fd, mki, s, 1);
-//		} else if(ifs->gdi != NULL) {
-//			gdi_read_sectors(ifs->gdi, mki, s, 1);
-		} else {
+		}
+		else {
 			fs_seek(ifs->fd, s << 11, SEEK_SET);
 			fs_read(ifs->fd, mki, sizeof(mki));
 		}
@@ -426,7 +434,8 @@ static int get_lba_from_mki(isofs_t *ifs) {
 				debugf("DS_ISOFS: Detected LBA: %d + 150\n", lba);
 				lba += 150;
 				break;
-			} else {
+			}
+			else {
 				lba = 0;
 				debugf("DS_ISOFS: Can't find LBA from MKI.\n");
 				break;
@@ -436,76 +445,6 @@ static int get_lba_from_mki(isofs_t *ifs) {
 	}
 	return lba;
 }
-
-/*
-static int get_toc_and_lba(isofs_t *ifs) {
-
-	uint8 ipbin[2048];
-	int i, lba = 150, mk = 0;
-	
-	if(ifs->ciso != NULL) {
-		ciso_read_sectors(ifs->ciso, ifs->fd, ipbin, 0, 1);
-	} else if(ifs->cdi != NULL) {
-        
-        cdi_get_toc(ifs->cdi, &ifs->toc);
-        return cdrom_locate_data_track(&ifs->toc);
-		
-	} else if(ifs->gdi != NULL) {
-        
-        gdi_get_toc(ifs->gdi, &ifs->toc);
-        return 45150;
-        
-	} else {
-	
-		fs_seek(ifs->fd, 0, SEEK_SET);
-
-		if(!fs_read(ifs->fd, ipbin, 2048)) {
-			ds_printf("DS_ERROR: Can't read IP.BIN from ISO\n");
-			return lba;
-		}
-	}
-
-
-	if(ipbin[0x0] == 'S' && ipbin[0x1] == 'E' && ipbin[(IPBIN_TOC_OFFSET)-1] == 0x31) {
-
-		memcpy_sh4(&ifs->toc, ipbin + IPBIN_TOC_OFFSET, sizeof(CDROM_TOC));
-		//lba = cdrom_locate_data_track(&toc) + 150;
-
-		for (i = 0; i < 99; i++) {
-			if(TOC_CTRL(ifs->toc.entry[i]) == 4) {
-				
-				lba = TOC_LBA(ifs->toc.entry[i]);
-				
-				if(lba >= 45150) {
-					
-					mk = get_lba_from_mki(ifs);
-					
-					if(mk > 150) {
-						return mk;
-					} else if(mk < 0) {
-						return lba;
-					} else {
-						return isofile_find_lba(ifs);
-					}
-				}
-				
-				break;
-			}
-		}
-		
-	} else {
-		mk = get_lba_from_mki(ifs);
-		
-		if(mk > 0) {
-			return mk;
-		} else {
-			return 150;
-		}
-	}
-
-	return lba;
-}
-*/
 
 static int get_toc_and_lba(isofs_t *ifs) {
 
@@ -582,11 +521,17 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 	ifs->joliet = 0;
 	for (i=1; i<=3; i++) {
 		blk = biread(ifs->session_base + i + 16 - 150, ifs);
-		if (blk < 0) return blk;
+		
+		if (blk < 0) {
+			return blk;
+		}
+		
 		if (memcmp((char *)ifs->icache[blk]->data, "\02CD001", 6) == 0) {
-			ifs->joliet = isjoliet((char *)ifs->icache[blk]->data+88);
-//			debugf("DS_ISOFS: joliet level %d extensions detected\n", ifs->joliet);
-			if (ifs->joliet) break;
+			ifs->joliet = isjoliet((char *) &ifs->icache[blk]->data[88]);
+			
+			if (ifs->joliet) {
+				break;
+			}
 		}
 	}
 
@@ -594,7 +539,10 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 	if (!ifs->joliet) {
 		/* Grab and check the volume descriptor */	
 		blk = biread(ifs->session_base + 16 - 150, ifs);
-		if (blk < 0) return i;
+		if (blk < 0) {
+			return i;
+		}
+		
 		if (memcmp((char*)ifs->icache[blk]->data, "\01CD001", 6)) {
 			ds_printf("DS_ERROR: CD/GD image is not ISO9660\n");
 			return -1;
@@ -619,23 +567,28 @@ static int fncompare(const char *isofn, int isosize, const char *normalfn) {
 	/* Compare ISO name */
 	for (i=0; i<isosize; i++) {
 		/* Weed out version codes */
-		if (isofn[i] == ';') break;
+		if (isofn[i] == ';') {
+			break;
+		}
 
 		/* Deal with crap '.' at end of filenames */
 		if (isofn[i] == '.' &&
-				(i == (isosize-1) || isofn[i+1] == ';'))
+				(i == (isosize-1) || isofn[i+1] == ';')) {
 			break;
+		}
 
 		/* Otherwise, compare the chars normally */
-		if (iso_tolower((int)isofn[i]) != iso_tolower((int)normalfn[i]))
+		if (iso_tolower((int)isofn[i]) != iso_tolower((int)normalfn[i])) {
 			return -1;
+		}
 	}
 
 	/* Catch ISO name shorter than normal name */
-	if (normalfn[i] != '/' && normalfn[i] != '\0')
+	if (normalfn[i] != '/' && normalfn[i] != '\0') {
 		return -1;
-	else
-		return 0;
+	}
+	
+	return 0;
 }
 
 /* Locate an ISO9660 object in the given directory; this can be a directory or
@@ -665,39 +618,45 @@ static virt_iso_dirent_t *find_object(const char *fn, int dir,
 	size_left = (int)dir_size;
 
 	/* Joliet */
-	uint8		* ucsname = (uint8 *)rrname;
+	uint8 *ucsname = (uint8 *) rrname;
 
 	/* If this is a Joliet CD, then UCSify the name */
-	if (ifs->joliet)
+	if (ifs->joliet) {
 		utf2ucs(ucsname, (uint8 *)fn);
+	}
 	
 	while (size_left > 0) {
 		c = biread(dir_extent, ifs);
-		if (c < 0) return NULL;
+		if (c < 0) {
+			return NULL;
+		}
 		
 		for (i=0; i<2048 && i<size_left; ) {
 			/* Locate the current dirent */
 			de = (virt_iso_dirent_t *)(ifs->icache[c]->data + i);
-			if (!de->length) break;
+			if (!de->length) {
+				break;
+			}
 
 			/* Try the Joliet filename if the CD is a Joliet disc */
 			if (ifs->joliet) {
 				if (!ucscompare((uint8 *)de->name, ucsname, de->name_len)) {
-					if (!((dir << 1) ^ de->flags))
+					if (!((dir << 1) ^ de->flags)) {
 						return de;
+					}
 				}
 			} else {
 				/* Assume no Rock Ridge name */
 				rrnamelen = 0;
 		
 				/* Check for Rock Ridge NM extension */
-				len = de->length - sizeof(virt_iso_dirent_t)
-					+ sizeof(de->name) - de->name_len;
-				pnt = (uint8*)de + sizeof(virt_iso_dirent_t)
-					- sizeof(de->name) + de->name_len;
+				len = de->length - sizeof(virt_iso_dirent_t) + sizeof(de->name) - de->name_len;
+				pnt = (uint8*)de + sizeof(virt_iso_dirent_t) - sizeof(de->name) + de->name_len;
+				
 				if ((de->name_len & 1) == 0) {
 					pnt++; len--;
 				}
+				
 				while ((len >= 4) && ((pnt[3] == 1) || (pnt[3] == 2))) {
 					if (strncmp((char *)pnt, "NM", 2) == 0) {
 						rrnamelen = pnt[2] - 5;
@@ -713,18 +672,23 @@ static virt_iso_dirent_t *find_object(const char *fn, int dir,
 					char *p = strchr(fn, '/');
 					int fnlen;
 				
-					if (p)
+					if (p) {
 						fnlen = p - fn;
-					else
+					}
+					else {
 						fnlen = strlen(fn);
+					}
+					
 					if (!strncasecmp(rrname, fn, fnlen) && ! *(rrname + fnlen)) {
-						if (!((dir << 1) ^ de->flags))
+						if (!((dir << 1) ^ de->flags)) {
 							return de;
+						}
 					}
 				} else {
 					if (!fncompare(de->name, de->name_len, fn)) {
-						if (!((dir << 1) ^ de->flags))
+						if (!((dir << 1) ^ de->flags)) {
 							return de;
+						}
 					}
 				}
 			}
@@ -761,22 +725,23 @@ static virt_iso_dirent_t *find_object_path(const char *fn, int dir, virt_iso_dir
 			/* Note: trailing path parts don't matter since find_object
 			   only compares based on the FN length on the disc. */
 			start = find_object(fn, 1, virt_iso_733(start->extent), virt_iso_733(start->size), ifs);
-			if (start == NULL) return NULL;
+			
+			if (start == NULL) {
+				return NULL;
+			}
 		}
 		fn = cur + 1;
 	}
 
 	/* Locate the file in the resulting directory */
 	if (*fn) {
-		start = find_object(fn, dir, virt_iso_733(start->extent), virt_iso_733(start->size), ifs);
-		return start;
+		return find_object(fn, dir, virt_iso_733(start->extent), virt_iso_733(start->size), ifs);
 	}
-	else {
-		if (!dir)
-			return NULL;
-		else
-			return start;
+	else if (!dir) {
+		return NULL;
 	}
+	
+	return start;
 }
 
 /********************************************************************************/
@@ -807,24 +772,30 @@ static void * virt_iso_open(vfs_handler_t * vfs, const char *fn, int mode) {
 	isofs_t *ifs = (isofs_t *)vfs->privdata;
 
 	/* Make sure they don't want to open things as writeable */
-	if ((mode & O_MODE_MASK) != O_RDONLY)
+	if ((mode & O_MODE_MASK) != O_RDONLY) {
 		return 0;
-
-
+	}
+	
 	/* Find the file we want */
-	de = find_object_path(fn, (mode & O_DIR)?1:0, &ifs->root_dirent, ifs);
-	if (!de) return 0;
+	de = find_object_path(fn, (mode & O_DIR) ? 1 : 0, &ifs->root_dirent, ifs);
+	if (!de) {
+		return 0;
+	}
 	
 	/* Find a free file handle */
 	mutex_lock(&fh_mutex);
-	for (fd=0; fd<MAX_ISO_FILES; fd++)
+	for (fd = 0; fd < MAX_ISO_FILES; fd++) {
 		if (fh[fd].first_extent == 0) {
 			fh[fd].first_extent = -1;
 			break;
 		}
+	}
+	
 	mutex_unlock(&fh_mutex);
-	if (fd >= MAX_ISO_FILES)
+	
+	if (fd >= MAX_ISO_FILES) {
 		return 0;
+	}
 
 	/* Fill in the file handle and return the fd */
 	fh[fd].first_extent = virt_iso_733(de->extent);
@@ -857,8 +828,9 @@ static ssize_t virt_iso_read(void * h, void *buf, size_t bytes) {
 	file_t fd = (file_t)h;
 
 	/* Check that the fd is valid */
-	if (fd >= MAX_ISO_FILES || fh[fd].first_extent == 0 || fh[fd].broken)
+	if (fd >= MAX_ISO_FILES || fh[fd].first_extent == 0 || fh[fd].broken) {
 		return -1;
+	}
 
 	rv = 0;
 	outbuf = (uint8 *)buf;
@@ -866,9 +838,11 @@ static ssize_t virt_iso_read(void * h, void *buf, size_t bytes) {
 	/* Read zero or more sectors into the buffer from the current pos */
 	while (bytes > 0) {
 		/* Figure out how much we still need to read */
-		toread = (bytes > (fh[fd].size - fh[fd].ptr)) ?
-			fh[fd].size - fh[fd].ptr : bytes;
-		if (toread == 0) break;
+		toread = (bytes > (fh[fd].size - fh[fd].ptr)) ? fh[fd].size - fh[fd].ptr : bytes;
+		
+		if (toread == 0) {
+			break;
+		}
 
 		/* How much more can we read in the current sector? */
 		thissect = 2048 - (fh[fd].ptr % 2048);
@@ -885,23 +859,22 @@ static ssize_t virt_iso_read(void * h, void *buf, size_t bytes) {
 
 			/* Do the read */
 			c = read_data(fh[fd].first_extent + fh[fd].ptr/2048, thissect, outbuf, fh[fd].ifs);
+			
 			if (c < 0) {
 				return -1;
 			}
 			
-		} else { 
-			
+		}
+		else { 
 			toread = (toread > thissect) ? thissect : toread;
-//			uint8 tmp[2048];
 		
 			/* Do the read */
 			c = bdread(fh[fd].first_extent + fh[fd].ptr/2048, fh[fd].ifs);
-//			c = read_data(fh[fd].first_extent + fh[fd].ptr/2048, 1, tmp, fh[fd].ifs) < 0)
+			
 			if (c < 0) {
 				return -1;
 			}
 			memcpy_sh4(outbuf, fh[fd].ifs->dcache[c]->data + (fh[fd].ptr % 2048), toread);
-//			memcpy_sh4(outbuf, tmp + (fh[fd].ptr % 2048), toread);
 		}
 		
 		/* Adjust pointers */
@@ -919,27 +892,36 @@ static off_t virt_iso_seek(void * h, off_t offset, int whence) {
 	file_t fd = (file_t)h;
 
 	/* Check that the fd is valid */
-	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken)
+	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken) {
 		return -1;
+	}
 
 	/* Update current position according to arguments */
 	switch (whence) {
 		case SEEK_SET:
 			fh[fd].ptr = offset;
 			break;
+		
 		case SEEK_CUR:
 			fh[fd].ptr += offset;
 			break;
+		
 		case SEEK_END:
 			fh[fd].ptr = fh[fd].size + offset;
 			break;
+		
 		default:
 			return -1;
 	}
 	
 	/* Check bounds */
-	if (fh[fd].ptr < 0) fh[fd].ptr = 0;
-	if (fh[fd].ptr > fh[fd].size) fh[fd].ptr = fh[fd].size;
+	if (fh[fd].ptr < 0) {
+		fh[fd].ptr = 0;
+	}
+	
+	if (fh[fd].ptr > fh[fd].size) {
+		fh[fd].ptr = fh[fd].size;
+	}
 	
 	return fh[fd].ptr;
 }
@@ -948,8 +930,9 @@ static off_t virt_iso_seek(void * h, off_t offset, int whence) {
 static off_t virt_iso_tell(void * h) {
 	file_t fd = (file_t)h;
 
-	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken)
+	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken) {
 		return -1;
+	}
 
 	return fh[fd].ptr;
 }
@@ -958,8 +941,9 @@ static off_t virt_iso_tell(void * h) {
 static size_t virt_iso_total(void * h) {
 	file_t fd = (file_t)h;
 
-	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken)
+	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken) {
 		return -1;
+	}
 
 	return fh[fd].size;
 }
@@ -967,12 +951,13 @@ static size_t virt_iso_total(void * h) {
 /* Helper function for readdir: post-processes an ISO filename to make
    it a bit prettier. */
 static void fn_postprocess(char *fnin) {
-	char	* fn = fnin;
+	char *fn = fnin;
 
 	while (*fn && *fn != ';') {
 		*fn = iso_tolower((int)*fn);
 		fn++;
 	}
+	
 	*fn = 0;
 
 	/* Strip trailing dots */
@@ -987,29 +972,40 @@ static dirent_t *virt_iso_readdir(void * h) {
 	virt_iso_dirent_t	*de;
 
 	/* RockRidge */
-	int		len;
-	uint8		*pnt;
+	int len;
+	uint8 *pnt;
 
 	file_t fd = (file_t)h;
 
-	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || !fh[fd].dir || fh[fd].broken)
+	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || !fh[fd].dir || fh[fd].broken) {
 		return NULL;
+		
+	}
 
 	/* Scan forwards until we find the next valid entry, an
 	   end-of-entry mark, or run out of dir size. */
-	c = -1; de = NULL;
+	c = -1;
+	de = NULL;
+	
 	while(fh[fd].ptr < fh[fd].size) {
 		/* Get the current dirent block */
 		c = biread(fh[fd].first_extent + fh[fd].ptr/2048, fh[fd].ifs);
-		if (c < 0) return NULL;
+		if (c < 0) {
+			return NULL;
+		}
 	
 		de = (virt_iso_dirent_t *)(fh[fd].ifs->icache[c]->data + (fh[fd].ptr%2048));
-		if (de->length) break;
+		if (de->length) {
+			break;
+		}
 
 		/* Skip to the next sector */
 		fh[fd].ptr += 2048 - (fh[fd].ptr%2048);
 	}
-	if (fh[fd].ptr >= fh[fd].size) return NULL;
+	
+	if (fh[fd].ptr >= fh[fd].size) {
+		return NULL;
+	}
 	
 	/* If we're at the first, skip the two blank entries */
 	if (!de->name[0] && de->name_len == 1) {
@@ -1017,12 +1013,15 @@ static dirent_t *virt_iso_readdir(void * h) {
 		de = (virt_iso_dirent_t *)(fh[fd].ifs->icache[c]->data + (fh[fd].ptr%2048));
 		fh[fd].ptr += de->length;
 		de = (virt_iso_dirent_t *)(fh[fd].ifs->icache[c]->data + (fh[fd].ptr%2048));
-		if (!de->length) return NULL;
+		if (!de->length) {
+			return NULL;
+		}
 	}
 
 	if (fh[fd].ifs->joliet) {
 		ucs2utfn((uint8 *)fh[fd].dirent.name, (uint8 *)de->name, de->name_len);
-	} else {
+	}
+	else {
 		/* Fill out the VFS dirent */
 		strncpy(fh[fd].dirent.name, de->name, de->name_len);
 		fh[fd].dirent.name[de->name_len] = 0;
@@ -1031,14 +1030,17 @@ static dirent_t *virt_iso_readdir(void * h) {
 		/* Check for Rock Ridge NM extension */
 		len = de->length - sizeof(virt_iso_dirent_t) + sizeof(de->name) - de->name_len;
 		pnt = (uint8*)de + sizeof(virt_iso_dirent_t) - sizeof(de->name) + de->name_len;
+		
 		if ((de->name_len & 1) == 0) {
 			pnt++; len--;
 		}
+		
 		while ((len >= 4) && ((pnt[3] == 1) || (pnt[3] == 2))) {
 			if (strncmp((char *)pnt, "NM", 2) == 0) {
 				strncpy(fh[fd].dirent.name, (char *)(pnt+5), pnt[2] - 5);
 				fh[fd].dirent.name[pnt[2] - 5] = 0;
 			}
+			
 			len -= pnt[2];
 			pnt += pnt[2];
 		}
@@ -1047,7 +1049,8 @@ static dirent_t *virt_iso_readdir(void * h) {
 	if (de->flags & 2) {
 		fh[fd].dirent.size = -1;
 		fh[fd].dirent.attr = O_DIR;
-	} else {
+	}
+	else {
 		fh[fd].dirent.size = virt_iso_733(de->size);
 		fh[fd].dirent.attr = 0;
 	}
@@ -1091,21 +1094,22 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 
 	switch(cmd) {
 		case ISOFS_IOCTL_RESET:
-		
+		{
 			virt_iso_reset(fh[fd].ifs);
 			break;
-			
+		}
 		case ISOFS_IOCTL_GET_FD_LBA:
-		
+		{
 			memcpy_sh4(data, &fh[fd].first_extent, sizeof(uint32));
 			break;
-			
+		}
 		case ISOFS_IOCTL_GET_DATA_TRACK_FILENAME:
 		{
 			if(fh[fd].ifs->gdi != NULL) {
 				GDI_track_t *trk = gdi_get_track(fh[fd].ifs->gdi, fh[fd].ifs->session_base - 150);
 				memcpy_sh4(data, trk->filename, sizeof(trk->filename));
-			} else {
+			}
+			else {
 				return -1;
 			}
 			break;
@@ -1113,7 +1117,6 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 		case ISOFS_IOCTL_GET_DATA_TRACK_FILENAME2:
 		{
 			if(fh[fd].ifs->gdi != NULL) {
-
 				GDI_track_t *trk = gdi_get_last_data_track(fh[fd].ifs->gdi);
 				char *p = strrchr(trk->filename, '/');
 				char *fn = (char*)data;
@@ -1121,25 +1124,25 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 				strncpy(fn, p + 1, 11);
 				fn[11] = 0;
 
-			} else {
+			}
+			else {
 				return -1;
 			}
 			break;
 		}
 		case ISOFS_IOCTL_GET_DATA_TRACK_LBA:
-		
+		{
 			memcpy_sh4(data, &fh[fd].ifs->session_base, sizeof(uint32));
 			break;
-			
+		}
 		case ISOFS_IOCTL_GET_DATA_TRACK_LBA2:
 		{
 			if(fh[fd].ifs->gdi != NULL) {
-
 				GDI_track_t *trk = gdi_get_last_data_track(fh[fd].ifs->gdi);
 				uint32 lba = trk->start_lba + 150;
 				memcpy_sh4(data, &lba, sizeof(uint32));
-
-			} else {
+			}
+			else {
 				return -1;
 			}
 			break;
@@ -1149,12 +1152,10 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			memset_sh4(data, 0, sizeof(uint32));
 			
 			if(fh[fd].ifs->cdi != NULL) {
-				
 				uint16 ssz = 0;
 				uint32 offset = cdi_get_offset(fh[fd].ifs->cdi, fh[fd].ifs->session_base - 150, &ssz);
 				memcpy_sh4(data, &offset, sizeof(uint32));
 			}
-			
 			break;
 		}
 		case ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE:
@@ -1162,16 +1163,14 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			uint32 sec_size;
 			
 			if(fh[fd].ifs->cdi != NULL) {
-				
 				CDI_track_t *ctrk = cdi_get_track(fh[fd].ifs->cdi, fh[fd].ifs->session_base - 150);
 				sec_size = cdi_track_sector_size(ctrk);
-				
-			} else if(fh[fd].ifs->gdi != NULL) {
-				
+			}
+			else if(fh[fd].ifs->gdi != NULL) {
 				GDI_track_t *gtrk = gdi_get_track(fh[fd].ifs->gdi, fh[fd].ifs->session_base - 150);
 				sec_size = gdi_track_sector_size(gtrk);
-				
-			} else {
+			}
+			else {
 				sec_size = 2048;
 			}
 			
@@ -1189,11 +1188,14 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			
 			if(fh[fd].ifs->cdi != NULL) {
 				lnk = (uint32)fh[fd].ifs->cdi;
-			} else if(fh[fd].ifs->gdi != NULL) {
+			}
+			else if(fh[fd].ifs->gdi != NULL) {
 				lnk = (uint32)fh[fd].ifs->gdi;
-			} else if(fh[fd].ifs->ciso != NULL) {
+			}
+			else if(fh[fd].ifs->ciso != NULL) {
 				lnk = (uint32)fh[fd].ifs->ciso;
-			} else {
+			}
+			else {
 				return -1;
 			}
 			
@@ -1206,10 +1208,10 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			break;
 		}
 		case ISOFS_IOCTL_GET_TOC_DATA:
-		
+		{
 			memcpy_sh4(data, &fh[fd].ifs->toc, sizeof(CDROM_TOC));
 			break;
-			
+		}
 		case ISOFS_IOCTL_GET_BOOT_SECTOR_DATA:
 		{
 			if(read_data(fh[fd].ifs->session_base - 150, 1, data, fh[fd].ifs) < 0) {
@@ -1228,14 +1230,14 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 
 			for(int i = 0; i < 99; i++) {
 
-				if(fh[fd].ifs->toc.entry[i] == (uint32)-1)
+				if(fh[fd].ifs->toc.entry[i] == (uint32)-1) {
 					break;
+				}
 
 				if(TOC_CTRL(fh[fd].ifs->toc.entry[i]) == 0) {
 					offset[i] = cdi_get_offset(fh[fd].ifs->cdi, TOC_LBA(fh[fd].ifs->toc.entry[i]), &ssz);
 				}
 			}
-
 			break;
 		}
 		case ISOFS_IOCTL_GET_TRACK_SECTOR_COUNT:
@@ -1245,7 +1247,8 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			
 			if(!val) {
 				val = fh[fd].ifs->session_base - 150;
-			} else {
+			}
+			else {
 				val -= 150;
 			}
 			
@@ -1256,18 +1259,21 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 				
 				val = ctrk->total_length / sec_size;
 				
-			} else if(fh[fd].ifs->gdi != NULL) {
+			}
+			else if(fh[fd].ifs->gdi != NULL) {
 				
 				GDI_track_t *gtrk = gdi_get_track(fh[fd].ifs->gdi, val);
 				sec_size = gdi_track_sector_size(gtrk);
 				
 				val = fs_total(fh[fd].ifs->gdi->track_fd) / sec_size;
 			
-			} else if(fh[fd].ifs->ciso != NULL) {
+			}
+			else if(fh[fd].ifs->ciso != NULL) {
 				
 				val = fh[fd].ifs->ciso->total_bytes / fh[fd].ifs->ciso->block_size;
 			
-			} else {
+			}
+			else {
 				val = fs_total(fh[fd].ifs->fd) / sec_size;
 			}
 			
@@ -1297,9 +1303,9 @@ static int virt_iso_fcntl(void *h, int cmd, va_list ap) {
 		case F_GETFL:
 			rv = O_RDONLY;
 
-			if(fh[fd].dir)
+			if(fh[fd].dir) {
 				rv |= O_DIR;
-
+			}
 			break;
 
 		case F_SETFL:
@@ -1520,20 +1526,20 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 				ifs->type = ISOFS_IMAGE_TYPE_CSO;
 				break;
 		}
-		
-	} else {
-		
+	}
+	else {
 		ifs->cdi = cdi_open(fd);
 		
 		if(ifs->cdi != NULL) {
 			ifs->type = ISOFS_IMAGE_TYPE_CDI;
-		} else {
-			
+		}
+		else {
 			ifs->gdi = gdi_open(fd, filename);
 			
 			if(ifs->gdi != NULL) {
 				ifs->type = ISOFS_IMAGE_TYPE_GDI;
-			} else {
+			}
+			else {
 				ifs->type = ISOFS_IMAGE_TYPE_ISO;
 			}
 		}
@@ -1648,3 +1654,4 @@ int fs_iso_unmount(const char *mountpoint) {
 	mutex_unlock(&fh_mutex);
 	return -1;
 }
+
