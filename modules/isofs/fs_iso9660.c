@@ -246,39 +246,48 @@ static int isofile_find_lba(isofs_t *ifs) {
 
 	for (sec = 16; sec < ROOT_DIRECTORY_HORIZON; sec++) {
 
-		if (isofile_read(ifs->fd, sec << 11, 6, buf1) < 0)
+		if (isofile_read(ifs->fd, sec << 11, 6, buf1) < 0) {
 			return 150;
-		if (!memcmp(buf1, "\001CD001", 6))
+		}
+		
+		if (!memcmp(buf1, "\001CD001", 6)) {
 			break;
-		else if(!memcmp(buf1, "\377CD001", 6))
+		}
+		else if(!memcmp(buf1, "\377CD001", 6)) {
 			return 150;
+		}
 	}
 	
-	if (sec >= ROOT_DIRECTORY_HORIZON)
+	if (sec >= ROOT_DIRECTORY_HORIZON) {
 		return 150;
+	}
 
 	debugf("DS_ISOFS: PVD is at %d\n", sec);
 
-	if (isofile_read(ifs->fd, (sec << 11) + 0x9c, 0x22, buf1) < 0)
+	if (isofile_read(ifs->fd, (sec << 11) + 0x9c, 0x22, buf1) < 0) {
 		return -1;
+	}
 
 	while (++sec < ROOT_DIRECTORY_HORIZON) {
-		if (!isofile_read(ifs->fd, sec << 11, 0x22, buf2))
+		if (!isofile_read(ifs->fd, sec << 11, 0x22, buf2)) {
 			return 150;
-		if (!memcmp(buf1, buf2, 0x12) && !memcmp(buf1 + 0x19, buf2 + 0x19, 0x9))
+		}
+		
+		if (!memcmp(buf1+2, buf2+2, 0x20)) {
 			break;
+		}
 	}
 	
-	if (sec >= ROOT_DIRECTORY_HORIZON)
+	if (sec >= ROOT_DIRECTORY_HORIZON) {
 		return 150;
+	}
 
 	debugf("DS_ISOFS: Root directory is at %d\n", sec);
 
-	sec = ((((((buf1[5]<<8)|buf1[4])<<8)|buf1[3])<<8)|buf1[2])+150-sec;
+	sec = (buf1[5] << 24 | buf1[4] << 16 | buf1[3] << 8 | buf1[2]) + 150 - sec;
 	
 	debugf("DS_ISOFS: Session offset is %d\n", sec);
 
-//	ifs->session_base = sec;
 	return sec;
 }
 
