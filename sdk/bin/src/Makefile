@@ -4,7 +4,7 @@
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = ciso gdiopt raw2wav img4dc mkbios # cdirip nerorip
+_SUBDIRS = ciso gdiopt raw2wav img4dc mkbios dcimgtool # cdirip nerorip
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 

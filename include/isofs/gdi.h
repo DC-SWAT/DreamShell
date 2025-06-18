@@ -8,9 +8,12 @@
 
 #ifndef _ISOFS_GDI_H
 #define _ISOFS_GDI_H
-
+#ifdef __DREAMCAST__
 #include <kos.h>
-
+#else
+#include <stddef.h>
+#include "isofs.h"
+#endif
 /**
  * \file
  * nullDC GDI support for isofs
@@ -54,6 +57,8 @@ int gdi_is_original(GDI_header_t *hdr);
 
 int gdi_get_toc(GDI_header_t *hdr, CDROM_TOC *toc);
 int gdi_read_sectors(GDI_header_t *hdr, uint8 *buff, uint32 start, uint32 count);
-
+#ifndef __DREAMCAST__
+int gdi_write_sectors(GDI_header_t *hdr, uint8_t *buff, uint32_t start, uint32_t count);
+#endif
 
 #endif /* _ISOFS_GDI_H */

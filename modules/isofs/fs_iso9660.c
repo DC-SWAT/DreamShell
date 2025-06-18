@@ -5,11 +5,14 @@
    Copyright (C)2001 Andrew Kieschnick
    Copyright (C)2002 Bero
    Copyright (C)2011-2025 SWAT
+   Copyright (C)2025 megavolt85
 */
-
+#ifdef __DREAMCAST__
 #include <ds.h>
-#include <isofs/isofs.h>
 #include <isofs/ciso.h>
+#endif
+
+#include <isofs/isofs.h>
 #include <isofs/cdi.h>
 #include <isofs/gdi.h>
 #include "internal.h"
@@ -22,7 +25,11 @@
 #endif
 
 #ifdef DEBUG
+#ifdef __DREAMCAST__
 #	define debugf(fmt, args...) ds_printf(fmt, ##args)
+#else
+#	define debugf(fmt, args...) printf(fmt, ##args)
+#endif
 #else
 #	define debugf(fmt, args...)
 #endif
@@ -55,8 +62,10 @@ typedef struct {
 
 
 typedef struct isofs {
+#ifdef __DREAMCAST__
     SLIST_ENTRY(isofs) list;
     vfs_handler_t *vfs;
+#endif
     const char *fn;
     file_t fd;
 
@@ -68,11 +77,13 @@ typedef struct isofs {
 	int joliet;
 
 	cache_block_t *icache[NUM_CACHE_BLOCKS];	/* inode cache */
-	cache_block_t *dcache[NUM_CACHE_BLOCKS];	/* data cache */
+	cache_block_t *dcache[NUM_CACHE_BLOCKS];	/* data cache */	
 	mutex_t cache_mutex;							/* Cache modification mutex */
 
 	uint32 type;
+#ifdef __DREAMCAST__
 	CISO_header_t *ciso;
+#endif
 	CDI_header_t  *cdi;
 	GDI_header_t  *gdi;
 } isofs_t;
@@ -90,17 +101,48 @@ static struct {
 	isofs_t    *ifs;
 } fh[MAX_ISO_FILES];
 
-
+#ifdef __DREAMCAST__
 typedef SLIST_HEAD(isofs_list, isofs) isofs_list_t;
 static isofs_list_t virt_iso_list;
 
 /* Mutex for file handles */
 static mutex_t fh_mutex = MUTEX_INITIALIZER;
+#else
+isofs_t *curisofs = NULL;
+#endif
+
 static int inited = 0;
 
 static int virt_iso_init_percd(isofs_t *ifs);
 static int virt_iso_reset(isofs_t *ifs);
 static void virt_iso_break_all(isofs_t *ifs);
+
+/* Locate the LBA sector of the data track; use after reading TOC */
+#ifndef __DREAMCAST__
+uint32_t cdrom_locate_data_track(CDROM_TOC *toc)
+{
+    int i, first, last;
+
+    first = TOC_TRACK(toc->first);
+    last = TOC_TRACK(toc->last);
+
+    if(first < 1 || last > 99 || first > last)
+	{
+        return 0;
+	}
+
+    /* Find the last track which as a CTRL of 4 */
+    for(i = last; i >= first; i--)
+    {
+        if(TOC_CTRL(toc->entry[i - 1]) == 4)
+        {
+            return TOC_LBA(toc->entry[i - 1]);
+		}
+    }
+
+    return 0;
+}
+#endif
 
 static int iso_tolower(int c) {
 	if (c >= 'A' && c <= 'Z') {
@@ -224,9 +266,11 @@ static uint32 virt_iso_733(const uint8 *from) {
 /* Read sectors data */
 static int read_data(uint32 sector, uint32 count, void *data, isofs_t *ifs) {
 	switch(ifs->type) {
+#ifdef __DREAMCAST__
 		case ISOFS_IMAGE_TYPE_CSO:
 		case ISOFS_IMAGE_TYPE_ZSO:
 			return ciso_read_sectors(ifs->ciso, ifs->fd, data, (sector + 150) - ifs->session_base, count);
+#endif
 		case ISOFS_IMAGE_TYPE_CDI:
 			return cdi_read_sectors(ifs->cdi, ifs->fd, data, sector, count);
 		case ISOFS_IMAGE_TYPE_GDI:
@@ -237,6 +281,24 @@ static int read_data(uint32 sector, uint32 count, void *data, isofs_t *ifs) {
 			return read_sectors_data(ifs->fd, count, 2048, data);
 	}
 }
+
+/* Write sectors data */
+#ifndef __DREAMCAST__
+static int write_data(uint32_t sector, uint32_t count, void *data, isofs_t *ifs) {
+	switch(ifs->type) {
+		case ISOFS_IMAGE_TYPE_CDI:
+			return cdi_write_sectors(ifs->cdi, ifs->fd, data, sector, count);
+		
+		case ISOFS_IMAGE_TYPE_GDI:
+			return gdi_write_sectors(ifs->gdi, data, sector, count);
+		
+		case ISOFS_IMAGE_TYPE_ISO:
+		default:
+			lseek(ifs->fd, (sector + 150 - ifs->session_base) << 11, SEEK_SET);
+			return write(ifs->fd, data, count << 11);
+	}
+}
+#endif
 
 #define ROOT_DIRECTORY_HORIZON 64
 
@@ -408,11 +470,14 @@ static int get_lba_from_mki(isofs_t *ifs) {
 	debugf("DS_ISOFS: Searching MKI string...\n");
 
 	while(s < 25) {
-
+#ifdef __DREAMCAST__
 		if(ifs->ciso != NULL) {
 			ciso_read_sectors(ifs->ciso, ifs->fd, mki, s, 1);
 		}
-		else {
+		else
+#endif
+		{
+
 			fs_seek(ifs->fd, s << 11, SEEK_SET);
 			fs_read(ifs->fd, mki, sizeof(mki));
 		}
@@ -470,7 +535,7 @@ static int get_toc_and_lba(isofs_t *ifs) {
 				lba = cdrom_locate_data_track(&ifs->toc);
 			}
 			break;
-
+#ifdef __DREAMCAST__
 		case ISOFS_IMAGE_TYPE_CSO:
 		case ISOFS_IMAGE_TYPE_ZSO:
 
@@ -481,7 +546,7 @@ static int get_toc_and_lba(isofs_t *ifs) {
 			}
 			spoof_multi_toc_cso(&ifs->toc, ifs->ciso, lba);
 			break;
-
+#endif
 		case ISOFS_IMAGE_TYPE_ISO:
 		default:
 
@@ -766,16 +831,22 @@ static void virt_iso_break_all(isofs_t *ifs) {
 }
 
 /* Open a file or directory */
+#ifdef __DREAMCAST__
 static void * virt_iso_open(vfs_handler_t * vfs, const char *fn, int mode) {
+	isofs_t *ifs = (isofs_t *)vfs->privdata;
+#else
+int virt_iso_open(const char *fn, int mode) {
+	isofs_t *ifs = curisofs;
+#endif
 	file_t		fd;
 	virt_iso_dirent_t	*de;
-	isofs_t *ifs = (isofs_t *)vfs->privdata;
-
+	
+#ifdef __DREAMCAST__
 	/* Make sure they don't want to open things as writeable */
 	if ((mode & O_MODE_MASK) != O_RDONLY) {
 		return 0;
 	}
-	
+#endif
 	/* Find the file we want */
 	de = find_object_path(fn, (mode & O_DIR) ? 1 : 0, &ifs->root_dirent, ifs);
 	if (!de) {
@@ -804,14 +875,20 @@ static void * virt_iso_open(vfs_handler_t * vfs, const char *fn, int mode) {
 	fh[fd].size = virt_iso_733(de->size);
 	fh[fd].broken = 0;
 	fh[fd].ifs = ifs;
-
+#ifdef __DREAMCAST__
 	return (void *)fd;
+#else
+	return fd;
+#endif
 }
 
 /* Close a file or directory */
+#ifdef __DREAMCAST__
 static int virt_iso_close(void * h) {
 	file_t fd = (file_t)h;
-
+#else
+int virt_iso_close(int fd)  {
+#endif
 	/* Check that the fd is valid */
 	if (fd < MAX_ISO_FILES) {
 		/* No need to lock the mutex: this is an atomic op */
@@ -822,10 +899,14 @@ static int virt_iso_close(void * h) {
 }
 
 /* Read from a file */
+#ifdef __DREAMCAST__
 static ssize_t virt_iso_read(void * h, void *buf, size_t bytes) {
+	file_t fd = (file_t)h;
+#else
+ssize_t virt_iso_read(int fd, void *buf, size_t bytes) {
+#endif
 	int rv, toread, thissect, c;
 	uint8 * outbuf;
-	file_t fd = (file_t)h;
 
 	/* Check that the fd is valid */
 	if (fd >= MAX_ISO_FILES || fh[fd].first_extent == 0 || fh[fd].broken) {
@@ -887,10 +968,81 @@ static ssize_t virt_iso_read(void * h, void *buf, size_t bytes) {
 	return rv;
 }
 
+#ifndef __DREAMCAST__
+/* Write to file */
+ssize_t virt_iso_write(int fd, void *buf, size_t bytes) {
+	int rv, towrite, thissect, c;
+	uint8_t * inbuf;
+
+	/* Check that the fd is valid */
+	if (fd >= MAX_ISO_FILES || fh[fd].first_extent == 0 || fh[fd].broken) {
+		return -1;
+	}
+
+	rv = 0;
+	inbuf = (uint8_t *)buf;
+
+	/* Read zero or more sectors into the buffer from the current pos */
+	while (bytes > 0) {
+		/* Figure out how much we still need to read */
+		towrite = (bytes > (fh[fd].size - fh[fd].ptr)) ? fh[fd].size - fh[fd].ptr : bytes;
+		
+		if (towrite == 0) {
+			break;
+		}
+
+		/* How much more can we read in the current sector? */
+		thissect = 2048 - (fh[fd].ptr & 0x7FF);
+
+		/* If we're on a sector boundary and we have more than one
+		   full sector to read, then short-circuit the cache here
+		   and use the multi-sector reads from the image */
+		if (thissect == 2048 && towrite >= 2048) {
+			/* Round it off to an even sector count */
+			thissect = towrite >> 11;
+			towrite = thissect << 11;
+			
+			debugf("%s: Short-circuit write for %d sectors\n", __func__, thissect);
+			
+			/* Do the write */
+			c = write_data(fh[fd].first_extent + (fh[fd].ptr >> 11), thissect, inbuf, fh[fd].ifs);
+			if (c < 0) {
+				debugf("%s: ERROR 1 Short-circuit write for %d sectors\n", __func__, thissect);
+				return -1;
+			}
+			
+		}
+		else {
+			towrite = (towrite > thissect) ? thissect : towrite;
+			uint8_t tmpbuf[2048];
+			memset(tmpbuf, 0, 2048);
+			memcpy(tmpbuf, inbuf, towrite);
+			/* Do the write */
+			c = write_data(fh[fd].first_extent + (fh[fd].ptr >> 11), 1, tmpbuf, fh[fd].ifs);
+			if (c < 0) {
+				debugf("%s: ERROR 2 Short-circuit write for %d sectors\n", __func__, thissect);
+				return -1;
+			}
+		}
+		
+		/* Adjust pointers */
+		inbuf += towrite;
+		fh[fd].ptr += towrite;
+		bytes -= towrite;
+		rv += towrite;
+	}
+	
+	return rv;
+}
+#endif
+
 /* Seek elsewhere in a file */
+#ifdef __DREAMCAST__
 static off_t virt_iso_seek(void * h, off_t offset, int whence) {
 	file_t fd = (file_t)h;
-
+#else
+off_t virt_iso_seek(int fd, off_t offset, int whence) {
+#endif
 	/* Check that the fd is valid */
 	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken) {
 		return -1;
@@ -927,9 +1079,12 @@ static off_t virt_iso_seek(void * h, off_t offset, int whence) {
 }
 
 /* Tell where in the file we are */
+#ifdef __DREAMCAST__
 static off_t virt_iso_tell(void * h) {
 	file_t fd = (file_t)h;
-
+#else
+off_t virt_iso_tell(int fd) {
+#endif
 	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken) {
 		return -1;
 	}
@@ -938,9 +1093,12 @@ static off_t virt_iso_tell(void * h) {
 }
 
 /* Tell how big the file is */
+#ifdef __DREAMCAST__
 static size_t virt_iso_total(void * h) {
 	file_t fd = (file_t)h;
-
+#else
+size_t virt_iso_total(int fd) {
+#endif
 	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || fh[fd].broken) {
 		return -1;
 	}
@@ -967,15 +1125,18 @@ static void fn_postprocess(char *fnin) {
 }
 
 /* Read a directory entry */
+#ifdef __DREAMCAST__
 static dirent_t *virt_iso_readdir(void * h) {
+	file_t fd = (file_t)h;
+#else
+dirent_t *virt_iso_readdir(int fd) {
+#endif
 	int		c;
 	virt_iso_dirent_t	*de;
 
 	/* RockRidge */
 	int len;
 	uint8 *pnt;
-
-	file_t fd = (file_t)h;
 
 	if (fd>=MAX_ISO_FILES || fh[fd].first_extent==0 || !fh[fd].dir || fh[fd].broken) {
 		return NULL;
@@ -1060,10 +1221,12 @@ static dirent_t *virt_iso_readdir(void * h) {
 	return &fh[fd].dirent;
 }
 
-
+#ifdef __DREAMCAST__
 static int virt_iso_rewinddir(void * h) {
 	file_t fd = (file_t)h;
-
+#else
+int virt_iso_rewinddir(int fd) {
+#endif
 	if(fd >= MAX_ISO_FILES || fh[fd].first_extent == 0 || !fh[fd].dir ||
 		fh[fd].broken) {
 		errno = EBADF;
@@ -1085,10 +1248,13 @@ static int virt_iso_reset(isofs_t *ifs) {
 /** 
  * Needed for isoldr module 
  */
+#ifdef __DREAMCAST__
 static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
-	
 	file_t fd = (file_t)hnd;
 	void *data = va_arg(ap, void *);
+#else
+int virt_iso_ioctl(int fd, int cmd, void *data) {
+#endif
 
 	debugf("%s: %d\n", __func__, cmd);
 
@@ -1192,9 +1358,11 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 			else if(fh[fd].ifs->gdi != NULL) {
 				lnk = (uint32)fh[fd].ifs->gdi;
 			}
+#ifdef __DREAMCAST__
 			else if(fh[fd].ifs->ciso != NULL) {
 				lnk = (uint32)fh[fd].ifs->ciso;
 			}
+#endif
 			else {
 				return -1;
 			}
@@ -1268,17 +1436,29 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 				val = fs_total(fh[fd].ifs->gdi->track_fd) / sec_size;
 			
 			}
+#ifdef __DREAMCAST__
 			else if(fh[fd].ifs->ciso != NULL) {
 				
 				val = fh[fd].ifs->ciso->total_bytes / fh[fd].ifs->ciso->block_size;
 			
 			}
+#endif
 			else {
 				val = fs_total(fh[fd].ifs->fd) / sec_size;
 			}
 			
 			memcpy_sh4(data, &val, sizeof(uint32));
 			break;
+		}
+		case ISOFS_IOCTL_GET_CDI_HDR:
+		{
+			if(fh[fd].ifs->cdi == NULL) {
+				return -1;
+			}
+			
+			CDI_header_t **h = (CDI_header_t **) data; 
+			
+			*h = fh[fd].ifs->cdi;
 		}
 		default:
 			return -1;
@@ -1287,9 +1467,12 @@ static int virt_iso_ioctl(void * hnd, int cmd, va_list ap) {
 	return 0;
 }
 
-
+#ifdef __DREAMCAST__
 static int virt_iso_fcntl(void *h, int cmd, va_list ap) {
 	file_t fd = (file_t)h;
+#else
+int virt_iso_fcntl(int fd, int cmd, va_list ap) {
+#endif
 	int rv = -1;
 
 	(void)ap;
@@ -1321,10 +1504,12 @@ static int virt_iso_fcntl(void *h, int cmd, va_list ap) {
 	return rv;
 }
 
-
+#ifdef __DREAMCAST__
 static int virt_iso_fstat(void *h, struct stat *st) {
 	file_t fd = (file_t)h;
-
+#else
+int virt_iso_fstat(int fd, struct stat *st) {
+#endif
 	if(fd >= MAX_ISO_FILES || !fh[fd].first_extent || fh[fd].broken) {
 		errno = EBADF;
 		return -1;
@@ -1335,24 +1520,32 @@ static int virt_iso_fstat(void *h, struct stat *st) {
 	if(fh[fd].dir) {
 		st->st_size = 0;
 		st->st_dev = 'c' | ('d' << 8);
-		st->st_mode = S_IFDIR | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR |
-			S_IXGRP | S_IXOTH;
+		st->st_mode = S_IFDIR | S_IRUSR | S_IXUSR;
+#ifndef __WIN32	
+		st->st_mode |= S_IXGRP | S_IXOTH | S_IRGRP | S_IROTH;
+#endif
 		st->st_nlink = 1;
+#ifndef __WIN32
 		st->st_blksize = 2048;
+#endif
 	}
 	else {
 		st->st_size = fh[fd].size;
 		st->st_dev = 'c' | ('d' << 8);
-		st->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH | S_IXUSR |
-			S_IXGRP | S_IXOTH;
+		st->st_mode = S_IFREG | S_IRUSR | S_IXUSR;
+#ifndef __WIN32	
+		st->st_mode |= S_IXGRP | S_IXOTH | S_IRGRP | S_IROTH;
+#endif
 		st->st_nlink = 1;
+#ifndef __WIN32
 		st->st_blksize = 2048;
+#endif
 	}
 
 	return 0;
 }
 
-
+#ifdef __DREAMCAST__
 /* Put everything together */
 static vfs_handler_t vh = {
 	/* Name handler */
@@ -1472,7 +1665,6 @@ int fs_iso_shutdown() {
 	return 0;
 }
 
-
 int fs_iso_mount(const char *mountpoint, const char *filename) {
 
 	isofs_t *ifs;
@@ -1512,7 +1704,7 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 	memset_sh4(ifs, 0, sizeof(isofs_t));
 	ifs->fd = fd;
 	ifs->vfs = vfs;
-	
+
 	ifs->ciso = ciso_open(fd);
 	
 	if(ifs->ciso != NULL) {
@@ -1598,8 +1790,6 @@ int fs_iso_mount(const char *mountpoint, const char *filename) {
 	return 0;
 }
 
-
-
 int fs_iso_unmount(const char *mountpoint) {
 
 	isofs_t *n;
@@ -1655,3 +1845,126 @@ int fs_iso_unmount(const char *mountpoint) {
 	return -1;
 }
 
+#else
+
+/* Initialize the file system */
+int fs_iso_init(const char *filename) {
+	isofs_t *ifs;
+	int fd;
+	int i;
+	
+	if(inited) {
+		return 0;
+	}
+
+	/* Reset fd's */
+	memset(fh, 0, sizeof(fh));
+	
+	/* Mark the first as active so we can have an error FD of zero */
+	fh[0].first_extent = -1;
+	
+	fd = open(filename, O_RDWR
+#ifdef __WIN32
+								| O_BINARY | O_RANDOM
+#endif
+								, S_IRUSR | S_IWUSR);
+
+	if(fd < 0) {
+		return -1;
+	}
+	
+	ifs = (isofs_t*) malloc(sizeof(isofs_t));
+
+	if(ifs == NULL) {
+		close(fd);
+		return -1;
+	}
+
+	memset(ifs, 0, sizeof(isofs_t));
+	ifs->fd = fd;
+	
+	ifs->cdi = cdi_open(fd);
+	
+	if(ifs->cdi != NULL) {
+		ifs->type = ISOFS_IMAGE_TYPE_CDI;
+	} else {
+		ifs->gdi = gdi_open(fd, filename);
+		
+		if(ifs->gdi != NULL) {
+			ifs->type = ISOFS_IMAGE_TYPE_GDI;
+		} else {
+			ifs->type = ISOFS_IMAGE_TYPE_ISO;
+		}
+	}
+	
+	ifs->session_base = 0;
+
+	/* Allocate cache block space */
+	for (i = 0; i < NUM_CACHE_BLOCKS; i++) {
+		ifs->icache[i] = malloc(sizeof(cache_block_t));
+		ifs->icache[i]->sector = -1;
+		ifs->dcache[i] = malloc(sizeof(cache_block_t));
+		ifs->dcache[i]->sector = -1;
+	}
+
+	if(virt_iso_init_percd(ifs) < 0) {
+
+		if(ifs->cdi != NULL) {
+			cdi_close(ifs->cdi);
+		}
+		
+		if(ifs->gdi != NULL) {
+			gdi_close(ifs->gdi);
+		}
+
+		close(fd);
+
+		/* Dealloc cache block space */
+		for (i = 0; i < NUM_CACHE_BLOCKS; i++) {
+			free(ifs->icache[i]);
+			free(ifs->dcache[i]);
+		}
+
+		free(ifs);
+		return -1;
+	}
+	
+	curisofs = ifs;
+	
+	inited = 1;
+	
+	return 0;
+}
+
+/* De-init the file system */
+int fs_iso_shutdown() {
+
+	if(!inited) {
+		return 0;
+	}
+	
+	isofs_t *c = curisofs;
+	int i;
+
+	if(c->cdi != NULL) {
+		cdi_close(c->cdi);
+	}
+	
+	if(c->gdi != NULL) {
+		gdi_close(c->gdi);
+	}
+	
+	close(c->fd);
+	
+	/* Dealloc cache block space */
+	for(i = 0; i < NUM_CACHE_BLOCKS; i++) {
+		free(c->icache[i]);
+		free(c->dcache[i]);
+	}
+	
+	free(c); 
+	
+	inited = 0;
+	return 0;
+}
+#endif

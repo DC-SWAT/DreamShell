@@ -8,9 +8,9 @@
 
 #ifndef _ISOFS_CDI_H
 #define _ISOFS_CDI_H
-
+#ifdef __DREAMCAST__
 #include <kos.h>
-
+#endif
 /**
  * \file
  * DiscJuggler CDI support for isofs
@@ -94,6 +94,7 @@ uint32 cdi_get_offset(CDI_header_t *hdr, uint32 lba, uint16 *sector_size);
 
 int cdi_get_toc(CDI_header_t *hdr, CDROM_TOC *toc);
 int cdi_read_sectors(CDI_header_t *hdr, file_t fd, uint8 *buff, uint32 start, uint32 count);
-
-
+#ifndef __DREAMCAST__
+int cdi_write_sectors(CDI_header_t *hdr, file_t fd, uint8 *buff, uint32 start, uint32 count);
+#endif
 #endif /* _ISOFS_CDI_H */

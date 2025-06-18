@@ -6,10 +6,12 @@
  * published by the Free Software Foundation.
  * 
  */
-
+#ifdef __DREAMCAST__
 #include <kos.h>
 #include "console.h"
 #include "utils.h"
+#endif
+
 #include "isofs/gdi.h"
 #include "internal.h"
 
@@ -234,9 +236,11 @@ GDI_track_t *gdi_get_track(GDI_header_t *hdr, uint32 lba) {
 				if(hdr->track_fd != FILEHND_INVALID) {
 					fs_close(hdr->track_fd);
 				}
-
+#ifdef __DREAMCAST__
 				hdr->track_fd = fs_open(hdr->tracks[i]->filename, O_RDONLY);
-				
+#else
+				hdr->track_fd = open(hdr->tracks[i]->filename, O_RDWR);
+#endif
 				if(hdr->track_fd == FILEHND_INVALID) {
 #ifdef DEBUG
 					dbglog(DBG_DEBUG, "%s: Can't open %s\n", __func__, hdr->tracks[i]->filename);
@@ -296,7 +300,27 @@ int gdi_read_sectors(GDI_header_t *hdr, uint8 *buff, uint32 start, uint32 count)
 	return read_sectors_data(hdr->track_fd, count, sector_size, buff);
 }
 
+#ifndef __DREAMCAST__
+int gdi_write_sectors(GDI_header_t *hdr, uint8_t *buff, uint32_t start, uint32_t count) {
+
+	uint16_t sector_size;
+	uint32_t offset = gdi_get_offset(hdr, start, &sector_size);
+	
+	if(offset == (uint32_t)-1) {
+		return -1;
+	}
+	
+#ifdef DEBUG
+	printf("%s: %ld %ld at %ld mode %d\n", __func__, start, count, offset, sector_size);
+#endif
+
+	fs_seek(hdr->track_fd, offset, SEEK_SET);
+	return write_sectors_data(hdr->track_fd, count, sector_size, buff);
+}
+#endif
+
 int gdi_is_original(GDI_header_t *hdr) {
 	return hdr->track_count > 2 && hdr->tracks[2]->start_lba == 45000 &&
 		(hdr->tracks[2]->flags & 0x0F) == 4;
 }
+

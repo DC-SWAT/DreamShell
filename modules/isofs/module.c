@@ -3,11 +3,13 @@
    module.c - isofs module
    Copyright (C)2009-2016 SWAT
 */
-            
+#ifdef __DREAMCAST__
 #include "ds.h"
+#endif
 #include "isofs/isofs.h"
 #include "isofs/ciso.h"
 
+#ifdef __DREAMCAST__
 DEFAULT_MODULE_HEADER(isofs);
 
 int builtin_isofs_cmd(int argc, char *argv[]) {
@@ -91,7 +93,7 @@ int lib_close(klibrary_t *lib) {
 	fs_iso_shutdown();
 	return nmmgr_handler_remove(&ds_isofs_hnd.nmmgr); 
 }
-
+#endif
 
 int read_sectors_data(file_t fd, uint32 sector_count, 
 						uint16 sector_size, uint8 *buff) {
@@ -352,3 +354,4 @@ void spoof_multi_toc_cso(CDROM_TOC *toc, CISO_header_t *hdr, uint32 lba) {
 	 */
 	toc->leadout_sector = (hdr->total_bytes / hdr->block_size) + lba;
 }
+

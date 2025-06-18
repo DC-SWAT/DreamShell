@@ -6,11 +6,12 @@
  * published by the Free Software Foundation.
  * 
  */
-
+#ifdef __DREAMCAST__
 #include <kos.h>
 #include "console.h"
-#include "isofs/cdi.h"
+#endif
 #include "internal.h"
+#include "isofs/cdi.h"
 
 //#define DEBUG 1
 
@@ -39,9 +40,8 @@ struct CDI_track_data {
 static int check_cdi_image(file_t fd, CDI_trailer_t *trail) {
     
     uint32 len;
-
-    fs_seek(fd, -8, SEEK_END);
-    len = fs_tell(fd) + 8;
+    
+    len = fs_seek(fd, -8, SEEK_END) + 8;
     fs_read(fd, trail, sizeof(CDI_trailer_t));
 
     if(trail->header_offset >= len || trail->header_offset == 0) {
@@ -376,5 +376,39 @@ int cdi_read_sectors(CDI_header_t *hdr, file_t fd, uint8 *buff, uint32 start, ui
 #endif
 
 	fs_seek(fd, offset, SEEK_SET);
+	
+#ifndef __DREAMCAST__
+	CDI_track_t *track = cdi_get_track(hdr, start);
+	if (track->mode != 2) {
+		uint32 bytes = count * sector_size;
+		if(fs_read(fd, buff, bytes) != bytes) {
+			printf("%s: error read %ld\n", __func__, start);
+			return -1;
+		}
+		
+		return 0;
+	}
+#endif
+	
 	return read_sectors_data(fd, count, sector_size, buff);
 }
+
+#ifndef __DREAMCAST__
+int cdi_write_sectors(CDI_header_t *hdr, int fd, uint8 *buff, uint32 start, uint32 count) {
+
+	uint16_t sector_size;
+	uint32_t offset = cdi_get_offset(hdr, start, &sector_size);
+	
+	if(offset == (uint32_t)-1) {
+		return -1;
+	}
+	
+#ifdef DEBUG
+	printf("%s: %d %d at %d mode %d\n", __func__, start, count, offset, sector_size);
+#endif
+
+	lseek(fd, offset, SEEK_SET);	
+	return write_sectors_data(fd, count, sector_size, buff);
+}
+#endif
+
