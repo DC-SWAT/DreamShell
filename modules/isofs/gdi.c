@@ -121,8 +121,11 @@ GDI_header_t *gdi_open(file_t fd, const char *filename) {
 #ifdef DEBUG
 		dbglog(DBG_DEBUG, "%s: %s", __func__, line);
 #endif
-		
+#ifdef __DREAMCAST__
 		rc = sscanf(line, "%d %ld %ld %ld %s %ld", 
+#else
+		rc = sscanf(line, "%d %d %d %d %s %d", 
+#endif
 					&track_no, 
 					&hdr->tracks[i]->start_lba, 
 					&hdr->tracks[i]->flags, 

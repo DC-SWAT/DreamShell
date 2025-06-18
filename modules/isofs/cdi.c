@@ -382,7 +382,7 @@ int cdi_read_sectors(CDI_header_t *hdr, file_t fd, uint8 *buff, uint32 start, ui
 	if (track->mode != 2) {
 		uint32 bytes = count * sector_size;
 		if(fs_read(fd, buff, bytes) != bytes) {
-			printf("%s: error read %ld\n", __func__, start);
+			printf("%s: error read %d\n", __func__, start);
 			return -1;
 		}
 		

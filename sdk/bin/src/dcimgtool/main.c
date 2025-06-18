@@ -287,7 +287,7 @@ void build_custom_gdi(const char *dn)
 	
 	virt_iso_ioctl(vfd, ISOFS_IOCTL_GET_IMAGE_FD, &cdi_fd);
 	virt_iso_ioctl(vfd, ISOFS_IOCTL_GET_TOC_DATA, &toc);
-	virt_iso_ioctl(vfd, ISOFS_IOCTL_GET_CDI_HDR, &hdr);
+	virt_iso_ioctl(vfd, ISOFS_IOCTL_GET_IMAGE_HEADER_PTR, &hdr);
 	
 	sprintf(out_file, "%sdisc.gdi", dn);
 	
@@ -797,7 +797,7 @@ int read_sectors_data(int fd, uint32 sector_count, uint16 sector_size, uint8 *bu
 	printf("%s: %d at %ld mode %d\n", __func__, sector_count, lseek(fd, 0, SEEK_CUR), sector_size);
 #endif
 
-	size_t tmps = sector_count << 1;
+	size_t tmps = sector_count << 11;
 	
 	/* Reading sectors bigger than 2048 */
 	if(sector_size > 2048) {

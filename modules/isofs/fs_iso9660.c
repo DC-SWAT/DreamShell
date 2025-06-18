@@ -108,6 +108,7 @@ static isofs_list_t virt_iso_list;
 /* Mutex for file handles */
 static mutex_t fh_mutex = MUTEX_INITIALIZER;
 #else
+static mutex_t fh_mutex = 0;
 isofs_t *curisofs = NULL;
 #endif
 
@@ -584,7 +585,7 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 	
 	/* Check for joliet extensions */
 	ifs->joliet = 0;
-	for (i=1; i<=3; i++) {
+	for (i = 1; i <= 3; i++) {
 		blk = biread(ifs->session_base + i + 16 - 150, ifs);
 		
 		if (blk < 0) {
@@ -592,7 +593,7 @@ static int virt_iso_init_percd(isofs_t *ifs) {
 		}
 		
 		if (memcmp((char *)ifs->icache[blk]->data, "\02CD001", 6) == 0) {
-			ifs->joliet = isjoliet((char *) &ifs->icache[blk]->data[88]);
+			ifs->joliet = isjoliet((char *) &ifs->icache[blk]->data+88);
 			
 			if (ifs->joliet) {
 				break;
@@ -1350,24 +1351,26 @@ int virt_iso_ioctl(int fd, int cmd, void *data) {
 		}
 		case ISOFS_IOCTL_GET_IMAGE_HEADER_PTR:
 		{
-			uint32 lnk = 0;
-			
 			if(fh[fd].ifs->cdi != NULL) {
-				lnk = (uint32)fh[fd].ifs->cdi;
+				CDI_header_t **h = (CDI_header_t **) data; 
+			
+				*h = fh[fd].ifs->cdi;
 			}
 			else if(fh[fd].ifs->gdi != NULL) {
-				lnk = (uint32)fh[fd].ifs->gdi;
+				GDI_header_t **h = (GDI_header_t **) data; 
+			
+				*h = fh[fd].ifs->gdi;
 			}
 #ifdef __DREAMCAST__
 			else if(fh[fd].ifs->ciso != NULL) {
-				lnk = (uint32)fh[fd].ifs->ciso;
+				CISO_header_t **h = (CISO_header_t **) data; 
+			
+				*h = fh[fd].ifs->ciso;
 			}
 #endif
 			else {
 				return -1;
 			}
-			
-			memcpy_sh4(data, &lnk, sizeof(uint32));
 			break;
 		}
 		case ISOFS_IOCTL_GET_IMAGE_FD:
@@ -1423,9 +1426,7 @@ int virt_iso_ioctl(int fd, int cmd, void *data) {
 			if(fh[fd].ifs->cdi != NULL) {
 				
 				CDI_track_t *ctrk = cdi_get_track(fh[fd].ifs->cdi, val);
-				sec_size = cdi_track_sector_size(ctrk);
-				
-				val = ctrk->total_length / sec_size;
+				val = ctrk->length;
 				
 			}
 			else if(fh[fd].ifs->gdi != NULL) {
@@ -1449,16 +1450,6 @@ int virt_iso_ioctl(int fd, int cmd, void *data) {
 			
 			memcpy_sh4(data, &val, sizeof(uint32));
 			break;
-		}
-		case ISOFS_IOCTL_GET_CDI_HDR:
-		{
-			if(fh[fd].ifs->cdi == NULL) {
-				return -1;
-			}
-			
-			CDI_header_t **h = (CDI_header_t **) data; 
-			
-			*h = fh[fd].ifs->cdi;
 		}
 		default:
 			return -1;

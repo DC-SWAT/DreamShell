@@ -49,8 +49,7 @@ typedef enum isofs_ioctl {
 	ISOFS_IOCTL_GET_CDDA_OFFSET,              /* 97*4 byte unsigned (CDDA tracks offset of CDI) */
 	
 	ISOFS_IOCTL_GET_TRACK_SECTOR_COUNT,       /* 4 byte unsigned */
-	ISOFS_IOCTL_GET_IMAGE_FD,                 /* 4 byte unsigned */
-	ISOFS_IOCTL_GET_CDI_HDR
+	ISOFS_IOCTL_GET_IMAGE_FD                  /* 4 byte unsigned */
 
 } isofs_ioctl_t;
 

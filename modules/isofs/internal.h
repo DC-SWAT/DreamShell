@@ -26,7 +26,7 @@
 #include <ctype.h>
 
 typedef int			file_t;
-typedef long int	uint32;
+typedef uint32_t	uint32;
 typedef int			int32;
 typedef uint8_t		uint8;
 typedef uint16_t	uint16;
