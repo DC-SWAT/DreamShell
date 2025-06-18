@@ -5,9 +5,9 @@
 */
 #ifdef __DREAMCAST__
 #include "ds.h"
+#include "isofs/ciso.h"
 #endif
 #include "isofs/isofs.h"
-#include "isofs/ciso.h"
 
 #ifdef __DREAMCAST__
 DEFAULT_MODULE_HEADER(isofs);
@@ -103,11 +103,10 @@ int read_sectors_data(file_t fd, uint32 sector_count,
 						__func__, sector_count, fs_tell(fd), sector_size);
 #endif
 
-	const uint16 sec_size = 2048;
-	size_t tmps = sec_size * sector_count;
+	size_t tmps = sector_count << 11;
 	
 	/* Reading sectors bigger than 2048 */
-	if(sector_size > sec_size) {
+	if(sector_size > 2048) {
 		
 		uint16 b_seek, a_seek;
 		uint8 *tmpb;
@@ -143,25 +142,25 @@ int read_sectors_data(file_t fd, uint32 sector_count,
 								__func__, tmps, b_seek, a_seek);
 #endif
 			while(tmps--) {
-				memmove_sh4(buff, tmpb + b_seek, sec_size);
+				memmove_sh4(buff, tmpb + b_seek, 2048);
 				tmpb += sector_size;
-				buff += sec_size;
+				buff += 2048;
 				sector_count--;
 			}
 			
-			tmps = sec_size * sector_count;
+			tmps = sector_count << 11;
 		}
 		
 		while(sector_count--) {
 			
 			fs_seek(fd, b_seek, SEEK_CUR);
 			
-			if(fs_read(fd, buff, sec_size) != sec_size) {
+			if(fs_read(fd, buff, 2048) != 2048) {
 				return -1;
 			}
 			
 			fs_seek(fd, a_seek, SEEK_CUR);
-			buff += sec_size;
+			buff += 2048;
 		}
 		
 	/* Reading normal data sectors (2048) */
@@ -175,7 +174,63 @@ int read_sectors_data(file_t fd, uint32 sector_count,
 	return 0;
 }
 
+#ifndef __DREAMCAST__
+int write_sectors_data(int fd, uint32 sector_count, uint16 sector_size, uint8 *buff) 
+{
+#ifdef DEBUG
+	ds_printf("%s: %d at %ld mode %d\n", __func__, sector_count, lseek(fd, 0, SEEK_CUR), sector_size);
+#endif
 
+	size_t tmps = sector_count << 11;
+	
+	/* Reading sectors bigger than 2048 */
+	if(sector_size > 2048) {
+		
+		uint16_t b_seek, a_seek;
+		uint8_t *tmpb;
+		
+		switch(sector_size) {
+			case 2324: /* MODE2_FORM2 */
+				b_seek = 16;
+				a_seek = 260;
+				break;
+			case 2336: /* SEMIRAW_MODE2 */
+				b_seek = 8;
+				a_seek = 280;
+				break;
+			case 2352: /* RAW_XA */
+				b_seek = 16;
+				a_seek = 288;
+				break;
+			default:
+				return -1;
+		}
+		
+		while(sector_count--) {
+			
+			fs_seek(fd, b_seek, SEEK_CUR);
+			
+			if(fs_write(fd, buff, 2048) != 2048) {
+				return -1;
+			}
+			
+			fs_seek(fd, a_seek, SEEK_CUR);
+			buff += 2048;
+		}
+		
+	/* Reading normal data sectors (2048) */
+	}
+	else {
+		if(fs_write(fd, buff, tmps) != tmps) {
+			return -1;
+		}
+	}
+	
+	return 0;
+}
+#endif
+
+#ifdef __DREAMCAST__
 file_t fs_iso_first_file(const char *mountpoint) {
 	
 	file_t fd;
@@ -204,6 +259,31 @@ file_t fs_iso_first_file(const char *mountpoint) {
 	return fd;
 }
 
+void spoof_multi_toc_cso(CDROM_TOC *toc, CISO_header_t *hdr, uint32 lba) {
+	/**
+	 * Track 1 Data
+	 * CTRL = 4, ADR = 1, LBA = ???
+	 */
+	toc->entry[0] = 0x41000000 | lba;
+	
+	/**
+	 * Ununsed / empty entries
+	 */
+	for(int i = 1; i < 99; i++)
+		toc->entry[i] = (uint32)-1;
+	
+	/**
+	 * First and last is track 1
+	 */
+	toc->first = 0x41010000;
+	toc->last  = 0x01010000;
+	
+	/**
+	 * Leadout sector
+	 */
+	toc->leadout_sector = (hdr->total_bytes / hdr->block_size) + lba;
+}
+#endif
 
 /**
  * Spoof TOC for GD low density area
@@ -327,31 +407,5 @@ void spoof_multi_toc_iso(CDROM_TOC *toc, file_t fd, uint32 lba) {
 	 * Leadout sector
 	 */
 	toc->leadout_sector = (fs_total(fd) / 2048) + lba;
-}
-
-
-void spoof_multi_toc_cso(CDROM_TOC *toc, CISO_header_t *hdr, uint32 lba) {
-	/**
-	 * Track 1 Data
-	 * CTRL = 4, ADR = 1, LBA = ???
-	 */
-	toc->entry[0] = 0x41000000 | lba;
-	
-	/**
-	 * Ununsed / empty entries
-	 */
-	for(int i = 1; i < 99; i++)
-		toc->entry[i] = (uint32)-1;
-	
-	/**
-	 * First and last is track 1
-	 */
-	toc->first = 0x41010000;
-	toc->last  = 0x01010000;
-	
-	/**
-	 * Leadout sector
-	 */
-	toc->leadout_sector = (hdr->total_bytes / hdr->block_size) + lba;
 }
 

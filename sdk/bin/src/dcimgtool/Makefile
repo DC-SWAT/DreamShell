@@ -1,6 +1,7 @@
 
 TARGET = dc-img-tool
-OBJS = main.c ../../../../modules/isofs/fs_iso9660.c ../../../../modules/isofs/cdi.c ../../../../modules/isofs/gdi.c
+OBJS = main.c ../../../../modules/isofs/fs_iso9660.c ../../../../modules/isofs/cdi.c \
+			  ../../../../modules/isofs/gdi.c  ../../../../modules/isofs/module.c
 CC = gcc
 EXTRA_FLAGS = -I../../../../modules/isofs -I../../../../include
 

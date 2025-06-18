@@ -80,6 +80,7 @@ typedef struct {
 #define fs_close		close
 #define memcpy_sh4		memcpy
 #define memset_sh4		memset
+#define memmove_sh4		memmove
 #define fs_total(fd)	lseek(fd, 0, SEEK_CUR)
 
 char *getFilePath(const char *file);
