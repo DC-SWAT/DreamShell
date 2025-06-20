@@ -150,7 +150,7 @@
 						onblur="export:gd_ripper_Gamename()"
 						font="arial"
 						fontcolor="#333333"
-						value="Game"
+						value="ripped_disc"
 						size="30"
 						height="20"
 						name="gname-text"

@@ -17,15 +17,14 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 #define SEC_BUF_SIZE 16
 #define UI_UPDATE_INTERVAL 500
 
-static int rip_sec(int tn ,int first, int count, int type, char *dst_file);
+static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, char *dst_file);
 static void* gd_ripper_thread(void *arg);
 static int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int get_disc_status_and_type(int *status, int *disc_type);
 static int safe_cdrom_read_toc(CDROM_TOC *toc, bool high_density);
-static int get_area_count(int disc_type);
-static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type);
-static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type);
-static int process_areas_and_tracks(char *dst_folder, char *dst_file, int disc_type, int area_count);
+static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text);
+static int cleanup_failed_rip(char *dst_folder, char *dst_file);
+static int process_areas_and_tracks(char *dst_folder, char *dst_file, int area_count, int disc_type);
 
 typedef struct {
     uint32_t track_num;
@@ -36,7 +35,7 @@ typedef struct {
 } track_info_t;
 
 static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count);
-static int calculate_total_sectors(int disc_type, int area_count);
+static int calculate_total_sectors(int area_count, int disc_type);
 static void update_ui_display(double progress_percent);
 
 static struct self {
@@ -102,7 +101,7 @@ void gd_ripper_Gamename()
     const char *input = GUI_TextEntryGetText(self.gname);
 
     if (!input || strlen(input) == 0) {
-        strcpy(text, "RIPPED_GAME_DISC");
+        strcpy(text, "ripped_disc");
     }
     else {
         strncpy(text, input, NAME_MAX - 1);
@@ -120,73 +119,58 @@ void gd_ripper_Gamename()
 
 void gd_ripper_ipbin_name()
 {
-	CDROM_TOC toc ;
-	int status = 0, disc_type = 0, cdcr = 0, x = 0;
+	CDROM_TOC toc;
+	int status = 0, disc_type = 0;
 	uint8_t *pbuff;
 	char text[NAME_MAX];
-	uint32 lba;
+	uint32_t lba = 0;
 
-	cdrom_set_sector_size(2048);
-	if((cdcr = cdrom_get_status(&status, &disc_type)) != ERR_OK) 
-	{
-		switch (cdcr)
-		{
-			case ERR_NO_DISC :
-				ds_printf("DS_ERROR: Disk not inserted\n");
-				return;
-			default:
-				ds_printf("DS_ERROR: GD-rom error\n");
-				return;
+	if(cdrom_get_status(&status, &disc_type)) {
+		return;
+	}
+
+	if (disc_type == CD_GDROM) {
+		lba = 45150;
+	}
+	else {
+		if(safe_cdrom_read_toc(&toc, false)) { 
+			ds_printf("DS_ERROR: Toc read error\n"); 
+			return; 
+		}
+		lba = cdrom_locate_data_track(&toc);
+
+		if(!lba) {
+			ds_printf("DS_ERROR: Failed to locate data track: lba=%d first=%d last=%d\n",
+				lba, TOC_TRACK(toc.first), TOC_TRACK(toc.last));
+			return;
 		}
 	}
 
 	pbuff = (uint8_t *)memalign(32, 2048);
 
-	if(!pbuff)
-	{
+	if(!pbuff) {
 		ds_printf("DS_ERROR: Failed to allocate buffer\n");
 		return;
 	}
-	
-	if (disc_type == CD_CDROM_XA) 
-	{
-		if(safe_cdrom_read_toc(&toc, false) != CMD_OK) 
-		{ 
-			ds_printf("DS_ERROR: Toc read error\n"); 
-			free(pbuff);
-			return; 
-		}
-		if(!(lba = cdrom_locate_data_track(&toc))) 
-		{
-			ds_printf("DS_ERROR: Error locate data track\n"); 
-			free(pbuff);
-			return;
-		}
-		if (cdrom_read_sectors_ex(pbuff, lba, 1, CDROM_READ_DMA)) 
-		{
-			ds_printf("DS_ERROR: CD read error %d\n",lba); 
-			free(pbuff);
-			return;
-		}
-	} 
-	else if (disc_type == CD_GDROM) 
-	{
-		if (cdrom_read_sectors_ex(pbuff, 45150, 1, CDROM_READ_DMA)) 
-		{
-			ds_printf("DS_ERROR: GD read error\n"); 
-			free(pbuff);
-			return;
-		}
-	}
-	else 
-	{
-		ds_printf("DS_ERROR: not game disc\nInserted %d disk\n",disc_type);
+
+	cdrom_set_sector_size(2048);
+
+	ds_printf("DS_PROCESS: Reading IP.BIN from LBA: %d\n", lba);
+
+	if (cdrom_read_sectors_ex(pbuff, lba, 1, CDROM_READ_DMA)) {
+		ds_printf("DS_ERROR: GD read error\n"); 
 		free(pbuff);
 		return;
 	}
-	
+
 	ipbin_meta_t *meta = (ipbin_meta_t*) pbuff;
-	
+
+	if(meta->boot_file[1] != '0' && meta->boot_file[0] != '1') {
+		free(pbuff);
+		GUI_TextEntrySetText(self.gname, "ripped_disc");
+		return;
+	}
+
 	char *p;
 	char *o;
 	
@@ -198,11 +182,8 @@ void gd_ripper_ipbin_name()
 		p++;
 
 	// copy rest to output buffer
-	while(meta->title + 29 > p) 
-	{ 
-		*o = *p;
-		p++; 
-		o++; 
+	while(meta->title + 29 > p) { 
+		*o++ = *p++;
 	}
 
 	// make sure output buf is null terminated
@@ -210,25 +191,20 @@ void gd_ripper_ipbin_name()
 	o--;
 
 	// remove trailing spaces
-	while(*o == ' ' && o > text) 
-	{
+	while(*o == ' ' && o > text) {
 		*o='\0';
 		o--;
 	}
-	
-	if (strlen(text) == 0) 
-	{
-		GUI_TextEntrySetText(self.gname, "Game");	
+
+	if (strlen(text) == 0) {
+		GUI_TextEntrySetText(self.gname, "ripped_disc");
 	} 
-	else 
-	{
-		for (x=0;text[x] !=0;x++) 
-		{
-			if (text[x] == ' ') text[x] = '_' ;
+	else {
+		for (int x = 0; text[x] != 0; x++) {
+			if (text[x] == ' ') text[x] = '_';
 		}
 		GUI_TextEntrySetText(self.gname, text);
 	}
-	//ds_printf("Image name - %s\n",text);
 	free(pbuff);
 }
 
@@ -379,68 +355,29 @@ static int safe_cdrom_read_toc(CDROM_TOC *toc, bool high_density)
     return CMD_OK;
 }
 
-static int get_area_count(int disc_type)
-{
-	if (disc_type == CD_CDROM_XA)
-		return 1;
-	else if (disc_type == CD_GDROM)
-		return 2;
-	else
-		return 0;
-}
+static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text) {
 
-static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type) {
-	file_t fd;
-
-	if (disc_type == CD_CDROM_XA) {
-		snprintf(dst_file, NAME_MAX, "%s.iso", dst_folder);
-		fd = fs_open(dst_file, O_RDONLY);
-
-		if (fd != FILEHND_INVALID) {
-			fs_close(fd);
-			if (fs_unlink(dst_file) != 0) {
-				ds_printf("DS_ERROR: Failed to remove old file: %s\n", dst_file);
-				return CMD_ERROR;
-			}
-		}
-		return CMD_OK;
-	}
-
-	if (disc_type == CD_GDROM) {
-		fd = fs_open(dst_folder, O_DIR);
-		if (fd != FILEHND_INVALID) {
-			fs_close(fd);
-			if (cleanup_failed_rip(dst_folder, dst_file, disc_type) != CMD_OK) {
-				ds_printf("DS_ERROR: Failed to remove old folder: %s\n", dst_folder);
-				return CMD_ERROR;
-			}
-		}
-
-		memset(dst_file, 0, NAME_MAX);
-		snprintf(dst_file, NAME_MAX, "%s", dst_folder);
-
-		if (fs_mkdir(dst_file) != 0) {
-			ds_printf("DS_ERROR: Failed to create folder: %s\n", dst_file);
+	if (DirExists(dst_folder)) {
+		if (cleanup_failed_rip(dst_folder, dst_file) != CMD_OK) {
+			ds_printf("DS_ERROR: Failed to remove old folder: %s\n", dst_folder);
 			return CMD_ERROR;
 		}
-		return CMD_OK;
 	}
 
-	ds_printf("DS_ERROR: This is not game disk\nInserted %d disk\n", disc_type);
-	return CMD_ERROR;
+	memset(dst_file, 0, NAME_MAX);
+	snprintf(dst_file, NAME_MAX, "%s", dst_folder);
+
+	if (fs_mkdir(dst_file) != 0) {
+		ds_printf("DS_ERROR: Failed to create folder: %s\n", dst_file);
+		return CMD_ERROR;
+	}
+	return CMD_OK;
 }
 
-static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type) {
-	if (disc_type == CD_CDROM_XA) {
-		if (fs_unlink(dst_file) != 0) {
-			ds_printf("DS_ERROR: Failed to delete file: %s\n", dst_file);
-		}
-		return CMD_OK;
-	}
-
+static int cleanup_failed_rip(char *dst_folder, char *dst_file) {
 	file_t fd = fs_open(dst_folder, O_DIR);
+
 	if (fd == FILEHND_INVALID) {
-		ds_printf("DS_ERROR: Folder '%s' not found\n", dst_folder);
 		return CMD_ERROR;
 	}
 
@@ -451,6 +388,7 @@ static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type) {
 		}
 
 		snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, dir->name);
+
 		if (fs_unlink(dst_file) != 0) {
 			ds_printf("DS_ERROR: Failed to delete file: %s\n", dst_file);
 		}
@@ -473,14 +411,13 @@ static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_
     uint32_t count = 0;
 
     for (uint32_t tn = first; tn <= last; tn++) {
-        if (disc_type == CD_CDROM_XA) tn = last;
 
         uint32_t type = TOC_CTRL(toc.entry[tn-1]);
         uint32_t start = TOC_LBA(toc.entry[tn-1]);
         uint32_t s_end = TOC_LBA((tn == last ? toc.leadout_sector : toc.entry[tn]));
         uint32_t nsec = s_end - start;
 
-        if (disc_type == CD_CDROM_XA && type == 4) nsec -= 2;
+        if (disc_type != CD_GDROM && type == 4) nsec -= 2;
         else if (area == 1 && tn != last && type != TOC_CTRL(toc.entry[tn])) nsec -= 150;
         else if (area == 0 && type == 4) nsec -= 150;
 
@@ -489,33 +426,25 @@ static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_
         tracks[count].sector_count = nsec;
         tracks[count].type = type;
 
-        if (disc_type == CD_GDROM) {
-            snprintf(tracks[count].filename, NAME_MAX, "track%02ld.%s", 
-                    tn, (type == 4 ? "iso" : "raw"));
-        }
+		snprintf(tracks[count].filename, NAME_MAX, "track%02ld.%s", 
+				tn, (type == 4 ? "iso" : "raw"));
 
         count++;
-
-        if (disc_type == CD_CDROM_XA) break;
     }
 
     *track_count = count;
     return CMD_OK;
 }
 
-static int calculate_total_sectors(int disc_type, int area_count) {
+static int calculate_total_sectors(int area_count, int disc_type) {
     uint32_t track_count;
     uint64_t total = 0;
-
-    ds_printf("DS_PROCESS: Calculating total sectors for disc type %d\n", area_count);
 
     for (int area = 0; area < area_count; area++) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
             ds_printf("DS_INFO: Total sectors calculation cancelled\n");
             return 0;
         }
-
-        ds_printf("DS_PROCESS: Processing area %d\n", area);
 
         if (get_track_info(area, disc_type, self.tracks, &track_count) != CMD_OK) {
             ds_printf("DS_ERROR: Failed to get track info for area %d\n", area);
@@ -528,11 +457,11 @@ static int calculate_total_sectors(int disc_type, int area_count) {
         }
     }
 
-    ds_printf("DS_PROCESS: Total sectors calculated: %u\n", (uint32_t)total);
+    ds_printf("DS_INFO: Total sectors: %u\n", (uint32_t)total);
     return total;
 }
 
-static int process_areas_and_tracks(char *dst_folder, char *dst_file, int disc_type, int area_count) {
+static int process_areas_and_tracks(char *dst_folder, char *dst_file, int area_count, int disc_type) {
     uint32_t track_count;
     char riplabel[64];
 
@@ -553,12 +482,10 @@ static int process_areas_and_tracks(char *dst_folder, char *dst_file, int disc_t
 
             int tn = self.tracks[i].track_num;
 
-            if (disc_type == CD_GDROM) {
-                snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, self.tracks[i].filename);
-            }
-
             snprintf(riplabel, sizeof(riplabel), "Track %d of %ld", tn, self.last_track);
             GUI_LabelSetText(self.track_label, riplabel);
+
+            snprintf(dst_file, NAME_MAX, "%s/%s", dst_folder, self.tracks[i].filename);
 
             if (rip_sec(tn, self.tracks[i].start_lba, self.tracks[i].sector_count, 
                        self.tracks[i].type, dst_file) != CMD_OK) {
@@ -576,6 +503,7 @@ static void* gd_ripper_thread(void *arg) {
 	char dst_file[NAME_MAX];
 	char text[NAME_MAX];
 	int area_count;
+	CDROM_TOC toc;
 
 	ds_printf("DS_PROCESS: Starting disc ripping process\n");
 	self.start_time = timer_ms_gettime64();
@@ -594,23 +522,19 @@ static void* gd_ripper_thread(void *arg) {
 	GUI_LabelSetText(self.track_label, "Preparing...");
 	ds_printf("DS_PROCESS: Preparing destination: %s\n", dst_folder);
 
-	if(prepare_destination_paths(dst_folder, dst_file, text, disc_type) != CMD_OK) {
+	if(prepare_destination_paths(dst_folder, dst_file, text) != CMD_OK) {
 		ds_printf("DS_ERROR: Failed to prepare destination paths\n");
 		goto out;
 	}
 
-	area_count = get_area_count(disc_type);
-	if(area_count == 0) {
-		ds_printf("DS_ERROR: Unknown disc type\n");
-		goto out;
-	}
+	area_count = disc_type == CD_GDROM ? 2 : 1;
 
-	CDROM_TOC toc;
 	if (safe_cdrom_read_toc(&toc, disc_type == CD_GDROM) != CMD_OK) {
 		goto out;
 	}
+
 	self.last_track = TOC_TRACK(toc.last);
-	self.total_sectors = calculate_total_sectors(disc_type, area_count);
+	self.total_sectors = calculate_total_sectors(area_count, disc_type);
 
 	ds_printf("DS_PROCESS: Creating GDI file\n");
 	GUI_LabelSetText(self.track_label, "Creating GDI");
@@ -621,8 +545,8 @@ static void* gd_ripper_thread(void *arg) {
 
 	ds_printf("DS_PROCESS: Starting track extraction\n");
 
-	if(process_areas_and_tracks(dst_folder, dst_file, disc_type, area_count) != CMD_OK) {
-		cleanup_failed_rip(dst_folder, dst_file, disc_type);
+	if(process_areas_and_tracks(dst_folder, dst_file, area_count, disc_type) != CMD_OK) {
+		cleanup_failed_rip(dst_folder, dst_file);
 		goto out;
 	}
 
@@ -691,11 +615,11 @@ static void update_ui_display(double progress_percent) {
 	self.last_ui_update = current_time;
 }
 
-static int rip_sec(int tn,int first,int count,int type,char *dst_file) {
+static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, char *dst_file) {
 	double percent;
 	file_t hnd;
-	int secbyte = (type == 4 ? 2048 : 2352) , count_old=count, bad=0, cdstat, readi;
-	int secmode = type == 4 ? CDROM_READ_DMA : CDROM_READ_PIO;
+	uint32_t secbyte = (type == 4 ? 2048 : 2352) , count_old = count, bad = 0, cdstat, readi;
+	uint32_t secmode = type == 4 ? CDROM_READ_DMA : CDROM_READ_PIO;
 	uint8_t *buffer = (uint8_t *)memalign(32, SEC_BUF_SIZE * secbyte);
 
 	if(!buffer) {
