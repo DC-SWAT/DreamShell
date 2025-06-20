@@ -21,7 +21,7 @@ void gd_ripper_StartRip(GUI_Widget *widget);
 
 void gd_ripper_CancelRip(GUI_Widget *widget);
 
-int gdfiles(char *dst_folder,char *dst_file,char *text);
+int create_gdi_file(char *dst_folder,char *dst_file, char *text, int disc_type);
 
 void gd_ripper_Exit();
 

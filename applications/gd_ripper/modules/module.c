@@ -9,6 +9,8 @@
 #include "ds.h"
 #include "isofs/isofs.h"
 #include <stdint.h>
+#include <stdbool.h>
+#include <dc/cdrom.h>
 
 DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
@@ -17,9 +19,9 @@ DEFAULT_MODULE_EXPORTS(app_gd_ripper);
 
 static int rip_sec(int tn ,int first, int count, int type, char *dst_file);
 static void* gd_ripper_thread(void *arg);
-static int gdfiles(char *dst_folder, char *dst_file, char *text);
+static int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int get_disc_status_and_type(int *status, int *disc_type);
-static int safe_cdrom_read_toc(CDROM_TOC *toc, int session);
+static int safe_cdrom_read_toc(CDROM_TOC *toc, bool high_density);
 static int get_area_count(int disc_type);
 static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type);
@@ -148,7 +150,7 @@ void gd_ripper_ipbin_name()
 	
 	if (disc_type == CD_CDROM_XA) 
 	{
-		if(safe_cdrom_read_toc(&toc, 0) != CMD_OK) 
+		if(safe_cdrom_read_toc(&toc, false) != CMD_OK) 
 		{ 
 			ds_printf("DS_ERROR: Toc read error\n"); 
 			free(pbuff);
@@ -350,11 +352,11 @@ getstatus:
 	return CMD_OK;
 }
 
-static int safe_cdrom_read_toc(CDROM_TOC *toc, int session)
+static int safe_cdrom_read_toc(CDROM_TOC *toc, bool high_density)
 {
     int terr = 0;
 
-    while (cdrom_read_toc(toc, session) != ERR_OK) {
+    while (cdrom_read_toc(toc, high_density) != ERR_OK) {
         if (!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
             ds_printf("DS_INFO: TOC reading cancelled\n");
             return CMD_ERROR;
@@ -462,7 +464,7 @@ static int cleanup_failed_rip(char *dst_folder, char *dst_file, int disc_type) {
 static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count) {
     CDROM_TOC toc;
 
-    if (safe_cdrom_read_toc(&toc, area) != CMD_OK) {
+    if (safe_cdrom_read_toc(&toc, area == 1) != CMD_OK) {
         return CMD_ERROR;
     }
 
@@ -604,19 +606,17 @@ static void* gd_ripper_thread(void *arg) {
 	}
 
 	CDROM_TOC toc;
-	if (safe_cdrom_read_toc(&toc, disc_type == CD_GDROM ? 1 : 0) != CMD_OK) {
+	if (safe_cdrom_read_toc(&toc, disc_type == CD_GDROM) != CMD_OK) {
 		goto out;
 	}
 	self.last_track = TOC_TRACK(toc.last);
 	self.total_sectors = calculate_total_sectors(disc_type, area_count);
 
-	if (disc_type == CD_GDROM) {
-		ds_printf("DS_PROCESS: Creating GDI files\n");
-		GUI_LabelSetText(self.track_label, "Creating GDI");
+	ds_printf("DS_PROCESS: Creating GDI file\n");
+	GUI_LabelSetText(self.track_label, "Creating GDI");
 
-		if (gdfiles(dst_folder, dst_file, text) != CMD_OK) {
-			goto out;
-		}
+	if (create_gdi_file(dst_folder, dst_file, text, disc_type) != CMD_OK) {
+		goto out;
 	}
 
 	ds_printf("DS_PROCESS: Starting track extraction\n");
@@ -776,95 +776,59 @@ static int rip_sec(int tn,int first,int count,int type,char *dst_file) {
 	return CMD_OK;
 }
 
-int gdfiles(char *dst_folder, char *dst_file, char *text) {
-	file_t gdfd;
-	FILE *gdifd;
+int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type) {
+	FILE *fp;
 	CDROM_TOC gdtoc, cdtoc;
-	int track, lba, gdtype, cdtype;
-	uint8_t *buff;
+	uint32_t track, lba, track_type;
+	uint32_t last_track;
 
 	cdrom_set_sector_size(2048);
 
-	if (safe_cdrom_read_toc(&cdtoc, 0) != ERR_OK) {
+	if (safe_cdrom_read_toc(&cdtoc, false) != ERR_OK) {
 		ds_printf("DS_ERROR: CD TOC read error\n");
 		return CMD_ERROR;
 	}
+	last_track = TOC_TRACK(cdtoc.last);
 
-	if (safe_cdrom_read_toc(&gdtoc, 1) != ERR_OK) {
-		ds_printf("DS_ERROR: GD TOC read error\n");
-		return CMD_ERROR;
+	if (disc_type == CD_GDROM) {
+		if (safe_cdrom_read_toc(&gdtoc, true) != ERR_OK) {
+			ds_printf("DS_ERROR: GD TOC read error\n");
+			return CMD_ERROR;
+		}
+		last_track = TOC_TRACK(gdtoc.last);
 	}
-
-	buff = memalign(32, 32768);
-
-	if (!buff) {
-		ds_printf("DS_ERROR: Failed to allocate buffer\n");
-		return CMD_ERROR;
-	}
-
-	ds_printf("DS_PROCESS: Reading IP.BIN\n");
-	int cdstat = cdrom_read_sectors_ex(buff, 45150, 16, CDROM_READ_DMA);
-
-	if (cdstat != ERR_OK) {
-		ds_printf("DS_ERROR: Failed to read IP.BIN\n");
-		free(buff);
-		return CMD_ERROR;
-	}
-
-	ds_printf("DS_OK: IP.BIN read successfully\n");
-
-	snprintf(dst_file, NAME_MAX, "%s/IP.BIN", dst_folder);
-	gdfd = fs_open(dst_file, O_WRONLY | O_TRUNC | O_CREAT);
-
-	if (gdfd == FILEHND_INVALID) {
-		ds_printf("DS_ERROR: Error open IP.BIN for write\n");
-		free(buff);
-		return CMD_ERROR;
-	}
-
-	if (fs_write(gdfd, buff, 32768) != 32768) {
-		ds_printf("DS_ERROR: Error write IP.BIN\n");
-		free(buff);
-		fs_close(gdfd);
-		return CMD_ERROR;
-	}
-
-	fs_close(gdfd);
-	free(buff);
-	ds_printf("DS_OK: IP.BIN dumped successfully\n");
 
 	snprintf(dst_file, NAME_MAX, "%s/%s.gdi", dst_folder, text);
 
-	gdifd = fopen(dst_file, "w");
-	if (!gdifd) {
+	fp = fopen(dst_file, "w");
+	if (!fp) {
 		ds_printf("DS_ERROR: Error open %s.gdi for write\n", text);
 		return CMD_ERROR;
 	}
 
-	int cdfirst = TOC_TRACK(cdtoc.first);
-	int cdlast = TOC_TRACK(cdtoc.last);
-	int gdfirst = TOC_TRACK(gdtoc.first);
-	int gdlast = TOC_TRACK(gdtoc.last);
+	fprintf(fp, "%ld\n", last_track);
 
-	fprintf(gdifd, "%d\n", gdlast);
-
-	for (track = cdfirst; track <= cdlast; track++) {
+	for (track = TOC_TRACK(cdtoc.first); track <= TOC_TRACK(cdtoc.last); ++track) {
 		lba = TOC_LBA(cdtoc.entry[track - 1]) - 150;
-		cdtype = TOC_CTRL(cdtoc.entry[track - 1]);
-		fprintf(gdifd, "%d %d %d %d track%02d.%s 0\n", 
-			track, lba, cdtype, (cdtype == 4 ? 2048 : 2352), 
-			track, (cdtype == 4 ? "iso" : "raw"));
+		track_type = TOC_CTRL(cdtoc.entry[track - 1]);
+
+		fprintf(fp, "%ld %ld %ld %d track%02ld.%s 0\n", 
+			track, lba, track_type, (track_type == 4 ? 2048 : 2352), 
+			track, (track_type == 4 ? "iso" : "raw"));
 	}
 
-	for (track = gdfirst; track <= gdlast; track++) {
-		lba = TOC_LBA(gdtoc.entry[track - 1]) - 150;
-		gdtype = TOC_CTRL(gdtoc.entry[track - 1]);
-		fprintf(gdifd, "%d %d %d %d track%02d.%s 0\n", 
-			track, lba, gdtype, (gdtype == 4 ? 2048 : 2352), 
-			track, (gdtype == 4 ? "iso" : "raw"));
+	if (disc_type == CD_GDROM) {
+		for (track = TOC_TRACK(gdtoc.first); track <= TOC_TRACK(gdtoc.last); ++track) {
+			lba = TOC_LBA(gdtoc.entry[track - 1]) - 150;
+			track_type = TOC_CTRL(gdtoc.entry[track - 1]);
+
+			fprintf(fp, "%ld %ld %ld %d track%02ld.%s 0\n", 
+				track, lba, track_type, (track_type == 4 ? 2048 : 2352), 
+				track, (track_type == 4 ? "iso" : "raw"));
+		}
 	}
 
-	fclose(gdifd);
+	fclose(fp);
 	ds_printf("DS_OK: %s.gdi created successfully\n", text);
 
 	return CMD_OK;
