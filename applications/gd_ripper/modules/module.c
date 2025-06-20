@@ -36,7 +36,7 @@ typedef struct {
 
 static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count);
 static int calculate_total_sectors(int area_count, int disc_type);
-static void update_ui_display(double progress_percent);
+static void update_ui_display(double progress_percent, uint32_t current_sector_size);
 
 static struct self {
 	App_t *app;
@@ -54,6 +54,7 @@ static struct self {
 	GUI_Widget *destination_path;
 	GUI_Widget *file_browser;
 	GUI_Widget *pages;
+	GUI_Widget *use_bin_btn;
 	uint32_t last_track;
 	volatile int rip_active;
 	uint64_t start_time;
@@ -165,7 +166,7 @@ void gd_ripper_ipbin_name()
 
 	ipbin_meta_t *meta = (ipbin_meta_t*) pbuff;
 
-	if(meta->boot_file[1] != '0' && meta->boot_file[0] != '1') {
+	if(meta->boot_file[0] != '0' && meta->boot_file[0] != '1') {
 		free(pbuff);
 		GUI_TextEntrySetText(self.gname, "ripped_disc");
 		return;
@@ -230,6 +231,7 @@ void gd_ripper_Init(App_t *app, const char* fileName)
 		self.destination_path = APP_GET_WIDGET("destination-path");
 		self.file_browser = APP_GET_WIDGET("file-browser");
 		self.pages = APP_GET_WIDGET("pages");
+		self.use_bin_btn = APP_GET_WIDGET("use_bin_btn");
 
 		if(DirExists("/ide")) {
 			strcpy(self.selected_path, "/ide");
@@ -399,6 +401,21 @@ static int cleanup_failed_rip(char *dst_folder, char *dst_file) {
 	return CMD_OK;
 }
 
+static const char *get_sector_info(uint32_t track_type, uint32_t *sector_size) {
+	if (track_type == 4 && GUI_WidgetGetState(self.use_bin_btn)) {
+		if(sector_size) *sector_size = 2352;
+		return "bin";
+	}
+	else if (track_type == 4) {
+		if(sector_size) *sector_size = 2048;
+		return "iso";
+	}
+	else {
+		if(sector_size) *sector_size = 2352;
+		return "raw";
+	}
+}
+
 static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count) {
     CDROM_TOC toc;
 
@@ -426,8 +443,10 @@ static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_
         tracks[count].sector_count = nsec;
         tracks[count].type = type;
 
+        const char *extension = get_sector_info(type, NULL);
+
 		snprintf(tracks[count].filename, NAME_MAX, "track%02ld.%s", 
-				tn, (type == 4 ? "iso" : "raw"));
+				tn, extension);
 
         count++;
     }
@@ -556,7 +575,7 @@ out:
 	return NULL;
 }
 
-static void update_ui_display(double progress_percent) {
+static void update_ui_display(double progress_percent, uint32_t current_sector_size) {
     uint64_t current_time = timer_ms_gettime64();
     uint64_t elapsed_time = current_time - self.start_time;
 
@@ -576,7 +595,7 @@ static void update_ui_display(double progress_percent) {
 	char processed_sectors_text[64];
 
 	double speed_sectors_per_sec = (double)self.processed_sectors / (elapsed_time / 1000.0);
-	double speed_kb_per_sec = speed_sectors_per_sec * 2048 / 1024.0;
+	double speed_kb_per_sec = speed_sectors_per_sec * current_sector_size / 1024.0;
 
 	snprintf(speed_text, sizeof(speed_text), "Speed: %.1f KB/s", speed_kb_per_sec);
 
@@ -618,9 +637,13 @@ static void update_ui_display(double progress_percent) {
 static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, char *dst_file) {
 	double percent;
 	file_t hnd;
-	uint32_t secbyte = (type == 4 ? 2048 : 2352) , count_old = count, bad = 0, cdstat, readi;
-	uint32_t secmode = type == 4 ? CDROM_READ_DMA : CDROM_READ_PIO;
-	uint8_t *buffer = (uint8_t *)memalign(32, SEC_BUF_SIZE * secbyte);
+	uint32_t secbyte, count_old = count, bad = 0, cdstat, readi;
+	uint32_t secmode;
+	uint8_t *buffer;
+
+	get_sector_info(type, &secbyte);
+	secmode = secbyte == 2048 ? CDROM_READ_DMA : CDROM_READ_PIO;
+	buffer = (uint8_t *)memalign(32, SEC_BUF_SIZE * secbyte);
 
 	if(!buffer) {
 		ds_printf("DS_ERROR: Failed to allocate buffer\n");
@@ -692,7 +715,7 @@ static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, c
 		self.processed_sectors += nsects;
 
 		percent = 1-(float)(count) / count_old;
-		update_ui_display(percent);
+		update_ui_display(percent, secbyte);
 	}
 
 	free(buffer);
@@ -705,8 +728,8 @@ int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type)
 	CDROM_TOC gdtoc, cdtoc;
 	uint32_t track, lba, track_type;
 	uint32_t last_track;
-
-	cdrom_set_sector_size(2048);
+	uint32_t sector_size;
+	char *extension;
 
 	if (safe_cdrom_read_toc(&cdtoc, false) != ERR_OK) {
 		ds_printf("DS_ERROR: CD TOC read error\n");
@@ -736,9 +759,11 @@ int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type)
 		lba = TOC_LBA(cdtoc.entry[track - 1]) - 150;
 		track_type = TOC_CTRL(cdtoc.entry[track - 1]);
 
-		fprintf(fp, "%ld %ld %ld %d track%02ld.%s 0\n", 
-			track, lba, track_type, (track_type == 4 ? 2048 : 2352), 
-			track, (track_type == 4 ? "iso" : "raw"));
+		extension = (char *)get_sector_info(track_type, &sector_size);
+
+		fprintf(fp, "%ld %ld %ld %ld track%02ld.%s 0\n", 
+			track, lba, track_type, sector_size, 
+			track, extension);
 	}
 
 	if (disc_type == CD_GDROM) {
@@ -746,9 +771,11 @@ int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type)
 			lba = TOC_LBA(gdtoc.entry[track - 1]) - 150;
 			track_type = TOC_CTRL(gdtoc.entry[track - 1]);
 
-			fprintf(fp, "%ld %ld %ld %d track%02ld.%s 0\n", 
-				track, lba, track_type, (track_type == 4 ? 2048 : 2352), 
-				track, (track_type == 4 ? "iso" : "raw"));
+			extension = (char *)get_sector_info(track_type, &sector_size);
+
+			fprintf(fp, "%ld %ld %ld %ld track%02ld.%s 0\n", 
+				track, lba, track_type, sector_size, 
+				track, extension);
 		}
 	}
 
@@ -767,6 +794,7 @@ void gd_ripper_Exit()  {
 			self.app->thd = NULL;
 		}
 	}
+	cdrom_set_sector_size(2048);
 	cdrom_spin_down();
 }
 

@@ -173,7 +173,7 @@
 					</panel>
 				</panel>
 
-				<panel x="40" y="255" width="360" height="80">
+				<panel x="40" y="255" width="360" height="100">
 					<panel height="20">
 						<label font="arial" color="#333333" text="Read options:" align="left" />
 					</panel>
@@ -187,11 +187,24 @@
 							y="25"
 							width="200"
 							height="25"
+							name="use_bin_btn">
+						<label x="25" height="20" font="arial" color="#333333" text="Use bin tracks" align="left" />
+					</input>
+
+					<input type="checkbox"
+							checked="no"
+							onnormal="iCheck"
+							onhighlight="iCheckh"
+							offnormal="iUncheck"
+							offhighlight="iUncheckh"
+							y="50"
+							width="200"
+							height="25"
 							name="bad_btn">
 						<label x="25" height="20" font="arial" color="#333333" text="Skip bad sectors" align="left" />
 					</input>
 
-					<panel y="55" width="360" height="20">
+					<panel y="75" width="360" height="20">
 						<input type="text"
 							onblur="export:gd_ripper_Number_read()"
 							font="arial"
