@@ -10,11 +10,17 @@ TARGET := $(TARGET).exe
 EXTRA_FLAGS += -I/local/include -L/local/lib -lmingw32 -luser32 -lgdi32 -lole32 -luuid -lcomctl32 -static -mno-ms-bitfields
 endif
 
+INSTALL = install
+DESTDIR = ../..
+
 all: clean $(TARGET)
 
 $(TARGET):
 	$(CC) $(OBJS) -o $(TARGET) $(LIBS) $(EXTRA_FLAGS)
 	strip $(TARGET)
+
+install : $(TARGET)
+	$(INSTALL) -m 755 $(TARGET) $(DESTDIR)/$(TARGET)
 
 clean:
 	rm -f $(TARGET) *.o
