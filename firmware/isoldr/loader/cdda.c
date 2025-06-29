@@ -186,7 +186,7 @@ static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 #endif
 
 static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
-	if (cdda->trans_method == PCM_TRANS_DMA) {
+	if (cdda->trans_method <= PCM_TRANS_DMA_BLOCKED) {
 // #ifdef HAVE_CDDA_ADPCM
 // 		if(cdda->bitsize == 4) {
 			dcache_purge_range((uint32)data, size);
@@ -196,6 +196,9 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 		aica_dma_irq_hide();
 		aica_dma_transfer(data, dest, size);
 		irq_restore(old);
+		if (cdda->trans_method == PCM_TRANS_DMA_BLOCKED) {
+			do { } while(aica_dma_in_progress());
+		}
 	}
 	else if(cdda->trans_method == PCM_TRANS_PIO) {
 		g2_lock();
@@ -374,7 +377,7 @@ static void aica_stop_clean_cdda() {
 	}
 #endif
 
-	if (cdda->trans_method == PCM_TRANS_DMA && aica_dma_in_progress()) {
+	if (cdda->trans_method <= PCM_TRANS_DMA_BLOCKED && aica_dma_in_progress()) {
 		aica_dma_disable();
 	}
 	cdda->stat = CDDA_STAT_IDLE;
@@ -919,7 +922,14 @@ int CDDA_Init() {
 	/* AICA DMA */
 	if(IsoInfo->emu_cdda <= CDDA_MODE_DMA_TMU1
 		|| (IsoInfo->emu_cdda & CDDA_MODE_DST_DMA)) {
-		cdda->trans_method = PCM_TRANS_DMA;
+		/* Looks like WinCE doesn't pause G2 DMA when accessing to AICA by SH4.
+		 * So we need to block CPU until the transfer is complete. */
+		if(IsoInfo->exec.type == BIN_TYPE_WINCE) {
+			cdda->trans_method = PCM_TRANS_DMA_BLOCKED;
+		}
+		else {
+			cdda->trans_method = PCM_TRANS_DMA;
+		}
 	}
 	else if(IsoInfo->emu_cdda <= CDDA_MODE_SQ_TMU1
 		|| (IsoInfo->emu_cdda & CDDA_MODE_DST_SQ)) {

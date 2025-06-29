@@ -26,6 +26,7 @@ typedef enum PCM_buff {
 
 typedef enum PCM_transfer {
 	PCM_TRANS_DMA = 0,
+	PCM_TRANS_DMA_BLOCKED,
 	PCM_TRANS_SQ,
 	PCM_TRANS_PIO,
 	PCM_TRANS_SQ_SPLIT,
