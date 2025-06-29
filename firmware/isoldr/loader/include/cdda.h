@@ -109,8 +109,8 @@ cdda_ctx_t *get_CDDA(void);
 int CDDA_Init(void);
 void CDDA_MainLoop(void);
 
-int CDDA_Play(uint32 first, uint32 last, uint32 loop);
-int CDDA_Play2(uint32 first, uint32 last, uint32 loop);
+int CDDA_PlayTracks(uint32 first, uint32 last, uint32 loop);
+int CDDA_PlaySectors(uint32 first, uint32 last, uint32 loop);
 int CDDA_Pause(void);
 int CDDA_Release();
 int CDDA_Stop(void);

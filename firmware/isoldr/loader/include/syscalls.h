@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _SYSCALLS_H
@@ -19,8 +19,8 @@
 #define CMD_DMAREAD            17  /**< \brief Read via DMA */
 #define CMD_GETTOC             18  /**< \brief Read TOC */
 #define CMD_GETTOC2            19  /**< \brief Read TOC */
-#define CMD_PLAY               20  /**< \brief Play track */
-#define CMD_PLAY2              21  /**< \brief Play sectors */
+#define CMD_PLAY_TRACKS        20  /**< \brief Play tracks */
+#define CMD_PLAY_SECTORS       21  /**< \brief Play sectors */
 #define CMD_PAUSE              22  /**< \brief Pause playback */
 #define CMD_RELEASE            23  /**< \brief Resume from pause */
 #define CMD_INIT               24  /**< \brief Initialize the drive */

@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2025 SWAT <http://www.dc-swat.ru>
  * (c)2024 megavolt85
  */
 
@@ -899,11 +899,11 @@ void gdcMainLoop(void) {
 						get_scd();
 						break;
 #ifdef HAVE_CDDA
-					case CMD_PLAY:
-						GDS->status = CDDA_Play(GDS->param[0], GDS->param[1], GDS->param[2]);
+					case CMD_PLAY_TRACKS:
+						GDS->status = CDDA_PlayTracks(GDS->param[0], GDS->param[1], GDS->param[2]);
 						break;
-					case CMD_PLAY2:
-						GDS->status = CDDA_Play2(GDS->param[0], GDS->param[1], GDS->param[2]);
+					case CMD_PLAY_SECTORS:
+						GDS->status = CDDA_PlaySectors(GDS->param[0], GDS->param[1], GDS->param[2]);
 						break;
 					case CMD_RELEASE:
 						GDS->status = CDDA_Release();
@@ -918,8 +918,8 @@ void gdcMainLoop(void) {
 						GDS->status = CDDA_Stop();
 						break;
 #else
-					case CMD_PLAY:
-					case CMD_PLAY2:
+					case CMD_PLAY_TRACKS:
+					case CMD_PLAY_SECTORS:
 					case CMD_RELEASE:
 						GDS->status = CMD_STAT_COMPLETED;
 						GDS->drv_stat = CD_STATUS_PLAYING;
@@ -1170,8 +1170,8 @@ int gdcReadAbort(int gd_chn) {
 	}
 
 	switch(GDS->cmd) {
-		case CMD_PLAY:
-		case CMD_PLAY2:
+		case CMD_PLAY_TRACKS:
+		case CMD_PLAY_SECTORS:
 		case CMD_PAUSE:
 #ifdef HAVE_CDDA
 			CDDA_Stop();

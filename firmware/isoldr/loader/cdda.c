@@ -1160,7 +1160,7 @@ static uint8 find_track_for_lba(uint32 lba) {
 }
 
 
-int CDDA_Play(uint32 first, uint32 last, uint32 loop) {
+int CDDA_PlayTracks(uint32 first, uint32 last, uint32 loop) {
 
 	gd_state_t *GDS = get_GDS();
 
@@ -1188,11 +1188,11 @@ int CDDA_Play(uint32 first, uint32 last, uint32 loop) {
 		last_lba = TOC_LBA(IsoInfo->toc.leadout_sector);
 	}
 
-	return CDDA_Play2(first_lba, last_lba, loop);
+	return CDDA_PlaySectors(first_lba, last_lba, loop);
 }
 
 
-int CDDA_Play2(uint32 first_lba, uint32 last_lba, uint32 loop) {
+int CDDA_PlaySectors(uint32 first_lba, uint32 last_lba, uint32 loop) {
 
 	gd_state_t *GDS = get_GDS();
 
@@ -1343,9 +1343,9 @@ static void play_next_track() {
 	if(next_track <= TOC_TRACK(IsoInfo->toc.last) && 
 	   next_track - 1 < TOC_TRACK(IsoInfo->toc.last) &&
 	   TOC_LBA(IsoInfo->toc.entry[next_track - 1]) < cdda->last_lba) {
-		
+
 		play_track(next_track);
-		
+
 		if(cdda->fd > FILEHND_INVALID) {
 			GDS->lba = TOC_LBA(IsoInfo->toc.entry[next_track - 1]);
 			uint32 offset = cdda->offset;
@@ -1356,7 +1356,7 @@ static void play_next_track() {
 		if(cdda->loop < 0xf) {
 			cdda->loop--;
 		}
-		CDDA_Play2(cdda->first_lba, cdda->last_lba, cdda->loop);
+		CDDA_PlaySectors(cdda->first_lba, cdda->last_lba, cdda->loop);
 	}
 }
 
@@ -1571,7 +1571,7 @@ void CDDA_Test(void) {
 
 	while(1) {
 
-		CDDA_Play(5, 15, 0);
+		CDDA_PlayTracks(5, 15, 0);
 
 		while(cdda->stat != CDDA_STAT_IDLE) {
 			CDDA_MainLoop();
