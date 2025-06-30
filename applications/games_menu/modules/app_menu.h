@@ -59,6 +59,7 @@ struct MenuStructure
 	bool sd;
 	bool cd;
 	bool rescan_covers;
+	bool cover_to_pvr;
 	bool convert_pvr_to_png;
 	volatile bool finish_menu;
 	volatile bool finished_menu;
@@ -130,6 +131,7 @@ const char* GetDeviceDir(uint8 device);
 const char* GetDefaultDir(uint8 device);
 const char* GetGamesPath(uint8 device);
 const char* GetCoversPath(uint8 device);
+const char* GetDefaultCoverName(int menu_type);
 void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack *send_message_optimizer
 	, PostPVRCoverCallBack *post_pvr_cover, PostOptimizerCoverCallBack *post_optimizer_cover);
 void DestroyMenuData();
@@ -174,8 +176,10 @@ bool SaveScannedCover();
 bool LoadScannedCover();
 bool HasAnyCover();
 void CleanIncompleteCover();
+bool DecodeImage(const char *path, kos_img_t *img);
 void OptimizeGameCovers();
 void OptimizeCover(int game_index, const char *game_name, kos_img_t *img, bool is_alpha);
+void CreateOptimizedCover(int game_index, const char *game_name, kos_img_t *img, bool is_alpha, int menu_type, int image_size);
 bool ExtractPVRCover(int game_index);
 void* LoadPVRCoverThread(void *params);
 void* OptimizeCoverThread(void *param);

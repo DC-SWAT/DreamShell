@@ -243,8 +243,8 @@ void OnGetObjectsCurrentViewEvent(uint loop_index, int id, Drawable *drawable, u
 
 		case LOADER_CONTROL_ID:
 		{
-			memset(menu_data.preset->device, 0, FIRMWARE_SIZE);
-			strcpy(menu_data.preset->device, TSU_OptionGroupGetTextSelected((OptionGroup *)drawable));
+			strncpy(menu_data.preset->device, TSU_OptionGroupGetTextSelected((OptionGroup *)drawable), FIRMWARE_SIZE);
+			menu_data.preset->device[FIRMWARE_SIZE] = '\0';
 		}
 		break;
 
