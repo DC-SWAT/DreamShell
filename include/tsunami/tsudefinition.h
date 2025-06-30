@@ -36,9 +36,9 @@ enum MenuLayerEnum
 
 enum ImageTypeEnum
 {
-	IT_PNG = (1 << 0),
-	IT_JPG = (1 << 1),	
-	IT_PVR = (1 << 2),
+	IT_PVR = (1 << 0),
+	IT_PNG = (1 << 1),
+	IT_JPG = (1 << 2),	
 	IT_KMG = (1 << 3),
 	IT_BPM = (1 << 4),
 	IT_ALL = (IT_PNG | IT_JPG | IT_BPM | IT_PVR | IT_KMG)

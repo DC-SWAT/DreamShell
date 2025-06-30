@@ -278,6 +278,7 @@ jpg_decode
 pvr_to_img
 png_to_img
 jpeg_to_img
+img_to_pvr
 img_to_png
 img_to_jpg
 pvr_to_png

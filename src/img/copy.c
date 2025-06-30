@@ -1,6 +1,6 @@
 /* DreamShell ##version##
    copy.c
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 */
 
 #include "ds.h"
@@ -72,8 +72,8 @@ bool copy_image(const char *image_source, const char *image_dest, bool is_alpha,
 			stbi_set_flip_vertically_on_load(true);
 		}
 
-		if ((strcasecmp(image_type_source, ".png") == 0 && png_decode(image_source, &img) == 0)
-			|| (strcasecmp(image_type_source, ".jpg")  == 0 && jpg_decode(image_source, &img) == 0))
+		if ((strcasecmp(image_type_source, ".png") == 0 && png_decode(image_source, &img, true) == 0)
+			|| (strcasecmp(image_type_source, ".jpg")  == 0 && jpg_decode(image_source, &img, true) == 0))
 		{
 			if (!copy_image_memory_to_file(&img, image_dest, true, output_width, output_height))
 			{
@@ -122,7 +122,11 @@ bool copy_image_memory_to_file(kos_img_t *image_source, const char *image_dest, 
 			
 			char *image_type_dest = strrchr(image_dest, '.');
 
-			if (strcasecmp(image_type_dest, ".png") == 0)
+			if (strcasecmp(image_type_dest, ".pvr") == 0)
+			{
+				copied = (img_to_pvr(image_source, image_dest, width, height) == 1);
+			}
+			else if (strcasecmp(image_type_dest, ".png") == 0)
 			{
 				copied = (img_to_png(image_source, image_dest, width, height) == 1);
 			}
