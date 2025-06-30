@@ -184,8 +184,8 @@ static void* ShowCoverThread(void *params)
 			else
 			{
 				game_cover_path = (char *)malloc(NAME_MAX);
-				snprintf(game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/no_cover.png");
-				cover_type = IT_PNG;
+				snprintf(game_cover_path, NAME_MAX, "%s/%s/%s%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images", GetDefaultCoverName(MT_PLANE_TEXT), ".pvr");
+				cover_type = IT_PVR;
 			}
 			
 			self.texture_cover_game = TSU_TextureCreateFromFile(game_cover_path, cover_type != IT_JPG, false, 0);
@@ -889,8 +889,10 @@ static bool LoadPage(bool change_view, uint8 direction)
 					}
 					else
 					{
-						CheckCover(game_index, MT_PLANE_TEXT);
-						cover_menu_type = MT_PLANE_TEXT;
+						if (CheckCover(game_index, MT_PLANE_TEXT) == SC_DEFAULT)
+							cover_menu_type = menu_data.menu_type;
+						else
+							cover_menu_type = MT_PLANE_TEXT;
 					}
 
 					if (GetGameCoverPath(game_index, &game_cover_path_tmp, cover_menu_type))

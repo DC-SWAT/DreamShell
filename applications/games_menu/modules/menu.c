@@ -21,6 +21,7 @@ struct MenuStructure menu_data;
 
 void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack *send_message_optimizer, PostPVRCoverCallBack *post_pvr_cover, PostOptimizerCoverCallBack *post_optimizer_cover)
 {
+	menu_data.cover_to_pvr = true;
 	menu_data.save_preset = false;
 	menu_data.cover_background = true;
 	menu_data.change_page_with_pad = false;
@@ -100,10 +101,9 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.current_dev = GetDeviceType(menu_data.default_dir);
 	menu_data.convert_pvr_to_png = (menu_data.current_dev == APP_DEVICE_IDE);
 
-	char game_cover_path[NAME_MAX];
-	memset(game_cover_path, 0, NAME_MAX);
-	snprintf(game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/gd.jpg");
-	menu_data.default_cover_type = (FileExists(game_cover_path) ? IT_JPG : IT_PNG);
+	char game_cover_path[NAME_MAX] = {0};
+	snprintf(game_cover_path, NAME_MAX, "%s/%s/%s%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images", GetDefaultCoverName(MT_PLANE_TEXT), ".pvr");
+	menu_data.default_cover_type = (FileExists(game_cover_path) && menu_data.cover_to_pvr ? IT_PVR : IT_PNG);
 
 	LoadMenuConfig();
 	SetGamesPath(menu_data.games_config_path);
@@ -333,6 +333,24 @@ const char *GetCoversPath(uint8 device)
 
 	default:
 		return menu_data.covers_path;
+	}
+}
+
+const char *GetDefaultCoverName(int menu_type)
+{
+	switch (menu_type)
+	{
+	case MT_PLANE_TEXT:
+		return "gd";
+
+	case MT_IMAGE_TEXT_64_5X2:
+		return "gd_64";
+
+	case MT_IMAGE_128_4X3:
+		return "gd_128";
+
+	default:
+		return "gd";
 	}
 }
 
@@ -726,6 +744,9 @@ void SetCoverType(int game_index, int menu_type, uint16 dw_image_type)
 			menu_data.games_array[game_index].cover_type = 0;
 		}
 
+		// LUIS VERA: ESTA LINEA LIMPIA Y NO PERMITE PONER VARIAS IMAGENES PARA UN MISMO TIPO
+		menu_data.games_array[game_index].cover_type &= ~((uint64)IMAGE_TYPE_MASK << ((menu_type - 1) * 16));
+
 		menu_data.games_array[game_index].cover_type |= (uint64)dw_image_type << ((menu_type - 1) * 16);
 	}
 }
@@ -779,7 +800,7 @@ bool CheckCoverImageType(int game_index, int menu_type, uint16 image_type)
 			}
 			else
 			{
-				fs_unlink(game_cover_path);
+				ds_printf("INVALID IMAGE: %s", game_cover_path);
 			}
 		}
 
@@ -913,13 +934,17 @@ bool GetGameCoverPath(int game_index, char **game_cover_path, int menu_type)
 				*game_cover_path = (char *)malloc(NAME_MAX);
 				memset(*game_cover_path, 0, NAME_MAX);
 
-				if (ContainsCoverType(game_index, menu_type, IT_JPG))
+				if (ContainsCoverType(game_index, menu_type, IT_PVR))
 				{
-					snprintf(*game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/gd.jpg");
+					snprintf(*game_cover_path, NAME_MAX, "%s/%s/%s%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images", GetDefaultCoverName(menu_type), ".pvr");
+				}
+				else if (ContainsCoverType(game_index, menu_type, IT_PNG))
+				{
+					snprintf(*game_cover_path, NAME_MAX, "%s/%s/%s%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images", GetDefaultCoverName(menu_type), ".png");
 				}
 				else
 				{
-					snprintf(*game_cover_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/gd.png");
+					snprintf(*game_cover_path, NAME_MAX, "%s/%s/%s%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images", GetDefaultCoverName(menu_type), ".jpg");					
 				}
 			}
 		}
@@ -1676,6 +1701,7 @@ void LoadDefaultMenuConfig()
 	menu_data.app_config.initial_view = menu_data.menu_type = MT_PLANE_TEXT;
 	menu_data.app_config.save_preset = 0;
 	menu_data.app_config.cover_background = 1;
+	menu_data.app_config.cover_to_pvr = 1;
 	menu_data.app_config.change_page_with_pad = 0;
 	menu_data.app_config.start_in_last_game = 0;
 	menu_data.app_config.enable_cache = 0;
@@ -1724,6 +1750,7 @@ bool LoadMenuConfig()
 			{"initial_view", CONF_INT, (void *)&menu_data.app_config.initial_view},
 			{"save_preset", CONF_INT, (void *)&menu_data.app_config.save_preset},
 			{"cover_background", CONF_INT, (void *)&menu_data.app_config.cover_background},
+			{"cover_to_pvr", CONF_INT, (void *)&menu_data.app_config.cover_to_pvr},
 			{"change_page_with_pad", CONF_INT, (void *)&menu_data.app_config.change_page_with_pad},
 			{"start_in_last_game", CONF_INT, (void *)&menu_data.app_config.start_in_last_game},
 			{"last_game", CONF_STR, (void *)menu_data.app_config.last_game},
@@ -1918,13 +1945,14 @@ void ParseMenuConfigToPresentation()
 		menu_data.app_config.initial_view = menu_data.menu_type = MT_PLANE_TEXT;
 	}
 
-	menu_data.save_preset = (menu_data.app_config.save_preset == 1);
-	menu_data.cover_background = (menu_data.app_config.cover_background == 1);
-	menu_data.change_page_with_pad = (menu_data.app_config.change_page_with_pad == 1);
-	menu_data.start_in_last_game = (menu_data.app_config.start_in_last_game == 1);
+	menu_data.save_preset = (menu_data.app_config.save_preset >= 1);
+	menu_data.cover_background = (menu_data.app_config.cover_background >= 1);
+	menu_data.cover_to_pvr = (menu_data.app_config.cover_to_pvr >= 1);
+	menu_data.change_page_with_pad = (menu_data.app_config.change_page_with_pad >= 1);
+	menu_data.start_in_last_game = (menu_data.app_config.start_in_last_game >= 1);
 	strcpy(menu_data.last_game, menu_data.app_config.last_game);
 	menu_data.last_device = menu_data.app_config.last_device;
-	menu_data.enable_cache = (menu_data.app_config.enable_cache == 1);
+	menu_data.enable_cache = (menu_data.app_config.enable_cache >= 1);
 
 	menu_data.background_color = ParseUIntToColor(menu_data.app_config.background_color);
 	menu_data.border_color = ParseUIntToColor(menu_data.app_config.border_color);
@@ -1954,6 +1982,7 @@ void ParsePresentationToMenuConfig()
 	menu_data.app_config.initial_view = menu_data.menu_type;
 	menu_data.app_config.save_preset = (menu_data.save_preset ? 1 : 0);
 	menu_data.app_config.cover_background = (menu_data.cover_background ? 1 : 0);
+	menu_data.app_config.cover_to_pvr = (menu_data.cover_to_pvr ? 1 : 0);
 	menu_data.app_config.change_page_with_pad = (menu_data.change_page_with_pad ? 1 : 0);
 	menu_data.app_config.start_in_last_game = (menu_data.start_in_last_game ? 1 : 0);
 	menu_data.app_config.enable_cache = (menu_data.enable_cache ? 1 : 0);
@@ -2007,13 +2036,13 @@ bool SaveMenuConfig()
 	}
 
 	snprintf(result, sizeof(result),
-			 "games_path = %s\ninitial_view = %d\nsave_preset = %d\n"
-			 "cover_background = %d\nchange_page_with_pad = %d\nstart_in_last_game = %d\nlast_game = %s\nlast_device = %d\n"
+			 "games_path = %s\ninitial_view = %d\nsave_preset = %d\ncover_background = %d\n"
+			 "cover_to_pvr = %d\nchange_page_with_pad = %d\nstart_in_last_game = %d\nlast_game = %s\nlast_device = %d\n"
 			 "background_color = %08lx\nborder_color = %08lx\ntitle_color = %08lx\nbody_color = %08lx\narea_color = %08lx\n"
 			 "control_top_color = %08lx\ncontrol_body_color = %08lx\ncontrol_bottom_color = %08lx\n"
 			 "enable_cache = %d",
-			 menu_data.app_config.games_path, menu_data.app_config.initial_view, menu_data.app_config.save_preset,
-			 menu_data.app_config.cover_background, menu_data.app_config.change_page_with_pad,
+			 menu_data.app_config.games_path, menu_data.app_config.initial_view, menu_data.app_config.save_preset, 
+			 menu_data.app_config.cover_background, menu_data.app_config.cover_to_pvr, menu_data.app_config.change_page_with_pad,
 			 menu_data.app_config.start_in_last_game, menu_data.app_config.last_game,
 			 menu_data.app_config.last_device, menu_data.app_config.background_color,
 			 menu_data.app_config.border_color, menu_data.app_config.title_color,
@@ -2224,6 +2253,27 @@ void CleanIncompleteCover()
 	}
 }
 
+bool DecodeImage(const char *path, kos_img_t *img)
+{
+	const char *ext = strrchr(path, '.');
+	if (!ext)
+		return false;
+
+	if (strcasecmp(ext, ".pvr") == 0)
+	{
+		return pvr_decode(path, img, true) == 0;
+	}
+	else if (strcasecmp(ext, ".png") == 0)
+	{
+		return png_decode(path, img, true) == 0;
+	}
+	else if (strcasecmp(ext, ".jpg") == 0)
+	{
+		return jpg_decode(path, img, true) == 0;
+	}
+	return false;
+}
+
 void OptimizeGameCovers()
 {
 	char *game_cover_path = NULL;
@@ -2231,39 +2281,74 @@ void OptimizeGameCovers()
 	char *game_without_extension = NULL;
 	kos_img_t kimg;
 
+	const int menu_priority[] = {
+		MT_PLANE_TEXT,
+		MT_IMAGE_128_4X3,
+		MT_IMAGE_TEXT_64_5X2};
+	const int menu_count = sizeof(menu_priority) / sizeof(menu_priority[0]);
+
 	for (int icount = 0; icount < menu_data.games_array_count; icount++)
 	{
 		if (menu_data.stop_optimize_game_cover || menu_data.finished_menu)
 			break;
 
-		if (CheckCover(icount, MT_PLANE_TEXT) == SC_EXISTS)
+		for (int i = 0; i < menu_count; i++)
 		{
-			GetCoverName(icount, &game_without_extension);
-			menu_data.send_message_optimizer("Check COVER: %s", game_without_extension);
+			int imenu = menu_priority[i];
 
-			if (CheckCover(icount, MT_IMAGE_TEXT_64_5X2) != SC_EXISTS || CheckCover(icount, MT_IMAGE_128_4X3) != SC_EXISTS)
+			if (CheckCover(icount, imenu) == SC_EXISTS)
 			{
-				if (GetGameCoverPath(icount, &game_cover_path, MT_PLANE_TEXT))
+				GetCoverName(icount, &game_without_extension);
+				menu_data.send_message_optimizer("Check COVER: %s", game_without_extension);
+
+				if (GetGameCoverPath(icount, &game_cover_path, imenu))
 				{
 					image_type = strrchr(game_cover_path, '.');
-
-					if ((strcasecmp(image_type, ".png") == 0 && png_decode(game_cover_path, &kimg) == 0) || (strcasecmp(image_type, ".jpg") == 0 && jpg_decode(game_cover_path, &kimg) == 0))
+					
+					if (DecodeImage(game_cover_path, &kimg))
 					{
-						menu_data.send_message_optimizer("Optimizing cover: %s", game_without_extension);
-						OptimizeCover(icount, game_without_extension, &kimg, strcasecmp(image_type, ".png") == 0 ? true : false);
+						if (menu_data.cover_to_pvr && strcasecmp(image_type, ".pvr") != 0)
+						{
+							const char *extension = strrchr(game_cover_path, '.');
+							if (extension)
+							{
+								menu_data.send_message_optimizer("Optimizing to PVR: %s", game_without_extension);
+
+								size_t base_length = extension - game_cover_path;
+								char new_cover_path[NAME_MAX];
+								strncpy(new_cover_path, game_cover_path, base_length);
+								new_cover_path[base_length] = '\0';
+								strcat(new_cover_path, GetCoverExtensionFromType(IT_PVR));
+
+								img_to_pvr(&kimg, new_cover_path, 0, 0);
+
+								SetCoverType(icount, imenu, IT_PVR);
+								unlink(game_cover_path);
+							}
+						}
+
+						if (CheckCover(icount, MT_IMAGE_TEXT_64_5X2) != SC_EXISTS || CheckCover(icount, MT_IMAGE_128_4X3) != SC_EXISTS)
+						{
+							menu_data.send_message_optimizer("Optimizing cover: %s", game_without_extension);
+							OptimizeCover(icount, game_without_extension, &kimg, strcasecmp(image_type, ".jpg") != 0);
+						}
+
 						kos_img_free(&kimg, 0);
 					}
 
 					free(game_cover_path);
 					game_cover_path = NULL;
 				}
-			}
 
-			menu_data.send_message_optimizer("%s", "");
-			if (game_without_extension != NULL)
-			{
-				free(game_without_extension);
-				game_without_extension = NULL;
+				menu_data.send_message_optimizer("%s", "");
+
+				if (game_without_extension != NULL)
+				{
+					free(game_without_extension);
+					game_without_extension = NULL;
+				}
+
+				break;
 			}
 		}
 	}
@@ -2273,38 +2358,42 @@ void OptimizeGameCovers()
 
 void OptimizeCover(int game_index, const char *game_name, kos_img_t *img, bool is_alpha)
 {
-	if (img != NULL && img->data)
+	if (!img || !img->data)
+		return;
+
+	if (img->w > 64)
+		CreateOptimizedCover(game_index, game_name, img, is_alpha, MT_IMAGE_TEXT_64_5X2, 64);
+
+	if (img->w > 128)
+		CreateOptimizedCover(game_index, game_name, img, is_alpha, MT_IMAGE_128_4X3, 128);
+}
+
+void CreateOptimizedCover(int game_index, const char *game_name, kos_img_t *img, bool is_alpha, int menu_type, int image_size)
+{
+	char new_cover_path[NAME_MAX];
+	char cover_folder[NAME_MAX];
+	uint16 image_type;
+
+	snprintf(cover_folder, NAME_MAX, "%s%s", GetCoversPath(menu_data.current_dev), GetCoverFolder(menu_type));
+	if (DirExists(cover_folder) == 0)
+		fs_mkdir(cover_folder);
+
+	if (menu_data.cover_to_pvr)
 	{
-		bool optimize_to_128 = img->w > 128;
-		bool optimize_to_64 = img->w > 64;
-		char new_cover_path[NAME_MAX];
-		char cover_folder[NAME_MAX];
-		int image_size = 0;
+		snprintf(new_cover_path, NAME_MAX, "%s/%s%s", cover_folder, game_name, GetCoverExtensionFromType(IT_PVR));
+		image_type = IT_PVR;
+	}
+	else
+	{
+		image_type = is_alpha ? IT_PNG : IT_JPG;
+		snprintf(new_cover_path, NAME_MAX, "%s/%s%s", cover_folder, game_name, GetCoverExtensionFromType(image_type));
+	}
 
-		for (int16 imenu = 2; imenu <= MAX_MENU; imenu++)
-		{
-			if ((optimize_to_64 && imenu == MT_IMAGE_TEXT_64_5X2) || (optimize_to_128 && imenu == MT_IMAGE_128_4X3))
-			{
-				memset(cover_folder, 0, NAME_MAX);
-				memset(new_cover_path, 0, NAME_MAX);
-
-				image_size = (imenu == MT_IMAGE_TEXT_64_5X2 ? 64 : 128);
-
-				snprintf(cover_folder, NAME_MAX, "%s%s", GetCoversPath(menu_data.current_dev), GetCoverFolder(imenu));
-				if (DirExists(cover_folder) == 0)
-				{
-					fs_mkdir(cover_folder);
-				}
-
-				snprintf(new_cover_path, NAME_MAX, "%s/%s%s", cover_folder, game_name, is_alpha ? GetCoverExtensionFromType(IT_PNG) : GetCoverExtensionFromType(IT_JPG));
-				if (copy_image_memory_to_file(img, new_cover_path, true, image_size, image_size))
-				{
-					CleanCoverType(game_index, imenu);
-					SetCoverType(game_index, imenu, is_alpha ? IT_PNG : IT_JPG);
-					menu_data.games_array[game_index].exists_cover[imenu - 1] = SC_EXISTS;
-				}
-			}
-		}
+	if (!FileExists(new_cover_path) && copy_image_memory_to_file(img, new_cover_path, true, image_size, image_size))
+	{
+		CleanCoverType(game_index, menu_type);
+		SetCoverType(game_index, menu_type, image_type);
+		menu_data.games_array[game_index].exists_cover[menu_type - 1] = SC_EXISTS;
 	}
 }
 
@@ -2336,10 +2425,15 @@ bool ExtractPVRCover(int game_index)
 			SaveScannedCover();
 
 			kos_img_t kimg;
-			if (pvr_decode(pvr_path, &kimg) == 0)
+			if (pvr_decode(pvr_path, &kimg, true) == 0)
 			{
 				uint16 image_type = 0;
-				if (kimg.fmt != TFM_RGB565 && menu_data.convert_pvr_to_png)
+
+				if (menu_data.cover_to_pvr)
+				{
+					image_type = IT_PVR;
+				}
+				else if (kimg.fmt != TFM_RGB565 && menu_data.convert_pvr_to_png)
 				{
 					image_type = IT_PNG;
 				}
@@ -2354,13 +2448,15 @@ bool ExtractPVRCover(int game_index)
 					memset(game_cover_path, 0, NAME_MAX);
 					snprintf(game_cover_path, NAME_MAX, "%s/%s%s", GetCoversPath(menu_data.current_dev), game_without_extension, GetCoverExtensionFromType(image_type));
 
-					if ((image_type == IT_PNG && img_to_png(&kimg, game_cover_path, 0, 0)) || (image_type == IT_JPG && img_to_jpg(&kimg, game_cover_path, 0, 0, 100)))
+					if ((image_type == IT_PVR && img_to_pvr(&kimg, game_cover_path, 0, 0))
+						|| (image_type == IT_PNG && img_to_png(&kimg, game_cover_path, 0, 0)) 
+						|| (image_type == IT_JPG && img_to_jpg(&kimg, game_cover_path, 0, 0, 100)))
 					{
 						menu_data.games_array[game_index].exists_cover[MT_PLANE_TEXT - 1] = SC_EXISTS;
 						SetCoverType(game_index, MT_PLANE_TEXT, image_type);
 
 						menu_data.send_message_scan("Optimizing cover: %s", game_without_extension);
-						OptimizeCover(game_index, game_without_extension, &kimg, (image_type == IT_PNG));
+						OptimizeCover(game_index, game_without_extension, &kimg, (image_type != IT_JPG));
 
 						menu_data.games_array[game_index].is_pvr_cover = true;
 						extracted_cover = true;

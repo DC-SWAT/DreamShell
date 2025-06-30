@@ -215,9 +215,9 @@ int ConfigParse(isoldr_conf *cfg, const char *filename)
 		if (optname == NULL)
 			optname = strtok(buf, "=");
 		else
-			optname = strtok('\0', "=");
+			optname = strtok(NULL, "=");
 
-		value = strtok('\0', "\n");
+		value = strtok(NULL, "\n");
 
 		if (optname == NULL || value == NULL)
 			break;
@@ -325,7 +325,7 @@ const char *GetLastPart(const char *source, const char separator, int option_pat
 
 bool ContainsOnlyNumbers(const char *string)
 {
-	volatile char c;
+	char c;
 
 	if (string == NULL)
 		return false;

@@ -302,6 +302,7 @@ typedef struct AppConfigStructure
 	int initial_view;
 	int save_preset;
 	int cover_background;
+	int cover_to_pvr;
 	int change_page_with_pad;
 	int start_in_last_game;
 	char last_game[NAME_MAX];
