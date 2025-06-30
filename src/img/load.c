@@ -1,11 +1,12 @@
 /* DreamShell ##version##
    load.c
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2025 Maniac Vera
 */
 
 #include "ds.h"
 #include "img/SegaPVRImage.h"
 #include "img/load.h"
+#include "img/decode.h"
 #include <kmg/kmg.h>
 #include <zlib/zlib.h>
 
@@ -13,142 +14,10 @@
 #include <malloc.h>
 #endif
 
-static bool bPVRTwiddleTable = false;
-
 /* Open the pvr texture and send it to VRAM */
 int pvr_to_img(const char *filename, kos_img_t *rv)
 {
-	unsigned long int imageSize;
-
-	file_t pFile = fs_open(filename, O_RDONLY);
-	if (pFile == FILEHND_INVALID)
-	{
-		dbglog(DBG_INFO, "pvr_to_img: does not exist");
-		return -1;
-	}
-
-	size_t fsize = fs_total(pFile);
-	if (fsize <= 0)
-	{
-		dbglog(DBG_INFO, "pvr_to_img: empty file");
-	}
-
-	uint8 *data = (uint8 *)memalign(32, fsize);	
-	if (data == NULL)
-	{
-		fs_close(pFile);
-		return -1;
-	}
-
-	if (fs_read(pFile, data, fsize) == -1)
-	{
-		fs_close(pFile);
-		return -1;
-	}
-
-	fs_close(pFile);
-	pFile = -1;
-
-	struct PVRTHeader pvrtHeader;
-	unsigned int offset = ReadPVRHeader(data, &pvrtHeader);
-	if (offset == 0)
-	{
-		free(data);
-		dbglog(DBG_INFO, "pvr_to_img: wrong header");
-		return -1;
-	}
-
-	enum TextureFormatMasks srcFormat = (enum TextureFormatMasks)(pvrtHeader.textureAttributes & 0xFF);
-
-	if (srcFormat != TFM_ARGB1555 && srcFormat != TFM_RGB565 && srcFormat != TFM_ARGB4444)
-	{
-		free(data);
-		dbglog(DBG_INFO, "pvr_to_img: unsupported format");
-		return -1;
-	}
-
-	imageSize = pvrtHeader.width * pvrtHeader.height * 4; // RGBA8888
-	rv->data = (unsigned char *)memalign(32, imageSize);
-
-	if (bPVRTwiddleTable == false)
-	{
-		BuildTwiddleTable();
-		bPVRTwiddleTable = true;
-	}
-
-	memset_sh4(rv->data, 0, imageSize);
-
-	if (!DecodePVR(data + offset, &pvrtHeader, rv->data))
-	{
-		free(data);
-		dbglog(DBG_INFO, "pvr_to_img: can't decode file");
-		return -1;
-	}
-	free(data);
-
-	rv->byte_count = imageSize;
-	rv->byte_count = (rv->byte_count + 31) & ~31;
-	rv->w = pvrtHeader.width;
-	rv->h = pvrtHeader.height;
-
-	uint32 dfmt = 0;	
-	switch ((pvrtHeader.textureAttributes >> 8) & 0xFF)
-	{
-		case TTM_TwiddledMipMaps: // NOT OK
-			dfmt |= PVR_TXRLOAD_FMT_TWIDDLED;
-			break;
-
-		case TTM_Twiddled: // OK
-		case TTM_TwiddledNonSquare:
-			dfmt |= PVR_TXRLOAD_FMT_TWIDDLED;
-			break;
-		
-		case TTM_VectorQuantizedMipMaps:
-			dfmt |= PVR_TXRLOAD_FMT_TWIDDLED | PVR_TXRLOAD_FMT_VQ;
-			break;
-
-		case TTM_VectorQuantized:		
-			dfmt |= PVR_TXRLOAD_FMT_TWIDDLED | PVR_TXRLOAD_FMT_VQ;
-			break;
-
-		case TTM_VectorQuantizedCustomCodeBookMipMaps:
-			dfmt |= PVR_TXRLOAD_FMT_NOTWIDDLE | PVR_TXRLOAD_FMT_VQ;
-			break;
-
-		case TTM_VectorQuantizedCustomCodeBook:
-			dfmt |= PVR_TXRLOAD_FMT_NOTWIDDLE | PVR_TXRLOAD_FMT_VQ;
-			break;
-			
-		case TTM_Raw:
-			dfmt |= PVR_TXRFMT_STRIDE;
-			break;
-		
-		case TTM_RawNonSquare: // OK
-			dfmt |= PVR_TXRFMT_NONE;
-			break;
-
-		default:
-			dfmt |= PVR_TXRFMT_NONE;
-			break;
-	}
-
-	dfmt = 0;
-	switch (srcFormat)
-	{
-		case TFM_ARGB1555:
-			rv->fmt = KOS_IMG_FMT(KOS_IMG_FMT_ARGB1555, dfmt);
-			break;
-
-		case TFM_RGB565:
-			rv->fmt = KOS_IMG_FMT(KOS_IMG_FMT_RGB565, dfmt);
-			break;
-
-		default:
-			rv->fmt = KOS_IMG_FMT(KOS_IMG_FMT_ARGB4444, dfmt);
-			break;
-	}
-
-	return 0;
+	return pvr_decode(filename, rv, true);
 }
 
 int gzip_kmg_to_img(const char * fn, kos_img_t * rv) {
