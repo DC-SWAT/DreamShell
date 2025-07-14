@@ -35,6 +35,10 @@ typedef int			mutex_t;
 #define FILEHND_INVALID -1
 #define MAX_FN_LEN 256
 
+#ifndef NAME_MAX
+#define NAME_MAX 256
+#endif
+
 /** \brief  Get the FAD address of a TOC entry.
     \param  n               The actual entry from the TOC to look at.
     \return                 The FAD of the entry.
@@ -64,6 +68,8 @@ typedef int			mutex_t;
 #define TRACK_FLAG_DATA      0x40 /* Data track */
 #define TRACK_FLAG_FOURCHAN  0x80 /* 4-channel audio */
 
+#define DBG_DEBUG	0
+
 typedef struct {
     uint32_t  entry[99];          /**< \brief TOC space for 99 tracks */
     uint32_t  first;              /**< \brief Point A0 information (1st track) */
@@ -82,6 +88,7 @@ typedef struct {
 #define memset_sh4		memset
 #define memmove_sh4		memmove
 #define fs_total(fd)	lseek(fd, 0, SEEK_CUR)
+#define dbglog(level, fmt, args...) printf(fmt, ##args)
 
 char *getFilePath(const char *file);
 uint32_t FileSize(const char *fn);

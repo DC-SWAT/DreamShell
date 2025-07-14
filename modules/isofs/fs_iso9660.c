@@ -1472,7 +1472,7 @@ int virt_iso_fcntl(int fd, int cmd, va_list ap) {
 		errno = EBADF;
 		return -1;
 	}
-
+#ifndef __WIN32
 	switch(cmd) {
 		case F_GETFL:
 			rv = O_RDONLY;
@@ -1491,7 +1491,7 @@ int virt_iso_fcntl(int fd, int cmd, va_list ap) {
 		default:
 			errno = EINVAL;
 	}
-
+#endif
 	return rv;
 }
 
@@ -1861,12 +1861,14 @@ int fs_iso_init(const char *filename) {
 								, S_IRUSR | S_IWUSR);
 
 	if(fd < 0) {
+		ds_printf("ERROR: can't open %s\n", filename);
 		return -1;
 	}
 	
 	ifs = (isofs_t*) malloc(sizeof(isofs_t));
 
 	if(ifs == NULL) {
+		ds_printf("ERROR: can't allocate memory for ifs\n");
 		close(fd);
 		return -1;
 	}
