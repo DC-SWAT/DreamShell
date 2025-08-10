@@ -14,14 +14,18 @@
 #include <kos/regfield.h>
 // #include <kos/thread.h>
 #include <stdint.h>
+#include <stdarg.h>
+#include <stdio.h>
 // #include <stdlib.h>
 
-/* Midifications for ISO Loader */
+/* Modifications for ISO Loader */
 #include <main.h>
 #include "sci.h"
 
 #ifdef LOG
-void dbglog(int level, const char *fmt, ...) {
+#undef dbglog
+static inline void sci_dbglog(int level, const char *fmt, ...) {
+    (void)level;
     va_list args;
     char log_buff[128];
 
@@ -30,11 +34,11 @@ void dbglog(int level, const char *fmt, ...) {
     va_end(args);
 
     LOGF(log_buff);
-
-    (void)level;
 }
+#define dbglog(level, ...) sci_dbglog(level, __VA_ARGS__)
 #else
-#define dbglog(...)
+#undef dbglog
+#define dbglog(...) do { } while(0)
 #endif
 /* End of modifications for ISO Loader */
 
