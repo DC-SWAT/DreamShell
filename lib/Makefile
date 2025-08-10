@@ -8,7 +8,7 @@ _SUBDIRS = libcfg/src libparallax SDL_rtf \
 	lua SDL SDL_gfx SDL_image SDL_ttf \
 	libtsunami fatfs/fatfs
 
-_SUBDIRS_CLEAN = $(_SUBDIRS) freetype mxml fatfs/fatfs
+_SUBDIRS_CLEAN = $(_SUBDIRS) freetype mxml
 
 all: build_freetype build_mxml $(patsubst %, _dir_%, $(_SUBDIRS))
 
@@ -27,10 +27,10 @@ $(patsubst %, _install_dir_%, $(_SUBDIRS)):
 
 build_freetype:
 	cd freetype/builds/unix && ./conf.sh
-	$(MAKE) -C freetype
+	$(MAKE) -C freetype -j8
 	cp ./freetype/objs/.libs/libfreetype.a libfreetype_2.4.4.a
 
 build_mxml:
 	cd ./mxml && ./conf.sh
-	$(MAKE) -C mxml libmxml.a
+	$(MAKE) -C mxml libmxml.a -j8
 	mv mxml/libmxml.a libmxml.a

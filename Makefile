@@ -237,7 +237,7 @@ update-build:
 	@git fetch && git checkout origin/master
 	@git submodule update --init --recursive
 	@echo Fetching and build KallistiOS from GitHub...
-	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt` && make clean && make
+	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt` && make clean && make -j8
 	@echo Fetching and build kos-ports from GitHub...
 	@mv include include_
 	@cd $(KOS_BASE)/../kos-ports && git fetch && git checkout origin/master && ./utils/build-all.sh
