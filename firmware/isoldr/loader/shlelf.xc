@@ -2,7 +2,7 @@
  * DreamShell ISO Loader
  * Link script for loader binary
  * Script for -z combreloc: combine and sort reloc sections
- * (c)2009-2017 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017, 2025 SWAT <http://www.dc-swat.ru>
  */
 
 OUTPUT_FORMAT("elf32-shl", "elf32-shl",
@@ -87,18 +87,14 @@ SECTIONS
     *(.sdata2 .sdata2.* .gnu.linkonce.s2.*)
   }
   .sbss2          : { *(.sbss2 .sbss2.* .gnu.linkonce.sb2.*) }
-  .eh_frame_hdr : { *(.eh_frame_hdr) }
-  .eh_frame       : ONLY_IF_RO { KEEP (*(.eh_frame)) }
-  .gcc_except_table   : ONLY_IF_RO { *(.gcc_except_table .gcc_except_table.*) }
+  /* Drop EH/unwind early to avoid pulling them into RO segment */
   /* Adjust the address for the data segment.  We want to adjust up to
      the same address within the page on the next page up.  */
   . = ALIGN(32) + (. & (32 - 1));
-  /* Exception handling  */
-  .eh_frame       : ONLY_IF_RW { KEEP (*(.eh_frame)) }
-  .gcc_except_table   : ONLY_IF_RW { *(.gcc_except_table .gcc_except_table.*) }
+  /* Exception handling dropped */
   /* Thread Local Storage sections  */
   .tdata	  : { *(.tdata .tdata.* .gnu.linkonce.td.*) }
-  .tbss		  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
+  .tbss	(NOLOAD)	  : { *(.tbss .tbss.* .gnu.linkonce.tb.*) *(.tcommon) }
   .preinit_array     :
   {
     PROVIDE_HIDDEN (__preinit_array_start = .);
@@ -230,5 +226,14 @@ SECTIONS
   .debug_pubtypes 0 : { *(.debug_pubtypes) }
   .debug_ranges   0 : { *(.debug_ranges) }
   .gnu.attributes 0 : { KEEP (*(.gnu.attributes)) }
-  /DISCARD/ : { *(.note.GNU-stack) *(.gnu_debuglink) }
+  /DISCARD/ : {
+    *(.note.GNU-stack)
+    *(.gnu_debuglink)
+    *(.eh_frame)
+    *(.eh_frame_hdr)
+    *(.gcc_except_table)
+    *(.gcc_except_table.*)
+    *(.note*)
+    *(.comment)
+  }
 }
