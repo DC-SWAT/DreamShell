@@ -709,13 +709,17 @@ static void g1_lba28_chain_next(void) {
 	OUT32(G1_ATA_DMA_LENGTH, nb_sectors * 512);
 	OUT8(G1_ATA_DMA_DIRECTION, !(g1_lba28_cmd == ATA_CMD_WRITE_DMA));
 
+    g1_ata_wait_nbsy();
+    g1_ata_wait_drdy();
+
 	OUT8(G1_ATA_COMMAND_REG, g1_lba28_cmd);
 
 	if (nb_sectors <= 256) {
 		g1_dma_set_irq_mask(1);
 	}
 
-	OUT8(G1_ATA_DMA_STATUS, 1);
+    OUT8(G1_ATA_DMA_ENABLE, 1);
+    OUT8(G1_ATA_DMA_STATUS, 1);
 }
 
 static void g1_ata_set_sector_and_count(u64 sector, u32 count, u8 drive, int lba28) {
@@ -743,7 +747,9 @@ static void g1_ata_set_sector_and_count(u64 sector, u32 count, u8 drive, int lba
 }
 
 static inline int can_use_lba28(u64 sector, u32 count) {
-	return ((sector + count) < 0x0FFFFFFF) && (count <= 256);
+    if (!count) return 1;
+    u64 end = sector + (u64)count - 1;
+    return (count <= 256) && (end <= 0x0FFFFFFF);
 }
 
 static s32 g1_ata_access(struct ide_req *req) {
