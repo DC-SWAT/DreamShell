@@ -192,7 +192,7 @@ build: $(TARGET)
 	cd $(DS_BASE)/modules && make
 	cd $(DS_BASE)/commands && make
 	cd $(DS_BASE)/applications && make
-	cd $(DS_BASE)/firmware/isoldr && make && make install
+	cd $(DS_BASE)/firmware/isoldr && make -j8 && make install
 	cd $(DS_BASE)/firmware/bootloader && make && make install
 #   cd $(DS_BASE)/firmware/aica && make && make install
 

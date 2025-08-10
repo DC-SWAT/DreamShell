@@ -1,7 +1,7 @@
 #
 # DreamShell ISO Loader
 # GD-ROM/CD-ROM (SPI/ATAPI)
-# (c) 2009-2020 SWAT
+# (c) 2009-2025 SWAT
 #
 
 include Makefile.cfg
@@ -9,11 +9,10 @@ include Makefile.cfg
 TARGETCFLAGS += $(CD_CFLAGS)
 LOBJECTS += $(CD)
 
-all: rm-elf $(BUILD)/cd.bin
+NAME ?= cd
 
-rm-elf:
-	rm -f $(LOBJECTS) $(BUILD)/cd.bin $(BUILD)/cd.elf
+all: $(BUILD)/$(NAME).bin
 
-$(BUILD)/cd.elf: $(LOBJECTS)
-	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(LOBJECTS) $(LIBS)
+$(BUILD)/$(NAME).elf: $(OBJECTS)
+	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(OBJECTS) $(LIBS)
 	$(TARGETSIZE) $@

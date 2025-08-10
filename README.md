@@ -107,7 +107,7 @@ cd ${KOS_BASE}/ds/applications && make
 ##### Firmwares only
 ```console
 cd ${KOS_BASE}/ds/firmware/bootloader && make && make release
-cd ${KOS_BASE}/ds/firmware/isoldr && make && make install
+cd ${KOS_BASE}/ds/firmware/isoldr && make -j8 && make install
 ```
 
 ### Running

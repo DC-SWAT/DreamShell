@@ -1,7 +1,7 @@
 #
 # DreamShell ISO Loader
 # SD Card
-# (c) 2009-2020 SWAT
+# (c) 2009-2025 SWAT
 #
 
 include Makefile.cfg
@@ -9,11 +9,10 @@ include Makefile.cfg
 TARGETCFLAGS += $(SD_CFLAGS)
 LOBJECTS += $(SD)
 
-all: rm-elf $(BUILD)/sd.bin
+NAME ?= sd
 
-rm-elf:
-	rm -f $(LOBJECTS) $(BUILD)/sd.bin $(BUILD)/sd.elf
+all: $(BUILD)/$(NAME).bin
 
-$(BUILD)/sd.elf: $(LOBJECTS)
-	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(LOBJECTS) $(LIBS)
+$(BUILD)/$(NAME).elf: $(OBJECTS)
+	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(OBJECTS) $(LIBS)
 	$(TARGETSIZE) $@

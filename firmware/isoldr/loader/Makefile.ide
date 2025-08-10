@@ -1,7 +1,7 @@
 #
 # DreamShell ISO Loader
 # G1-ATA (IDE)
-# (c) 2009-2020 SWAT
+# (c) 2009-2025 SWAT
 #
 
 include Makefile.cfg
@@ -9,11 +9,10 @@ include Makefile.cfg
 TARGETCFLAGS += $(IDE_CFLAGS)
 LOBJECTS += $(IDE)
 
-all: rm-elf $(BUILD)/ide.bin
+NAME ?= ide
 
-rm-elf:
-	rm -f $(LOBJECTS) $(BUILD)/ide.bin $(BUILD)/ide.elf
+all: $(BUILD)/$(NAME).bin
 
-$(BUILD)/ide.elf: $(LOBJECTS)
-	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(LOBJECTS) $(LIBS)
+$(BUILD)/$(NAME).elf: $(OBJECTS)
+	$(TARGETCC) $(TARGETCFLAGS) $(TARGETLDFLAGS) -o $@ $(OBJECTS) $(LIBS)
 	$(TARGETSIZE) $@
