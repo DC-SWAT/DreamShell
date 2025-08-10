@@ -60,7 +60,7 @@ static int sndoggvorbis_queue_enabled;		/* wait in STATUS_QUEUED? */
 static volatile int sndoggvorbis_loop;		/* current looping mode */
 static volatile int sndoggvorbis_status;	/* current status of thread */
 static volatile int sndoggvorbis_bitrateint;	/* bitrateinterval in calls */
-static semaphore_t *sndoggvorbis_halt_sem;	/* semaphore to pause thread */
+static semaphore_t sndoggvorbis_halt_sem = SEM_INITIALIZER(0);	/* semaphore to pause thread */
 static char sndoggvorbis_lastfilename[256];	/* filename of last played file */
 static int current_section;
 static int sndoggvorbis_vol = 240;
@@ -89,7 +89,7 @@ void sndoggvorbis_queue_go() {
 
 	/* Tell it to go */
 	sndoggvorbis_status = STATUS_STARTING;
-	sem_signal(sndoggvorbis_halt_sem);
+    sem_signal(&sndoggvorbis_halt_sem);
 }
 
 /* getter and setter functions for information access 
@@ -308,7 +308,7 @@ void sndoggvorbis_thread()
 				
 			case STATUS_READY:
 				printf("oggthread: waiting on semaphore\n");
-				sem_wait(sndoggvorbis_halt_sem);
+                sem_wait(&sndoggvorbis_halt_sem);
 				printf("oggthread: released from semaphore (status=%d)\n", sndoggvorbis_status);
 				break;
 				
@@ -328,7 +328,7 @@ void sndoggvorbis_thread()
 				
 			case STATUS_QUEUED:
 				printf("oggthread: queue waiting on semaphore\n");
-				sem_wait(sndoggvorbis_halt_sem);
+                sem_wait(&sndoggvorbis_halt_sem);
 				printf("oggthread: queue released from semaphore\n");
 				break;
 
@@ -491,7 +491,7 @@ int sndoggvorbis_start_fd(FILE * fd, int loop)
 		sndoggvorbis_status = STATUS_QUEUEING;
 	else
 		sndoggvorbis_status = STATUS_STARTING;
-	sem_signal(sndoggvorbis_halt_sem);
+    sem_signal(&sndoggvorbis_halt_sem);
 
 	/* Grab all standard comments from the file
 	 * (based on v-comment.html found in OggVorbis source packages
@@ -543,7 +543,7 @@ void sndoggvorbis_thd_quit()
 	sndoggvorbis_status = STATUS_QUIT;
 
 	/* In case player is READY -> tell it to continue */
-	sem_signal(sndoggvorbis_halt_sem);
+	sem_signal(&sndoggvorbis_halt_sem);
         while (sndoggvorbis_status != STATUS_ZOMBIE)
                 thd_pass();
         // snd_stream_stop();
@@ -568,7 +568,7 @@ void sndoggvorbis_mainloop()
 {
 	/* create a semaphore for thread to halt on
 	 */
-	sndoggvorbis_halt_sem = sem_create(0);
+    sem_init(&sndoggvorbis_halt_sem, 0);
 	
 	sndoggvorbis_status = STATUS_INIT;
 	sndoggvorbis_queue_enabled = 0;
@@ -584,5 +584,5 @@ void sndoggvorbis_mainloop()
 
 	/* destroy the semaphore we first created
 	 */
-	sem_destroy(sndoggvorbis_halt_sem);
+    sem_destroy(&sndoggvorbis_halt_sem);
 }

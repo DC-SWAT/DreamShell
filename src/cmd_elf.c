@@ -2,7 +2,7 @@
 
    elf.c
    Copyright (C)2000,2001,2003 Dan Potter
-   Copyright (C)2006-2014 SWAT
+   Copyright (C)2006-2014, 2025 SWAT
 */
 
 
@@ -19,7 +19,7 @@
 #endif
 
 /* Finds a given symbol in a relocated ELF symbol table */
-static int find_sym(char *name, struct elf_sym_t* table, int tablelen) {
+static int find_sym(char *name, elf_sym_t *table, int tablelen) {
 	int i;
 	for (i=0; i<tablelen; i++) {
 		if (!strcmp((char*)table[i].name, name))
@@ -37,12 +37,12 @@ static int find_sym(char *name, struct elf_sym_t* table, int tablelen) {
 cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 	uint8			*img, *imgout;
 	int			sz, i, j, sect; 
-	struct elf_hdr_t	*hdr;
-	struct elf_shdr_t	*shdrs, *symtabhdr;
-	struct elf_sym_t	*symtab;
+    elf_hdr_t   *hdr;
+    elf_shdr_t  *shdrs, *symtabhdr;
+    elf_sym_t   *symtab;
 	int			symtabsize;
-	struct elf_rel_t	*reltab;
-	struct elf_rela_t	*relatab;
+    elf_rel_t   *reltab;
+    elf_rela_t  *relatab;
 	int			reltabsize;
 	char			*stringtab;
 	uint32			vma;
@@ -71,7 +71,7 @@ cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 	fs_close(fd);
 
 	/* Header is at the front */
-	hdr = (struct elf_hdr_t *)(img+0);
+    hdr = (elf_hdr_t *)(img + 0);
 	if (hdr->ident[0] != 0x7f || strncmp((const char*)hdr->ident+1, "ELF", 3)) {
 		ds_printf("DS_ERROR: File is not a valid ELF file\n");
 		hdr->ident[4] = 0;
@@ -103,7 +103,7 @@ cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 	/* Locate the string table; SH elf files ought to have
 	   two string tables, one for section names and one for object
 	   string names. We'll look for the latter. */
-	shdrs = (struct elf_shdr_t *)(img + hdr->shoff);
+    shdrs = (elf_shdr_t *)(img + hdr->shoff);
 	stringtab = NULL;
 	for (i=0; i<hdr->shnum; i++) {
 		if (shdrs[i].type == SHT_STRTAB && i != hdr->shstrndx) {
@@ -127,8 +127,8 @@ cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 		ds_printf("DS_ERROR: ELF contains no symbol table\n");
 		goto error1;
 	}
-	symtab = (struct elf_sym_t *)(img + symtabhdr->offset);
-	symtabsize = symtabhdr->size / sizeof(struct elf_sym_t);
+    symtab = (elf_sym_t *)(img + symtabhdr->offset);
+    symtabsize = symtabhdr->size / sizeof(elf_sym_t);
 
 	/* Relocate symtab entries for quick access */
 	for (i=0; i<symtabsize; i++)
@@ -212,8 +212,8 @@ cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 
 		switch (shdrs[i].type) {
 		case SHT_RELA:
-			relatab = (struct elf_rela_t *)(img + shdrs[i].offset);
-			reltabsize = shdrs[i].size / sizeof(struct elf_rela_t);
+            relatab = (elf_rela_t *)(img + shdrs[i].offset);
+            reltabsize = shdrs[i].size / sizeof(elf_rela_t);
 		
 			for (j=0; j<reltabsize; j++) {
 				int sym;
@@ -254,8 +254,8 @@ cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 			break;
 
 		case SHT_REL:
-			reltab = (struct elf_rel_t *)(img + shdrs[i].offset);
-			reltabsize = shdrs[i].size / sizeof(struct elf_rel_t);
+            reltab = (elf_rel_t *)(img + shdrs[i].offset);
+            reltabsize = shdrs[i].size / sizeof(elf_rel_t);
 		
 			for (j=0; j<reltabsize; j++) {
 				int sym, info, pcrel;

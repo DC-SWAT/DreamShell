@@ -75,9 +75,10 @@ int QueDestroy( QUEUE *pQueue) {
     CloseHandle( pQueue->qMutex);
 
 #elif defined(_arch_dreamcast)
-    sem_destroy( pQueue->qNotEmpty);
-    if( pQueue->qNotFull != NULL)
-        sem_destroy( pQueue->qNotFull);
+    sem_destroy( &pQueue->qNotEmpty);
+    if( pQueue->qNotFull.initialized ) {
+        sem_destroy( &pQueue->qNotFull);
+    }
 #else
     close( pQueue->qNotEmpty[QUEUE_PIPE_IN]);
     close( pQueue->qNotEmpty[QUEUE_PIPE_OUT]);
@@ -98,7 +99,7 @@ int _QueGet( QUEUE *pQueue, void **ppMsg) {
 #ifdef _WIN32
         ReleaseSemaphore( pQueue->qNotFull, 1, NULL);
 #elif defined(_arch_dreamcast)
-		sem_signal(pQueue->qNotFull);
+		sem_signal(&pQueue->qNotFull);
 #endif
     }
 #if !defined(_WIN32) && !defined(_arch_dreamcast)
@@ -119,7 +120,7 @@ int QueGet( QUEUE *pQueue, void **ppMsg) {
 #ifdef _WIN32
     WaitForSingleObject( pQueue->qNotEmpty, INFINITE);
 #elif defined(_arch_dreamcast)
-	sem_wait(pQueue->qNotEmpty);
+	sem_wait(&pQueue->qNotEmpty);
 #endif
 
     return( _QueGet( pQueue, ppMsg));
@@ -130,7 +131,7 @@ int QuePut( QUEUE *pQueue, void *pMsg) {
 #ifdef _WIN32
         WaitForSingleObject( pQueue->qNotFull, INFINITE);
 #elif defined(_arch_dreamcast)
-		sem_wait(pQueue->qNotFull);
+		sem_wait(&pQueue->qNotFull);
 #endif
     }
 
@@ -143,7 +144,7 @@ int QuePut( QUEUE *pQueue, void *pMsg) {
 #ifdef _WIN32
     ReleaseSemaphore( pQueue->qNotEmpty, 1, NULL);
 #elif defined(_arch_dreamcast)
-	sem_signal(pQueue->qNotEmpty);
+	sem_signal(&pQueue->qNotEmpty);
 #else
     {
         char    b;
@@ -160,7 +161,9 @@ int QueCreate( QUEUE *pQueue, int qLimit ) {
 #ifdef _WIN32
     pQueue->qNotEmpty =  CreateSemaphore( NULL, 0, 0x7fffffff, NULL);
 #elif defined(_arch_dreamcast)
-	pQueue->qNotEmpty =  sem_create(0);
+    	if (sem_init(&pQueue->qNotEmpty, 0) < 0) {
+    		return (-1);
+    	}
 #else
     if( pipe(pQueue->qNotEmpty)) {
         return( -1);
@@ -173,9 +176,13 @@ int QueCreate( QUEUE *pQueue, int qLimit ) {
         pQueue->qNotFull = NULL;
 
 #elif defined(_arch_dreamcast)
-        pQueue->qNotFull = sem_create(qLimit);
-    } else
-        pQueue->qNotFull = NULL;
+        if (sem_init(&pQueue->qNotFull, qLimit) < 0) {
+            sem_destroy(&pQueue->qNotEmpty);
+            return (-1);
+        }
+    } else {
+        pQueue->qNotFull.initialized = 0;
+    }
 #else
     } else
         pQueue->qNotFull = 0;
@@ -190,8 +197,10 @@ int QueCreate( QUEUE *pQueue, int qLimit ) {
 }
 
 long GetQueNotEmptyHandle( QUEUE *pQueue) {
-#if defined(_WIN32) || defined(_arch_dreamcast)
+#if defined(_WIN32)
     return( ( long) ( pQueue->qNotEmpty));
+#elif defined(_arch_dreamcast)
+    return( ( long) ( &pQueue->qNotEmpty));
 #else
     return( ( long) ( pQueue->qNotEmpty[QUEUE_PIPE_IN]));
 #endif

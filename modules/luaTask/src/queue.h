@@ -31,8 +31,8 @@ typedef struct _queue
      void *     qNotEmpty;
      void *     qNotFull;
 #elif defined(_arch_dreamcast)
-     semaphore_t *     qNotEmpty;
-     semaphore_t *     qNotFull;
+     semaphore_t       qNotEmpty;
+     semaphore_t       qNotFull;
 #else
      int        qNotEmpty[2];
      int        qNotFull;

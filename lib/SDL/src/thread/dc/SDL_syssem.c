@@ -93,7 +93,21 @@ struct SDL_semaphore
 
 SDL_sem *SDL_CreateSemaphore(Uint32 initial_value)
 {
-	return (SDL_sem *)sem_create(initial_value);
+    SDL_sem *sem;
+
+    sem = (SDL_sem *)malloc(sizeof(*sem));
+    if (!sem) {
+        SDL_OutOfMemory();
+        return NULL;
+    }
+
+    if (sem_init(&sem->sem, (int)initial_value) < 0) {
+        free(sem);
+        SDL_SetError("Failed to initialize semaphore");
+        return NULL;
+    }
+
+    return sem;
 }
 
 /* WARNING:
@@ -107,6 +121,7 @@ void SDL_DestroySemaphore(SDL_sem *sem)
 	}
 
 	sem_destroy(&sem->sem);
+    free(sem);
 }
 
 int SDL_SemTryWait(SDL_sem *sem)
