@@ -44,7 +44,7 @@ git submodule update --init --recursive
 sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
 cd /usr/local/dc/kos/kos/utils/dc-chain
-cp Makefile.default.cfg Makefile.cfg
+cp Makefile.dreamcast.cfg Makefile.cfg
 make
 ```
 ##### SDK
