@@ -15,7 +15,7 @@ VER_MAJOR = 4
 VER_MINOR = 0
 VER_MICRO = 3
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
-VER_BUILD = 0x11
+VER_BUILD = 0x12
 
 BUILD_TYPE_BASE = $(if $(filter 0x3%,$(VER_BUILD)),Release,$(if $(filter 0x2%,$(VER_BUILD)),RC,$(if $(filter 0x1%,$(VER_BUILD)),Beta,$(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
 BUILD_NUM = $(lastword $(subst 0x2,,$(subst 0x1,,$(subst 0x0,,$(subst 0x3,,$(VER_BUILD))))))
@@ -245,11 +245,22 @@ update-build:
 	@echo Building DreamShell...
 	@make clean-all && make build
 
+build-ports:
+	@echo Fetching and rebuilding kos-ports from GitHub...
+	@mv include include_
+	@cd $(KOS_BASE)/../kos-ports && git fetch && git checkout origin/master
+	@echo Uninstalling previous kos-ports...
+	@$(KOS_BASE)/../kos-ports/utils/uninstall-all.sh
+	@echo Building new kos-ports...
+	@$(KOS_BASE)/../kos-ports/utils/build-all.sh
+	@mv include_ include
+
 toolchain:
 	@cp $(DS_SDK)/toolchain/environ.sh $(KOS_BASE)/environ.sh
 	@cp $(DS_SDK)/toolchain/patches/*.diff $(KOS_BASE)/utils/dc-chain/patches
+	@cp $(DS_SDK)/toolchain/Makefile.cfg $(KOS_BASE)/utils/dc-chain/Makefile.cfg
 	@source $(KOS_BASE)/environ.sh
-	@cd $(KOS_BASE)/utils/dc-chain && cp Makefile.default.cfg Makefile.cfg && make
+	@cd $(KOS_BASE)/utils/dc-chain && make
 
 $(TARGET): libs $(TARGET_BIN) make-build
 

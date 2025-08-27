@@ -43,9 +43,9 @@ git submodule update --init --recursive
 ```console
 sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
-cd /usr/local/dc/kos/kos/utils/dc-chain
-cp Makefile.dreamcast.cfg Makefile.cfg
-make
+cd /usr/local/dc/kos/kos
+cp ./ds/sdk/toolchain/Makefile.cfg ./utils/dc-chain/Makefile.cfg
+cd utils/dc-chain && make
 ```
 ##### SDK
 ```console
@@ -78,13 +78,17 @@ make clean-all
 ```console
 make release
 ```
-##### Update code from GitHub
+##### Update all code from GitHub
 ```console
 make update
 ```
-##### Update code from GitHub and re-build
+##### Update all code from GitHub and re-build
 ```console
 make update-build
+```
+##### Update and re-build kos-ports
+```console
+make build-ports
 ```
 ##### Re-build toochain (if updated)
 ```console
