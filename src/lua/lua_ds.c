@@ -378,8 +378,6 @@ static int dir_iter_factory (lua_State *L) {
 }
 
 
-
-
 /*
 ** Creates directory metatable.
 */
@@ -391,6 +389,125 @@ static int dir_create_meta (lua_State *L) {
 	lua_settable (L, -3);
 
 	return 1;
+}
+
+
+static int l_copy_file(lua_State *L) {
+    const char *src_path = luaL_checkstring(L, 1);
+    const char *dst_path = luaL_checkstring(L, 2);
+    int callback_ref = LUA_NOREF;
+    void *buffer = NULL;
+    file_t src_fd = FILEHND_INVALID, dst_fd = FILEHND_INVALID;
+    ssize_t bytes_read, total_bytes_written = 0;
+    int result = 0;
+    size_t buffer_size = 65536;
+    size_t total_size = 0;
+    const char *err_msg = NULL;
+
+    if (lua_isfunction(L, 3)) {
+        lua_pushvalue(L, 3);
+        callback_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+
+    if (lua_isnumber(L, 4)) {
+        buffer_size = lua_tointeger(L, 4);
+    }
+
+    src_fd = fs_open(src_path, O_RDONLY);
+    if (src_fd == FILEHND_INVALID) {
+        err_msg = "Cannot open source file";
+        goto final_return;
+    }
+
+    total_size = fs_total(src_fd);
+
+    while (buffer_size >= 32768) {
+        buffer = aligned_alloc(32, buffer_size);
+        if (buffer) break;
+        buffer_size /= 2;
+    }
+
+    if (!buffer) {
+        err_msg = "Out of memory";
+        goto final_return;
+    }
+
+    dst_fd = fs_open(dst_path, O_WRONLY);
+    if (dst_fd == FILEHND_INVALID) {
+        err_msg = "Cannot open destination file";
+        goto final_return;
+    }
+
+    while (total_bytes_written < total_size) {
+        bytes_read = fs_read(src_fd, buffer, buffer_size);
+        if (bytes_read <= 0) {
+            err_msg = "File read error";
+            goto final_return;
+        }
+
+        ssize_t bytes_written = fs_write(dst_fd, buffer, bytes_read);
+        if (bytes_written != bytes_read) {
+            err_msg = "File write error";
+            goto final_return;
+        }
+
+        total_bytes_written += bytes_written;
+
+        if (callback_ref != LUA_NOREF) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, callback_ref);
+            lua_pushnumber(L, total_bytes_written);
+            if (lua_pcall(L, 1, 1, 0) != 0) {
+                err_msg = "Callback error";
+                goto final_return;
+            }
+            if (lua_isboolean(L, -1) && !lua_toboolean(L, -1)) {
+                fs_close(dst_fd);
+                fs_unlink(dst_path); 
+                dst_fd = FILEHND_INVALID;
+                err_msg = "Cancelled by user";
+                goto final_return;
+            }
+            lua_pop(L, 1);
+        }
+    }
+
+    if (total_bytes_written == total_size) {
+        result = 1;
+    }
+	else {
+        err_msg = "File size mismatch";
+    }
+
+final_return:
+    if (dst_fd != FILEHND_INVALID) fs_close(dst_fd);
+    if (src_fd != FILEHND_INVALID) fs_close(src_fd);
+    if (buffer) free(buffer);
+    luaL_unref(L, LUA_REGISTRYINDEX, callback_ref);
+
+    if (result) {
+        lua_pushboolean(L, 1);
+        return 1;
+    }
+	else {
+        lua_pushnil(L);
+        lua_pushstring(L, err_msg ? err_msg : "Unknown copy error");
+        return 2;
+    }
+}
+
+
+static int l_fs_rename(lua_State *L) {
+    const char *old_path = luaL_checkstring(L, 1);
+    const char *new_path = luaL_checkstring(L, 2);
+
+    if (fs_rename(old_path, new_path) < 0) {
+        lua_pushnil(L);
+        lua_pushstring(L, "Cannot rename path");
+        return 2;
+    }
+
+    lua_pushboolean(L, 1);
+    return 1;
 }
 
 
@@ -409,6 +526,8 @@ static const struct luaL_reg fs_lib[] = {
 	{"dir", dir_iter_factory},
 	{"mkdir", make_dir},
 	{"rmdir", remove_dir},
+	{"copyfile", l_copy_file},
+	{"rename", l_fs_rename},
 	{NULL, NULL},
 };
 
