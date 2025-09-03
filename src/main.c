@@ -181,7 +181,7 @@ int InitDS() {
 
 #ifdef DS_DEBUG
 	uint64 t_start = timer_ms_gettime64();
-	dbglog_set_level(DBG_KDEBUG);
+	dbglog_set_level(DBG_DEBUG);
 #endif
 
 	if(!emu) {
