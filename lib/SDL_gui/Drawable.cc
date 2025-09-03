@@ -4,6 +4,11 @@
 
 #include "SDL_gui.h"
 
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+}
+
 
 static int Inside(int x, int y, SDL_Rect *r)
 {
@@ -307,14 +312,18 @@ void GUI_Drawable::DoUpdate(int force)
 		force = 1;
 	}
 	Update(force);
-	flags &= ~WIDGET_CHANGED;
+	if(flags & WIDGET_CHANGED) {
+		flags &= ~WIDGET_CHANGED;
+	}
 }
 
 /* mark as changed so it will be drawn in the next update */
 
 void GUI_Drawable::MarkChanged()
 {
+	LockVideo();
 	flags |= WIDGET_CHANGED;
+	UnlockVideo();
 }
 
 /* tile an image over an area on a widget */

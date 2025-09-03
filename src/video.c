@@ -338,7 +338,7 @@ int VideoIsLocked() {
 }
 
 int VideoMustLock() {
-	return (video_inited && video_thd != thd_get_current());
+	return video_inited;
 }
 
 void LockVideo() { 
@@ -476,7 +476,7 @@ int InitVideo(int w, int h, int bpp) {
 		video_dma = 0;
 	}
 
-	mutex_init((mutex_t *)&video_mutex, MUTEX_TYPE_NORMAL);
+	mutex_init(&video_mutex, MUTEX_TYPE_RECURSIVE);
 	return 1; 
 }
 
