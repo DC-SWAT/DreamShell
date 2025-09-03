@@ -218,6 +218,10 @@ function FileManager:ModalClick(s)
 		else
 			return self:ShowModal("alert", "Unknown command", nil);
 		end 
+
+		if self.modal.mode == "alert" then
+			return;
+		end
 	end
 	
 	self:HideModal();
@@ -523,14 +527,14 @@ function FileManager:deletePath()
 		Sleep(50);
 
 		if not self:deletePathRecursive(f.file) then
-			self:ShowModal("alert", "Error deleting directory: " .. (self.delete_error or "unknown"));
+			self:ShowModal("alert", "Error deleting: " .. (self.delete_error or "unknown"));
 			return;
 		end
 
 	else
 		local ok, err = os.remove(f.file);
 		if not ok then
-			self:ShowModal("alert", "Error deleting file: " .. (err or "unknown"));
+			self:ShowModal("alert", "Error deleting: " .. (err or "unknown"));
 			return;
 		end
 	end
