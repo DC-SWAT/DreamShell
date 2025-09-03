@@ -222,9 +222,8 @@ static void joyUpdate(SDL_Joystick *joystick) {
 		count_cond = !(count & 0x1);
 		if (cond->joyx!=0 || cond->joyy!=0 || count_cond) {
 			{
-				register unsigned s= __sdl_dc_mouse_shift+1;
-				mx = (cond->joyx) >> s;
-				my = (cond->joyy) >> s;
+				mx = cond->joyx / 6;
+				my = cond->joyy / 6;
 			}
 			
 			if (count_cond) {
@@ -245,29 +244,29 @@ static void joyUpdate(SDL_Joystick *joystick) {
 
 	//Check Joystick Axis P1
 	//"joyx", "joyy", "joy2x", and "joy2y" are all zero based
-	if (cond->joyx != prev_joyx) {
+	if (cond->joyx != prev_joyx || cond->joyx != 0) {
 		SDL_PrivateJoystickAxis(joystick, 0, cond->joyx);
 	}
 	
-	if (cond->joyy != prev_joyy) {
+	if (cond->joyy != prev_joyy || cond->joyy != 0) {
 		SDL_PrivateJoystickAxis(joystick, 1, cond->joyy);
 	}
 	
 	//Check L and R triggers
 	//In this case, do not flip the PRESSED/RELEASED!
-	if (cond->rtrig != prev_rtrig) {
+	if (cond->rtrig != prev_rtrig || cond->rtrig != 0) {
 		SDL_PrivateJoystickAxis(joystick, 2, cond->rtrig);
 	}
 	
-	if (cond->ltrig != prev_ltrig) {
+	if (cond->ltrig != prev_ltrig || cond->ltrig != 0) {
 		SDL_PrivateJoystickAxis(joystick, 3, cond->ltrig);
 	}
 	//Check Joystick Axis P2
-	if (cond->joy2x != prev_joy2x) {
+	if (cond->joy2x != prev_joy2x || cond->joy2x != 0) {
 		SDL_PrivateJoystickAxis(joystick, 4, cond->joy2x);
 	}
 	
-	if (cond->joy2y != prev_joy2y) {
+	if (cond->joy2y != prev_joy2y || cond->joy2y != 0) {
 		SDL_PrivateJoystickAxis(joystick, 5, cond->joy2y);
 	}
 

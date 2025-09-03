@@ -87,7 +87,7 @@ void SDL_DC_Default60Hz(SDL_bool value)
 #include <GL/glu.h>
 #endif
 
-unsigned int __sdl_dc_mouse_shift=1;
+// unsigned int __sdl_dc_mouse_shift=1;
 
 
 /* Initialization/Query functions */
