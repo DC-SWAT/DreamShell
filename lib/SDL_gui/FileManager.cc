@@ -5,9 +5,8 @@
 
 #include "SDL_gui.h"
 
-extern "C"
-{
-void SDL_DC_EmulateMouse(SDL_bool value);
+extern "C" {
+	void SDL_DC_EmulateMouse(SDL_bool value);
 }
 
 GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int y, int w, int h)
@@ -21,10 +20,12 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	item_area.x = 0;
 	item_area.y = 0;
 	
-	item_normal = new GUI_Surface("normal", SDL_HWSURFACE, item_area.w, item_area.h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	item_highlight = new GUI_Surface("highlight", SDL_HWSURFACE, item_area.w, item_area.h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	item_disabled = new GUI_Surface("disabled", SDL_HWSURFACE, item_area.w, item_area.h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	item_pressed = new GUI_Surface("pressed", SDL_HWSURFACE, item_area.w, item_area.h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
+	
+	item_normal = new GUI_Surface("normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	item_highlight = new GUI_Surface("highlight", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	item_disabled = new GUI_Surface("disabled", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	item_pressed = new GUI_Surface("pressed", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 
 	item_normal->Fill(NULL, 0xFF000000);
 	item_highlight->Fill(NULL, 0x00FFFFFF);
@@ -137,7 +138,12 @@ void GUI_FileManager::AdjustScrollbar(GUI_Object * sender) {
 
 	int scroll_pos = scrollbar->GetVerticalPosition();
 	int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-	panel->SetYOffset(scroll_pos * ((cont_height / scroll_height) + 1));
+	
+	if(scroll_height > 0) {
+		panel->SetYOffset((int)(scroll_pos * (float)cont_height / scroll_height));
+	} else {
+		panel->SetYOffset(0);
+	}
 
 	if (scroll_pos <= 0) {
 		button_up->SetEnabled(0);
@@ -150,7 +156,6 @@ void GUI_FileManager::AdjustScrollbar(GUI_Object * sender) {
 		button_down->SetEnabled(1);
 	}
 
-	thd_sleep(100);
 }
 
 void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
@@ -193,7 +198,12 @@ void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 	}
 
 	scrollbar->SetVerticalPosition(scroll_pos);
-	panel->SetYOffset(scroll_pos * ((cont_height / scroll_height) + 1));
+
+	if(scroll_height > 0) {
+		panel->SetYOffset((int)(scroll_pos * (float)cont_height / scroll_height));
+	} else {
+		panel->SetYOffset(0);
+	}
 }
 
 
@@ -274,7 +284,11 @@ void GUI_FileManager::Scan()
 	dirent_t *ent;
 	dirent_t *sorts = (dirent_t *) malloc(sizeof(dirent_t));
 	int n = 0;
-	
+
+	if(sorts == NULL) {
+		return;
+	}
+
 	f = fs_open(cur_path, O_RDONLY | O_DIR);
 	
 	if(f == FILEHND_INVALID) 
@@ -283,7 +297,7 @@ void GUI_FileManager::Scan()
 		free(sorts);
 		return;
 	}
-	
+
 	panel->RemoveAllWidgets();
 	panel->SetYOffset(0);
 
@@ -324,10 +338,10 @@ void GUI_FileManager::Scan()
 			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
 		}
 	}
+	rescan = 0;
 
 	free(sorts);
 	fs_close(f);
-	rescan = 0;
 }
 
 void GUI_FileManager::ReScan() {
@@ -697,12 +711,18 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 				case 1: // Analog joystick
 					if(flags & WIDGET_PRESSED) {
 
+						int val = event->jaxis.value;
+
+						int sleep_time = 158 - abs(val);
+						if(sleep_time > 0) {
+							thd_sleep(sleep_time);
+						}
+
 						int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
 						int sp_old = scrollbar->GetVerticalPosition();
 						int sp = sp_old;
-						int val = event->jaxis.value;
 						int step = (scroll_height / panel->GetWidgetCount());
-						step += abs(val) / 8;
+						step += (abs(val) - 16) / 10;
 
 						if (val < 0) {
 							sp -= step;
