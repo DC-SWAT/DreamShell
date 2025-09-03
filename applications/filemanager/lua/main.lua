@@ -1,7 +1,7 @@
 -------------------------------------------
 --                                       --
 -- @name:    File Manager                --
--- @version: 0.7.0                       --
+-- @version: 0.8.0                       --
 -- @author:  SWAT                        --
 -- @url:     http://www.dc-swat.ru       --
 --                                       --
@@ -56,37 +56,39 @@ FileManager = {
 				index = -1
 			}
 		},
-		
+
 		dual = true,
-		
+
 		bg = {
 		 	normal = nil,
 		 	focus = nil
 		},
-		
+
 		item = {
 			normal = nil,
 			selected = nil
 		}
 	},
-	
+
 	modal = {
-	
 		widget = nil,
 		window = nil,
 		label = nil,
 		input = nil,
+		progress = nil,
+		body = nil,
+		buttons = nil,
 		ok = nil,
 		cancel = nil,
 		visible = true,
 		func = nil,
-		mode = "prompt"
+		mode = nil,
+		copy_cancelled = false
 	},
 
 	toolbar = {
 		widget = nil
 	}
-	
 }
 
 function FileManager:ext_supported(tbl, ext)
@@ -103,66 +105,55 @@ function FileManager:replace_spaces(str)
 end
 
 
-function FileManager:ShowModal(mode, label, func, input)
+function FileManager:ShowModal(mode, text, func, inputText)
 
-	if self.modal.visible then 
-		self:HideModal(); 
+	if not self.modal.visible then
+		GUI.ContainerSetEnabled(self.mgr.top.widget, 0);
+		GUI.ContainerSetEnabled(self.mgr.bottom.widget, 0);
+		GUI.ContainerSetEnabled(self.toolbar.widget, 0);
+		GUI.ContainerAdd(self.app.body, self.modal.window);
 	end
+
+	self.modal.mode = mode;
+	self.modal.func = func;
 
 	if mode == "alert" then
-
-		GUI.LabelSetText(self.modal.label, label);
-
-		if self.modal.mode ~= "alert" then
-			GUI.WidgetSetEnabled(self.modal.cancel, 0);
-			GUI.WidgetSetPosition(self.modal.ok, 145, 111);
-		end
-
-		if self.modal.mode == "prompt" then
-			GUI.ContainerRemove(self.modal.widget, self.modal.input);
-		end	
+		GUI.ContainerRemove(self.modal.body, self.modal.input);
+		GUI.ContainerRemove(self.modal.body, self.modal.progress);
+		GUI.WidgetSetEnabled(self.modal.buttons, 1);
+		GUI.WidgetSetEnabled(self.modal.ok, 1);
+		GUI.WidgetSetEnabled(self.modal.cancel, 0);
 
 	elseif mode == "confirm" then
-
-		if self.modal.mode == "prompt" then
-			GUI.ContainerRemove(self.modal.widget, self.modal.input);
-		end
-
-		GUI.LabelSetText(self.modal.label, label);
-
-		GUI.WidgetSetPosition(self.modal.ok, 110, 111);
+		GUI.ContainerRemove(self.modal.body, self.modal.input);
+		GUI.ContainerRemove(self.modal.body, self.modal.progress);
+		GUI.WidgetSetEnabled(self.modal.buttons, 1);
+		GUI.WidgetSetEnabled(self.modal.ok, 1);
 		GUI.WidgetSetEnabled(self.modal.cancel, 1);
-		
-	
-	elseif mode == "prompt" then
-	
-		if self.modal.mode ~= "prompt" then
-			GUI.ContainerAdd(self.modal.widget, self.modal.input);
-		end
-		
-		GUI.LabelSetText(self.modal.label, label);
-		GUI.TextEntrySetText(self.modal.input, input);
-		
-		if self.modal.mode == "alert" then
-			GUI.WidgetSetPosition(self.modal.ok, 110, 111);
-			GUI.WidgetSetEnabled(self.modal.cancel, 1);
-		end
 
-	else
-		return false;
+	elseif mode == "prompt" then
+		GUI.ContainerRemove(self.modal.body, self.modal.progress);
+		GUI.ContainerAdd(self.modal.body, self.modal.input);
+		GUI.TextEntrySetText(self.modal.input, inputText or "");
+		GUI.WidgetSetEnabled(self.modal.buttons, 1);
+		GUI.WidgetSetEnabled(self.modal.ok, 1);
+		GUI.WidgetSetEnabled(self.modal.cancel, 1);
+
+	elseif mode == "progress" then
+		GUI.ContainerRemove(self.modal.body, self.modal.input);
+		GUI.ContainerAdd(self.modal.body, self.modal.progress);
+		GUI.ProgressBarSetPosition(self.modal.progress, 0);
+		GUI.WidgetMarkChanged(self.modal.progress);
+		GUI.WidgetSetEnabled(self.modal.buttons, 1);
+		GUI.WidgetSetEnabled(self.modal.ok, 0);
+		GUI.WidgetSetEnabled(self.modal.cancel, 1);
 	end
 
-	GUI.ContainerSetEnabled(self.mgr.top.widget, 0);
-	GUI.ContainerSetEnabled(self.mgr.bottom.widget, 0);
-	GUI.ContainerSetEnabled(self.toolbar.widget, 0);
-	GUI.ContainerAdd(self.app.body, self.modal.window);
-	GUI.WidgetMarkChanged(self.modal.window);
+	GUI.LabelSetText(self.modal.label, text);
+	GUI.WidgetMarkChanged(self.modal.body);
+    GUI.WidgetMarkChanged(self.app.body);
 
-	self.modal.func = func;
 	self.modal.visible = true;
-	self.modal.mode = mode;
-
-	return true;
 end
 
 
@@ -171,6 +162,7 @@ function FileManager:HideModal()
 	if self.modal.visible then
 
 		GUI.ContainerRemove(self.app.body, self.modal.window);
+		GUI.WidgetMarkChanged(self.app.body);
 
 		GUI.ContainerSetEnabled(self.mgr.top.widget, 1);
 		GUI.ContainerSetEnabled(self.mgr.bottom.widget, 1);
@@ -178,17 +170,27 @@ function FileManager:HideModal()
 
 		self.modal.visible = false;
 		self.modal.func = nil;
+		self.modal.mode = nil;
 	end
 end
 
 
 function FileManager:ModalClick(s)
 
+	if not s then
+		if self.modal.mode == "progress" then
+			self.modal.copy_cancelled = true;
+		end
+		return self:HideModal();
+	end
+
 	if s and self.modal.visible and self.modal.func then 
+	
+		GUI.WidgetSetEnabled(self.modal.ok, 0);
 		
 		if self.modal.func == "delete" then
 		
-			self:toolbarDelete();
+			self:deletePath();
 			
 		elseif self.modal.func == "mount_iso" then
 		
@@ -196,12 +198,16 @@ function FileManager:ModalClick(s)
 			
 		elseif self.modal.func == "copy" then
 		    
-			self:toolbarCopy();
+			self:copyPath();
 			
 		elseif self.modal.func == "rename" then
 
 			self:toolbarRename();
 			
+		elseif self.modal.func == "mkdir" then
+
+			self:toolbarMkdir();
+
 		elseif self.modal.func == "exec" then
 		    
 			self:openFile();
@@ -234,6 +240,129 @@ function FileManager:execConsole(cmd)
 end
 
 
+function FileManager:copyFile(src, dst, size)
+
+	local initial_copied_size = self.modal.progress_copied_size;
+	local buffer_size;
+
+	if size < 5 * 1024 * 1024 then
+		buffer_size = 65536;
+	else
+		buffer_size = 512 * 1024;
+	end
+
+    local function progress_callback(bytes_written)
+        local current_progress = initial_copied_size + bytes_written;
+        GUI.ProgressBarSetPosition(self.modal.progress, current_progress / self.modal.progress_total);
+		GUI.WidgetMarkChanged(self.modal.progress);
+		return not self.modal.copy_cancelled
+    end
+
+    local ok, err = lfs.copyfile(src, dst, progress_callback, buffer_size);
+	self.copy_error = err;
+    
+	if not ok then
+        return false;
+    end
+
+	self.modal.progress_copied_size = self.modal.progress_copied_size + size;
+    
+    return true;
+end
+
+
+function FileManager:getPathTotalSize(path)
+    local total_size = 0;
+
+    for file in lfs.dir(path) do
+        if file.name ~= "." and file.name ~= ".." then
+            local fullpath = path .. "/" .. file.name;
+
+            if file.attr == 0 then
+                total_size = total_size + file.size;
+            else
+                total_size = total_size + self:getPathTotalSize(fullpath);
+            end
+        end
+    end
+    return total_size;
+end
+
+
+function FileManager:copyPathRecursive(src, dst)
+	
+	if not lfs.mkdir(dst) then
+		return false;
+	end
+
+    for file in lfs.dir(src) do
+        if file.name ~= "." and file.name ~= ".." then
+
+            local full_src_path = src .. "/" .. file.name;
+			local full_dst_path = dst .. "/" .. file.name;
+
+            if file.attr == 0 then
+                if not self:copyFile(full_src_path, full_dst_path, file.size) then
+					return false;
+				end
+            else
+                if not self:copyPathRecursive(full_src_path, full_dst_path) then
+					return false;
+				end
+            end
+        end
+    end
+	return true;
+end
+
+
+function FileManager:copyPath()
+
+	local f = self:getFile();
+	local mgr = self:getUnfocusedManager();
+	local to = GUI.FileManagerGetPath(mgr.widget);
+
+	if to ~= "/" then
+		to = to .. "/" .. f.name;
+	else
+		to = to .. f.name;
+	end
+
+	if f.attr ~= 0 then
+		self:ShowModal("progress", "Calculating files size...", nil);
+		Sleep(50);
+
+		self.modal.progress_total = self:getPathTotalSize(f.file);
+		self.modal.progress_copied_size = 0;
+		self.modal.copy_cancelled = false;
+
+		GUI.LabelSetText(self.modal.label, "Copying files, please wait...");
+		GUI.WidgetMarkChanged(self.modal.label);
+		Sleep(50);
+
+		if not self:copyPathRecursive(f.file, to) then
+			self:ShowModal("alert", "Error copying directory: " .. (self.copy_error or "unknown"));
+			return;
+		end
+	else
+		self:ShowModal("progress", "Copying files, please wait...", nil);
+		Sleep(50);
+
+		self.modal.progress_total = f.size;
+		self.modal.progress_copied_size = 0;
+		self.modal.copy_cancelled = false;
+
+		if not self:copyFile(f.file, to, f.size) then
+			self:ShowModal("alert", "Error copying file: " .. (self.copy_error or "unknown"));
+			return;
+		end
+	end
+
+	self:HideModal();
+	GUI.FileManagerScan(mgr.widget);
+end
+
+
 function FileManager:toolbarCopy()
 
 	local f = self:getFile();
@@ -241,31 +370,15 @@ function FileManager:toolbarCopy()
 	if f.name == nil then
 		return;
 	end
-	
+
 	local mgr = self:getUnfocusedManager();
 	local to = GUI.FileManagerGetPath(mgr.widget);
-	
+
 	if not self.modal.visible then 
 		return self:ShowModal("confirm", "Copy '" .. f.name .. "' to '" .. to .. "'?", "copy");
 	else
 		self:HideModal();
-	end
-
-	if to ~= "/" then
-		to = to .. "/" .. f.name;
-	else
-		to = to .. f.name;
-	end
-	
-	if f.attr ~= 0 or f.size > 8192*1024 then
-		self:execConsole("cp " .. self:replace_spaces(f.file) .. " " .. to .. " 1")
-	else
-		if os.execute("cp " .. self:replace_spaces(f.file) .. " " .. to) ~= DS.CMD_OK then
-			self:showConsole();
-			return;
-		end
-		
-		GUI.FileManagerScan(mgr.widget);
+		self:copyPath();
 	end
 end
 
@@ -285,10 +398,10 @@ function FileManager:toolbarRename()
 	end
 
 	local dst = f.path .. "/" .. GUI.TextEntryGetText(self.modal.input);
-	dst = self:replace_spaces(dst);
+	local ok, err = lfs.rename(f.file, dst);
 
-	if os.execute("rename " .. self:replace_spaces(f.file) .. " " .. dst) ~= DS.CMD_OK then
-		self:showConsole();
+	if not ok then
+		self:ShowModal("alert", "Error renaming item: " .. (err or "unknown"));
 		return;
 	end
 
@@ -297,32 +410,148 @@ function FileManager:toolbarRename()
 end
 
 
+function FileManager:toolbarMkdir()
+
+	local mgr = self:getFocusedManager();
+	local path = GUI.FileManagerGetPath(mgr.widget);
+
+	if not self.modal.visible then 
+		return self:ShowModal("prompt", "Enter a new directory name:", "mkdir", "NewFolder");
+	else
+		self:HideModal();
+	end
+
+	local dst = path .. "/" .. GUI.TextEntryGetText(self.modal.input);
+	local ok, err = lfs.mkdir(dst);
+
+	if not ok then
+		self:ShowModal("alert", "Can't create directory: " .. (err or "unknown"));
+	end
+end
+
+
 function FileManager:toolbarDelete()
 
 	local f = self:getFile();
-	local cmd = "rm";
+	local msg = 'Delete "' .. f.name .. '"?';
 
 	if f.name == nil then
 		return;
 	end
 
+	if f.attr ~= 0 then
+		msg = 'Delete folder "'.. f.name ..'"?';
+	end
+
 	if not self.modal.visible then 
-		return self:ShowModal("confirm", 'Delete "' .. f.name .. '"?', "delete");
+		return self:ShowModal("confirm", msg, "delete");
 	else
 		self:HideModal();
 	end
+end
+
+
+function FileManager:countFiles(path)
+    local count = 0;
+
+    for file in lfs.dir(path) do
+        if file.name ~= "." and file.name ~= ".." then
+
+            local fullpath = path .. "/" .. file.name;
+            count = count + 1;
+
+            if file.attr ~= 0 then
+                count = count + self:countFiles(fullpath);
+            end
+        end
+    end
+
+    return count;
+end
+
+
+function FileManager:deletePathRecursive(path)
+    for file in lfs.dir(path) do
+        if file.name ~= "." and file.name ~= ".." then
+
+            local fullpath = path .. "/" .. file.name;
+
+            if file.attr == 0 then
+				local ok, err = os.remove(fullpath);
+
+                if not ok then
+					self.delete_error = err;
+					return false;
+				end
+            else
+                if not self:deletePathRecursive(fullpath) then
+					return false;
+				end
+            end
+
+			self.modal.progress_count = self.modal.progress_count + 1;
+			GUI.ProgressBarSetPosition(self.modal.progress, self.modal.progress_count / self.modal.progress_total);
+        end
+    end
+    
+	local ok, err = lfs.rmdir(path);
+
+	if not ok then
+		self.delete_error = err;
+		return false;
+	end
+
+    return true;
+end
+
+
+function FileManager:deletePath()
+
+	local f = self:getFile();
+	self.delete_error = nil;
 
 	if f.attr ~= 0 then
-		cmd = cmd .. "dir";
+
+		self:ShowModal("progress", "Calculating files...", nil);
+		Sleep(50);
+
+		self.modal.progress_total = self:countFiles(f.file);
+		self.modal.progress_count = 0;
+
+		GUI.LabelSetText(self.modal.label, "Deleting files, please wait...");
+		GUI.WidgetMarkChanged(self.modal.label);
+		Sleep(50);
+
+		if not self:deletePathRecursive(f.file) then
+			self:ShowModal("alert", "Error deleting directory: " .. (self.delete_error or "unknown"));
+			return;
+		end
+
+	else
+		local ok, err = os.remove(f.file);
+		if not ok then
+			self:ShowModal("alert", "Error deleting file: " .. (err or "unknown"));
+			return;
+		end
 	end
 
-	if os.execute(cmd .. " " .. self:replace_spaces(f.file)) ~= DS.CMD_OK then
-		self:showConsole();
-		return;
-	end
+	self:HideModal();
 
 	local mgr = self:getFocusedManager();
 	GUI.FileManagerScan(mgr.widget);
+
+	mgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
+	local umgr = self:getUnfocusedManager();
+
+	if umgr and umgr.ent and umgr.ent.index > -1 then
+		local bt = GUI.FileManagerGetItem(umgr.widget, umgr.ent.index);
+
+		if bt then
+			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
+		end
+
+		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
+	end
 end
 
 
@@ -337,39 +566,39 @@ function FileManager:toolbarArchive()
 	local ext = string.lower(string.sub(f.name, -4));
 	local file = self:replace_spaces(f.file);
 	local name = f.name;
-	
+
 	local mgr = self:getUnfocusedManager();
 	local dst = GUI.FileManagerGetPath(mgr.widget);
-	
+
 	local msg = "Uknown";
 	local cmd = "";
-	
+
 	if ext == ".gz" then
-	
+
 	    msg = "Extract ";
 	    cmd = "gzip -d " .. file .. " " .. dst .. string.sub(name, 1, -4);
-	    
+
 	elseif ext == "bz2" then
-	
+
 		if not DS.GetCmdByName("bzip2") then
 			 if not self:loadModule("bzip2") then
 				self:showConsole();
 				return;
 			 end
 		end
-	
+
 	    msg = "Extract ";
 	    cmd = "bzip2 -d " .. file .. " " .. dst .. string.sub(name, 1, -5);
-	
+
 	elseif ext == "zip" then
-	
+
 		if not DS.GetCmdByName("zip") then
 			 if not self:loadModule("zip") then
 				self:showConsole();
 				return;
 			 end
 		end
-	
+
 	    msg = "Extract ";
 	    cmd = "unzip -e -o " .. file .. " -d " .. dst;
 
@@ -385,22 +614,21 @@ function FileManager:toolbarArchive()
 	else
 		self:HideModal();
 	end
-	
+
 	self:execConsole(cmd)
 	GUI.FileManagerScan(mgr.widget);
 end
-
 
 
 function FileManager:toolbarModeSwitch()
 
 	if self.mgr.dual then
 		GUI.ContainerRemove(self.app.body, self.mgr.bottom.widget);
-		GUI.FileManagerResize(self.mgr.top.widget, 610, 445);
+		GUI.FileManagerResize(self.mgr.top.widget, 610, 439);
 		GUI.FileManagerSetScrollbar(self.mgr.top.widget, nil, self:getResource("sb-back-big", DS.LIST_ITEM_GUI_SURFACE));
 		self.mgr.dual = false;
 	else
-		GUI.FileManagerResize(self.mgr.top.widget, 610, 220);
+		GUI.FileManagerResize(self.mgr.top.widget, 610, 217);
 		GUI.FileManagerSetScrollbar(self.mgr.top.widget, nil, self:getResource("sb-back", DS.LIST_ITEM_GUI_SURFACE));
 		GUI.ContainerAdd(self.app.body, self.mgr.bottom.widget);
 		GUI.WidgetMarkChanged(self.app.body);
@@ -416,20 +644,20 @@ function FileManager:toolbarMountISO()
 	if f.name == nil then
 		return;
 	end
-	
+
 	if not self.modal.visible then 
 		return self:ShowModal("confirm", 'Mount selected ISO as VFS?', "mount_iso");
 	else
 		self:HideModal();
 	end
-	
+
 	if not DS.GetCmdByName("isofs") then
 		 if not self:loadModule("minilzo") or not self:loadModule("isofs") then
 			self:showConsole();
 			return;
 		 end
 	end
-	
+
 	if os.execute("isofs -m -f " .. self:replace_spaces(f.file) .. " -d /iso") ~= DS.CMD_OK then
 		self:showConsole();
 	end
@@ -521,8 +749,6 @@ function FileManager:openFile()
 		else
 			self:HideModal();
 		end
-
-		--if DS.GetModuleByFileName(file) then return file end
 
 		self:execConsole("module -o -f " .. file)
 
@@ -664,10 +890,10 @@ end
 
 
 function FileManager:focusManager(mgr)
-     
+
 	mgr.focus = true;
 	GUI.PanelSetBackground(mgr.widget, self.mgr.bg.focus);
-	
+
 	if mgr.id == self.mgr.top.id then
 		self.mgr.bottom.focus = false;
 		GUI.PanelSetBackground(self.mgr.bottom.widget, self.mgr.bg.normal);
@@ -733,32 +959,42 @@ end
 
 
 function FileManager:ItemClick(ent, mgr)
-	
+
 	self:focusManager(mgr);
 	
+	local umgr = self:getUnfocusedManager();
+
+	if umgr and umgr.ent and umgr.ent.index > -1 then
+		local bt = GUI.FileManagerGetItem(umgr.widget, umgr.ent.index);
+		if bt then
+			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
+		end
+		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
+	end
+
 	if ent.attr == 0  then
 
 		if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
-		
+
 			local bt;
 
 			if mgr.ent.index > -1 then
 				bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
 				GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
 			end
-			
+
 			bt = GUI.FileManagerGetItem(mgr.widget, ent.index);
 			GUI.ButtonSetNormalImage(bt, self.mgr.item.selected);
 			mgr.ent = ent;
-			
+
 		else
 			self:openFile();
 		end
 	else
-	
+
 		GUI.FileManagerChangeDir(mgr.widget, ent.name, ent.size);
 		mgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
-		
+
 		local d = GUI.FileManagerGetPath(mgr.widget);
 		if d ~= "/" then
 			self:tooltip(d);
@@ -772,32 +1008,29 @@ function FileManager:ItemContextClick(ent, mgr)
 
 	self:focusManager(mgr);
 	
-	if ent.attr ~= 0  then
+	local umgr = self:getUnfocusedManager();
 
-		if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
-		
-			local bt;
-
-			if mgr.ent.index > -1 then
-				bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
-				GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
-			end
-			
-			bt = GUI.FileManagerGetItem(mgr.widget, ent.index);
-			GUI.ButtonSetNormalImage(bt, self.mgr.item.selected);
-			mgr.ent = ent;
-			
-		else
-			GUI.FileManagerChangeDir(mgr.widget, ent.name, ent.size);
-			mgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
-			
-			local d = GUI.FileManagerGetPath(mgr.widget);
-			if d ~= "/" then
-				self:tooltip(d);
-			else 
-				self:tooltip(nil);
-			end
+	if umgr and umgr.ent and umgr.ent.index > -1 then
+		local bt = GUI.FileManagerGetItem(umgr.widget, umgr.ent.index);
+		if bt then
+			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
 		end
+		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
+	end
+
+	if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
+	
+		local bt;
+
+		if mgr.ent.index > -1 then
+			bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
+			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
+		end
+		
+		bt = GUI.FileManagerGetItem(mgr.widget, ent.index);
+		GUI.ButtonSetNormalImage(bt, self.mgr.item.selected);
+		mgr.ent = ent;
+		
 	end
 end
 
@@ -823,14 +1056,14 @@ end
 
 
 function FileManager:tooltip(msg)
-	
+
 	if msg then
 		GUI.LabelSetText(self.title, msg);
 	else
 
 		local mgr = self:getFocusedManager();
 		local path = GUI.FileManagerGetPath(mgr.widget);
-		
+
 		if path == "/" then
 			GUI.LabelSetText(self.title, self.app.name .. " v" .. self.app.ver);
 		else
@@ -877,101 +1110,119 @@ end
 function FileManager:Initialize()
 
 	if self.app == nil then
-	
+
 		self.app = DS.GetAppById(THIS_APP_ID);
-	
+
 		if self.app ~= nil then
-	
+
 	        self.font = self:getResource("arial", DS.LIST_ITEM_GUI_FONT);
-	
+
 			if not self.font then
 				return false;
 			end
-			
+
 			self.mgr.bg.normal = self:getResource("white-bg", DS.LIST_ITEM_GUI_SURFACE);
-	
+
 			if not self.mgr.bg.normal then
 				return false;
 			end
-			
+
 			self.mgr.bg.focus = self:getResource("blue-bg", DS.LIST_ITEM_GUI_SURFACE);
-	
+
 			if not self.mgr.bg.focus then
 				return false;
 			end
-	
+
 			self.title = self:getElement("title");
-	
+
 			if not self.title then
 				return false;
 			end
-	
+
 			self.mgr.top.widget = self:getElement("filemgr-top");
-	
+
 			if not self.mgr.top.widget then
 				return false;
 			end
-	
+
 			self.mgr.bottom.widget = self:getElement("filemgr-bottom");
-	
+
 			if not self.mgr.bottom.widget then
 				return false;
 			end
-			
+
 			self.mgr.item.normal = self:getResource("item-normal", DS.LIST_ITEM_GUI_SURFACE);
-	
+
 			if not self.mgr.item.normal then
 				return false;
 			end
-			
+
 			self.mgr.item.selected = self:getResource("item-selected", DS.LIST_ITEM_GUI_SURFACE);
-	
+
 			if not self.mgr.item.selected then
 				return false;
 			end
 
 			self.modal.window = self:getElement("modal-win");
-	
+
 			if not self.modal.window then
 				return false;
 			end
 
 			self.modal.widget = self:getElement("modal-content");
-	
+
 			if not self.modal.widget then
 				return false;
 			end
 
 			self.modal.label = self:getElement("modal-label");
-	
+
 			if not self.modal.label then
 				return false;
 			end
-			
+
 			self.modal.input = self:getElement("modal-input");
-	
+
 			if not self.modal.input then
 				return false;
 			end
-			
+
 			self.modal.ok = self:getElement("modal-ok");
-	
+
 			if not self.modal.ok then
 				return false;
 			end
-			
+
 			self.modal.cancel = self:getElement("modal-cancel");
-	
+
 			if not self.modal.cancel then
 				return false;
 			end
 
+			self.modal.buttons = self:getElement("modal-buttons");
+
+			if not self.modal.buttons then
+				return false;
+			end
+
+			self.modal.body = self:getElement("modal-body-panel");
+
+			if not self.modal.body then
+				return false;
+			end
+
+			self.modal.progress = self:getElement("modal-progress");
+
+			if not self.modal.progress then
+				return false;
+			end
+
 			self.toolbar.widget = self:getElement("toolbar-panel");
-	
+
 			if not self.toolbar.widget then
 				return false;
 			end
-			
+
 			self:HideModal();
 			self:focusManager(self.mgr.top);
 			self:toolbarModeSwitch();
