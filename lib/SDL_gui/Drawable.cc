@@ -365,56 +365,54 @@ void GUI_Drawable::TileImage(GUI_Surface *surface, const SDL_Rect *rp, int x_off
 void GUI_Drawable::CenterImage(GUI_Surface *surface, const SDL_Rect *rp, int x_offset, int y_offset)
 {
 	SDL_Rect sr, dr;
-	int bw, bh;//, cx, cy;
 	
-	if(surface == NULL) return;
+	if(surface == NULL || rp == NULL) return;
 	
-//	ds_printf("%s: %d %d %d %d\n", __func__, rp->x, rp->y, rp->w, rp->h);
+	int bw = surface->GetWidth();
+	int bh = surface->GetHeight();
 	
-	bw = surface->GetWidth();
-	bh = surface->GetHeight();
+	dr.x = rp->x + (rp->w - bw) / 2 + x_offset;
+	dr.y = rp->y + (rp->h - bh) / 2 + y_offset;
+	dr.w = bw;
+	dr.h = bh;
 	
 	sr.x = 0;
 	sr.y = 0;
 	sr.w = bw;
 	sr.h = bh;
 	
-	dr.x = (area.w / 2) - (bw / 2) + x_offset;
-	dr.y = (area.h / 2) - (bh / 2) + y_offset;
-	dr.w = bw;
-	dr.h = bh;
+	if (dr.x < rp->x)
+	{
+		sr.x = rp->x - dr.x;
+		sr.w -= sr.x;
+		dr.w -= sr.x;
+		dr.x = rp->x;
+	}
 	
-	Draw(surface, &sr, &dr);
+	if (dr.y < rp->y)
+	{
+		sr.y = rp->y - dr.y;
+		sr.h -= sr.y;
+		dr.h -= sr.y;
+		dr.y = rp->y;
+	}
+	
+	if (dr.x + dr.w > rp->x + rp->w)
+	{
+		sr.w -= (dr.x + dr.w) - (rp->x + rp->w);
+		dr.w = rp->x + rp->w - dr.x;
+	}
+	
+	if (dr.y + dr.h > rp->y + rp->h)
+	{
+		sr.h -= (dr.y + dr.h) - (rp->y + rp->h);
+		dr.h = rp->y + rp->h - dr.y;
+	}
 
-//	dr.x = rp->x;
-//	sr.x = (dr.x + x_offset) % bw;
-//	sr.w = dr.w = bw - sr.x;
-//	
-//	if (dr.x + dr.w > rp->x + rp->w)
-//		sr.w = dr.w = rp->x + rp->w - dr.x;
-//
-//	dr.y = rp->y;
-//	sr.y = (dr.y + y_offset) % bh;
-//	sr.h = dr.h = bh - sr.y;
-//	
-//	if (dr.y + dr.h > rp->y + rp->h)
-//		sr.h = dr.h = rp->y + rp->h - dr.y;
-//	
-//	cx = (area.w / 2) - (bw / 2) + x_offset;
-//	cy = (area.h / 2) - (bh / 2) + y_offset;
-	
-//	sr.x += cx;
-//	sr.y += cy;
-//	dr.x += cx;
-//	dr.y += cy;
-	
-	
-//	if(sr.x < cx + bw && sr.x >= cx + bw) {
-//		if(sr.y < cy + bh && sr.y >= cy + bh) {
-//			ds_printf("%s: %d %d %d %d -> %d %d %d %d\n", __func__, sr.x, sr.y, sr.w, sr.h, dr.x, dr.y, dr.w, dr.h);
-//			Draw(surface, &sr, &dr);
-//		}
-//	}
+	if (sr.w > 0 && sr.h > 0)
+	{
+		Draw(surface, &sr, &dr);
+	}
 }
 
 
