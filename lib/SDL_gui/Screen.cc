@@ -22,8 +22,8 @@ GUI_Screen::GUI_Screen(const char *aname, SDL_Surface *surface)
 	background = 0;
 	contents = 0;
 	focus_widget = 0;
+	modal_widget = 0;
 	background_color = 0;
-	//mouse = 0;
 	joysel = new GUI_Widget *[64];
 	joysel_size = 0;
 	joysel_cur = 0;
@@ -34,6 +34,7 @@ GUI_Screen::~GUI_Screen(void)
 {
 	if (background) background->DecRef();
 	if (focus_widget) focus_widget->DecRef();
+	if (modal_widget) modal_widget->DecRef();
 	if (contents) contents->DecRef();
 	if (screen_surface) screen_surface->DecRef();
 }
@@ -283,6 +284,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 	if(joysel_enabled) {
 
 		SDL_Event evt;
+		GUI_Container *container = modal_widget ? (GUI_Container *)modal_widget : (GUI_Container *)contents;
 		
 		switch(event->type) {
 			case SDL_JOYHATMOTION:
@@ -291,7 +293,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 					break;
 				}
 				
-				if (contents) {
+				if (container) {
 					switch(event->jhat.value) {
 						case SDL_HAT_UP: //UP
 						case SDL_HAT_DOWN: //DOWN
@@ -303,7 +305,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 							}
 							
 							joysel_size = 0;
-							find_widget_rec((GUI_Container *)contents);
+							find_widget_rec(container);
 							
 							if(joysel_size) {
 							
@@ -334,7 +336,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 								joysel[i] = NULL;
 							}
 							joysel_size = 0;
-							find_widget_rec((GUI_Container *)contents);
+							find_widget_rec(container);
 							joysel_cur = event->jhat.value == SDL_HAT_LEFT ? 0 : joysel_size - 1;
 							
 							if(joysel_size && joysel[joysel_cur]) {
@@ -354,7 +356,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 			
 			case SDL_KEYDOWN:
 			{
-				if (contents) {
+				if (container) {
 					switch (event->key.keysym.sym) {
 						default:
 							break;
@@ -369,7 +371,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 							}
 							
 							joysel_size = 0;
-							find_widget_rec((GUI_Container *)contents);
+							find_widget_rec(container);
 							
 							if(joysel_size) {
 							
@@ -399,7 +401,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 								joysel[i] = NULL;
 							}
 							joysel_size = 0;
-							find_widget_rec((GUI_Container *)contents);
+							find_widget_rec(container);
 							joysel_cur = event->key.keysym.sym == SDLK_LEFT ? 0 : joysel_size - 1;
 							
 							if(joysel_size && joysel[joysel_cur]) {
@@ -419,9 +421,16 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 		}
 	}
 
-	if (contents)
-		if (contents->Event(event, xoffset, yoffset))
+	if(modal_widget)
+	{
+		if(modal_widget->Event(event, xoffset, yoffset))
 			return 1;
+	}
+	else if(contents)
+	{
+		if(contents->Event(event, xoffset, yoffset))
+			return 1;
+	}
 	return GUI_Drawable::Event(event, xoffset, yoffset);
 }
 
@@ -433,7 +442,8 @@ void GUI_Screen::RemoveWidget(GUI_Widget *widget)
 
 void GUI_Screen::SetContents(GUI_Widget *widget)
 {
-
+	SetFocusWidget(NULL);
+	SetModalWidget(NULL);
 	Keep(&contents, widget);
 
 	joysel_size = 0;
@@ -446,6 +456,21 @@ void GUI_Screen::SetContents(GUI_Widget *widget)
 	}
 
 	MarkChanged();
+}
+
+GUI_Widget *GUI_Screen::GetContents(void)
+{
+	return contents;
+}
+
+void GUI_Screen::SetModalWidget(GUI_Widget *widget)
+{
+	if (GUI_ObjectKeep((GUI_Object **) &modal_widget, widget))
+	{
+		MarkChanged();
+		joysel_size = 0;
+		joysel_cur = -1;
+	}
 }
 
 void GUI_Screen::SetBackground(GUI_Surface *image)
@@ -468,30 +493,32 @@ void GUI_Screen::SetBackgroundColor(SDL_Color c)
 
 void GUI_Screen::SetFocusWidget(GUI_Widget *widget)
 {
-	//assert(widget != NULL);
-	
-	if (widget != NULL && focus_widget != widget)
-	{
-		ClearFocusWidget();
-		widget->SetFlags(WIDGET_HAS_FOCUS);
-		widget->IncRef();
-		focus_widget = widget;
-	}
-}
+	if (focus_widget == widget)
+		return;
 
-void GUI_Screen::ClearFocusWidget()
-{
 	if (focus_widget)
 	{
 		focus_widget->ClearFlags(WIDGET_HAS_FOCUS);
 		focus_widget->DecRef();
 		focus_widget = 0;
 	}
+
+	if (widget)
+	{
+		focus_widget = widget;
+		focus_widget->IncRef();
+		focus_widget->SetFlags(WIDGET_HAS_FOCUS);
+	}
 }
 
 GUI_Widget *GUI_Screen::GetFocusWidget()
 {
 	return focus_widget;
+}
+
+GUI_Widget *GUI_Screen::GetModalWidget()
+{
+	return modal_widget;
 }
 /*
 void GUI_Screen::SetMouse(GUI_Mouse *m)
@@ -522,6 +549,11 @@ void GUI_ScreenSetContents(GUI_Screen *screen, GUI_Widget *widget)
 	screen->SetContents(widget);
 }
 
+GUI_Widget *GUI_ScreenGetContents(GUI_Screen *screen)
+{
+	return screen->GetContents();
+}
+
 void GUI_ScreenSetBackground(GUI_Screen *screen, GUI_Surface *image)
 {
 	screen->SetBackground(image);
@@ -532,9 +564,14 @@ void GUI_ScreenSetFocusWidget(GUI_Screen *screen, GUI_Widget *widget)
 	screen->SetFocusWidget(widget);
 }
 
-void GUI_ScreenClearFocusWidget(GUI_Screen *screen)
+void GUI_ScreenSetModalWidget(GUI_Screen *screen, GUI_Widget *widget)
 {
-	screen->ClearFocusWidget();
+	screen->SetModalWidget(widget);
+}
+
+GUI_Widget *GUI_ScreenGetModalWidget(GUI_Screen *screen)
+{
+	return screen->GetModalWidget();
 }
 
 void GUI_ScreenSetBackgroundColor(GUI_Screen *screen, SDL_Color c)

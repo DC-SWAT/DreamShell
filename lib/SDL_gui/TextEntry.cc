@@ -113,7 +113,7 @@ void GUI_TextEntry::Clicked(int x, int y)
 	
 	if (flags & WIDGET_HAS_FOCUS)
 	{
-		screen->ClearFocusWidget();
+		screen->SetFocusWidget(NULL);
 		if (unfocus_callback)
 			unfocus_callback->Call(this);
 	}
@@ -155,7 +155,7 @@ int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
 		if (key == SDLK_RETURN)
 		{
 			GUI_Screen *screen = GUI_GetScreen();
-			screen->ClearFocusWidget();
+			screen->SetFocusWidget(NULL);
 			if (unfocus_callback)
 				unfocus_callback->Call(this);	
 			return 1;

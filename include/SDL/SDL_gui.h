@@ -815,7 +815,7 @@ class GUI_Screen : public GUI_Drawable
 		GUI_Surface *background;
 		GUI_Widget *contents;
 		GUI_Widget *focus_widget;
-		//GUI_Mouse *mouse;
+		GUI_Widget *modal_widget;
 		GUI_Widget **joysel;
 		int joysel_size;
 		int joysel_cur;
@@ -837,12 +837,14 @@ class GUI_Screen : public GUI_Drawable
 		virtual void RemoveWidget(GUI_Widget *widget);
 		
 		void SetContents(GUI_Widget *widget);
+		GUI_Widget *GetContents(void);
 		void SetBackground(GUI_Surface *image);
 		void SetFocusWidget(GUI_Widget *item);
-		void ClearFocusWidget(void);
+		void SetModalWidget(GUI_Widget *widget);
 		void SetJoySelectState(int value);
 		void SetBackgroundColor(SDL_Color c);
 		GUI_Widget *GetFocusWidget(void);
+		GUI_Widget *GetModalWidget(void);
 		GUI_Surface *GetSurface(void);
 
 		//void SetMouse(GUI_Mouse *m);
@@ -922,21 +924,6 @@ extern "C" {
 void GUI_SetScreen(GUI_Screen *);
 GUI_Screen *GUI_GetScreen(void);
 
-/*
-int GUI_Init(void);
-void GUI_Run(void);
-void GUI_Quit(void);
-
-int GUI_MustLock(void);
-int GUI_Lock(void);
-int GUI_Unlock(void);
-
-void GUI_SetThread(Uint32 id);
-int GUI_GetRunning(void);
-void GUI_SetRunning(int value);
-
-GUI_Mouse *GUI_MouseCreate(char *name, SDL_Surface * sf);
-*/
 
 int GUI_ClipRect(SDL_Rect *sr, SDL_Rect *dr, const SDL_Rect *clip);
 void GUI_TriggerUpdate(void);
@@ -1050,9 +1037,11 @@ int GUI_ContainerIsVisibleWidget(GUI_Widget *container, GUI_Widget *widget);
 
 GUI_Screen *GUI_ScreenCreate(int w, int h, int d, int f);
 void GUI_ScreenSetContents(GUI_Screen *screen, GUI_Widget *contents);
+GUI_Widget *GUI_ScreenGetContents(GUI_Screen *screen);
 void GUI_ScreenSetBackground(GUI_Screen *screen, GUI_Surface *surface);
 void GUI_ScreenSetFocusWidget(GUI_Screen *screen, GUI_Widget *item);
-void GUI_ScreenClearFocusWidget(GUI_Screen *screen);
+void GUI_ScreenSetModalWidget(GUI_Screen *screen, GUI_Widget *widget);
+GUI_Widget *GUI_ScreenGetModalWidget(GUI_Screen *screen);
 void GUI_ScreenSetBackgroundColor(GUI_Screen *screen, SDL_Color c);
 GUI_Widget *GUI_ScreenGetFocusWidget(GUI_Screen *screen);
 //void GUI_ScreenDrawMouse(GUI_Screen *screen); 
@@ -1064,8 +1053,7 @@ void GUI_ScreenDoUpdate(GUI_Screen *screen, int force);
 void GUI_ScreenDraw(GUI_Screen *screen, GUI_Surface *image, 
                     const SDL_Rect *src_r, const SDL_Rect *dst_r);
 void GUI_ScreenFill(GUI_Screen *screen, const SDL_Rect *dst_r, SDL_Color c);
-void GUI_ScreenErase(GUI_Screen *screen, const SDL_Rect *area); 
-//void GUI_ScreenSetMouse(GUI_Screen *screen, GUI_Mouse *m);
+void GUI_ScreenErase(GUI_Screen *screen, const SDL_Rect *area);
 GUI_Surface *GUI_ScreenGetSurface(GUI_Screen *screen);
 
 GUI_Screen *GUI_RealScreenCreate(const char *aname, SDL_Surface *surface);

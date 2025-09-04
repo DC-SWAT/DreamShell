@@ -1004,9 +1004,11 @@ GUI_ContainerIsVisibleWidget
 #Screen API
 GUI_ScreenCreate
 GUI_ScreenSetContents
+GUI_ScreenGetContents
 GUI_ScreenSetBackground
 GUI_ScreenSetFocusWidget
-GUI_ScreenClearFocusWidget
+GUI_ScreenSetModalWidget
+GUI_ScreenGetModalWidget
 GUI_ScreenSetBackgroundColor
 GUI_ScreenGetFocusWidget
 GUI_ScreenGetSurface

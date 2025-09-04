@@ -138,9 +138,11 @@ int GUI_ContainerIsVisibleWidget(GUI_Widget *container, GUI_Widget *widget);
 /* Screen API */
 
 void GUI_ScreenSetContents(GUI_Screen *screen, GUI_Widget *contents);
+GUI_Widget *GUI_ScreenGetContents(GUI_Screen *screen);
 void GUI_ScreenSetBackground(GUI_Screen *screen, GUI_Surface *surface);
 void GUI_ScreenSetFocusWidget(GUI_Screen *screen, GUI_Widget *item);
-void GUI_ScreenClearFocusWidget(GUI_Screen *screen);
+void GUI_ScreenSetModalWidget(GUI_Screen *screen, GUI_Widget *widget);
+GUI_Widget *GUI_ScreenGetModalWidget(GUI_Screen *screen);
 void GUI_ScreenSetBackgroundColor(GUI_Screen *screen, SDL_Color c);
 GUI_Widget *GUI_ScreenGetFocusWidget(GUI_Screen *screen);
 void GUI_ScreenSetJoySelectState(GUI_Screen *screen, int value);
