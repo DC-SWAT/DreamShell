@@ -574,6 +574,7 @@ class GUI_Container : public GUI_Widget
 		GUI_Container(const char *name, int x, int y, int w, int h);
 		virtual ~GUI_Container(void);
 
+		virtual void Update(int force);
 		int ContainsWidget(GUI_Widget *widget);
 		void AddWidget(GUI_Widget *widget);
 		virtual void RemoveWidget(GUI_Widget *widget);

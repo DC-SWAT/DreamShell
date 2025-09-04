@@ -97,6 +97,7 @@ void GUI_Container::AddWidget(GUI_Widget *widget)
 			SDL_Rect parea = widgets[n_widgets - 1]->GetArea();
 			
 			if((parea.x + parea.w + warea.w) > area.w) {
+				warea.x = 0;
 				warea.y = parea.y + parea.h;
 			} else {
 				warea.x = parea.x + parea.w;
@@ -149,6 +150,7 @@ void GUI_Container::AddWidget(GUI_Widget *widget)
 	
 	widgets[n_widgets++] = widget;
 	UpdateLayout();
+	MarkChanged();
 }
 
 void GUI_Container::RemoveWidget(GUI_Widget *widget)
@@ -172,6 +174,7 @@ void GUI_Container::RemoveWidget(GUI_Widget *widget)
 	}
 	n_widgets = j;
 	UpdateLayout();
+	MarkChanged();
 }
 
 void GUI_Container::RemoveAllWidgets()
@@ -186,6 +189,7 @@ void GUI_Container::RemoveAllWidgets()
 	
 	n_widgets = 0;
 	UpdateLayout();
+	MarkChanged();
 }
 
 void GUI_Container::UpdateLayout(void)
@@ -326,6 +330,29 @@ void GUI_Container::SetEnabled(int flag)
 		SetFlags(WIDGET_DISABLED);
 
 	MarkChanged();
+}
+
+void GUI_Container::Update(int force)
+{
+	if (flags & WIDGET_HIDDEN) return;
+
+	if (flags & WIDGET_CHANGED)
+	{
+		force = 1;
+		flags &= ~WIDGET_CHANGED;
+	}
+	
+	if (force)
+	{
+		Erase(&area);
+	}
+
+	for (int i = 0; i < n_widgets; i++)
+	{
+		if(IsVisibleWidget(widgets[i])) {
+			widgets[i]->DoUpdate(force);
+		}
+	}
 }
 
 extern "C"
