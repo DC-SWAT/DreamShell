@@ -936,7 +936,7 @@ GUI_SurfaceThickLine
 GUI_SurfaceRectangle
 GUI_SurfaceRectangleRounded
 GUI_SurfaceBox
-GUI_SurfaceBoxRouded
+GUI_SurfaceBoxRounded
 GUI_SurfaceCircle
 GUI_SurfaceCircleAA
 GUI_SurfaceCircleFill

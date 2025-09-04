@@ -130,7 +130,7 @@ void GUI_Surface::Box(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c)
 	boxColor(surface, x1, y1, x2, y2, __builtin_bswap32(c));
 }
 
-void GUI_Surface::BoxRouded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
+void GUI_Surface::BoxRounded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
 {
 	roundedBoxColor(surface, x1, y1, x2, y2, rad, __builtin_bswap32(c));
 }
@@ -430,9 +430,9 @@ void GUI_SurfaceBox(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint1
 	surface->Box(x1, y1, x2, y2, c);
 }
 
-void GUI_SurfaceBoxRouded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
+void GUI_SurfaceBoxRounded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c)
 {
-	surface->BoxRouded(x1, y1, x2, y2, rad, c);
+	surface->BoxRounded(x1, y1, x2, y2, rad, c);
 }
 
 void GUI_SurfaceCircle(GUI_Surface *surface, Sint16 x, Sint16 y, Sint16 rad, Uint32 c)

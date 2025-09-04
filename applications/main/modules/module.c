@@ -59,7 +59,7 @@ static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
 		sdl->format->Bmask,
 		sdl->format->Amask);
 
-	GUI_SurfaceBoxRouded(s, 0, 0, w - 1, h - 1, 10, GUI_SurfaceMapRGBA(s, 212, 241, 21, 220));
+	GUI_SurfaceBoxRounded(s, 0, 0, w - 1, h - 1, 10, GUI_SurfaceMapRGBA(s, 212, 241, 21, 220));
 	GUI_SurfaceRectangleRounded(s, 1, 1, w - 2, h - 2, 10, GUI_SurfaceMapRGBA(s, 212, 241, 41, 255));
 
 	dst.x = dst.y = ICON_HIGHLIGHT_PADDING / 2;

@@ -134,7 +134,7 @@ class GUI_Surface : public GUI_Object
 		void Rectangle(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c);
 		void RectangleRounded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c);
 		void Box(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c);
-		void BoxRouded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c);
+		void BoxRounded(Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c);
 		void Circle(Sint16 x, Sint16 y, Sint16 rad, Uint32 c);
 		void CircleAA(Sint16 x, Sint16 y, Sint16 rad, Uint32 c);
 		void CircleFill(Sint16 x, Sint16 y, Sint16 rad, Uint32 c);
@@ -973,7 +973,7 @@ void GUI_SurfaceThickLine(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2,
 void GUI_SurfaceRectangle(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c);
 void GUI_SurfaceRectangleRounded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c);
 void GUI_SurfaceBox(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Uint32 c);
-void GUI_SurfaceBoxRouded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c);
+void GUI_SurfaceBoxRounded(GUI_Surface *surface, Sint16 x1, Sint16 y1, Sint16 x2, Sint16 y2, Sint16 rad, Uint32 c);
 void GUI_SurfaceCircle(GUI_Surface *surface, Sint16 x, Sint16 y, Sint16 rad, Uint32 c);
 void GUI_SurfaceCircleAA(GUI_Surface *surface, Sint16 x, Sint16 y, Sint16 rad, Uint32 c);
 void GUI_SurfaceCircleFill(GUI_Surface *surface, Sint16 x, Sint16 y, Sint16 rad, Uint32 c);
