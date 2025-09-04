@@ -99,8 +99,6 @@ void GUI_Drawable::Notify(int mask)
 
 void GUI_Drawable::WriteFlags(int andmask, int ormask)
 {
-	//ds_printf("GUI_Drawable::WriteFlags: %s\n", GetName()); 
-	
 	int oldflags = flags;	
 	flags = (flags & andmask) | ormask;
 	if (flags != oldflags)
@@ -119,6 +117,30 @@ void GUI_Drawable::ClearFlags(int mask)
 
 int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 {
+	if ((flags & (WIDGET_DISABLED | WIDGET_HIDDEN))) {
+		switch(event->type) {
+			case SDL_MOUSEBUTTONUP:
+			case SDL_KEYUP:
+				if (flags & WIDGET_PRESSED) {
+					ClearFlags(WIDGET_PRESSED);
+				}
+				break;
+			case SDL_MOUSEMOTION:
+				if((flags & WIDGET_DISABLED) == 0) {
+					if(focused) {
+						int x = event->motion.x - xoffset;
+						int y = event->motion.y - yoffset;
+						ClearFlags(WIDGET_INSIDE);
+						unHighlighted(x, y);
+						focused = 0;
+					}
+				}
+				break;
+			default:
+				break;
+		}
+		return 0;
+	}
 	
 	GUI_Screen *screen = GUI_GetScreen();
 	GUI_Drawable *focus = screen->GetFocusWidget();
@@ -133,12 +155,9 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			
 			int x = event->button.x - xoffset;
 			int y = event->button.y - yoffset;
-			if ((flags & WIDGET_DISABLED) == 0 &&
-				(flags & WIDGET_HIDDEN) == 0) {
-				if (Inside(x, y, &area)) {
-					if (focus == 0 || focus == this) {
-						SetFlags(WIDGET_PRESSED);
-					}
+			if (Inside(x, y, &area)) {
+				if (focus == 0 || focus == this) {
+					SetFlags(WIDGET_PRESSED);
 				}
 			}
 			break;
@@ -151,27 +170,23 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			
 			int x = event->button.x - xoffset;
 			int y = event->button.y - yoffset;
-			if ((flags & WIDGET_DISABLED) == 0 &&
-				(flags & WIDGET_HIDDEN) == 0)
-			{
-				if (flags & WIDGET_PRESSED)
-					if (Inside(x, y, &area))
-						if (focus == 0 || focus == this) {
-							switch (event->button.button)
-							{
-								case SDL_BUTTON_LEFT:
-									Clicked(x, y);
-									break;
-								
-								case SDL_BUTTON_RIGHT:
-									ContextClicked(x, y);
-									break;
-								
-								default:
-									break;
-							}
+			if (flags & WIDGET_PRESSED)
+				if (Inside(x, y, &area))
+					if (focus == 0 || focus == this) {
+						switch (event->button.button)
+						{
+							case SDL_BUTTON_LEFT:
+								Clicked(x, y);
+								break;
+							
+							case SDL_BUTTON_RIGHT:
+								ContextClicked(x, y);
+								break;
+							
+							default:
+								break;
 						}
-			}
+					}
 			if (flags & WIDGET_PRESSED) {
 				ClearFlags(WIDGET_PRESSED);
 			}
@@ -191,12 +206,9 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 				x -= xoffset;
 				y -= yoffset;
 				
-				if ((flags & WIDGET_DISABLED) == 0 &&
-					(flags & WIDGET_HIDDEN) == 0) {
-					if (Inside(x, y, &area)) {
-						if (focus == 0 || focus == this) {
-							SetFlags(WIDGET_PRESSED);
-						}
+				if (Inside(x, y, &area)) {
+					if (focus == 0 || focus == this) {
+						SetFlags(WIDGET_PRESSED);
 					}
 				}
 			}
@@ -216,28 +228,24 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 				x -= xoffset;
 				y -= yoffset;
 				
-				if ((flags & WIDGET_DISABLED) == 0 &&
-					(flags & WIDGET_HIDDEN) == 0)
-				{
-					if (flags & WIDGET_PRESSED)
-						if (Inside(x, y, &area))
-							if (focus == 0 || focus == this) {
-								switch (event->key.keysym.sym)
-								{
-									case SDLK_RETURN:
-									case SDLK_KP_ENTER:
-										Clicked(x, y);
-										break;
-									
-									case SDLK_BACKSPACE:
-										ContextClicked(x, y);
-										break;
-									
-									default:
-										break;
-								}
+				if (flags & WIDGET_PRESSED)
+					if (Inside(x, y, &area))
+						if (focus == 0 || focus == this) {
+							switch (event->key.keysym.sym)
+							{
+								case SDLK_RETURN:
+								case SDLK_KP_ENTER:
+									Clicked(x, y);
+									break;
+								
+								case SDLK_BACKSPACE:
+									ContextClicked(x, y);
+									break;
+								
+								default:
+									break;
 							}
-				}
+						}
 				if (flags & WIDGET_PRESSED) {
 					ClearFlags(WIDGET_PRESSED);
 				}
@@ -250,9 +258,7 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 			int y = event->motion.y - yoffset;
 			if (focus == 0 || focus == this)
 			{
-				if ((flags & WIDGET_DISABLED) == 0 &&
-					(flags & WIDGET_HIDDEN) == 0 &&
-					Inside(x, y, &area)) {
+				if (Inside(x, y, &area)) {
 					
 					if(!focused) {
 						SetFlags(WIDGET_INSIDE);
@@ -262,13 +268,10 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 
 				} else {
 
-					if((flags & WIDGET_DISABLED) == 0) {
-						
-						if(focused) {
-							ClearFlags(WIDGET_INSIDE);
-							unHighlighted(x, y);
-							focused = 0;
-						}
+					if(focused) {
+						ClearFlags(WIDGET_INSIDE);
+						unHighlighted(x, y);
+						focused = 0;
 					}
 				}
 			}
@@ -332,16 +335,11 @@ void GUI_Drawable::TileImage(GUI_Surface *surface, const SDL_Rect *rp, int x_off
 {
 	SDL_Rect sr, dr;
 	int xp, yp, bw, bh;
-
-	//assert(surface != NULL);
-	//assert(rp != NULL);
 	
 	if(surface == NULL || rp == NULL) return;
 	
 	bw = surface->GetWidth();
 	bh = surface->GetHeight();
-	
-	//ds_printf("GUI_Drawable::TileImage: xo=%d yo=%d\n", x_offset, y_offset);
 	
 	for (xp=0; xp < rp->w; xp += sr.w)
 	{
