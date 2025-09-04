@@ -344,7 +344,8 @@ void GUI_Container::Update(int force)
 	
 	if (force)
 	{
-		Erase(&area);
+		SDL_Rect local_area = {0, 0, area.w, area.h};
+		Erase(&local_area);
 	}
 
 	for (int i = 0; i < n_widgets; i++)

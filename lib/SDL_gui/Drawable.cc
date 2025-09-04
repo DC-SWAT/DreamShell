@@ -82,8 +82,14 @@ void GUI_Drawable::Fill(const SDL_Rect *dr, SDL_Color c)
 {
 }
 
-void GUI_Drawable::Erase(const SDL_Rect *dr)
+void GUI_Drawable::Erase(const SDL_Rect *rp)
 {
+	GUI_Drawable *p = GetParent();
+	if (p)
+	{
+		SDL_Rect r = Adjust(rp);
+		p->Erase(&r);
+	}
 }
 
 void GUI_Drawable::RemoveWidget(GUI_Widget *widget)
@@ -369,8 +375,8 @@ void GUI_Drawable::CenterImage(GUI_Surface *surface, const SDL_Rect *rp, int x_o
 	int bw = surface->GetWidth();
 	int bh = surface->GetHeight();
 	
-	dr.x = rp->x + (rp->w - bw) / 2 + x_offset;
-	dr.y = rp->y + (rp->h - bh) / 2 + y_offset;
+	dr.x = rp->x + (rp->w - bw) / 2;
+	dr.y = rp->y + (rp->h - bh) / 2;
 	dr.w = bw;
 	dr.h = bh;
 	
@@ -406,6 +412,9 @@ void GUI_Drawable::CenterImage(GUI_Surface *surface, const SDL_Rect *rp, int x_o
 		sr.h -= (dr.y + dr.h) - (rp->y + rp->h);
 		dr.h = rp->y + rp->h - dr.y;
 	}
+
+	dr.x += x_offset;
+	dr.y += y_offset;
 
 	if (sr.w > 0 && sr.h > 0)
 	{
