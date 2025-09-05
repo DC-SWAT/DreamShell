@@ -797,7 +797,60 @@ class GUI_FileManager : public GUI_Container
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
 };
 
+class GUI_Dialog : public GUI_Container
+{
+	public:
+		enum DialogMode {
+			MODE_INFO,
+			MODE_ALERT,
+			MODE_CONFIRM,
+			MODE_PROMPT,
+			MODE_PROGRESS
+		};
 
+	protected:
+		GUI_Panel *body;
+		GUI_Label *label;
+		GUI_RTF *rtf;
+		GUI_TextEntry *input;
+		GUI_ProgressBar *progress;
+		GUI_Panel *buttons;
+		GUI_Button *confirm_button;
+		GUI_Button *cancel_button;
+
+		GUI_Callback *confirm_callback;
+		GUI_Callback *cancel_callback;
+
+		DialogMode mode;
+
+		int original_h;
+		int original_y;
+
+		void ButtonClick(GUI_Object *sender);
+		void RelayoutButtons(void);
+		GUI_Surface *CreateBackground(int w, int h);
+
+	public:
+		GUI_Dialog(const char *name, int x, int y, int w, int h, GUI_Font *font);
+		virtual ~GUI_Dialog(void);
+
+		void Show(DialogMode mode, const char *text, const char *bodyText = NULL);
+		void Hide(void);
+		void SetText(const char *text);
+
+		void SetConfirmCallback(GUI_Callback *callback);
+		void SetCancelCallback(GUI_Callback *callback);
+
+		void SetConfirmButtonImages(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+		void SetCancelButtonImages(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+		void SetInputImages(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *focus);
+		void SetProgressImages(GUI_Surface *bg, GUI_Surface *bar);
+
+		const char *GetInputText(void);
+		void SetProgress(double value);
+
+		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
+};
 
 class GUI_Screen;
 
@@ -1256,6 +1309,30 @@ int GUI_FileManagerEvent(GUI_Widget *widget, const SDL_Event *event, int xoffset
 void GUI_FileManagerUpdate(GUI_Widget *widget, int force);
 void GUI_FileManagerRemoveScrollbar(GUI_Widget *widget);
 void GUI_FileManagerRestoreScrollbar(GUI_Widget *widget);
+
+
+/* Dialog Widget API */
+
+typedef enum {
+	DIALOG_MODE_INFO,
+	DIALOG_MODE_ALERT,
+	DIALOG_MODE_CONFIRM,
+	DIALOG_MODE_PROMPT,
+	DIALOG_MODE_PROGRESS
+} GUI_DialogMode;
+
+GUI_Widget *GUI_DialogCreate(const char *name, int x, int y, int w, int h, GUI_Font *font);
+void GUI_DialogShow(GUI_Widget *widget, GUI_DialogMode mode, const char *text, const char *bodyText);
+void GUI_DialogHide(GUI_Widget *widget);
+void GUI_DialogSetText(GUI_Widget *widget, const char *text);
+void GUI_DialogSetConfirmCallback(GUI_Widget *widget, GUI_Callback *callback);
+void GUI_DialogSetCancelCallback(GUI_Widget *widget, GUI_Callback *callback);
+const char *GUI_DialogGetInputText(GUI_Widget *widget);
+void GUI_DialogSetProgress(GUI_Widget *widget, double value);
+void GUI_DialogSetConfirmButtonImages(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+void GUI_DialogSetCancelButtonImages(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+void GUI_DialogSetInputImages(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *focus);
+void GUI_DialogSetProgressImages(GUI_Widget *widget, GUI_Surface *bg, GUI_Surface *bar);
 
 
 #ifdef __cplusplus

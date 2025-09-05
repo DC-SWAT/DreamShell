@@ -17,7 +17,7 @@ OBJS =	\
 	VBoxLayout.o RealScreen.o \
 	Mouse.o ScrollPanel.o \
 	Window.o SDLScreen.o \
-	RTF.o FileManager.o
+	RTF.o FileManager.o Dialog.o
 
 
 KOS_CFLAGS += -I../../include/SDL -I../include -I../../include

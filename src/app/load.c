@@ -63,6 +63,7 @@ static GUI_ListBox *parseAppListBoxElement(App_t *app, mxml_node_t *node, char *
 static GUI_Widget *parseAppCardStackElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h);
 static GUI_Widget *parseAppRTFElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h);
 static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h);
+static GUI_Widget *parseAppDialogElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h);
 
 static GUI_Surface *getElementSurface(App_t *app, char *name);
 static GUI_Surface *getElementSurfaceTheme(App_t *app, mxml_node_t *node, char *attr);
@@ -1333,11 +1334,15 @@ static GUI_Widget *parseAppElement(App_t *app, mxml_node_t *node, SDL_Rect *pare
 	} else if(!strncmp(node->value.element.name, "filemanager", 11)) {
 
 		widget = parseAppFileManagerElement(app, node, name, x, y, w, h);
-		/*
-		} else if(!strcmp(node->value.element.name, "nanox")) {
 
-			widget = parseAppNanoXElement(app, node, name, x, y, w, h);
-		*/
+	} else if(!strncmp(node->value.element.name, "dialog", 6)) {
+
+		widget = parseAppDialogElement(app, node, name, x, y, w, h);
+	/*
+	} else if(!strcmp(node->value.element.name, "nanox")) {
+
+		widget = parseAppNanoXElement(app, node, name, x, y, w, h);
+	*/
 	} else {
 		return NULL;
 	}
@@ -2488,4 +2493,72 @@ static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, cha
 	}
 
 	return fm;
+}
+
+static GUI_Widget *parseAppDialogElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h) {
+
+	GUI_Font *font;
+	char *src;
+	GUI_Widget *dialog;
+
+#ifdef APP_LOAD_DEBUG
+	ds_printf("DS_DEBUG: Parsing Dialog: %s\n", name);
+#endif
+
+	src = FindXmlAttr("font", node, NULL);
+
+	if(src == NULL || (font = getElementFont(app, node, src)) == NULL) {
+		ds_printf("DS_ERROR: Can't find font '%s'\n", src);
+		return NULL;
+	}
+
+	dialog = GUI_DialogCreate(name, x, y, w, h, font);
+	if(dialog == NULL) return NULL;
+
+	char *onconfirm = FindXmlAttr("onconfirm", node, NULL);
+	char *oncancel = FindXmlAttr("oncancel", node, NULL);
+	GUI_Surface *s1, *s2, *s3, *s4;
+
+	if(onconfirm) {
+		GUI_Callback *cb = CreateAppElementCallback(app, onconfirm, dialog);
+		if(cb) {
+			GUI_DialogSetConfirmCallback(dialog, cb);
+			GUI_ObjectDecRef((GUI_Object *) cb);
+		}
+	}
+
+	if(oncancel) {
+		GUI_Callback *cb = CreateAppElementCallback(app, oncancel, dialog);
+		if(cb) {
+			GUI_DialogSetCancelCallback(dialog, cb);
+			GUI_ObjectDecRef((GUI_Object *) cb);
+		}
+	}
+
+	if((s1 = getElementSurfaceTheme(app, node, "background")) != NULL) {
+		GUI_PanelSetBackground(dialog, s1);
+	}
+
+	s1 = getElementSurfaceTheme(app, node, "confirm_normal");
+	s2 = getElementSurfaceTheme(app, node, "confirm_highlight");
+	s3 = getElementSurfaceTheme(app, node, "confirm_pressed");
+	s4 = getElementSurfaceTheme(app, node, "confirm_disabled");
+	GUI_DialogSetConfirmButtonImages(dialog, s1, s2, s3, s4);
+
+	s1 = getElementSurfaceTheme(app, node, "cancel_normal");
+	s2 = getElementSurfaceTheme(app, node, "cancel_highlight");
+	s3 = getElementSurfaceTheme(app, node, "cancel_pressed");
+	s4 = getElementSurfaceTheme(app, node, "cancel_disabled");
+	GUI_DialogSetCancelButtonImages(dialog, s1, s2, s3, s4);
+
+	s1 = getElementSurfaceTheme(app, node, "input_normal");
+	s2 = getElementSurfaceTheme(app, node, "input_highlight");
+	s3 = getElementSurfaceTheme(app, node, "input_focus");
+	GUI_DialogSetInputImages(dialog, s1, s2, s3);
+
+	s1 = getElementSurfaceTheme(app, node, "progress_bg");
+	s2 = getElementSurfaceTheme(app, node, "progress_bar");
+	GUI_DialogSetProgressImages(dialog, s1, s2);
+
+	return dialog;
 }

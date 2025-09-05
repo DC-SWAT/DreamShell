@@ -15,7 +15,7 @@ VER_MAJOR = 4
 VER_MINOR = 0
 VER_MICRO = 3
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
-VER_BUILD = 0x13
+VER_BUILD = 0x14
 
 BUILD_TYPE_BASE = $(if $(filter 0x3%,$(VER_BUILD)),Release,$(if $(filter 0x2%,$(VER_BUILD)),RC,$(if $(filter 0x1%,$(VER_BUILD)),Beta,$(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
 BUILD_NUM = $(lastword $(subst 0x2,,$(subst 0x1,,$(subst 0x0,,$(subst 0x3,,$(VER_BUILD))))))
@@ -99,7 +99,7 @@ GUI_OBJS = $(SDL_GUI)/SDL_gui.o $(SDL_GUI)/Exception.o $(SDL_GUI)/Object.o \
 			$(SDL_GUI)/ToggleButton.o $(SDL_GUI)/ProgressBar.o $(SDL_GUI)/ScrollBar.o \
 			$(SDL_GUI)/AbstractTable.o $(SDL_GUI)/ListBox.o $(SDL_GUI)/VBoxLayout.o \
 			$(SDL_GUI)/RealScreen.o $(SDL_GUI)/ScrollPanel.o $(SDL_GUI)/RTF.o \
-			$(SDL_GUI)/Window.o $(SDL_GUI)/FileManager.o
+			$(SDL_GUI)/Window.o $(SDL_GUI)/FileManager.o $(SDL_GUI)/Dialog.o
 
 CONSOLE_OBJ = $(SDL_CONSOLE)/SDL_console.o $(SDL_CONSOLE)/DT_drawtext.o \
 				$(SDL_CONSOLE)/internal.o

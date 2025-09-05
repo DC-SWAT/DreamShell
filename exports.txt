@@ -1204,6 +1204,20 @@ GUI_FileManagerUpdate
 GUI_FileManagerRemoveScrollbar
 GUI_FileManagerRestoreScrollbar
 #
+# Dialog Widget API
+GUI_DialogCreate
+GUI_DialogShow
+GUI_DialogHide
+GUI_DialogSetText
+GUI_DialogSetConfirmCallback
+GUI_DialogSetCancelCallback
+GUI_DialogGetInputText
+GUI_DialogSetProgress
+GUI_DialogSetConfirmButtonImages
+GUI_DialogSetCancelButtonImages
+GUI_DialogSetInputImages
+GUI_DialogSetProgressImages
+#
 # Tsunami API
 TSU_SendMessageCallback
 TSU_SendMessage
