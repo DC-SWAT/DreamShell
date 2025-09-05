@@ -306,8 +306,10 @@ void GUI_ListBoxRemoveItem(GUI_ListBox *list, int n);
 /* RTF Widget API */ 
 GUI_Widget *GUI_RTF_Load(const char *name, const char *file, const char *default_font, int x, int y, int w, int h);
 GUI_Widget *GUI_RTF_LoadRW(const char *name, SDL_RWops *src, int freesrc, const char *default_font, int x, int y, int w, int h);
+GUI_Widget *GUI_RTF_CreateFromText(const char *name, const char *text, const char *default_font, int x, int y, int w, int h);
 int GUI_RTF_GetFullHeight(GUI_Widget *widget);
 void GUI_RTF_SetOffset(GUI_Widget *widget, int value);
+void GUI_RTF_SetText(GUI_Widget *widget, const char *text);
 void GUI_RTF_SetBgColor(GUI_Widget *widget, int r, int g, int b);
 int GUI_RTF_SetFont(GUI_Widget *widget, RTF_FontFamily family, const char *file);
 const char *GUI_RTF_GetTitle(GUI_Widget *widget);

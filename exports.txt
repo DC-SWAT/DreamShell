@@ -1169,8 +1169,10 @@ GUI_ListBoxRemoveItem
 # RTF Widget API
 GUI_RTF_Load
 GUI_RTF_LoadRW
+GUI_RTF_CreateFromText
 GUI_RTF_GetFullHeight
 GUI_RTF_SetOffset
+GUI_RTF_SetText
 GUI_RTF_SetBgColor
 GUI_RTF_SetFont
 GUI_RTF_GetTitle

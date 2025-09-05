@@ -1,7 +1,7 @@
 /** 
  * \file       SDL_gui.h
  * \brief      SDL GUI for DreamShell
- * \date       2005-2014
+ * \date       2005-2025
  * \author     SWAT
  * \copyright  http://www.dc-swat.ru
  */
@@ -11,6 +11,7 @@
 #include "SDL_image.h"
 #include "SDL_ttf.h"
 #include "SDL_rtf.h"
+#include <kos/fs.h>
 
 #ifndef SDL_GUI_H
 #define SDL_GUI_H
@@ -277,7 +278,6 @@ class GUI_Widget;
 class GUI_Drawable : public GUI_Object
 {
 	protected:
-		// FIXME make these private
 		int flags;
 		int flag_delta;
 		int focused;
@@ -382,7 +382,6 @@ class GUI_TextEntry : public GUI_Widget
 		virtual void unHighlighted(int x, int y);
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
 };
-
 
 class GUI_Label : public GUI_Widget
 {
@@ -610,10 +609,6 @@ class GUI_Panel : public GUI_Container
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
 };
 
-
-
-// ScrollPanel by Thorsten Riess
-
 class GUI_ScrollPanel : public GUI_Container
 {
 	protected:
@@ -633,8 +628,6 @@ class GUI_ScrollPanel : public GUI_Container
 		virtual void Update(int force);
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
 };
-
-
 
 class GUI_CardStack : public GUI_Container
 {
@@ -695,8 +688,6 @@ class GUI_ListBox : public GUI_AbstractTable
 		void RemoveItem(int n);
 };
 
-// GUI_RTF and GUI_FileManager by SWAT
-
 class GUI_RTF : public GUI_Widget
 {
 	protected:
@@ -708,16 +699,36 @@ class GUI_RTF : public GUI_Widget
 		void SetupFonts(const char *default_font);
 		void SetupSurface();
 	public:
+		char (*FontList)[NAME_MAX];
 		GUI_RTF(const char *aname, const char *file, const char *default_font, int x, int y, int w, int h);
 		GUI_RTF(const char *aname, SDL_RWops *src, int freesrc, const char *default_font, int x, int y, int w, int h);
+		GUI_RTF(const char *aname, const char *text, int x, int y, int w, int h, const char *default_font);
 		virtual ~GUI_RTF(void);
-		
+
+		/* Sets the widget's content from a text string with basic markup like HTML and BBCode. */
+		void SetText(const char *text);
+
+		/* Gets the widget's full content height. */
 		int GetFullHeight();
+
+		/* Sets RTF render offset. */
 		void SetOffset(int value);
-		
+
+		/* Sets the widget's size. */
+		void SetSize(int w, int h);
+
+		/* Sets the widget's height. */
+		void SetHeight(int h);
+
+		/* Sets the widget's width. */
+		void SetWidth(int w);
+
+		/* Sets the widget's background color. */
 		void SetBgColor(int r, int g, int b);
+
+		/* Sets the widget's font. */
 		int SetFont(RTF_FontFamily family, const char *file);
-		
+
 		/* Get the title of an RTF document */
 		const char *GetTitle();
 
@@ -726,14 +737,13 @@ class GUI_RTF : public GUI_Widget
 
 		/* Get the author of an RTF document */
 		const char *GetAuthor();
-		
+
 		virtual void DrawWidget(const SDL_Rect *dr);
 };
 
-
 class GUI_FileManager : public GUI_Container
 {
-protected:
+	protected:
 		int rescan;
 		char cur_path[NAME_MAX];
 		GUI_Rect item_area;
@@ -751,18 +761,14 @@ protected:
 		GUI_ScrollBar *scrollbar;
 		GUI_Button *button_up;
 		GUI_Button *button_down;
+
 		void AdjustScrollbar(GUI_Object * sender);
 		void ScrollbarButtonEvent(GUI_Object * sender);
 		void Build();
-		/*
-		void ItemEvent(GUI_Object * sender, GUI_CallbackFunction *func);
-		void ItemClickEvent(GUI_Object * sender);
-		void ItemMouseoverEvent(GUI_Object * sender);
-		void ItemMouseoutEvent(GUI_Object * sender);
-		*/
 	public:
 		GUI_FileManager(const char *name, const char *path, int x, int y, int w, int h);
 		virtual ~GUI_FileManager(void);
+
 		void Scan();
 		void ReScan();
 		void Resize(int w, int h);
@@ -772,6 +778,7 @@ protected:
 		void SetPath(const char *path);
 		const char *GetPath();
 		void ChangeDir(const char *name, int size);
+
 		void SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 		void SetItemLabel(GUI_Font *font, int r, int g, int b);
 		void SetItemSize(const SDL_Rect *item_r);
@@ -782,8 +789,10 @@ protected:
 		void SetScrollbar(GUI_Surface *knob, GUI_Surface *background);
 		void SetScrollbarButtonUp(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 		void SetScrollbarButtonDown(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+
 		void RemoveScrollbar();
 		void RestoreScrollbar();
+
 		virtual void Update(int force);
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
 };
@@ -791,22 +800,6 @@ protected:
 
 
 class GUI_Screen;
-
-// GUI_MouseSprite by Thorsten Riess
-/*
-class GUI_Mouse : public GUI_Surface
-{
-	protected:
-		SDL_Rect odst;
-		SDL_Rect osrc;
-		SDL_Surface *bgsave;
-		Uint16 x;
-		Uint16 y;
-	public:
-		GUI_Mouse(char *aname, SDL_Surface *image);
-		virtual ~GUI_Mouse(void);
-		void Draw(GUI_Screen *scr,int x,int y);
-};*/
 
 class GUI_Screen : public GUI_Drawable
 {
@@ -846,9 +839,6 @@ class GUI_Screen : public GUI_Drawable
 		GUI_Widget *GetFocusWidget(void);
 		GUI_Widget *GetModalWidget(void);
 		GUI_Surface *GetSurface(void);
-
-		//void SetMouse(GUI_Mouse *m);
-		//void DrawMouse(void);
 };
 
 class GUI_RealScreen : public GUI_Screen
@@ -1223,8 +1213,10 @@ void GUI_ListBoxRemoveItem(GUI_ListBox *list, int n);
 /* RTF Widget API */ 
 GUI_Widget *GUI_RTF_Load(const char *name, const char *file, const char *default_font, int x, int y, int w, int h);
 GUI_Widget *GUI_RTF_LoadRW(const char *name, SDL_RWops *src, int freesrc, const char *default_font, int x, int y, int w, int h);
+GUI_Widget *GUI_RTF_CreateFromText(const char *name, const char *text, const char *default_font, int x, int y, int w, int h);
 int GUI_RTF_GetFullHeight(GUI_Widget *widget);
 void GUI_RTF_SetOffset(GUI_Widget *widget, int value);
+void GUI_RTF_SetText(GUI_Widget *widget, const char *text);
 void GUI_RTF_SetBgColor(GUI_Widget *widget, int r, int g, int b);
 int GUI_RTF_SetFont(GUI_Widget *widget, RTF_FontFamily family, const char *file);
 const char *GUI_RTF_GetTitle(GUI_Widget *widget);
