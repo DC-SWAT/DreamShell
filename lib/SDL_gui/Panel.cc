@@ -15,29 +15,6 @@ GUI_Panel::~GUI_Panel()
 	if (layout) layout->DecRef();
 }
 
-void GUI_Panel::Update(int force)
-{
-	int i;
-	
-	if (flags & WIDGET_CHANGED)
-	{
-		force = 1;
-		flags &= ~WIDGET_CHANGED;
-	}
-	
-	if (force)
-	{
-		SDL_Rect r = area;
-		r.x = x_offset;
-		r.y = y_offset;
-		Erase(&r);
-	}
-
-	for (i=0; i<n_widgets; i++)
-		widgets[i]->DoUpdate(force);
-}
-
-
 int GUI_Panel::Event(const SDL_Event *event, int xoffset, int yoffset)
 {
 	int i;

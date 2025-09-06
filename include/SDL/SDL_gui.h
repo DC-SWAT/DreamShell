@@ -599,7 +599,6 @@ class GUI_Panel : public GUI_Container
 {
 	protected:
 		GUI_Layout *layout;
-		virtual void Update(int force);
 		virtual void UpdateLayout(void);
 	public:
 		GUI_Panel(const char *name, int x, int y, int w, int h);

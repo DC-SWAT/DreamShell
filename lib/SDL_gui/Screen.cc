@@ -57,10 +57,8 @@ void GUI_Screen::Draw(GUI_Surface *image, const SDL_Rect *src_r, const SDL_Rect 
 	SDL_Rect sr, dr;
 	SDL_Rect *srp, *drp;
 
-	//assert( != 0);
-	
 	if(image == NULL) return;
-	
+
 	if (src_r)
 	{
 		sr = *src_r;
@@ -89,14 +87,10 @@ void GUI_Screen::Draw(GUI_Surface *image, const SDL_Rect *src_r, const SDL_Rect 
 		else
 			printf("NULL\n");
 	}
-*/	
-	if(VideoMustLock()) {
+*/
 		LockVideo();
 		image->Blit(srp, screen_surface, drp);
 		UnlockVideo();
-	} else {
-		image->Blit(srp, screen_surface, drp);
-	}
 	
 	// if (!screen_surface->IsDoubleBuffered())
 		UpdateRect(drp);
@@ -107,15 +101,11 @@ void GUI_Screen::Fill(const SDL_Rect *dst_r, SDL_Color c)
 {
 	Uint32 color = screen_surface->MapRGB(c.r, c.g, c.b);
 	SDL_Rect r = *dst_r;
-	
-	if(VideoMustLock()) {
+
 		LockVideo();
 		screen_surface->Fill(&r, color);
 		UnlockVideo();
-	} else {
-		screen_surface->Fill(&r, color);
-	}
-	
+
 	// if (!screen_surface->IsDoubleBuffered())
 		UpdateRect(&r);
 	
@@ -138,13 +128,9 @@ void GUI_Screen::Erase(const SDL_Rect *area)
 			rp = NULL;
 		
 		
-		if(VideoMustLock()) {
-			LockVideo();
-			screen_surface->Fill(rp, background_color);
-			UnlockVideo();
-		} else {
-			screen_surface->Fill(rp, background_color);
-		}
+		LockVideo();
+		screen_surface->Fill(rp, background_color);
+		UnlockVideo();
 	}
 
 	// if (!screen_surface->IsDoubleBuffered())
@@ -153,12 +139,16 @@ void GUI_Screen::Erase(const SDL_Rect *area)
 
 void GUI_Screen::Update(int force)
 {
-	
+
 	if (force)
 		Erase(&area);
-	
+
 	if (contents)
 		contents->DoUpdate(force);
+
+	if (modal_widget) {
+		modal_widget->DoUpdate(force);
+	}
 
 	FlushUpdates();
 }
@@ -449,9 +439,7 @@ void GUI_Screen::SetContents(GUI_Widget *widget)
 	joysel_size = 0;
 	joysel_cur = -1;
 	
-	int i;
-	
-	for(i = 0; i < joysel_size; i++) {
+	for(int i = 0; i < joysel_size; i++) {
 		joysel[i] = NULL;
 	}
 
@@ -465,11 +453,26 @@ GUI_Widget *GUI_Screen::GetContents(void)
 
 void GUI_Screen::SetModalWidget(GUI_Widget *widget)
 {
-	if (GUI_ObjectKeep((GUI_Object **) &modal_widget, widget))
+	if (widget && modal_widget == widget)
+		return;
+
+	joysel_size = 0;
+	joysel_cur = -1;
+
+	for(int i = 0; i < joysel_size; i++) {
+		joysel[i] = NULL;
+	}
+
+	if (modal_widget)
 	{
-		MarkChanged();
-		joysel_size = 0;
-		joysel_cur = -1;
+		modal_widget->DecRef();
+		modal_widget = 0;
+	}
+
+	if (widget)
+	{
+		modal_widget = widget;
+		modal_widget->IncRef();
 	}
 }
 
@@ -493,7 +496,7 @@ void GUI_Screen::SetBackgroundColor(SDL_Color c)
 
 void GUI_Screen::SetFocusWidget(GUI_Widget *widget)
 {
-	if (focus_widget == widget)
+	if (widget && focus_widget == widget)
 		return;
 
 	if (focus_widget)

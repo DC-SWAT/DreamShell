@@ -362,6 +362,7 @@ void GUI_Dialog::Show(DialogMode new_mode, const char *text, const char *bodyTex
     if(screen) screen->SetModalWidget(this);
 
     ClearFlags(WIDGET_HIDDEN);
+    MarkChanged();
 
     if(parent) {
         parent->MarkChanged();
@@ -399,12 +400,12 @@ int GUI_Dialog::Event(const SDL_Event *event, int xoffset, int yoffset) {
 }
 
 void GUI_Dialog::Hide(void) {
+    SetFlags(WIDGET_HIDDEN);
+
     GUI_Screen *screen = GUI_GetScreen();
     if(screen) screen->SetModalWidget(NULL);
 
-    SetFlags(WIDGET_HIDDEN);
-    MarkChanged();
-    if (parent) {
+    if(parent) {
         parent->MarkChanged();
     }
 }

@@ -44,7 +44,10 @@ int GUI_Container::IsVisibleWidget(GUI_Widget *widget)
 {
 	if (!widget)
 		return 0;
-	
+
+	if(widget->GetFlags() & WIDGET_HIDDEN)
+		return 0;
+
 	SDL_Rect r = widget->GetArea();
 	
 	if(r.x < (area.w + x_offset) && r.y < (area.h + y_offset) && r.x + r.w > x_offset && r.y + r.h > y_offset) {
@@ -344,13 +347,17 @@ void GUI_Container::Update(int force)
 	
 	if (force)
 	{
-		SDL_Rect local_area = {0, 0, area.w, area.h};
-		Erase(&local_area);
+		SDL_Rect r = area;
+		r.x = x_offset;
+		r.y = y_offset;
+		Erase(&r);
 	}
+
+	GUI_Screen *screen = GUI_GetScreen();
 
 	for (int i = 0; i < n_widgets; i++)
 	{
-		if(IsVisibleWidget(widgets[i])) {
+		if(IsVisibleWidget(widgets[i]) && widgets[i] != screen->GetModalWidget()) {
 			widgets[i]->DoUpdate(force);
 		}
 	}
