@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="File Manager" version="0.8.0" icon="images/icon.png">
+<app name="File Manager" version="1.0.0" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/tolua.klf" />
 		<module src="../../modules/luaDS.klf" />
 		<module src="../../modules/luaGUI.klf" />
 		<script type="text/lua" src="lua/main.lua" />
-		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="16" name="arial" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="comic" />
 		<image src="images/toolbar/exec_norm.png" name="icon-exec" />
 		<image src="images/toolbar/exec_highlight.png" name="icon-exec-high" />
 		<image src="images/toolbar/copy_norm.png" name="icon-copy" />
@@ -24,10 +24,6 @@
 		<image src="images/toolbar/config_highlight.png" name="icon-config-high" />
 		<image src="images/toolbar/exit_norm.png" name="icon-exit" />
 		<image src="images/toolbar/exit_highlight.png" name="icon-exit-high" />
-		<image src="../../gui/icons/normal/ok/32x32.png" name="but-ok" />
-		<image src="../../gui/icons/normal/cancel/32x32.png" name="but-cancel" />
-		<image src="../../gui/icons/highlight/ok/32x32.png" name="but-ok-high" />
-		<image src="../../gui/icons/highlight/cancel/32x32.png" name="but-cancel-high" />
 		<surface width="640" height="480" name="background">
 			<fill color="#99CBDB" />
 			<fill x="13" y="28" width="614" height="443" color="#AAAAAA" />
@@ -41,33 +37,6 @@
 		</surface>
 		<surface width="305" height="110" name="blue-bg">
 			<fill color="#EEFBFF" />
-		</surface>
-		<surface width="480" height="150" name="modal-bg">
-			<fill color="#555555" />
-			<fill x="0" y="0" width="480" height="149" color="#AAAAAA" />
-			<fill x="1" y="1" width="478" height="147" color="#EEEEEE" />
-			<fill x="2" y="2" width="476" height="145" color="#D9D9D9" />
-			<fill x="2" y="2" width="476" height="1" color="#FBFBFB" />
-		</surface>
-		<surface width="470" height="14" name="progress-bg">
-			<fill color="#555555" />
-			<fill x="1" y="1" width="468" height="12" color="#D9D9D9" />
-		</surface>
-		<surface width="470" height="14" name="progress-bar">
-			<fill color="#5E88B8" />
-			<fill x="1" y="1" width="468" height="12" color="#82B3E8" />
-		</surface>
-		<surface width="470" height="30" name="input-normal">
-			<fill width="470" height="30" color="#555555" />
-			<fill x="1" y="1" width="468" height="28" color="#F5F5F5" />
-		</surface>
-		<surface width="470" height="30" name="input-focus">
-			<fill color="#AAAAAA" />
-			<fill x="1" y="1" width="468" height="28" color="#D9F5FF" />
-		</surface>
-		<surface width="470" height="30" name="input-highlight">
-			<fill color="#AAAAAA" />
-			<fill x="1" y="1" width="468" height="28" color="#FFFFE0" />
 		</surface>
 		<surface width="590" height="28" name="item-normal">
 			<fill height="1" color="#FFFFFF" />
@@ -106,7 +75,7 @@
 		</surface>
 	</resources>
 	<body width="640" height="480" background="background" onload="FileManager:Initialize()" onunload="FileManager:Shutdown()">
-		<label width="340" height="25" x="20" y="2" font="arial" color="#000000" name="title" text="File Manager" align="left" />
+		<label width="340" height="25" x="20" y="2" font="comic" color="#000000" name="title" text="File Manager" align="left" />
 		<panel x="365" y="4" width="280" height="22" name="toolbar-panel">
 			<input type="button" 
 					onclick="FileManager:toolbarCopy()" 
@@ -187,7 +156,7 @@
 				item_highlight="item-focus" 
 				item_pressed="item-normal" 
 				item_disabled="item-normal"
-				item_font="arial" 
+				item_font="comic" 
 				item_font_color="#000000"
 				sb_knob="sb-knob" 
 				sb_back="sb-back" 
@@ -208,7 +177,7 @@
 				item_highlight="item-focus" 
 				item_pressed="item-normal" 
 				item_disabled="item-normal"
-				item_font="arial" 
+				item_font="comic" 
 				item_font_color="#000000"
 				sb_knob="sb-knob" 
 				sb_back="sb-back" 
@@ -223,31 +192,9 @@
 				onclick="FileManagerItemClickBottom"
 				oncontextclick="FileManagerItemContextClickBottom"
 				onmouseover="FileManagerItemMouseover" />
-		<panel x="80" y="165" width="480" height="150" name="modal-win">
-			<panel background="modal-bg" name="modal-content">
-				<panel x="5" y="5" width="470" height="50">
-					<label width="470" height="50" x="0" y="0" font="arial" color="#000000" name="modal-label" text="Please wait..." />
-				</panel>
-				<panel x="5" y="55" width="470" height="40" name="modal-body-panel">
-					<input type="text" font="arial" fontcolor="#000000" size="20" x="0" y="0" width="470" height="30" 
-							name="modal-input" normal="input-normal" highlight="input-highlight" focus="input-focus" />
-					<progressbar name="modal-progress" x="0" y="8" width="470" height="14" bimage="progress-bg" pimage="progress-bar" />
-				</panel>
-				<panel name="modal-buttons" x="0" y="110" width="480" height="33">
-					<input type="button" 
-							onclick="FileManager:ModalClick(true)" 
-							normal="but-ok" 
-							highlight="but-ok-high" 
-							pressed="but-ok" 
-							x="192" y="1" width="32" height="32" name="modal-ok" />
-					<input type="button" 
-							onclick="FileManager:ModalClick(false)" 
-							normal="but-cancel" 
-							highlight="but-cancel-high" 
-							pressed="but-cancel" 
-							x="256" y="0" width="32" height="32" name="modal-cancel" />
-				</panel>
-			</panel>
-		</panel>
+		<dialog name="modal-dialog" font="comic"
+				x="120" y="160" width="400" height="160"
+				onconfirm="FileManager:ModalClick(true)"
+				oncancel="FileManager:ModalClick(false)" />
 	</body>
 </app>
