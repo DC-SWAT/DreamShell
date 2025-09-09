@@ -356,6 +356,8 @@ function FileManager:toolbarMkdir()
 
 	if not ok then
 		return self:showError("Can't create directory: " .. (err or "Unknown error"));
+	else
+		GUI.FileManagerScan(mgr.widget);
 	end
 end
 
@@ -888,34 +890,29 @@ function FileManagerItemContextClickBottom(ent)
 	FileManager:ItemContextClick(ent, FileManager.mgr.bottom);
 end
 
+function FileManagerItemSelectTop(ent)
+	FileManager:ItemSelect(ent, FileManager.mgr.top);
+end
+
+function FileManagerItemSelectBottom(ent)
+	FileManager:ItemSelect(ent, FileManager.mgr.bottom);
+end
 
 function FileManager:ItemClick(ent, mgr)
 
 	self:focusManager(mgr);
-	
+
 	local umgr = self:getUnfocusedManager();
 
 	if umgr and umgr.ent and umgr.ent.index > -1 then
-		local bt = GUI.FileManagerGetItem(umgr.widget, umgr.ent.index);
-		if bt then
-			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
-		end
+		GUI.FileManagerClearSelection(umgr.widget);
 		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
 	end
 
 	if ent.attr == 0  then
 
 		if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
-
-			local bt;
-
-			if mgr.ent.index > -1 then
-				bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
-				GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
-			end
-
-			bt = GUI.FileManagerGetItem(mgr.widget, ent.index);
-			GUI.ButtonSetNormalImage(bt, self.mgr.item.selected);
+			GUI.FileManagerSetSelectedItem(mgr.widget, ent.index);
 			mgr.ent = ent;
 
 		else
@@ -938,30 +935,33 @@ end
 function FileManager:ItemContextClick(ent, mgr)
 
 	self:focusManager(mgr);
-	
+
 	local umgr = self:getUnfocusedManager();
 
 	if umgr and umgr.ent and umgr.ent.index > -1 then
-		local bt = GUI.FileManagerGetItem(umgr.widget, umgr.ent.index);
-		if bt then
-			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
-		end
+		GUI.FileManagerClearSelection(umgr.widget);
 		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
 	end
 
 	if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
-	
-		local bt;
-
-		if mgr.ent.index > -1 then
-			bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
-			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
-		end
-		
-		bt = GUI.FileManagerGetItem(mgr.widget, ent.index);
-		GUI.ButtonSetNormalImage(bt, self.mgr.item.selected);
+		GUI.FileManagerSetSelectedItem(mgr.widget, ent.index);
 		mgr.ent = ent;
-		
+	end
+end
+
+function FileManager:ItemSelect(ent, mgr)
+
+	self:focusManager(mgr);
+
+	local umgr = self:getUnfocusedManager();
+
+	if umgr and umgr.ent and umgr.ent.index > -1 then
+		GUI.FileManagerClearSelection(umgr.widget);
+		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
+	end
+
+	if not mgr.ent or (mgr.ent.index ~= ent.index and mgr.ent.name ~= ent.name) then
+		mgr.ent = ent;
 	end
 end
 

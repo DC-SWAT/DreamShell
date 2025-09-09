@@ -156,6 +156,7 @@
 				item_highlight="item-focus" 
 				item_pressed="item-normal" 
 				item_disabled="item-normal"
+				item_selected_normal="item-selected"
 				item_font="comic" 
 				item_font_color="#000000"
 				sb_knob="sb-knob" 
@@ -170,13 +171,15 @@
 				sbbdown_disabled="sbb-disabled" 
 				onclick="FileManagerItemClickTop" 
 				oncontextclick="FileManagerItemContextClickTop" 
-				onmouseover="FileManagerItemMouseover" />
+				onmouseover="FileManagerItemMouseover"
+				onselect="FileManagerItemSelectTop" />
 		<filemanager path="/" background="white-bg" name="filemgr-bottom" 
 				width="610" height="217" x="15" y="252"
 				item_normal="item-normal" 
 				item_highlight="item-focus" 
 				item_pressed="item-normal" 
 				item_disabled="item-normal"
+				item_selected_normal="item-selected"
 				item_font="comic" 
 				item_font_color="#000000"
 				sb_knob="sb-knob" 
@@ -191,7 +194,8 @@
 				sbbdown_disabled="sbb-disabled" 
 				onclick="FileManagerItemClickBottom"
 				oncontextclick="FileManagerItemContextClickBottom"
-				onmouseover="FileManagerItemMouseover" />
+				onmouseover="FileManagerItemMouseover"
+				onselect="FileManagerItemSelectBottom" />
 		<dialog name="modal-dialog" font="comic"
 				x="120" y="160" width="400" height="160"
 				onconfirm="FileManager:ModalClick(true)"
