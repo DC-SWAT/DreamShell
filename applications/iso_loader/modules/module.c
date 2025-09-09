@@ -1046,10 +1046,18 @@ void isoLoader_FwItemClick(dirent_fm_t *fm_ent) {
 		memset(noext, 0, sizeof(noext));
 		strncpy(noext, ent->name, len);
 		GUI_TextEntrySetText(self.device, noext);
+
+		if(GUI_FileManagerGetSelectedItem(self.fw_browser) != fm_ent->index) {
+			GUI_FileManagerSetSelectedItem(self.fw_browser, fm_ent->index);
+		}
 	}
 	else if(ent->name[0] == '.' && ent->name[1] == '.') {
 		GUI_TextEntrySetText(self.device, "auto");
 	}
+}
+
+void isoLoader_FwItemSelect(dirent_fm_t *fm_ent) {
+	isoLoader_FwItemClick(fm_ent);
 }
 
 void isoLoader_Run(GUI_Widget *widget) {
@@ -1241,19 +1249,11 @@ void isoLoader_Run(GUI_Widget *widget) {
 }
 
 static void selectFile(char *name, int index) {
-	GUI_Widget *w;
+
 	GUI_WidgetSetEnabled(self.btn_run, 1);
-	
-	w = GUI_FileManagerGetItem(self.filebrowser, index);
-	GUI_ButtonSetNormalImage(w, self.item_selected);
-	GUI_ButtonSetHighlightImage(w, self.item_selected);
-	GUI_ButtonSetPressedImage(w, self.item_selected);
-	
-	if(self.current_item > -1) {
-		w = GUI_FileManagerGetItem(self.filebrowser, self.current_item);
-		GUI_ButtonSetNormalImage(w, self.item_norm);
-		GUI_ButtonSetHighlightImage(w, self.item_focus);
-		GUI_ButtonSetPressedImage(w, self.item_focus);
+
+	if(GUI_FileManagerGetSelectedItem(self.filebrowser) != index) {
+		GUI_FileManagerSetSelectedItem(self.filebrowser, index);
 	}
 
 	self.current_item = index;
@@ -1294,7 +1294,7 @@ static void changeDir(dirent_t *ent) {
 	GUI_WidgetSetEnabled(self.btn_run, 0);
 }
 
-void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
+void isoLoader_ItemChange(dirent_fm_t *fm_ent, int change_dir) {
 
 	if(!fm_ent) {
 		return;
@@ -1341,18 +1341,22 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
 			}
 			fs_close(fd);
 		}
-		changeDir(ent);
 
-	} else if(self.current_item == fm_ent->index) {
-
+		if(change_dir) {
+			changeDir(ent);
+		}
+	}
+	else if(self.current_item == fm_ent->index) {
 		isoLoader_Run(NULL);
-
-	} else if(IsFileSupportedByApp(self.app, ent->name)) {
-
+	}
+	else if(IsFileSupportedByApp(self.app, ent->name)) {
 		selectFile(ent->name, fm_ent->index);
 	}
 }
 
+void isoLoader_ItemClick(dirent_fm_t *fm_ent) {
+	isoLoader_ItemChange(fm_ent, 1);
+}
 
 void isoLoader_ItemContextClick(dirent_fm_t *fm_ent) {
 
@@ -1363,11 +1367,15 @@ void isoLoader_ItemContextClick(dirent_fm_t *fm_ent) {
 		if(ent->attr == O_DIR) {
 			changeDir(ent);
 		} else {
-			isoLoader_ItemClick(fm_ent);
+			isoLoader_ItemChange(fm_ent, 1);
 		}
 	} else {
 		isoLoader_ShowSettings(self.settings);
 	}
+}
+
+void isoLoader_ItemSelect(dirent_fm_t *fm_ent) {
+	isoLoader_ItemChange(fm_ent, 0);
 }
 
 

@@ -225,12 +225,13 @@
 				<panel x="20" y="12" height="312" width="100%">
 					<panel name="filemanager_bg">
 						<filemanager height="300"
-							item_disabled="item-selected"
+							item_disabled="item-normal"
 							item_font="m23"
 							item_font_color="#3278A0"
 							item_highlight="item-focus"
 							item_normal="item-normal"
 							item_pressed="item-focus"
+							item_selected_normal="item-selected"
 							sb_knob="sb-knob"
 							sb_back="sb-back"
 							sbbup_normal="sbb-normal"
@@ -244,6 +245,7 @@
 							name="file_browser"
 							onclick="export:isoLoader_ItemClick()"
 							oncontextclick="export:isoLoader_ItemContextClick()"
+							onselect="export:isoLoader_ItemSelect()"
 							path="/" width="302" x="6" y="6" />
 					</panel>
 				</panel>
@@ -588,12 +590,13 @@
 								</panel>
 								<panel height="200" background="fw_browser_bg" >
 									<filemanager height="198" y="1" x="1" path="/"
-										item_disabled="item-selected"
+										item_disabled="item-normal"
 										item_font="m23"
 										item_font_color="#3278A0"
 										item_highlight="item-focus"
 										item_normal="item-normal"
 										item_pressed="item-focus"
+										item_selected_normal="item-selected"
 										sb_knob="sb-knob"
 										sb_back="sb-back-sm"
 										sbbup_normal="sbb-normal"
@@ -605,7 +608,8 @@
 										sbbdown_pressed="sbb-pressed"
 										sbbdown_disabled="sbb-disabled"
 										name="fw_browser"
-										onclick="export:isoLoader_FwItemClick()" />
+										onclick="export:isoLoader_FwItemClick()"
+										onselect="export:isoLoader_FwItemSelect()" />
 								</panel>
 							</panel>
 						</panel>

@@ -11,6 +11,7 @@ isoLoader_ShowGames
 isoLoader_Run
 isoLoader_ItemClick
 isoLoader_ItemContextClick
+isoLoader_ItemSelect
 isoLoader_toggleDMA
 isoLoader_toggleIRQ
 isoLoader_toggleAsync
@@ -38,3 +39,4 @@ isoLoader_Rotate_Image
 isoLoader_toggleExtension
 isoLoader_toggleVMU
 isoLoader_FwItemClick
+isoLoader_FwItemSelect

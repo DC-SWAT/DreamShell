@@ -84,6 +84,8 @@ void isoLoader_ItemClick(dirent_fm_t *fm_ent);
 
 void isoLoader_ItemContextClick(dirent_fm_t *fm_ent);
 
+void isoLoader_ItemSelect(dirent_fm_t *fm_ent);
+
 void isoLoader_Init(App_t *app);
 
 void isoLoader_ResizeUI();
@@ -97,3 +99,5 @@ uint32 getModeCDDA();
 void setModeCDDA(uint32 mode);
 
 void isoLoader_FwItemClick(dirent_fm_t *fm_ent);
+
+void isoLoader_FwItemSelect(dirent_fm_t *fm_ent);
