@@ -472,7 +472,7 @@ void GUI_RTF::SetupSurface() {
 		surface->DecRef();
 	}
 	else {
-		SetBgColor(255, 255, 255);
+		color = SDL_MapRGB(screen->format, 255, 255, 255);
 	}
 	surface = GUI_SurfaceCreate("rtf_render",
 								screen->flags,

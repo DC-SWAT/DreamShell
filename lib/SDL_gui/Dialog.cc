@@ -193,7 +193,6 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
 }
 
 GUI_Dialog::~GUI_Dialog(void) {
-    label->DecRef();
     rtf->DecRef();
     input->DecRef();
     progress->DecRef();

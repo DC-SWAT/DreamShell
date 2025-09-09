@@ -449,7 +449,7 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 	if(item_label_font) {
 //		SDL_Rect ts = item_label_font->GetTextSize(name);
 		
-		lb = new GUI_Label(name, 2, 0, item_area.w-4, item_area.h, item_label_font, name);
+		lb = new GUI_Label(name, 4, 0, item_area.w - 6, item_area.h, item_label_font, name);
 		lb->SetTextColor(item_label_clr.r, item_label_clr.g, item_label_clr.b);
 		lb->SetAlign(WIDGET_HORIZ_LEFT | WIDGET_VERT_CENTER);
 		bt->SetCaption(lb);
