@@ -750,23 +750,42 @@ class GUI_FileManager : public GUI_Container
 		GUI_Surface *item_highlight;
 		GUI_Surface *item_pressed;
 		GUI_Surface *item_disabled;
+		GUI_Surface *item_selected_normal;
+		GUI_Surface *item_selected_highlight;
+		GUI_Surface *item_selected_pressed;
+		GUI_Surface *item_selected_disabled;
 		GUI_CallbackFunction *item_click;
 		GUI_CallbackFunction *item_context_click;
 		GUI_CallbackFunction *item_mouseover;
 		GUI_CallbackFunction *item_mouseout;
+		GUI_CallbackFunction *item_select;
+		GUI_Callback **item_select_callbacks;
 		GUI_Font *item_label_font;
 		SDL_Color item_label_clr;
 		GUI_Panel *panel;
 		GUI_ScrollBar *scrollbar;
 		GUI_Button *button_up;
 		GUI_Button *button_down;
+		int selected_item;
 
 		void AdjustScrollbar(GUI_Object * sender);
 		void ScrollbarButtonEvent(GUI_Object * sender);
 		void Build();
+		void GetWidgetAbsolutePosition(GUI_Widget *widget, Uint16 *x, Uint16 *y);
+		void UpdateScrollbarButtons();
+		void UpdatePanelOffsetAndScrollbar(int new_offset);
+		void HandleMouseWheel(const SDL_Event *event);
+		void HandleKeyDown(const SDL_Event *event);
+		void HandleAnalogJoyMotion(const SDL_Event *event);
+		void HandleJoyHatMotion(const SDL_Event *event);
 	public:
 		GUI_FileManager(const char *name, const char *path, int x, int y, int w, int h);
 		virtual ~GUI_FileManager(void);
+
+		void SetSelectedItem(int index);
+		int GetSelectedItem();
+		void ClearSelection();
+		void EnsureItemVisible(int index);
 
 		void Scan();
 		void ReScan();
@@ -779,12 +798,14 @@ class GUI_FileManager : public GUI_Container
 		void ChangeDir(const char *name, int size);
 
 		void SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+		void SetItemSelectedSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 		void SetItemLabel(GUI_Font *font, int r, int g, int b);
 		void SetItemSize(const SDL_Rect *item_r);
 		void SetItemClick(GUI_CallbackFunction *func);
 		void SetItemContextClick(GUI_CallbackFunction *func);
 		void SetItemMouseover(GUI_CallbackFunction *func);
 		void SetItemMouseout(GUI_CallbackFunction *func);
+		void SetItemSelect(GUI_CallbackFunction *func);
 		void SetScrollbar(GUI_Surface *knob, GUI_Surface *background);
 		void SetScrollbarButtonUp(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 		void SetScrollbarButtonDown(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
@@ -1294,12 +1315,14 @@ void GUI_FileManagerAddItem(GUI_Widget *widget, const char *name, int size, int 
 GUI_Widget *GUI_FileManagerGetItem(GUI_Widget *widget, int index);
 GUI_Widget *GUI_FileManagerGetItemPanel(GUI_Widget *widget);
 void GUI_FileManagerSetItemSurfaces(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
+void GUI_FileManagerSetItemSelectedSurfaces(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 void GUI_FileManagerSetItemLabel(GUI_Widget *widget, GUI_Font *font, int r, int g, int b);
 void GUI_FileManagerSetItemSize(GUI_Widget *widget, const SDL_Rect *item_r);
 void GUI_FileManagerSetItemClick(GUI_Widget *widget, GUI_CallbackFunction *func);
 void GUI_FileManagerSetItemContextClick(GUI_Widget *widget, GUI_CallbackFunction *func);
 void GUI_FileManagerSetItemMouseover(GUI_Widget *widget, GUI_CallbackFunction *func);
 void GUI_FileManagerSetItemMouseout(GUI_Widget *widget, GUI_CallbackFunction *func);
+void GUI_FileManagerSetItemSelect(GUI_Widget *widget, GUI_CallbackFunction *func);
 void GUI_FileManagerSetScrollbar(GUI_Widget *widget, GUI_Surface *knob, GUI_Surface *background);
 void GUI_FileManagerSetScrollbarButtonUp(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
 void GUI_FileManagerSetScrollbarButtonDown(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled);
@@ -1307,6 +1330,9 @@ int GUI_FileManagerEvent(GUI_Widget *widget, const SDL_Event *event, int xoffset
 void GUI_FileManagerUpdate(GUI_Widget *widget, int force);
 void GUI_FileManagerRemoveScrollbar(GUI_Widget *widget);
 void GUI_FileManagerRestoreScrollbar(GUI_Widget *widget);
+int GUI_FileManagerGetSelectedItem(GUI_Widget *widget);
+void GUI_FileManagerSetSelectedItem(GUI_Widget *widget, int index);
+void GUI_FileManagerClearSelection(GUI_Widget *widget);
 
 
 /* Dialog Widget API */

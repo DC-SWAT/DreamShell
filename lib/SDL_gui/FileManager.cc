@@ -4,6 +4,7 @@
 #include <kos/thread.h>
 
 #include "SDL_gui.h"
+#include <algorithm>
 
 extern "C" {
 	void SDL_DC_EmulateMouse(SDL_bool value);
@@ -32,15 +33,24 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	item_pressed->Fill(NULL, 0x00FFFFFF);
 	item_disabled->Fill(NULL, 0xFF000000);
 	
+	item_selected_normal = NULL;
+	item_selected_highlight = NULL;
+	item_selected_pressed = NULL;
+	item_selected_disabled = NULL;
+
 	item_click = NULL;
 	item_context_click = NULL;
 	item_mouseover = NULL;
 	item_mouseout = NULL;
+	item_select = NULL;
+	item_select_callbacks = NULL;
  
 	item_label_font = NULL;
 	item_label_clr.r = 0;
 	item_label_clr.g = 0;
 	item_label_clr.b = 0;
+
+	selected_item = -1;
 	
 	Build();
 }
@@ -51,6 +61,19 @@ GUI_FileManager::~GUI_FileManager() {
 	item_pressed->DecRef();
 	item_disabled->DecRef();
 	
+	if(item_selected_normal) item_selected_normal->DecRef();
+	if(item_selected_highlight) item_selected_highlight->DecRef();
+	if(item_selected_pressed) item_selected_pressed->DecRef();
+	if(item_selected_disabled) item_selected_disabled->DecRef();
+
+	if(item_select_callbacks) {
+		for(int i=0; i < panel->GetWidgetCount(); i++) {
+			if(item_select_callbacks[i])
+				item_select_callbacks[i]->DecRef();
+		}
+		free(item_select_callbacks);
+	}
+
 	if(item_label_font)
 		item_label_font->DecRef();
 		
@@ -133,76 +156,54 @@ void GUI_FileManager::AdjustScrollbar(GUI_Object * sender) {
 	int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
 	
 	if(cont_height <= 0) {
+		panel->SetYOffset(0);
+		UpdateScrollbarButtons();
 		return;
 	}
 
 	int scroll_pos = scrollbar->GetVerticalPosition();
 	int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
 	
-	if(scroll_height > 0) {
+	if (scroll_pos >= scroll_height) {
+		panel->SetYOffset(cont_height);
+	} else if(scroll_height > 0) {
 		panel->SetYOffset((int)(scroll_pos * (float)cont_height / scroll_height));
 	} else {
 		panel->SetYOffset(0);
 	}
-
-	if (scroll_pos <= 0) {
-		button_up->SetEnabled(0);
-	} else {
-		button_up->SetEnabled(1);
-	}
-	if (scroll_pos >= scroll_height) {
-		button_down->SetEnabled(0);
-	} else {
-		button_down->SetEnabled(1);
-	}
-
+	UpdateScrollbarButtons();
 }
 
 void GUI_FileManager::ScrollbarButtonEvent(GUI_Object * sender) {
 
-	int scroll_pos, scroll_height, cont_height;
-	
-	cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
-	
+	int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
 	if(cont_height <= 0) {
 		return;
 	}
-	
-	scroll_pos = scrollbar->GetVerticalPosition();
-	scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-	
-	if(sender == button_up) {
-		
-		scroll_pos -= scroll_height / panel->GetWidgetCount();
-		
-		if(button_down->GetFlags() & WIDGET_DISABLED) {
-			button_down->SetEnabled(1);
-		}
-		
-		if(scroll_pos < 0) {
-			scroll_pos = 0;
-			button_up->SetEnabled(0);
-		}
-		
-	} else if(sender == button_down) {
-		
-		scroll_pos += scroll_height / panel->GetWidgetCount();
-		if(button_up->GetFlags() & WIDGET_DISABLED) {
-			button_up->SetEnabled(1);
-		}
-		
-		if(scroll_pos > scroll_height) {
-			scroll_pos = scroll_height;
-			button_down->SetEnabled(0);
-		}
+
+	int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+	if (scroll_height <= 0) {
+		return;
 	}
 
-	scrollbar->SetVerticalPosition(scroll_pos);
+	int current_offset = panel->GetYOffset();
+	int new_offset = current_offset;
 
-	if(scroll_height > 0) {
-		panel->SetYOffset((int)(scroll_pos * (float)cont_height / scroll_height));
-	} else {
-		panel->SetYOffset(0);
+	if(sender == button_up) {
+		new_offset -= item_area.h;
+	} else if(sender == button_down) {
+		new_offset += item_area.h;
+	}
+
+	if (new_offset < 0) {
+		new_offset = 0;
+	}
+	if (new_offset > cont_height) {
+		new_offset = cont_height;
+	}
+
+	if (new_offset != current_offset) {
+		UpdatePanelOffsetAndScrollbar(new_offset);
 	}
 }
 
@@ -300,6 +301,9 @@ void GUI_FileManager::Scan()
 
 	panel->RemoveAllWidgets();
 	panel->SetYOffset(0);
+	scrollbar->SetVerticalPosition(0);
+	UpdateScrollbarButtons();
+	selected_item = -1;
 
 	if(strlen(cur_path) > 1) 
 	{
@@ -345,6 +349,7 @@ void GUI_FileManager::Scan()
 }
 
 void GUI_FileManager::ReScan() {
+	ClearSelection();
 	rescan = 1;
 	MarkChanged();
 }
@@ -355,7 +360,7 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 	GUI_Callback *cb;
 //	GUI_EventHandler < GUI_FileManager > *cb;
 	GUI_Label *lb;
-	dirent_fm_t *prm;
+	dirent_fm_t *prm = NULL;
 	int need_free = 1;
 	int cnt = panel->GetWidgetCount();
 
@@ -366,7 +371,7 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 	bt->SetPressedImage(item_pressed);
 	bt->SetDisabledImage(item_disabled);
 
-	if(item_click || item_context_click || item_mouseover || item_mouseout) {
+	if(item_click || item_context_click || item_mouseover || item_mouseout || item_select) {
 		
 		prm = (dirent_fm_t *) malloc(sizeof(dirent_fm_t));
 		
@@ -378,7 +383,9 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 			prm->obj = this;
 			prm->index = cnt;
 		}
-		
+	}
+
+	if(prm) {
 		if(item_click) {
 //			cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::ItemClickEvent, (GUI_CallbackFunction*)free, (void*)prm);
 			cb = new GUI_Callback_C(item_click, (GUI_CallbackFunction*)free, (void*)prm);
@@ -414,12 +421,31 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 		}
 		
 		if(item_mouseout) {
-			cb = new GUI_Callback_C(item_mouseout, (need_free ? (GUI_CallbackFunction*)free : NULL), (void*)prm);
+			if(need_free) {
+				cb = new GUI_Callback_C(item_mouseout, (GUI_CallbackFunction*)free, (void*)prm);
+				need_free = 0;
+			} else {
+				cb = new GUI_Callback_C(item_mouseout, NULL, (void*)prm);
+			}
 			bt->SetMouseout(cb);
 			cb->DecRef();
 		}
+
+		if(item_select) {
+			item_select_callbacks = (GUI_Callback **) realloc(item_select_callbacks, sizeof(GUI_Callback *) * (cnt + 1));
+
+			if(item_select_callbacks != NULL) {
+				if(need_free) {
+					cb = new GUI_Callback_C(item_select, (GUI_CallbackFunction*)free, (void*)prm);
+					need_free = 0;
+				} else {
+					cb = new GUI_Callback_C(item_select, NULL, (void*)prm);
+				}
+				item_select_callbacks[cnt] = cb;
+			}
+		}
 	}
-	
+
 	if(item_label_font) {
 //		SDL_Rect ts = item_label_font->GetTextSize(name);
 		
@@ -480,6 +506,14 @@ void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highligh
 	ReScan();
 }
 
+void GUI_FileManager::SetItemSelectedSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled) {
+	GUI_ObjectKeep((GUI_Object **) &item_selected_normal, normal);
+	GUI_ObjectKeep((GUI_Object **) &item_selected_highlight, highlight);
+	GUI_ObjectKeep((GUI_Object **) &item_selected_pressed, pressed);
+	GUI_ObjectKeep((GUI_Object **) &item_selected_disabled, disabled);
+	ReScan();
+}
+
 void GUI_FileManager::SetItemSize(const SDL_Rect *item_r) {
 	item_area.w = item_r->w;
 	item_area.h = item_r->h;
@@ -505,6 +539,11 @@ void GUI_FileManager::SetItemMouseover(GUI_CallbackFunction *func) {
 
 void GUI_FileManager::SetItemMouseout(GUI_CallbackFunction *func) {
 	item_mouseout = func;
+	ReScan();
+}
+
+void GUI_FileManager::SetItemSelect(GUI_CallbackFunction *func) {
+	item_select = func;
 	ReScan();
 }
 
@@ -572,6 +611,15 @@ void GUI_FileManager::Update(int force) {
 	}
 
 	if(rescan)  {
+		if(item_select_callbacks) {
+			for(int i=0; i < panel->GetWidgetCount(); i++) {
+				if(item_select_callbacks[i])
+					item_select_callbacks[i]->DecRef();
+			}
+			free(item_select_callbacks);
+			item_select_callbacks = NULL;
+		}
+
 		panel->RemoveAllWidgets();
 		panel->SetYOffset(0);
 
@@ -584,6 +632,200 @@ void GUI_FileManager::Update(int force) {
 	} else {
 		for (i = 0; i < n_widgets; i++) {
 			widgets[i]->DoUpdate(force);
+		}
+	}
+}
+
+void GUI_FileManager::HandleMouseWheel(const SDL_Event *event) {
+	if ((flags & WIDGET_PRESSED) || !event->motion.z) {
+		return;
+	}
+	int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
+	if (cont_height <= 0) return;
+
+	int current_offset = panel->GetYOffset();
+	int new_offset = current_offset;
+	int val = event->motion.z;
+	
+	if (val < 0) {
+		new_offset -= item_area.h;
+	}
+	else if(val > 0) {
+		new_offset += item_area.h;
+	}
+	else {
+		return;
+	}
+
+	if(new_offset > cont_height) new_offset = cont_height;
+	if(new_offset < 0) new_offset = 0;
+
+	if(current_offset != new_offset) {
+		UpdatePanelOffsetAndScrollbar(new_offset);
+	}
+}
+
+void GUI_FileManager::HandleKeyDown(const SDL_Event *event) {
+	switch (event->key.keysym.sym) {
+		default:
+			break;
+
+		case SDLK_HOME:
+		{
+			panel->SetYOffset(0);
+			scrollbar->SetVerticalPosition(0);
+			UpdateScrollbarButtons();
+			break;
+		}
+
+		case SDLK_END:
+		{
+			int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
+			if (cont_height > 0) {
+				int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+				panel->SetYOffset(cont_height);
+				scrollbar->SetVerticalPosition(scroll_height);
+				UpdateScrollbarButtons();
+			}
+			break;
+		}
+
+		case SDLK_PAGEUP:
+		case SDLK_PAGEDOWN:
+		{
+			int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
+			if (cont_height <= 0) break;
+
+			int current_offset = panel->GetYOffset();
+			int new_offset = current_offset;
+
+			if (event->key.keysym.sym == SDLK_PAGEUP) {
+				new_offset -= panel->GetHeight();
+			}
+			else {
+				new_offset += panel->GetHeight();
+			}
+
+			if(new_offset > cont_height) new_offset = cont_height;
+			if(new_offset < 0) new_offset = 0;
+
+			if(current_offset != new_offset) {
+				UpdatePanelOffsetAndScrollbar(new_offset);
+			}
+		}
+		break;
+	}
+}
+
+void GUI_FileManager::HandleAnalogJoyMotion(const SDL_Event *event) {
+	if(!(flags & WIDGET_PRESSED)) {
+		return;
+	}
+
+	int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
+	if (cont_height <= 0) return;
+
+	int val = event->jaxis.value;
+
+	int sleep_time = 128 - abs(val);
+	if(sleep_time > 0) {
+		thd_sleep(sleep_time);
+	}
+
+	int current_offset = panel->GetYOffset();
+	int new_offset = current_offset;
+
+	if (val < -12) {
+		new_offset -= item_area.h;
+	}
+	else if(val > 12) {
+		new_offset += item_area.h;
+	}
+	else {
+		return;
+	}
+
+	if(new_offset > cont_height) new_offset = cont_height;
+	if(new_offset < 0) new_offset = 0;
+
+	if(current_offset != new_offset) {
+		UpdatePanelOffsetAndScrollbar(new_offset);
+	}
+}
+
+void GUI_FileManager::HandleJoyHatMotion(const SDL_Event *event) {
+	if (event->jhat.hat) { // skip second d-pad
+		return;
+	}
+	if(!(flags & WIDGET_PRESSED)) {
+		return;
+	}
+
+	int item_count = panel->GetWidgetCount();
+	if (item_count <= 0) return;
+
+	int old_selection = selected_item;
+	int new_selection = selected_item;
+
+	if (new_selection < 0) {
+		// If nothing is selected, any direction press selects the second item (or first if it's the only one)
+		switch (event->jhat.value) {
+			case SDL_HAT_UP:
+			case SDL_HAT_DOWN:
+			case SDL_HAT_LEFT:
+			case SDL_HAT_RIGHT:
+				new_selection = (item_count > 0 ? 0 : -1);
+				break;
+		}
+	}
+	else {
+		// Something is selected, move from there
+		int visible_items = panel->GetHeight() / item_area.h;
+		switch(event->jhat.value) {
+			case SDL_HAT_UP: // UP
+				new_selection--;
+				break;
+			case SDL_HAT_DOWN: // DOWN
+				new_selection++;
+				break;
+			case SDL_HAT_LEFT: // LEFT
+				new_selection -= visible_items;
+				break;
+			case SDL_HAT_RIGHT: // RIGHT
+				new_selection += visible_items;
+				break;
+			default:
+				break;
+		}
+	}
+
+	if (new_selection < 0) {
+		new_selection = 0;
+	}
+	else if (new_selection >= item_count) {
+		new_selection = item_count - 1;
+	}
+
+	if(old_selection != new_selection ) {
+		EnsureItemVisible(new_selection);
+		SetSelectedItem(new_selection);
+
+		GUI_Button *item = GetItem(new_selection);
+		if (item) {
+
+			SDL_Event evt;
+			Uint16 abs_x, abs_y;
+			GetWidgetAbsolutePosition(item, &abs_x, &abs_y);
+
+			evt.type = SDL_MOUSEMOTION;
+			evt.motion.x = abs_x;
+			evt.motion.y = abs_y;
+			SDL_PushEvent(&evt);
+			SDL_WarpMouse(evt.motion.x, evt.motion.y);
+
+			if (item_select && item_select_callbacks && new_selection >= 0) {
+				item_select_callbacks[new_selection]->Call(item);
+			}
 		}
 	}
 }
@@ -605,8 +847,8 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		case SDL_JOYBUTTONDOWN:
 		
 			switch(event->jbutton.button) {
-				case SDL_DC_Y: // Y
-				case SDL_DC_X: // X
+				case SDL_DC_Y:
+				case SDL_DC_X:
 					SetFlags(WIDGET_PRESSED);
 					SDL_DC_EmulateMouse(SDL_FALSE);
 					GUI_GetScreen()->SetJoySelectState(0);
@@ -619,8 +861,8 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		case SDL_JOYBUTTONUP:
 
 			switch(event->jbutton.button) {
-				case SDL_DC_Y: // Y
-				case SDL_DC_X: // X
+				case SDL_DC_Y:
+				case SDL_DC_X:
 					ClearFlags(WIDGET_PRESSED);
 					SDL_DC_EmulateMouse(SDL_TRUE);
 					GUI_GetScreen()->SetJoySelectState(1);
@@ -631,162 +873,22 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 			break;
 		
 		case SDL_MOUSEMOTION:
-			if (event->motion.z) {
-				int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-				int sp_old = scrollbar->GetVerticalPosition();
-				int sp = sp_old;
-				int val = event->motion.z;
-				int step = (scroll_height / panel->GetWidgetCount());
-				
-				if (val < 0) {
-					sp -= step;
-				} else if(val > 0) {
-					sp += step;
-				} else {
-					break;
-				}
-				
-				if(sp > scroll_height) {
-					sp = scroll_height;
-				} else if(sp < 0) {
-					sp = 0;
-				}
-
-				if(sp_old != sp) {
-					scrollbar->SetVerticalPosition(sp);
-					AdjustScrollbar(NULL);
-				}
-			}
+			HandleMouseWheel(event);
 			break;
-
+		
 		case SDL_KEYDOWN:
-			switch (event->key.keysym.sym) {
-				default:
-					break;
-
-				case SDLK_HOME:
-				{
-					scrollbar->SetVerticalPosition(0);
-					AdjustScrollbar(NULL);
-					break;
-				}
-
-				case SDLK_END:
-				{
-					int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-					scrollbar->SetVerticalPosition(scroll_height);
-					AdjustScrollbar(NULL);
-					break;
-				}
-
-				case SDLK_PAGEUP:
-				case SDLK_PAGEDOWN:
-					int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-					int sp_old = scrollbar->GetVerticalPosition();
-					int sp = sp_old;
-					int step = (scroll_height / panel->GetWidgetCount());
-					
-					if (event->key.keysym.sym == SDLK_PAGEUP) {
-						sp -= step;
-					} else {
-						sp += step;
-					}
-					
-					if(sp > scroll_height) {
-						sp = scroll_height;
-					} else if(sp < 0) {
-						sp = 0;
-					}
-
-					if(sp_old != sp) {
-						scrollbar->SetVerticalPosition(sp);
-						AdjustScrollbar(NULL);
-					}
-					break;
-			}
+			HandleKeyDown(event);
 			break;
 
 		case SDL_JOYAXISMOTION:
-			switch(event->jaxis.axis) {
-				case 1: // Analog joystick
-					if(flags & WIDGET_PRESSED) {
-
-						int val = event->jaxis.value;
-
-						int sleep_time = 158 - abs(val);
-						if(sleep_time > 0) {
-							thd_sleep(sleep_time);
-						}
-
-						int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-						int sp_old = scrollbar->GetVerticalPosition();
-						int sp = sp_old;
-						int step = (scroll_height / panel->GetWidgetCount());
-						step += (abs(val) - 16) / 10;
-
-						if (val < 0) {
-							sp -= step;
-						} else if(val > 0) {
-							sp += step;
-						} else {
-							break;
-						}
-
-						if(sp > scroll_height) {
-							sp = scroll_height;
-						} else if(sp < 0) {
-							sp = 0;
-						}
-
-						if(sp_old != sp) {
-							scrollbar->SetVerticalPosition(sp);
-							AdjustScrollbar(NULL);
-						}
-					}
-					break;
-				default:
-					break;
+			if (event->jaxis.axis == 1) { // Analog joystick
+				HandleAnalogJoyMotion(event);
 			}
 			break;
 
 		case SDL_JOYHATMOTION:
-			if (event->jhat.hat) { // skip second d-pad
-				break;
-			}
-			
-			if(flags & WIDGET_PRESSED) {
-
-				int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
-				int sp = scrollbar->GetVerticalPosition();
-				int step = (scroll_height / panel->GetWidgetCount()) * 2;
-
-				switch(event->jhat.value) {
-					case SDL_HAT_UP: // UP
-						sp -= step;
-						break;
-					case SDL_HAT_DOWN: // DOWN
-						sp += step;
-						break;
-					case SDL_HAT_LEFT: // LEFT
-						sp -= step * ((panel->GetHeight() / item_area.h) - 1);
-						break;
-					case SDL_HAT_RIGHT: // RIGHT
-						sp += step * ((panel->GetHeight() / item_area.h) - 1);
-						break;
-					default:
-						break;
-				}
-				
-				if(sp > scroll_height) {
-					sp = scroll_height;
-				}
-				
-				if(sp < 0) {
-					sp = 0;
-				}
-				scrollbar->SetVerticalPosition(sp);
-				AdjustScrollbar(NULL);
-			}
+			HandleJoyHatMotion(event);
+			break;
 			
 		default:
 			break;
@@ -800,6 +902,121 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 	}
 	return rv;
 }
+
+void GUI_FileManager::GetWidgetAbsolutePosition(GUI_Widget *widget, Uint16 *x, Uint16 *y) {
+	SDL_Rect warea = widget->GetArea();
+	*x = warea.x + warea.w / 2;
+	*y = warea.y + warea.h / 2;
+
+	GUI_Drawable *p = widget->GetParent();
+	
+	while (p) {
+		warea = p->GetArea();
+		int type = p->GetWType();
+		
+		if (type == WIDGET_TYPE_CONTAINER || type == WIDGET_TYPE_CARDSTACK) {
+			*x += warea.x - ((GUI_Container*)p)->GetXOffset();
+			*y += warea.y - ((GUI_Container*)p)->GetYOffset();
+		}
+		else {
+			*x += warea.x;
+			*y += warea.y;
+		}
+		p = p->GetParent();
+	}
+}
+
+void GUI_FileManager::UpdateScrollbarButtons() {
+	int scroll_pos = scrollbar->GetVerticalPosition();
+	int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+	
+	if (scroll_pos <= 0) {
+		button_up->SetEnabled(0);
+	}
+	else {
+		button_up->SetEnabled(1);
+	}
+	if (scroll_pos >= scroll_height) {
+		button_down->SetEnabled(0);
+	}
+	else {
+		button_down->SetEnabled(1);
+	}
+}
+
+void GUI_FileManager::UpdatePanelOffsetAndScrollbar(int new_offset) {
+	panel->SetYOffset(new_offset);
+
+	int cont_height = (panel->GetWidgetCount() * item_area.h) - panel->GetHeight();
+	if(cont_height < 0) cont_height = 0;
+
+	int scroll_height = scrollbar->GetHeight() - scrollbar->GetKnobImage()->GetHeight();
+
+	if (new_offset >= cont_height) {
+		scrollbar->SetVerticalPosition(scroll_height);
+	}
+	else if (cont_height > 0 && scroll_height > 0) {
+		int sp = (int)(new_offset * (float)scroll_height / cont_height);
+		scrollbar->SetVerticalPosition(sp);
+	}
+	else {
+		scrollbar->SetVerticalPosition(0);
+	}
+	UpdateScrollbarButtons();
+}
+
+void GUI_FileManager::ClearSelection() {
+	SetSelectedItem(-1);
+}
+
+void GUI_FileManager::SetSelectedItem(int index) {
+
+	if (item_selected_normal && selected_item >= 0 && selected_item < panel->GetWidgetCount()) {
+		GUI_Button *old_item = GetItem(selected_item);
+		if (old_item) {
+			old_item->SetNormalImage(item_normal);
+			old_item->SetHighlightImage(item_highlight);
+			old_item->SetPressedImage(item_pressed);
+			old_item->SetDisabledImage(item_disabled);
+		}
+	}
+
+	selected_item = index;
+
+	if (selected_item >= 0 && selected_item < panel->GetWidgetCount()) {
+		GUI_Button *new_item = GetItem(selected_item);
+		if (new_item) {
+			if(item_selected_normal) new_item->SetNormalImage(item_selected_normal);
+			if(item_selected_highlight) new_item->SetHighlightImage(item_selected_highlight);
+			if(item_selected_pressed) new_item->SetPressedImage(item_selected_pressed);
+			if(item_selected_disabled) new_item->SetDisabledImage(item_selected_disabled);
+		}
+	}
+}
+
+int GUI_FileManager::GetSelectedItem() {
+	return selected_item;
+}
+
+void GUI_FileManager::EnsureItemVisible(int index) {
+
+	int item_count = panel->GetWidgetCount();
+	if (item_count <= 0) return;
+
+	int item_h = item_area.h;
+	int panel_h = panel->GetHeight();
+
+	int new_offset = (index * item_h) - (panel_h - item_h) / 2;
+	int max_offset = std::max(0, (item_count * item_h) - panel_h);
+
+	new_offset = std::max(0, new_offset + item_h);
+	new_offset = std::min(new_offset, max_offset);
+
+	if (panel->GetYOffset() != new_offset) {
+		UpdatePanelOffsetAndScrollbar(new_offset);
+	}
+}
+
 
 extern "C"
 {
@@ -845,6 +1062,10 @@ void GUI_FileManagerSetItemSurfaces(GUI_Widget *widget, GUI_Surface *normal, GUI
 	((GUI_FileManager *) widget)->SetItemSurfaces(normal, highlight, pressed, disabled);
 }
 
+void GUI_FileManagerSetItemSelectedSurfaces(GUI_Widget *widget, GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled) {
+	((GUI_FileManager *) widget)->SetItemSelectedSurfaces(normal, highlight, pressed, disabled);
+}
+
 void GUI_FileManagerSetItemLabel(GUI_Widget *widget, GUI_Font *font, int r, int g, int b) {
 	((GUI_FileManager *) widget)->SetItemLabel(font, r, g, b);
 }
@@ -867,6 +1088,10 @@ void GUI_FileManagerSetItemMouseover(GUI_Widget *widget, GUI_CallbackFunction *f
 
 void GUI_FileManagerSetItemMouseout(GUI_Widget *widget, GUI_CallbackFunction *func) {
 	((GUI_FileManager *) widget)->SetItemMouseout(func);
+}
+
+void GUI_FileManagerSetItemSelect(GUI_Widget *widget, GUI_CallbackFunction *func) {
+	((GUI_FileManager *) widget)->SetItemSelect(func);
 }
 
 void GUI_FileManagerSetScrollbar(GUI_Widget *widget, GUI_Surface *knob, GUI_Surface *background) {
@@ -895,6 +1120,18 @@ void GUI_FileManagerRemoveScrollbar(GUI_Widget *widget) {
 
 void GUI_FileManagerRestoreScrollbar(GUI_Widget *widget) {
 	((GUI_FileManager *) widget)->RestoreScrollbar();
+}
+
+int GUI_FileManagerGetSelectedItem(GUI_Widget *widget) {
+	return ((GUI_FileManager *) widget)->GetSelectedItem();
+}
+
+void GUI_FileManagerSetSelectedItem(GUI_Widget *widget, int index) {
+	((GUI_FileManager *) widget)->SetSelectedItem(index);
+}
+
+void GUI_FileManagerClearSelection(GUI_Widget *widget) {
+	((GUI_FileManager *) widget)->ClearSelection();
 }
 
 }

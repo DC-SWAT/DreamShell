@@ -2328,7 +2328,9 @@ static void filemanager_lua_func_out(dirent_fm_t *ent) {
 	filemanager_call_lua_func(ent, 3);
 }
 
-
+static void filemanager_lua_func_select(void *data) {
+	filemanager_call_lua_func(data, 4);
+}
 
 static GUI_CallbackFunction *FileManagerCallbackFunc(App_t *app, const char *event, char *wname, int idx) {
 
@@ -2358,6 +2360,8 @@ static GUI_CallbackFunction *FileManagerCallbackFunc(App_t *app, const char *eve
 				return (GUI_CallbackFunction *)filemanager_lua_func_over;
 			case 3:
 				return (GUI_CallbackFunction *)filemanager_lua_func_out;
+			case 4:
+				return (GUI_CallbackFunction *)filemanager_lua_func_select;
 			default:
 				return NULL;
 			}
@@ -2445,6 +2449,15 @@ static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, cha
 		GUI_FileManagerSetItemSurfaces(fm, sn, sh, sp, sd);
 	}
 
+	sn = getElementSurfaceTheme(app, node, "item_selected_normal");
+
+	if(sn != NULL) {
+		sh = getElementSurfaceTheme(app, node, "item_selected_highlight");
+		sp = getElementSurfaceTheme(app, node, "item_selected_pressed");
+		sd = getElementSurfaceTheme(app, node, "item_selected_disabled");
+		GUI_FileManagerSetItemSelectedSurfaces(fm, sn, sh, sp, sd);
+	}
+
 	event = FindXmlAttr("onclick", node, NULL);
 
 	if(event != NULL) {
@@ -2467,6 +2480,12 @@ static GUI_Widget *parseAppFileManagerElement(App_t *app, mxml_node_t *node, cha
 
 	if(event != NULL) {
 		GUI_FileManagerSetItemMouseout(fm, FileManagerCallbackFunc(app, event, name, 3));
+	}
+
+	event = FindXmlAttr("onselect", node, NULL);
+
+	if(event != NULL) {
+		GUI_FileManagerSetItemSelect(fm, FileManagerCallbackFunc(app, event, name, 4));
 	}
 
 	if(node->child && node->child->next) {
