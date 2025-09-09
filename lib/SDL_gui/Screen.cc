@@ -1,6 +1,3 @@
-// Modified by SWAT 
-// http://www.dc-swat.ru 
-
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -73,28 +70,12 @@ void GUI_Screen::Draw(GUI_Surface *image, const SDL_Rect *src_r, const SDL_Rect 
 	}
 	else
 		drp = NULL;
-/*
-	if (flags & SCREEN_DEBUG_BLIT)
-	{
-		printf("Screen_draw: %p:", image);
-		if (src_r)
-			printf("[%d,%d,%d,%d]", srp->x, srp->y, srp->w, srp->h);
-		else
-			printf("NULL");
-		printf(" -> %p:", screen_surface);
-		if (drp)
-			printf("[%d,%d,%d,%d] (%d,%d)\n", drp->x, drp->y, drp->w, drp->h, drp->x + drp->w, drp->y + drp->h);
-		else
-			printf("NULL\n");
-	}
-*/
-		LockVideo();
-		image->Blit(srp, screen_surface, drp);
-		UnlockVideo();
-	
-	// if (!screen_surface->IsDoubleBuffered())
-		UpdateRect(drp);
-	
+
+	LockVideo();
+	image->Blit(srp, screen_surface, drp);
+	UnlockVideo();
+
+	UpdateRect(drp);
 }
 
 void GUI_Screen::Fill(const SDL_Rect *dst_r, SDL_Color c)
@@ -102,12 +83,11 @@ void GUI_Screen::Fill(const SDL_Rect *dst_r, SDL_Color c)
 	Uint32 color = screen_surface->MapRGB(c.r, c.g, c.b);
 	SDL_Rect r = *dst_r;
 
-		LockVideo();
-		screen_surface->Fill(&r, color);
-		UnlockVideo();
+	LockVideo();
+	screen_surface->Fill(&r, color);
+	UnlockVideo();
 
-	// if (!screen_surface->IsDoubleBuffered())
-		UpdateRect(&r);
+	UpdateRect(&r);
 	
 }
 
@@ -133,8 +113,7 @@ void GUI_Screen::Erase(const SDL_Rect *area)
 		UnlockVideo();
 	}
 
-	// if (!screen_surface->IsDoubleBuffered())
-		UpdateRect(area);
+	UpdateRect(area);
 }
 
 void GUI_Screen::Update(int force)
@@ -257,19 +236,6 @@ void GUI_Screen::SetJoySelectState(int value) {
 
 int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 {
-/*	if (event->type == SDL_QUIT)
-	{
-		GUI_SetRunning(0);
-		return 1;
-	}
-	if (event->type == SDL_KEYDOWN)
-	{
-		if (event->key.keysym.sym == SDLK_ESCAPE)
-		{
-			GUI_SetRunning(0);
-			return 1;
-		}
-	}*/
 
 	if(joysel_enabled) {
 
@@ -435,13 +401,13 @@ void GUI_Screen::SetContents(GUI_Widget *widget)
 	SetFocusWidget(NULL);
 	SetModalWidget(NULL);
 	Keep(&contents, widget);
-
-	joysel_size = 0;
-	joysel_cur = -1;
 	
-	for(int i = 0; i < joysel_size; i++) {
+	for (int i = 0; i < joysel_size; i++)
+	{
 		joysel[i] = NULL;
 	}
+	joysel_size = 0;
+	joysel_cur = -1;
 
 	MarkChanged();
 }
@@ -456,12 +422,12 @@ void GUI_Screen::SetModalWidget(GUI_Widget *widget)
 	if (widget && modal_widget == widget)
 		return;
 
-	joysel_size = 0;
-	joysel_cur = -1;
-
-	for(int i = 0; i < joysel_size; i++) {
+	for (int i = 0; i < joysel_size; i++)
+	{
 		joysel[i] = NULL;
 	}
+	joysel_size = 0;
+	joysel_cur = -1;
 
 	if (modal_widget)
 	{
@@ -523,21 +489,6 @@ GUI_Widget *GUI_Screen::GetModalWidget()
 {
 	return modal_widget;
 }
-/*
-void GUI_Screen::SetMouse(GUI_Mouse *m)
-{
-	GUI_ObjectKeep((GUI_Object **) &mouse, m);
-}
-
-void GUI_Screen::DrawMouse(void)
-{
-	if (mouse)
-	{
-		int x,y;
-		SDL_GetMouseState(&x, &y);
-		mouse->Draw(this,x,y);
-	}
-}*/
 
 extern "C"
 {
@@ -586,23 +537,12 @@ GUI_Widget *GUI_ScreenGetFocusWidget(GUI_Screen *screen)
 {
 	return screen->GetFocusWidget();
 }
-/*
-void GUI_ScreenDrawMouse(GUI_Screen *screen)
-{
-	screen->DrawMouse();
-}
-*/
 
 void GUI_ScreenEvent(GUI_Screen *screen, const SDL_Event *event, int xoffset, int yoffset)
 {
 	screen->Event(event, xoffset, yoffset);
 }
 
-
-void GUI_ScreenUpdate(GUI_Screen *screen, int force)
-{
-	//screen->Update(force);
-}
 
 void GUI_ScreenDoUpdate(GUI_Screen *screen, int force) {
 	if(screen)
@@ -628,12 +568,6 @@ void GUI_ScreenErase(GUI_Screen *screen, const SDL_Rect *area)
 	if(screen)
 		screen->Erase(area);
 }
-/*
-void GUI_ScreenSetMouse(GUI_Screen *screen, GUI_Mouse *m)
-{
-	if(screen)
-		screen->SetMouse(m);
-}*/
 
 void GUI_ScreenSetJoySelectState(GUI_Screen *screen, int value) {
 	screen->SetJoySelectState(value);

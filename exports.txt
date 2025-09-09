@@ -1016,7 +1016,6 @@ GUI_ScreenGetSurface
 #GUI_ScreenSetMouse
 GUI_ScreenSetJoySelectState
 GUI_ScreenEvent
-GUI_ScreenUpdate
 GUI_ScreenDoUpdate
 GUI_ScreenDraw
 GUI_ScreenFill

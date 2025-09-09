@@ -1089,8 +1089,7 @@ GUI_Widget *GUI_ScreenGetFocusWidget(GUI_Screen *screen);
 //void GUI_ScreenDrawMouse(GUI_Screen *screen); 
 void GUI_ScreenSetJoySelectState(GUI_Screen *screen, int value);
 void GUI_ScreenEvent(GUI_Screen *screen, const SDL_Event *event, 
-                     int xoffset, int yoffset); 
-void GUI_ScreenUpdate(GUI_Screen *screen, int force); 
+                     int xoffset, int yoffset);
 void GUI_ScreenDoUpdate(GUI_Screen *screen, int force); 
 void GUI_ScreenDraw(GUI_Screen *screen, GUI_Surface *image, 
                     const SDL_Rect *src_r, const SDL_Rect *dst_r);
