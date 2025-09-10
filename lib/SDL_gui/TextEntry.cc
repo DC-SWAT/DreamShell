@@ -8,50 +8,61 @@
 GUI_TextEntry::GUI_TextEntry(const char *aname, int x, int y, int w, int h, GUI_Font *afont, int size)
 : GUI_Widget(aname, x, y, w, h), font(afont)
 {
-	SDL_Rect in;
-
-	in.x = 4;
-	in.y = 4;
-	in.w = area.w-8;
-	in.h = area.h-8;
-	
 	SetTransparent(1);
-	
-	normal_image =     new GUI_Surface("normal", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	highlight_image =  new GUI_Surface("highlight", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	focus_image =      new GUI_Surface("focus", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
 
-	textcolor.r = 255;
-	textcolor.g = 255;
-	textcolor.b = 255;
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
+
+	normal_image =     new GUI_Surface("normal", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	highlight_image =  new GUI_Surface("highlight", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	focus_image =      new GUI_Surface("focus", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+
+	textcolor.r = 0;
+	textcolor.g = 0;
+	textcolor.b = 0;
 	textcolor.unused = 255;
 
-	font->IncRef();
-	
+	if (font) font->IncRef();
+
 	buffer_size = size;
 	buffer_index = 0;
 	buffer = new char[size+1];
 	strcpy(buffer, "");
 
-	normal_image->Fill(NULL, 0xFF000000);
+	SDL_Rect rect;
 
-	highlight_image->Fill(NULL, 0x00FFFFFF);
-	highlight_image->Fill(&in, 0xFF000000);
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	normal_image->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	normal_image->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	normal_image->Fill(&rect, SDL_MapRGB(format, 245, 245, 245));
 
-	focus_image->Fill(NULL, 0x00FFFFFF);
-	focus_image->Fill(&in, 0x005050C0);
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	highlight_image->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	highlight_image->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	highlight_image->Fill(&rect, SDL_MapRGB(format, 255, 255, 224));
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	focus_image->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	focus_image->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	focus_image->Fill(&rect, SDL_MapRGB(format, 217, 245, 255));
+
 	focus_callback = 0;
 	unfocus_callback = 0;
-	
+
 	wtype = WIDGET_TYPE_TEXTENTRY;
 }
 
 GUI_TextEntry::~GUI_TextEntry()
 {
-	font->DecRef();
-	normal_image->DecRef();
-	highlight_image->DecRef();
-	focus_image->DecRef();
+	if (font) font->DecRef();
+	if (normal_image) normal_image->DecRef();
+	if (highlight_image) highlight_image->DecRef();
+	if (focus_image) focus_image->DecRef();
 	if (focus_callback) focus_callback->DecRef();
 	if (unfocus_callback) unfocus_callback->DecRef();
 	delete [] buffer;
@@ -160,10 +171,7 @@ int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
 				unfocus_callback->Call(this);	
 			return 1;
 		}
-		
-		
-        //ch = kbd_get_key(); 
-		//if (isascii(ch)) {
+
 		if (ch >= 32 && ch <= 126)
 		{
 			if (buffer_index < buffer_size)
@@ -182,8 +190,8 @@ int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
 
 void GUI_TextEntry::SetFont(GUI_Font *afont)
 {
-	GUI_ObjectKeep((GUI_Object **) &font, afont);
-	/* FIXME: should re-draw the text in the new color */
+	if(GUI_ObjectKeep((GUI_Object **) &font, afont))
+		MarkChanged();
 }
 
 void GUI_TextEntry::SetTextColor(int r, int g, int b)
@@ -191,12 +199,18 @@ void GUI_TextEntry::SetTextColor(int r, int g, int b)
 	textcolor.r = r;
 	textcolor.g = g;
 	textcolor.b = b;
-	/* FIXME: should re-draw the text in the new color */
+	MarkChanged();
 }
 
 void GUI_TextEntry::SetText(const char *text)
 {
-	assert(text != NULL);
+	if (text == NULL)
+	{
+		strcpy(buffer, "");
+		buffer_index = 0;
+		MarkChanged();
+		return;
+	}
 
 	if (strlen(text) < buffer_size)
 	{
