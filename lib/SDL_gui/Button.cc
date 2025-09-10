@@ -4,35 +4,132 @@
 
 #include "SDL_gui.h"
 
+struct GUI_Button_Defaults {
+	int w, h;
+	GUI_Surface *normal;
+	GUI_Surface *highlight;
+	GUI_Surface *pressed;
+	GUI_Surface *disabled;
+	GUI_Button_Defaults *next;
+};
+
+static GUI_Button_Defaults *defaults_cache = NULL;
+
+static void on_button_stops_using_defaults(GUI_Button *button) {
+	SDL_Rect area = button->GetArea();
+	int w = area.w;
+	int h = area.h;
+	
+	GUI_Button_Defaults *entry = defaults_cache;
+	GUI_Button_Defaults *prev = NULL;
+
+	while(entry) {
+		if (entry->w == w && entry->h == h) {
+			if (button->GetNormalImage() == entry->normal &&
+				button->GetHighlightImage() == entry->highlight &&
+				button->GetPressedImage() == entry->pressed &&
+				button->GetDisabledImage() == entry->disabled)
+			{
+				if (entry->normal->GetRef() == 2) {
+					if (prev) {
+						prev->next = entry->next;
+					} else {
+						defaults_cache = entry->next;
+					}
+					entry->normal->DecRef();
+					entry->highlight->DecRef();
+					entry->pressed->DecRef();
+					entry->disabled->DecRef();
+					delete entry;
+				}
+			}
+			break;
+		}
+		prev = entry;
+		entry = entry->next;
+	}
+}
+
 GUI_Button::GUI_Button(const char *aname, int x, int y, int w, int h)
 : GUI_AbstractButton(aname, x, y, w, h)
 {
+	GUI_Button_Defaults *entry = defaults_cache;
+	while (entry) {
+		if (entry->w == w && entry->h == h) {
+			break;
+		}
+		entry = entry->next;
+	}
 
-	SDL_Rect in;
-	
-	in.x = 4;
-	in.y = 4;
-	in.w = area.w-8;
-	in.h = area.h-8;
-	
-	disabled =   new GUI_Surface("disabled", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	normal =     new GUI_Surface("normal", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	highlight =  new GUI_Surface("highlight", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	pressed =    new GUI_Surface("pressed", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	
-	disabled->Fill(NULL, 0xFF000000);
-	
-	normal->Fill(NULL, 0xFF000000);
+	if (entry) {
+		disabled = entry->disabled;
+		normal = entry->normal;
+		highlight = entry->highlight;
+		pressed = entry->pressed;
+		disabled->IncRef();
+		normal->IncRef();
+		highlight->IncRef();
+		pressed->IncRef();
+		return;
+	}
 
-	highlight->Fill(NULL, 0x00FFFFFF);
-	highlight->Fill(&in, 0xFF000000);
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
 
-	pressed->Fill(NULL, 0x00FFFFFF);
-	pressed->Fill(&in, 0x005050C0);
+	disabled =   new GUI_Surface("disabled", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	normal =     new GUI_Surface("normal", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	highlight =  new GUI_Surface("highlight", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	pressed =    new GUI_Surface("pressed", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+
+	SDL_Rect rect;
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	normal->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	normal->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	normal->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	highlight->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	highlight->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	highlight->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	pressed->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	pressed->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	pressed->Fill(&rect, SDL_MapRGB(format, 212, 241, 41));
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	disabled->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	disabled->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	disabled->Fill(&rect, SDL_MapRGB(format, 204, 204, 204));
+
+	entry = new GUI_Button_Defaults;
+	entry->w = w;
+	entry->h = h;
+	entry->disabled = disabled;
+	entry->normal = normal;
+	entry->highlight = highlight;
+	entry->pressed = pressed;
+	
+	disabled->IncRef();
+	normal->IncRef();
+	highlight->IncRef();
+	pressed->IncRef();
+
+	entry->next = defaults_cache;
+	defaults_cache = entry;
 }
 
 GUI_Button::~GUI_Button()
 {
+	on_button_stops_using_defaults(this);
 	normal->DecRef();
 	highlight->DecRef();
 	pressed->DecRef();
@@ -55,26 +152,34 @@ GUI_Surface *GUI_Button::GetCurrentImage()
 
 void GUI_Button::SetNormalImage(GUI_Surface *surface)
 {
-	if (GUI_ObjectKeep((GUI_Object **) &normal, surface))
+	if (GUI_ObjectKeep((GUI_Object **) &normal, surface)) {
+		on_button_stops_using_defaults(this);
 		MarkChanged();
+	}
 }
 
 void GUI_Button::SetHighlightImage(GUI_Surface *surface)
 {
-	if (GUI_ObjectKeep((GUI_Object **) &highlight, surface))
+	if (GUI_ObjectKeep((GUI_Object **) &highlight, surface)) {
+		on_button_stops_using_defaults(this);
 		MarkChanged();
+	}
 }
 
 void GUI_Button::SetPressedImage(GUI_Surface *surface)
 {
-	if (GUI_ObjectKeep((GUI_Object **) &pressed, surface))
+	if (GUI_ObjectKeep((GUI_Object **) &pressed, surface)) {
+		on_button_stops_using_defaults(this);
 		MarkChanged();
+	}
 }
 
 void GUI_Button::SetDisabledImage(GUI_Surface *surface)
 {
-	if (GUI_ObjectKeep((GUI_Object **) &disabled, surface))
+	if (GUI_ObjectKeep((GUI_Object **) &disabled, surface)) {
+		on_button_stops_using_defaults(this);
 		MarkChanged();
+	}
 }
 
 GUI_Surface *GUI_Button::GetNormalImage()
