@@ -78,18 +78,6 @@
 			<fill color="#61BDEC" height="60" width="96%" x="2%" y="6" />
 		</surface>
 
-		<surface height="20" name="text_edit_normal" width="23%">
-			<fill color="#EEEEEE" />
-		</surface>
-		<surface height="20" name="text_edit_focus" width="23%">
-			<fill color="#666666" />
-			<fill color="#EEEEEE" height="18" width="99%" x="1%" y="1" />
-		</surface>
-		<surface height="20" name="text_edit_high" width="23%">
-			<fill color="#29B1EA" />
-			<fill color="#EEEEEE" height="18" width="99%" x="1%" y="1" />
-		</surface>
-
 	</resources>
 
 	<body height="480" onload="export:BiosFlasher_Init()" width="100%">
@@ -191,12 +179,12 @@
 			<panel background="page3" name="settings_page">	
 				<panel height="50" width="31%" x="9%" y="150">
 					<label align="left" color="#FFFFFF" font="comic-16" height="20" text="Start address, 0 to default" width="100%" />
-					<input focus="text_edit_focus" font="arial" fontcolor="#333333" height="20" highlight="text_edit_high" name="start_addresss" normal="text_edit_normal" size="30" type="text" value="0" width="75%" y="20" />
+					<input font="arial" fontcolor="#333333" height="20" name="start_addresss" size="30" type="text" value="0" width="75%" y="20" />
 				</panel>
 
 				<panel height="50" width="31%" x="9%" y="200">
 					<label align="left" color="#FFFFFF" font="comic-16" height="20" text="Data length, 0 to default" width="100%" />
-					<input focus="text_edit_focus" font="arial" fontcolor="#333333" height="20" highlight="text_edit_high" name="data_length" normal="text_edit_normal" size="30" type="text" value="0" width="75%" y="20" />
+					<input font="arial" fontcolor="#333333" height="20" name="data_length" size="30" type="text" value="0" width="75%" y="20" />
 				</panel>
 				
 				<input disabled="button_small" height="72" highlight="button_small_hl" normal="button_small" onclick="export:BiosFlasher_OnSupportedPressed()" pressed="button_small_hl" type="button" width="38%" x="51%" y="170">
