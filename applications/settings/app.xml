@@ -29,29 +29,6 @@
 			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
 			<fill x="5" y="5" width="270" height="50" color="#CCCCCC" />
 		</surface>
-		<image src="../../gui/buttons/checkbox2/check.png" name="check-on" />
-		<image src="../../gui/buttons/checkbox2/check_hl.png" name="check-on-hl" />
-		<surface width="18" height="17" name="check-off">
-			<fill color="#FFFFFF" />
-		</surface>
-		<surface width="18" height="17" name="check-off-hl">
-			<fill color="#D4F129" />
-		</surface>
-		<surface width="40" height="20" name="input-normal4">
-			<fill x="0" y="0" width="40" height="20" color="#EEEEEE" />
-		</surface>
-		<surface width="40" height="20" name="input-focus4">
-			<fill x="0" y="0" width="40" height="20" color="#29B1EA" />
-			<fill x="2" y="2" width="38" height="18" color="#7CFFC1" />
-		</surface>
-		
-		<surface width="25" height="20" name="input-normal2">
-			<fill x="0" y="0" width="25" height="20" color="#EEEEEE" />
-		</surface>
-		<surface width="25" height="20" name="input-focus2">
-			<fill x="0" y="0" width="25" height="20" color="#29B1EA" />
-			<fill x="2" y="2" width="23" height="18" color="#7CFFC1" />
-		</surface>
 		<surface width="200" height="20" name="slider-bg">
 			<fill x="0" y="0" width="200" height="20" color="#CCCCCC" />
 			<fill x="2" y="2" width="196" height="16" color="#EEEEEE" />
@@ -62,7 +39,6 @@
 		</surface>
 		<theme>
 			<input type="button" normal="but-normal" highlight="but-hl" pressed="but-pressed" disabled="but-disabled" />
-			<input type="checkbox" onnormal="check-on" onhighlight="check-on-hl" offnormal="check-off" offhighlight="check-off-hl" />
 		</theme>
 	</resources>
 	<body width="100%" height="100%" onload="export:SettingsApp_Init()" background="#DDDDDD">
@@ -227,19 +203,15 @@
 					<label font="comic-22" color="#31799F" text="System date and time" align="center" valign="center" />
 				</panel>
 
-				<panel x="32%" y="80" width="230" height="20">
-					<input  type="text" 
+				<panel x="32%" y="80" width="230" height="25">
+					<input type="text" 
 						onblur="export:SettingsApp_Time()"
 						onfocus="export:SettingsApp_Time_Clr()"
 						font="arial" 
 						fontcolor="#333333" 
 						value="1998" 
-						size="5" x="5" width="40"
-						name="year" 
-						normal="input-normal4" 
-						highlight="input-normal4"
-						focus="input-focus4">
-					</input>
+						size="5" x="5" width="40" height="25"
+						name="year" />
 
 					<panel x="45" width="20">
 						<label font="arial" color="#333333" text="/" align="center" />
@@ -251,12 +223,8 @@
 						font="arial" 
 						fontcolor="#333333" 
 						value="03" 
-						size="3" x="65" width="25"
-						name="month" 
-						normal="input-normal2" 
-						highlight="input-normal2"
-						focus="input-focus2">
-					</input>
+						size="3" x="65" width="25" height="25"
+						name="month" />
 
 					<panel x="90" width="20">
 						<label font="arial" color="#333333" text="/" align="center" />
@@ -268,12 +236,8 @@
 						font="arial"
 						fontcolor="#333333"
 						value="18"
-						size="3" x="110" width="25"
-						name="day"
-						normal="input-normal2"
-						highlight="input-normal2"
-						focus="input-focus2">
-					</input>
+						size="3" x="110" width="25" height="25"
+						name="day" />
 
 					<input type="text"
 						onblur="export:SettingsApp_Time()"
@@ -281,12 +245,8 @@
 						font="arial"
 						fontcolor="#333333"
 						value="00"
-						size="3" x="155" width="25"
-						name="hours"
-						normal="input-normal2"
-						highlight="input-normal2"
-						focus="input-focus2">
-					</input>
+						size="3" x="155" width="25" height="25"
+						name="hours" />
 
 					<panel x="180" width="20">
 						<label font="arial" color="#333333" text=":" align="center" />
@@ -298,12 +258,8 @@
 						font="arial"
 						fontcolor="#333333"
 						value="00"
-						size="3" x="200" width="25"
-						name="minute"
-						normal="input-normal2"
-						highlight="input-normal2"
-						focus="input-focus2">
-					</input>
+						size="3" x="200" width="25" height="25"
+						name="minute" />
 				</panel>
 
 				<panel x="32%" y="110" width="230" height="20">

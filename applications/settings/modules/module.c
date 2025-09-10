@@ -362,10 +362,6 @@ static void SetupBootSettings() {
 	Item_list_t *applist      = GetAppList();
 	GUI_Widget  *panel        = APP_GET_WIDGET("boot-root");
 	GUI_Font    *font         = APP_GET_FONT("arial");
-	GUI_Surface *check_on     = APP_GET_SURFACE("check-on");
-	GUI_Surface *check_on_hl  = APP_GET_SURFACE("check-on-hl");
-	GUI_Surface *check_off    = APP_GET_SURFACE("check-off");
-	GUI_Surface *check_off_hl = APP_GET_SURFACE("check-off-hl");
 	
 	if(self.settings->root[0] == 0) {
 		UncheckBesides(GUI_ContainerGetChild(panel, WIDGET_VALUE_OFFSET), NULL);
@@ -394,14 +390,10 @@ static void SetupBootSettings() {
 
 			SDL_Rect ts = GUI_FontGetTextSize(font, app->name);
 
-			int w = ts.w + GUI_SurfaceGetWidth(check_on) + 16;
-			int h = GUI_SurfaceGetHeight(check_on) + 6;
+			int h = ts.h + 8;
+			int w = ts.w + h + 12;
 
 			GUI_Widget *b = GUI_ToggleButtonCreate(app->name, 0, 0, w, h);
-			GUI_ToggleButtonSetOnNormalImage(b, check_on);
-			GUI_ToggleButtonSetOnHighlightImage(b, check_on_hl);
-			GUI_ToggleButtonSetOffNormalImage(b, check_off);
-			GUI_ToggleButtonSetOffHighlightImage(b, check_off_hl);
 			
 			GUI_Callback *c = GUI_CallbackCreate((GUI_CallbackFunction *)SettingsApp_ToggleApp, NULL, b);
 			GUI_ToggleButtonSetClick(b, c);
