@@ -7,30 +7,34 @@
 GUI_ProgressBar::GUI_ProgressBar(const char *aname, int x, int y, int w, int h)
 : GUI_Widget(aname, x, y, w, h)
 {
-	SDL_Rect in;
-
-	in.x = 4;
-	in.y = 4;
-	in.w = area.w-8;
-	in.h = area.h-8;
-	
 	SetTransparent(1);
 
 	value = 0.5;	
-	image1 = new GUI_Surface("1", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	image2 = new GUI_Surface("2", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	
-	image1->Fill(NULL, 0x00FFFFFF);
-	image1->Fill(&in,  0xFF000000);
-	
-	image2->Fill(NULL, 0x00FFFFFF);
-	image2->Fill(&in,  0x004040FF);
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
+	image1 = new GUI_Surface("1", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	image2 = new GUI_Surface("2", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+
+	SDL_Rect rect;
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	image1->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	image1->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	image1->Fill(&rect, SDL_MapRGB(format, 217, 217, 217));
+
+	rect = {0, 0, (Uint16)w, (Uint16)h};
+	image2->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	image2->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	image2->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
 }
 
 GUI_ProgressBar::~GUI_ProgressBar(void)
 {
-	image1->DecRef();
-	image2->DecRef();
+	if (image1) image1->DecRef();
+	if (image2) image2->DecRef();
 }
 
 void GUI_ProgressBar::Update(int force)
