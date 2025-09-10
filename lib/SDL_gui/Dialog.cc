@@ -34,68 +34,12 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     body->DecRef();
 
     // Input
-    GUI_Surface *input_normal = new GUI_Surface("input_normal", SDL_HWSURFACE, w - 40, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, (Uint16)(w - 40), 30};
-    input_normal->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, (Uint16)(w - 42), 28};
-    input_normal->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, (Uint16)(w - 44), 26};
-    input_normal->Fill(&rect, SDL_MapRGB(format, 245, 245, 245));
-
-    GUI_Surface *input_focus = new GUI_Surface("input_focus", SDL_HWSURFACE, w - 40, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, (Uint16)(w - 40), 30};
-    input_focus->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, (Uint16)(w - 42), 28};
-    input_focus->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, (Uint16)(w - 44), 26};
-    input_focus->Fill(&rect, SDL_MapRGB(format, 217, 245, 255));
-
-    GUI_Surface *input_highlight = new GUI_Surface("input_highlight", SDL_HWSURFACE, w - 40, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, (Uint16)(w - 40), 30};
-    input_highlight->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, (Uint16)(w - 42), 28};
-    input_highlight->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, (Uint16)(w - 44), 26};
-    input_highlight->Fill(&rect, SDL_MapRGB(format, 255, 255, 224));
-
     input = new GUI_TextEntry("dialog_input", 10, (Sint16)((body->GetHeight() - 30) / 2),
         (Uint16)(w - 40), 30, font, 256);
-    input->SetNormalImage(input_normal);
-    input->SetHighlightImage(input_highlight);
-    input->SetFocusImage(input_focus);
-    input->SetTextColor(0, 0, 0);
-    input_normal->DecRef();
-    input_focus->DecRef();
-    input_highlight->DecRef();
 
     // Progress bar
-    GUI_Surface *progress_bg = new GUI_Surface("progress_bg", SDL_HWSURFACE, w - 40, 20,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, (Uint16)(w-40), 20};
-    progress_bg->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, (Uint16)(w-42), 18};
-    progress_bg->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, (Uint16)(w-44), 16};
-    progress_bg->Fill(&rect, SDL_MapRGB(format, 217, 217, 217));
-
-    GUI_Surface *progress_bar_surf = new GUI_Surface("progress_bar_surf", SDL_HWSURFACE, w - 40, 20,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, (Uint16)(w-40), 20};
-    progress_bar_surf->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, (Uint16)(w-42), 18};
-    progress_bar_surf->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, (Uint16)(w-44), 16};
-    progress_bar_surf->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
-    
     progress = new GUI_ProgressBar("dialog_progress", 10, (Sint16)((body->GetHeight() - 20) / 2),
         (Uint16)(w - 40), 20);
-    progress->SetImage1(progress_bg);
-    progress->SetImage2(progress_bar_surf);
-    progress_bg->DecRef();
-    progress_bar_surf->DecRef();
 
     // Buttons panel
     GUI_Panel *buttons_panel = new GUI_Panel("dialog_buttons_panel", 10, h - 50, w - 20, 40);
@@ -103,52 +47,11 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     content_panel->AddWidget(buttons_panel);
     buttons_panel->DecRef();
 
-    // Button surfaces
-    GUI_Surface *btn_normal = new GUI_Surface("btn_normal", SDL_HWSURFACE, 100, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, 100, 30};
-    btn_normal->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, 98, 28};
-    btn_normal->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, 96, 26};
-    btn_normal->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
-
-    GUI_Surface *btn_highlight = new GUI_Surface("btn_highlight", SDL_HWSURFACE, 100, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, 100, 30};
-    btn_highlight->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, 98, 28};
-    btn_highlight->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, 96, 26};
-    btn_highlight->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
-
-    GUI_Surface *btn_pressed = new GUI_Surface("btn_pressed", SDL_HWSURFACE, 100, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, 100, 30};
-    btn_pressed->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, 98, 28};
-    btn_pressed->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, 96, 26};
-    btn_pressed->Fill(&rect, SDL_MapRGB(format, 212, 241, 41));
-
-    GUI_Surface *btn_disabled = new GUI_Surface("btn_disabled", SDL_HWSURFACE, 100, 30,
-        format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-    rect = {0, 0, 100, 30};
-    btn_disabled->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-    rect = {1, 1, 98, 28};
-    btn_disabled->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-    rect = {2, 2, 96, 26};
-    btn_disabled->Fill(&rect, SDL_MapRGB(format, 204, 204, 204));
-
     // Confirm button
-    confirm_button = new GUI_Button("dialog_confirm", (Sint16)((w-20)/2 - 110), 0, 100, 30);
-    confirm_button->SetNormalImage(btn_normal);
-    confirm_button->SetHighlightImage(btn_highlight);
-    confirm_button->SetPressedImage(btn_pressed);
-    confirm_button->SetDisabledImage(btn_disabled);
+    confirm_button = new GUI_Button("dialog_confirm", (Sint16)((w - 20) / 2 - 110), 0, 100, 30);
 
     GUI_Label *confirm_label = new GUI_Label("confirm_label", 0, 0, 100, 30, font, "Confirm");
-    confirm_label->SetTextColor(255,255,255);
+    confirm_label->SetTextColor(255, 255, 255);
     confirm_button->SetCaption(confirm_label);
     confirm_button->SetEnabled(1);
     confirm_label->DecRef();
@@ -160,14 +63,10 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     confirm_button->DecRef();
 
     // Cancel button
-    cancel_button = new GUI_Button("dialog_cancel", (Sint16)((w-20)/2 + 10), 0, 100, 30);
-    cancel_button->SetNormalImage(btn_normal);
-    cancel_button->SetHighlightImage(btn_highlight);
-    cancel_button->SetPressedImage(btn_pressed);
-    cancel_button->SetDisabledImage(btn_disabled);
+    cancel_button = new GUI_Button("dialog_cancel", (Sint16)((w - 20) / 2 + 10), 0, 100, 30);
 
     GUI_Label *cancel_label = new GUI_Label("cancel_label", 0, 0, 100, 30, font, "Cancel");
-    cancel_label->SetTextColor(255,255,255);
+    cancel_label->SetTextColor(255, 255, 255);
     cancel_button->SetCaption(cancel_label);
     cancel_button->SetEnabled(1);
     cancel_label->DecRef();
@@ -177,11 +76,6 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     cancel_cb_handler->DecRef();
     buttons_panel->AddWidget(cancel_button);
     cancel_button->DecRef();
-
-    btn_normal->DecRef();
-    btn_highlight->DecRef();
-    btn_pressed->DecRef();
-    btn_disabled->DecRef();
 
     confirm_callback = NULL;
     cancel_callback = NULL;
