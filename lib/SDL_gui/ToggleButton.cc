@@ -67,6 +67,7 @@ GUI_ToggleButton::GUI_ToggleButton(const char *aname, int x, int y, int w, int h
 		on_highlight = entry->on_highlight;
 		off_normal = entry->off_normal;
 		off_highlight = entry->off_highlight;
+
 		on_normal->IncRef();
 		on_highlight->IncRef();
 		off_normal->IncRef();
@@ -85,21 +86,29 @@ GUI_ToggleButton::GUI_ToggleButton(const char *aname, int x, int y, int w, int h
 
 	rect = {0, 0, (Uint16)box_size, (Uint16)box_size};
 	off_normal->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(box_size - 4), (Uint16)(box_size - 4)};
+	rect = {1, 1, (Uint16)(box_size - 2), (Uint16)(box_size - 2)};
 	off_normal->Fill(&rect, SDL_MapRGB(format, 255, 255, 255));
 
 	rect = {0, 0, (Uint16)box_size, (Uint16)box_size};
-	off_highlight->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
+	off_highlight->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
 	rect = {2, 2, (Uint16)(box_size - 4), (Uint16)(box_size - 4)};
 	off_highlight->Fill(&rect, SDL_MapRGB(format, 212, 241, 41));
 
 	rect = {0, 0, (Uint16)box_size, (Uint16)box_size};
 	on_normal->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
-	rect = {2, 2, (Uint16)(box_size - 4), (Uint16)(box_size - 4)};
+	rect = {1, 1, (Uint16)(box_size - 2), (Uint16)(box_size - 2)};
 	on_normal->Fill(&rect, SDL_MapRGB(format, 255, 255, 255));
 
-	if(box_size > 14) {
-		rect = {7, 7, (Uint16)(box_size - 14), (Uint16)(box_size - 14)};
+	const Sint16 padding = (Sint16)(box_size * 0.28f);
+	const Sint16 inner_size = box_size - 2 * padding;
+
+	if(inner_size > 0) {
+		rect = {
+			padding,
+			padding,
+			(Uint16)inner_size,
+			(Uint16)inner_size
+		};
 		on_normal->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
 	}
 
@@ -108,8 +117,13 @@ GUI_ToggleButton::GUI_ToggleButton(const char *aname, int x, int y, int w, int h
 	rect = {2, 2, (Uint16)(box_size - 4), (Uint16)(box_size - 4)};
 	on_highlight->Fill(&rect, SDL_MapRGB(format, 212, 241, 41));
 
-	if(box_size > 14) {
-		rect = {7, 7, (Uint16)(box_size - 14), (Uint16)(box_size - 14)};
+	if(inner_size > 0) {
+		rect = {
+			padding,
+			padding,
+			(Uint16)inner_size,
+			(Uint16)inner_size
+		};
 		on_highlight->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
 	}
 
@@ -119,10 +133,12 @@ GUI_ToggleButton::GUI_ToggleButton(const char *aname, int x, int y, int w, int h
 	entry->on_highlight = on_highlight;
 	entry->off_normal = off_normal;
 	entry->off_highlight = off_highlight;
+
 	on_normal->IncRef();
 	on_highlight->IncRef();
 	off_normal->IncRef();
 	off_highlight->IncRef();
+
 	entry->next = defaults_cache;
 	defaults_cache = entry;
 }
@@ -130,10 +146,10 @@ GUI_ToggleButton::GUI_ToggleButton(const char *aname, int x, int y, int w, int h
 GUI_ToggleButton::~GUI_ToggleButton()
 {
 	on_button_stops_using_defaults(this);
-	off_normal->DecRef();
-	off_highlight->DecRef();
-	on_normal->DecRef();
-	on_highlight->DecRef();
+	if (off_normal) off_normal->DecRef();
+	if (off_highlight) off_highlight->DecRef();
+	if (on_normal) on_normal->DecRef();
+	if (on_highlight) on_highlight->DecRef();
 }
 
 void GUI_ToggleButton::Clicked(int x, int y)
