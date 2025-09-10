@@ -12,28 +12,54 @@ extern "C" {
 
 GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int y, int w, int h)
 : GUI_Container(aname, x, y, w, h) {
-	
+
 	strncpy(cur_path, path != NULL ? path : "/", NAME_MAX);
 	rescan = 1;
-	
-	item_area.w = w - 20; 
-	item_area.h = 20; 
+
+	scrollbar = new GUI_ScrollBar("scrollbar", 0, 20, 20, area.h - 40);
+	button_up = new GUI_Button("button_up", 0, 0, 20, 20);
+	button_down = new GUI_Button("button_down", 0, area.h - 20, 20, 20);
+
+	item_area.w = w - scrollbar->GetWidth(); 
+	item_area.h = 28; 
 	item_area.x = 0;
 	item_area.y = 0;
-	
+
+	scrollbar->SetPosition(item_area.w, 20);
+	button_up->SetPosition(item_area.w, 0);
+	button_down->SetPosition(item_area.w, area.h - 20);
+
 	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
-	
+
 	item_normal = new GUI_Surface("normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 	item_highlight = new GUI_Surface("highlight", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 	item_disabled = new GUI_Surface("disabled", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 	item_pressed = new GUI_Surface("pressed", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 
-	item_normal->Fill(NULL, 0xFF000000);
-	item_highlight->Fill(NULL, 0x00FFFFFF);
-	item_pressed->Fill(NULL, 0x00FFFFFF);
-	item_disabled->Fill(NULL, 0xFF000000);
-	
-	item_selected_normal = NULL;
+	SDL_Rect rect;
+
+	rect = {0, 0, (Uint16)item_area.w, 1};
+	item_normal->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	rect = {0, 1, (Uint16)item_area.w, 26};
+	item_normal->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
+	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
+	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
+	rect = {0, 27, (Uint16)item_area.w, 1};
+	item_normal->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
+	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
+	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
+
+	rect = {0, 0, (Uint16)item_area.w, 1};
+	item_highlight->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	rect = {0, 1, (Uint16)item_area.w, 26};
+	item_highlight->Fill(&rect, SDL_MapRGB(format, 0xEE, 0xEE, 0xEE));
+	rect = {0, 27, (Uint16)item_area.w, 1};
+	item_highlight->Fill(&rect, SDL_MapRGB(format, 0xDD, 0xDD, 0xDD));
+
+	item_selected_normal = new GUI_Surface("selected_normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	item_selected_normal->Fill(NULL, SDL_MapRGB(format, 0xFF, 0xBB, 0xBB));
 	item_selected_highlight = NULL;
 	item_selected_pressed = NULL;
 	item_selected_disabled = NULL;
@@ -51,8 +77,36 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	item_label_clr.b = 0;
 
 	selected_item = -1;
-	
-	Build();
+
+	panel = new GUI_Panel("panel", 0, 0, item_area.w, area.h);
+
+	if(panel) {
+		AddWidget(panel);
+		panel->DecRef();
+	}
+
+	GUI_EventHandler < GUI_FileManager > *cb;
+
+	if(scrollbar) {
+		cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::AdjustScrollbar);
+		scrollbar->SetMovedCallback(cb);
+		cb->DecRef();
+		AddWidget(scrollbar);
+	}
+
+	if(button_up) {
+		cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::ScrollbarButtonEvent);
+		button_up->SetClick(cb);
+		cb->DecRef();
+		AddWidget(button_up);
+	}
+
+	if(button_down) {
+		cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::ScrollbarButtonEvent);
+		button_down->SetClick(cb);
+		cb->DecRef();
+		AddWidget(button_down);
+	}
 }
 
 GUI_FileManager::~GUI_FileManager() {
@@ -60,7 +114,7 @@ GUI_FileManager::~GUI_FileManager() {
 	item_highlight->DecRef();
 	item_pressed->DecRef();
 	item_disabled->DecRef();
-	
+
 	if(item_selected_normal) item_selected_normal->DecRef();
 	if(item_selected_highlight) item_selected_highlight->DecRef();
 	if(item_selected_pressed) item_selected_pressed->DecRef();
@@ -76,55 +130,15 @@ GUI_FileManager::~GUI_FileManager() {
 
 	if(item_label_font)
 		item_label_font->DecRef();
-		
+
 	if(scrollbar)
 		scrollbar->DecRef();
-		
+
 	if(button_up)
 		button_up->DecRef();
-		
+
 	if(button_down)
 		button_down->DecRef();
-}
-
-
-void GUI_FileManager::Build() {
-	
-	panel = new GUI_Panel("panel", 0, 0, item_area.w, area.h);
-	
-	if(panel) {
-		AddWidget(panel);
-		panel->DecRef();
-	}
-	
-	GUI_EventHandler < GUI_FileManager > *cb;
-	
-	scrollbar = new GUI_ScrollBar("scrollbar", item_area.w, 20, 20, area.h - 40);
-	
-	if(scrollbar) {
-		cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::AdjustScrollbar);
-		scrollbar->SetMovedCallback(cb);
-		cb->DecRef();
-		AddWidget(scrollbar);
-	}
-
-	button_up = new GUI_Button("button_up", item_area.w, 0, 20, 20);
-	
-	if(button_up) {
-		cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::ScrollbarButtonEvent);
-		button_up->SetClick(cb);
-		cb->DecRef();
-		AddWidget(button_up);
-	}
-	
-	button_down = new GUI_Button("button_down", item_area.w, area.h - 20, 20, 20);
-	
-	if(button_down) {
-		cb = new GUI_EventHandler < GUI_FileManager > (this, &GUI_FileManager::ScrollbarButtonEvent);
-		button_down->SetClick(cb);
-		cb->DecRef();
-		AddWidget(button_down);
-	}
 }
 
 

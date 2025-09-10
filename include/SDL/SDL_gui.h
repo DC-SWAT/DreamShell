@@ -779,7 +779,6 @@ class GUI_FileManager : public GUI_Container
 
 		void AdjustScrollbar(GUI_Object * sender);
 		void ScrollbarButtonEvent(GUI_Object * sender);
-		void Build();
 		void GetWidgetAbsolutePosition(GUI_Widget *widget, Uint16 *x, Uint16 *y);
 		void UpdateScrollbarButtons();
 		void UpdatePanelOffsetAndScrollbar(int new_offset);
