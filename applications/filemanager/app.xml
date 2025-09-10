@@ -38,41 +38,6 @@
 		<surface width="305" height="110" name="blue-bg">
 			<fill color="#EEFBFF" />
 		</surface>
-		<surface width="590" height="28" name="item-normal">
-			<fill height="1" color="#FFFFFF" />
-			<fill y="1" height="26" color="#F3F3F3" />
-			<fill y="27" height="1" color="#CCCCCC" />
-		</surface>
-		<surface width="590" height="28" name="item-focus">
-			<fill color="#DDDDDD" />
-		</surface>
-		<surface width="590" height="28" name="item-selected">
-			<fill color="#FFBBBB" />
-		</surface>
-		<surface width="20" height="20" name="sbb-normal">
-			<fill color="#BBBBBB" />
-			<fill x="1" width="19" color="#CCCCCC" />
-		</surface>
-		<surface width="20" height="20" name="sbb-focus">
-			<fill color="#BBBBBB" />
-			<fill x="1" width="19" color="#DDDDDD" />
-		</surface>
-		<surface width="20" height="20" name="sbb-disabled">
-			<fill color="#BBBBBB" />
-			<fill x="1" width="19" color="#AAAAAA" />
-		</surface>
-		<surface width="20" height="40" name="sb-knob">
-			<fill color="#CCCCCC" />
-			<fill x="1" y="1" width="19" height="38" color="#F3F3F3" />
-		</surface>
-		<surface width="20" height="180" name="sb-back">
-			<fill color="#EEEEEE" />
-			<fill width="1" color="#CCCCCC" />
-		</surface>
-		<surface width="20" height="405" name="sb-back-big">
-			<fill color="#EEEEEE" />
-			<fill width="1" color="#CCCCCC" />
-		</surface>
 	</resources>
 	<body width="640" height="480" background="background" onload="FileManager:Initialize()" onunload="FileManager:Shutdown()">
 		<label width="340" height="25" x="20" y="2" font="comic" color="#000000" name="title" text="File Manager" align="left" />
@@ -152,46 +117,14 @@
 		</panel>
 		<filemanager path="/" background="white-bg" name="filemgr-top" 
 				width="610" height="217" x="15" y="30"
-				item_normal="item-normal" 
-				item_highlight="item-focus" 
-				item_pressed="item-normal" 
-				item_disabled="item-normal"
-				item_selected_normal="item-selected"
-				item_font="comic" 
-				item_font_color="#000000"
-				sb_knob="sb-knob" 
-				sb_back="sb-back" 
-				sbbup_normal="sbb-normal" 
-				sbbup_highlight="sbb-focus" 
-				sbbup_pressed="sbb-normal" 
-				sbbup_disabled="sbb-disabled"
-				sbbdown_normal="sbb-normal" 
-				sbbdown_highlight="sbb-focus" 
-				sbbdown_pressed="sbb-normal" 
-				sbbdown_disabled="sbb-disabled" 
+				item_font="comic"
 				onclick="FileManagerItemClickTop" 
 				oncontextclick="FileManagerItemContextClickTop" 
 				onmouseover="FileManagerItemMouseover"
 				onselect="FileManagerItemSelectTop" />
 		<filemanager path="/" background="white-bg" name="filemgr-bottom" 
 				width="610" height="217" x="15" y="252"
-				item_normal="item-normal" 
-				item_highlight="item-focus" 
-				item_pressed="item-normal" 
-				item_disabled="item-normal"
-				item_selected_normal="item-selected"
-				item_font="comic" 
-				item_font_color="#000000"
-				sb_knob="sb-knob" 
-				sb_back="sb-back" 
-				sbbup_normal="sbb-normal" 
-				sbbup_highlight="sbb-focus" 
-				sbbup_pressed="sbb-normal" 
-				sbbup_disabled="sbb-disabled"
-				sbbdown_normal="sbb-normal" 
-				sbbdown_highlight="sbb-focus" 
-				sbbdown_pressed="sbb-normal" 
-				sbbdown_disabled="sbb-disabled" 
+				item_font="comic"
 				onclick="FileManagerItemClickBottom"
 				oncontextclick="FileManagerItemContextClickBottom"
 				onmouseover="FileManagerItemMouseover"

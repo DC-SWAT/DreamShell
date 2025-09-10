@@ -61,11 +61,6 @@ FileManager = {
 		 	normal = nil,
 		 	focus = nil
 		},
-
-		item = {
-			normal = nil,
-			selected = nil
-		}
 	},
 
 	modal = {
@@ -554,11 +549,9 @@ function FileManager:toolbarModeSwitch()
 	if self.mgr.dual then
 		GUI.ContainerRemove(self.app.body, self.mgr.bottom.widget);
 		GUI.FileManagerResize(self.mgr.top.widget, 610, 439);
-		GUI.FileManagerSetScrollbar(self.mgr.top.widget, nil, self:getResource("sb-back-big", DS.LIST_ITEM_GUI_SURFACE));
 		self.mgr.dual = false;
 	else
 		GUI.FileManagerResize(self.mgr.top.widget, 610, 217);
-		GUI.FileManagerSetScrollbar(self.mgr.top.widget, nil, self:getResource("sb-back", DS.LIST_ITEM_GUI_SURFACE));
 		GUI.ContainerAdd(self.app.body, self.mgr.bottom.widget);
 		GUI.WidgetMarkChanged(self.app.body);
 		self.mgr.dual = true;
@@ -1073,18 +1066,6 @@ function FileManager:Initialize()
 			self.mgr.bottom.widget = self:getElement("filemgr-bottom");
 
 			if not self.mgr.bottom.widget then
-				return false;
-			end
-
-			self.mgr.item.normal = self:getResource("item-normal", DS.LIST_ITEM_GUI_SURFACE);
-
-			if not self.mgr.item.normal then
-				return false;
-			end
-
-			self.mgr.item.selected = self:getResource("item-selected", DS.LIST_ITEM_GUI_SURFACE);
-
-			if not self.mgr.item.selected then
 				return false;
 			end
 
