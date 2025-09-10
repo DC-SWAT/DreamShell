@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * gui.c                    *
  * DreamShell GUI           *
- * (c)2006-2023 SWAT        *
+ * (c)2006-2025 SWAT        *
  ****************************/
 
 #include "ds.h"
@@ -36,13 +36,8 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 			GUI_ScreenDoUpdate(GUI_GetScreen(), 0);
 			break;
 		case EVENT_ACTION_UPDATE:
-		{
-			App_t *app = GetCurApp();
-			if(app != NULL && app->body != NULL) {
-				GUI_WidgetMarkChanged(app->body);
-			}
+			GUI_ScreenDoUpdate(GUI_GetScreen(), 1);
 			break;
-		}
 		default:
 			break;
 	}

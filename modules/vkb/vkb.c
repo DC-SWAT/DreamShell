@@ -439,6 +439,24 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 	
 	SDL_Event *event = (SDL_Event *) param;
 	
+	/* Handle text entry focus events */
+	switch(event->type) {
+		case DS_SHOW_VKB_EVENT:
+			if(!VirtKeyboardIsVisible()) {
+				VirtKeyboardShow();
+			}
+			/* Don't process this event further inside vkb */
+			event->type = 0;
+			return;
+		case DS_HIDE_VKB_EVENT:
+			if(VirtKeyboardIsVisible()) {
+				VirtKeyboardHide();
+			}
+			/* Don't process this event further inside vkb */
+			event->type = 0;
+			return;
+	}
+
 	if(VirtKeyboardIsVisible()) {
 
 		switch(event->type) {

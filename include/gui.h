@@ -15,6 +15,10 @@
 #include "module.h"
 #include "SDL/SDL_gui.h"
 
+/* Custom GUI events */
+#define DS_SHOW_VKB_EVENT (SDL_USEREVENT + 10)
+#define DS_HIDE_VKB_EVENT (SDL_USEREVENT + 11)
+
 /* Virtual keyboard from vkb module */
 int VirtKeyboardInit();
 void VirtKeyboardShutdown();

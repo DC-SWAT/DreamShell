@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "SDL_gui.h"
+#include "gui.h"
 
 extern "C"
 {
@@ -120,16 +121,24 @@ void GUI_TextEntry::Update(int force)
 void GUI_TextEntry::Clicked(int x, int y)
 {
 	GUI_Screen *screen = GUI_GetScreen();
+	SDL_Event ev;
+
 	ds_sfx_play(DS_SFX_CLICK);
 
 	if (flags & WIDGET_HAS_FOCUS)
 	{
+		ev.type = DS_HIDE_VKB_EVENT;
+		SDL_PushEvent(&ev);
+
 		screen->SetFocusWidget(NULL);
 		if (unfocus_callback)
 			unfocus_callback->Call(this);
 	}
 	else
 	{
+		ev.type = DS_SHOW_VKB_EVENT;
+		SDL_PushEvent(&ev);
+		
 		if (focus_callback)
 			focus_callback->Call(this);
 		screen->SetFocusWidget(this);
@@ -166,6 +175,10 @@ int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
 		}
 		if (key == SDLK_RETURN)
 		{
+			SDL_Event ev;
+			ev.type = DS_HIDE_VKB_EVENT;
+			SDL_PushEvent(&ev);
+
 			GUI_Screen *screen = GUI_GetScreen();
 			screen->SetFocusWidget(NULL);
 			if (unfocus_callback)
