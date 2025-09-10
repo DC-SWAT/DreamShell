@@ -5,6 +5,11 @@
 
 #include "SDL_gui.h"
 
+extern "C"
+{
+	#include "sfx.h"
+}
+
 GUI_TextEntry::GUI_TextEntry(const char *aname, int x, int y, int w, int h, GUI_Font *afont, int size)
 : GUI_Widget(aname, x, y, w, h), font(afont)
 {
@@ -25,30 +30,24 @@ GUI_TextEntry::GUI_TextEntry(const char *aname, int x, int y, int w, int h, GUI_
 
 	buffer_size = size;
 	buffer_index = 0;
-	buffer = new char[size+1];
+	buffer = new char[size + 1];
 	strcpy(buffer, "");
 
 	SDL_Rect rect;
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
-	normal_image->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
 	normal_image->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
 	normal_image->Fill(&rect, SDL_MapRGB(format, 245, 245, 245));
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
-	highlight_image->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	highlight_image->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
 	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
-	highlight_image->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
 	highlight_image->Fill(&rect, SDL_MapRGB(format, 255, 255, 224));
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
-	focus_image->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
+	focus_image->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
 	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
-	focus_image->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
 	focus_image->Fill(&rect, SDL_MapRGB(format, 217, 245, 255));
 
 	focus_callback = 0;
@@ -121,7 +120,8 @@ void GUI_TextEntry::Update(int force)
 void GUI_TextEntry::Clicked(int x, int y)
 {
 	GUI_Screen *screen = GUI_GetScreen();
-	
+	ds_sfx_play(DS_SFX_CLICK);
+
 	if (flags & WIDGET_HAS_FOCUS)
 	{
 		screen->SetFocusWidget(NULL);
@@ -139,12 +139,13 @@ void GUI_TextEntry::Clicked(int x, int y)
 
 void GUI_TextEntry::Highlighted(int x, int y)
 {
-
+	ds_sfx_play(DS_SFX_CLICK2);
+	MarkChanged();
 }
 
 void GUI_TextEntry::unHighlighted(int x, int y)
 {
-
+	MarkChanged();
 }
 
 int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
