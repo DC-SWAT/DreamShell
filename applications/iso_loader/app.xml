@@ -121,24 +121,6 @@
 		<image name="iRunHigh" src="images/btn_launch_over.png" />
 		<image name="iRunDisabled" src="images/btn_launch_disabled.png" />
 
-		<image src="../../gui/buttons/checkbox2/check.png" name="iCheck" />
-		<image src="../../gui/buttons/checkbox2/check_hl.png" name="iCheckHigh" />
-		<surface width="18" height="17" name="iUncheck">
-			<fill color="#FFFFFF" />
-		</surface>
-		<surface width="18" height="17" name="iUncheckHigh">
-			<fill color="#D4F129" />
-		</surface>
-
-		<surface height="18" name="input-text-normal" width="26%">
-			<fill color="#31799F" />
-			<fill color="#FFFFFF" height="16" width="99%" x="1%" y="1" />
-		</surface>
-		<surface height="16" name="input-text-focus" width="26%">
-			<fill color="#31799F" />
-			<fill color="#D4F129" height="16" width="99%" x="1%" y="1" />
-		</surface>
-
 		<surface height="25" name="sw_btn" width="60">
 			<fill color="#FFFFFF" />
 			<fill color="#31799F" height="86%" width="90%" x="5%" y="8%" />
@@ -190,11 +172,6 @@
 			<fill color="#FFFFFF" />
 			<fill color="#85C4E2" height="48" x="1" y="1" />
 		</surface>
-
-		<theme>
-			<input offhighlight="iUncheckHigh" offnormal="iUncheck" onhighlight="iCheckHigh" onnormal="iCheck" type="checkbox" />
-			<input focus="input-text-focus" highlight="input-text-normal" normal="input-text-normal" type="text" />
-		</theme>
 
 	</resources>
 	<body height="480" onload="export:isoLoader_Init()" onunload="export:isoLoader_Shutdown()" width="100%" name="main_body">
@@ -452,7 +429,7 @@
 								<input height="23" name="0x8c" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="20%">
 									<label align="left" color="#000000" font="arial" height="22" text="0x8c" width="109%" x="45%" />
 								</input>
-								<input font="arial" fontcolor="#000000" height="18" name="boot-memory-text" onblur="export:isoLoader_toggleMemory()" size="30" type="text" value="e00000" width="59%" />
+								<input font="arial" fontcolor="#000000" height="22" name="boot-memory-text" onblur="export:isoLoader_toggleMemory()" size="30" type="text" value="e00000" width="59%" />
 							</panel>
 						</panel>
 
@@ -510,7 +487,7 @@
 									<input height="23" name="0x8c" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="20%">
 										<label align="left" color="#000000" font="arial" height="22" text="0x8c" width="109%" x="45%" />
 									</input>
-									<input font="arial" fontcolor="#000000" height="18" name="heap-memory-text" onblur="export:isoLoader_toggleHeap()" size="30" type="text" value="e00000" width="59%" />
+									<input font="arial" fontcolor="#000000" height="22" name="heap-memory-text" onblur="export:isoLoader_toggleHeap()" size="30" type="text" value="e00000" width="59%" />
 								</panel>
 							</panel>
 						</panel>
@@ -566,19 +543,19 @@
 								<panel height="20">
 									<label align="left" color="#000000" font="arial" height="20" text="Patch address 1" />
 								</panel>
-								<input font="arial" fontcolor="#000000" height="18" name="pa1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
+								<input font="arial" fontcolor="#000000" height="22" name="pa1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
 								<panel height="25">
 									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 1" />
 								</panel>
-								<input font="arial" fontcolor="#000000" height="18" name="pv1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+								<input font="arial" fontcolor="#000000" height="22" name="pv1-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
 								<panel height="25">
 									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch address 2" />
 								</panel>
-								<input font="arial" fontcolor="#000000" height="18" name="pa2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
+								<input font="arial" fontcolor="#000000" height="22" name="pa2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="0c000000" width="59%" />
 								<panel height="25">
 									<label align="left" color="#000000" font="arial" height="20" y="5" text="Patch value 2" />
 								</panel>
-								<input font="arial" fontcolor="#000000" height="18" name="pv2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
+								<input font="arial" fontcolor="#000000" height="22" name="pv2-text" onblur="export:isoLoader_togglePatchAddr()" size="30" type="text" value="00000000" width="59%" />
 							</panel>
 						</panel>
 
@@ -586,7 +563,7 @@
 							<panel height="250" width="80%">
 								<panel height="45">
 									<label align="left" color="#31799F" font="arial" height="22" text="Loader firmware:" width="100%" />
-									<input font="arial" fontcolor="#000000" height="18" name="device" size="30" type="text" value="auto" width="100%" />
+									<input font="arial" fontcolor="#000000" height="22" name="device" size="30" type="text" value="auto" width="100%" />
 								</panel>
 								<panel height="200" background="fw_browser_bg" >
 									<filemanager height="198" y="1" x="1" path="/"
@@ -652,7 +629,7 @@
 					</panel>
 					<panel height="150" width="86%" x="12%" y="105">
 						<label align="left" color="#31799F" font="arial" height="25" width="100%" text="VMU emulation:" />
-						<input font="arial" fontcolor="#000000" height="18" name="vmu-number" size="20" type="text" value="001" width="40" />
+						<input font="arial" fontcolor="#000000" height="22" name="vmu-number" size="20" type="text" value="001" width="40" />
 						<input height="25" y="50" name="vmu-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Disabled" x="9%" />
 						</input>
@@ -707,7 +684,7 @@
 						<panel width="100%" height="25">
 							<label align="left" color="#31799F" font="arial" height="25" text="Icon name:" width="100%" />
 						</panel>
-						<input font="arial" fontcolor="#000000" height="18" name="link-text"
+						<input font="arial" fontcolor="#000000" height="22" name="link-text"
 							onblur="export:isoLoader_toggleLinkName()" size="30" type="text" value="Game name" width="59%" />
 						<panel width="100%" height="6"/>
 						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()"
