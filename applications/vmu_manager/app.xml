@@ -67,7 +67,6 @@
 		<image src="images/dump_disable.png" name="dump_d" />
 		<image src="images/format.png" name="format" />
 		<image src="images/format_high.png" name="format_h" />
-		
 		<surface width="640" height="385" name="main_frame">
 			<fill color="#EEEEEE" />
 			<fill x="1%" y="2%" width="98%" height="96%" color="#333333" />
@@ -107,7 +106,6 @@
 		<surface width="48" height="48" name="logo">
 			<fill width="48" height="48" color="#333333" />
 		</surface>
-		
 		<surface width="100" height="20" name="input-normal">
 			<fill width="100" height="20" color="#FFFFFF" />
 		</surface>
@@ -115,7 +113,9 @@
 			<fill width="100" height="20" color="#29B1EA" />
 			<fill x="2" y="2" width="98" height="18" color="#7CFFC1" />
 		</surface>
-		
+		<surface width="1" height="1" name="empty">
+			<fill color="#313031" />
+		</surface>
 	</resources>
 	<body width="100%" height="100%" onload="export:Vmu_Manager_Init()">
 
@@ -156,10 +156,10 @@
 				</panel>
 
 				<panel x="160" y="20" width="480" height="80" >
-					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="28" y="10" name="contA" />
-					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="148" y="10" name="contB" />
-					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="268" y="10" name="contC" />
-					<progressbar pos="0.0" pimage="controller" width="64" height="64" x="388" y="10" name="contD" />
+					<progressbar pos="0.0" pimage="controller" bimage="empty" width="64" height="64" x="28" y="10" name="contA" />
+					<progressbar pos="0.0" pimage="controller" bimage="empty" width="64" height="64" x="148" y="10" name="contB" />
+					<progressbar pos="0.0" pimage="controller" bimage="empty" width="64" height="64" x="268" y="10" name="contC" />
+					<progressbar pos="0.0" pimage="controller" bimage="empty" width="64" height="64" x="388" y="10" name="contD" />
 				</panel>
 
 				<panel x="160" y="120" width="480" height="190" name="vmu-container">
