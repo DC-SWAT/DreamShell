@@ -15,8 +15,7 @@ OBJS =	\
 	ProgressBar.o ScrollBar.o \
 	AbstractTable.o ListBox.o \
 	VBoxLayout.o RealScreen.o \
-	Mouse.o ScrollPanel.o \
-	Window.o SDLScreen.o \
+	ScrollPanel.o Window.o \
 	RTF.o FileManager.o Dialog.o
 
 

@@ -1338,11 +1338,7 @@ static GUI_Widget *parseAppElement(App_t *app, mxml_node_t *node, SDL_Rect *pare
 	} else if(!strncmp(node->value.element.name, "dialog", 6)) {
 
 		widget = parseAppDialogElement(app, node, name, x, y, w, h);
-	/*
-	} else if(!strcmp(node->value.element.name, "nanox")) {
 
-		widget = parseAppNanoXElement(app, node, name, x, y, w, h);
-	*/
 	} else {
 		return NULL;
 	}
@@ -1603,64 +1599,6 @@ static GUI_Callback *CreateAppElementCallback(App_t *app, const char *event, GUI
 
 	return cb;
 }
-
-/*
-
-#include "nano-X.h"
-#include "nanowm.h"
-
-static void NanoXDefaultEventHandler(void *data) {
-	GR_EVENT gevent;
-	GrGetNextEvent(&gevent);
-	//printf("NanoXDefaultEventHandler: %d\n", gevent.type);
-	GUI_WidgetMarkChanged((GUI_Widget *)data);
-	switch (gevent.type) {
-		case GR_EVENT_TYPE_EXPOSURE:
-			GUI_WidgetMarkChanged((GUI_Widget *)data);
-			break;
-		case GR_EVENT_TYPE_UPDATE:
-			GUI_WidgetMarkChanged((GUI_Widget *)data);
-			break;
-		case GR_EVENT_TYPE_MOUSE_MOTION:
-			GUI_WidgetMarkChanged((GUI_Widget *)data);
-			break;
-		case GR_EVENT_TYPE_CLOSE_REQ:
-			//GrClose();
-			break;
-	}
-}
-
-
-
-static GUI_Widget *parseAppNanoXElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h) {
-
-	GUI_Widget *widget;
-	GUI_Callback *cb;
-	char *event = NULL;
-
-#ifdef APP_LOAD_DEBUG
-	ds_printf("DS_DEBUG: Parsing NanoX: %s\n", name);
-#endif
-
-	widget = GUI_NANOX_Create(name, x, y, w, h);
-	event = FindXmlAttr("event", node, NULL);
-
-	if(event != NULL) {
-		cb = CreateAppElementCallback(app, event, widget);
-	} else {
-		ds_printf("NanoXDefaultEventHandler: OK\n");
-		cb = GUI_CallbackCreate((GUI_CallbackFunction *)NanoXDefaultEventHandler, NULL, widget);
-	}
-
-	if(cb != NULL) {
-		GUI_NANOX_SetGEventHandler(widget, cb);
-		GUI_ObjectDecRef((GUI_Object *) cb);
-	}
-
-	return widget;
-}
-
-*/
 
 
 static GUI_Widget *parseAppButtonElement(App_t *app, mxml_node_t *node, char *name, int x, int y, int w, int h) {
