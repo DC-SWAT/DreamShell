@@ -507,6 +507,10 @@ class GUI_ToggleButton : public GUI_AbstractButton
 		void SetOffNormalImage(GUI_Surface *surface);
 		void SetOnHighlightImage(GUI_Surface *surface);
 		void SetOffHighlightImage(GUI_Surface *surface);
+		GUI_Surface *GetOnNormalImage(void);
+		GUI_Surface *GetOnHighlightImage(void);
+		GUI_Surface *GetOffNormalImage(void);
+		GUI_Surface *GetOffHighlightImage(void);
 };
 
 class GUI_ProgressBar : public GUI_Widget
@@ -940,7 +944,6 @@ typedef struct guiWindow GUI_Window;
 typedef struct guiRect GUI_Rect;
 typedef struct guiColor GUI_Color;
 typedef struct guiListBox GUI_ListBox;
-//typedef struct guiMouse GUI_Mouse;
 
 #endif
 
@@ -1196,6 +1199,10 @@ void GUI_ToggleButtonSetOnNormalImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ToggleButtonSetOnHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ToggleButtonSetOffNormalImage(GUI_Widget *widget, GUI_Surface *surface);
 void GUI_ToggleButtonSetOffHighlightImage(GUI_Widget *widget, GUI_Surface *surface);
+GUI_Surface *GUI_ToggleButtonGetOnNormalImage(GUI_Widget *widget);
+GUI_Surface *GUI_ToggleButtonGetOnHighlightImage(GUI_Widget *widget);
+GUI_Surface *GUI_ToggleButtonGetOffNormalImage(GUI_Widget *widget);
+GUI_Surface *GUI_ToggleButtonGetOffHighlightImage(GUI_Widget *widget);
 void GUI_ToggleButtonSetCaption(GUI_Widget *widget, GUI_Widget *caption);
 GUI_Widget *GUI_ToggleButtonGetCaption(GUI_Widget *widget);
 void GUI_ToggleButtonSetClick(GUI_Widget *widget, GUI_Callback *callback);
