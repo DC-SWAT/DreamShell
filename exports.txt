@@ -1132,6 +1132,7 @@ GUI_ScrollBarGetHorizontalPosition
 GUI_ScrollBarGetVerticalPosition
 GUI_ScrollBarSetHorizontalPosition
 GUI_ScrollBarSetVerticalPosition
+GUI_ScrollBarResize
 #
 #CardStack widget API 
 GUI_CardStackCreate

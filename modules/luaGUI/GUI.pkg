@@ -265,6 +265,7 @@ int GUI_ScrollBarGetHorizontalPosition(GUI_Widget *widget);
 int GUI_ScrollBarGetVerticalPosition(GUI_Widget *widget);
 void GUI_ScrollBarSetHorizontalPosition(GUI_Widget *widget, int value);
 void GUI_ScrollBarSetVerticalPosition(GUI_Widget *widget, int value);
+void GUI_ScrollBarResize(GUI_Widget *widget, int w, int h);
 
 /* CardStack widget API */
 

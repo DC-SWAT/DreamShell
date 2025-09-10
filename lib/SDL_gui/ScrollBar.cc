@@ -7,17 +7,11 @@
 GUI_ScrollBar::GUI_ScrollBar(const char *aname, int x, int y, int w, int h)
 : GUI_Widget(aname, x, y, w, h)
 {
-	SDL_Rect in;
-
-	in.x = 4;
-	in.y = 4;
-	in.w = w-8;
-	in.h = w-8;
-	
 	SetTransparent(1);
 
-	background = new GUI_Surface("bg", SDL_HWSURFACE, w, h, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
-	knob = new GUI_Surface("knob", SDL_HWSURFACE, w, w, 16, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000);
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
+	background = NULL;
+	knob = new GUI_Surface("knob", SDL_HWSURFACE, w, w * 2, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 
 	position_x = 0;
 	position_y = 0;
@@ -26,13 +20,14 @@ GUI_ScrollBar::GUI_ScrollBar(const char *aname, int x, int y, int w, int h)
 	tracking_start_y = 0;
 	tracking_pos_x = 0;
 	tracking_pos_y = 0;
-	
-	knob->Fill(NULL, 0x00FFFFFF);
-	knob->Fill(&in,  0x004040FF);
 
-	background->Fill(NULL, 0x00FFFFFF);
-	in.h = h-8;
-	background->Fill(&in,  0xFF000000);
+	SDL_Rect rect;
+
+	knob->Fill(NULL, SDL_MapRGB(format, 204, 204, 204));
+	rect = {1, 1, (Uint16)(w - 2), (Uint16)(w * 2 - 2)};
+	knob->Fill(&rect,  SDL_MapRGB(format, 243, 243, 243));
+
+	CreateBackground();
 	moved_callback = 0;
 	wtype = WIDGET_TYPE_SCROLLBAR;
 }
@@ -42,6 +37,17 @@ GUI_ScrollBar::~GUI_ScrollBar(void)
 	knob->DecRef();
 	background->DecRef();
 	if (moved_callback) moved_callback->DecRef();
+}
+
+void GUI_ScrollBar::CreateBackground(void) {
+	if (background) {
+		background->DecRef();
+	}
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
+	background = new GUI_Surface("bg", SDL_HWSURFACE, area.w, area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	background->Fill(NULL, SDL_MapRGB(format, 238, 238, 238));
+	SDL_Rect rect = {0, 0, 1, (Uint16)area.h};
+	background->Fill(&rect,  SDL_MapRGB(format, 204, 204, 204));
 }
 
 void GUI_ScrollBar::Update(int force)
@@ -197,6 +203,32 @@ void GUI_ScrollBar::SetMovedCallback(GUI_Callback *callback)
 	GUI_ObjectKeep((GUI_Object **) &moved_callback, callback);
 }
 
+void GUI_ScrollBar::SetWidth(int w)
+{
+	if (area.w == w)
+		return;
+
+	Resize(w, area.h);
+}
+
+void GUI_ScrollBar::SetHeight(int h)
+{
+	if (area.h == h)
+		return;
+
+	Resize(area.w, h);
+}
+
+void GUI_ScrollBar::Resize(int w, int h)
+{
+	if (area.w == w && area.h == h)
+		return;
+
+	GUI_Widget::SetSize(w, h);
+	CreateBackground();
+	MarkChanged();
+}
+
 extern "C"
 {
 
@@ -260,6 +292,11 @@ void GUI_ScrollBarSetHorizontalPosition(GUI_Widget *widget, int value)
 void GUI_ScrollBarSetVerticalPosition(GUI_Widget *widget, int value) 
 {
 	((GUI_ScrollBar *) widget)->SetVerticalPosition(value);
+}
+
+void GUI_ScrollBarResize(GUI_Widget *widget, int w, int h)
+{
+	((GUI_ScrollBar *) widget)->Resize(w, h);
 }
 
 }

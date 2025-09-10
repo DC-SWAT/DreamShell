@@ -543,6 +543,7 @@ class GUI_ScrollBar : public GUI_Widget
 		int tracking_start_y;
 		int tracking_pos_x;
 		int tracking_pos_y;
+		void CreateBackground(void);
 	public:
 		GUI_ScrollBar(const char *aname, int x, int y, int w, int h);
 		virtual ~GUI_ScrollBar(void);
@@ -559,6 +560,10 @@ class GUI_ScrollBar : public GUI_Widget
 		virtual void Update(int force);
 		virtual void Erase(const SDL_Rect *rp);
 		virtual int Event(const SDL_Event *event, int xoffset, int yoffset);
+
+		void SetWidth(int w);
+		void SetHeight(int h);
+		void Resize(int w, int h);
 };
 
 class GUI_Container : public GUI_Widget
@@ -1248,6 +1253,7 @@ int GUI_ScrollBarGetHorizontalPosition(GUI_Widget *widget);
 int GUI_ScrollBarGetVerticalPosition(GUI_Widget *widget);
 void GUI_ScrollBarSetHorizontalPosition(GUI_Widget *widget, int value);
 void GUI_ScrollBarSetVerticalPosition(GUI_Widget *widget, int value);
+void GUI_ScrollBarResize(GUI_Widget *widget, int w, int h);
 
 /* CardStack widget API */
 
