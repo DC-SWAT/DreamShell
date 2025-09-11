@@ -23,7 +23,8 @@
 --	MapleAttached          Check for attached maple device
 --
 --	Bit library:           bit.or, bit.and, bit.not, bit.xor
---	File system library:   lfs.chdir, lfs.currentdir, lfs.dir, lfs.mkdir, lfs.rmdir
+--	File system library:   lfs.chdir, lfs.currentdir, lfs.dir, lfs.mkdir, lfs.rmdir,
+--                         lfs.copyfile, lfs.rename
 --	
 ------------------------------------------
 
@@ -114,6 +115,11 @@ local DreamShell = {
 		self:InstallingApps(path .. "/apps");
 		self.initialized = true;
 		OpenApp(os.getenv("APP"));
+
+		local startup_cmd = os.getenv("STARTUP_CMD");
+		if startup_cmd ~= nil and startup_cmd ~= "" then
+			os.execute(startup_cmd);
+		end
 	end,
 
 	InstallingApps = function(self, path)

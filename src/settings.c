@@ -81,6 +81,7 @@ void ResetSettings() {
 	Settings_t *cur = &current_set;
 	VideoSettings_t *vid = &current_set.video;
 	AudioSettings_t *aud = &current_set.audio;
+	NetworkSettings_t *net = &current_set.network;
 	memset(&current_set, 0, sizeof(current_set));
 
 	vid->bpp = 16;
@@ -97,6 +98,9 @@ void ResetSettings() {
 	aud->click_enabled = 1;
 	aud->hover_enabled = 1;
 	aud->startup_enabled = 1;
+
+	net->startup_connect = 0;
+	net->startup_ntp = 0;
 
 	strncpy(cur->app, "Main", 4);
 	cur->app[4] = '\0';
@@ -152,6 +156,7 @@ static int LoadSettingsVMU() {
 		fs_read(fd, &sets, sizeof(Settings_t));
 
 		if (sets.version != DS_SETTIGS_VERSION) {
+			dbglog(DBG_DEBUG, "%s: Version mismatch for %s\n", __func__, save_name);
 			fs_close(fd);
 			continue;
 		}
@@ -190,6 +195,7 @@ static int LoadSettingsFile(const char *filename) {
 	}
 
 	if (sets.version != DS_SETTIGS_VERSION) {
+		dbglog(DBG_DEBUG, "%s: Version mismatch for %s\n", __func__, filename);
 		return 0;
 	}
 

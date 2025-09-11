@@ -53,6 +53,17 @@ typedef struct AudioSettings {
 }  AudioSettings_t;
 
 
+typedef struct NetworkSettings {
+
+	/* Network connect at startup */
+	int startup_connect;
+
+	/* Use NTP at startup to sync time */
+	int startup_ntp;
+
+}  NetworkSettings_t;
+
+
 typedef struct Settings {
 
 	/* Core version */
@@ -72,6 +83,9 @@ typedef struct Settings {
 
 	/* Audio */
 	AudioSettings_t audio;
+
+	/* Network */
+	NetworkSettings_t network;
 
 }  Settings_t;
 

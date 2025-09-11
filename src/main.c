@@ -239,28 +239,39 @@ int InitDS() {
 	setenv("PWD", fs_getwd(), 1);
 	setenv("APP", (settings->app[0] != 0 ? settings->app : "Main"), 1);
 
+	if(settings->network.startup_connect) {
+		strcpy(fn, "net --init");
+
+		if(settings->network.startup_ntp) {
+			strcat(fn, " && ntp --sync");
+		}
+		strcat(fn, " &");
+		setenv("STARTUP_CMD", fn, 1);
+	}
+	else {
+		setenv("STARTUP_CMD", "", 1);
+	}
+
 	/* If used custom BIOS and syscalls is not installed, setting up it */
 	if(is_custom_bios() && is_no_syscalls()) {
 		tmpb = (uint8 *)0xa021a056;
-	} else {
-
+	}
+	else {
 		sys_info_init();
 		tmpb = get_board_id();
-
 		if(strncmp(getenv("PATH"), "/cd", 3)) {
 			/* Relax GD drive =) */
 			cdrom_spin_down();
 		}
 	}
-
 	memset(fn, 0, sizeof(fn));
 
 	for(tmpi = 0; tmpi < 8; tmpi++) {
 		snprintf(bf, sizeof(bf), "%02X", tmpb[tmpi]);
 		strcat(fn, bf);
 	}
-
 	setenv("BOARD_ID", fn, 1);
+
 	IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 	InitEvents();
 
