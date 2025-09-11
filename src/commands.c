@@ -325,18 +325,25 @@ Cmd_t *GetCmdByName(const char *name) {
 	return NULL;
 }
 
-/* Execute a single command input by the user or a script */
-int dsystem(const char *buff) {
+static int dsystem_internal(const char *buff) {
 	int argc, ret = 0;
 	char *argv[32];
 	char *str;
+	const char *cmd_start = buff;
 
-	/* we don't care if the user just hit enter */
-	if (buff[0] == '\0') return 0;
+	/* Trim leading whitespace */
+	while(*cmd_start && isspace((unsigned char)*cmd_start)) {
+		cmd_start++;
+	}
 
-	str = strdup(buff);
+	/* We don't care if the user just hit enter or comment */
+	if (cmd_start[0] == '\0' || cmd_start[0] == '#') {
+		return CMD_OK;
+	}
 
-	/* seperate the string into args */
+	str = strdup(cmd_start);
+
+	/* Seperate the string into args */
 	for (argc = 0; argc < 32;) {
 		if ((argv[argc] = fix_path_spaces(strsep(&str, " \t\n"))) == NULL)
 			break;
@@ -344,15 +351,66 @@ int dsystem(const char *buff) {
 			argc++;
 	}
 
-	/* try to run the command as a builtin */
-	ret = CallCmd(argc, argv);
+	/* Try to run the command as a builtin */
+	if(argc > 0) {
+		ret = CallCmd(argc, argv);
 
-	if(ret == CMD_NOT_EXISTS) {
-		ds_printf("DS_ERROR: '%s' - Command not found\n", argv[0]);
+		if(ret == CMD_NOT_EXISTS) {
+			ds_printf("DS_ERROR: '%s' - Command not found\n", argv[0]);
+		}
 	}
 
 	free(str);
 	return ret;
+}
+
+static int dsystem_exec(const char *buff) {
+	char *tmp_buff = strdup(buff);
+	char *p;
+	int rv = CMD_OK;
+	char *current_cmd = tmp_buff;
+
+	while ((p = strstr(current_cmd, "&&"))) {
+		*p = '\0';
+		rv = dsystem_internal(current_cmd);
+		if (rv != CMD_OK) {
+			free(tmp_buff);
+			return rv;
+		}
+		current_cmd = p + 2;
+	}
+
+	rv = dsystem_internal(current_cmd);
+	free(tmp_buff);
+	return rv;
+}
+
+static void *dsystem_thread(void *command) {
+	char *cmd = (char *)command;
+	dsystem_exec(cmd);
+	free(cmd);
+	return NULL;
+}
+
+int dsystem(const char *buff) {
+	int len = 0;
+
+	if (buff == NULL || (len = strlen(buff)) == 0) {
+		return CMD_OK;
+	}
+
+	int end = len - 1;
+	while(end >= 0 && isspace((unsigned char)buff[end])) {
+		end--;
+	}
+
+	if (end >= 0 && buff[end] == '&') {
+		char *trimmed_buff = strndup(buff, end);
+		thd_create(1, dsystem_thread, trimmed_buff);
+		return CMD_OK;
+	}
+
+	return dsystem_exec(buff);
 }
 
 int system(const char *buff) {
@@ -382,12 +440,14 @@ int dsystem_script(const char *fn) {
 
 	while (fgets(buff, sizeof(buff), f)) {
 
-		if (buff[0] == 0 || buff[0] == '#')
-			continue;
-		if (buff[strlen(buff)-1] == '\n')
-			buff[strlen(buff)-1] = 0;
-		if (buff[strlen(buff)-1] == '\r')
-			buff[strlen(buff)-1] = 0;
+		size_t len = strlen(buff);
+		if (len > 0 && buff[len-1] == '\n') {
+			buff[len-1] = '\0';
+			len--;
+		}
+		if (len > 0 && buff[len-1] == '\r') {
+			buff[len-1] = '\0';
+		}
 
 		r = dsystem(buff);
 	}
@@ -400,10 +460,14 @@ int dsystem_buff(const char *buff) {
 	char *b, *bf;
 	int r = CMD_OK;
 
-	bf = strdup(buff);
+	if (buff == NULL) {
+		return CMD_OK;
+	}
 
-	while((b = strsep(&bf, "\n")) != NULL) {
-		if (b[0] == 0 || b[0] == '#') continue;
+	bf = strdup(buff);
+	char *tmp_bf = bf;
+
+	while((b = strsep(&tmp_bf, "\n")) != NULL) {
 		r = dsystem(b);
 	}
 

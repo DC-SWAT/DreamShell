@@ -92,42 +92,8 @@ int ds_printf(const char *fmt, ...) {
 }
 
 
-static void *CommandThread(void *command) {
-	
-	int argc;
-	char *argv[32];
-	char *str = (char *)command;
-
-	for (argc = 0; argc < 32;) {
-		if ((argv[argc] = fix_path_spaces(strsep(&str, " \t\n"))) == NULL)
-			break;
-		if (*argv[argc] != '\0')
-			argc++;
-	}
-	
-	if(CallCmd(argc, argv) == CMD_NOT_EXISTS) {
-	   ds_printf("DS_ERROR: Command '%s' not found.\n", argv[0]);
-	}
-	
-	free(command);
-	return NULL;
-}
-
-
 static void Command_Handler(ConsoleInformation *console, char* command) {
-	
-	if (command[0] == '\0') {
-		return;
-	}
-	
-	int len = strlen(command);
-
-	if(command[len - 1] == '&') {
-		command[len - 2] = '\0';
-		thd_create(1, CommandThread, strdup(command));
-	} else {
-		CommandThread(strdup(command));
-	}
+	dsystem(command);
 }
 
 
