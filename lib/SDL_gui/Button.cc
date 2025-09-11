@@ -81,33 +81,47 @@ GUI_Button::GUI_Button(const char *aname, int x, int y, int w, int h)
 	pressed =    new GUI_Surface("pressed", SDL_HWSURFACE, w, h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
 
 	SDL_Rect rect;
+	int B;
+
+	if(h <= 30) {
+		B = 2;
+	}
+	else if(h >= 60) {
+		B = 5;
+	}
+	else {
+		B = (int)(2 + (h - 30.0) / 10.0 + 0.5);
+	}
+
+	const int b1 = B - 1;
+	const int b2 = B;
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
 	normal->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	rect = {(Sint16)b1, (Sint16)b1, (Uint16)(w - b1 * 2), (Uint16)(h - b1 * 2)};
 	normal->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	rect = {(Sint16)b2, (Sint16)b2, (Uint16)(w - b2 * 2), (Uint16)(h - b2 * 2)};
 	normal->Fill(&rect, SDL_MapRGB(format, 49, 121, 159));
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
 	highlight->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	rect = {(Sint16)b1, (Sint16)b1, (Uint16)(w - b1 * 2), (Uint16)(h - b1 * 2)};
 	highlight->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	rect = {(Sint16)b2, (Sint16)b2, (Uint16)(w - b2 * 2), (Uint16)(h - b2 * 2)};
 	highlight->Fill(&rect, SDL_MapRGB(format, 97, 189, 236));
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
 	pressed->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	rect = {(Sint16)b1, (Sint16)b1, (Uint16)(w - b1 * 2), (Uint16)(h - b1 * 2)};
 	pressed->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	rect = {(Sint16)b2, (Sint16)b2, (Uint16)(w - b2 * 2), (Uint16)(h - b2 * 2)};
 	pressed->Fill(&rect, SDL_MapRGB(format, 212, 241, 41));
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
 	disabled->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
-	rect = {1, 1, (Uint16)(w - 2), (Uint16)(h - 2)};
+	rect = {(Sint16)b1, (Sint16)b1, (Uint16)(w - b1 * 2), (Uint16)(h - b1 * 2)};
 	disabled->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
-	rect = {2, 2, (Uint16)(w - 4), (Uint16)(h - 4)};
+	rect = {(Sint16)b2, (Sint16)b2, (Uint16)(w - b2 * 2), (Uint16)(h - b2 * 2)};
 	disabled->Fill(&rect, SDL_MapRGB(format, 204, 204, 204));
 
 	entry = new GUI_Button_Defaults;
