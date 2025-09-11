@@ -185,32 +185,32 @@ GUI_Surface *GUI_ToggleButton::GetCurrentImage()
 
 void GUI_ToggleButton::SetOnNormalImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &on_normal, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
 
 void GUI_ToggleButton::SetOffNormalImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &off_normal, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
 
 void GUI_ToggleButton::SetOnHighlightImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &on_highlight, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
 
 void GUI_ToggleButton::SetOffHighlightImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &off_highlight, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }

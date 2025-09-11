@@ -166,32 +166,32 @@ GUI_Surface *GUI_Button::GetCurrentImage()
 
 void GUI_Button::SetNormalImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &normal, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
 
 void GUI_Button::SetHighlightImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &highlight, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
 
 void GUI_Button::SetPressedImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &pressed, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
 
 void GUI_Button::SetDisabledImage(GUI_Surface *surface)
 {
+	on_button_stops_using_defaults(this);
 	if (GUI_ObjectKeep((GUI_Object **) &disabled, surface)) {
-		on_button_stops_using_defaults(this);
 		MarkChanged();
 	}
 }
