@@ -206,7 +206,8 @@ int open(const char *path, int flags) {
 
 		if(r != FR_OK) {
 			file->fp.cltbl = NULL;
-			LOGFF("ERROR, creating linkmap required %d dwords, code %d\n", file->fp.cltbl[0], r);
+			// NOTE: This line causes build error with flto=auto
+			// LOGFF("ERROR, creating linkmap required %d dwords, code %d\n", file->fp.cltbl[0], r);
 		} else {
 			LOGFF("Created linkmap with %d sequences\n", file->fp.cltbl[0]);
 		}

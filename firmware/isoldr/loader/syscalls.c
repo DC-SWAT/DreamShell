@@ -487,6 +487,12 @@ void data_transfer_emu_async() {
 	}
 
 	if(GDS->cmd_abort) {
+#if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
+		if(IsoInfo->use_dma) {
+			fs_enable_dma(FS_DMA_SHARED);
+			g1_dma_set_irq_mask(1);
+		}
+#endif
 		GDS->transfered = 0;
 		GDS->status = CMD_STAT_IDLE;
 	}
