@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Network" version="0.2.0" icon="images/icon.png">
+<app name="Network" version="0.3.0" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/ppp.klf" />
 		<module src="../../modules/ftpd.klf" />
@@ -13,40 +13,6 @@
 			<fill color="#BBBBBB" height="1" y="43" />
 			<fill color="#CCCCCC" height="1" y="44" />
 		</surface>
-		<surface width="280" height="60" name="but-large-normal">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#31799F" />
-		</surface>
-		<surface width="280" height="60" name="but-large-hl">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#61BDEC" />
-		</surface>
-		<surface width="280" height="60" name="but-large-pressed">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#D4F129" />
-		</surface>
-		<surface width="280" height="60" name="but-large-disabled">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#CCCCCC" />
-		</surface>
-		<image src="../../gui/buttons/checkbox2/check.png" name="check-on" />
-		<image src="../../gui/buttons/checkbox2/check_hl.png" name="check-on-hl" />
-		<surface width="18" height="17" name="check-off">
-			<fill color="#FFFFFF" />
-		</surface>
-		<surface width="18" height="17" name="check-off-hl">
-			<fill color="#D4F129" />
-		</surface>
-		<theme>
-			<input type="button" normal="but-large-normal" highlight="but-large-hl"
-				pressed="but-large-pressed" disabled="but-large-disabled" />
-			<input type="checkbox" onnormal="check-on" onhighlight="check-on-hl"
-				offnormal="check-off" offhighlight="check-off-hl" />
-		</theme>
 	</resources>
 	<body width="100%" height="100%" background="#DDDDDD"
 		onload="export:NetworkApp_Init()"
@@ -87,7 +53,7 @@
 						<label font="comic-22" color="#EEEEEE" text="Exit" />
 					</input>
 				</panel>
-				<panel height="80" width="100%">
+				<panel height="100" width="100%">
 					<panel x="20" y="10">
 						<panel width="50%" height="35">
 							<panel width="130" height="30">
@@ -128,6 +94,20 @@
 								<label font="comic-20" color="#CF3311" align="left"
 									text="stopped" name="httpd-status" />
 							</panel>
+						</panel>
+					</panel>
+				</panel>
+				<panel height="60" width="100%">
+					<panel x="20">
+						<panel width="100%" height="25">
+							<input type="checkbox" name="startup-connect-but">
+								<label x="27" height="20" font="comic-16" color="#31799F" text="Connect at startup" align="left" />
+							</input>
+						</panel>
+						<panel width="100%" height="25">
+							<input type="checkbox" name="startup-ntp-but">
+								<label x="27" height="20" font="comic-16" color="#31799F" text="Sync time at startup (NTP)" align="left" />
+							</input>
 						</panel>
 					</panel>
 				</panel>

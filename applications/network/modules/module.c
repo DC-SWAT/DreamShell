@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Network app module
-   Copyright (C) 2024 SWAT 
+   Copyright (C) 2024-2025 SWAT 
 */
 
 #include <ds.h>
@@ -22,6 +22,7 @@ static struct {
     App_t *app;
     char *last_ip;
     app_action_t action;
+    Settings_t *settings;
 
     GUI_Widget *pages;
 
@@ -29,8 +30,19 @@ static struct {
     GUI_Widget *net_status;
     GUI_Widget *ftpd_status;
     GUI_Widget *httpd_status;
+    GUI_Widget *startup_connect_but;
+    GUI_Widget *startup_ntp_but;
 
 } self;
+
+static void SetupNetworkSettings() {
+    if(self.startup_connect_but) {
+        GUI_WidgetSetState(self.startup_connect_but, self.settings->network.startup_connect);
+    }
+    if(self.startup_ntp_but) {
+        GUI_WidgetSetState(self.startup_ntp_but, self.settings->network.startup_ntp);
+    }
+}
 
 static void *app_thread(void *params) {
     (void)params;
@@ -94,16 +106,30 @@ void NetworkApp_Init(App_t *app) {
 
     memset(&self, 0, sizeof(self));
     self.app = app;
+    self.settings = GetSettings();
 
     self.pages = APP_GET_WIDGET("pages");
     self.ip_addr = APP_GET_WIDGET("ip-addr");
     self.net_status = APP_GET_WIDGET("net-status");
     self.ftpd_status = APP_GET_WIDGET("ftpd-status");
     self.httpd_status = APP_GET_WIDGET("httpd-status");
+    self.startup_connect_but = APP_GET_WIDGET("startup-connect-but");
+    self.startup_ntp_but = APP_GET_WIDGET("startup-ntp-but");
+
+    SetupNetworkSettings();
 }
 
 void NetworkApp_Shutdown(App_t *app) {
     (void)app;
+    int startup_connect = GUI_WidgetGetState(self.startup_connect_but);
+    int startup_ntp = GUI_WidgetGetState(self.startup_ntp_but);
+
+    if(self.settings->network.startup_connect != startup_connect ||
+        self.settings->network.startup_ntp != startup_ntp) {
+        self.settings->network.startup_connect = startup_connect;
+        self.settings->network.startup_ntp = startup_ntp;
+        SaveSettings();
+    }
 }
 
 void NetworkApp_Open(App_t *app) {
