@@ -44,6 +44,7 @@ void GoUpDirectory(const char *original_path, int levels, char *result);
 const char* GetLastPart(const char *source, const char separator, int option_path);
 bool ContainsOnlyNumbers(const char *string);
 int  GetDeviceType(const char *dir);
+const char *GetDeviceName(int type);
 int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type);
 void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data);
 char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name);

@@ -19,6 +19,40 @@
 
 struct MenuStructure menu_data;
 
+static const char *find_path_on_device(const char *dev_prefix, const char *subdir, char *path_buf, size_t path_buf_size) {
+    char dev_path[16] = {0};
+    char search_path[64] = {0};
+    char first_partition_found[16] = {0};
+
+    for (int i = 0; i < 4; i++) {
+        if (i == 0) {
+            snprintf(dev_path, sizeof(dev_path), "/%s", dev_prefix);
+        } else {
+            snprintf(dev_path, sizeof(dev_path), "/%s%d", dev_prefix, i);
+        }
+
+        if (DirExists(dev_path)) {
+            if (first_partition_found[0] == 0) {
+                strcpy(first_partition_found, dev_path);
+            }
+            snprintf(search_path, sizeof(search_path), "%s/%s", dev_path, subdir);
+
+            if (DirExists(search_path)) {
+                strncpy(path_buf, search_path, path_buf_size - 1);
+				path_buf[path_buf_size - 1] = '\0';
+                return path_buf;
+            }
+        }
+    }
+
+    if (first_partition_found[0] != 0) {
+        snprintf(path_buf, path_buf_size, "%s/%s", first_partition_found, subdir);
+        return path_buf;
+    }
+
+    return NULL;
+}
+
 void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack *send_message_optimizer, PostPVRCoverCallBack *post_pvr_cover, PostOptimizerCoverCallBack *post_optimizer_cover)
 {
 	menu_data.cover_to_pvr = true;
@@ -68,27 +102,28 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	memset(menu_data.covers_path_sd, 0, sizeof(menu_data.covers_path_sd));
 	memset(menu_data.games_path_sd, 0, sizeof(menu_data.games_path_sd));
 
-	menu_data.ide = (DirExists(IDE_DS_PATH) == 1);
-	menu_data.sd = (DirExists(SD_DS_PATH) == 1);
+	char ds_path[64];
+	menu_data.ide = (find_path_on_device("ide", "DS", ds_path, sizeof(ds_path)) != NULL);
+	menu_data.sd = (find_path_on_device("sd", "DS", ds_path, sizeof(ds_path)) != NULL);
 	menu_data.cd = (!is_custom_bios());
 
 	if (menu_data.ide)
 	{
-		strcpy(menu_data.default_dir, IDE_DS_PATH);
-		strcpy(menu_data.covers_path, IDE_COVERS_PATH);
+		find_path_on_device("ide", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
+		find_path_on_device("ide", "DS/covers", menu_data.covers_path, sizeof(menu_data.covers_path));
 	}
 
 	if (menu_data.sd)
 	{
 		if (menu_data.ide)
 		{
-			strcpy(menu_data.default_dir_sd, SD_DS_PATH);
-			strcpy(menu_data.covers_path_sd, SD_COVERS_PATH);
+			find_path_on_device("sd", "DS", menu_data.default_dir_sd, sizeof(menu_data.default_dir_sd));
+			find_path_on_device("sd", "DS/covers", menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd));
 		}
 		else
 		{
-			strcpy(menu_data.default_dir, SD_DS_PATH);
-			strcpy(menu_data.covers_path, SD_COVERS_PATH);
+			find_path_on_device("sd", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
+			find_path_on_device("sd", "DS/covers", menu_data.covers_path, sizeof(menu_data.covers_path));
 		}
 	}
 
@@ -106,7 +141,17 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.default_cover_type = (FileExists(game_cover_path) && menu_data.cover_to_pvr ? IT_PVR : IT_PNG);
 
 	LoadMenuConfig();
-	SetGamesPath(menu_data.games_config_path);
+
+	if(strlen(menu_data.games_config_path) == 0)
+	{
+		char games_path[64];
+		if (find_path_on_device(GetDeviceName(menu_data.current_dev), "games", games_path, sizeof(games_path))) {
+			SetGamesPath(games_path);
+		}
+	}
+	else {
+		SetGamesPath(menu_data.games_config_path);
+	}
 
 	menu_data.started_with_cache = menu_data.enable_cache;
 

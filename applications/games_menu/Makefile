@@ -16,7 +16,7 @@ KOS_CFLAGS += -I./
 
 all: install
 
-$(DEPS): modules/module.c
+$(DEPS): $(wildcard modules/*.c)
 	cd modules && make
 	
 clean:

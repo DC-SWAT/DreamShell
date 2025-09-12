@@ -368,6 +368,23 @@ int GetDeviceType(const char *dir)
 	}
 }
 
+const char *GetDeviceName(int type)
+{
+	switch (type)
+	{
+		case APP_DEVICE_CD:
+			return "cd";
+		case APP_DEVICE_SD:
+			return "sd";
+		case APP_DEVICE_IDE:
+			return "ide";
+		case APP_DEVICE_PC:
+			return "pc";
+		default:
+			return "";
+	}
+}
+
 int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type)
 {
 	return (sector_size == 2048 &&
