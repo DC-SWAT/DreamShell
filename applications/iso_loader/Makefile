@@ -16,7 +16,7 @@ ROMDISKS = presets_ide.romfs presets_sd.romfs presets_cd.romfs
 
 all: install
 
-$(DEPS): modules/module.c
+$(DEPS): $(wildcard modules/*.c)
 	cd modules && make
 
 presets/: presets.tar.gz

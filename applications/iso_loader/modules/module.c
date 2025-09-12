@@ -1764,12 +1764,64 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 	return 0;
 }
 
+static const char *setup_device_partitions(const char *dev_prefix, GUI_Widget *button, char *games_path_buf) {
+	GUI_Callback *cb;
+	char dev_path[16] = {0};
+	char games_path[32] = {0};
+	char *path_dup;
+	char first_partition_found[16] = {0};
+
+	for (int i = 0; i < 4; i++) {
+		if (i == 0) {
+			sprintf(dev_path, "/%s", dev_prefix);
+		}
+		else {
+			sprintf(dev_path, "/%s%d", dev_prefix, i);
+		}
+
+		if (DirExists(dev_path)) {
+			if (first_partition_found[0] == 0) {
+				strcpy(first_partition_found, dev_path);
+			}
+			sprintf(games_path, "%s/games", dev_path);
+
+			if (DirExists(games_path)) {
+				path_dup = strdup(games_path);
+				cb = GUI_CallbackCreate((GUI_CallbackFunction *)isoLoader_SwitchVolume,
+										(GUI_CallbackFunction *)free, path_dup);
+				if (cb) {
+					GUI_ButtonSetClick(button, cb);
+					GUI_ObjectDecRef((GUI_Object *) cb);
+				}
+				GUI_WidgetSetEnabled(button, 1);
+				
+				strcpy(games_path_buf, games_path);
+				return games_path_buf;
+			}
+		}
+	}
+
+	/* No partition with 'games' was found. Use the first partition found, if any. */
+	if (first_partition_found[0] != 0) {
+		path_dup = strdup(first_partition_found);
+		cb = GUI_CallbackCreate((GUI_CallbackFunction *)isoLoader_SwitchVolume,
+								(GUI_CallbackFunction *)free, path_dup);
+		if (cb) {
+			GUI_ButtonSetClick(button, cb);
+			GUI_ObjectDecRef((GUI_Object *) cb);
+		}
+		GUI_WidgetSetEnabled(button, 1);
+	}
+
+	return NULL;
+}
 
 void isoLoader_Init(App_t *app) {
 
 	GUI_Widget *w, *b;
 	GUI_Callback *cb;
 	char *default_dir = NULL;
+	char path_buffer[NAME_MAX];
 
 	if(app != NULL) {
 		(void)random();
@@ -1958,63 +2010,36 @@ void isoLoader_Init(App_t *app) {
 			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_CD], 1);
 		} 
 		
-		if(DirExists("/sd")) {
-			
-			cb = GUI_CallbackCreate((GUI_CallbackFunction *)isoLoader_SwitchVolume, NULL, "/sd");
-
-			if(cb) {
-				GUI_ButtonSetClick(self.btn_dev[APP_DEVICE_SD], cb);
-				GUI_ObjectDecRef((GUI_Object *) cb);
-			}
-			
-			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_SD], 1);
-
-			if(DirExists("/sd/games")) {
-				default_dir = "/sd/games";
-			}
+		if(setup_device_partitions("sd", self.btn_dev[APP_DEVICE_SD], path_buffer)) {
+			default_dir = path_buffer;
 		}
-		
-		if(DirExists("/ide")) {
-			
-			cb = GUI_CallbackCreate((GUI_CallbackFunction *)isoLoader_SwitchVolume, NULL, "/ide");
 
-			if(cb) {
-				GUI_ButtonSetClick(self.btn_dev[APP_DEVICE_IDE], cb);
-				GUI_ObjectDecRef((GUI_Object *) cb);
-			}
-			
-			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_IDE], 1);
-
-			if(DirExists("/ide/games")) {
-				default_dir = "/ide/games";
-			}
+		if(setup_device_partitions("ide", self.btn_dev[APP_DEVICE_IDE], path_buffer)) {
+			default_dir = path_buffer;
 		}
-		
+
 		if(DirExists("/pc")) {
-			
+
 			cb = GUI_CallbackCreate((GUI_CallbackFunction *)isoLoader_SwitchVolume, NULL, "/pc");
 
 			if(cb) {
 				GUI_ButtonSetClick(self.btn_dev[APP_DEVICE_PC], cb);
 				GUI_ObjectDecRef((GUI_Object *) cb);
 			}
-			
 			GUI_WidgetSetEnabled(self.btn_dev[APP_DEVICE_PC], 1);
 		}
 
 		/* Checking for arguments from a executor */
 		if(app->args != NULL) {
-			
 			char *name = getFilePath(app->args);
-			
+
 			if(name) {
 				isoLoader_SwitchVolume(name);
 				free(name);
 			}
-
 			self.have_args = true;
-
-		} else {
+		}
+		else {
 			self.have_args = false;
 
 			if(default_dir) {
@@ -2032,8 +2057,8 @@ void isoLoader_Init(App_t *app) {
 		}
 
 		isoLoader_ResizeUI();
-
-	} else {
+	}
+	else {
 		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n", 
 					lib_get_name(), __func__);
 	}
