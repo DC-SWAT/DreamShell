@@ -39,7 +39,7 @@ uint8_t convert_kos_flags_to_pvr_texture_type(uint16_t kos_flags)
 
 	if (!(kos_flags & PVR_TXRFMT_VQ_ENABLE))
 	{
-		if (kos_flags & PVR_TXRFMT_STRIDE)
+		if (kos_flags & PVR_TXRFMT_X32_STRIDE)
 		{
 			// Strided textures, usually raw format
 			return TTM_Raw; // 0x0B

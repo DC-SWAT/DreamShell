@@ -191,7 +191,7 @@ int pvr_decode(const char *filename, kos_img_t *kimg, bool kos_format)
 		break;
 
 	case TTM_Raw:
-		texFormat = PVR_TXRFMT_STRIDE;
+		texFormat = PVR_TXRFMT_X32_STRIDE;
 		break;
 
 	case TTM_RawNonSquare:

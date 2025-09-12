@@ -6,8 +6,6 @@
 GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *font)
 : GUI_Container(aname, x, y, w, h) {
     GUI_Surface *bg_surface = CreateBackground(w, h);
-    SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
-    SDL_Rect rect;
 
     SetTransparent(1);
 

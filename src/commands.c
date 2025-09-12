@@ -2113,7 +2113,9 @@ static int builtin_rtc(int argc, char *argv[]) {
 			ds_printf("DS_ERROR: RTC value is invalid");
 			return CMD_ERROR;
 		}
-		ds_printf("DS_INFO: %s", ctime(&unix_time));
+		char time_str[80];
+		strftime(time_str, sizeof(time_str), "%c", time);
+		ds_printf("DS_INFO: %s\n", time_str);
 		return CMD_OK;
 	}
 

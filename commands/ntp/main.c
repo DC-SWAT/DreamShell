@@ -107,16 +107,25 @@ int main(int argc, char **argv) {
     Settings_t *settings = GetSettings();
     ntp_time += settings->time_zone * 60;
 
-    ds_printf("DS_INFO: NTP time: %s", ctime(&ntp_time));
+    struct tm *time_info;
+    char time_str[80];
+
+    time_info = localtime(&ntp_time);
+    strftime(time_str, sizeof(time_str), "%c", time_info);
+    ds_printf("DS_INFO: NTP time: %s\n", time_str);
 
     /* Print the current system time */
     dc_time = rtc_unix_secs();
-    ds_printf("DS_INFO: Old system time: %s", ctime(&dc_time));
+    time_info = localtime(&dc_time);
+    strftime(time_str, sizeof(time_str), "%c", time_info);
+    ds_printf("DS_INFO: Old system time: %s\n", time_str);
 
     /* Set the system time to the NTP time and read it back */
     rtc_set_unix_secs(ntp_time);
     dc_time = rtc_unix_secs();
-    ds_printf("DS_OK: New system time: %s", ctime(&dc_time));
+    time_info = localtime(&dc_time);
+    strftime(time_str, sizeof(time_str), "%c", time_info);
+    ds_printf("DS_OK: New system time: %s\n", time_str);
 
     return CMD_OK;
 }
