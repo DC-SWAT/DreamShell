@@ -153,6 +153,7 @@ void GUI_Screen::find_widget_rec(GUI_Container *p) {
 				case WIDGET_TYPE_CONTAINER:
 				
 					find_widget_rec((GUI_Container *)w);
+					break;
 					
 				case WIDGET_TYPE_CARDSTACK:
 				
@@ -236,7 +237,6 @@ void GUI_Screen::SetJoySelectState(int value) {
 
 int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 {
-
 	if(joysel_enabled) {
 
 		SDL_Event evt;
@@ -248,23 +248,18 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 				if (event->jhat.hat) { // skip second d-pad
 					break;
 				}
-				
 				if (container) {
 					switch(event->jhat.value) {
 						case SDL_HAT_UP: //UP
 						case SDL_HAT_DOWN: //DOWN
-							
-							int i;
-							
-							for(i = 0; i < joysel_size; i++) {
+							for(int i = 0; i < joysel_size; i++) {
 								joysel[i] = NULL;
 							}
-							
 							joysel_size = 0;
 							find_widget_rec(container);
-							
+
 							if(joysel_size) {
-							
+
 								if(event->jhat.value == SDL_HAT_UP) {
 									if(joysel_cur <= 0) joysel_cur = joysel_size - 1;
 									else joysel_cur--;
@@ -272,7 +267,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 									if(joysel_cur >= joysel_size-1) joysel_cur = 0;
 									else joysel_cur++;
 								}
-								
+
 								if(joysel[joysel_cur]) {
 									evt.type = SDL_MOUSEMOTION;
 									calc_parent_offset(joysel[joysel_cur], &evt.motion.x, &evt.motion.y);
@@ -282,19 +277,17 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 									SDL_WarpMouse(evt.motion.x, evt.motion.y);
 								}
 							}
-							
 							break;
-						
+
 						case SDL_HAT_LEFT: //LEFT
 						case SDL_HAT_RIGHT: //RIGHT
-						
-							for(i = 0; i < joysel_size; i++) {
+							for(int i = 0; i < joysel_size; i++) {
 								joysel[i] = NULL;
 							}
 							joysel_size = 0;
 							find_widget_rec(container);
 							joysel_cur = event->jhat.value == SDL_HAT_LEFT ? 0 : joysel_size - 1;
-							
+
 							if(joysel_size && joysel[joysel_cur]) {
 								evt.type = SDL_MOUSEMOTION;
 								calc_parent_offset(joysel[joysel_cur], &evt.motion.x, &evt.motion.y);
@@ -303,34 +296,29 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 								SDL_PushEvent(&evt);
 								SDL_WarpMouse(evt.motion.x, evt.motion.y);
 							}
-
 							break;
 					}
 				}
 				break;
 			}
-			
+
 			case SDL_KEYDOWN:
 			{
 				if (container) {
 					switch (event->key.keysym.sym) {
 						default:
 							break;
-						
+
 						case SDLK_UP: //UP
 						case SDLK_DOWN: //DOWN
-							
-							int i;
-							
-							for(i = 0; i < joysel_size; i++) {
+							for(int i = 0; i < joysel_size; i++) {
 								joysel[i] = NULL;
 							}
-							
 							joysel_size = 0;
 							find_widget_rec(container);
-							
+
 							if(joysel_size) {
-							
+
 								if(event->key.keysym.sym == SDLK_UP) {
 									if(joysel_cur <= 0) joysel_cur = joysel_size - 1;
 									else joysel_cur--;
@@ -338,7 +326,7 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 									if(joysel_cur >= joysel_size-1) joysel_cur = 0;
 									else joysel_cur++;
 								}
-								
+
 								if(joysel[joysel_cur]) {
 									evt.type = SDL_MOUSEMOTION;
 									calc_parent_offset(joysel[joysel_cur], &evt.motion.x, &evt.motion.y);
@@ -348,18 +336,18 @@ int GUI_Screen::Event(const SDL_Event *event, int xoffset, int yoffset)
 									SDL_WarpMouse(evt.motion.x, evt.motion.y);
 								}
 							}
-							
+
 							break;
-						
+
 						case SDLK_RIGHT: //RIGHT
 						case SDLK_LEFT: //LEFT
-							for(i = 0; i < joysel_size; i++) {
+							for(int i = 0; i < joysel_size; i++) {
 								joysel[i] = NULL;
 							}
 							joysel_size = 0;
 							find_widget_rec(container);
 							joysel_cur = event->key.keysym.sym == SDLK_LEFT ? 0 : joysel_size - 1;
-							
+
 							if(joysel_size && joysel[joysel_cur]) {
 								evt.type = SDL_MOUSEMOTION;
 								calc_parent_offset(joysel[joysel_cur], &evt.motion.x, &evt.motion.y);
@@ -401,7 +389,7 @@ void GUI_Screen::SetContents(GUI_Widget *widget)
 	SetFocusWidget(NULL);
 	SetModalWidget(NULL);
 	Keep(&contents, widget);
-	
+
 	for (int i = 0; i < joysel_size; i++)
 	{
 		joysel[i] = NULL;
