@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Settings" version="0.2.0" icon="images/icon.png">
+<app name="Settings" version="0.3.0" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_settings.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
@@ -9,26 +9,6 @@
 			<fill color="#BBBBBB" height="1" y="43" />
 			<fill color="#CCCCCC" height="1" y="44" />
 		</surface>
-		<surface width="280" height="60" name="but-normal">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#31799F" />
-		</surface>
-		<surface width="280" height="60" name="but-hl">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#61BDEC" />
-		</surface>
-		<surface width="280" height="60" name="but-pressed">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#D4F129" />
-		</surface>
-		<surface width="280" height="60" name="but-disabled">
-			<fill color="#EEEEEE" />
-			<fill x="4" y="4" width="272" height="52" color="#BBBBBB" />
-			<fill x="5" y="5" width="270" height="50" color="#CCCCCC" />
-		</surface>
 		<surface width="200" height="20" name="slider-bg">
 			<fill x="0" y="0" width="200" height="20" color="#CCCCCC" />
 			<fill x="2" y="2" width="196" height="16" color="#EEEEEE" />
@@ -37,9 +17,6 @@
 			<fill x="0" y="0" width="20" height="20" color="#31799F" />
 			<fill x="2" y="2" width="16" height="16" color="#61BDEC" />
 		</surface>
-		<theme>
-			<input type="button" normal="but-normal" highlight="but-hl" pressed="but-pressed" disabled="but-disabled" />
-		</theme>
 	</resources>
 	<body width="100%" height="100%" onload="export:SettingsApp_Init()" background="#DDDDDD">
 		<panel height="45" background="header-bg">
@@ -278,6 +255,17 @@
 					<panel x="200" width="30">
 						<label font="arial" color="#333333" text="MM" align="center"/>
 					</panel>
+				</panel>
+
+				<panel x="30%" y="140" width="250" height="30">
+					<label x="0" width="120" font="arial" color="#333333" text="Timezone (GMT):" align="left" valign="center" />
+					<input type="button" name="tz-minus" x="125" width="25" height="25" onclick="export:SettingsApp_TimezoneChange()">
+						<label font="arial" color="#EEEEEE" text="-" />
+					</input>
+					<input type="text" name="timezone" x="155" width="60" height="25" font="arial" fontcolor="#333333" value="+0" size="10" onblur="export:SettingsApp_TimezoneChange()" onfocus="export:SettingsApp_TimezoneClr()" />
+					<input type="button" name="tz-plus" x="220" width="25" height="25" onclick="export:SettingsApp_TimezoneChange()">
+						<label font="arial" color="#EEEEEE" text="+" />
+					</input>
 				</panel>
 
 				<panel width="100%" height="50" />

@@ -18,6 +18,8 @@ SettingsApp_ToggleStartup
 SettingsApp_Time
 SettingsApp_Time_Clr
 SettingsApp_TimeChange
+SettingsApp_TimezoneChange
+SettingsApp_TimezoneClr
 # Audio
 SettingsApp_ToggleSfx
 SettingsApp_ToggleClick

@@ -32,6 +32,10 @@ void SettingsApp_Time(GUI_Widget *widget);
 
 void SettingsApp_Time_Clr(GUI_Widget *widget);
 
+void SettingsApp_TimezoneChange(GUI_Widget *widget);
+
+void SettingsApp_TimezoneClr(GUI_Widget *widget);
+
 void SettingsApp_ToggleSfx(GUI_Widget *widget);
 
 void SettingsApp_ToggleClick(GUI_Widget *widget);

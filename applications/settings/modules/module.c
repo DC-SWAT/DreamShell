@@ -44,6 +44,7 @@ static struct {
 	GUI_Widget *click_chk;
 	GUI_Widget *hover_chk;
 	GUI_Widget *startup_chk;
+	GUI_Widget *timezone_entry;
 	
 	int prev_sfx_enabled;
 	int prev_click_enabled;
@@ -56,6 +57,7 @@ static struct {
 static void SetupVideoSettings();
 static void SetupBootSettings();
 static void SetupAudioSettings();
+static void SetupTimezoneSettings();
 
 static int UncheckBesides(GUI_Widget *widget, char *label) {
 
@@ -113,6 +115,7 @@ void SettingsApp_Init(App_t *app) {
 		self.sysdate[3] = APP_GET_WIDGET("hours");
 		self.sysdate[4] = APP_GET_WIDGET("minute");
 		
+		self.timezone_entry = APP_GET_WIDGET("timezone");
 		self.volume_knob = APP_GET_WIDGET("volume-slider");
 		self.volume_label = APP_GET_WIDGET("volume-label");
 		self.sfx_chk = APP_GET_WIDGET("sfx-chk");
@@ -129,6 +132,7 @@ void SettingsApp_Init(App_t *app) {
 		SetupVideoSettings();
 		SetupBootSettings();
 		SetupAudioSettings();
+		SetupTimezoneSettings();
 	}
 }
 
@@ -160,6 +164,7 @@ void SettingsApp_ResetSettings(GUI_Widget *widget) {
 	SetupBootSettings();
 	SetupVideoSettings();
 	SetupAudioSettings();
+	SetupTimezoneSettings();
 	SetScreenMode(self.settings->video.virt_width, self.settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 	SetScreenFilter(self.settings->video.tex_filter);
 }
@@ -508,6 +513,25 @@ void SettingsApp_Time_Clr(GUI_Widget *widget)
 	GUI_TextEntrySetText(widget, "");
 }
 
+void SettingsApp_TimezoneClr(GUI_Widget *widget)
+{
+	GUI_TextEntrySetText(widget, "");
+}
+
+static void SetupTimezoneSettings() {
+	char buf[16];
+	int tz_minutes_total = self.settings->time_zone;
+	int hours = tz_minutes_total / 60;
+	int minutes = abs(tz_minutes_total % 60);
+
+	if (minutes == 0) {
+		snprintf(buf, sizeof(buf), "%+d", hours);
+	} else {
+		snprintf(buf, sizeof(buf), "%+d:%02d", hours, minutes);
+	}
+	GUI_TextEntrySetText(self.timezone_entry, buf);
+}
+
 static void SetupAudioSettings() {
 	
 	if(self.volume_knob && self.volume_label) {
@@ -655,3 +679,55 @@ void SettingsApp_VolumeChange(GUI_Widget *widget) {
 	}
 }
 
+void SettingsApp_TimezoneChange(GUI_Widget *widget) {
+	const char *object_name = GUI_ObjectGetName((GUI_Object *)widget);
+
+	if(!strcmp(object_name, "tz-plus") || !strcmp(object_name, "tz-minus")) {
+        if (!strcmp(object_name, "tz-plus")) {
+		    self.settings->time_zone += 30;
+        }
+		else {
+		    self.settings->time_zone -= 30;
+        }
+	}
+	else if(!strcmp(object_name, "timezone")) {
+		const char *text = GUI_TextEntryGetText(widget);
+		int hours = 0, minutes = 0;
+		float value_f = 0;
+		const char *p = text;
+        int parsed_tz;
+
+		if (strlen(p) == 0) {
+			parsed_tz = 0;
+		}
+		else if (strchr(p, ':')) {
+			sscanf(p, "%d:%d", &hours, &minutes);
+
+			if (hours < 0 || (hours == 0 && strchr(p, '-'))) {
+				parsed_tz = hours * 60 - minutes;
+			}
+			else {
+				parsed_tz = hours * 60 + minutes;
+			}
+		}
+		else {
+			value_f = atof(p);
+			parsed_tz = (int)(value_f * 60);
+		}
+        self.settings->time_zone = parsed_tz;
+	}
+
+	int clamped_tz = self.settings->time_zone;
+
+	if(clamped_tz > 14 * 60) {
+		clamped_tz = 14 * 60;
+	}
+	if(clamped_tz < -12 * 60) {
+		clamped_tz = -12 * 60;
+	}
+
+	if (strcmp(object_name, "timezone") != 0 || self.settings->time_zone != clamped_tz) {
+		self.settings->time_zone = clamped_tz;
+		SetupTimezoneSettings();
+	}
+}
