@@ -51,15 +51,10 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
 	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
 
-	rect = {0, 0, (Uint16)item_area.w, 1};
-	item_highlight->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
-	rect = {0, 1, (Uint16)item_area.w, 26};
-	item_highlight->Fill(&rect, SDL_MapRGB(format, 0xEE, 0xEE, 0xEE));
-	rect = {0, 27, (Uint16)item_area.w, 1};
-	item_highlight->Fill(&rect, SDL_MapRGB(format, 0xDD, 0xDD, 0xDD));
+	item_highlight->Fill(NULL, SDL_MapRGB(format, 97, 189, 236));
 
 	item_selected_normal = new GUI_Surface("selected_normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-	item_selected_normal->Fill(NULL, SDL_MapRGB(format, 0xFF, 0xBB, 0xBB));
+	item_selected_normal->Fill(NULL, SDL_MapRGB(format, 212, 241, 21));
 	item_selected_highlight = NULL;
 	item_selected_pressed = NULL;
 	item_selected_disabled = NULL;

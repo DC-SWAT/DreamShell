@@ -115,7 +115,7 @@ GUI_Button::GUI_Button(const char *aname, int x, int y, int w, int h)
 	rect = {(Sint16)b1, (Sint16)b1, (Uint16)(w - b1 * 2), (Uint16)(h - b1 * 2)};
 	pressed->Fill(&rect, SDL_MapRGB(format, 187, 187, 187));
 	rect = {(Sint16)b2, (Sint16)b2, (Uint16)(w - b2 * 2), (Uint16)(h - b2 * 2)};
-	pressed->Fill(&rect, SDL_MapRGB(format, 212, 241, 41));
+	pressed->Fill(&rect, SDL_MapRGB(format, 212, 241, 21));
 
 	rect = {0, 0, (Uint16)w, (Uint16)h};
 	disabled->Fill(&rect, SDL_MapRGB(format, 238, 238, 238));
