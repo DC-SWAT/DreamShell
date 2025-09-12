@@ -11,7 +11,7 @@
 #include <kos.h>
 
 /* need increment when settings structure changed */
-#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('0')<<8 | '0')
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '0')
 
 typedef struct VideoSettings {
 
@@ -77,6 +77,9 @@ typedef struct Settings {
 
 	/* Default app name */
 	char app[64];
+
+	/* Time zone in minutes */
+	int time_zone;
 
 	/* Video */
 	VideoSettings_t video;

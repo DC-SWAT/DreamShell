@@ -108,6 +108,7 @@ void ResetSettings() {
 	strncpy(cur->startup, "/lua/startup.lua", 16);
 	cur->startup[16] = '\0';
 
+	cur->time_zone = 0;
 	cur->version = DS_SETTIGS_VERSION;
 
 	if(loaded) {

@@ -103,6 +103,10 @@ int main(int argc, char **argv) {
     /* Grab time from the structure, and subtract 70 years to convert
        from NTP's 1900 epoch to Unix time's 1970 epoch */
     ntp_time = (ntohl(packet.trns_time_s) - NTP_DELTA);
+    
+    Settings_t *settings = GetSettings();
+    ntp_time += settings->time_zone * 60;
+
     ds_printf("DS_INFO: NTP time: %s", ctime(&ntp_time));
 
     /* Print the current system time */
