@@ -189,8 +189,13 @@ static void ConsoleEventHandler(void *ds_event, void *param, int action) {
 			case SDL_KEYDOWN:
 				switch(event->key.keysym.sym) {
 					case SDLK_F1:
-					case SDLK_ESCAPE:
 						ShowConsole();
+						break;
+					case SDLK_ESCAPE:
+						if (GUI_ScreenGetFocusWidget(GUI_GetScreen()) == NULL) {
+							ShowConsole();
+						}
+						break;
 					default:
 						break;
 				}
