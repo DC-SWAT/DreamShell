@@ -393,11 +393,11 @@ void ShutdownDS() {
 	expt_shutdown();
 	g1_ata_shutdown();
 }
-
+/*
 #define KBD_ATTACHED		(1 << 0)
 #define KBD_DETACHED		(1 << 1)
 
-static uint8_t kbd_changed = 0;
+static volatile uint8_t kbd_changed = 0;
 
 static void close_vkb_module(void) {
 	if(maple_enum_type(0, MAPLE_FUNC_KEYBOARD)) {
@@ -426,24 +426,24 @@ static void keyboard_detach_cb(maple_device_t *dev) {
 	(void) dev;
 	kbd_changed |= KBD_DETACHED;
 }
-
+*/
 int main(int argc, char **argv) {
 
-	static SDL_Event event;
+	SDL_Event event;
 
 	if(InitDS()) {
 		return -1;
 	}
-	
-	maple_attach_callback(MAPLE_FUNC_KEYBOARD, keyboard_attach_cb);
-	maple_detach_callback(MAPLE_FUNC_KEYBOARD, keyboard_detach_cb);
-	
+
+	// maple_attach_callback(MAPLE_FUNC_KEYBOARD, keyboard_attach_cb);
+	// maple_detach_callback(MAPLE_FUNC_KEYBOARD, keyboard_detach_cb);
+
 	while(1) {
 
 		while(SDL_PollEvent(&event)) {
 			ProcessInputEvents(&event);
 		}
-		
+/*
 		if (kbd_changed) {
 			if (kbd_changed & KBD_ATTACHED) {
 				close_vkb_module();
@@ -453,7 +453,7 @@ int main(int argc, char **argv) {
 			}
 			kbd_changed = 0;
 		}
-		
+*/
 		UnLoadOldApps();
 		GUI_ClearTrash();
 
@@ -465,4 +465,3 @@ int main(int argc, char **argv) {
 	ShutdownDS();
 	return 0;
 }
-
