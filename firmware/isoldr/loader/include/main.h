@@ -68,6 +68,8 @@
 #define HOLLY_REV_VA0 0x0b
 #define holly_revision() (*(vuint32 *)NONCACHED_ADDR(0x005f689c))
 
+#define GPIO_PIN_RESET_BUTTON 0
+
 extern isoldr_info_t *IsoInfo;
 extern uint32 loader_size;
 extern uint32 loader_addr;

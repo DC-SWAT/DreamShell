@@ -11,6 +11,7 @@
 #include <mmu.h>
 #include <cdda.h>
 #include <maple.h>
+#include <gpio.h>
 #include <arch/cache.h>
 #include <arch/timer.h>
 #include <arch/gdb.h>
@@ -869,6 +870,10 @@ void gdcMainLoop(void) {
 		}
 #endif
 
+		if(gpio_read_pin(GPIO_PIN_RESET_BUTTON) == 0) {
+			menu_exit();
+		}
+
 		if(GDS->status == CMD_STAT_PROCESSING) {
 #ifdef HAVE_MULTI_DISC
 			if (GDS->need_reinit == 1 && GDS->cmd != CMD_INIT) {
@@ -1052,6 +1057,10 @@ int gdcGetDrvStat(uint32 *status) {
 	}
 #endif
 
+	if(gpio_read_pin(GPIO_PIN_RESET_BUTTON) == 0) {
+		menu_exit();
+	}
+
 	if(lock_gdsys()) {
 		DBGFF("Busy\n");
 		return CMD_STAT_BUSY;
@@ -1140,6 +1149,8 @@ void gdcInitSystem(void) {
 		CDDA_Stop();
 	}
 #endif
+
+    gpio_set_as_input(GPIO_PIN_RESET_BUTTON);
 
 	reset_GDS(GDS);
 	gdcMainLoop();
@@ -1392,6 +1403,7 @@ void gdcDummy(int gd_chn, int *arg2) {
 void menu_exit(void) {
 	LOGFF(NULL);
 
+	do {} while(pre_read_xfer_busy());
 	fs_enable_dma(FS_DMA_DISABLED);
 	shutdown_machine();
 

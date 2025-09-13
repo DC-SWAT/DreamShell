@@ -222,4 +222,6 @@ void restore_syscalls(void);
 
 int sys_misc_init(void);
 
+void menu_exit(void);
+
 #endif

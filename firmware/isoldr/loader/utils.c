@@ -73,12 +73,13 @@ void setup_machine(void) {
 
 void shutdown_machine(void) {
 
+	/* FIXME
 	const uint32 reset_regs[] = {
 		0xa05f6808, 0xa05f6820, 0xa05f6c14, 0xa05f7414, 
 		0xa05f7814, 0xa05f7834, 0xa05f7854, 0xa05f7874, 
 		0xa05f7c14, 0xffa0001c, 0xffa0002c, 0xffa0003c
 	};
-
+	*/
 	irq_disable();
 
 	*(vuint32 *)(0xff000010) = 0;
@@ -104,7 +105,7 @@ void shutdown_machine(void) {
 	addr2 += *(vuint32 *)(addr1);
 
 	*(vuint32 *)(0xa05f8044) = (*(vuint32 *)(0xa05f8044) & 0xfffffffe);
-
+/*
 	for (uint32 i = 0; i < ((sizeof(reset_regs)) >> 2); ++i) {
 		*(vuint32 *)(reset_regs[i]) = (*(vuint32 *)(reset_regs[i]) & 0xfffffffe);
 		for (uint32 j = 0; j < 127; ++j) {
@@ -113,6 +114,7 @@ void shutdown_machine(void) {
 			}
 		}
 	}
+*/
 }
 
 uint Load_BootBin() {
