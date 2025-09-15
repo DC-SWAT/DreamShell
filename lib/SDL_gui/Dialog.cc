@@ -261,10 +261,10 @@ void GUI_Dialog::Show(DialogMode new_mode, const char *text, const char *bodyTex
 }
 
 int GUI_Dialog::Event(const SDL_Event *event, int xoffset, int yoffset) {
-	int rv;
+	int rv = 0;
 
 	if((flags & WIDGET_HIDDEN)) {
-		return 0;
+		return rv;
 	}
 
 	rv = GUI_Drawable::Event(event, xoffset, yoffset);
@@ -273,20 +273,19 @@ int GUI_Dialog::Event(const SDL_Event *event, int xoffset, int yoffset) {
 		return rv;
 	}
 
+	if(widgets[0]->Event(event, xoffset + area.x, yoffset + area.y)) {
+		return 1;
+	}
+
 	// Handle ESCAPE key press to cancel
 	if(event->type == SDL_KEYDOWN) {
 		if(event->key.keysym.sym == SDLK_ESCAPE) {
 			if(!(cancel_button->GetFlags() & WIDGET_DISABLED)) {
 				ButtonClick(cancel_button);
-				return 1; // Event handled
+				rv = 1;
 			}
 		}
 	}
-
-	if(widgets[0]->Event(event, xoffset + area.x, yoffset + area.y)) {
-		return 1;
-	}
-
 	return rv;
 }
 

@@ -173,7 +173,7 @@ int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
 			}
 			return 1;
 		}
-		if (key == SDLK_RETURN)
+		if (key == SDLK_RETURN || key == SDLK_ESCAPE)
 		{
 			SDL_Event ev;
 			ev.type = DS_HIDE_VKB_EVENT;
@@ -181,8 +181,9 @@ int GUI_TextEntry::Event(const SDL_Event *event, int xoffset, int yoffset)
 
 			GUI_Screen *screen = GUI_GetScreen();
 			screen->SetFocusWidget(NULL);
+
 			if (unfocus_callback)
-				unfocus_callback->Call(this);	
+				unfocus_callback->Call(this);
 			return 1;
 		}
 

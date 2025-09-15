@@ -119,8 +119,10 @@ void GUI_Screen::Erase(const SDL_Rect *area)
 void GUI_Screen::Update(int force)
 {
 
-	if (force)
+	if (force) {
+		LockVideo();
 		Erase(&area);
+	}
 
 	if (contents)
 		contents->DoUpdate(force);
@@ -130,6 +132,10 @@ void GUI_Screen::Update(int force)
 	}
 
 	FlushUpdates();
+
+	if (force) {
+		UnlockVideo();
+	}
 }
 
 
