@@ -5,7 +5,6 @@
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="30" name="m23_30" />
 		<font src="../../fonts/ttf/arial.ttf" type="ttf" size="16" name="arial" />
-		<image src="../../gui/bars/black_bar_640x37.png" name="iBarTop" />
 		<image src="../../gui/icons/normal/button_cancel.png" name="iExitNorm" />
 		<image src="../../gui/icons/highlight/button_cancel.png" name="iExitHigh" />
 		<image src="../../gui/icons/normal/button_ok.png" name="iOkNorm" />
@@ -15,6 +14,7 @@
 		<image src="../../gui/buttons/big_green/highlight.png" name="buthigh" />
 		<image src="../../gui/buttons/big_green/normal.png" name="butnorm" />
 		<image src="../../gui/buttons/big_green/pressed.png" name="butpres" />
+		<image src="images/black_bar_640x37.png" name="iBarTop" />
 		<image src="images/help.png" name="help" />
 		<image src="images/null.png" name="null" />
 		<image src="images/vmu.png" name="vmu" />
