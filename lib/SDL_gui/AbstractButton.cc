@@ -89,16 +89,16 @@ void GUI_AbstractButton::Notify(int mask)
 
 void GUI_AbstractButton::Clicked(int x, int y)
 {
+	ds_sfx_play(DS_SFX_CLICK);
 	if (click) {
-		ds_sfx_play(DS_SFX_CLICK);
 		click->Call(this);
 	}
 }
 
 void GUI_AbstractButton::ContextClicked(int x, int y)
 {
+	ds_sfx_play(DS_SFX_CLICK);
 	if (context_click) {
-		ds_sfx_play(DS_SFX_CLICK);
 		context_click->Call(this);
 	}
 }
