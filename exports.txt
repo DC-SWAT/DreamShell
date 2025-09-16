@@ -2087,6 +2087,16 @@ g2_dma_shutdown
 #
 # Maple
 vmu_beep_raw
+vmu_beep_waveform
+vmu_set_datetime
+vmu_get_datetime
+vmu_draw_lcd_xbm
+vmu_draw_lcd_rotated
+vmu_set_icon_shape
+vmu_set_custom_color
+vmu_use_custom_color
+vmu_toggle_241_blocks
+vmu_has_241_blocks
 purupuru_rumble
 purupuru_rumble_raw
 #

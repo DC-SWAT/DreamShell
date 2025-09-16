@@ -2,12 +2,14 @@
 
    main.c - NTP
    Copyright (C) 2023 Eric Fradella
-   Copyright (C) 2023 SWAT
+   Copyright (C) 2023, 2025 SWAT
 
 */
 #include "ds.h"
 #include <netdb.h>
 #include <arch/rtc.h>
+#include <dc/maple.h>
+#include <dc/maple/vmu.h>
 
 #define NTP_PORT    "123"
 #define NTP_SERVER  "us.pool.ntp.org"
@@ -127,5 +129,24 @@ int main(int argc, char **argv) {
     strftime(time_str, sizeof(time_str), "%c", time_info);
     ds_printf("DS_OK: New system time: %s\n", time_str);
 
+    maple_device_t *vmu;
+    int i = 0;
+
+    ds_printf("DS_PROCESS: Syncing VMUs...\n");
+
+    while((vmu = maple_enum_type(i, MAPLE_FUNC_CLOCK))) {
+        ds_printf("DS_INFO: Syncing VMU %c%c...\n", vmu->port + 'A', vmu->unit + '0');
+        if(vmu_set_datetime(vmu, ntp_time) != MAPLE_EOK) {
+            ds_printf("DS_ERROR: Failed to sync VMU %c%c.\n", vmu->port + 'A', vmu->unit + '0');
+        }
+        i++;
+    }
+
+    if (i == 0) {
+        ds_printf("DS_INFO: No VMUs with clock function found.\n");
+    }
+    else {
+        ds_printf("DS_OK: All VMUs are synced.\n");
+    }
     return CMD_OK;
 }
