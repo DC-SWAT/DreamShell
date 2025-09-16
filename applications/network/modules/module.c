@@ -7,6 +7,8 @@
 #include <ds.h>
 #include <stdbool.h>
 
+#include "app_module.h"
+
 DEFAULT_MODULE_EXPORTS(app_network);
 
 typedef enum {
@@ -25,6 +27,7 @@ static struct {
     Settings_t *settings;
 
     GUI_Widget *pages;
+    GUI_Widget *dialog;
 
     GUI_Widget *ip_addr;
     GUI_Widget *net_status;
@@ -109,6 +112,7 @@ void NetworkApp_Init(App_t *app) {
     self.settings = GetSettings();
 
     self.pages = APP_GET_WIDGET("pages");
+    self.dialog = APP_GET_WIDGET("dialog");
     self.ip_addr = APP_GET_WIDGET("ip-addr");
     self.net_status = APP_GET_WIDGET("net-status");
     self.ftpd_status = APP_GET_WIDGET("ftpd-status");
@@ -121,15 +125,36 @@ void NetworkApp_Init(App_t *app) {
 
 void NetworkApp_Shutdown(App_t *app) {
     (void)app;
+}
+
+static int SettingsChanged() {
     int startup_connect = GUI_WidgetGetState(self.startup_connect_but);
     int startup_ntp = GUI_WidgetGetState(self.startup_ntp_but);
 
-    if(self.settings->network.startup_connect != startup_connect ||
-        self.settings->network.startup_ntp != startup_ntp) {
-        self.settings->network.startup_connect = startup_connect;
-        self.settings->network.startup_ntp = startup_ntp;
-        SaveSettings();
+    return self.settings->network.startup_connect != startup_connect ||
+           self.settings->network.startup_ntp != startup_ntp;
+}
+
+void NetworkApp_Exit(GUI_Widget *widget) {
+    if (SettingsChanged()) {
+        GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Saving settings", "Do you want to save changed settings?");
     }
+    else {
+        dsystem("app -o -n Main");
+    }
+}
+
+void NetworkApp_DialogConfirm(GUI_Widget *widget) {
+    GUI_DialogShow(widget, DIALOG_MODE_INFO, "Saving settings", "Please wait, saving settings to device...");
+    self.settings->network.startup_connect = GUI_WidgetGetState(self.startup_connect_but);
+    self.settings->network.startup_ntp = GUI_WidgetGetState(self.startup_ntp_but);
+    SaveSettings();
+    NetworkApp_DialogCancel(widget);
+}
+
+void NetworkApp_DialogCancel(GUI_Widget *widget) {
+    GUI_DialogHide(widget);
+    dsystem("app -o -n Main");
 }
 
 void NetworkApp_Open(App_t *app) {

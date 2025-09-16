@@ -9,3 +9,6 @@ NetworkApp_ConnectBBA
 NetworkApp_ConnectModem
 NetworkApp_FTP
 NetworkApp_HTTP
+NetworkApp_Exit
+NetworkApp_DialogConfirm
+NetworkApp_DialogCancel

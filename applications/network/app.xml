@@ -49,7 +49,7 @@
 				</panel>
 				<panel height="65" width="100%">
 					<input type="button" width="280" height="60"
-						onclick="console:app -o -n Main" align="center">
+						onclick="export:NetworkApp_Exit()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Exit" />
 					</input>
 				</panel>
@@ -113,5 +113,9 @@
 				</panel>
 			</panel>
 		</cardstack>
+		<dialog name="dialog" font="comic-16"
+				x="120" y="160" width="400" height="160"
+				onconfirm="export:NetworkApp_DialogConfirm"
+				oncancel="export:NetworkApp_DialogCancel" />
 	</body>
 </app>
