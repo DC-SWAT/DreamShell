@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Main app module
-   Copyright (C)2011-2016, 2024 SWAT 
+   Copyright (C)2011-2025 SWAT 
 
 */
 
@@ -32,6 +32,8 @@ static struct {
 	struct tm datetime;
 	GUI_Widget *dateWidget;
 	GUI_Widget *timeWidget;
+	GUI_Widget *netIconWidget;
+	int net_status;
 
 	Event_t *input_event;
 } self;
@@ -283,6 +285,17 @@ static void ShowVersion(GUI_Widget *widget) {
 }
 
 
+static void ShowNetStatus(int force) {
+
+	int old_status = self.net_status;
+	self.net_status = strncmp(getenv("NET_IPV4"), "0.0.0.0", 7);
+
+	if(self.netIconWidget && (force || self.net_status != old_status)) {
+		GUI_PictureSetImage(self.netIconWidget, self.net_status ? APP_GET_SURFACE("net-on") : APP_GET_SURFACE("net-off"));
+	}
+}
+
+
 static void ShowDateTime(int force) {
 
 	char str[32];
@@ -323,6 +336,7 @@ static void *ClockThread(void *arg) {
 
 	while(self.app->state & APP_STATE_OPENED) {
 		ShowDateTime(0);
+		ShowNetStatus(0);
 		thd_sleep(250);
 	}
 
@@ -379,9 +393,11 @@ void MainApp_Init(App_t *app) {
 
 		self.dateWidget = APP_GET_WIDGET("date");
 		self.timeWidget = APP_GET_WIDGET("time");
+		self.netIconWidget = APP_GET_WIDGET("net_icon");
 
 		if(self.dateWidget && self.timeWidget) {
 			ShowDateTime(1);
+			ShowNetStatus(1);
 			self.app->thd = thd_create(0, ClockThread, NULL);
 		}
 

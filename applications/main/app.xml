@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Main" version="0.6.0" icon="images/icon.png">
+<app name="Main" version="0.6.1" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_main.klf" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="comic" />
@@ -12,6 +12,8 @@
 		<image src="images/left_hover.png" name="left-hover" />
 		<image src="images/right.png" name="right" />
 		<image src="images/right_hover.png" name="right-hover" />
+		<image src="images/online.png" name="net-on" />
+		<image src="images/offline.png" name="net-off" />
 	</resources>
 	<body width="100%" height="100%" onload="export:MainApp_Init()" onunload="export:MainApp_Shutdown()" background="main-bg">
 		<panel width="100%" height="443" name="app-list" />
@@ -25,11 +27,16 @@
 					<panel width="22%">
 						<label name="date" text="00.00.0000" color="#33295A" align="left" valign="center" font="comic" />
 					</panel>
-					<panel width="66%">
+					<panel width="62%">
 						<label name="version" text="DreamShell" color="#33295A" align="center" valign="center" font="comic" />
 					</panel>
-					<panel width="12%">
-						<label name="time" text="00:00" color="#33295A" align="right" valign="center" font="comic" />
+					<panel width="16%">
+						<panel width="30%">
+							<image name="net_icon" src="net-off" />
+						</panel>
+						<panel x="35%" width="65%">
+							<label name="time" text="00:00" color="#33295A" align="right" valign="center" font="comic" />
+						</panel>
 					</panel>
 				</panel>
 			</panel>
