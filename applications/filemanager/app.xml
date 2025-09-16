@@ -31,6 +31,8 @@
 			<fill x="14" y="29" width="612" height="1" color="#FBFBFB" />
 			<fill x="15" y="249" width="610" height="1" color="#AAAAAA" />
 			<fill x="15" y="250" width="610" height="1" color="#FBFBFB" />
+			<fill x="319" y="29" width="1" height="441" color="#AAAAAA" />
+			<fill x="320" y="29" width="1" height="441" color="#FBFBFB" />
 		</surface>
 		<surface width="305" height="110" name="white-bg">
 			<fill color="#FFFFFF" />
@@ -100,7 +102,7 @@
 					x="173" y="0" width="22" height="22" />
 			<input type="button" 
 					onclick="FileManager:toolbarModeSwitch()" 
-					onmouseover="FileManager:tooltip('Switch to dual or single window mode')" 
+					onmouseover="FileManager:tooltip('Switch window mode')" 
 					onmouseout="FileManager:tooltip(nil)" 
 					normal="icon-config" 
 					highlight="icon-config-high" 

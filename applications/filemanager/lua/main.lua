@@ -55,7 +55,7 @@ FileManager = {
 			}
 		},
 
-		dual = true,
+		mode = 1,
 
 		bg = {
 		 	normal = nil,
@@ -546,16 +546,32 @@ end
 
 function FileManager:toolbarModeSwitch()
 
-	if self.mgr.dual then
+	self.mgr.mode = (self.mgr.mode + 1) % 3;
+
+	if self.mgr.mode == 0 then
+		-- Single mode
 		GUI.ContainerRemove(self.app.body, self.mgr.bottom.widget);
+		GUI.WidgetSetPosition(self.mgr.top.widget, 15, 30);
 		GUI.FileManagerResize(self.mgr.top.widget, 610, 439);
-		self.mgr.dual = false;
-	else
+		
+	elseif self.mgr.mode == 1 then
+		-- Horizontal mode
+		GUI.WidgetSetPosition(self.mgr.top.widget, 15, 30);
 		GUI.FileManagerResize(self.mgr.top.widget, 610, 217);
+		GUI.WidgetSetPosition(self.mgr.bottom.widget, 15, 252);
+		GUI.FileManagerResize(self.mgr.bottom.widget, 610, 217);
 		GUI.ContainerAdd(self.app.body, self.mgr.bottom.widget);
-		GUI.WidgetMarkChanged(self.app.body);
-		self.mgr.dual = true;
+
+	elseif self.mgr.mode == 2 then
+		-- Vertical mode
+		GUI.WidgetSetPosition(self.mgr.top.widget, 15, 30);
+		GUI.FileManagerResize(self.mgr.top.widget, 304, 439);
+		GUI.WidgetSetPosition(self.mgr.bottom.widget, 321, 30);
+		GUI.FileManagerResize(self.mgr.bottom.widget, 304, 439);
+		GUI.ContainerAdd(self.app.body, self.mgr.bottom.widget);
 	end
+	
+	GUI.WidgetMarkChanged(self.app.body);
 end
 
 
