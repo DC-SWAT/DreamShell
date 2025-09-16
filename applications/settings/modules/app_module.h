@@ -12,6 +12,12 @@ void SettingsApp_ShowPage(GUI_Widget *widget);
 
 void SettingsApp_ResetSettings(GUI_Widget *widget);
 
+void SettingsApp_SaveSettings(GUI_Widget *widget);
+
+void SettingsApp_DialogConfirm(GUI_Widget *widget);
+
+void SettingsApp_DialogCancel(GUI_Widget *widget);
+
 void SettingsApp_Reboot(GUI_Widget *widget);
 
 void SettingsApp_ToggleNativeMode(GUI_Widget *widget);

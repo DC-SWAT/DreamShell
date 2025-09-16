@@ -4,6 +4,7 @@
 		<module src="modules/app_settings.klf" />
 		<font src="../../fonts/ttf/arial_lite.ttf" type="ttf" size="14" name="arial" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="22" name="comic-22" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="18" name="comic-18" />
 		<surface height="45" name="header-bg">
 			<fill color="#C9DADE" />
 			<fill color="#BBBBBB" height="1" y="43" />
@@ -41,18 +42,19 @@
 					</input>
 				</panel>
 				<panel height="70" width="50%">
-					<input type="button" width="280" height="60" onclick="export:SaveSettings()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="Save to VMU or Root" />
+					<input type="button" width="280" height="60" onclick="export:SettingsApp_ShowPage()" name="date-but" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Date and Time" />
 					</input>
 				</panel>
+				<panel height="35" />
 				<panel height="70" width="50%">
 					<input type="button" width="280" height="60" onclick="export:SettingsApp_ResetSettings()" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Reset to default" />
 					</input>
 				</panel>
 				<panel height="70" width="50%">
-					<input type="button" width="280" height="60" onclick="export:SettingsApp_ShowPage()" name="date-but" align="center">
-						<label font="comic-22" color="#EEEEEE" text="Date and Time" />
+					<input type="button" width="280" height="60" onclick="export:SettingsApp_SaveSettings()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="Save to VMU or Root" />
 					</input>
 				</panel>
 				<panel height="70" width="50%">
@@ -343,5 +345,9 @@
 
 			</panel>
 		</cardstack>
+		<dialog name="dialog" font="comic-18"
+				x="120" y="160" width="400" height="160"
+				onconfirm="export:SettingsApp_DialogConfirm"
+				oncancel="export:SettingsApp_DialogCancel" />
 	</body>
 </app>

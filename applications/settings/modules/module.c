@@ -12,6 +12,12 @@ DEFAULT_MODULE_EXPORTS(app_settings);
 #define WIDGET_VALUE_OFFSET 1
 
 enum {
+	DIALOG_ACTION_NONE = 0,
+	DIALOG_ACTION_RESET,
+	DIALOG_ACTION_SAVE
+};
+
+enum {
 	NATIVE_MODE_AUTO = 0,
 	NATIVE_MODE_PAL,
 	NATIVE_MODE_NTSC,
@@ -37,6 +43,8 @@ static struct {
 	App_t *app;
 	Settings_t *settings;
 	GUI_Widget *pages;
+	GUI_Widget *dialog;
+	int dialog_action;
 	GUI_Widget *sysdate[6];
 	GUI_Widget *volume_knob;
 	GUI_Widget *volume_label;
@@ -109,6 +117,8 @@ void SettingsApp_Init(App_t *app) {
 		self.app = app;
 		self.settings = GetSettings();
 		self.pages = APP_GET_WIDGET("pages");
+		self.dialog = APP_GET_WIDGET("dialog");
+		self.dialog_action = DIALOG_ACTION_NONE;
 		self.sysdate[0] = APP_GET_WIDGET("year");
 		self.sysdate[1] = APP_GET_WIDGET("month");
 		self.sysdate[2] = APP_GET_WIDGET("day");
@@ -159,7 +169,7 @@ void SettingsApp_ShowPage(GUI_Widget *widget) {
 	ScreenFadeIn();
 }
 
-void SettingsApp_ResetSettings(GUI_Widget *widget) {
+static void DoResetSettings() {
 	ResetSettings();
 	SetupBootSettings();
 	SetupVideoSettings();
@@ -167,6 +177,48 @@ void SettingsApp_ResetSettings(GUI_Widget *widget) {
 	SetupTimezoneSettings();
 	SetScreenMode(self.settings->video.virt_width, self.settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 	SetScreenFilter(self.settings->video.tex_filter);
+}
+
+void SettingsApp_ResetSettings(GUI_Widget *widget) {
+	self.dialog_action = DIALOG_ACTION_RESET;
+	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Reset settings?", "Are you sure you want to reset all settings?");
+}
+
+void SettingsApp_SaveSettings(GUI_Widget *widget) {
+	self.dialog_action = DIALOG_ACTION_SAVE;
+	char body[NAME_MAX];
+
+	if (maple_enum_type(0, MAPLE_FUNC_MEMCARD)) {
+		snprintf(body, sizeof(body), "Save settings to first VMU?");
+	}
+	else {
+		snprintf(body, sizeof(body), "No VMU detected. Save settings to %s?", getenv("PATH"));
+	}
+	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Save settings?", body);
+}
+
+void SettingsApp_DialogConfirm(GUI_Widget *widget) {
+	switch(self.dialog_action) {
+		case DIALOG_ACTION_RESET:
+			GUI_DialogShow(widget, DIALOG_MODE_INFO, "Resetting settings", "Please wait, removing settings files...");
+			DoResetSettings();
+			GUI_DialogShow(widget, DIALOG_MODE_ALERT, "Resetting settings", "Completed.");
+			break;
+		case DIALOG_ACTION_SAVE:
+			GUI_DialogShow(widget, DIALOG_MODE_INFO, "Saving settings", "Please wait, saving settings to device...");
+			SaveSettings();
+			GUI_DialogShow(widget, DIALOG_MODE_ALERT, "Saving settings", "Completed.");
+			break;
+		default:
+			GUI_DialogHide(widget);
+			break;
+	}
+	self.dialog_action = DIALOG_ACTION_NONE;
+}
+
+void SettingsApp_DialogCancel(GUI_Widget *widget) {
+	self.dialog_action = DIALOG_ACTION_NONE;
+	GUI_DialogHide(widget);
 }
 
 void SettingsApp_Reboot(GUI_Widget *widget) {
