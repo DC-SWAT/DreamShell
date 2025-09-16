@@ -25,3 +25,7 @@ void NetworkApp_Exit(GUI_Widget *widget);
 void NetworkApp_DialogConfirm(GUI_Widget *widget);
 
 void NetworkApp_DialogCancel(GUI_Widget *widget);
+
+void NetworkApp_ToggleEth(GUI_Widget *widget);
+
+void NetworkApp_TogglePpp(GUI_Widget *widget);

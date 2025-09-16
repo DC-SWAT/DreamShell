@@ -99,7 +99,8 @@ void ResetSettings() {
 	aud->hover_enabled = 1;
 	aud->startup_enabled = 1;
 
-	net->startup_connect = 0;
+	net->startup_connect_eth = 0;
+	net->startup_connect_ppp = 0;
 	net->startup_ntp = 0;
 
 	strncpy(cur->app, "Main", 4);

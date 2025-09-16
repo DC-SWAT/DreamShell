@@ -33,14 +33,18 @@ static struct {
     GUI_Widget *net_status;
     GUI_Widget *ftpd_status;
     GUI_Widget *httpd_status;
-    GUI_Widget *startup_connect_but;
+    GUI_Widget *startup_connect_eth_but;
+    GUI_Widget *startup_connect_ppp_but;
     GUI_Widget *startup_ntp_but;
 
 } self;
 
 static void SetupNetworkSettings() {
-    if(self.startup_connect_but) {
-        GUI_WidgetSetState(self.startup_connect_but, self.settings->network.startup_connect);
+    if(self.startup_connect_eth_but) {
+        GUI_WidgetSetState(self.startup_connect_eth_but, self.settings->network.startup_connect_eth);
+    }
+    if(self.startup_connect_ppp_but) {
+        GUI_WidgetSetState(self.startup_connect_ppp_but, self.settings->network.startup_connect_ppp);
     }
     if(self.startup_ntp_but) {
         GUI_WidgetSetState(self.startup_ntp_but, self.settings->network.startup_ntp);
@@ -117,7 +121,8 @@ void NetworkApp_Init(App_t *app) {
     self.net_status = APP_GET_WIDGET("net-status");
     self.ftpd_status = APP_GET_WIDGET("ftpd-status");
     self.httpd_status = APP_GET_WIDGET("httpd-status");
-    self.startup_connect_but = APP_GET_WIDGET("startup-connect-but");
+    self.startup_connect_eth_but = APP_GET_WIDGET("startup-connect-eth-but");
+    self.startup_connect_ppp_but = APP_GET_WIDGET("startup-connect-ppp-but");
     self.startup_ntp_but = APP_GET_WIDGET("startup-ntp-but");
 
     SetupNetworkSettings();
@@ -128,10 +133,12 @@ void NetworkApp_Shutdown(App_t *app) {
 }
 
 static int SettingsChanged() {
-    int startup_connect = GUI_WidgetGetState(self.startup_connect_but);
+    int startup_connect_eth = GUI_WidgetGetState(self.startup_connect_eth_but);
+    int startup_connect_ppp = GUI_WidgetGetState(self.startup_connect_ppp_but);
     int startup_ntp = GUI_WidgetGetState(self.startup_ntp_but);
 
-    return self.settings->network.startup_connect != startup_connect ||
+    return self.settings->network.startup_connect_eth != startup_connect_eth ||
+           self.settings->network.startup_connect_ppp != startup_connect_ppp ||
            self.settings->network.startup_ntp != startup_ntp;
 }
 
@@ -146,7 +153,8 @@ void NetworkApp_Exit(GUI_Widget *widget) {
 
 void NetworkApp_DialogConfirm(GUI_Widget *widget) {
     GUI_DialogShow(widget, DIALOG_MODE_INFO, "Saving settings", "Please wait, saving settings to device...");
-    self.settings->network.startup_connect = GUI_WidgetGetState(self.startup_connect_but);
+    self.settings->network.startup_connect_eth = GUI_WidgetGetState(self.startup_connect_eth_but);
+    self.settings->network.startup_connect_ppp = GUI_WidgetGetState(self.startup_connect_ppp_but);
     self.settings->network.startup_ntp = GUI_WidgetGetState(self.startup_ntp_but);
     SaveSettings();
     NetworkApp_DialogCancel(widget);
@@ -197,4 +205,18 @@ void NetworkApp_HTTP(GUI_Widget *widget) {
     GUI_LabelSetTextColor(self.httpd_status, 207, 51, 17);
     GUI_LabelSetText(self.httpd_status, "Starting...");
     self.action = APP_ACTION_CONNECT_HTTPD;
+}
+
+void NetworkApp_ToggleEth(GUI_Widget *widget) {
+    (void)widget;
+    if(GUI_WidgetGetState(self.startup_connect_eth_but)) {
+        GUI_WidgetSetState(self.startup_connect_ppp_but, 0);
+    }
+}
+
+void NetworkApp_TogglePpp(GUI_Widget *widget) {
+    (void)widget;
+    if(GUI_WidgetGetState(self.startup_connect_ppp_but)) {
+        GUI_WidgetSetState(self.startup_connect_eth_but, 0);
+    }
 }

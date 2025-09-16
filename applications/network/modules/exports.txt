@@ -12,3 +12,5 @@ NetworkApp_HTTP
 NetworkApp_Exit
 NetworkApp_DialogConfirm
 NetworkApp_DialogCancel
+NetworkApp_ToggleEth
+NetworkApp_TogglePpp

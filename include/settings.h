@@ -11,7 +11,7 @@
 #include <kos.h>
 
 /* need increment when settings structure changed */
-#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '0')
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '1')
 
 typedef struct VideoSettings {
 
@@ -55,8 +55,11 @@ typedef struct AudioSettings {
 
 typedef struct NetworkSettings {
 
-	/* Network connect at startup */
-	int startup_connect;
+	/* Ethernet connect at startup */
+	int startup_connect_eth;
+
+	/* Dial-up connect at startup */
+	int startup_connect_ppp;
 
 	/* Use NTP at startup to sync time */
 	int startup_ntp;

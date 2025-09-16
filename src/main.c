@@ -239,19 +239,6 @@ int InitDS() {
 	setenv("PWD", fs_getwd(), 1);
 	setenv("APP", (settings->app[0] != 0 ? settings->app : "Main"), 1);
 
-	if(settings->network.startup_connect) {
-		strcpy(fn, "net --init");
-
-		if(settings->network.startup_ntp) {
-			strcat(fn, " && ntp --sync");
-		}
-		strcat(fn, " &");
-		setenv("STARTUP_CMD", fn, 1);
-	}
-	else {
-		setenv("STARTUP_CMD", "", 1);
-	}
-
 	/* If used custom BIOS and syscalls is not installed, setting up it */
 	if(is_custom_bios() && is_no_syscalls()) {
 		tmpb = (uint8 *)0xa021a056;
@@ -307,6 +294,34 @@ int InitDS() {
 
 	/* Preload some sfx to avoid delay on first input */
 	ds_sfx_preload();
+
+	if(settings->network.startup_connect_eth) {
+		strcpy(fn, "net --init");
+	}
+	else if(settings->network.startup_connect_ppp) {
+		snprintf(fn, sizeof(fn), "%s/modules/ppp.klf", getenv("PATH"));
+
+		if(OpenModule(fn)) {
+			strcpy(fn, "ppp --init");
+		}
+		else {
+			fn[0] = '\0';
+		}
+	}
+	else {
+		fn[0] = '\0';
+	}
+
+	if(fn[0] != '\0') {
+		if(settings->network.startup_ntp) {
+			strcat(fn, " && ntp --sync");
+		}
+		strcat(fn, " &");
+		setenv("STARTUP_CMD", fn, 1);
+	}
+	else {
+		setenv("STARTUP_CMD", "", 1);
+	}
 
 #ifdef DS_DEBUG
 	uint64 t_end = timer_ms_gettime64();

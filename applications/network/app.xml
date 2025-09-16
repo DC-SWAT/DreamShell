@@ -97,11 +97,16 @@
 						</panel>
 					</panel>
 				</panel>
-				<panel height="60" width="100%">
+				<panel height="85" width="100%">
 					<panel x="20">
 						<panel width="100%" height="25">
-							<input type="checkbox" name="startup-connect-but">
-								<label x="27" height="20" font="comic-16" color="#31799F" text="Connect at startup" align="left" />
+							<input type="checkbox" name="startup-connect-eth-but" onclick="export:NetworkApp_ToggleEth">
+								<label x="27" height="20" font="comic-16" color="#31799F" text="Connect ethernet at startup" align="left" />
+							</input>
+						</panel>
+						<panel width="100%" height="25">
+							<input type="checkbox" name="startup-connect-ppp-but" onclick="export:NetworkApp_TogglePpp">
+								<label x="27" height="20" font="comic-16" color="#31799F" text="Connect dial up at startup" align="left" />
 							</input>
 						</panel>
 						<panel width="100%" height="25">
