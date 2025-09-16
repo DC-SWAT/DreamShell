@@ -16,8 +16,12 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     bg_surface->DecRef();
 
     // Label
-    label = new GUI_Label("dialog_label", 10, 10, w - 20, 40, font, "Message");
-    label->SetTextColor(0, 0, 0);
+    const char *label_name = "dialog_label";
+    SDL_Rect r = font->GetTextSize(label_name);
+    int font_h = r.h > 25 ? r.h * 2 : 50;
+    label = new GUI_Label(label_name, 10, 10, w - 20, font_h, font, "Message");
+    label->SetTextColor(10, 10, 10);
+    label->SetAlign(WIDGET_HORIZ_CENTER | WIDGET_VERT_CENTER);
     content_panel->AddWidget(label);
     label->DecRef();
 
@@ -26,17 +30,17 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     rtf->SetBgColor(217, 217, 217);
 
     // Body panel
-    body = new GUI_Panel("dialog_body", 10, 45, w - 20, h - 100);
+    body = new GUI_Panel("dialog_body", 10, 10 + font_h, w - 20, h - 100);
     body->SetTransparent(1);
     content_panel->AddWidget(body);
     body->DecRef();
 
     // Input
-    input = new GUI_TextEntry("dialog_input", 10, (Sint16)((body->GetHeight() - 30) / 2),
+    input = new GUI_TextEntry("dialog_input", 10, (Sint16)((body->GetHeight() - font_h) / 2),
         (Uint16)(w - 40), 30, font, 256);
 
     // Progress bar
-    progress = new GUI_ProgressBar("dialog_progress", 10, (Sint16)((body->GetHeight() - 20) / 2),
+    progress = new GUI_ProgressBar("dialog_progress", 10, (Sint16)((body->GetHeight() - font_h) / 2),
         (Uint16)(w - 40), 20);
 
     // Buttons panel
@@ -49,7 +53,7 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     confirm_button = new GUI_Button("dialog_confirm", (Sint16)((w - 20) / 2 - 110), 0, 100, 30);
 
     GUI_Label *confirm_label = new GUI_Label("confirm_label", 0, 0, 100, 30, font, "Confirm");
-    confirm_label->SetTextColor(255, 255, 255);
+    confirm_label->SetTextColor(245, 245, 245);
     confirm_button->SetCaption(confirm_label);
     confirm_button->SetEnabled(1);
     confirm_label->DecRef();
@@ -64,7 +68,7 @@ GUI_Dialog::GUI_Dialog(const char *aname, int x, int y, int w, int h, GUI_Font *
     cancel_button = new GUI_Button("dialog_cancel", (Sint16)((w - 20) / 2 + 10), 0, 100, 30);
 
     GUI_Label *cancel_label = new GUI_Label("cancel_label", 0, 0, 100, 30, font, "Cancel");
-    cancel_label->SetTextColor(255, 255, 255);
+    cancel_label->SetTextColor(245, 245, 245);
     cancel_button->SetCaption(cancel_label);
     cancel_button->SetEnabled(1);
     cancel_label->DecRef();
