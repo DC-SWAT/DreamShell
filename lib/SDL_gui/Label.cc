@@ -45,9 +45,16 @@ void GUI_Label::SetTextColor(int r, int g, int b)
 
 void GUI_Label::SetText(const char *s)
 {
-	delete [] text;
-	text = new char[strlen(s)+1];
-	strcpy(text, s);
+	if (text)
+	{
+		delete [] text;
+		text = NULL;
+	}
+	if (s)
+	{
+		text = new char[strlen(s) + 1];
+		strcpy(text, s);
+	}
 	MarkChanged();
 }
 
