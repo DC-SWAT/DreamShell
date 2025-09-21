@@ -71,6 +71,7 @@ static float sdl_dc_v1 = 0.9f;
 static float sdl_dc_v2 = 0.6f;
 
 static void *VideoThread(void *ptr);
+static void SDL_DS_Blit_Cursor(void);
 
 
 SDL_Surface *GetScreen() {
@@ -542,20 +543,7 @@ void SDL_DS_Blit_Textured() {
 		plx_fcxt_end(plx_cxt);
 	}
 
-	plx_mat3d_identity();
 	plx_mat3d_translate(sdl_dc_trans_x, sdl_dc_trans_y, sdl_dc_trans_z);
-	//plx_mat3d_translate((sdl_dc_wtex/2)+512.0f*sdl_dc_trans_x/native_width,(sdl_dc_htex/2)+512.0f*sdl_dc_trans_y/native_height,sdl_dc_trans_z - 3);
-
-	/* Clear internal to an identity matrix */
-	plx_mat_identity();
-
-	/* "Applying" all matrixs: multiply a matrix onto the "internal" one */
-	plx_mat3d_apply_all();
-
-	plx_mat3d_rotate(sdl_dc_rot_x, 1.0f, 0.0f, 0.0f);
-	plx_mat3d_rotate(sdl_dc_rot_y, 0.0f, 1.0f, 0.0f);
-	plx_mat3d_rotate(sdl_dc_rot_z, 0.0f, 0.0f, 1.0f);
-	plx_mat3d_translate(0, 0, 0);
 
 	plx_cxt_texture(plx_screen_txr);
 	plx_cxt_culling(PLX_CULL_NONE);
@@ -567,10 +555,13 @@ void SDL_DS_Blit_Textured() {
 	plx_vert_ifpm3(PLX_VERT, sdl_dc_x + native_width, sdl_dc_y, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v1);
 	plx_vert_ifpm3(PLX_VERT, sdl_dc_x, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v2);
 	plx_vert_ifpm3(PLX_VERT_EOS, sdl_dc_x + native_width, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v2);
+}
 
-	if (!ConsoleIsVisible()) {
+static void SDL_DS_Blit_Cursor(void) {
+	if (!ConsoleIsVisible() && plx_cursor_txr) {
 		int mouse_cursor_x = 0;
 		int mouse_cursor_y = 0;
+		uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);
 
 		SDL_GetMouseState(&mouse_cursor_x, &mouse_cursor_y);
 
@@ -626,6 +617,7 @@ static void *VideoThread(void *ptr) {
 			ProcessVideoEventsRender();
 			SDL_DS_Blit_Textured();
 			ProcessVideoEventsRenderPost();
+			SDL_DS_Blit_Cursor();
 
 			pvr_list_finish();
 		} else {
