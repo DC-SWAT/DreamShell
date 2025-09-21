@@ -330,14 +330,8 @@ static void dreameye_get_video_frame_cb(maple_state_t *st, maple_frame_t *frame)
               */
             if(first_state->format == DREAMEYE_FRAME_FMT_YUYV422) {
                 if(first_state->width >= 320) {
-                    timer_spin_sleep(10);
-                }
-                else {
                     timer_spin_sleep(7);
                 }
-            }
-            else {
-                timer_spin_sleep(5);
             }
         }
         return;

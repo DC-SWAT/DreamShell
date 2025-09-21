@@ -64,18 +64,7 @@ static void dreameye_preview_frame() {
         return;
     }
 
-    if(is_fullscreen) {
-        plx_mat3d_identity();
-        plx_mat_identity();
-        plx_mat3d_apply_all();
-
-        plx_mat3d_rotate(0.0f, 1.0f, 0.0f, 0.0f);
-        plx_mat3d_rotate(0.0f, 0.0f, 1.0f, 0.0f);
-        plx_mat3d_rotate(0.0f, 0.0f, 0.0f, 1.0f);
-        plx_mat3d_translate(0, 0, 0);
-    } else if(ScreenIsHidden()) {
-        return;
-    }
+    plx_mat3d_translate(0, 0, 0.1f);
 
 	plx_cxt_texture(plx_txr);
 	plx_cxt_culling(PLX_CULL_NONE);
@@ -98,7 +87,9 @@ static void DrawHandler(void *ds_event, void *param, int action) {
             }
             break;
         case EVENT_ACTION_RENDER_POST:
-            dreameye_preview_frame();
+            if(!is_fullscreen && !ScreenIsHidden() && !ConsoleIsVisible()) {
+                dreameye_preview_frame();
+            }
             break;
         case EVENT_ACTION_UPDATE:
             break;
@@ -149,6 +140,7 @@ static void onPreviewClick(void) {
 static void EventHandler(void *ds_event, void *param, int action) {
 
     SDL_Event *event = (SDL_Event *) param;
+    static int inside_video_area = 0;
 
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
@@ -167,6 +159,18 @@ static void EventHandler(void *ds_event, void *param, int action) {
                 onPreviewClick();
             }
             break;
+        case SDL_MOUSEMOTION:
+            int mx = event->motion.x, my = event->motion.y;
+            if(mx >= frame_x && mx <= frame_x + (frame_txr_width * frame_scale) &&
+                my >= frame_y && my <= frame_y + (frame_txr_height * frame_scale)) {
+                if(!inside_video_area) {
+                    ds_sfx_play(DS_SFX_CLICK2);
+                    inside_video_area = 1;
+                }
+            }
+            else {
+                inside_video_area = 0;
+            }
         default:
             break;
     }
