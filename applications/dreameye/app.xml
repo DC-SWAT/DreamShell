@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Dreameye" version="1.0.0" icon="images/icon.png">
+<app name="Dreameye" version="1.0.1" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/quirc.klf" />
 		<module src="../../modules/dreameye.klf" />
@@ -198,12 +198,8 @@
 						</input>
 					</panel>
 				</panel>
-				<panel width="328" height="248" x="156" y="141">
-					<input type="button" width="328" height="248"
-						normal="preview-back" highlight="preview-back"
-						pressed="preview-back" disabled="preview-back">
-						<label font="comic-22" color="#EEEEEE" text="Camera preview" />
-					</input>
+				<panel width="328" height="248" x="156" y="141" backgroundCenter="preview-back">
+					<label font="comic-22" color="#EEEEEE" text="Camera preview" />
 				</panel>
 				<panel x="500" y="320" height="25" width="140">
 					<label align="left" color="#444444" font="comic-14" height="25"
@@ -247,12 +243,8 @@
 						<label font="comic-22" color="#EEEEEE" text="Back to main" />
 					</input>
 				</panel>
-				<panel width="328" height="248" x="156" y="141">
-					<input type="button" width="328" height="248"
-						normal="preview-back" highlight="preview-back"
-						pressed="preview-back" disabled="preview-back">
-						<label font="comic-22" color="#EEEEEE" text="Camera preview" />
-					</input>
+				<panel width="328" height="248" x="156" y="141" backgroundCenter="preview-back">
+					<label font="comic-22" color="#EEEEEE" text="Camera preview" />
 				</panel>
 				<panel x="25" y="140" height="50" width="100">
 					<label align="left" color="#31799F" font="comic-16" height="25"
