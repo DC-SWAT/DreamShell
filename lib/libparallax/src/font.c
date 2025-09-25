@@ -208,8 +208,8 @@ plx_font_t * plx_font_load(const char * fn) {
 	case 1:		/* TXF_FORMAT_BITMAP */
 		/* Allocate temp texture space */
 		bmsize = hdr.txr_width * hdr.txr_height / 8;
-		bmtmp = malloc(bmsize);
-		txrtmp = malloc(hdr.txr_width * hdr.txr_height * 2);
+		bmtmp = aligned_alloc(32, bmsize);
+		txrtmp = aligned_alloc(32, hdr.txr_width * hdr.txr_height * 2);
 		if (bmtmp == NULL || txrtmp == NULL) {
 			dbglog(DBG_WARNING, "plx_font_load: can't allocate temp texture space for '%s'\n", fn);
 			goto fail_3;	/* bail */
@@ -236,7 +236,7 @@ plx_font_t * plx_font_load(const char * fn) {
 	case 0:		/* TXF_FORMAT_BYTE */
 		/* Allocate temp texture space */
 		bmsize = hdr.txr_width * hdr.txr_height;
-		txrtmp = malloc(bmsize * 2);
+		txrtmp = aligned_alloc(32, bmsize * 2);
 		if (txrtmp == NULL) {
 			dbglog(DBG_WARNING, "plx_font_load: can't allocate temp texture space for '%s'\n", fn);
 			goto fail_3;	/* bail */
@@ -455,6 +455,13 @@ void plx_fcxt_setsize(plx_fcxt_t * cxt, float size) {
 		return;
 
 	cxt->size = size;
+}
+
+float plx_fcxt_getsize(plx_fcxt_t * cxt) {
+	assert( cxt != NULL );
+	if (cxt == NULL)
+		return 0.0f;
+	return cxt->size;
 }
 
 void plx_fcxt_setcolor4f(plx_fcxt_t * cxt, float a, float r, float g, float b) {
