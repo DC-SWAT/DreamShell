@@ -15,9 +15,7 @@ FileManager = {
 	modules = {},
 	ffmpeg = {
 		ext = {
-			".mpg", ".m1v", ".m2v", ".sfd", ".pss", "mpeg", ".avi", 
-			".mkv", ".m4v", ".flv", ".f4v", ".wmv", "m2ts", ".mpv", 
-			".mp4", ".3gp", ".4xm", ".mov", ".mgp"
+			".avi", ".mkv", ".ac3", ".aac"
 		}
 	},
 	audio = {
@@ -126,7 +124,7 @@ function FileManager:ModalClick(s)
 			self:toolbarMountISO();
 			
 		elseif self.modal.func == "copy" then
-		    
+
 			self:copyPath();
 			
 		elseif self.modal.func == "rename" then
@@ -138,11 +136,11 @@ function FileManager:ModalClick(s)
 			self:toolbarMkdir();
 
 		elseif self.modal.func == "exec" then
-		    
+
 			self:openFile();
 			
 		elseif self.modal.func == "archive" then
-		    
+
 			self:toolbarArchive();
 		else
 			return self:ShowDialog("Unknown command", GUI.DIALOG_MODE_ALERT, nil, nil);
@@ -184,40 +182,40 @@ function FileManager:copyFile(src, dst, size)
 		buffer_size = 512 * 1024;
 	end
 
-    local function progress_callback(bytes_written)
-        local current_progress = initial_copied_size + bytes_written;
-        GUI.DialogSetProgress(self.modal.widget, current_progress / self.modal.progress_total);
+	local function progress_callback(bytes_written)
+		local current_progress = initial_copied_size + bytes_written;
+		GUI.DialogSetProgress(self.modal.widget, current_progress / self.modal.progress_total);
 		return not self.modal.copy_cancelled
-    end
+	end
 
-    local ok, err = lfs.copyfile(src, dst, progress_callback, buffer_size);
+	local ok, err = lfs.copyfile(src, dst, progress_callback, buffer_size);
 	self.copy_error = err;
-    
+	
 	if not ok then
-        return false;
-    end
+		return false;
+	end
 
 	self.modal.progress_copied_size = self.modal.progress_copied_size + size;
-    
-    return true;
+	
+	return true;
 end
 
 
 function FileManager:getPathTotalSize(path)
-    local total_size = 0;
+	local total_size = 0;
 
-    for file in lfs.dir(path) do
-        if file.name ~= "." and file.name ~= ".." then
-            local fullpath = path .. (path == "/" and "" or "/") .. file.name;
+	for file in lfs.dir(path) do
+		if file.name ~= "." and file.name ~= ".." then
+			local fullpath = path .. (path == "/" and "" or "/") .. file.name;
 
-            if file.attr == 0 then
-                total_size = total_size + file.size;
-            else
-                total_size = total_size + self:getPathTotalSize(fullpath);
-            end
-        end
-    end
-    return total_size;
+			if file.attr == 0 then
+				total_size = total_size + file.size;
+			else
+				total_size = total_size + self:getPathTotalSize(fullpath);
+			end
+		end
+	end
+	return total_size;
 end
 
 
@@ -227,23 +225,23 @@ function FileManager:copyPathRecursive(src, dst)
 		return false;
 	end
 
-    for file in lfs.dir(src) do
-        if file.name ~= "." and file.name ~= ".." then
+	for file in lfs.dir(src) do
+		if file.name ~= "." and file.name ~= ".." then
 
-            local full_src_path = src .. (src == "/" and "" or "/") .. file.name;
+			local full_src_path = src .. (src == "/" and "" or "/") .. file.name;
 			local full_dst_path = dst .. (dst == "/" and "" or "/") .. file.name;
 
-            if file.attr == 0 then
-                if not self:copyFile(full_src_path, full_dst_path, file.size) then
+			if file.attr == 0 then
+				if not self:copyFile(full_src_path, full_dst_path, file.size) then
 					return false;
 				end
-            else
-                if not self:copyPathRecursive(full_src_path, full_dst_path) then
+			else
+				if not self:copyPathRecursive(full_src_path, full_dst_path) then
 					return false;
 				end
-            end
-        end
-    end
+			end
+		end
+	end
 	return true;
 end
 
@@ -380,48 +378,48 @@ end
 
 
 function FileManager:countFiles(path)
-    local count = 0;
+	local count = 0;
 
-    for file in lfs.dir(path) do
-        if file.name ~= "." and file.name ~= ".." then
+	for file in lfs.dir(path) do
+		if file.name ~= "." and file.name ~= ".." then
 
-            local fullpath = path .. (path == "/" and "" or "/") .. file.name;
-            count = count + 1;
+			local fullpath = path .. (path == "/" and "" or "/") .. file.name;
+			count = count + 1;
 
-            if file.attr ~= 0 then
-                count = count + self:countFiles(fullpath);
-            end
-        end
-    end
+			if file.attr ~= 0 then
+				count = count + self:countFiles(fullpath);
+			end
+		end
+	end
 
-    return count;
+	return count;
 end
 
 
 function FileManager:deletePathRecursive(path)
-    for file in lfs.dir(path) do
-        if file.name ~= "." and file.name ~= ".." then
+	for file in lfs.dir(path) do
+		if file.name ~= "." and file.name ~= ".." then
 
-            local fullpath = path .. (path == "/" and "" or "/") .. file.name;
+			local fullpath = path .. (path == "/" and "" or "/") .. file.name;
 
-            if file.attr == 0 then
+			if file.attr == 0 then
 				local ok, err = os.remove(fullpath);
 
-                if not ok then
+				if not ok then
 					self.delete_error = err;
 					return false;
 				end
-            else
-                if not self:deletePathRecursive(fullpath) then
+			else
+				if not self:deletePathRecursive(fullpath) then
 					return false;
 				end
-            end
+			end
 
 			self.modal.progress_count = self.modal.progress_count + 1;
 			GUI.ProgressBarSetPosition(self.modal.progress, self.modal.progress_count / self.modal.progress_total);
-        end
-    end
-    
+		end
+	end
+	
 	local ok, err = lfs.rmdir(path);
 
 	if not ok then
@@ -429,19 +427,19 @@ function FileManager:deletePathRecursive(path)
 		return false;
 	end
 
-    return true;
+	return true;
 end
 
 
 function FileManager:deletePath()
 
+	self:ShowDialog("Deleting", GUI.DIALOG_MODE_INFO, nil, "Please wait...");
 	local f = self:getFile();
 	self.delete_error = nil;
 
 	if f.attr ~= 0 then
 
 		self:ShowDialog("Calculating files...", GUI.DIALOG_MODE_PROGRESS, nil);
-
 
 		self.modal.progress_total = self:countFiles(f.file);
 		self.modal.progress_count = 0;
@@ -468,12 +466,7 @@ function FileManager:deletePath()
 	local umgr = self:getUnfocusedManager();
 
 	if umgr and umgr.ent and umgr.ent.index > -1 then
-		local bt = GUI.FileManagerGetItem(umgr.widget, umgr.ent.index);
-
-		if bt then
-			GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
-		end
-
+		GUI.FileManagerClearSelection(umgr.widget);
 		umgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
 	end
 end
@@ -499,8 +492,8 @@ function FileManager:toolbarArchive()
 
 	if ext == ".gz" then
 
-	    msg = "Extract ";
-	    cmd = "gzip -d " .. file .. " " .. dst .. string.sub(name, 1, -4);
+		msg = "Extract ";
+		cmd = "gzip -d " .. file .. " " .. dst .. string.sub(name, 1, -4);
 
 	elseif ext == "bz2" then
 
@@ -511,8 +504,8 @@ function FileManager:toolbarArchive()
 			 end
 		end
 
-	    msg = "Extract ";
-	    cmd = "bzip2 -d " .. file .. " " .. dst .. string.sub(name, 1, -5);
+		msg = "Extract ";
+		cmd = "bzip2 -d " .. file .. " " .. dst .. string.sub(name, 1, -5);
 
 	elseif ext == "zip" then
 
@@ -523,8 +516,8 @@ function FileManager:toolbarArchive()
 			 end
 		end
 
-	    msg = "Extract ";
-	    cmd = "unzip -e -o " .. file .. " -d " .. dst;
+	msg = "Extract ";
+		cmd = "unzip -e -o " .. file .. " -d " .. dst;
 
 	else
 
@@ -536,10 +529,15 @@ function FileManager:toolbarArchive()
 	if self.modal.mode == nil then 
 		return self:ShowDialog(msg, GUI.DIALOG_MODE_CONFIRM, "archive", f.file);
 	else
-		self:HideDialog();
+		self:ShowDialog("Archive", GUI.DIALOG_MODE_INFO, nil, "Please wait...");
 	end
 
-	self:execConsole(cmd)
+	if os.execute(cmd) ~= DS.CMD_OK then
+		self:showConsole();
+		return;
+	end
+
+	self:HideDialog();
 	GUI.FileManagerScan(mgr.widget);
 end
 
@@ -586,22 +584,21 @@ function FileManager:toolbarMountISO()
 	if self.modal.mode == nil then 
 		return self:ShowDialog("Mount ISO?", GUI.DIALOG_MODE_CONFIRM, "mount_iso", "Mount selected ISO as VFS?");
 	else
-		self:HideDialog();
+		self:ShowDialog("Mounting ISO", GUI.DIALOG_MODE_INFO, nil, "Please wait...");
 	end
 
 	if not DS.GetCmdByName("isofs") then
-		 if not self:loadModule("minilzo") or not self:loadModule("isofs") then
+		if not self:loadModule("minilzo") or not self:loadModule("isofs") then
 			self:showConsole();
 			return;
-		 end
+		end
 	end
 
 	if os.execute("isofs -m -f " .. self:replace_spaces(f.file) .. " -d /iso") ~= DS.CMD_OK then
 		self:showConsole();
 	end
+	self:HideDialog();
 end
-
-
 
 
 function FileManager:loadModule(name)
@@ -620,7 +617,7 @@ end
 
 function FileManager:unloadModules()
 
-    if table.getn(self.modules) > 0 then
+	if table.getn(self.modules) > 0 then
 
 		for i = 1, table.getn(self.modules) do
 
@@ -658,7 +655,7 @@ function FileManager:openFile()
 		if self.modal.mode == nil then
 			return self:ShowDialog("Execute file?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Executing file", GUI.DIALOG_MODE_INFO, nil, "Please wait, loading...");
 		end
 
 		local flag = "-b";
@@ -667,7 +664,9 @@ function FileManager:openFile()
   		   flag = "-e";
   		end
 
-		self:execConsole("exec "..flag.." -f " .. file);
+		os.execute("exec "..flag.." -f " .. file);
+		self:HideDialog();
+		self:showConsole();
 
 	elseif ext == ".txt" then
 
@@ -685,50 +684,75 @@ function FileManager:openFile()
 		if self.modal.mode == nil then
 			return self:ShowDialog("Load module?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Loading module", GUI.DIALOG_MODE_INFO, nil, "Please wait, loading...");
 		end
 
-		self:execConsole("module -o -f " .. file)
+		if os.execute("module -o -f " .. file) ~= DS.CMD_OK then
+			self:HideDialog();
+			self:showConsole();
+		else
+			self:HideDialog();
+		end
 
 	elseif ext == ".lua" then
 
 		if self.modal.mode == nil then
 			return self:ShowDialog("Run script?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Running lua script", GUI.DIALOG_MODE_INFO, nil, "Please wait, executing...");
 		end
 
-		self:execConsole("lua " .. file)
+		if os.execute("lua " .. file) ~= DS.CMD_OK then
+			self:HideDialog();
+			self:showConsole();
+		else
+			self:HideDialog();
+		end
 	
 	elseif ext == ".dsc" then
 
 		if self.modal.mode == nil then
 			return self:ShowDialog("Run script?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Running dsc script", GUI.DIALOG_MODE_INFO, nil, "Please wait, executing...");
 		end
 
-		self:execConsole("dsc " .. file)
+		if os.execute("dsc " .. file) ~= DS.CMD_OK then
+			self:HideDialog();
+			self:showConsole();
+		else
+			self:HideDialog();
+		end
 
 	elseif ext == ".xml" then
 
 		if self.modal.mode == nil then
 			return self:ShowDialog("Add application?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Adding application", GUI.DIALOG_MODE_INFO, nil, "Please wait, adding...");
 		end
 
-		self:execConsole("app -a -f " .. file)
+		if os.execute("app -a -f " .. file) ~= DS.CMD_OK then
+			self:HideDialog();
+			self:showConsole();
+		else
+			self:HideDialog();
+		end
 
 	elseif ext == ".dsr" or ext == ".img" then
 
 		if self.modal.mode == nil then
 			return self:ShowDialog("Mount romdisk?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Mounting romdisk", GUI.DIALOG_MODE_INFO, nil, "Please wait, mounting...");
 		end
 
-		self:execConsole("romdisk -m " .. file)
+		if os.execute("romdisk -m " .. file) ~= DS.CMD_OK then
+			self:HideDialog();
+			self:showConsole();
+		else
+			self:HideDialog();
+		end
 
 	elseif self:ext_supported(self.audio.ext, ext) then
 
@@ -745,16 +769,19 @@ function FileManager:openFile()
 		if self.modal.mode == nil then
 			return self:ShowDialog("Play file?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Playing file", GUI.DIALOG_MODE_INFO, nil, "Please wait, loading...");
 		end
 
 		if not DS.GetCmdByName(mod) then
 
-			 if not self:loadModule(mod) then
-			 	self:showConsole();
-			 	return file;
-			 end
+			if not self:loadModule(mod) then
+				self:HideDialog();
+				self:showConsole();
+				return file;
+			end
 		end
+
+		self:HideDialog();
 
 		if os.execute(mod .. " -p -f " .. file) ~= DS.CMD_OK then
 			self:showConsole();
@@ -765,21 +792,21 @@ function FileManager:openFile()
 		if self.modal.mode == nil then
 			return self:ShowDialog("Play file?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Playing file", GUI.DIALOG_MODE_INFO, nil, "Please wait, loading...");
 		end
 
 		if not DS.GetCmdByName("ffplay") then
-		
-			 if not self:loadModule("bzip2") 
-				 or not self:loadModule("mpg123") 
-				 or not self:loadModule("oggvorbis") 
-				 or not self:loadModule("ffmpeg") then
-			 	self:showConsole();
-			 	return file;
-			 end
+
+			if not self:loadModule("ffmpeg") then
+				self:HideDialog();
+				self:showConsole();
+				return file;
+			end
 		end
 
-		if os.execute("ffplay -p -f " .. file) ~= DS.CMD_OK then
+		self:HideDialog();
+
+		if os.execute("ffplay -p -e -f " .. file) ~= DS.CMD_OK then
 			self:showConsole();
 		end
 
@@ -788,18 +815,24 @@ function FileManager:openFile()
 		if self.modal.mode == nil then
 			return self:ShowDialog("Install package?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
-			self:HideDialog();
+			self:ShowDialog("Installing package", GUI.DIALOG_MODE_INFO, nil, "Please wait, installing...");
 		end
 
 		if not DS.GetCmdByName("opkg") then
 		
-			 if not self:loadModule("minilzo") or not self:loadModule("opkg") then
-			 	self:showConsole();
-			 	return file;
-			 end
+			if not self:loadModule("minilzo") or not self:loadModule("opkg") then
+				self:HideDialog();
+				self:showConsole();
+				return file;
+			end
 		end
 
-		self:execConsole("opkg -i -f " .. file);
+		if os.execute("opkg -i -f " .. file) ~= DS.CMD_OK then
+			self:HideDialog();
+			self:showConsole();
+		else
+			self:HideDialog();
+		end
 
 	else
 
@@ -818,8 +851,7 @@ function FileManager:openFile()
 		end
 
 		local mgr = self:getFocusedManager();
-		local bt = GUI.FileManagerGetItem(mgr.widget, mgr.ent.index);
-		GUI.ButtonSetNormalImage(bt, self.mgr.item.normal);
+		GUI.FileManagerClearSelection(mgr.widget);
 		mgr.ent = {name = nil, size = 0, time = 0, attr = 0, index = -1};
 	end
 
@@ -847,7 +879,7 @@ function FileManager:getFocusedManager()
 	   return self.mgr.top;
 	elseif self.mgr.bottom.focus then
 	   return self.mgr.bottom;
-    end
+	end
 end
 
 function FileManager:getUnfocusedManager()
@@ -855,7 +887,7 @@ function FileManager:getUnfocusedManager()
 	   return self.mgr.top;
 	elseif not self.mgr.bottom.focus then
 	   return self.mgr.bottom;
-    end
+	end
 end
 
 
@@ -1019,12 +1051,12 @@ function FileManager:getResource(name, type)
 
 	if r ~= nil then
 
-	    if type == DS.LIST_ITEM_GUI_FONT then
-	    	return GUI.AnyToFont(r.data);
+		if type == DS.LIST_ITEM_GUI_FONT then
+			return GUI.AnyToFont(r.data);
 		elseif type == DS.LIST_ITEM_GUI_SURFACE then
-		    return GUI.AnyToSurface(r.data);
+			return GUI.AnyToSurface(r.data);
 		else
-            self:showError("FileManager: Uknown resource type - " .. type);
+			self:showError("FileManager: Uknown resource type - " .. type);
 			return nil;
 		end
 	end

@@ -432,7 +432,7 @@ static int l_copy_file(lua_State *L) {
         goto final_return;
     }
 
-    dst_fd = fs_open(dst_path, O_WRONLY);
+    dst_fd = fs_open(dst_path, O_WRONLY | O_CREAT | O_TRUNC);
     if (dst_fd == FILEHND_INVALID) {
         err_msg = "Cannot open destination file";
         goto final_return;
