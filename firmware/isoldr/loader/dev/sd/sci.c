@@ -1088,6 +1088,9 @@ sci_result_t sci_spi_dma_write_data(const uint8_t *data, size_t len, dma_callbac
     dma_addr_t src = dma_map_src(spi_dma_buffer, len);
     dma_addr_t dst = hw_to_dma_addr(SCTDR1_ADDR);
 
+    /* PVR DMA conflict check */
+    do {} while(*(volatile uint32_t *)0xa05f6808);
+
     /* Enable transmission */
     sci_set_transfer_mode(TE);
 
@@ -1140,6 +1143,9 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
     /* Prepare DMA */
     dma_addr_t src = hw_to_dma_addr(SCRDR1_ADDR);
     dma_addr_t dst = dma_map_dst(spi_dma_buffer, len);
+
+    /* PVR DMA conflict check */
+    do {} while(*(volatile uint32_t *)0xa05f6808);
 
     /* Enable full-duplex mode */
     sci_set_transfer_mode(RE | TE);
