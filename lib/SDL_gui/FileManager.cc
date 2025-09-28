@@ -8,6 +8,8 @@
 
 extern "C" {
 	void SDL_DC_EmulateMouse(SDL_bool value);
+	void LockVideo();
+	void UnlockVideo();
 }
 
 GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int y, int w, int h)
@@ -292,22 +294,18 @@ void GUI_FileManager::Scan()
 {
 	file_t f;
 	dirent_t *ent;
-	dirent_t *sorts = (dirent_t *) malloc(sizeof(dirent_t));
+	dirent_t *sorts = NULL;
 	int n = 0;
-
-	if(sorts == NULL) {
-		return;
-	}
 
 	f = fs_open(cur_path, O_RDONLY | O_DIR);
 	
 	if(f == FILEHND_INVALID) 
 	{
 		printf("GUI_FileManager: Can't open dir: %s\n", cur_path);
-		free(sorts);
 		return;
 	}
 
+	LockVideo();
 	panel->RemoveAllWidgets();
 	panel->SetYOffset(0);
 	scrollbar->SetVerticalPosition(0);
@@ -326,15 +324,23 @@ void GUI_FileManager::Scan()
 			strncasecmp(ent->name, "$RECYCLE.BIN", NAME_MAX) &&
 			strncasecmp(ent->name, "System Volume Information", NAME_MAX)
 		) {
-			if (n) {
-				sorts = (dirent_t *) realloc((void *) sorts, (sizeof(dirent_t)*(n+1)));
+			dirent_t *tmp = (dirent_t *) realloc(sorts, (sizeof(dirent_t)*(n+1)));
+
+			if(tmp == NULL) {
+				if(sorts) free(sorts);
+				fs_close(f);
+				return;
 			}
+
+			sorts = tmp;
 			memcpy(&sorts[n], ent, sizeof(dirent_t));
 			n++;
 		}
 	}
 
-	qsort((void *) sorts, n, sizeof(dirent_t), (int (*)(const void*, const void*)) alpha_sort);
+	if(n > 0) {
+		qsort((void *) sorts, n, sizeof(dirent_t), (int (*)(const void*, const void*)) alpha_sort);
+	}
 
 	for (int i = 0; i < n; i++)
 	{
@@ -353,7 +359,9 @@ void GUI_FileManager::Scan()
 	}
 	rescan = 0;
 
-	free(sorts);
+	if(sorts) free(sorts);
+	UnlockVideo();
+
 	fs_close(f);
 }
 
