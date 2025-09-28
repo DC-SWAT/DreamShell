@@ -35,7 +35,7 @@ static int frame_format = DREAMEYE_FRAME_FMT_YUV420P;
 
 static pvr_ptr_t pvr_txr;
 static plx_texture_t *plx_txr;
-// static semaphore_t yuv_done = SEM_INITIALIZER(0);
+static uint8_t *yuv_dma_buffer = NULL;
 
 static int capturing = 0;
 static int got_frame = 0;
@@ -45,6 +45,15 @@ static int back_to_window;
 static kthread_t *thread;
 static Event_t *input_event;
 static Event_t *video_event;
+
+static int show_stat = 0;
+static uint64_t fps_start_time = 0;
+static uint32_t frame_count_for_fps = 0;
+static float current_fps = 0.0f;
+static float display_fps = 0.0f;
+static plx_font_t *stat_font;
+static plx_fcxt_t *stat_font_cxt;
+static float stat_font_base_size;
 
 static maple_device_t *dreameye;
 static dreameye_frame_cb frame_callback;
@@ -63,7 +72,7 @@ static void dreameye_preview_frame() {
         // TODO: Show waiting picture
         return;
     }
-
+    plx_mat_identity();
     plx_mat3d_translate(0, 0, 0.1f);
 
 	plx_cxt_texture(plx_txr);
@@ -76,6 +85,61 @@ static void dreameye_preview_frame() {
 	plx_vert_ifpm3(PLX_VERT_EOS, frame_x + native_width, frame_y + native_height, z, color, width_ratio, height_ratio);
 }
 
+static void load_stat_font(void) {
+    if(stat_font) return;
+
+    char fn[NAME_MAX];
+    sprintf(fn, "%s/fonts/txf/axaxax.txf", getenv("PATH"));
+
+    LockVideo();
+    stat_font = plx_font_load(fn);
+
+    if(stat_font) {
+        stat_font_cxt = plx_fcxt_create(stat_font, PVR_LIST_TR_POLY);
+        stat_font_base_size = plx_fcxt_getsize(stat_font_cxt);
+    }
+    UnlockVideo();
+}
+
+static inline void render_stats() {
+    if(!show_stat || !stat_font_cxt) return;
+
+    char stat_str[64];
+    snprintf(stat_str, sizeof(stat_str), "%.1f FPS", display_fps);
+
+    const float scale = (is_fullscreen ? 480.0f : (float)frame_txr_height * frame_scale) / 480.0f;
+    const float font_size = stat_font_base_size * scale;
+    float text_width, text_height;
+
+    plx_fcxt_setsize(stat_font_cxt, font_size);
+    plx_fcxt_str_metrics(stat_font_cxt, stat_str, NULL, &text_height, &text_width, NULL);
+
+    const float disp_w = is_fullscreen ? 640.0f : (float)frame_txr_width * frame_scale;
+    const float margin_x = (disp_w / 640.0f) * 10.0f;
+
+    point_t p = {
+        (frame_x + disp_w) - text_width - margin_x,
+        frame_y + ((is_fullscreen ? 480.0f : (float)frame_txr_height * frame_scale) * (50.0f / 480.0f)),
+        20.0f
+    };
+    point_t p_shadow = {p.x + 2.0f * scale, p.y + 2.0f * scale, p.z - 1.0f};
+
+    plx_fcxt_begin(stat_font_cxt);
+
+    /* Shadow */
+    plx_fcxt_setpos_pnt(stat_font_cxt, &p_shadow);
+    plx_fcxt_setcolor4f(stat_font_cxt, 1.0f, 0.0f, 0.0f, 0.0f);
+    plx_fcxt_draw(stat_font_cxt, stat_str);
+    
+    /* Text */
+    plx_fcxt_setpos_pnt(stat_font_cxt, &p);
+    plx_fcxt_setcolor4f(stat_font_cxt, 1.0f, 1.0f, 1.0f, 0.0f);
+    plx_fcxt_draw(stat_font_cxt, stat_str);
+
+    plx_fcxt_end(stat_font_cxt);
+    plx_fcxt_setsize(stat_font_cxt, stat_font_base_size);
+}
+
 static void DrawHandler(void *ds_event, void *param, int action) {
 
     switch(action) {
@@ -83,12 +147,14 @@ static void DrawHandler(void *ds_event, void *param, int action) {
             if(is_fullscreen) {
                 pvr_list_begin(PVR_LIST_TR_POLY);
                 dreameye_preview_frame();
+                render_stats();
                 pvr_list_finish();
             }
             break;
         case EVENT_ACTION_RENDER_POST:
             if(!is_fullscreen && !ScreenIsHidden() && !ConsoleIsVisible()) {
                 dreameye_preview_frame();
+                render_stats();
             }
             break;
         case EVENT_ACTION_UPDATE:
@@ -144,13 +210,21 @@ static void EventHandler(void *ds_event, void *param, int action) {
 
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
-            if(is_fullscreen) {
-                switch(event->jbutton.button) {
-                    case SDL_DC_B:
-                    case SDL_DC_A:
+            switch(event->jbutton.button) {
+                case SDL_DC_B:
+                case SDL_DC_A:
+                    if(is_fullscreen) {
                         onPreviewClick();
-                        break;
-                }
+                    }
+                    break;
+                case SDL_DC_Y:
+                    if(is_fullscreen || inside_video_area) {
+                        if(!show_stat) {
+                            load_stat_font();
+                        }
+                        show_stat = !show_stat;
+                    }
+                    break;
             }
             break;
         case SDL_MOUSEBUTTONDOWN:
@@ -214,7 +288,61 @@ static int setup_pvr(void) {
     return 0;
 }
 
-static void yuv420p_to_yuv422(uint8_t *src) {
+// FIXME: It's works only for 160x120
+static void yuv420p_to_yuv422_dma(uint8_t *src) {
+    const int frame_width = frame_txr_width;
+    const int frame_height = frame_txr_height;
+
+    uint8_t *y_plane = src;
+    uint8_t *u_plane = src + (frame_width * frame_height);
+    uint8_t *v_plane = u_plane + (frame_width * frame_height / 4);
+
+    const int y_stride = frame_width;
+    const int u_stride = frame_width / 2;
+    const int v_stride = frame_width / 2;
+
+    const size_t dma_buffer_size = (pvr_txr_width * pvr_txr_height * 3) / 2;
+    uint8_t *dst = yuv_dma_buffer;
+    int x_blk, y_blk;
+    const size_t padding_size = (BYTE_SIZE_FOR_16x16_BLOCK_420 * ((pvr_txr_width >> 4) - (frame_width >> 4)));
+
+    for(y_blk = 0; y_blk < frame_height; y_blk += 16) {
+        for(x_blk = 0; x_blk < frame_width; x_blk += 16) {
+
+            uint8_t *y_src = &y_plane[y_blk * y_stride + x_blk];
+            uint8_t *u_src = &u_plane[(y_blk / 2) * u_stride + (x_blk / 2)];
+            uint8_t *v_src = &v_plane[(y_blk / 2) * v_stride + (x_blk / 2)];
+            int i, j;
+
+            /* U data for 16x16 pixels */
+            for(i = 0; i < 8; ++i) {
+                *((uint64_t *)&dst[i * 8]) = *((uint64_t *)&u_src[i * u_stride]);
+            }
+            dst += 64;
+
+            /* V data for 16x16 pixels */
+            for(i = 0; i < 8; ++i) {
+                *((uint64_t *)&dst[i * 8]) = *((uint64_t *)&v_src[i * v_stride]);
+            }
+            dst += 64;
+
+            /* Y data for 4 (8x8 pixels) */
+            for(i = 0; i < 4; ++i) {
+                for(j = 0; j < 8; ++j) {
+                    *((uint64_t *)&dst[i * 64 + j * 8]) = *((uint64_t *)&y_src[((i >> 1) * 8 + j) * y_stride + ((i & 1) * 8)]);
+                }
+            }
+            dst += 256;
+        }
+        if (padding_size > 0) {
+            memset_sh4(dst, 0, padding_size);
+            dst += padding_size;
+        }
+    }
+    pvr_dma_yuv_conv(yuv_dma_buffer, dma_buffer_size, 1, NULL, NULL);
+}
+
+static void yuv420p_to_yuv422_sq(uint8_t *src) {
     int i, j, index, x_blk, y_blk;
     size_t dummies = (BYTE_SIZE_FOR_16x16_BLOCK_420 *
         ((pvr_txr_width >> 4) - (frame_txr_width >> 4))) >> 5;
@@ -276,11 +404,10 @@ static void yuv420p_to_yuv422(uint8_t *src) {
     }
 
     sq_unlock();
-    // sem_wait(&yuv_done);
 }
 
-/* FIXME: It's not effective as yuv420p_to_yuv422(), just works. */
-static void yuyv422_to_yuv422(uint8_t *src) {
+// TODO: Add DMA version
+static void yuyv422_to_yuv422_sq(uint8_t *src) {
     int i, j, x_blk, y_blk;
 
     uint8_t u_block[128] __attribute__((aligned(32)));
@@ -320,12 +447,12 @@ static void yuyv422_to_yuv422(uint8_t *src) {
                 }
             }
 
-            pvr_sq_load((void *)0, (void *)u_block, 64, PVR_DMA_YUV);
-            pvr_sq_load((void *)0, (void *)v_block, 64, PVR_DMA_YUV);
-            pvr_sq_load((void *)0, (void *)y_block, 128, PVR_DMA_YUV);
-            pvr_sq_load((void *)0, (void *)(u_block + 64), 64, PVR_DMA_YUV);
-            pvr_sq_load((void *)0, (void *)(v_block + 64), 64, PVR_DMA_YUV);
-            pvr_sq_load((void *)0, (void *)(y_block + 128), 128, PVR_DMA_YUV);
+            pvr_sq_load((void *)PVR_TA_YUV_CONV, (void *)u_block, 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)PVR_TA_YUV_CONV, (void *)v_block, 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)PVR_TA_YUV_CONV, (void *)y_block, 128, PVR_DMA_YUV);
+            pvr_sq_load((void *)PVR_TA_YUV_CONV, (void *)(u_block + 64), 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)PVR_TA_YUV_CONV, (void *)(v_block + 64), 64, PVR_DMA_YUV);
+            pvr_sq_load((void *)PVR_TA_YUV_CONV, (void *)(y_block + 128), 128, PVR_DMA_YUV);
         }
 
         pvr_sq_set32((void *)PVR_TA_YUV_CONV, 0, 
@@ -333,7 +460,6 @@ static void yuyv422_to_yuv422(uint8_t *src) {
                      ((pvr_txr_width >> 4) - (frame_txr_width >> 4)), PVR_DMA_YUV);
     }
 }
-
 
 static void *capture_thread(void *param) {
     uint8_t *frame = NULL;
@@ -373,14 +499,39 @@ static void *capture_thread(void *param) {
             }
             switch(frame_format) {
                 case DREAMEYE_FRAME_FMT_YUV420P:
-                    yuv420p_to_yuv422(frame);
+                    if(frame_txr_width == 160) {
+                        yuv420p_to_yuv422_dma(frame);
+                    }
+                    else {
+                        yuv420p_to_yuv422_sq(frame);
+                    }
                     break;
                 case DREAMEYE_FRAME_FMT_YUYV422:
-                    yuyv422_to_yuv422(frame);
+                    yuyv422_to_yuv422_sq(frame);
                     break;
                 default:
                     got_frame = 0;
                     break;
+            }
+            if(show_stat) {
+                if(fps_start_time == 0) {
+                    fps_start_time = timer_ms_gettime64();
+                }
+                frame_count_for_fps++;
+                uint64_t now = timer_ms_gettime64();
+                uint64_t diff = now - fps_start_time;
+                if(diff >= 100) {
+                    current_fps = (float)frame_count_for_fps * 1000.0f / (float)diff;
+
+                    if(display_fps == 0.0f) {
+                        display_fps = current_fps;
+                    }
+                    else {
+                        display_fps = display_fps * 0.9f + current_fps * 0.1f;
+                    }
+                    fps_start_time = now;
+                    frame_count_for_fps = 0;
+                }
             }
             UnlockVideo();
 
@@ -391,17 +542,14 @@ static void *capture_thread(void *param) {
     }
     return NULL;
 }
-/*
-static void asic_yuv_evt_handler(uint32 code) {
-    (void)code;
-    sem_signal(&yuv_done);
-    dbglog(DBG_DEBUG, "%s: %d\n", __func__, sem_count(&yuv_done));
-}*/
 
 int dreameye_preview_init(maple_device_t *dev, dreameye_preview_t *params) {
     int rs;
 
     if(dreameye) {
+        if(!capturing) {
+            return -1;
+        }
         dreameye_preview_shutdown(dreameye);
     }
 	if(!dev) {
@@ -472,8 +620,13 @@ int dreameye_preview_init(maple_device_t *dev, dreameye_preview_t *params) {
         return -1;
     }
 
-	// asic_evt_set_handler(ASIC_EVT_PVR_YUV_DONE, asic_yuv_evt_handler);
-	// asic_evt_enable(ASIC_EVT_PVR_YUV_DONE, ASIC_IRQ_DEFAULT);
+    const size_t dma_buffer_size = (pvr_txr_width * pvr_txr_height * 3) / 2;
+    yuv_dma_buffer = aligned_alloc(32, dma_buffer_size);
+
+    if(!yuv_dma_buffer) {
+        ds_printf("DS_ERROR: Can't allocate YUV DMA buffer\n");
+        return -1;
+    }
 
     input_event = AddEvent(
         "DreamEye_Input",
@@ -502,21 +655,26 @@ int dreameye_preview_init(maple_device_t *dev, dreameye_preview_t *params) {
 }
 
 void dreameye_preview_shutdown(maple_device_t *dev) {
-    if(!dreameye) {
+    if(!dreameye || !capturing) {
         return;
     }
     capturing = 0;
+
+    RemoveEvent(input_event);
+    RemoveEvent(video_event);
+
     thd_join(thread, NULL);
 
-	// asic_evt_disable(ASIC_EVT_PVR_YUV_DONE, ASIC_IRQ_DEFAULT);
-	// asic_evt_set_handler(ASIC_EVT_PVR_YUV_DONE, NULL);
-
     dreameye_stop_video_camera(dev ? dev : dreameye);
-    dreameye = NULL;
 
-    RemoveEvent(video_event);
-    RemoveEvent(input_event);
-
+    if(stat_font_cxt) {
+        plx_fcxt_destroy(stat_font_cxt);
+        stat_font_cxt = NULL;
+    }
+    if(stat_font) {
+        plx_font_destroy(stat_font);
+        stat_font = NULL;
+    }
     if(is_fullscreen) {
         EnableScreen();
         GUI_Enable();
@@ -524,4 +682,12 @@ void dreameye_preview_shutdown(maple_device_t *dev) {
 
     pvr_mem_free(pvr_txr);
     free(plx_txr);
+
+    if(yuv_dma_buffer) {
+        free(yuv_dma_buffer);
+        yuv_dma_buffer = NULL;
+    }
+
+    dreameye = NULL;
 }
+
