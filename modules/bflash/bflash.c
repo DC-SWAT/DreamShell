@@ -75,7 +75,7 @@ static void send_cmd(bflash_dev_t *dev, uint16 cmd) {
 			case CMD_MANUFACTURER_UNLOCK_DATA:
 				send_unlock_jedec(dev);
 				flashport[dev->unlock[0]] = cmd;
-				timer_spin_sleep(10); // Same as jedec_delay(10000);
+				thd_sleep(10); // Same as jedec_delay(10000);
 				break;
 			case CMD_RESET_DATA:
 				send_unlock_jedec(dev);

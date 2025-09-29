@@ -87,10 +87,6 @@ void *memcpy_sh4(void *dest, const void *src, size_t count);
 void *memmove_sh4(void *dest, const void *src, size_t count);
 void *memset_sh4(void *dest, uint32 val, size_t count);
 
-#define memcpy  memcpy_sh4
-#define memmove memmove_sh4
-#define memset  memset_sh4
-
 #ifndef strcasestr
 char *strcasestr(const char *str1, const char *str2);
 #endif

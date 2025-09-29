@@ -755,7 +755,7 @@ static void __ask_60hz_fade16(unsigned short n)
 			b=0;
 		buff[i+j*640]=((r<<rs) | (g<<gs) | (b<<bs));
 	}
-	timer_spin_sleep(10);
+	thd_sleep(10);
 }
 
 static int __ask_60hz_wait(void)
@@ -779,7 +779,7 @@ static int __ask_60hz_wait(void)
 	for(i=0;i<200;i++)
 	{
 		if (cond && cond->buttons & CONT_Y) return !sdl_dc_default_60hz;
-		timer_spin_sleep(10);
+		thd_sleep(10);
 	}
 
 	return sdl_dc_default_60hz;

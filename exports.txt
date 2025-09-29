@@ -1598,7 +1598,9 @@ plx_fcxt_destroy
 plx_fcxt_char_metrics
 plx_fcxt_str_metrics
 plx_fcxt_setsize
+plx_fcxt_getsize
 plx_fcxt_setpos_pnt
+plx_fcxt_setcolor4f
 plx_fcxt_setpos
 plx_fcxt_getpos
 plx_fcxt_begin
@@ -1695,6 +1697,7 @@ div
 getenv
 setenv
 labs
+llabs
 ldiv
 mblen
 mbstowcs
@@ -1867,6 +1870,7 @@ signal
 gethostname
 __locale_mb_cur_max
 random
+aligned_alloc
 #
 # File System
 opendir
@@ -1971,6 +1975,7 @@ net_icmp_echo_cb
 cond_init
 mutex_init
 sem_init
+mutex_unlock_as_thread
 #
 kthread_key_next
 kthread_key_create
@@ -2054,7 +2059,6 @@ vid_builtin
 #
 arch_main
 arch_set_exit_path
-arch_real_exit
 arch_return
 arch_shutdown
 #
@@ -2196,3 +2200,4 @@ oneshot_timer_setup
 oneshot_timer_start
 oneshot_timer_stop
 oneshot_timer_destroy
+__dreamcast_get_ticks

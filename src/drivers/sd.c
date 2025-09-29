@@ -245,7 +245,7 @@ int sdc_init(void) {
 		return -1;
 	}
 	
-	timer_spin_sleep(20);
+	thd_sleep(20);
 	SELECT();
 	
 	/* 80 dummy clocks */
@@ -258,7 +258,7 @@ int sdc_init(void) {
 #ifdef SD_DEBUG
 		dbglog(DBG_DEBUG, "%s: Enter Idle state\n", __func__);
 #endif
-		timer_spin_sleep(20);
+		thd_sleep(20);
 		
 		i = 0;
 		
