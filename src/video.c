@@ -490,21 +490,18 @@ void ShutdownVideo() {
 		free(plx_screen_txr);
 		plx_screen_txr = NULL;
 	}
-
 	if(plx_cursor_txr) {
 		plx_txr_destroy(plx_cursor_txr);
 		plx_cursor_txr = NULL;
 	}
-
-	if (plx_cxt) {
+	if(plx_cxt) {
 		plx_fcxt_destroy(plx_cxt);
 		plx_cxt = NULL;
 	}
-	if (plx_fnt) {
+	if(plx_fnt) {
 		plx_font_destroy(plx_fnt);
 		plx_fnt = NULL;
 	}
-
 	SDL_Quit();
 }
 
@@ -543,6 +540,7 @@ void SDL_DS_Blit_Textured() {
 		plx_fcxt_end(plx_cxt);
 	}
 
+	plx_mat_identity();
 	plx_mat3d_translate(sdl_dc_trans_x, sdl_dc_trans_y, sdl_dc_trans_z);
 
 	plx_cxt_texture(plx_screen_txr);
@@ -586,44 +584,46 @@ static void *VideoThread(void *ptr) {
 			thd_pass();
 			continue;
 		}
-
 		LockVideo();
 
-		if(screen_changed && draw_screen) {
-			if(video_dma) {
-				dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
-				do {
-					int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
-						sdl_dc_wtex * sdl_dc_htex * 2, 1, NULL, 0);
-					if(rs < 0 && errno == EINPROGRESS) {
-						thd_pass();
-						continue;
-					}
-					break;
-				} while(1);
+		if(draw_screen) {
+			ProcessVideoEventsRender();
+
+			if(screen_changed) {
+				if(video_dma) {
+					dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+					do {
+						int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
+							sdl_dc_wtex * sdl_dc_htex * 2, 1, NULL, 0);
+						if(rs < 0 && errno == EINPROGRESS) {
+							thd_pass();
+							continue;
+						}
+						break;
+					} while(1);
+				}
+				else {
+					pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
+				}
+				screen_changed = 0;
 			}
-			else {
-				pvr_txr_load(sdl_dc_buftex, sdl_dc_memtex, sdl_dc_wtex * sdl_dc_htex * 2);
-			}
-			screen_changed = 0;
 		}
 
 		pvr_scene_begin();
 
 		if(draw_screen) {
 			pvr_list_begin(PVR_LIST_TR_POLY);
-			ScreenFadeStep();
 
-			ProcessVideoEventsRender();
+			ScreenFadeStep();
 			SDL_DS_Blit_Textured();
 			ProcessVideoEventsRenderPost();
 			SDL_DS_Blit_Cursor();
 
 			pvr_list_finish();
-		} else {
+		}
+		else {
 			ProcessVideoEventsRender();
 		}
-
 		pvr_scene_finish();
 		UnlockVideo();
 	}
