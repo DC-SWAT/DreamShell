@@ -145,19 +145,21 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 
 		/* not handled --> panic !! */
 		//irq_dump_regs(0, source);
-		
+
 		dbgio_set_dev_fb();
 		vid_clear(0, 0, 0);
 		ConsoleInformation *con = GetConsole();
-		
+
 		for(i = 16; i > 0; i--) {
 			dbglog(DBG_INFO, "%s\n", con->ConsoleLines[i]);
 		}
-		
-		dbglog(DBG_ERROR, "Unhandled Exception. Reboot after 10 seconds.");
+
+		dbglog(DBG_ERROR, "Unhandled Exception. Reboot after 3 seconds.");
 		
 		//panic("Unhandled IRQ/Exception");
-		timer_spin_sleep(10000);
+		uint64_t timeout = timer_ms_gettime64() + 3000;
+		while(timer_ms_gettime64() < timeout);
+
 		arch_reboot();
 //		asic_sys_reset();
 	}

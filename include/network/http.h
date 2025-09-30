@@ -20,9 +20,9 @@ void httpfs_shutdown();
 
 
 /* DSN utils */
-int dns_init(const uint8 *ip);
+int dns_init(const uint8_t *ip);
 int dns(const char *name, struct in_addr* addr);
-int ds_gethostbyname(const struct sockaddr_in * dnssrv, const char *name, uint8 *ipout);
+int ds_gethostbyname(const struct sockaddr_in * dnssrv, const char *name, uint8_t *ipout);
 
 
 /* URL utils */

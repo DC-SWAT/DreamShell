@@ -53,7 +53,7 @@ int is_hacked_bios();
 int is_custom_bios();
 int is_no_syscalls();
 
-uint32 gzip_get_file_size(const char *filename);
+uint32_t gzip_get_file_size(const char *filename);
 
 void dbgio_set_dev_ds();
 void dbgio_set_dev_scif();
@@ -85,7 +85,7 @@ char *strndup(const char *, size_t);
 /* Optimized memory utils */
 void *memcpy_sh4(void *dest, const void *src, size_t count);
 void *memmove_sh4(void *dest, const void *src, size_t count);
-void *memset_sh4(void *dest, uint32 val, size_t count);
+void *memset_sh4(void *dest, uint32_t val, size_t count);
 
 #ifndef strcasestr
 char *strcasestr(const char *str1, const char *str2);

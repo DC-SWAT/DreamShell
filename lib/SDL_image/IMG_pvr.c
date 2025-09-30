@@ -95,7 +95,7 @@ SDL_Surface *IMG_LoadPVR_RW(SDL_RWops *src)
 	Uint32 Amask;
 	SDL_Surface *surface = NULL;
 	char *error = NULL;
-	uint8 *data;
+	uint8_t *data;
 
 	if ( !src ) {
 		/* The error message has been set in SDL_RWFromFile */
@@ -111,7 +111,7 @@ SDL_Surface *IMG_LoadPVR_RW(SDL_RWops *src)
 	fprintf(stderr, "IMG_LoadPVR_RW: %d bytes\n", len);
 #endif
 	
-	data = (uint8*) memalign(32, len);
+	data = (uint8_t*) aligned_alloc(32, len);
 	
 	if(data == NULL) {
 		error = "no free memory";

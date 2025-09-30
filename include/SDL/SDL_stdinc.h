@@ -74,7 +74,7 @@
 #ifdef __DREAMCAST__
 void *memcpy_sh4(void *dest, const void *src, size_t count);
 void *memmove_sh4(void *dest, const void *src, size_t count);
-void *memset_sh4(void *dest, uint32 val, size_t count);
+void *memset_sh4(void *dest, uint32_t val, size_t count);
 #endif
 
 /* The number of elements in an array */
