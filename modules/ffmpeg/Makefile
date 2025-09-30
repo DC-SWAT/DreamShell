@@ -1,45 +1,43 @@
 #
 # ffmpeg module for DreamShell
-# Copyright (C)2011-2024 SWAT
+# Copyright (C)2011-2025 SWAT
 # http://www.dc-swat.ru
 #
 
 TARGET_NAME = ffmpeg
-OBJS = module.o player.o aica.o mpg123.o oggvorbis.o #xvid.o
-DBG_LIBS = -lds -lbzip2 -loggvorbis -lmpg123 #-lxvidcore
-LIBS = -lavcodec -lavformat -lavutil #-lswscale
+OBJS = module.o player.o pcm.o
+DBG_LIBS = -lds
+LIBS = -lavcodec -lavformat -lavutil
 EXPORTS_FILE = exports.txt
+# EXPORTS_FILE = exports_ffmpeg.txt
 GCC_LIB =
+FFMPEG_PATH = ffmpeg-0.6.3
+# FFMPEG_PATH = FFmpeg
 
-VER_MAJOR = 0
-VER_MINOR = 6
-VER_MICRO = 3
+VER_MAJOR = 2
+VER_MINOR = 0
+VER_MICRO = 0
 
-KOS_CFLAGS += -I./include
+KOS_CFLAGS += -I./include -O3
 KOS_LIB_PATHS += -L./lib
 
-all: rm-elf ffmpeg-0.6.3/config.h include/libavcodec/avcodec.h
+all: rm-elf $(FFMPEG_PATH)/config.h include/libavcodec/avcodec.h
 
 include ../../sdk/Makefile.loadable
 
-ffmpeg-0.6.3/config.h:
-	-mv $(KOS_PORTS)/lib/libogg.a $(KOS_PORTS)/lib/libogg-kos.a
-	-mv $(KOS_PORTS)/lib/libvorbis.a $(KOS_PORTS)/lib/libvorbis-kos.a
+$(FFMPEG_PATH)/config.h:
 	./config.sh
+# git clone --depth 1 --branch release/2.2 https://github.com/FFmpeg/FFmpeg.git
 
 include/libavcodec/avcodec.h:
-	@-mv $(KOS_PORTS)/lib/libogg.a $(KOS_PORTS)/lib/libogg-kos.a
-	@-mv $(KOS_PORTS)/lib/libvorbis.a $(KOS_PORTS)/lib/libvorbis-kos.a
-	cd ./ffmpeg-0.6.3 && make install
-	-mv $(KOS_PORTS)/lib/libogg-kos.a $(KOS_PORTS)/lib/libogg.a
-	-mv $(KOS_PORTS)/lib/libvorbis-kos.a $(KOS_PORTS)/lib/libvorbis.a
+	cd ./$(FFMPEG_PATH) && make install
 
 clean: rm-elf
 	-rm -f $(OBJS)
-	cd ./ffmpeg-0.6.3 && make clean
+	cd ./$(FFMPEG_PATH) && make clean
 	-rm -R ./include
 	-rm -R ./lib
-	-rm -f ./ffmpeg-0.6.3/config.h
+	-rm -f ./$(FFMPEG_PATH)/config.h
 
 rm-elf:
 	-rm -f $(TARGET) || true
