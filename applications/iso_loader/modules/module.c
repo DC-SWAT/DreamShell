@@ -9,6 +9,7 @@
 #include <ds.h>
 #include <isoldr.h>
 #include <vmu.h>
+#include <ffmpeg.h>
 
 #include <stdbool.h>
 #include <kos/md5.h>
@@ -20,6 +21,28 @@ DEFAULT_MODULE_EXPORTS(app_iso_loader);
 
 #define SCREENSHOT_HOTKEY (CONT_START | CONT_A | CONT_B)
 #define ALT_BOOT_FILE "2ND_READ.BIN"
+#define FFMPEG_MODULES_COUNT 1
+
+static const char *ffmpeg_module_names[FFMPEG_MODULES_COUNT] = {
+	// "bzip2",
+	// "mpg123",
+	"ffmpeg"
+};
+
+static void getWidgetAbsolutePosition(GUI_Widget *widget, int *x, int *y, int *w, int *h) {
+	SDL_Rect area = GUI_WidgetGetArea(widget);
+	*x = area.x;
+	*y = area.y;
+	*w = area.w;
+	*h = area.h;
+	widget = (GUI_Widget*)GUI_WidgetGetParent((GUI_Object*)widget);
+	while (widget) {
+		area = GUI_WidgetGetArea(widget);
+		*x += area.x;
+		*y += area.y;
+		widget = (GUI_Widget*)GUI_WidgetGetParent((GUI_Object*)widget);
+	}
+}
 
 static struct {
 
@@ -114,13 +137,29 @@ static struct {
 	uint32_t pa[2];
 	uint32_t pv[2];
 
+	bool ffmpeg_modules_loaded;
+	kthread_t *ffmpeg_thd;
+	Module_t *ffmpeg_modules[FFMPEG_MODULES_COUNT];
+	int (*ffplay)(const char *file, ffplay_params_t *params);
+	void (*ffplay_shutdown)(void);
+	void (*ffplay_toggle_pause)(void);
+	int (*ffplay_is_playing)(void);
+	int (*ffplay_is_paused)(void);
+
+	kthread_t *select_thd;
+	mutex_t select_mutex;
+	condvar_t select_cond;
+	char select_filename[NAME_MAX];
+	volatile uint32_t select_id;
+	volatile int select_new;
+	volatile int thd_running;
+
 } self;
 
 void isoLoader_DefaultPreset();
 void isoLoader_RemovePreset(GUI_Widget *widget);
 int isoLoader_LoadPreset(GUI_Widget *widget);
 int isoLoader_SavePreset(GUI_Widget *widget);
-void isoLoader_ResizeUI();
 void isoLoader_toggleMemory(GUI_Widget *widget);
 void isoLoader_toggleBootMode(GUI_Widget *widget);
 void isoLoader_toggleIconSize(GUI_Widget *widget);
@@ -134,27 +173,25 @@ static int canUseTrueAsyncDMA(void) {
 
 static char *relativeFilename(char *filename) {
 	static char filepath[NAME_MAX];
-	char path[NAME_MAX];
-	int len;
-
-	if (strchr(self.filename, '/')) {
-		len = strlen(strchr(self.filename, '/'));
-	} else {
-		len = strlen(self.filename);
-	}
-
-	memset(filepath, 0, sizeof(filepath));
-	memset(path, 0, sizeof(path));
-	strncpy(path, self.filename, strlen(self.filename) - len);
-
-	snprintf(filepath, NAME_MAX, "%s/%s/%s",
-		GUI_FileManagerGetPath(self.filebrowser), path, filename);
+	makeGameRelativePath(filepath, sizeof(filepath), GUI_FileManagerGetPath(self.filebrowser), self.filename, filename);
 	return filepath;
 }
 
 void isoLoader_Rotate_Image(GUI_Widget *widget) {
 	(void)widget;
 	setIcon(GUI_SurfaceGetWidth(self.slnkico));
+}
+
+void FFplayTogglePlayback(GUI_Widget *widget) {
+	if(!self.ffplay || !self.ffplay_is_playing()) {
+		return;
+	}
+	else if(widget != self.games && !self.ffplay_is_paused()) {
+		self.ffplay_toggle_pause();
+	}
+	else if(widget == self.games && self.ffplay_is_paused()) {
+		self.ffplay_toggle_pause();
+	}
 }
 
 void isoLoader_ShowPage(GUI_Widget *widget) {
@@ -183,12 +220,14 @@ void isoLoader_ShowPage(GUI_Widget *widget) {
 }
 
 void isoLoader_ShowSettings(GUI_Widget *widget) {
+	FFplayTogglePlayback(widget);
 	ScreenFadeOutEx("Settings", 1);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 }
 
 void isoLoader_ShowExtensions(GUI_Widget *widget) {
+	FFplayTogglePlayback(widget);
 	ScreenFadeOutEx("Extensions", 1);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
@@ -203,6 +242,11 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 	isoLoader_SavePreset(NULL);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
+
+	if(self.ffplay && self.ffplay_is_playing()) {
+		thd_sleep(250);
+		FFplayTogglePlayback(widget);
+	}
 }
 
 static void check_link_file(void) {
@@ -221,6 +265,7 @@ static void check_link_file(void) {
 
 void isoLoader_ShowLink(GUI_Widget *widget) {
 
+	FFplayTogglePlayback(widget);
 	ScreenFadeOutEx("Shortcut", 1);
 
 	GUI_WidgetSetState(self.rotate180, 0);
@@ -404,6 +449,9 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	int i;
 
 	StopCDDATrack();
+	if(self.ffplay) {
+		self.ffplay_shutdown();
+	}
 	snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", env, GUI_TextEntryGetText(self.linktext));
 
 	fd = fopen(save_file, "w");
@@ -1072,15 +1120,17 @@ void isoLoader_Run(GUI_Widget *widget) {
 				GUI_FileManagerGetPath(self.filebrowser), 
 				self.filename);
 
+	StopCDDATrack();
+	if(self.ffplay && self.ffplay_is_playing()) {
+		self.ffplay_shutdown();
+		thd_sleep(50);
+	}
 	if(!GUI_WidgetGetState(self.fastboot)) {
 		ScreenFadeOutEx("Starting...", 1);
 	}
-	StopCDDATrack();
-
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
 		isoLoader_SavePreset(NULL);
 	}
-
 	self.isoldr = isoldr_get_info(filepath, 0);
 
 	if(self.isoldr == NULL) {
@@ -1248,6 +1298,121 @@ void isoLoader_Run(GUI_Widget *widget) {
 	free(self.isoldr);
 }
 
+static void unloadFFmpegModules() {
+    if(self.ffmpeg_modules_loaded) {
+        for(int i = 0; i < FFMPEG_MODULES_COUNT; i++) {
+            if(self.ffmpeg_modules[i]) {
+                CloseModule(self.ffmpeg_modules[i]);
+            }
+        }
+    }
+}
+
+static void loadFFmpegModules() {
+    if(!self.ffmpeg_modules_loaded) {
+        for(int i = 0; i < FFMPEG_MODULES_COUNT; i++) {
+            char fn[NAME_MAX];
+            snprintf(fn, NAME_MAX, "%s/modules/%s.klf", getenv("PATH"), ffmpeg_module_names[i]);
+            self.ffmpeg_modules[i] = OpenModule(fn);
+        }
+        self.ffmpeg_modules_loaded = true;
+        self.ffplay = (int (*)(const char *, ffplay_params_t *))GET_EXPORT_ADDR("ffplay");
+        self.ffplay_shutdown = (void (*)(void))GET_EXPORT_ADDR("ffplay_shutdown");
+        self.ffplay_toggle_pause = (void (*)(void))GET_EXPORT_ADDR("ffplay_toggle_pause");
+        self.ffplay_is_playing = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_playing");
+        self.ffplay_is_paused = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_paused");
+    }
+}
+
+static void *selectFile_worker(void *p) {
+	(void)p;
+	char filename[NAME_MAX];
+	uint32_t last_id = 0;
+	int trailer_playing = 0;
+	char *trailer_path = NULL;
+
+	mutex_lock(&self.select_mutex);
+
+	while(self.thd_running) {
+
+		while(!self.select_new && self.thd_running) {
+			cond_wait(&self.select_cond, &self.select_mutex);
+		}
+
+		if(!self.thd_running) {
+			break;
+		}
+
+		strcpy(filename, self.select_filename);
+		self.select_new = 0;
+		last_id = self.select_id;
+
+		mutex_unlock(&self.select_mutex);
+
+		StopCDDATrack();
+		if(self.ffplay && self.ffplay_is_playing()) {
+			self.ffplay_shutdown();
+		}
+
+		strncpy(self.filename, filename, NAME_MAX);
+		trailer_path = relativeFilename("trailer.avi");
+		mutex_unlock(&self.select_mutex);
+
+		showCover();
+		isoLoader_LoadPreset(NULL);
+
+		mutex_lock(&self.select_mutex);
+		if(last_id != self.select_id) {
+			mutex_unlock(&self.select_mutex);
+			goto next_item;
+		}
+		mutex_unlock(&self.select_mutex);
+
+		trailer_playing = 0;
+
+		if(FileExists(trailer_path)) {
+			loadFFmpegModules();
+
+			if(self.ffplay) {
+
+				ffplay_params_t params;
+				memset(&params, 0, sizeof(params));
+				params.scale = 1.0f;
+				params.loop = 1;
+
+				getWidgetAbsolutePosition(self.cover_widget,
+					&params.x, &params.y,
+					&params.width, &params.height);
+
+				if(self.ffplay(trailer_path, &params) == 0) {
+					trailer_playing = 1;
+					thd_sleep(50);
+				}
+			}
+		}
+
+		if(GUI_WidgetGetState(self.cdda) && !trailer_playing) {
+			char filepath[NAME_MAX];
+			size_t track_size = GetCDDATrackFilename(5,
+				GUI_FileManagerGetPath(self.filebrowser), filename, filepath);
+
+			if(track_size) {
+				do {
+					track_size = GetCDDATrackFilename((random() % 15) + 4,
+									GUI_FileManagerGetPath(self.filebrowser), filename, filepath);
+				} while(track_size == 0);
+				PlayCDDATrack(filepath, 3);
+			}
+		}
+
+	next_item:
+		mutex_lock(&self.select_mutex);
+	}
+
+	mutex_unlock(&self.select_mutex);
+	return NULL;
+}
+
 static void selectFile(char *name, int index) {
 
 	GUI_WidgetSetEnabled(self.btn_run, 1);
@@ -1257,25 +1422,15 @@ static void selectFile(char *name, int index) {
 	}
 
 	self.current_item = index;
-	strncpy(self.filename, name, NAME_MAX);
+	// strncpy(self.filename, name, NAME_MAX);
 	highliteDevice();
-	StopCDDATrack();
-	showCover();
-	isoLoader_LoadPreset(NULL);
 
-	if (GUI_WidgetGetState(self.cdda)) {
-		char filepath[NAME_MAX];
-		size_t track_size = GetCDDATrackFilename(5,
-			GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
-
-		if (track_size) {
-			do {
-				track_size = GetCDDATrackFilename((random() % 15) + 4,
-								GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
-			} while(track_size == 0);
-			PlayCDDATrack(filepath, 3);
-		}
-	}
+	mutex_lock(&self.select_mutex);
+	strncpy(self.select_filename, name, NAME_MAX);
+	self.select_new = 1;
+	self.select_id++;
+	cond_signal(&self.select_cond);
+	mutex_unlock(&self.select_mutex);
 
 	if (GUI_WidgetGetFlags(self.settings) & WIDGET_DISABLED) {
 		GUI_WidgetSetEnabled(self.settings, 1);
@@ -1473,13 +1628,23 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	uint32 heap = HEAP_MODE_AUTO;
 	uint32 cdda_mode = CDDA_MODE_DISABLED;
 	int vmu_num = 0;
+	int ffplay_paused = 0;
 
-	StopCDDATrack();
+	if(self.ffplay && self.ffplay_is_playing() && !self.ffplay_is_paused()) {
+		self.ffplay_toggle_pause();
+		ffplay_paused = 1;
+	}
+	PauseCDDATrack();
+
 	filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
 
 	fd = fs_open(filename, O_CREAT | O_TRUNC | O_WRONLY);
 
 	if(fd == FILEHND_INVALID) {
+		if(ffplay_paused) {
+			self.ffplay_toggle_pause();
+		}
+		ResumeCDDATrack();
 		return -1;
 	}
 
@@ -1568,6 +1733,11 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 
 	fs_write(fd, result, strlen(result));
 	fs_close(fd);
+
+	if(ffplay_paused) {
+		self.ffplay_toggle_pause();
+	}
+	ResumeCDDATrack();
 
 	if(widget) {
 		GUI_LabelSetText(self.preset_status, "Saved");
@@ -1816,6 +1986,13 @@ static const char *setup_device_partitions(const char *dev_prefix, GUI_Widget *b
 	return NULL;
 }
 
+static void *load_ffmpeg_modules_thd(void *param) {
+    (void)param;
+    loadFFmpegModules();
+	self.ffmpeg_thd = NULL;
+    return NULL;
+}
+
 void isoLoader_Init(App_t *app) {
 
 	GUI_Widget *w, *b;
@@ -2056,7 +2233,16 @@ void isoLoader_Init(App_t *app) {
 			GUI_LabelSetText(w, vers);
 		}
 
-		isoLoader_ResizeUI();
+		if(strncmp(getenv("PATH"), "/sd", 3)) {
+			self.ffmpeg_thd = thd_create(0, load_ffmpeg_modules_thd, NULL);
+		}
+		
+		self.thd_running = 1;
+		self.select_new = 0;
+		self.select_id = 0;
+		mutex_init(&self.select_mutex, MUTEX_TYPE_NORMAL);
+		cond_init(&self.select_cond);
+		self.select_thd = thd_create(0, selectFile_worker, NULL);
 	}
 	else {
 		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n", 
@@ -2064,58 +2250,36 @@ void isoLoader_Init(App_t *app) {
 	}
 }
 
-void isoLoader_ResizeUI()
-{
-	SDL_Surface *screen = GetScreen();
-	GUI_Widget *filemanager_bg = APP_GET_WIDGET("filemanager_bg");
-	GUI_Widget *cover_bg = APP_GET_WIDGET("cover_bg");
-	GUI_Widget *title_panel = APP_GET_WIDGET("title_panel");
+static void release_resources(void) {
+	StopCDDATrack();
 
-	int screen_width = GetScreenWidth();
-	SDL_Rect filemanager_bg_rect = GUI_WidgetGetArea(filemanager_bg);
-	SDL_Rect cover_bg_rect = GUI_WidgetGetArea(cover_bg);
-	SDL_Rect title_rect = GUI_WidgetGetArea(title_panel);
+	if(self.select_thd) {
+		mutex_lock(&self.select_mutex);
+		self.thd_running = 0;
+		cond_signal(&self.select_cond);
+		mutex_unlock(&self.select_mutex);
+		thd_join(self.select_thd, NULL);
+		self.select_thd = NULL;
+	}
 
-	const int gap = 19;
+	if(self.ffmpeg_thd) {
+		thd_join(self.ffmpeg_thd, NULL);
+	}
 
-	int filemanager_bg_width = screen_width - cover_bg_rect.w - gap * 3;
-	int filemanager_bg_height = filemanager_bg_rect.h;
-
-	GUI_Surface *fm_bg = GUI_SurfaceCreate("fm_bg", 
-											screen->flags, 
-											filemanager_bg_width, 
-											filemanager_bg_height,
-											screen->format->BitsPerPixel, 
-											screen->format->Rmask, 
-											screen->format->Gmask, 
-											screen->format->Bmask, 
-											screen->format->Amask);
-
-	GUI_SurfaceFill(fm_bg, NULL, GUI_SurfaceMapRGB(fm_bg, 255, 255, 255));
-	SDL_Rect grayRect;
-	grayRect.x = 6;
-	grayRect.y = 6;
-	grayRect.w = filemanager_bg_width - grayRect.x * 2;
-	grayRect.h = filemanager_bg_height - grayRect.y * 2;
-	GUI_SurfaceFill(fm_bg, &grayRect, GUI_SurfaceMapRGB(fm_bg, 0xCC, 0xE4, 0xF0));
-
-	GUI_PanelSetBackground(filemanager_bg, fm_bg);
-	GUI_ObjectDecRef((GUI_Object *) fm_bg);
-
-	int delta_x = filemanager_bg_width + gap * 2 - cover_bg_rect.x;
-
-	GUI_WidgetSetPosition(cover_bg, cover_bg_rect.x + delta_x, cover_bg_rect.y);
-	GUI_WidgetSetPosition(title_panel, title_rect.x + delta_x, title_rect.y);
-	GUI_WidgetSetSize(filemanager_bg, filemanager_bg_width, filemanager_bg_height);
-	GUI_FileManagerResize(self.filebrowser, 
-						  filemanager_bg_width - grayRect.x * 2, 
-						  filemanager_bg_height - grayRect.y * 2);
+	if(self.ffplay) {
+		self.ffplay_shutdown();
+		unloadFFmpegModules();
+		self.ffplay = NULL;
+	}
+	unmountAllPresetsRomdisks();
 }
 
 void isoLoader_Shutdown(App_t *app) {
 	(void)app;
-	StopCDDATrack();
-	unmountAllPresetsRomdisks();
+	release_resources();
+
+	mutex_destroy(&self.select_mutex);
+	cond_destroy(&self.select_cond);
 
 	if(self.isoldr) {
 		free(self.isoldr);
@@ -2126,7 +2290,7 @@ void isoLoader_Exit(GUI_Widget *widget) {
 
 	(void)widget;
 	App_t *app = NULL;
-	StopCDDATrack();
+	release_resources();
 
 	if(self.have_args == true) {
 		

@@ -33,6 +33,8 @@ char *fix_spaces(char *str);
 int conf_parse(isoldr_conf *cfg, const char *filename);
 
 int getDeviceType(const char *dir);
+void getFirstPathComponent(const char *path, char *result);
+void makeGameRelativePath(char *dst, size_t dst_size, const char *base_path, const char *game_path, const char *filename);
 int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename);
 char *makePresetFilename(const char *dir, uint8 *md5);
 
@@ -44,6 +46,8 @@ char *findPresetFile(const char *dir, uint8 *md5, bool default_only);
 size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, char *result);
 void PlayCDDATrack(const char *file, int loop);
 void StopCDDATrack();
+void PauseCDDATrack();
+void ResumeCDDATrack();
 
 char *lib_get_name();
 uint32 lib_get_version();

@@ -177,21 +177,31 @@ int checkGDI(char *filepath, const char *fmPath, char *dirname, char *filename) 
 	return 0;
 }
 
+
+void makeGameRelativePath(char *dst, size_t dst_size, const char *base_path, const char *game_path, const char *filename) {
+    char game_dir[NAME_MAX];
+    getFirstPathComponent(game_path, game_dir);
+    snprintf(dst, dst_size, "%s/%s/%s", base_path, game_dir, filename);
+}
+
+
+void getFirstPathComponent(const char *path, char *result) {
+    const char *p = strchr(path, '/');
+    memset(result, 0, NAME_MAX);
+
+    if (p) {
+        size_t len = p - path;
+        strncpy(result, path, len);
+    }
+}
+
+
 size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, char *result) {
-	char path[NAME_MAX];
-	int len = 0;
-	int size = 0;
+	char track_file[16];
+	int size = 0, len;
 
-	if (strchr(filename, '/')) {
-		len = strlen(strchr(filename, '/'));
-	} else {
-		len = strlen(filename);
-	}
-
-	memset(result, 0, NAME_MAX);
-	memset(path, 0, NAME_MAX);
-	strncpy(path, filename, strlen(filename) - len);
-	snprintf(result, NAME_MAX, "%s/%s/track%02d.raw", fpath, path, num);
+	snprintf(track_file, sizeof(track_file), "track%02d.raw", num);
+	makeGameRelativePath(result, NAME_MAX, fpath, filename, track_file);
 
 	size = FileSize(result);
 
@@ -209,6 +219,23 @@ size_t GetCDDATrackFilename(int num, const char *fpath, const char *filename, ch
 
 static wav_stream_hnd_t wav_hnd = SND_STREAM_INVALID;
 static int wav_inited = 0;
+static int cdda_paused = 0;
+
+void PauseCDDATrack() {
+	if(wav_inited && wav_hnd != SND_STREAM_INVALID && wav_is_playing(wav_hnd)) {
+		wav_pause(wav_hnd);
+		cdda_paused = 1;
+	} else {
+		cdda_paused = 0;
+	}
+}
+
+void ResumeCDDATrack() {
+	if(cdda_paused) {
+		wav_play(wav_hnd);
+		cdda_paused = 0;
+	}
+}
 
 void StopCDDATrack() {
 	if(wav_inited) {

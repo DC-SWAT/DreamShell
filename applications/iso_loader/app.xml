@@ -14,65 +14,65 @@
 		<image name="logo" src="images/logo.png" />
 		<image name="stdico" src="images/gd.png" />
 	
-		<surface height="104" name="head_bg" width="100%">
-			<fill color="#DDDDDD" height="366" />
-			<fill color="#31799F" height="114" width="100%" y="366" />
+		<surface height="104" name="head_bg" width="640">
+			<fill color="#A0DDDD" height="366" />
+			<fill color="#165e93" height="114" width="640" y="366" />
 			
-			<blit height="79" surface="logo" width="19%" x="1%" y="14" />
+			<blit height="79" surface="logo" width="122" x="6" y="14" />
 		</surface>
 
-		<surface height="380" name="games_bg" width="100%">
-			<fill color="#DDDDDD" height="266" />
-			<fill color="#31799F" height="114" width="100%" y="266" />
+		<surface height="380" name="games_bg" width="640">
+			<fill color="#A0DDDD" height="266" />
+			<fill color="#165e93" height="114" width="640" y="266" />
 		</surface>
 
-		<surface height="380" name="settings_bg" width="100%">
-			<fill color="#DDDDDD" height="266" />
-			<fill color="#31799F" height="114" width="100%" y="262" />
+		<surface height="380" name="settings_bg" width="640">
+			<fill color="#A0DDDD" height="266" />
+			<fill color="#165e93" height="114" width="640" y="262" />
 
-			<fill color="#FFFFFF" height="312" width="94%" x="3%" y="10" />
-			<fill color="#CCE4F0" height="297" width="92%" x="4%" y="20" />
+			<fill color="#B0B0B0" x="20" y="14" width="601" height="309" />
+			<fill color="#E0FFFF" x="19" y="13" width="601" height="309" />
+			<fill color="#e5e3e7" x="25" y="19" width="589" height="297" />
 		</surface>
 
 		<surface height="269" width="269" name="overlay_bg">
-			<fill color="#FFFFFF"/>
+			<fill color="#B0B0B0"/>
+			<fill color="#FFFFFF" width="268" height="268"/>
 			<fill color="#61BEEC" height="256" width="256" x="6" y="6" />
 		</surface>
 
 		<image name="overlay" src="images/cover_overlay.png" />
 		<image name="cover" src="images/cover_image.png" />
 
-		<surface height="30" name="item-normal" width="50%">
-			<fill color="#CCE4F0" />
-			<fill color="#FFFFFF" height="2" y="28" />
+		<surface height="30" name="item-normal" width="320">
+			<fill color="#f1ecf5" />
+			<fill color="#FFFFFF" height="1" y="28" />
+			<fill color="#d5ceed" height="1" y="29" />
 		</surface>
-		<surface height="30" name="item-focus" width="50%">
+		<surface height="30" name="item-focus" width="320">
 			<fill color="#85C4E2" />
-			<fill color="#FFFFFF" height="2" y="28" />
+			<fill color="#FFFFFF" height="1" y="28" />
+			<fill color="#d5ceed" height="1" y="29" />
 		</surface>
-		<surface height="30" name="item-selected" width="50%">
+		<surface height="30" name="item-selected" width="320">
 			<fill color="#D4F129" />
-			<fill color="#FFFFFF" height="2" y="28" />
+			<fill color="#FFFFFF" height="1" y="28" />
+			<fill color="#d5ceed" height="1" y="29" />
 		</surface>
 		<surface width="18" height="20" name="sbb-normal">
-			<fill color="#FFFFFF" />
-			<fill x="1" width="17" color="#85C4E2" />
+			<fill color="#85C4E2" />
 		</surface>
 		<surface width="18" height="20" name="sbb-focus">
-			<fill color="#FFFFFF" />
-			<fill x="1" width="17" color="#61BDEC" />
+			<fill color="#61BDEC" />
 		</surface>
 		<surface width="18" height="20" name="sbb-pressed">
-			<fill color="#FFFFFF" />
-			<fill x="1" width="17" color="#D4F129" />
+			<fill color="#D4F129" />
 		</surface>
 		<surface width="18" height="20" name="sbb-disabled">
-			<fill color="#FFFFFF" />
-			<fill x="1" width="17" color="#CCE4F0" />
+			<fill color="#CCE4F0" />
 		</surface>
 		<surface width="18" height="40" name="sb-knob">
-			<fill color="#FFFFFF" />
-			<fill x="1" y="1" width="17" height="38" color="#85C4E2" />
+			<fill color="#85C4E2" />
 		</surface>
 		<surface width="18" height="260" name="sb-back">
 			<fill color="#FFFFFF" />
@@ -82,8 +82,14 @@
 			<fill color="#FFFFFF" />
 			<fill width="1" color="#CCE4F0" />
 		</surface>
-		<surface width="80%" height="200" name="fw_browser_bg">
-			<fill color="#FFFFFF" />
+		<surface name="fm_background" width="314" height="312">
+			<fill color="#B0B0B0"/>
+			<fill color="#FFFFFF" width="313" height="311"/>
+			<fill color="#CCE4F0" x="6" y="6" width="301" height="299" />
+		</surface>
+		<surface width="226" height="200" name="fw_browser_bg">
+			<fill color="#B0B0B0" />
+			<fill color="#FFFFFF" height="199" />
 		</surface>
 
 		<image name="btn_cd_norm" src="images/btn_cd_norm.png" />
@@ -122,74 +128,71 @@
 		<image name="iRunDisabled" src="images/btn_launch_disabled.png" />
 
 		<surface height="25" name="sw_btn" width="60">
-			<fill color="#FFFFFF" />
-			<fill color="#31799F" height="86%" width="90%" x="5%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#FFFFFF" width="59" height="24" />
+			<fill color="#31799F" height="20" width="55" x="2" y="2" />
 		</surface>
 		<surface height="25" name="sw_btn_hl" width="60">
-			<fill color="#FFFFFF" />
-			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#FFFFFF" width="59" height="24" />
+			<fill color="#61BDEC" height="20" width="55" x="2" y="2" />
 		</surface>
 		<surface height="25" name="sw_btn_on" width="60">
-			<fill color="#31799F" />
-			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#31799F" width="59" height="24" />
+			<fill color="#61BDEC" height="20" width="55" x="2" y="2" />
 		</surface>
 		<surface height="25" name="sw_btn_on_hl" width="60">
-			<fill color="#31799F" />
-			<fill color="#61BDEC" height="86%" width="90%" x="5%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#31799F" width="59" height="24" />
+			<fill color="#61BDEC" height="20" width="55" x="2" y="2" />
 		</surface>
 
 		<surface height="25" name="sw_btn_sm" width="40">
-			<fill color="#FFFFFF" />
-			<fill color="#31799F" height="86%" width="90%" x="7%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#FFFFFF" width="39" height="24" />
+			<fill color="#31799F" height="20" width="35" x="2" y="2" />
 		</surface>
 		<surface height="25" name="sw_btn_sm_hl" width="40">
-			<fill color="#FFFFFF" />
-			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#FFFFFF" width="39" height="24" />
+			<fill color="#61BDEC" height="20" width="35" x="2" y="2" />
 		</surface>
 		<surface height="25" name="sw_btn_sm_on" width="40">
-			<fill color="#31799F" />
-			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#31799F" width="39" height="24" />
+			<fill color="#61BDEC" height="20" width="35" x="2" y="2" />
 		</surface>
 		<surface height="25" name="sw_btn_sm_on_hl" width="40">
-			<fill color="#31799F" />
-			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
+			<fill color="#B0B0B0" />
+			<fill color="#31799F" width="39" height="24" />
+			<fill color="#61BDEC" height="20" width="35" x="2" y="2" />
 		</surface>
 
-		<surface height="25" name="preset_btn" width="70">
-			<fill color="#FFFFFF" />
-			<fill color="#31799F" height="86%" width="90%" x="7%" y="8%" />
-		</surface>
-		<surface height="25" name="preset_btn_hl" width="70">
-			<fill color="#FFFFFF" />
-			<fill color="#61BDEC" height="86%" width="90%" x="7%" y="8%" />
-		</surface>
-		<surface height="25" name="preset_btn_pressed" width="70">
-			<fill color="#FFFFFF" />
-			<fill color="#85C4E2" height="86%" width="90%" x="7%" y="8%" />
-		</surface>
 
-		<surface height="50" width="50%" name="menu_bg">
-			<fill color="#FFFFFF" />
-			<fill color="#85C4E2" height="48" x="1" y="1" />
+		<surface height="50" width="320" name="menu_bg">
+			<fill color="#B0B0B0" />
+			<fill color="#FFFFFF" height="49" />
+			<fill color="#85C4E2" height="47" x="1" y="1" />
 		</surface>
 
 	</resources>
-	<body height="480" onload="export:isoLoader_Init()" onunload="export:isoLoader_Shutdown()" width="100%" name="main_body">
+	<body width="640" height="480" onload="export:isoLoader_Init()" onunload="export:isoLoader_Shutdown()" name="main_body">
 		<panel background="head_bg" height="104">
-			<panel height="25" width="23%" x="21%" y="70">
-				<input disabled="btn_sd_disabled" height="23" highlight="btn_sd_over" inactive="true" name="btn_sd" normal="btn_sd_norm" pressed="btn_sd_over" type="button" width="21%" />
-				<input disabled="btn_cd_disabled" height="23" highlight="btn_cd_over" inactive="true" name="btn_cd" normal="btn_cd_norm" pressed="btn_cd_over" type="button" width="21%" />
-				<input disabled="btn_hdd_disabled" height="23" highlight="btn_hdd_over" inactive="true" name="btn_hdd" normal="btn_hdd_norm" pressed="btn_hdd_over" type="button" width="28%" />
-				<input disabled="btn_pc_disabled" height="23" highlight="btn_pc_over" inactive="true" name="btn_pc" normal="btn_pc_norm" pressed="btn_pc_over" type="button" width="26%" />
+			<panel height="25" width="147" x="134" y="70">
+				<input disabled="btn_sd_disabled" height="23" highlight="btn_sd_over" inactive="true" name="btn_sd" normal="btn_sd_norm" pressed="btn_sd_over" type="button" width="31" />
+				<input disabled="btn_cd_disabled" height="23" highlight="btn_cd_over" inactive="true" name="btn_cd" normal="btn_cd_norm" pressed="btn_cd_over" type="button" width="31" />
+				<input disabled="btn_hdd_disabled" height="23" highlight="btn_hdd_over" inactive="true" name="btn_hdd" normal="btn_hdd_norm" pressed="btn_hdd_over" type="button" width="41" />
+				<input disabled="btn_pc_disabled" height="23" highlight="btn_pc_over" inactive="true" name="btn_pc" normal="btn_pc_norm" pressed="btn_pc_over" type="button" width="38" />
 			</panel>
-			<panel height="50" width="50%" x="55%" y="15">
+			<panel height="50" width="320" x="352" y="15">
 				<panel background="menu_bg">
 					<panel x="10" y="6">
-						<input disabled="iGamesDis" height="36" highlight="iGamesHigh" inactive="true" name="games" normal="iGamesNorm" onclick="export:isoLoader_ShowGames()" pressed="iGamesNorm" type="button" width="18%" x="0%" y="1" />
-						<input disabled="iSetDis" height="36" highlight="iSetHigh" inactive="true" name="settings" normal="iSetNorm" onclick="export:isoLoader_ShowSettings()" pressed="iSetNorm" type="button" width="18%" x="18%" />
-						<input disabled="iExtDis" height="36" highlight="iExtHigh" inactive="true" name="extensions" normal="iExtNorm" onclick="export:isoLoader_ShowExtensions()" pressed="iExtNorm" type="button" width="18%" x="36%"/>
-						<input disabled="iLinkDis" height="36" highlight="iLinkHigh" inactive="true" name="link" normal="iLinkNorm" onclick="export:isoLoader_ShowLink()" pressed="iLinkNorm" type="button" width="18%" x="54%"/>
-						<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="18%" x="72%" />
+						<input disabled="iGamesDis" height="36" highlight="iGamesHigh" inactive="true" name="games" normal="iGamesNorm" onclick="export:isoLoader_ShowGames()" pressed="iGamesNorm" type="button" width="58" x="0" y="1" />
+						<input disabled="iSetDis" height="36" highlight="iSetHigh" inactive="true" name="settings" normal="iSetNorm" onclick="export:isoLoader_ShowSettings()" pressed="iSetNorm" type="button" width="58" x="58" />
+						<input disabled="iExtDis" height="36" highlight="iExtHigh" inactive="true" name="extensions" normal="iExtNorm" onclick="export:isoLoader_ShowExtensions()" pressed="iExtNorm" type="button" width="58" x="115"/>
+						<input disabled="iLinkDis" height="36" highlight="iLinkHigh" inactive="true" name="link" normal="iLinkNorm" onclick="export:isoLoader_ShowLink()" pressed="iLinkNorm" type="button" width="58" x="173"/>
+						<input disabled="iExitNorm" height="36" highlight="iExitHigh" normal="iExitNorm" onclick="export:isoLoader_Exit()" pressed="iExitNorm" type="button" width="58" x="230" />
 					</panel>
 				</panel>
 			</panel>
@@ -200,7 +203,7 @@
 			<panel background="games_bg" height="380">
 
 				<panel x="20" y="12" height="312" width="100%">
-					<panel name="filemanager_bg">
+					<panel background="fm_background" width="314" height="312">
 						<filemanager height="300"
 							item_disabled="item-normal"
 							item_font="m23"
@@ -227,7 +230,7 @@
 					</panel>
 				</panel>
 
-				<panel height="46" width="256" x="56%" y="8" name="title_panel">
+				<panel height="46" width="256" x="358" y="8" name="title_panel">
 					<panel height="23">
 						<label align="center" color="#3278A0" font="arial-18" name="game_title" text="Select a game" />
 					</panel>
@@ -235,7 +238,7 @@
 						<label align="center" color="#3278A0" font="arial-18" name="game_title2" text=" " />
 					</panel>
 				</panel>
-				<panel height="269" width="269" x="56%" y="55" name="cover_bg">
+				<panel height="269" width="269" x="358" y="55" name="cover_bg">
 					<panel background="overlay_bg">
 						<panel height="256" width="256" x="6" y="6">
 							<panel background="cover" name="cover_image">
@@ -246,16 +249,16 @@
 				</panel>
 
 				<panel height="40" width="60%" x="4%" y="330">
-					<panel height="20" width="50%">
-						<label align="left" color="#FFFFFF" font="arial" text="A: browse/select/run" />
+					<panel height="20" width="60%">
+						<label align="left" color="#FFFFFF" font="arial" text="A: browse, select, run" />
 					</panel>
-					<panel height="20" width="50%">
-						<label align="left" color="#FFFFFF" font="arial" text="B: browse/settings" />
+					<panel height="20" width="40%">
+						<label align="left" color="#FFFFFF" font="arial" text="B: browse or settings" />
 					</panel>
-					<panel height="20" width="50%">
-						<label align="left" color="#FFFFFF" font="arial" text="X/Y+Analog/D-Pad: scroll" />
+					<panel height="20" width="60%">
+						<label align="left" color="#FFFFFF" font="arial" text="X+Analog/D-Pad: scroll/select" />
 					</panel>
-					<panel height="20" width="50%">
+					<panel height="20" width="40%">
 						<label align="left" color="#FFFFFF" font="arial" text="Analog/D-Pad: cursor" />
 					</panel>
 				</panel>
@@ -264,14 +267,14 @@
 
 			<panel background="settings_bg" height="380">
 
-				<panel height="350" width="50%" y="10">
+				<panel height="350" width="320" y="10">
 
-					<label align="left" color="#31799F" font="m23" height="40" text="Settings:" width="41%" x="13%" y="5" />
+					<label align="left" color="#31799F" font="m23" height="40" text="Settings:" width="131" x="42" y="5" />
 					<input height="25" name="preset-checkbox" type="checkbox" width="47%" x="44%" y="16">
 						<label align="left" color="#000000" font="arial" height="20" text="Save as preset" width="87%" x="17%" />
 					</input>
 
-					<panel height="190" width="84%" x="13%" y="45">
+					<panel height="190" width="269" x="42" y="45">
 						<input height="25" name="dma-checkbox" onclick="export:isoLoader_toggleDMA()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Use DMA transfer (GD/IDE only)" x="9%" />
 						</input>
@@ -321,7 +324,7 @@
 						</input>
 					</panel>
 
-					<panel height="125" name="os-panel" width="84%" x="13%" y="227">
+					<panel height="125" name="os-panel" width="269" x="42" y="227">
 						<label align="left" color="#31799F" font="arial" height="25" text="Binary OS:" />
 						<input checked="true" height="25" onclick="export:isoLoader_toggleOS()" type="checkbox" width="41%">
 							<label align="left" color="#000000" font="arial" height="20" text="Auto" x="23%" />
@@ -338,7 +341,7 @@
 					</panel>
 				</panel>
 
-				<panel height="370" width="55%" x="49%" y="10" name="container-panel">
+				<panel height="370" width="352" x="314" y="10" name="container-panel">
 
 					<panel height="30" name="switch-panel" width="100%" y="16">
 						<input type="checkbox" checked="true" height="25" width="60" onclick="export:isoLoader_toggleOptions()" offhighlight="sw_btn_hl" offnormal="sw_btn" onhighlight="sw_btn_on_hl" onnormal="sw_btn_on">
@@ -358,7 +361,7 @@
 						</input>
 					</panel>
 
-					<cardstack height="330" width="100%" name="options-panel" y="48" x="10">
+					<cardstack height="330" width="352" name="options-panel" y="48" x="10">
 						<panel name="boot-panel">
 							<panel height="25" name="boot-mode-panel" width="100%">
 								<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
@@ -595,15 +598,15 @@
 
 				</panel>
 
-				<panel height="30" width="75%" x="4%" y="335">
-					<label align="left" color="#FFFFFF" font="arial" height="25" text="Preset:" width="15%" y="2" />
-					<input type="button" height="25" width="70" x="60" onclick="export:isoLoader_SavePreset()" highlight="preset_btn_hl" normal="preset_btn" pressed="preset_btn_pressed">
+				<panel height="30" width="480" x="26" y="335">
+					<label align="left" color="#FFFFFF" font="arial" height="25" text="Preset:" width="72" y="2" />
+					<input type="button" height="25" width="70" x="60" onclick="export:isoLoader_SavePreset()">
 						<label align="center" color="#ffffff" font="arial" width="100%" height="100%" text="Save" />
 					</input>
-					<input type="button" height="25" width="70" x="135" onclick="export:isoLoader_RemovePreset()" highlight="preset_btn_hl" normal="preset_btn" pressed="preset_btn_pressed">
+					<input type="button" height="25" width="70" x="135" onclick="export:isoLoader_RemovePreset()">
 						<label align="center" color="#ffffff" font="arial" width="100%" height="100%" text="Remove" />
 					</input>
-					<input type="button" height="25" width="70" x="210" onclick="export:isoLoader_LoadPreset()" highlight="preset_btn_hl" normal="preset_btn" pressed="preset_btn_pressed">
+					<input type="button" height="25" width="70" x="210" onclick="export:isoLoader_LoadPreset()">
 						<label align="center" color="#ffffff" font="arial" width="100%" height="100%" text="Default" />
 					</input>
 					<panel height="25" width="70" x="290">
@@ -648,13 +651,13 @@
 
 			<panel background="settings_bg" height="380">
 
-				<panel height="350" width="50%" y="10">
+				<panel height="350" width="320" y="10">
 					<panel width="256" height="256" x="45" y="30">
 						<image src="stdico" name="link-icon"/>
 					</panel>
 				</panel>
 
-				<panel height="370" width="44%" x="56%" y="10">
+				<panel height="370" width="282" x="358" y="10">
 					<panel height="340" width="80%" y="15">
 
 						<label y="0" align="left" color="#31799F" font="arial" height="25" text="Icon size:" width="100%" />
@@ -706,7 +709,7 @@
 			</panel>
 		</cardstack>
 
-		<panel width="30%" x="70%" y="435" height="30" background="#31799F" name="run-panel">
+		<panel width="192" x="448" y="435" height="30" background="#165e93" name="run-panel">
 			<input type="button" width="82" height="30" disabled="iRunDisabled" highlight="iRunHigh" inactive="true" name="run_iso" normal="iRunNorm" onclick="export:isoLoader_Run()" pressed="iRunNorm" />
 
 			<panel height="20" width="60" x="110" y="5">
