@@ -65,7 +65,7 @@ static void screenshot_callback(void)  {
 	}
 
 	do {
-		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.png", root_dir, ++scr_num);
+		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.ppm", root_dir, ++scr_num);
 		if (!FileExists(path)) {
 			break;
 		}
@@ -77,7 +77,7 @@ static void screenshot_callback(void)  {
 
 	LockVideo();
 	ds_sfx_play(DS_SFX_SCRSHOT);
-	dsystemf("screenshot %s png", path);
+	dsystemf("screenshot %s ppm", path);
 	UnlockVideo();
 	
 	last_time = now;
