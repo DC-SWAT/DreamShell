@@ -339,6 +339,7 @@ static void yuv420p_to_yuv422_dma(uint8_t *src) {
             dst += padding_size;
         }
     }
+    dcache_purge_range((uintptr_t)yuv_dma_buffer, dma_buffer_size);
     pvr_dma_yuv_conv(yuv_dma_buffer, dma_buffer_size, 1, NULL, NULL);
 }
 
