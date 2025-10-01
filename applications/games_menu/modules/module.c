@@ -1606,6 +1606,14 @@ static void GamesApp_InputEvent(int type, int key)
 		speed_cursor = 6.5;
 	}
 
+	if (menu_data.ffplay && menu_data.ffplay_is_playing())
+	{
+		key = KeyCancel;
+		goto SkipCommand;
+	}
+
+	menu_data.ffmpeg_played = false;
+
 	switch (key)
 	{
 		case KeyStart:
@@ -1862,12 +1870,13 @@ static void GamesApp_InputEvent(int type, int key)
 			break;
 	}
 
+	SkipCommand:
 	if (!skip_cursor)
 	{	
 		self.game_changed = true;		
 		
 		if (key != KeyMiscX)
-			StopCDDA();			
+			StopCDDA();
 		
 		for (int i = 0; i < self.game_count; i++)
 		{
@@ -2389,6 +2398,12 @@ static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 {
 	if (!self.wait_to_exit_app)
 		if (self.show_cover_game) thd_pass();
+
+	if (menu_data.ffplay && menu_data.ffplay_is_playing())
+	{
+		thd_pass();
+		return;
+	}
 
 	switch(action)
 	{

@@ -127,7 +127,8 @@ enum GameAttributeEnum
 {
 	GAE_IS_FOLDER_NAME = (1 << 0),
 	GAE_IS_GDI_OPTIMIZED = (1 << 1),
-	GAE_IS_CDDA = (1 << 2)
+	GAE_IS_CDDA = (1 << 2),
+	GAE_CONTAINS_TRAILER = (1 << 3)
 };
 
 enum CoverStatusEnum
@@ -266,6 +267,7 @@ typedef struct GameItemStructure
 	bool is_pvr_cover;
 	bool checked_optimized;
 	bool is_gdi_optimized;
+	bool contains_trailer;
 	int16 is_cdda;
 	CoverStruct cover;
 

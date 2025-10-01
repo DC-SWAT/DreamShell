@@ -19,7 +19,46 @@
 
 struct MenuStructure menu_data;
 
-static const char *find_path_on_device(const char *dev_prefix, const char *subdir, char *path_buf, size_t path_buf_size) {
+static const char *ffmpeg_module_names[FFMPEG_MODULES_COUNT] =
+{
+	"ffmpeg"
+};
+
+void UnloadFFmpegModules()
+{
+	if(menu_data.ffmpeg_modules_loaded)
+	{
+		for(int i = 0; i < FFMPEG_MODULES_COUNT; i++)
+		{
+			if(menu_data.ffmpeg_modules[i])
+			{
+				CloseModule(menu_data.ffmpeg_modules[i]);
+			}
+		}
+	}
+}
+
+void LoadFFmpegModules()
+{
+	if(!menu_data.ffmpeg_modules_loaded)
+	{
+		for(int i = 0; i < FFMPEG_MODULES_COUNT; i++)
+		{
+			char fn[NAME_MAX];
+			snprintf(fn, NAME_MAX, "%s/modules/%s.klf", getenv("PATH"), ffmpeg_module_names[i]);
+			menu_data.ffmpeg_modules[i] = OpenModule(fn);
+		}
+
+		menu_data.ffmpeg_modules_loaded = true;
+		menu_data.ffplay = (int (*)(const char *, ffplay_params_t *))GET_EXPORT_ADDR("ffplay");
+		menu_data.ffplay_shutdown = (void (*)(void))GET_EXPORT_ADDR("ffplay_shutdown");
+		menu_data.ffplay_toggle_pause = (void (*)(void))GET_EXPORT_ADDR("ffplay_toggle_pause");
+		menu_data.ffplay_is_playing = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_playing");
+		menu_data.ffplay_is_paused = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_paused");
+	}
+}
+
+char *FindPathOnDevice(const char *dev_prefix, const char *subdir, char *path_buf, size_t path_buf_size) {
     char dev_path[16] = {0};
     char search_path[64] = {0};
     char first_partition_found[16] = {0};
@@ -81,6 +120,14 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.games_array_ptr_count = 0;
 	menu_data.games_array_ptr = NULL;
 
+	menu_data.ffmpeg_modules_loaded = false;
+	menu_data.ffplay = NULL;
+	menu_data.ffplay_shutdown = NULL;
+	menu_data.ffplay_toggle_pause = NULL;
+	menu_data.ffplay_is_playing = NULL;
+	menu_data.ffplay_is_paused = NULL;
+	menu_data.ffmpeg_played = false;
+
 	menu_data.send_message_scan = send_message_scan;
 	menu_data.send_message_optimizer = send_message_optimizer;
 	menu_data.post_pvr_cover = post_pvr_cover;
@@ -103,27 +150,27 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	memset(menu_data.games_path_sd, 0, sizeof(menu_data.games_path_sd));
 
 	char ds_path[64];
-	menu_data.ide = (find_path_on_device("ide", "DS", ds_path, sizeof(ds_path)) != NULL);
-	menu_data.sd = (find_path_on_device("sd", "DS", ds_path, sizeof(ds_path)) != NULL);
+	menu_data.ide = (FindPathOnDevice("ide", "DS", ds_path, sizeof(ds_path)) != NULL);
+	menu_data.sd = (FindPathOnDevice("sd", "DS", ds_path, sizeof(ds_path)) != NULL);
 	menu_data.cd = (!is_custom_bios());
 
 	if (menu_data.ide)
 	{
-		find_path_on_device("ide", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
-		find_path_on_device("ide", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
+		FindPathOnDevice("ide", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
+		FindPathOnDevice("ide", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
 	}
 
 	if (menu_data.sd)
 	{
 		if (menu_data.ide)
 		{
-			find_path_on_device("sd", "DS", menu_data.default_dir_sd, sizeof(menu_data.default_dir_sd));
-			find_path_on_device("sd", COVERS_RELATIVE_PATH, menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd));
+			FindPathOnDevice("sd", "DS", menu_data.default_dir_sd, sizeof(menu_data.default_dir_sd));
+			FindPathOnDevice("sd", COVERS_RELATIVE_PATH, menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd));
 		}
 		else
 		{
-			find_path_on_device("sd", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
-			find_path_on_device("sd", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
+			FindPathOnDevice("sd", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
+			FindPathOnDevice("sd", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
 		}
 	}
 
@@ -145,7 +192,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	if(strlen(menu_data.games_config_path) == 0)
 	{
 		char games_path[64];
-		if (find_path_on_device(GetDeviceName(menu_data.current_dev), "games", games_path, sizeof(games_path))) {
+		if (FindPathOnDevice(GetDeviceName(menu_data.current_dev), "games", games_path, sizeof(games_path))) {
 			SetGamesPath(games_path);
 		}
 	}
@@ -189,6 +236,7 @@ void DestroyMenuData()
 	FreeGames();
 	FreeCategories();
 	FreeCache();
+	UnloadFFmpegModules();
 	UnmountAllPresetsRomdisks();
 
 	memset(&menu_data, 0, sizeof(struct MenuStructure));
@@ -424,7 +472,7 @@ void *PlayCDDAThread(void *params)
 	if (game_index >= 0)
 	{
 		const char *full_path_game = GetFullGamePathByIndex(game_index);
-		const uint32_t max_time = 2;
+		uint32_t max_time = 2;
 		uint32_t start_time = 0;
 		uint32_t end_time = 0;
 		timer_ms_gettime(&start_time, NULL);
@@ -437,8 +485,55 @@ void *PlayCDDAThread(void *params)
 
 		if (!menu_data.cdda_game_changed)
 		{
-			if (CheckCDDA(game_index))
+			char trailer_path[NAME_MAX];
+			snprintf(trailer_path, NAME_MAX, "%s/trailer.avi", GetFolderPathFromFile(full_path_game));
+
+			if (!menu_data.ffmpeg_played && menu_data.state_app == SA_GAMES_MENU && FileExists(trailer_path))
 			{
+				menu_data.ffmpeg_played = true;
+				max_time = 2;
+				start_time = 0;
+				end_time = 0;
+				timer_ms_gettime(&start_time, NULL);
+				end_time = start_time;
+				while (menu_data.state_app == SA_GAMES_MENU 
+					&& !menu_data.cdda_game_changed && (end_time - start_time) <= max_time)
+				{
+					thd_pass();
+					timer_ms_gettime(&end_time, NULL);
+				}
+				
+				LoadFFmpegModules();
+
+				if(menu_data.ffplay)
+				{
+					ffplay_params_t params;
+					memset(&params, 0, sizeof(params));
+					params.scale = 1.0f;
+					params.loop = 1;
+
+					params.x = 640 / 2;
+					params.y = 480 / 2;
+					params.width = 640 / 2;
+					params.height = 480 / 2;
+					params.fullscreen = true;
+
+					if(menu_data.ffplay(trailer_path, &params) == 0)
+					{
+						thd_sleep(50);
+					}
+
+					if (menu_data.state_app != SA_GAMES_MENU)
+					{
+						menu_data.ffplay_shutdown();
+						DisableScreen();
+						GUI_Disable();
+					}
+				}
+			}
+			else if (CheckCDDA(game_index))
+			{
+				menu_data.games_array[game_index].contains_trailer = false;
 				if (!menu_data.cdda_game_changed)
 				{
 					size_t track_size = 0;
@@ -523,6 +618,13 @@ bool CheckCDDA(int game_index)
 void StopCDDA()
 {
 	StopCDDATrack();
+	if(menu_data.ffplay && menu_data.ffplay_is_playing())
+	{
+		menu_data.ffplay_shutdown();
+		DisableScreen();
+        GUI_Disable();
+	}
+
 	if (menu_data.play_cdda_thread != NULL)
 	{
 		menu_data.cdda_game_changed = true;
@@ -536,7 +638,8 @@ void PlayCDDA(int game_index)
 {
 	StopCDDA();
 
-	if ((menu_data.games_array[game_index].is_cdda == CCGE_NOT_CHECKED || menu_data.games_array[game_index].is_cdda == CCGE_CDDA) && (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE))
+	if ((menu_data.games_array[game_index].contains_trailer || menu_data.games_array[game_index].is_cdda == CCGE_NOT_CHECKED || menu_data.games_array[game_index].is_cdda == CCGE_CDDA) 
+		&& (menu_data.current_dev == APP_DEVICE_SD || menu_data.current_dev == APP_DEVICE_IDE))
 	{
 		menu_data.play_cdda_thread = thd_create(0, PlayCDDAThread, (void *)game_index);
 	}
@@ -3106,6 +3209,9 @@ void AddGameToCache(int game_index)
 	if (game_item->is_cdda == CCGE_CDDA)
 		cache.attributes |= GAE_IS_CDDA;
 
+	if (game_item->contains_trailer)
+		cache.attributes |= GAE_CONTAINS_TRAILER;
+
 	menu_data.cache_array[menu_data.cache_array_count] = cache;
 	menu_data.cache_array_count++;
 }
@@ -3137,6 +3243,9 @@ void PopulateCache()
 
 		if (game_item->is_cdda == CCGE_CDDA)
 			cache->attributes |= GAE_IS_CDDA;
+
+		if (game_item->contains_trailer)
+			cache->attributes |= GAE_CONTAINS_TRAILER;
 	}
 
 	if (menu_data.cache_array_count > 0)
@@ -3167,6 +3276,7 @@ GameItemStruct *FindInCache(const char *game_path)
 		game_item->is_folder_name = (cache_item->attributes & GAE_IS_FOLDER_NAME ? true : false);
 		game_item->is_gdi_optimized = (cache_item->attributes & GAE_IS_GDI_OPTIMIZED ? true : false);
 		game_item->is_cdda = (cache_item->attributes & GAE_IS_CDDA ? CCGE_CDDA : CCGE_NOT_CDDA);
+		game_item->contains_trailer = (cache_item->attributes & GAE_CONTAINS_TRAILER ? true : false);
 		memset(&game_item->cover, 0, sizeof(CoverStruct));
 
 		const char *game_file = GetFileName(cache_item->game);
@@ -3221,6 +3331,7 @@ void CopyDeepGame(const GameItemStruct *src, GameItemStruct *dest)
 	dest->checked_optimized = src->checked_optimized;
 	dest->is_gdi_optimized = src->is_gdi_optimized;
 	dest->is_cdda = src->is_cdda;
+	dest->contains_trailer = src->contains_trailer;
 	dest->cover = src->cover;
 }
 
@@ -3290,8 +3401,10 @@ void RetrieveGamesRecursive()
 
 			bool checked_optimized = false, gdi_optimized = false;
 			int gdi_cdda = CCGE_NOT_CHECKED;
+			bool contains_trailer = false;
 
 			GameItemStruct *game_cache = NULL;
+			GameItemStruct *game_item = NULL;
 			bool exists_cache = false;
 
 			while ((ent = fs_readdir(fd)) != NULL)
@@ -3339,6 +3452,7 @@ void RetrieveGamesRecursive()
 						strcpy(upper_game_name, ent->name);
 						is_folder_name = (frame.level > 0 && unique_file == 0);
 						is_valid_game = true;
+						contains_trailer = true;
 					}
 					else if (strncasecmp(ent->name, "track", 5) == 0)
 					{
@@ -3356,6 +3470,15 @@ void RetrieveGamesRecursive()
 							else if (strncasecmp(ent->name, "track04.wav", 11) == 0 || strncasecmp(ent->name, "track04.raw", 11) == 0)
 								gdi_cdda = CCGE_CANDIDATE;
 						}
+
+						continue;
+					}
+					else if (strncasecmp(ent->name, "trailer.avi", 11) == 0)
+					{
+						if (game_item != NULL)
+							game_item->contains_trailer = true;
+						else 
+							contains_trailer = true;
 
 						continue;
 					}
@@ -3387,7 +3510,7 @@ void RetrieveGamesRecursive()
 						menu_data.games_array = tmp;
 					}
 
-					GameItemStruct *game_item = &menu_data.games_array[menu_data.games_array_count++];
+					game_item = &menu_data.games_array[menu_data.games_array_count++];
 
 					if (game_cache != NULL)
 					{
@@ -3414,6 +3537,7 @@ void RetrieveGamesRecursive()
 					game_item->exists_cover[MT_IMAGE_128_4X3 - 1] = SC_WITHOUT_SEARCHING;
 					game_item->checked_optimized = false;
 					game_item->is_cdda = CCGE_NOT_CHECKED;
+					game_item->contains_trailer = contains_trailer;
 					game_item->game_index_tmp = -1;
 					game_item->device = GetDeviceType(frame.full_path_folder);
 					memset(&game_item->cover, 0, sizeof(CoverStruct));
