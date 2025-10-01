@@ -110,7 +110,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	if (menu_data.ide)
 	{
 		find_path_on_device("ide", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
-		find_path_on_device("ide", "DS/covers", menu_data.covers_path, sizeof(menu_data.covers_path));
+		find_path_on_device("ide", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
 	}
 
 	if (menu_data.sd)
@@ -118,12 +118,12 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 		if (menu_data.ide)
 		{
 			find_path_on_device("sd", "DS", menu_data.default_dir_sd, sizeof(menu_data.default_dir_sd));
-			find_path_on_device("sd", "DS/covers", menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd));
+			find_path_on_device("sd", COVERS_RELATIVE_PATH, menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd));
 		}
 		else
 		{
 			find_path_on_device("sd", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
-			find_path_on_device("sd", "DS/covers", menu_data.covers_path, sizeof(menu_data.covers_path));
+			find_path_on_device("sd", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
 		}
 	}
 
