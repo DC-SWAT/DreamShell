@@ -17,9 +17,19 @@ static int file_open(URLContext *h, const char *filename, int flags) {
     file_t fd;
     int _flags = 0;
     char fn[NAME_MAX];
-    char proto[32];
+    const char *path_start = strchr(filename, ':');
 
-    sscanf(filename, "%[a-zA-Z0-9_]:%s", proto, fn);
+    if(path_start) {
+        path_start++;
+        while(*path_start == ' ') {
+            path_start++;
+        }
+        strncpy(fn, path_start, NAME_MAX);
+    }
+    else {
+        strncpy(fn, filename, NAME_MAX);
+    }
+    fn[NAME_MAX - 1] = '\0';
 
     if(strncmp(fn, "/sd", 3) == 0) {
         h->max_packet_size = 8 << 10;
