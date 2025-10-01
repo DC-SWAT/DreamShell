@@ -141,6 +141,7 @@ static int LoadSettingsVMU() {
 	file_t fd;
 	int ret = 0;
 	Settings_t sets;
+	ssize_t res;
 
 	for (int i = 0; i < 8; ++i) {
 		if (!(vmu = maple_enum_type(i, MAPLE_FUNC_MEMCARD))) {
@@ -155,9 +156,9 @@ static int LoadSettingsVMU() {
 			continue;
 		}
 
-		fs_read(fd, &sets, sizeof(Settings_t));
+		res = fs_read(fd, &sets, sizeof(Settings_t));
 
-		if (sets.version != DS_SETTIGS_VERSION) {
+		if (res != sizeof(Settings_t) || sets.version != DS_SETTIGS_VERSION) {
 			dbglog(DBG_DEBUG, "%s: Version mismatch for %s\n", __func__, save_name);
 			fs_close(fd);
 			continue;
@@ -192,11 +193,7 @@ static int LoadSettingsFile(const char *filename) {
 	res = fs_read(fd, &sets, sizeof(Settings_t));
 	fs_close(fd);
 
-	if (res != sizeof(Settings_t)) {
-		return 0;
-	}
-
-	if (sets.version != DS_SETTIGS_VERSION) {
+	if (res != sizeof(Settings_t) || sets.version != DS_SETTIGS_VERSION) {
 		dbglog(DBG_DEBUG, "%s: Version mismatch for %s\n", __func__, filename);
 		return 0;
 	}
