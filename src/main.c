@@ -319,9 +319,6 @@ int InitDS() {
 		strcat(fn, " &");
 		setenv("STARTUP_CMD", fn, 1);
 	}
-	else {
-		setenv("STARTUP_CMD", "", 1);
-	}
 
 #ifdef DS_DEBUG
 	uint64 t_end = timer_ms_gettime64();
