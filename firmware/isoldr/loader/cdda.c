@@ -246,7 +246,7 @@ static void setup_pcm_buffer(void) {
 	cdda->size = 0x8000;
 
 	uint32 shift = 0;
-	if(cdda->channels == 1 || cdda->trans_method >= PCM_TRANS_SQ_SPLIT) {
+	if(cdda->trans_method >= PCM_TRANS_SQ_SPLIT) {
 		shift += 1;
 	}
 	size_t ram_usage = cdda->size >> shift;
