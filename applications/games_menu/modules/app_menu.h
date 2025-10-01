@@ -32,6 +32,8 @@
 #define CD_GAMES_PATH "/cd/games"
 #define CD_COVERS_PATH "/cd/apps/games_menu/covers"
 
+#define COVERS_RELATIVE_PATH "DS/apps/games_menu/covers"
+
 #define MOTOSHORT(p) ((*(p)) << 8) + *(p + 1)
 #define MAX_SIZE_CDDA 0
 #define MAX_TRIGGER_VALUE 255
