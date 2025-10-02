@@ -86,6 +86,7 @@ static struct {
     volatile int skip_to_keyframe;
     volatile int is_fullscreen;
     int back_to_window;
+    int sdl_gui_managed;
 
     float frame_x, frame_y;
     float frame_x_old, frame_y_old;
@@ -788,6 +789,10 @@ static void PlayerDrawHandler(void *ds_event, void *param, int action) {
                         render_stats();
                         pvr_list_finish();
                     }
+                    else if(!vid->sdl_gui_managed) {
+                        render_video_frame(&vid->txr[vid->txr_idx]);
+                        render_stats();
+                    }
                     break;
                 case EVENT_ACTION_RENDER_POST:
                     if(!vid->is_fullscreen && !vid->pause &&
@@ -810,8 +815,10 @@ static void handle_player_click(int button) {
                 vid->frame_y = vid->frame_y_old;
                 ds_sfx_play(DS_SFX_CLICK);
                 update_display_geometry();
-                EnableScreen();
-                GUI_Enable();
+                if(vid->sdl_gui_managed) {
+                    EnableScreen();
+                    GUI_Enable();
+                }
             }
         }
         else {
@@ -838,8 +845,11 @@ static void handle_player_click(int button) {
             vid->frame_y_old = vid->frame_y;
             ds_sfx_play(DS_SFX_CLICK);
             update_display_geometry();
-            DisableScreen();
-            GUI_Disable();
+
+            if(vid->sdl_gui_managed) {
+                DisableScreen();
+                GUI_Disable();
+            }
         }
     }
 }
@@ -1537,6 +1547,9 @@ void ffplay_toggle_pause() {
 }
 
 int ffplay(const char *filename, ffplay_params_t *params) {
+    while(vid->done) {
+        thd_sleep(10);
+    }
     if(vid->playing) {
         ffplay_shutdown();
     }
@@ -1544,9 +1557,11 @@ int ffplay(const char *filename, ffplay_params_t *params) {
     memset(vid, 0, sizeof(vids));
     memset(aud, 0, sizeof(auds));
     av_log_set_level(params->verbose ? AV_LOG_INFO : AV_LOG_QUIET);
+    vid->done = 3;
 
     if(ffplay_open_file(filename, params) < 0) {
         ffplay_close_file();
+        vid->done = 0;
         return -1;
     }
     vid->frame[0] = avcodec_alloc_frame();
@@ -1555,6 +1570,7 @@ int ffplay(const char *filename, ffplay_params_t *params) {
     if(!vid->frame[0] || !vid->frame[1]) {
         ds_printf("DS_ERROR: avcodec_alloc_frame() failed\n");
         ffplay_close_file();
+        vid->done = 0;
         return -1;
     }
     vid->decode_frame_idx = 0;
@@ -1567,8 +1583,9 @@ int ffplay(const char *filename, ffplay_params_t *params) {
 
     vid->is_fullscreen = vid->params.fullscreen;
     vid->back_to_window = !vid->params.fullscreen;
+    vid->sdl_gui_managed = ScreenIsEnabled();
 
-    if(vid->is_fullscreen) {
+    if(vid->is_fullscreen && vid->sdl_gui_managed) {
         GUI_Disable();
         DisableScreen();
     }
@@ -1622,18 +1639,20 @@ int ffplay(const char *filename, ffplay_params_t *params) {
             }
         }
     }
-    vid->playing = 1;
 
     if(vid->params.show_stat) {
         load_stat_font();
     }
 
-    vid->video_event = AddEvent("ffmpeg_player_video", EVENT_TYPE_VIDEO, EVENT_PRIO_DEFAULT, PlayerDrawHandler, NULL);
+    vid->video_event = AddEvent("ffmpeg_player_video", EVENT_TYPE_VIDEO, EVENT_PRIO_OVERLAY, PlayerDrawHandler, NULL);
     vid->input_event = AddEvent("ffmpeg_player_input", EVENT_TYPE_INPUT, EVENT_PRIO_DEFAULT, PlayerInputHandler, NULL);
 
     if(params->verbose) {
         ds_printf("DS_FFMPEG: Starting playback thread...\n");
     }
+    vid->playing = 1;
+    vid->done = 0;
+
     vid->thread = thd_create(0, player_thread, NULL);
 
     if(!vid->thread) {
@@ -1703,7 +1722,7 @@ static void ffplay_free() {
     vid->playing = 0;
     vid->done = 0;
 
-    if(vid->is_fullscreen) {
+    if(vid->is_fullscreen && vid->sdl_gui_managed) {
         EnableScreen();
         GUI_Enable();
     }
