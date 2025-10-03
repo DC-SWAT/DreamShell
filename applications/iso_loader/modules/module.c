@@ -1354,6 +1354,10 @@ static void *selectFile_worker(void *p) {
 			self.ffplay_shutdown();
 		}
 
+		setTitle("Loading...");
+		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
+		self.current_cover = self.default_cover;
+
 		strncpy(self.filename, filename, NAME_MAX);
 		trailer_path = relativeFilename("trailer.avi");
 		mutex_unlock(&self.select_mutex);
@@ -1379,6 +1383,7 @@ static void *selectFile_worker(void *p) {
 				memset(&params, 0, sizeof(params));
 				params.scale = 1.0f;
 				params.loop = 1;
+				params.fade_in = 2000;
 
 				getWidgetAbsolutePosition(self.cover_widget,
 					&params.x, &params.y,
