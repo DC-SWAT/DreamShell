@@ -10,6 +10,7 @@
 
 #include <ds.h>
 #include <isoldr.h>
+#include <ffmpeg.h>
 #include "app_utils.h"
 #include "app_definition.h"
 #include "tsunami/tsudefinition.h"
@@ -42,6 +43,7 @@
 #define IMAGE_128_4X3_FOLDER "/128"
 #define IMAGE_TYPE_SUPPORTED (IT_PNG | IT_JPG | IT_PVR)
 #define DEFAULT_RADIUS 2
+#define FFMPEG_MODULES_COUNT 1
 
 typedef void SendMessageCallBack(const char *fmt, const char *message);
 typedef void PostPVRCoverCallBack(bool new_cover);
@@ -68,8 +70,8 @@ struct MenuStructure
 	volatile bool cdda_game_changed;
 	volatile bool stop_load_pvr_cover;
 	volatile bool stop_optimize_game_cover;
-	int default_cover_type;
 	int state_app;
+	int default_cover_type;
 	int menu_type;
 	int cache_array_count;
 	int categories_array_count;
@@ -92,6 +94,15 @@ struct MenuStructure
 	char default_dir_sd[20];
 	char games_path_sd[NAME_MAX];
 	char covers_path_sd[50];
+
+	bool ffmpeg_modules_loaded;
+	Module_t *ffmpeg_modules[FFMPEG_MODULES_COUNT];
+	int (*ffplay)(const char *file, ffplay_params_t *params);
+	void (*ffplay_shutdown)(void);
+	void (*ffplay_toggle_pause)(void);
+	int (*ffplay_is_playing)(void);
+	int (*ffplay_is_paused)(void);
+	bool ffmpeg_played;
 
 	int games_array_ptr_count;
 	GameItemStruct **games_array_ptr;
@@ -128,6 +139,7 @@ struct MenuStructure
 };
 
 GameItemStruct *GetGamePtrByIndex(int game_index);
+char *FindPathOnDevice(const char *dev_prefix, const char *subdir, char *path_buf, size_t path_buf_size);
 void SetGamesPath(const char* games_path);
 const char* GetDeviceDir(uint8 device);
 const char* GetDefaultDir(uint8 device);
@@ -158,6 +170,8 @@ int GenerateVMUFile(const char* full_path_game, int vmu_mode, uint32 vmu_number)
 bool LoadFirmwareFiles();
 void LoadDefaultMenuConfig();
 bool LoadMenuConfig();
+void LoadFFmpegModules();
+void UnloadFFmpegModules();
 bool LoadCache();
 bool SaveCache();
 void PatchParseText(PresetStruct *preset);
