@@ -592,10 +592,7 @@ static inline void render_video_frame(video_txr_t *txr) {
     const uint32 color = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
     const float width_ratio = (float)txr->width / txr->tw;
     const float height_ratio = (float)txr->height / txr->th;
-    const float z = vid->sdl_gui_managed ? 1.0f : 100.0f;
-
-    plx_mat_identity();
-    plx_mat3d_translate(0, 0, 0.1f);
+    const float z = 100.0f;
 
     plx_cxt_texture(txr->plx_txr);
     plx_cxt_culling(PLX_CULL_NONE);
@@ -626,7 +623,7 @@ static inline void render_stats() {
     point_t p = {
         (vid->disp_x + vid->disp_w) - text_width - margin_x,
         vid->disp_y + (vid->disp_h * (50.0f / 480.0f)),
-        20.0f
+        110.0f
     };
     point_t p_shadow = {p.x + 2.0f * scale, p.y + 2.0f * scale, p.z - 1.0f};
 
@@ -786,8 +783,13 @@ static void PlayerDrawHandler(void *ds_event, void *param, int action) {
                     if(vid->is_fullscreen) {
                         pvr_list_begin(PVR_LIST_OP_POLY);
                         render_video_frame(&vid->txr[vid->txr_idx]);
-                        render_stats();
                         pvr_list_finish();
+
+                        if(vid->params.show_stat) {
+                            pvr_list_begin(PVR_LIST_TR_POLY);
+                            render_stats();
+                            pvr_list_finish();
+                        }
                     }
                     else if(!vid->sdl_gui_managed) {
                         render_video_frame(&vid->txr[vid->txr_idx]);
@@ -1640,6 +1642,7 @@ int ffplay(const char *filename, ffplay_params_t *params) {
         }
     }
 
+    vid->params.show_stat = 1;
     if(vid->params.show_stat) {
         load_stat_font();
     }
