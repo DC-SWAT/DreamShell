@@ -512,35 +512,32 @@ void *PlayCDDAThread(void *params)
 					params.scale = 1.0f;
 					params.loop = 1;
 
-					params.x = 490 - 256 / 2 - 1;
-					params.y = 180 - 256 / 2;
-					params.width = 256;
-					params.height = 256;
-					
 					switch(menu_data.menu_type)
 					{
 						case MT_PLANE_TEXT:
 						{
-							params.fullscreen = false;
+							params.x = 490 - 256 / 2 - 1;
+							params.y = 180 - 256 / 2;
+							params.width = 256;
+							params.height = 256;
 						}
 						break;
 
 						default:
 						{
-							params.fullscreen = true;
+							params.fullscreen = 1;
 						}
 					}
 					
-
-					if(menu_data.ffplay(trailer_path, &params) == 0)
-					{
-						thd_sleep(50);
-					}
-
 					if (menu_data.state_app != SA_GAMES_MENU)
 					{
 						menu_data.ffplay_shutdown();
 					}
+					else if(menu_data.ffplay(trailer_path, &params) == 0)
+					{
+						thd_sleep(50);
+					}
+
 				}
 			}
 			else if (CheckCDDA(game_index))
