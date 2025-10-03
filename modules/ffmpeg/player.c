@@ -592,19 +592,19 @@ static inline void render_video_frame(video_txr_t *txr) {
     const uint32 color = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
     const float width_ratio = (float)txr->width / txr->tw;
     const float height_ratio = (float)txr->height / txr->th;
-    const float z = 1.0f;
+    const float z = vid->sdl_gui_managed ? 1.0f : 100.0f;
 
     plx_mat_identity();
     plx_mat3d_translate(0, 0, 0.1f);
 
     plx_cxt_texture(txr->plx_txr);
     plx_cxt_culling(PLX_CULL_NONE);
-    plx_cxt_send(PLX_LIST_TR_POLY);
+    plx_cxt_send(PLX_LIST_OP_POLY);
 
-    plx_vert_ifpm3(PLX_VERT, vid->disp_x, vid->disp_y, z, color, 0.0f, 0.0f);
-    plx_vert_ifpm3(PLX_VERT, vid->disp_x + vid->disp_w, vid->disp_y, z, color, width_ratio, 0.0f);
-    plx_vert_ifpm3(PLX_VERT, vid->disp_x, vid->disp_y + vid->disp_h, z, color, 0.0f, height_ratio);
-    plx_vert_ifpm3(PLX_VERT_EOS, vid->disp_x + vid->disp_w, vid->disp_y + vid->disp_h, z, color, width_ratio, height_ratio);
+    plx_vert_ifp(PLX_VERT, vid->disp_x, vid->disp_y, z, color, 0.0f, 0.0f);
+    plx_vert_ifp(PLX_VERT, vid->disp_x + vid->disp_w, vid->disp_y, z, color, width_ratio, 0.0f);
+    plx_vert_ifp(PLX_VERT, vid->disp_x, vid->disp_y + vid->disp_h, z, color, 0.0f, height_ratio);
+    plx_vert_ifp(PLX_VERT_EOS, vid->disp_x + vid->disp_w, vid->disp_y + vid->disp_h, z, color, width_ratio, height_ratio);
 }
 
 static inline void render_stats() {
@@ -784,7 +784,7 @@ static void PlayerDrawHandler(void *ds_event, void *param, int action) {
             switch(action) {
                 case EVENT_ACTION_RENDER:
                     if(vid->is_fullscreen) {
-                        pvr_list_begin(PVR_LIST_TR_POLY);
+                        pvr_list_begin(PVR_LIST_OP_POLY);
                         render_video_frame(&vid->txr[vid->txr_idx]);
                         render_stats();
                         pvr_list_finish();
