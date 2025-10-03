@@ -66,23 +66,21 @@ static void dreameye_preview_frame() {
     const float height_ratio = (float)frame_txr_height / pvr_txr_height;
     const float native_width = (is_fullscreen ? 640.0f : (float)frame_txr_width * frame_scale);
     const float native_height = (is_fullscreen ? 480.0f : (float)frame_txr_height * frame_scale);
-    const float z = 1.0f;
+    const float z = 100.0f;
 
     if(!got_frame) {
         // TODO: Show waiting picture
         return;
     }
-    plx_mat_identity();
-    plx_mat3d_translate(0, 0, 0.1f);
 
 	plx_cxt_texture(plx_txr);
 	plx_cxt_culling(PLX_CULL_NONE);
 	plx_cxt_send(PLX_LIST_TR_POLY);
 
-	plx_vert_ifpm3(PLX_VERT, frame_x, frame_y, z, color, 0.0f, 0.0f);
-	plx_vert_ifpm3(PLX_VERT, frame_x + native_width, frame_y, z, color, width_ratio, 0.0f);
-	plx_vert_ifpm3(PLX_VERT, frame_x, frame_y + native_height, z, color, 0.0f, height_ratio);
-	plx_vert_ifpm3(PLX_VERT_EOS, frame_x + native_width, frame_y + native_height, z, color, width_ratio, height_ratio);
+	plx_vert_ifp(PLX_VERT, frame_x, frame_y, z, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, frame_x + native_width, frame_y, z, color, width_ratio, 0.0f);
+	plx_vert_ifp(PLX_VERT, frame_x, frame_y + native_height, z, color, 0.0f, height_ratio);
+	plx_vert_ifp(PLX_VERT_EOS, frame_x + native_width, frame_y + native_height, z, color, width_ratio, height_ratio);
 }
 
 static void load_stat_font(void) {
@@ -120,7 +118,7 @@ static inline void render_stats() {
     point_t p = {
         (frame_x + disp_w) - text_width - margin_x,
         frame_y + ((is_fullscreen ? 480.0f : (float)frame_txr_height * frame_scale) * (50.0f / 480.0f)),
-        20.0f
+        110.0f
     };
     point_t p_shadow = {p.x + 2.0f * scale, p.y + 2.0f * scale, p.z - 1.0f};
 
