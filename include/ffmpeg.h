@@ -25,8 +25,10 @@ typedef struct ffplay_params {
 
     int loop;
     int verbose;
-    const char *force_format;
     int show_stat;
+    int fade_in;
+
+    const char *force_format;
     void (*update_callback)(int64_t current_pos, int64_t total_duration);
 } ffplay_params_t;
 

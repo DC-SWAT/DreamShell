@@ -87,6 +87,7 @@ static struct {
     volatile int is_fullscreen;
     int back_to_window;
     int sdl_gui_managed;
+    int fade_in_done;
 
     float frame_x, frame_y;
     float frame_x_old, frame_y_old;
@@ -588,15 +589,15 @@ static int yuv_init(int tw, int th, int height) {
     return 0;
 }
 
-static inline void render_video_frame(video_txr_t *txr) {
-    const uint32 color = PVR_PACK_COLOR(1.0f, 1.0f, 1.0f, 1.0f);
+static inline void render_video_frame(video_txr_t *txr, int list_type, float alpha) {
+    const uint32 color = PVR_PACK_COLOR(alpha, 1.0f, 1.0f, 1.0f);
     const float width_ratio = (float)txr->width / txr->tw;
     const float height_ratio = (float)txr->height / txr->th;
     const float z = 100.0f;
 
     plx_cxt_texture(txr->plx_txr);
     plx_cxt_culling(PLX_CULL_NONE);
-    plx_cxt_send(PLX_LIST_OP_POLY);
+    plx_cxt_send(list_type);
 
     plx_vert_ifp(PLX_VERT, vid->disp_x, vid->disp_y, z, color, 0.0f, 0.0f);
     plx_vert_ifp(PLX_VERT, vid->disp_x + vid->disp_w, vid->disp_y, z, color, width_ratio, 0.0f);
@@ -778,28 +779,34 @@ static void PlayerDrawHandler(void *ds_event, void *param, int action) {
             }
         }
         if(vid->video_started > 1) {
+            float alpha = 1.0f;
+            if(!vid->fade_in_done && !vid->is_fullscreen && vid->params.fade_in > 0) {
+                uint64_t elapsed = timer_ms_gettime64() - vid->start_time;
+                if(elapsed < vid->params.fade_in) {
+                    alpha = (float)elapsed / (float)vid->params.fade_in;
+                }
+                else {
+                    vid->fade_in_done = 1;
+                }
+            }
+
             switch(action) {
                 case EVENT_ACTION_RENDER:
                     if(vid->is_fullscreen) {
-                        pvr_list_begin(PVR_LIST_OP_POLY);
-                        render_video_frame(&vid->txr[vid->txr_idx]);
+                        pvr_list_begin(PVR_LIST_TR_POLY);
+                        render_video_frame(&vid->txr[vid->txr_idx], PVR_LIST_TR_POLY, alpha);
+                        render_stats();
                         pvr_list_finish();
-
-                        if(vid->params.show_stat) {
-                            pvr_list_begin(PVR_LIST_TR_POLY);
-                            render_stats();
-                            pvr_list_finish();
-                        }
                     }
                     else if(!vid->sdl_gui_managed) {
-                        render_video_frame(&vid->txr[vid->txr_idx]);
+                        render_video_frame(&vid->txr[vid->txr_idx], PVR_LIST_OP_POLY, alpha);
                         render_stats();
                     }
                     break;
                 case EVENT_ACTION_RENDER_POST:
                     if(!vid->is_fullscreen && !vid->pause &&
                         !ScreenIsHidden() && !ConsoleIsVisible()) {
-                        render_video_frame(&vid->txr[vid->txr_idx]);
+                        render_video_frame(&vid->txr[vid->txr_idx], PVR_LIST_TR_POLY, alpha);
                         render_stats();
                     }
                     break;
@@ -1041,6 +1048,7 @@ static int ffplay_do_seek(int64_t pos_ms, int flags) {
     vid->frame_timer = vid->start_time;
     vid->skip_to_keyframe = 1;
     vid->video_started = 0;
+    vid->fade_in_done = 1;
 
     vid->txr_idx = 0;
     vid->decode_frame_idx = 0;
@@ -1158,6 +1166,7 @@ static void *player_thread(void *p) {
     if(ffplay_seek_internal(0, AVSEEK_FLAG_BACKWARD) < 0) {
         vid->done = 2;
     }
+    vid->fade_in_done = !vid->params.fade_in;
 
     while(!vid->done) {
         if(vid->pause) {
@@ -1642,7 +1651,6 @@ int ffplay(const char *filename, ffplay_params_t *params) {
         }
     }
 
-    vid->params.show_stat = 1;
     if(vid->params.show_stat) {
         load_stat_font();
     }

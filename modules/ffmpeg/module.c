@@ -169,6 +169,7 @@ int builtin_ffplay_cmd(int argc, char *argv[]) {
                     " -e, --verbose     - Verbose output\n"
                     " -t, --stat        - Show statistics\n\n"
                     "Arguments: \n"
+                    " -d  --fade-in     - Fade in duration in ms (default: 0)\n"
                     " -i, --format      - Force format detection\n"
                     " -f, --file        - File for playing\n"
                     " -m, --mode        - Video mode (0: Windowed, 1: Fullscreen)\n"
@@ -204,6 +205,7 @@ int builtin_ffplay_cmd(int argc, char *argv[]) {
         {"loop",        'l', NULL, CFG_BOOL,  (void *) &params.loop,         0},
         {"verbose",     'e', NULL, CFG_BOOL,  (void *) &params.verbose,      0},
         {"stat",        't', NULL, CFG_BOOL,  (void *) &params.show_stat,    0},
+        {"fade-in",     'd', NULL, CFG_INT,   (void *) &params.fade_in,      0},
         CFG_END_OF_LIST
     };
     CMD_DEFAULT_ARGS_PARSER(options);
