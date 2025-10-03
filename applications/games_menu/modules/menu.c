@@ -491,7 +491,7 @@ void *PlayCDDAThread(void *params)
 			if (!menu_data.ffmpeg_played && menu_data.state_app == SA_GAMES_MENU && FileExists(trailer_path))
 			{
 				menu_data.ffmpeg_played = true;
-				max_time = 2;
+				max_time = 1;
 				start_time = 0;
 				end_time = 0;
 				timer_ms_gettime(&start_time, NULL);
