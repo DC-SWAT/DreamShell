@@ -1607,7 +1607,6 @@ static void GamesApp_InputEvent(int type, int key)
 	}
 	else if (menu_data.ffplay && menu_data.ffplay_is_playing())
 	{
-		key = KeyCancel;
 		goto SkipCommand;
 	}
 
@@ -1874,7 +1873,7 @@ static void GamesApp_InputEvent(int type, int key)
 	{	
 		self.game_changed = true;		
 		
-		if (key != KeyMiscX)
+		if (key != KeyMiscX || (menu_data.ffplay && menu_data.ffplay_is_playing()))
 			StopCDDA();
 		
 		for (int i = 0; i < self.game_count; i++)
