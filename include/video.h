@@ -1,7 +1,7 @@
 /** 
  * \file    video.h
  * \brief   DreamShell video rendering
- * \date    2004-2024
+ * \date    2004-2025
  * \author  SWAT www.dc-swat.ru
  */
      
@@ -90,10 +90,5 @@ void HideLogo();
 
 /* Utility function to fill out the initial poly contexts */
 void plx_fill_contexts(plx_texture_t * txr);
-
-static inline void plx_vert_ifpm3(int flags, float x, float y, float z, uint32 color, float u, float v) {       
-	plx_mat_tfip_3d(x, y, z);
-	plx_vert_ifp(flags, x, y, z, color, u, v);
-}
 
 #endif

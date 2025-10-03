@@ -540,19 +540,16 @@ void SDL_DS_Blit_Textured() {
 		plx_fcxt_end(plx_cxt);
 	}
 
-	plx_mat_identity();
-	plx_mat3d_translate(sdl_dc_trans_x, sdl_dc_trans_y, sdl_dc_trans_z);
-
 	plx_cxt_texture(plx_screen_txr);
 	plx_cxt_culling(PLX_CULL_NONE);
 	plx_cxt_send(PLX_LIST_TR_POLY);
 
 	uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);
 
-	plx_vert_ifpm3(PLX_VERT, sdl_dc_x, sdl_dc_y, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v1);
-	plx_vert_ifpm3(PLX_VERT, sdl_dc_x + native_width, sdl_dc_y, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v1);
-	plx_vert_ifpm3(PLX_VERT, sdl_dc_x, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v2);
-	plx_vert_ifpm3(PLX_VERT_EOS, sdl_dc_x + native_width, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v2);
+	plx_vert_ifp(PLX_VERT, sdl_dc_x, sdl_dc_y, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v1);
+	plx_vert_ifp(PLX_VERT, sdl_dc_x + native_width, sdl_dc_y, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v1);
+	plx_vert_ifp(PLX_VERT, sdl_dc_x, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u1, sdl_dc_v2);
+	plx_vert_ifp(PLX_VERT_EOS, sdl_dc_x + native_width, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v2);
 }
 
 static void SDL_DS_Blit_Cursor(void) {
@@ -560,6 +557,7 @@ static void SDL_DS_Blit_Cursor(void) {
 		int mouse_cursor_x = 0;
 		int mouse_cursor_y = 0;
 		uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);
+		const float mouse_cursor_z = sdl_dc_z + 100.0f;
 
 		SDL_GetMouseState(&mouse_cursor_x, &mouse_cursor_y);
 
@@ -567,10 +565,10 @@ static void SDL_DS_Blit_Cursor(void) {
 		plx_cxt_culling(PLX_CULL_NONE);
 		plx_cxt_send(PLX_LIST_TR_POLY);
 
-		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x, mouse_cursor_y, 1.0f, color, 0.0f, 0.0f);
-		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y, 1.0f, color, 1.0f, 0.0f);
-		plx_vert_ifpm3(PLX_VERT, mouse_cursor_x, mouse_cursor_y + plx_cursor_txr->w, 1.0f, color, 0.0f, 1.0f);
-		plx_vert_ifpm3(PLX_VERT_EOS, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y + plx_cursor_txr->w, 1.0f, color, 1.0f, 1.0f);
+		plx_vert_ifp(PLX_VERT, mouse_cursor_x, mouse_cursor_y, mouse_cursor_z, color, 0.0f, 0.0f);
+		plx_vert_ifp(PLX_VERT, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y, mouse_cursor_z, color, 1.0f, 0.0f);
+		plx_vert_ifp(PLX_VERT, mouse_cursor_x, mouse_cursor_y + plx_cursor_txr->w, mouse_cursor_z, color, 0.0f, 1.0f);
+		plx_vert_ifp(PLX_VERT_EOS, mouse_cursor_x + plx_cursor_txr->w, mouse_cursor_y + plx_cursor_txr->w, mouse_cursor_z, color, 1.0f, 1.0f);
 	}
 }
 
