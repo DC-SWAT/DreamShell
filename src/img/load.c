@@ -9,10 +9,7 @@
 #include "img/decode.h"
 #include <kmg/kmg.h>
 #include <zlib/zlib.h>
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
-#endif
 
 /* Open the pvr texture and send it to VRAM */
 int pvr_to_img(const char *filename, kos_img_t *rv)

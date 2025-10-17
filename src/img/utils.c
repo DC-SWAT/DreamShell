@@ -5,10 +5,7 @@
 
 #include "ds.h"
 #include "img/utils.h"
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
-#endif
 
 bool pvr_is_alpha(const char *filename)
 {

@@ -11,10 +11,7 @@
 #include "img/convert.h"
 #include "img/decode.h"
 #include "img/stb_image.h"
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
-#endif
 
 
 bool copy_image(const char *image_source, const char *image_dest, bool is_alpha, bool rewrite, uint width, uint height, uint output_width, uint output_height, bool yflip)

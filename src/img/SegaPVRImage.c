@@ -13,11 +13,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <math.h>
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
 #include <kos/fs.h>
-#endif
 
 // Twiddle
 static const unsigned int kTwiddleTableSize = 1024;
