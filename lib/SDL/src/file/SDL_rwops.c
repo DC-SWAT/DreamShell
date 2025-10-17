@@ -257,7 +257,7 @@ static int SDLCALL win32_file_close(SDL_RWops *context)
 #endif /* __WIN32__ */
 
 
-#if defined(__DREAMCAST__)
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 
 /* Functions to read/write KallistiOS file pointers */
 
@@ -493,7 +493,7 @@ SDL_RWops *SDL_RWFromFile(const char *file, const char *mode)
 {
 	SDL_RWops *rwops = NULL;
 	
-#if defined(__DREAMCAST__)
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 	file_t fd;
 	int dc_mode = 0;
 #elif defined(_HAVE_STDIO_H)
@@ -520,7 +520,7 @@ SDL_RWops *SDL_RWFromFile(const char *file, const char *mode)
 
 #elif defined(HAVE_STDIO_H)
 
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 
 	if(SDL_strchr(mode,'r') != NULL) {
 		dc_mode = O_RDONLY;
@@ -582,7 +582,7 @@ SDL_RWops *SDL_RWFromFile(const char *file, const char *mode)
 	return(rwops);
 }
 
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 SDL_RWops *SDL_RWFromFD(file_t fd, int autoclose)
 {
 	SDL_RWops *rwops = NULL;

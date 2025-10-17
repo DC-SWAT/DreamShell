@@ -26,7 +26,7 @@
 #include "SDL_platform.h"
 
 /* Add any platform that doesn't build using the configure system */
-#if defined(__DREAMCAST__)
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 #include "SDL_config_dreamcast.h"
 #elif defined(__MACOS__)
 #include "SDL_config_macos.h"

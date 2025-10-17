@@ -70,12 +70,9 @@
 #define MACOS
 #endif
 #include <png.h>
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
-#endif
 
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__) && !defined(__NAOMI__)
 int fileno(FILE *f);
 #endif
 
@@ -344,7 +341,7 @@ static void png_read_data(png_structp ctx, png_bytep area, png_size_t size)
 
 	src = (SDL_RWops *)lib.png_get_io_ptr(ctx);
 	
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__) && !defined(__NAOMI__)
 	int fd = fileno(src->hidden.stdio.fp);
 	
 	if(size > 1024 && fd > -1) {

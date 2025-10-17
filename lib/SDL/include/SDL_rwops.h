@@ -32,7 +32,7 @@
 
 #include "begin_code.h"
 
-#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast) || defined(__NAOMI__)
 #include <kos/fs.h>
 #endif
 
@@ -78,7 +78,7 @@ typedef struct SDL_RWops {
 		} buffer;
 	    } win32io;
 #endif
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 	    struct {
 			int autoclose;
 			file_t fd;
@@ -111,7 +111,7 @@ extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFile(const char *file, const char 
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFP(FILE *fp, int autoclose);
 #endif
 
-#if defined(__DREAMCAST__) || defined(_arch_dreamcast)
+#if defined(__DREAMCAST__) || defined(_arch_dreamcast) || defined(__NAOMI__)
 extern DECLSPEC SDL_RWops * SDLCALL SDL_RWFromFD(file_t fd, int autoclose);
 #endif
 

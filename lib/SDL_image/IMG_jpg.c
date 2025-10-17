@@ -27,10 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <setjmp.h>
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
-#endif
 
 #include "SDL_image.h"
 
@@ -44,7 +41,7 @@
 	#define FALSE JPEG_FALSE
 #endif
 
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__) && !defined(__NAOMI__)
 int fileno(FILE *f);
 #endif
 
@@ -288,7 +285,7 @@ static boolean fill_input_buffer (j_decompress_ptr cinfo)
 	my_source_mgr * src = (my_source_mgr *) cinfo->src;
 	int nbytes;
 	
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__) && !defined(__NAOMI__)
 	int fd = fileno(src->ctx->hidden.stdio.fp);
 	
 	if(fd > -1) {

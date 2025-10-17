@@ -29,12 +29,9 @@
 #include "SDL_endian.h"
 #include "SDL_image.h"
 #include "SegaPVRImage.h"
-
-#if defined(__DREAMCAST__)
 #include <malloc.h>
-#endif
 
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__) && !defined(__NAOMI__)
 int fileno(FILE *f);
 #endif
 
@@ -118,7 +115,7 @@ SDL_Surface *IMG_LoadPVR_RW(SDL_RWops *src)
 		goto done;
 	}
 	
-#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__)
+#if defined(HAVE_STDIO_H) && !defined(__DREAMCAST__) && !defined(__NAOMI__)
 
 	int fd = fileno(src->hidden.stdio.fp);
 	
