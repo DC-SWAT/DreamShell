@@ -4,6 +4,7 @@
    Copyright (C)2000,2001,2004 Dan Potter
 */
 
+#include <kos/regfield.h>
 #include <dc/scif.h>
 
 /*
@@ -32,8 +33,15 @@ kernel or for debugging it.
 #define SCSPTR2	SCIFREG16(0xffe80020)
 #define SCLSR2	SCIFREG16(0xffe80024)
 
-//#define PTR2_RTSIO  (1 << 7)
-//#define PTR2_RTSDT  (1 << 6)
+/* Serial port register bits */
+#define SPB2DT  BIT(0)  /* Serial port break data */
+#define SPB2IO  BIT(1)  /* Serial port break IO */
+#define SCKDT   BIT(2)  /* Clock data */
+#define SCKIO   BIT(3)  /* Clock IO */
+#define CTSDT   BIT(4)  /* CTS data */
+#define CTSIO   BIT(5)  /* CTS IO */
+#define RTSDT   BIT(6)  /* RTS data */
+#define RTSIO   BIT(7)  /* RTS IO */
 
 /* Default serial parameters */
 //static int serial_baud = 57600;
@@ -70,21 +78,25 @@ int scif_init() {
 	for (i=0; i<10000; i++)
 		__asm__("nop");
 
+#ifdef DEV_TYPE_SD
+	/* Unreset, disable hardware flow control, triggers on 8 bytes */
+	SCFCR2 = 0x40;
+	/* RTS can be used as CS for SCI-SPI SD card on NAOMI */
+	SCSPTR2 = (RTSIO | RTSDT);
+#else
 	/* Unreset, enable hardware flow control, triggers on 8 bytes */
 	SCFCR2 = 0x48;
-	
+
 	/* Disable manual pin control */
 	SCSPTR2 = 0;
-	
-	/* Disable SD */
-//	SCSPTR2 = PTR2_RTSIO | PTR2_RTSDT;
-	
+#endif
+
 	/* Clear status */
 	(void)SCFSR2;
 	SCFSR2 = 0x60;
 	(void)SCLSR2;
 	SCLSR2 = 0;
-	
+
 	/* Enable transmit/receive */
 	SCSCR2 = 0x30;
 
