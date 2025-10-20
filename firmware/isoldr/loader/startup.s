@@ -78,57 +78,6 @@ stack_ptr:
     .globl      _loader_size
 _loader_size:
     .long       _end - start
-
-    ! Disable interrupts, but leave exceptions enabled.
-    ! Returns the old interrupt status.
-    .globl  _irq_disable
-_irq_disable:
-    mov.l   _irqd_and,r1
-    mov.l   _irqd_or,r2
-    stc sr,r0
-    and r0,r1
-    or  r2,r1
-    ldc r1,sr
-    rts
-    nop
-
-    ! Check for disabled interrupts.
-!    .globl  _irq_disabled
-!_irq_disabled:
-!    mov.l   _irqd_or,r1
-!    stc sr,r0
-!    tst r0, r1
-!    rts
-!    movt r0
-    
-    .align 2
-_irqd_and:
-    .long   0xefffff0f
-_irqd_or:
-    .long   0x000000f0
-
-    ! Enable interrupts and exceptions. 
-    ! Returns the old interrupt status.
-!    .globl  _irq_enable
-!_irq_enable:
-!    mov.l   _irqe_and,r1
-!    stc sr,r0
-!    and r0,r1
-!    ldc r1,sr
-!    rts
-!    nop
-!    
-!    .align 2
-!_irqe_and:
-!    .long   0xefffff0f
-
-    ! Restore interrupts to the state returned by irq_disable()
-    ! or irq_enable().
-    .globl  _irq_restore
-_irq_restore:
-    ldc r4,sr
-    rts
-    nop
 	
 bios_patch_null:
     nop
