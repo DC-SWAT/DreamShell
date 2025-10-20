@@ -37,7 +37,9 @@
 /* AICA memory end for PCM buffer */
 #define AICA_MEMORY_START 0x00800000
 #define AICA_MEMORY_END 0x00a00000
+#define AICA_MEMORY_8MB_END 0x01000000
 #define AICA_MEMORY_END_ARM 0x00200000
+#define AICA_MEMORY_8MB_END_ARM 0x00800000
 
 #define aica_dma_in_progress() AICA_DMA_ADST
 #define aica_dma_disable() AICA_DMA_ADEN = 0
@@ -302,10 +304,12 @@ static void setup_pcm_buffer(void) {
 	}
 
 	/* Setup buffer at end of sound memory */
-	cdda->aica_left[0] = AICA_MEMORY_END - cdda->size;
+	const uint32 aica_memory_end = malloc_heap_pos() > RAM_END_ADDR ?
+		AICA_MEMORY_8MB_END : AICA_MEMORY_END;
+	cdda->aica_left[0] = aica_memory_end - cdda->size;
 	cdda->aica_left[1] = cdda->aica_left[0] + (cdda->size >> 2);
 
-	cdda->aica_right[0] = AICA_MEMORY_END - (cdda->size >> 1);
+	cdda->aica_right[0] = aica_memory_end - (cdda->size >> 1);
 	cdda->aica_right[1] = cdda->aica_right[0] + (cdda->size >> 2);
 
 	/* Setup end position for sound buffer */
@@ -386,7 +390,9 @@ static void aica_stop_clean_cdda() {
 static void aica_setup_cdda(int clean) {
 
 	uint32 val;
-	const uint32 smp_ptr = AICA_MEMORY_END_ARM - cdda->size;
+	const uint32 aica_memory_end = malloc_heap_pos() > RAM_END_ADDR ?
+		AICA_MEMORY_8MB_END_ARM : AICA_MEMORY_END_ARM;
+	const uint32 smp_ptr = aica_memory_end - cdda->size;
 	const int smp_size = cdda->size >> 1;
 
 	/* Stop AICA channels */

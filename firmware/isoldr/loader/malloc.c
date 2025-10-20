@@ -192,14 +192,19 @@ static void internal_malloc_stat(uint32 *free_size, uint32 *max_free_size) {
 
     uint32 exec_addr = CACHED_ADDR(APP_BIN_ADDR);
 
-    if ((uint32)internal_malloc_base < exec_addr) {
+    if((uint32)internal_malloc_base > CACHED_ADDR(RAM_END_ADDR)) {
+        *free_size = CACHED_ADDR(RAM_END_32MB_ADDR) - (uint32)internal_malloc_base;
+    }
+    else if ((uint32)internal_malloc_base < exec_addr) {
         if(IsoInfo->exec.type == BIN_TYPE_KATANA) {
             *free_size = CACHED_ADDR(IP_BIN_BOOTSTRAP_2_ADDR) - (uint32)internal_malloc_pos;
-        } else {
+        }
+        else {
             *free_size = exec_addr - (uint32)internal_malloc_pos;
         }
-    } else {
-        *max_free_size = CACHED_ADDR(RAM_END_ADDR) - (uint32)internal_malloc_base;
+    }
+    else {
+        *free_size = CACHED_ADDR(RAM_END_ADDR) - (uint32)internal_malloc_base;
     }
     *max_free_size = *free_size;
 }

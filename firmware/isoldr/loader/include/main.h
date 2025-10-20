@@ -33,6 +33,7 @@
 #define FLASH_ROM_ICON_ADDR          (FLASH_ROM_ADDR + 0x1a480)
 #define RAM_START_ADDR               0x0c000000
 #define RAM_END_ADDR                 0x0d000000
+#define RAM_END_32MB_ADDR            0x0e000000
 
 /* Software environment structure in RAM */
 #define SYSCALLS_INFO_ADDR           (RAM_START_ADDR)
