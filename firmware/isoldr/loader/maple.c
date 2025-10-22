@@ -209,13 +209,13 @@ static void maple_vmu_block_write(maple_frame_t *req, maple_frame_t *resp) {
         LOGF("      BWRITE: device busy\n");
         return;
     }
-    uint16 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
-    uint8 phase_count = STORAGE_FUNC_WRITE_PHASE_COUNT(device_info);
     uint8 phase = (req_params[1] >> 8) & 0x0f;
     uint16 block = ((req_params[1] >> 24) & 0xff) | ((req_params[1] >> 16) & 0xff) << 8;
     uint8 *buff = (uint8 *)&req_params[2];
 
 #if _FS_READONLY == 0
+    uint16 block_size = STORAGE_FUNC_BLOCK_SIZE(device_info);
+    uint8 phase_count = STORAGE_FUNC_WRITE_PHASE_COUNT(device_info);
     int offset = (block * block_size) + ((block_size / phase_count) * phase);
     lseek(vmu_fd, offset, SEEK_SET);
     int res = write(vmu_fd, buff, (block_size / phase_count));
@@ -345,7 +345,7 @@ static void maple_cmd_proc(int8 cmd, maple_frame_t *req, maple_frame_t *resp) {
 }
 #endif // MAPLE_SNIFFER
 
-static void maple_dma_proc() {
+static void maple_dma_proc(int is_request) {
     uint32 *data, *recv_data, addr, value;
     uint32 trans_count;
     uint8 len, last = 0, port, pattern;
@@ -353,8 +353,10 @@ static void maple_dma_proc() {
     maple_frame_t *resp_frame_ptr;
 
     addr = MAPLE_REG(MAPLE_DMA_ADDR);
-
     data = (uint32 *)NONCACHED_ADDR(addr);
+
+    /* TODO: Support to prevent command sending to physical VMU. */
+    (void)is_request;
 
     for (trans_count = 0; trans_count < 24 && !last; ++trans_count) {
 
@@ -393,8 +395,12 @@ static void maple_dma_proc() {
 
         maple_frame_t resp_frame;
         maple_read_frame(recv_data, &resp_frame);
-        maple_dump_frame("SEND", trans_count, &req_frame);
-        maple_dump_frame("RECV", trans_count, &resp_frame);
+        if (is_request) {
+            maple_dump_frame("SEND", trans_count, &req_frame);
+        }
+        else {
+            maple_dump_frame("RECV", trans_count, &resp_frame);
+        }
 
         maple_cmd_proc(req_frame.cmd, &req_frame, resp_frame_ptr);
 
@@ -426,9 +432,11 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
 
     if (passer == current_vector) {
         // Handle UBC break on Maple register
+        maple_dma_proc(1);
         requested = 1;
-    } else if(requested) {
-        maple_dma_proc();
+    }
+    else if(requested) {
+        maple_dma_proc(0);
         requested = 0;
     }
 #else
@@ -438,7 +446,7 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
         || ((*ASIC_IRQ9_MASK & ASIC_NRM_MAPLE_DMA) && code == EXP_CODE_INT9)
         || ((*ASIC_IRQ13_MASK & ASIC_NRM_MAPLE_DMA) && code == EXP_CODE_INT13)
     ) {
-        maple_dma_proc();
+        maple_dma_proc(0);
     }
 #endif
     return current_vector;
@@ -448,8 +456,11 @@ static void *maple_dma_handler(void *passer, register_stack *stack, void *curren
 int maple_init_irq() {
 
 #ifdef HAVE_UBC
+    LOGFF("with UBC\n");
     ubc_init();
     ubc_configure_channel(UBC_CHANNEL_A, MAPLE_DMA_STATUS, UBC_BBR_OPERAND | UBC_BBR_WRITE);
+#else
+    LOGFF("without UBC\n");
 #endif
 
 #ifndef NO_ASIC_LT

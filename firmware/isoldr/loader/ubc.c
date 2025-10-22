@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * SH4 UBC
- * (c)2013-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2013-2025 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -17,7 +17,7 @@ static void *ubc_handler(register_stack *stack, void *current_vector) {
 	if(ubc_is_channel_break(UBC_CHANNEL_A)) {
 
 		// ubc_clear_channel(UBC_CHANNEL_A);
-		ubc_clear_break(UBC_CHANNEL_B);
+		ubc_clear_break(UBC_CHANNEL_A);
 		// LOGF("UBC: A\n");
 		// dump_regs(stack);
 #ifdef HAVE_MAPLE
@@ -45,7 +45,7 @@ void ubc_init() {
 	
 	UBC_R_BBRA  = UBC_R_BBRB  = 0;
 	UBC_R_BAMRA = UBC_R_BAMRB = UBC_BAMR_NOASID;
-	UBC_R_BRCR  = UBC_BRCR_UBDE | UBC_BRCR_PCBA | UBC_BRCR_PCBB;
+	UBC_R_BRCR  = UBC_BRCR_UBDE | UBC_BRCR_PCBB;
 
 	/* set DBR here */
 	dbr_set(ubc_handler_lowlevel);
