@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C) 2009-2016 SWAT <http://www.dc-swat.ru>
+!   Copyright (C) 2009-2016, 2025 SWAT <http://www.dc-swat.ru>
 !   Based on Sylverant PSO Patcher code by Lawrence Sebald
 !
 !   This program is free software: you can redistribute it and/or modify
@@ -15,6 +15,14 @@
 !   along with this program. If not, see <http://www.gnu.org/licenses/>.
 !
     .globl      start
+    .globl      _loader_addr
+    .globl      _loader_size
+    .globl      _bios_patch_base
+    .globl      _bios_patch_handler
+    .globl      _bios_patch_end
+    .globl      _boot_stub
+    .globl      _boot_stub_len
+
     .text
 start:
     ! First, make sure to run in the P2 area
@@ -59,7 +67,7 @@ init:
     jmp         @r0
     mov         #0, r0
 
-    .align      2
+    .align      4
 mainaddr:
     .long       _main
 initaddr:
@@ -74,36 +82,31 @@ p2_mask:
     .long       0xa0000000
 stack_ptr:
     .long       0x8d000000
-
-    .globl      _loader_size
+_loader_addr:
+    .long       start
 _loader_size:
     .long       _end - start
-	
+_boot_stub_len:
+    .long       _boot_stub_len - _boot_stub
+
+    .align 2
 bios_patch_null:
     nop
     rts
     nop
 
-    .globl  _bios_patch_base
 _bios_patch_base:
-!    nop
-!    mov.l   r0, @-r15
     mov.l   _bios_patch_handler, r0
     jmp     @r0
-!    mov.l   @r15+, r0
-!    nop
-	
+
     .align  4
-    .globl  _bios_patch_handler
 _bios_patch_handler:
     .long   bios_patch_null
-    .globl  _bios_patch_end
 _bios_patch_end:
 
 	.align 2
     ! This MUST always be run from a non-cacheable area of memory, since it
     ! messes with the CCR register.
-    .globl      _boot_stub
 _boot_stub:
     ! Set up some registers we will need to deal with later...
     mov         r4, r14
@@ -145,7 +148,10 @@ _boot_stub:
     mov         #0, r14
     ! We should not ever get back here.
 
-    .balign     4
+    .align 2
+ccr_data:
+    .word       0x0909
+    .align     4
 ccr_addr:
     .long       0xff00001c
 newr15:
@@ -162,10 +168,3 @@ startaddr:
     .long       start
 p2mask:
     .long       0xa0000000
-ccr_data:
-    .word       0x0909
-
-    .globl      _boot_stub_len
-    .balign     4
-_boot_stub_len:
-    .long       _boot_stub_len - _boot_stub

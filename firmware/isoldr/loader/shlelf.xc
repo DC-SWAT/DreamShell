@@ -9,11 +9,9 @@ OUTPUT_FORMAT("elf32-shl", "elf32-shl",
 	      "elf32-shl")
 OUTPUT_ARCH(sh)
 ENTRY(start)
-SEARCH_DIR("/opt/toolchains/dc/sh-elf/sh-elf/lib");
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
-  PROVIDE (__executable_start = 0x8ce00400); . = 0x8ce00400;
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)

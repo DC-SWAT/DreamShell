@@ -11,8 +11,7 @@
 #include <maple.h>
 
 isoldr_info_t *IsoInfo;
-uint32 loader_addr = 0;
-uint32 loader_end = 0;
+uint32 loader_end;
 
 int main(int argc, char *argv[]) {
 
@@ -23,9 +22,8 @@ int main(int argc, char *argv[]) {
 		bfont_saved_addr = 0xa0001000;
 	}
 
-	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
-	loader_addr = (uint32)IsoInfo;
 	loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
+	IsoInfo = (isoldr_info_t *)(loader_addr - ISOLDR_PARAMS_SIZE);
 
 	OpenLog();
 	printf(NULL);
@@ -86,10 +84,11 @@ int main(int argc, char *argv[]) {
 		IsoInfo->boot_mode
 	);
 
-	LOGF("Loader: %08lx - %08lx size %d, heap %08lx\n", 
+	LOGF("Loader: %08lx - %08lx size %d, params %08lx, heap %08lx\n", 
 		loader_addr,
 		loader_addr + loader_size,
 		loader_size + ISOLDR_PARAMS_SIZE,
+		(uint32)IsoInfo,
 		malloc_heap_pos()
 	);
 
@@ -100,7 +99,7 @@ int main(int argc, char *argv[]) {
 		goto error;
 	}
 
-	if (!IsoInfo->use_dma) {
+	if(!IsoInfo->use_dma) {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
 
