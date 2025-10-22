@@ -67,7 +67,7 @@ static dma_addr_t dma_map_src_dst(uintptr_t addr, size_t len, bool is_dst) {
         if(is_dst)
             dcache_inval_range(addr, len);
         else
-            dcache_flush_range(addr, len);
+            dcache_purge_range(addr, len);
         break;
 
     default:
@@ -106,7 +106,7 @@ static const unsigned char dma_unit_size[] = {
 //     channels_cfg[channel]->callback(d);
 // }
 
-uint32_t dma_is_running(dma_channel_t channel) {
+bool dma_is_running(dma_channel_t channel) {
     uint32_t chcr = dmac_read(channel, DMA_REG_CHCR);
 
     return (chcr & (REG_CHCR_TRANSFER_END | REG_CHCR_DMAC_EN)) == REG_CHCR_DMAC_EN;
@@ -123,6 +123,13 @@ void dma_wait_complete(dma_channel_t channel) {
         //         thd_pass();
         // }
     }
+}
+
+void dma_transfer_abort(dma_channel_t channel) {
+    // irq_disable_scoped();
+
+    dmac_write(channel, DMA_REG_CHCR, 0);
+    // genwait_wake_all((void *)&channels_cfg[channel]);
 }
 
 int dma_transfer(const dma_config_t *cfg, dma_addr_t dst, dma_addr_t src,
