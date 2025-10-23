@@ -404,6 +404,12 @@ static void aica_setup_cdda(int clean) {
 				smp_ptr, (smp_ptr + smp_size), smp_size, 
 				cdda->aica_format, cdda->end_tm);
 		cdda->restore_count = 0;
+
+		memset(cdda->buff[PCM_TMP_BUFF], 0, smp_size);
+		aica_transfer(cdda->buff[PCM_TMP_BUFF], cdda->aica_left[0], smp_size);
+		do { } while(aica_dma_in_progress());
+		aica_transfer(cdda->buff[PCM_TMP_BUFF], cdda->aica_right[0], smp_size);
+		do { } while(aica_dma_in_progress());
 	}
 
 	cdda->cur_buff = 0;
