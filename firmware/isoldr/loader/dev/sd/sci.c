@@ -1067,13 +1067,13 @@ sci_result_t sci_spi_dma_write_data(const uint8_t *data, size_t len, dma_callbac
     sci_result_t result;
     uint32_t timeout_cnt = 0;
 
-    if(!initialized || sci_mode != SCI_MODE_SPI) {
-        return SCI_ERR_NOT_INITIALIZED;
-    }
+    // if(!initialized || sci_mode != SCI_MODE_SPI) {
+    //     return SCI_ERR_NOT_INITIALIZED;
+    // }
 
-    if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
-        return SCI_ERR_PARAM;
-    }
+    // if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
+    //     return SCI_ERR_PARAM;
+    // }
 
     /* Reverse each byte */
     for(i = 0; i < len; i++) {
@@ -1088,8 +1088,8 @@ sci_result_t sci_spi_dma_write_data(const uint8_t *data, size_t len, dma_callbac
     dma_addr_t src = dma_map_src(spi_dma_buffer, len);
     dma_addr_t dst = hw_to_dma_addr(SCTDR1_ADDR);
 
-    /* PVR DMA conflict check */
-    do {} while(*(volatile uint32_t *)0xa05f6808);
+    irq_disable_scoped();
+    do {} while(dma_is_running(config.channel) || dma_is_running(DMA_CHANNEL_0));
 
     /* Enable transmission */
     sci_set_transfer_mode(TE);
@@ -1111,7 +1111,8 @@ sci_result_t sci_spi_dma_write_data(const uint8_t *data, size_t len, dma_callbac
         while(!(SCSSR1 & TEND)) {
             if(++timeout_cnt > SCI_MAX_WAIT_CYCLES) {
                 sci_set_transfer_mode(0);
-                dbglog(DBG_ERROR, "SCI: Timeout waiting for TEND in SPI read data\n");
+                dma_transfer_abort(config.channel);
+                dbglog(DBG_ERROR, "SCI: Timeout waiting for TEND in SPI DMA write data\n");
                 return SCI_ERR_TIMEOUT;
             }
         }
@@ -1128,13 +1129,13 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
     uint32_t timeout_cnt;
     uint8_t *buffer = spi_dma_buffer;
 
-    if(!initialized || sci_mode != SCI_MODE_SPI) {
-        return SCI_ERR_NOT_INITIALIZED;
-    }
+    // if(!initialized || sci_mode != SCI_MODE_SPI) {
+    //     return SCI_ERR_NOT_INITIALIZED;
+    // }
 
-    if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
-        return SCI_ERR_PARAM;
-    }
+    // if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
+    //     return SCI_ERR_PARAM;
+    // }
 
     /* Configure DMA */
     dma_config_t config = sci_dma_rx_config;
@@ -1144,8 +1145,8 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
     dma_addr_t src = hw_to_dma_addr(SCRDR1_ADDR);
     dma_addr_t dst = dma_map_dst(spi_dma_buffer, len);
 
-    /* PVR DMA conflict check */
-    do {} while(*(volatile uint32_t *)0xa05f6808);
+    irq_disable_scoped();
+    do {} while(dma_is_running(config.channel) || dma_is_running(DMA_CHANNEL_0));
 
     /* Enable full-duplex mode */
     sci_set_transfer_mode(RE | TE);
@@ -1163,7 +1164,8 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
         while(!(SCSSR1 & TDRE)) {
             if(++timeout_cnt > SCI_MAX_WAIT_CYCLES) {
                 sci_set_transfer_mode(0);
-                dbglog(DBG_ERROR, "SCI: Timeout waiting for TDRE in SPI read data\n");
+                dma_transfer_abort(config.channel);
+                dbglog(DBG_ERROR, "SCI: Timeout waiting for TDRE in SPI DMA read data\n");
                 return SCI_ERR_TIMEOUT;
             }
         }
@@ -1181,7 +1183,8 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
     while(!(SCSSR1 & TEND)) {
         if(++timeout_cnt > SCI_MAX_WAIT_CYCLES) {
             sci_set_transfer_mode(0);
-            dbglog(DBG_ERROR, "SCI: Timeout waiting for TEND in SPI read data\n");
+            dma_transfer_abort(config.channel);
+            dbglog(DBG_ERROR, "SCI: Timeout waiting for TEND in SPI DMA read data\n");
             return SCI_ERR_TIMEOUT;
         }
     }
@@ -1205,6 +1208,6 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
 }
 
 sci_result_t sci_dma_wait_complete(void) {
-    dma_wait_complete(DMA_CHANNEL_1);
+    dma_wait_complete(sci_dma_rx_config.channel);
     return check_sci_errors();
 }

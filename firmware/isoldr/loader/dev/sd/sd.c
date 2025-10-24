@@ -22,7 +22,7 @@
 #define MAX_RETRIES     500000
 #define READ_RETRIES    50000
 #define WRITE_RETRIES   150000
-#define MAX_RETRY       10
+#define MAX_RETRY       2
 
 
 /* MMC/SD command (in SPI) */
@@ -54,12 +54,25 @@ static uint8 (*f_spi_sr_byte)(uint8 b) = NULL;
 static uint8 (*f_spi_slow_sr_byte)(uint8 b) = NULL;
 static uint8 (*f_spi_rec_byte)(void) = NULL;
 static void (*f_spi_send_byte)(uint8 b) = NULL;
-static void (*f_spi_rec_data)(uint8* buffer, uint16 buffer_len) = NULL;
+static int (*f_spi_rec_data)(uint8* buffer, uint16 buffer_len) = NULL;
 #if _FS_READONLY == 0
-static void (*f_spi_send_data)(const uint8* data, uint16 data_len) = NULL;
+static int (*f_spi_send_data)(const uint8* data, uint16 data_len) = NULL;
 #endif
 static void (*f_spi_cs_on)(void) = NULL;
 static void (*f_spi_cs_off)(void) = NULL;
+
+/* SCIF/SPI interface wrappers for rec_data/send_data only */
+static int scif_rec_data(uint8* buffer, uint16 buffer_len) {
+	spi_rec_data(buffer, buffer_len);
+	return 0;
+}
+
+#if _FS_READONLY == 0
+static int scif_send_data(const uint8* data, uint16 data_len) {
+	spi_send_data(data, data_len);
+	return 0;
+}
+#endif
 
 /* SCI interface implementation - use wrapper functions */
 static uint8 sci_sr_byte(uint8 b) {
@@ -84,23 +97,23 @@ static void sci_send_byte(uint8 b) {
 	sci_spi_write_byte(b);
 }
 
-static void sci_rec_data(uint8* buffer, uint16 buffer_len) {
-	if(buffer_len & 31) {
-		sci_spi_read_data(buffer, buffer_len);
+static int sci_rec_data(uint8 *buffer, uint16 len) {
+	if(len & 31) {
+		return sci_spi_read_data(buffer, len);
 	}
 	else {
-		sci_spi_dma_read_data(buffer, buffer_len, NULL, NULL);
+		return sci_spi_dma_read_data(buffer, len, NULL, NULL);
 	}
 }
 
 #if _FS_READONLY == 0
-static void sci_send_data(const uint8* data, uint16 data_len) {
-	// if(data_len & 31) {
-		sci_spi_write_data(data, data_len);
-	// }
-	// else {
-	// 	sci_spi_dma_write_data(data, data_len, NULL, NULL);
-	// }
+static int sci_send_data(const uint8 *data, uint16 len) {
+	if(len & 31) {
+		return sci_spi_write_data(data, len);
+	}
+	else {
+		return sci_spi_dma_write_data(data, len, NULL, NULL);
+	}
 }
 #endif
 
@@ -252,7 +265,9 @@ static uint8 send_cmd (
 	} while ((res & 0x80) && --n);
 	
 #ifdef SD_DEBUG
-	LOGFF("CMD 0x%02x response 0x%02x\n", cmd, res);
+	if(res != 0) {
+		LOGFF("CMD 0x%02x response 0x%02x\n", cmd, res);
+	}
 #endif
 
 	return res;			/* Return with the response value */
@@ -344,9 +359,9 @@ int sd_init_ex(const sd_init_params_t *params) {
 		f_spi_slow_sr_byte = spi_slow_sr_byte;
 		f_spi_rec_byte = spi_rec_byte;
 		f_spi_send_byte = spi_send_byte;
-		f_spi_rec_data = spi_rec_data;
+		f_spi_rec_data = scif_rec_data;
 #if _FS_READONLY == 0
-		f_spi_send_data = spi_send_data;
+		f_spi_send_data = scif_send_data;
 #endif
 		f_spi_cs_on = spi_cs_on;
 		f_spi_cs_off = spi_cs_off;
@@ -476,6 +491,26 @@ int sd_init_ex(const sd_init_params_t *params) {
 	return -1;
 }
 
+static int sd_reinit(void) {
+	sd_init_params_t params = {
+		.interface = current_interface,
+		.check_crc = check_crc
+	};
+
+	DESELECT();
+	(void)f_spi_rec_byte();
+
+	// if (current_interface == SD_IF_SCIF) {
+	// 	spi_shutdown();
+	// }
+	// else {
+		sci_shutdown();
+	// }
+
+	initted = 0;
+	return sd_init_ex(&params);
+}
+
 #else
 
 static int read_data(uint8 *buff, size_t len);
@@ -506,9 +541,9 @@ int sd_init_ex(const sd_init_params_t *params) {
 		f_spi_slow_sr_byte = spi_slow_sr_byte;
 		f_spi_rec_byte = spi_rec_byte;
 		f_spi_send_byte = spi_send_byte;
-		f_spi_rec_data = spi_rec_data;
+		f_spi_rec_data = scif_rec_data;
 #if _FS_READONLY == 0
-		f_spi_send_data = spi_send_data;
+		f_spi_send_data = scif_send_data;
 #endif
 		f_spi_cs_on = spi_cs_on;
 		f_spi_cs_off = spi_cs_off;
@@ -561,7 +596,10 @@ out:
 	(void)f_spi_rec_byte();	
 	return rv;
 }
-	
+
+static int sd_reinit(void) {
+	return 0;
+}
 #endif
 
 
@@ -617,7 +655,9 @@ static int read_data (
 		return -1;	/* If not valid data token, return with error */
 	}
 
-	f_spi_rec_data(buff, len);
+	if(f_spi_rec_data(buff, len)) {
+		return -1;
+	}
 	
 #ifndef DISCARD_CRC16
 	crc = (uint16)f_spi_rec_byte() << 8;
@@ -648,9 +688,11 @@ int sd_read_blocks(uint32 block, size_t count, uint8 *buf, int blocked) {
 
 	uint8 *p;
 	int retry, cnt;
-	
+	int reinit_retry = 0;
+
 	if (byte_mode) block <<= 9;	/* Convert to byte address if needed */
 
+retry_read:
 	for (retry = 0; retry < MAX_RETRY; retry++) {
 		p = buf;
 		cnt = count;
@@ -692,13 +734,13 @@ int sd_read_blocks(uint32 block, size_t count, uint8 *buf, int blocked) {
 		(void)f_spi_rec_byte();			/* Idle (Release DO) */
 		if (cnt == 0) break;
 	}
-	
-//#ifdef SD_DEBUG
-//	LOGFF("retry = %d (MAX=%d) cnt = %d\n", retry, MAX_RETRY, cnt);
-//#endif
 
 	if((retry >= MAX_RETRY || cnt > 0)) {
-		//errno = EIO;
+		if(reinit_retry++ < MAX_RETRY) {
+			if(!sd_reinit()) {
+				goto retry_read;
+			}
+		}
 		return -1;
 	}
 
@@ -724,7 +766,9 @@ static int write_data (
 	if (token != 0xFD) {	/* Is data token */
 
 		crc = sd_crc16(buff, 512, 0);
-		f_spi_send_data(buff, 512);
+		if(f_spi_send_data(buff, 512)) {
+			return -1;
+		}
 		f_spi_send_byte((uint8)(crc >> 8));
 		f_spi_send_byte((uint8)crc);
 		
@@ -753,9 +797,11 @@ int sd_write_blocks(uint32 block, size_t count, const uint8 *buf, int blocked) {
 	
 	uint8 cnt, *p;
 	int retry;
+	int reinit_retry = 0;
 
 	if (byte_mode) block <<= 9;	/* Convert to byte address if needed */
 
+retry_write:
 	for (retry = 0; retry < MAX_RETRY; retry++) {
 		
 		p = (uint8 *)buf;
@@ -789,12 +835,12 @@ int sd_write_blocks(uint32 block, size_t count, const uint8 *buf, int blocked) {
 		if (cnt == 0) break;
 	}
 	
-//#ifdef SD_DEBUG
-//	LOGFF("retry = %d (MAX=%d) cnt = %d\n", retry, MAX_RETRY, cnt);
-//#endif
-	
 	if((retry >= MAX_RETRY || cnt > 0)) {
-		//errno = EIO;
+		if(reinit_retry++ < MAX_RETRY) {
+			if(!sd_reinit()) {
+				goto retry_write;
+			}
+		}
 		return -1;
 	}
 	
@@ -813,48 +859,56 @@ static void sd_stop_trans() {
 
 /* For now only read supported (really write is not need) */
 int sd_poll(size_t blocks) {
-	
+
 	if(sds.count > 0) {
-		
+
 		int cnt = sds.count > blocks ? blocks : sds.count;
+		int original_cnt = cnt;
 		sds.count -= cnt;
 		SELECT();
-		
+
 		do {
 
 			if(read_data(sds.buff, 512)) {
-				
+
 				DESELECT();
-				
+
 				/* Restart the transfer from last position */
+				int blocks_read = original_cnt - cnt;
 				int rcnt = sds.rcount;
-				sds.count += cnt;
-				sds.block += (sds.rcount - sds.count);
-				
+				sds.count += original_cnt;
+				sds.block += blocks_read;
+				sds.buff -= blocks_read * 512;
+
+				if(sd_reinit()) {
+					sds.count = 0;
+					sd_stop_trans();
+					return -1;
+				}
+
 				if(!sd_read_blocks(sds.block, sds.count, sds.buff, 0)) {
 					sds.rcount = rcnt;
 					return sds.rcount - sds.count;
-				} else {
+				}
+				else {
 					sds.count = 0;
 					sd_stop_trans();
 					return -1;
 				}
 			}
-			
+
 			sds.buff += 512;
-			
+
 		} while (--cnt);
-		
+
 		if(sds.count <= 0) {
-			
 			sd_stop_trans();
-			
-		} else {
+		}
+		else {
 			DESELECT();
 			return sds.rcount - sds.count;
 		}
 	}
-	
 	return 0;
 }
 
