@@ -1,6 +1,6 @@
 #
 # ISO Loader module for DreamShell
-# Copyright (C) 2009-2024 SWAT
+# Copyright (C) 2009-2025 SWAT
 #
 
 TARGET_NAME = isoldr
@@ -10,7 +10,7 @@ EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
 VER_MINOR = 8
-VER_MICRO = 1
+VER_MICRO = 4
 
 all: rm-elf
 

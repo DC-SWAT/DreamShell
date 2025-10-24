@@ -1,7 +1,7 @@
 /** 
  * \file    isoldr.h
  * \brief   DreamShell ISO loader
- * \date    2009-2024
+ * \date    2009-2025
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -171,8 +171,9 @@ typedef struct isoldr_info {
 	uint32 scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
 	uint32 bleem;                       /* Memory address for Bleem! binary or 1 for auto load. */
 	uint32 alt_read;                    /* Use alternative reading without aborting. */
+	uint32 use_gpio;                    /* Use GPIO-0 as button for IGR. */
 
-	uint32 cdda_offset[43];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[42];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

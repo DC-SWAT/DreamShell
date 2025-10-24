@@ -15,6 +15,7 @@
 #include <arch/cache.h>
 #include <arch/timer.h>
 #include <arch/gdb.h>
+#include <arch/irq.h>
 
 #ifdef DEV_TYPE_SD
 #include <sd/spi.h>
@@ -706,7 +707,7 @@ static int init_cmd() {
 # ifdef HAVE_GDB
 
 		gdb_init();
-		
+
 	} else {
 		
 		int old = irq_disable();
@@ -870,7 +871,7 @@ void gdcMainLoop(void) {
 		}
 #endif
 
-		if(gpio_read_pin(GPIO_PIN_RESET_BUTTON) == 0) {
+		if(IsoInfo->use_gpio && gpio_read_pin(GPIO_PIN_RESET_BUTTON) == 0) {
 			menu_exit();
 		}
 
@@ -1057,7 +1058,7 @@ int gdcGetDrvStat(uint32 *status) {
 	}
 #endif
 
-	if(gpio_read_pin(GPIO_PIN_RESET_BUTTON) == 0) {
+	if(IsoInfo->use_gpio && gpio_read_pin(GPIO_PIN_RESET_BUTTON) == 0) {
 		menu_exit();
 	}
 
@@ -1150,8 +1151,9 @@ void gdcInitSystem(void) {
 	}
 #endif
 
-    gpio_set_as_input(GPIO_PIN_RESET_BUTTON);
-
+	if(IsoInfo->use_gpio) {
+    	gpio_set_as_input(GPIO_PIN_RESET_BUTTON);
+	}
 	reset_GDS(GDS);
 	gdcMainLoop();
 }
@@ -1247,7 +1249,7 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	GDS->requested -= dmabuf[1];
 
 	if(fs_dma_enabled() == FS_DMA_STREAM) {
-#ifdef _FS_ASYNC
+#if defined(_FS_ASYNC) && !defined(DEV_TYPE_SD)
 		if(read_async(iso_fd, (uint8 *)dmabuf[0], dmabuf[1], data_transfer_cb) < 0) {
 			return -1;
 		}
@@ -1279,21 +1281,20 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 		LOGF("ERROR: %d != %d\n", gd_chn, GDS->req_count);
 		return -1;
 	}
-
 	if(GDS->status != CMD_STAT_STREAMING) {
 		LOGF("ERROR: status = %s\n", stat_name[GDS->status + 1]);
 		return -1;
 	}
-#ifdef _FS_ASYNC
+#if defined(_FS_ASYNC) && !defined(DEV_TYPE_SD)
 	if(fs_dma_enabled() == FS_DMA_STREAM) {
 		do {} while(poll(iso_fd) > 1);
 	}
-#endif
 	if(pre_read_xfer_busy()) {
 		*size = pre_read_xfer_size();
 		LOGFF("%d busy s=%ld\n", gd_chn, pre_read_xfer_size());
 		return 1;
 	}
+#endif
 	*size = GDS->requested;
 	LOGFF("%d done s=%d r=%ld\n", gd_chn, pre_read_xfer_size(), GDS->requested);
 	return 0;
