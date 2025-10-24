@@ -98,6 +98,7 @@ static struct {
 	GUI_Widget *screenshot;
 	GUI_Widget *alt_boot;
 	GUI_Widget *alt_read;
+	GUI_Widget *use_gpio;
 
 	GUI_Widget *device;
 	GUI_Widget *fw_browser;
@@ -597,6 +598,10 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 		char boot_file[24];
 		sprintf(boot_file, " -b %s", ALT_BOOT_FILE);
 		strcat(cmd, boot_file);
+	}
+
+	if(GUI_WidgetGetState(self.use_gpio)) {
+		strcat(cmd, " --gpio");
 	}
 
 	fprintf(fd, "%s\n", cmd);
@@ -1290,6 +1295,10 @@ void isoLoader_Run(GUI_Widget *widget) {
 		isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
 	}
 
+	if(GUI_WidgetGetState(self.use_gpio)) {
+		self.isoldr->use_gpio = 1;
+	}
+
 	isoldr_exec(self.isoldr, addr);
 
 	/* If we there, then something wrong... */
@@ -1564,6 +1573,7 @@ void isoLoader_DefaultPreset() {
 	GUI_WidgetSetState(self.low, 0);
 	isoLoader_toggleVMU(self.vmu_disabled);
 	GUI_WidgetSetState(self.screenshot, 0);
+	GUI_WidgetSetState(self.use_gpio, 0);
 
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
@@ -1723,13 +1733,13 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	snprintf(result, sizeof(result),
 			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %08lx\n"
 			"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
-			"vmu = %d\nscrhotkey = %lx\naltread = %d\n"
+			"vmu = %d\nscrhotkey = %lx\naltread = %d\ngpio = %d\n"
 			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
 			title, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
 			cdda_mode, GUI_WidgetGetState(self.irq), GUI_WidgetGetState(self.low), heap,
 			GUI_WidgetGetState(self.fastboot), type, mode, memory,
 			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
-			GUI_WidgetGetState(self.alt_read),
+			GUI_WidgetGetState(self.alt_read), GUI_WidgetGetState(self.use_gpio),
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
 	if(GUI_WidgetGetState(self.alt_boot)) {
@@ -1767,7 +1777,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		return -1;
 	}
 
-	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0;
+	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0, use_gpio = 0;
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
@@ -1792,6 +1802,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		{ "low",      CONF_INT,   (void *) &low        },
 		{ "vmu",      CONF_INT,   (void *) &emu_vmu    },
 		{ "scrhotkey",CONF_INT,   (void *) &scr_hotkey },
+		{ "gpio",     CONF_INT,   (void *) &use_gpio   },
 		{ "heap",     CONF_STR,   (void *) &heap_memory},
 		{ "memory",   CONF_STR,   (void *) memory      },
 		{ "async",    CONF_INT,   (void *) &emu_async  },
@@ -1837,6 +1848,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 	GUI_WidgetSetState(self.irq, use_irq);
 	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
 	GUI_WidgetSetState(self.low, low);
+	GUI_WidgetSetState(self.use_gpio, use_gpio);
 
 	if (emu_vmu) {
 		char num[8], fn[32];
@@ -2068,6 +2080,7 @@ void isoLoader_Init(App_t *app) {
 		self.vmu_priv_1mb  = APP_GET_WIDGET("vmu-priv-1mb-checkbox");
 		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
 		self.alt_boot      = APP_GET_WIDGET("alt-boot-checkbox");
+		self.use_gpio      = APP_GET_WIDGET("gpio-checkbox");
 		
 		self.options_panel	  = APP_GET_WIDGET("options-panel");
 		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
