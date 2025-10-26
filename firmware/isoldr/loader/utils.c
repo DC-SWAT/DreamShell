@@ -168,6 +168,8 @@ uint Load_BootBin() {
 }
 
 void rom_memcpy(void* dst, void* src, size_t cnt) {
+	irq_disable_scoped();
+
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 	do {} while(pre_read_xfer_busy());
 #endif
@@ -400,11 +402,10 @@ void *search_memory(const uint8 *key, uint32 key_size) {
 	return NULL;
 }
 
-
-int patch_memory(const uint32 key, const uint32 val) {
+int patch_memory(const uint32 key, const uint32 val, const uint32 range) {
 
 	uint32 exec_addr = NONCACHED_ADDR(IsoInfo->exec.addr);
-	uint32 end_loc = exec_addr + IsoInfo->exec.size;
+	uint32 end_loc = exec_addr + (range ? range : IsoInfo->exec.size);
 	uint8 *k = (uint8 *)&key;
 	uint8 *v = (uint8 *)&val;
 	int count = 0;
@@ -422,7 +423,6 @@ int patch_memory(const uint32 key, const uint32 val) {
 
 	return count;
 }
-
 
 void apply_patch_list() {
 	if(!IsoInfo->patch_addr[0]) {

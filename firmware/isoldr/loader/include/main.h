@@ -68,6 +68,7 @@
 #define HOLLY_REV_VA1 0x10
 #define HOLLY_REV_VA0 0x0b
 #define holly_revision() (*(vuint32 *)NONCACHED_ADDR(0x005f689c))
+#define is_dreamcast() (*(vuint32 *)NONCACHED_ADDR(0x005f74b0) == 0)
 
 #define GPIO_PIN_RESET_BUTTON 0
 
@@ -94,7 +95,7 @@ char *relative_filename(char *filename);
 void descramble(uint8 *source, uint8 *dest, uint32 size);
 
 void *search_memory(const uint8 *key, uint32 key_size);
-int patch_memory(const uint32 key, const uint32 val);
+int patch_memory(const uint32 key, const uint32 val, const uint32 range);
 void apply_patch_list();
 void rom_memcpy(void* dst, void* src, size_t cnt);
 

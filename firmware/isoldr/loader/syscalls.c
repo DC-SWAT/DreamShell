@@ -742,6 +742,11 @@ static int init_cmd() {
 		spi_init();
 	}
 #endif
+
+	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
+		patch_memory(0xff800030, (uint32)(&IsoInfo->cdda_offset[0]), 5 << 20);
+		patch_memory(0xffe80000, (uint32)(&IsoInfo->cdda_offset[1]), 0);
+	}
 	return CMD_STAT_COMPLETED;
 }
 
@@ -1587,6 +1592,6 @@ void gdc_syscall_patch(void) {
 		size += second_offset;
 		icache_flush_range(CACHED_ADDR(SYSCALLS_FW_GDC_ADDR), size);
 	} else {
-		patch_memory(CACHED_ADDR(SYSCALLS_FW_GDC_ENTRY_ADDR), (uint32)gdc_redir);
+		patch_memory(CACHED_ADDR(SYSCALLS_FW_GDC_ENTRY_ADDR), (uint32)gdc_redir, 0);
 	}
 }

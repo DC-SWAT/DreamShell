@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
 	timer_ns_enable();
 #endif
 
-	int emu_all_sc = 0;
+	int emu_all_sc = is_dreamcast() ? 0 : 1;
 
 	if (IsoInfo->syscalls == 0) {
 		if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
@@ -134,6 +134,13 @@ int main(int argc, char *argv[]) {
 	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
 		/* Patch GDC driver entry */
 		gdc_syscall_patch();
+	}
+
+	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
+		argc = patch_memory(0xff800030, (uint32)(&IsoInfo->cdda_offset[0]), 0);
+		LOGF("Patch GPIO register: %d\n", argc);
+		argc = patch_memory(0xffe80000, (uint32)(&IsoInfo->cdda_offset[1]), 0);
+		LOGF("Patch SCIF register: %d\n", argc);
 	}
 
 #ifdef HAVE_EXPT
