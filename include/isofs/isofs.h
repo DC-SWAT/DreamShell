@@ -8,7 +8,7 @@
 #ifndef _ISOFS_H
 #define _ISOFS_H
 
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 #include <kos.h>
 #include <kos/blockdev.h>
 #else
@@ -89,7 +89,7 @@ typedef struct ipbin_meta {
 
 
 int fs_iso_shutdown();
-#ifdef __DREAMCAST__
+#if defined(__DREAMCAST__) || defined(__NAOMI__)
 int fs_iso_init();
 int fs_iso_mount(const char *mountpoint, const char *filename);
 int fs_iso_unmount(const char *mountpoint);
