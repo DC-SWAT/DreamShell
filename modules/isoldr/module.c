@@ -166,6 +166,7 @@ static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_fi
 		info->exec.type = BIN_TYPE_NAOMI;
 		strncpy(info->exec.file, "NAOMI.BIN", 9);
 		info->exec.file[9] = '\0';
+		info->exec_addr = cart_hdr.game_execute_adr;
 	}
 	else {
 		ds_printf("DS_ERROR: No executable found in NAOMI ROM\n");

@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
-		launch(IsoInfo->exec.addr);
+		launch(IsoInfo->exec_addr > 0 ? IsoInfo->exec_addr : IsoInfo->exec.addr);
 	} else {
 		printf("Executing from IP.BIN...\n");
 		launch(IP_BIN_BOOTSTRAP_2_ADDR);
@@ -217,6 +217,6 @@ int main(int argc, char *argv[]) {
 error:
 	printf("Failed!\n");
 	Load_DS();
-	launch(IsoInfo->exec.addr);
+	launch(APP_BIN_ADDR);
 	return -1;
 }

@@ -188,8 +188,9 @@ typedef struct isoldr_info {
 	uint32 bleem;                       /* Memory address for Bleem! binary or 1 for auto load. */
 	uint32 alt_read;                    /* Use alternative reading without aborting. */
 	uint32 use_gpio;                    /* Use GPIO-0 as button for IGR. */
+	uint32 exec_addr;                   /* Alternative memory address for executing */
 
-	uint32 cdda_offset[42];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[41];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 
