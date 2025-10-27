@@ -146,6 +146,10 @@ int main(int argc, char *argv[]) {
 		LOGF("Loading IRQ handlers from %08lx to %08lx %d bytes\n",
 			(uintptr_t)src, (uintptr_t)dst, 0x7000);
 		memcpy(dst, src, 0x7000);
+
+#ifdef HAVE_EXPT
+		exception_init(boot_vbr);
+#endif
 	}
 	else {
 		if((IsoInfo->boot_mode != BOOT_MODE_DIRECT) ||

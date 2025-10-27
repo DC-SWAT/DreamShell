@@ -243,26 +243,26 @@ general_exception_xt:
     mov.l   @r15+, r3
 !   mov.l   @r15+, r2
 !   mov.l   @r15+, r1
-	
+
     mov.l   _exception_os_type, r1
-    mov #2, r2
+    mov #1, r2
     cmp/eq  r2, r1
-    bt katana_entry
+    bt kos_entry
     mov #3, r2
     cmp/eq  r2, r1
     bt wince_entry
-
-kos_entry:
-    mov.l   @r15+, r2
-    mov.l   @r15+, r1
-    mov.l   @r15+, r4  ! Get the exception code
-    jmp     @r0
-    mov.l   @r15+, r0
 
 katana_entry:
     mov.l   @r15+, r2
     mov.l   @r15+, r1
     add     #4, r15    ! Skip the exception code
+    jmp     @r0
+    mov.l   @r15+, r0
+
+kos_entry:
+    mov.l   @r15+, r2
+    mov.l   @r15+, r1
+    mov.l   @r15+, r4  ! Get the exception code
     jmp     @r0
     mov.l   @r15+, r0
 

@@ -92,7 +92,7 @@ int exception_init(uint32 vbr_addr) {
 	// 	interrupt_stack = (uint32)malloc(2048);
 	// }
 	// LOGFF("VBR buffer 0x%08lx -> 0x%08lx, stack 0x%08lx\n", vbr_buffer, vbr_buffer_orig, interrupt_stack);
-	LOGFF("VBR buffer 0x%08lx -> 0x%08lx\n", vbr_buffer, vbr_buffer_orig);
+	LOGFF("VBR INT buffer 0x%08lx -> 0x%08lx\n", VBR_INT(vbr_buffer), VBR_INT(vbr_buffer_orig));
 
 	/* Interrupt hack for VBR. */
 	memcpy(
@@ -107,6 +107,8 @@ int exception_init(uint32 vbr_addr) {
 	}
 
 #ifdef HAVE_UBC
+	LOGFF("VBR GEN buffer 0x%08lx -> 0x%08lx\n", VBR_GEN(vbr_buffer), VBR_GEN(vbr_buffer_orig));
+
 	/* General exception hack for VBR. */
 	memcpy(
 		VBR_GEN(vbr_buffer) - (general_sub_handler_base - general_sub_handler),
