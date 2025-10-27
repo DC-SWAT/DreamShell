@@ -79,7 +79,8 @@ typedef enum isoldr_exec_type {
 	BIN_TYPE_AUTO = 0,
 	BIN_TYPE_KOS = 1,
 	BIN_TYPE_KATANA,
-	BIN_TYPE_WINCE
+	BIN_TYPE_WINCE,
+	BIN_TYPE_NAOMI
 } isoldr_exec_type_t;
 
 
@@ -134,12 +135,27 @@ typedef enum isoldr_cdda_mode {
 	CDDA_MODE_CH_FIXED = 0x00020000
 } isoldr_cdda_mode_t;
 
+/**
+* Type of dumped image
+*/
+typedef enum isoldr_image_type {
+
+	IMAGE_TYPE_ISO = ISOFS_IMAGE_TYPE_ISO,
+	IMAGE_TYPE_CSO = ISOFS_IMAGE_TYPE_CSO,
+	IMAGE_TYPE_ZSO = ISOFS_IMAGE_TYPE_ZSO,
+	IMAGE_TYPE_CDI = ISOFS_IMAGE_TYPE_CDI,
+	IMAGE_TYPE_GDI = ISOFS_IMAGE_TYPE_GDI,
+
+	IMAGE_TYPE_ROM_NAOMI = 10
+
+} isoldr_image_type_t;
+
 
 typedef struct isoldr_info {
 
 	char magic[12];                     /* isoldr magic code - 'DSISOLDRXXX' where XXX is version */
 
-	uint32 image_type;                  /* See isofs_image_type_t */
+	uint32 image_type;                  /* See isoldr_image_type_t */
 	char image_file[256];               /* Full path to image */
 	char image_second[12];              /* Second data track file for the multitrack GDI image */
 
@@ -179,7 +195,7 @@ typedef struct isoldr_info {
 
 
 /**
- * Get some info from CD image and fill info structure
+ * Get some info from CD image or NAOMI ROM dump and fill info structure
  */
 isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex);
 
