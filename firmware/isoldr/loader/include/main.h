@@ -76,7 +76,12 @@ extern isoldr_info_t *IsoInfo;
 extern uint32 loader_size;
 extern uint32 loader_addr;
 extern uint32 loader_end;
+
+extern uint32 boot_stack;
+extern uint32 boot_sr;
+extern uint32 boot_vbr;
 extern void boot_stub(void *, uint32) __attribute__((noreturn));
+
 void setup_machine(void);
 void shutdown_machine(void);
 void setup_region(void);

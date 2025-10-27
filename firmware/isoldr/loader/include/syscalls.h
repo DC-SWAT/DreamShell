@@ -7,6 +7,7 @@
 #ifndef _SYSCALLS_H
 #define _SYSCALLS_H
 
+#include <sys/types.h>
 #include <arch/types.h>
 #include <dc/cdrom.h>
 
@@ -223,5 +224,12 @@ void restore_syscalls(void);
 int sys_misc_init(void);
 
 void menu_exit(void);
+
+typedef struct gdc_cart_read_params {
+	uint32_t offset;  // absolete offset in dump 
+	void *dst_buf;    // pointer to destation buffer
+	uint32_t size;    // size in bytes
+	uint32_t type;    // reading type: 0 - PIO, 1 - DMA
+} gdc_cart_read_params_t;
 
 #endif

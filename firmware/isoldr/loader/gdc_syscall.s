@@ -197,7 +197,7 @@ gdc_redir_bc:
 	mov     #0, r6
 gdc_redir_c0:
 	mov     r7, r0
-	mov     #16, r1
+	mov     #17, r1
 	cmp/hi  r0, r1
 	bf      bad_syscall
 	mov.l   gdc_syscall, r1
@@ -273,7 +273,7 @@ gdcUnk1:
 	.long _gdcDummy
 gdGdcChangeDisc:
 	.long _gdGdcChangeDisc
-gdcUnk3:
-	.long _gdcDummy
+gdGdcCartRead:
+	.long _gdGdcCartRead
 gdcUnk4:
 	.long _gdcDummy

@@ -118,29 +118,59 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	if((IsoInfo->boot_mode != BOOT_MODE_DIRECT) ||
-		((loader_end < CACHED_ADDR(IP_BIN_ADDR) ||
-			loader_addr > CACHED_ADDR(APP_BIN_ADDR)) &&
-		(malloc_heap_pos() < CACHED_ADDR(IP_BIN_ADDR) ||
-			malloc_heap_pos() > CACHED_ADDR(APP_BIN_ADDR)))
-	) {
-		printf("Loading IP.BIN...\n");
+	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI) {
 
-		if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT ? 1 : 0)) {
-			goto error;
+		/* Clear ROM DMA busy flag */
+		*((uint32_t *)NONCACHED_ADDR(0x0c0000ac)) = 0;
+
+		/* Set VBR address for IRQ vectors */
+		boot_vbr = CACHED_ADDR(0x0c000000);
+		LOGF("Setting VBR address to %08lx\n", boot_vbr);
+
+		/* Set stack pointer */
+		boot_stack = CACHED_ADDR(0x0cc00000);
+		LOGF("Setting stack pointer to %08lx\n", boot_stack);
+
+		/* Set SR value */
+		boot_sr = 0x60000101;
+		LOGF("Setting SR to %08lx\n", boot_sr);
+
+		uint8_t *dst = (uint8_t *) NONCACHED_ADDR(SYSCALLS_FW_ADDR);
+		uint8_t *src = (uint8_t *) IsoInfo->syscalls;
+		LOGF("Loading IRQ vectors from %08lx to %08lx %d bytes\n",
+			(uintptr_t)src, (uintptr_t)dst, 0x4f00);
+		memcpy(dst, src, 0x4f00);
+
+		dst = (uint8_t *) NONCACHED_ADDR(0x0c018000);
+		src = (uint8_t *) IsoInfo->syscalls + 0x4f00;
+		LOGF("Loading IRQ handlers from %08lx to %08lx %d bytes\n",
+			(uintptr_t)src, (uintptr_t)dst, 0x7000);
+		memcpy(dst, src, 0x7000);
+	}
+	else {
+		if((IsoInfo->boot_mode != BOOT_MODE_DIRECT) ||
+			((loader_end < CACHED_ADDR(IP_BIN_ADDR) ||
+				loader_addr > CACHED_ADDR(APP_BIN_ADDR)) &&
+			(malloc_heap_pos() < CACHED_ADDR(IP_BIN_ADDR) ||
+				malloc_heap_pos() > CACHED_ADDR(APP_BIN_ADDR)))
+		) {
+			printf("Loading IP.BIN...\n");
+
+			if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT ? 1 : 0)) {
+				goto error;
+			}
 		}
-	}
+		if(IsoInfo->exec.type != BIN_TYPE_KOS) {
+			/* Patch GDC driver entry */
+			gdc_syscall_patch();
+		}
 
-	if(IsoInfo->exec.type != BIN_TYPE_KOS) {
-		/* Patch GDC driver entry */
-		gdc_syscall_patch();
-	}
-
-	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
-		argc = patch_memory(0xff800030, (uint32)(&IsoInfo->cdda_offset[0]), 0);
-		LOGF("Patch GPIO register: %d\n", argc);
-		argc = patch_memory(0xffe80000, (uint32)(&IsoInfo->cdda_offset[1]), 0);
-		LOGF("Patch SCIF register: %d\n", argc);
+		if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
+			/* Patch GPIO register to prevent cable detection */
+			argc = patch_memory(0xff800030,
+				IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 0);
+			LOGF("Patch GPIO register: %d\n", argc);
+		}
 	}
 
 #ifdef HAVE_EXPT
@@ -151,7 +181,7 @@ int main(int argc, char *argv[]) {
 #endif
 
 #ifdef HAVE_EXT_SYSCALLS
-	if(IsoInfo->syscalls) {
+	if(IsoInfo->syscalls && IsoInfo->image_type != IMAGE_TYPE_ROM_NAOMI) {
 		printf("Loading syscalls...\n");
 		Load_Syscalls();
 	}

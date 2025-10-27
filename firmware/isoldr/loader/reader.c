@@ -303,6 +303,7 @@ int ReadSectors(uint8 *buf, int sec, int num, fs_callback_f *cb) {
 			break;
 		}
 		case ISOFS_IMAGE_TYPE_ISO:
+		case IMAGE_TYPE_ROM_NAOMI:
 		default:
 		{
 			size_t offset = (sec - IsoInfo->track_lba[0]) * IsoInfo->sector_size;

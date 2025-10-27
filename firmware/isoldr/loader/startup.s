@@ -22,6 +22,9 @@
     .globl      _bios_patch_end
     .globl      _boot_stub
     .globl      _boot_stub_len
+    .globl      _boot_stack
+    .globl      _boot_sr
+    .globl      _boot_vbr
 
     .text
 start:
@@ -110,14 +113,17 @@ _bios_patch_end:
 _boot_stub:
     ! Set up some registers we will need to deal with later...
     mov         r4, r14
-    mov.l       newr15, r15
+    mov.l       newr15, r0
+    mov.l       @r0, r15
     ldc         r14, spc
     mov.l       newgbr, r0
     mov.l       ccr_addr, r3
     ldc         r0, gbr
     mov.l       newvbr, r1
+    mov.l       @r1, r1
     mov.w       ccr_data, r2
     mov.l       newsr, r4
+    mov.l       @r4, r4
     ldc         r1, vbr
     mov.l       newfpscr, r5
     ldc         r4, sr
@@ -154,14 +160,20 @@ ccr_data:
     .align     4
 ccr_addr:
     .long       0xff00001c
-newr15:
+_boot_stack:
     .long       0x8c00f400          ! r15
+newr15:
+    .long       _boot_stack
 newgbr:
     .long       0x8c000000          ! gbr
-newvbr:
+_boot_vbr:
     .long       0x8c00f400          ! vbr
-newsr:
+newvbr:
+    .long       _boot_vbr
+_boot_sr:
     .long       0x700000f0          ! sr
+newsr:
+    .long       _boot_sr
 newfpscr:
     .long       0x00040001          ! fpscr
 startaddr:

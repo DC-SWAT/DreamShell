@@ -744,8 +744,9 @@ static int init_cmd() {
 #endif
 
 	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
-		patch_memory(0xff800030, (uint32)(&IsoInfo->cdda_offset[0]), 5 << 20);
-		patch_memory(0xffe80000, (uint32)(&IsoInfo->cdda_offset[1]), 0);
+		/* Patch GPIO register to prevent cable detection */
+		patch_memory(0xff800030,
+			IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 5 << 20);
 	}
 	return CMD_STAT_COMPLETED;
 }
@@ -1394,6 +1395,24 @@ void gdGdcChangeDisc(int disc_num) {
 #else
 	(void)disc_num;
 #endif
+}
+
+void gdGdcCartRead(gdc_cart_read_params_t *params) {
+	LOGFF("offset=%d dst=%08lx size=%d type=%d\n",
+		params->offset, (uint32)params->dst_buf,
+		params->size, params->type);
+
+	if(params->type) {
+		fs_enable_dma(FS_DMA_SHARED);
+	}
+	else {
+		fs_enable_dma(FS_DMA_DISABLED);
+	}
+
+	/* TODO: Async DMA support */
+	ReadSectors(params->dst_buf,
+		params->offset / IsoInfo->sector_size,
+		params->size / IsoInfo->sector_size, NULL);
 }
 
 void gdcDummy(int gd_chn, int *arg2) {
