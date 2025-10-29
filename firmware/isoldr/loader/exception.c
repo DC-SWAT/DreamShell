@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Exception handling
- * (c)2014-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2025 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -92,7 +92,7 @@ int exception_init(uint32 vbr_addr) {
 	// 	interrupt_stack = (uint32)malloc(2048);
 	// }
 	// LOGFF("VBR buffer 0x%08lx -> 0x%08lx, stack 0x%08lx\n", vbr_buffer, vbr_buffer_orig, interrupt_stack);
-	LOGFF("VBR INT buffer 0x%08lx -> 0x%08lx\n", VBR_INT(vbr_buffer), VBR_INT(vbr_buffer_orig));
+	LOGFF("VBR INT hooking at 0x%08lx -> 0x%08lx\n", VBR_INT(vbr_buffer), VBR_INT(vbr_buffer_orig));
 
 	/* Interrupt hack for VBR. */
 	memcpy(
@@ -107,7 +107,7 @@ int exception_init(uint32 vbr_addr) {
 	}
 
 #ifdef HAVE_UBC
-	LOGFF("VBR GEN buffer 0x%08lx -> 0x%08lx\n", VBR_GEN(vbr_buffer), VBR_GEN(vbr_buffer_orig));
+	LOGFF("VBR GEN hooking at 0x%08lx -> 0x%08lx\n", VBR_GEN(vbr_buffer), VBR_GEN(vbr_buffer_orig));
 
 	/* General exception hack for VBR. */
 	memcpy(
@@ -176,18 +176,18 @@ void *exception_handler(register_stack *stack) {
 	uint32 index;
 	void *back_vector;
 	
-	if (inside_int) {
+	if(inside_int) {
 		LOGFF("ERROR: already in IRQ\n");
 		return my_exception_finish;
 	}
 	
 	inside_int = 1;
-	
-#if 0
-	LOGFF("0x%02x 0x%08lx\n",
-			stack->exception_type & 0xff, 
-			stack->exception_type == EXP_TYPE_INT ? *REG_INTEVT : *REG_EXPEVT);
-//	dump_regs(stack);
+
+#if defined(LOG) && defined(HAVE_UBC)
+	if(stack->exception_type == EXP_TYPE_GEN) {
+		LOGF("GENERAL EXCEPTION: 0x%08lx\n", *REG_EXPEVT);
+		dump_regs(stack);
+	}
 #endif
 
 	/* Ensure vbr buffer is set... */
@@ -271,7 +271,7 @@ void dump_regs(register_stack *stack) {
 	LOGF("R12 = 0x%08lx  R13 = 0x%08lx  R14 = 0x%08lx\n PR = 0x%08lx   PC = 0x%08lx   SR = 0x%08lx\n",
 		stack->r12, stack->r13, stack->r14, stack->pr, stack->spc, stack->ssr);
 		
-//	LOGF(" SGR = 0x%08lx  STACK = 0x%08lx\n", sgr(), r15());
+	LOGF(" SGR = 0x%08lx  DBR = 0x%08lx  STACK = 0x%08lx\n", sgr(), dbr(), r15());
 }
 
 #endif

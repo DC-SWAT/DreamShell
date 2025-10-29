@@ -25,12 +25,14 @@ static void* asic_handle_exception(register_stack *stack, void *current_vector) 
 	uint32 code = *REG_INTEVT;
 #if 0//def LOG
 	uint32 st = ASIC_IRQ_STATUS[ASIC_MASK_NRM_INT];
-	
+
 	if(code == EXP_CODE_INT13 || code == EXP_CODE_INT11 || code == EXP_CODE_INT9) {
-		LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
-					code & 0x0fff, st, 
-					ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
-					ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+		if(st & (ASIC_NRM_MAPLE_DMA | ASIC_NRM_AICA_DMA | ASIC_NRM_GD_DMA)) {
+			LOGF("IRQ: 0x%lx NRM: 0x%08lx EXT: 0x%08lx ERR: 0x%08lx\n", 
+						code & 0x0fff, st, 
+						ASIC_IRQ_STATUS[ASIC_MASK_EXT_INT], 
+						ASIC_IRQ_STATUS[ASIC_MASK_ERR_INT]);
+		}
 	}
 	// dump_regs(stack);
 #endif

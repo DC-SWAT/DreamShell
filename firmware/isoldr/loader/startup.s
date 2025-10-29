@@ -37,7 +37,7 @@ start:
 setup_cache:
     ! Now that we are in P2, it's safe to enable the cache
     mov.l       ccr_addr, r0
-    mov.w       ccr_data, r1
+    mov.l       ccr_data, r1
     mov.l       r1, @r0
     ! After changing CCR, eight instructions must be executed before it's safe
     ! to enter a cached area such as P1
@@ -121,7 +121,7 @@ _boot_stub:
     ldc         r0, gbr
     mov.l       newvbr, r1
     mov.l       @r1, r1
-    mov.w       ccr_data, r2
+    mov.l       ccr_data, r2
     mov.l       newsr, r4
     mov.l       @r4, r4
     ldc         r1, vbr
@@ -154,10 +154,9 @@ _boot_stub:
     mov         #0, r14
     ! We should not ever get back here.
 
-    .align 2
+    .align 4
 ccr_data:
-    .word       0x0909
-    .align     4
+    .long       0x00000909
 ccr_addr:
     .long       0xff00001c
 _boot_stack:

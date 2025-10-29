@@ -122,7 +122,7 @@ uint Load_BootBin() {
 	int rv, bsec;
 	uint32 bs = 0xfff000; /* FIXME: switch stack pointer for use all memory */
 	uint32 exec_addr = CACHED_ADDR(IsoInfo->exec.addr);
-	const uint32 sec_size = 2048;
+	const uint32 sec_size = IsoInfo->sector_size < 2048 ? IsoInfo->sector_size : 2048;
 	uint8 *buff = (uint8*)(NONCACHED_ADDR(IsoInfo->exec.addr));
 
 	if(IsoInfo->exec.size < bs) {

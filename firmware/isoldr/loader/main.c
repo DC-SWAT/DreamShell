@@ -6,8 +6,9 @@
 #include <main.h>
 #include <arch/timer.h>
 #include <arch/cache.h>
-#include <ubc.h>
+#include <asic.h>
 #include <exception.h>
+#include <ubc.h>
 #include <maple.h>
 
 isoldr_info_t *IsoInfo;
@@ -42,7 +43,7 @@ int main(int argc, char *argv[]) {
 
 	int emu_all_sc = is_dreamcast() ? 0 : 1;
 
-	if (IsoInfo->syscalls == 0) {
+	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI || IsoInfo->syscalls == 0) {
 		if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
 			|| (malloc_heap_pos() < ISOLDR_DEFAULT_ADDR_LOW)
 			|| (is_custom_bios() && is_no_syscalls())) {
@@ -75,11 +76,12 @@ int main(int argc, char *argv[]) {
 		IsoInfo->image_type
 	);
 
-	LOGF("Boot: %s at %d size %d addr %08lx type %d mode %d\n",
+	LOGF("Boot: %s at %d size %d load %08lx exec %08lx type %d mode %d\n",
 		IsoInfo->exec.file,
 		IsoInfo->exec.lba,
 		IsoInfo->exec.size,
 		IsoInfo->exec.addr,
+		IsoInfo->exec_addr > 0 ? IsoInfo->exec_addr : IsoInfo->exec.addr,
 		IsoInfo->exec.type,
 		IsoInfo->boot_mode
 	);
@@ -124,11 +126,11 @@ int main(int argc, char *argv[]) {
 		*((uint32_t *)NONCACHED_ADDR(0x0c0000ac)) = 0;
 
 		/* Set VBR address for IRQ vectors */
-		boot_vbr = CACHED_ADDR(0x0c000000);
+		boot_vbr = 0x0c000000;
 		LOGF("Setting VBR address to %08lx\n", boot_vbr);
 
 		/* Set stack pointer */
-		boot_stack = CACHED_ADDR(0x0cc00000);
+		boot_stack = 0x0cc00000;
 		LOGF("Setting stack pointer to %08lx\n", boot_stack);
 
 		/* Set SR value */
@@ -149,6 +151,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef HAVE_EXPT
 		exception_init(boot_vbr);
+		asic_init();
 #endif
 	}
 	else {
