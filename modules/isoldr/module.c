@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    DreamShell ISO Loader module
-   Copyright (C)2009-2024 SWAT
+   Copyright (C)2009-2025 SWAT
 
 */
 
@@ -113,23 +113,19 @@ static int get_executable_info(isoldr_info_t *info, file_t fd) {
 	return 0;
 }
 
-static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_file, int show_errors) {
+static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_file) {
 	naomi_cart_header_t cart_hdr;
 	char *pbuf = NULL;
 
 	fs_seek(fd, 0, SEEK_SET);
 
 	if(fs_read(fd, &cart_hdr, sizeof(cart_hdr)) != sizeof(cart_hdr)) {
-		if(show_errors) {
-			ds_printf("DS_ERROR: Can't read NAOMI ROM header\n");
-		}
+		ds_printf("DS_ERROR: Can't read NAOMI ROM header\n");
 		return -1;
 	}
 
 	if(strncmp(cart_hdr.system_name, "NAOMI", 5) != 0) {
-		if(show_errors) {
-			ds_printf("DS_ERROR: Invalid NAOMI ROM header\n");
-		}
+		ds_printf("DS_ERROR: Invalid NAOMI ROM header\n");
 		return -1;
 	}
 
@@ -150,28 +146,15 @@ static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_fi
 	info->image_file[len] = '\0';
 	info->track_lba[0] = 0;
 	info->track_lba[1] = 0;
-	info->sector_size = 32;
+	info->sector_size = 4;
 
-	int last_exe = -1;
-	for(int i = 0; i < 8; i++) {
-		if(cart_hdr.game_exe[i].size > 0) {
-			last_exe = i;
-		}
-	}
-
-	if(last_exe >= 0) {
-		info->exec.addr = (uint32)cart_hdr.game_exe[last_exe].dst_buf;
-		info->exec.size = cart_hdr.game_exe[last_exe].size;
-		info->exec.lba = cart_hdr.game_exe[last_exe].offset / info->sector_size;
-		info->exec.type = BIN_TYPE_NAOMI;
-		strncpy(info->exec.file, "NAOMI.BIN", 9);
-		info->exec.file[9] = '\0';
-		info->exec_addr = cart_hdr.game_execute_adr;
-	}
-	else {
-		ds_printf("DS_ERROR: No executable found in NAOMI ROM\n");
-		return -1;
-	}
+	info->exec.addr = (uint32)cart_hdr.game_exe[0].dst_buf;
+	info->exec.size = cart_hdr.game_exe[0].size;
+	info->exec.lba = cart_hdr.game_exe[0].offset / info->sector_size;
+	info->exec.type = BIN_TYPE_NAOMI;
+	strncpy(info->exec.file, "NAOMI.BIN", 9);
+	info->exec.file[9] = '\0';
+	info->exec_addr = cart_hdr.game_execute_adr;
 
 	return 0;
 }
@@ -401,7 +384,7 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	ext = strrchr(file, '.');
 
 	if(ext != NULL && !strcasecmp(ext, ".dni")) {
-		if(get_naomi_rom_info(info, fd, file, 1) < 0) {
+		if(get_naomi_rom_info(info, fd, file) < 0) {
 			fs_close(fd);
 			goto error;
 		}
@@ -506,7 +489,9 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 }
 
 static void set_loader_type(isoldr_info_t *info) {
-	if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0) {
+	if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0 ||
+		info->image_type == IMAGE_TYPE_ROM_NAOMI)
+	{
 		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
 		info->fs_type[4] = '\0';
 	} else if ((info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0) && info->emu_vmu == 0) {
@@ -689,7 +674,6 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 
 		dcache_flush_range((uintptr_t)buff, hlen + vlen);
 		info->syscalls = (uintptr_t)buff;
-		info->heap = HEAP_MODE_BEHIND;
 		addr = ISOLDR_DEFAULT_ADDR_LOW + 0x1000;
 	}
 
