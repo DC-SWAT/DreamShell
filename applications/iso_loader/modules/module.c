@@ -13,6 +13,7 @@
 
 #include <stdbool.h>
 #include <kos/md5.h>
+#include <naomi/cart.h>
 
 #include "app_utils.h"
 #include "app_module.h"
@@ -167,9 +168,10 @@ void isoLoader_toggleIconSize(GUI_Widget *widget);
 static void setIcon(int size);
 
 static int canUseTrueAsyncDMA(void) {
-	return (self.sector_size == 2048 && 
+	return (self.sector_size <= 2048 && 
 			(self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
-			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI));
+			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI ||
+				self.image_type == IMAGE_TYPE_ROM_NAOMI));
 }
 
 static char *relativeFilename(char *filename) {
@@ -272,9 +274,19 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 	GUI_WidgetSetState(self.rotate180, 0);
 	GUI_WidgetSetState(self.btn_hidetext, 1);
 
-	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
-	ipbin->title[sizeof(ipbin->title)-1] = '\0';
-	GUI_TextEntrySetText(self.linktext, trim_spaces2(ipbin->title));
+	const char *title1 = GUI_LabelGetText(self.title);
+	const char *title2 = GUI_LabelGetText(self.title2);
+	char full_title[128];
+
+	if(title2 != NULL && title2[0] != ' ' && title2[0] != '\0') {
+		snprintf(full_title, sizeof(full_title), "%s %s", title1, title2);
+	}
+	else {
+		strncpy(full_title, title1, sizeof(full_title) - 1);
+		full_title[sizeof(full_title) - 1] = '\0';
+	}
+
+	GUI_TextEntrySetText(self.linktext, trim_spaces2(full_title));
 	check_link_file();
 
 	isoLoader_ShowPage(widget);
@@ -360,6 +372,60 @@ static void setTitle(const char *text) {
 	vmu_draw_string(text);
 }
 
+static void showROMInfo(const char *path) {
+	char noext[128];
+	char title[128];
+	file_t fd;
+	naomi_cart_header_t cart_hdr;
+
+	GUI_PanelSetBackground(self.cover_widget, self.default_cover);
+	self.current_cover = self.default_cover;
+
+	fd = fs_open(path, O_RDONLY);
+	if(fd == FILEHND_INVALID) {
+		setTitle("Invalid file");
+		return;
+	}
+
+	if(fs_read(fd, &cart_hdr, sizeof(cart_hdr)) != sizeof(cart_hdr)) {
+		fs_close(fd);
+		setTitle("Read error");
+		return;
+	}
+	fs_close(fd);
+
+	if(strncmp(cart_hdr.system_name, "NAOMI", 5) != 0) {
+		setTitle("Invalid ROM format");
+		return;
+	}
+
+	memset(title, 0, sizeof(title));
+	memset(noext, 0, sizeof(noext));
+
+	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
+	strcpy(noext, strtok(noext, "."));
+
+	for(int i = 0; i < 8; i++) {
+		if(cart_hdr.regional_name[i][0] != 0) {
+			trim_spaces(cart_hdr.regional_name[i], title, 32);
+			break;
+		}
+	}
+
+	if(strlen(title) > 0) {
+		setTitle(title);
+	}
+	else {
+		setTitle(noext);
+	}
+
+	self.image_type = IMAGE_TYPE_ROM_NAOMI;
+	self.sector_size = 4;
+
+	kos_md5((uint8 *)&cart_hdr, sizeof(cart_hdr), self.md5);
+	memset(self.boot_sector, 0, sizeof(self.boot_sector));
+}
+
 /* Try to get cover image from ISO */
 static void showCover() {
 
@@ -369,9 +435,16 @@ static void showCover() {
 	char title[128];
 	ipbin_meta_t *ipbin;
 	int use_cover = 0;
+	const char *ext;
 
 	setTitle("Loading...");
 	snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+
+	ext = strrchr(self.filename, '.');
+	if(ext != NULL && !strcasecmp(ext, ".dni")) {
+		showROMInfo(path);
+		return;
+	}
 
 	if(fs_iso_mount("/isocover", path)) {
 		setTitle("None");
@@ -1291,7 +1364,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 		self.isoldr->scr_hotkey = SCREENSHOT_HOTKEY;
 	}
 
-	if(GUI_WidgetGetState(self.alt_boot)) {
+	if(GUI_WidgetGetState(self.alt_boot) && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
 		isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
 	}
 
@@ -1587,7 +1660,7 @@ void isoLoader_DefaultPreset() {
 	/*
 	 * Enable CDDA if present
 	 */
-	if (self.filename[0] != 0) {
+	if (self.filename[0] != 0 && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
 
 		char filepath[NAME_MAX];
 		size_t track_size = GetCDDATrackFilename(4,
@@ -1603,6 +1676,9 @@ void isoLoader_DefaultPreset() {
 			GUI_WidgetSetState(self.cdda, 1);
 			isoLoader_toggleCDDA(self.cdda);
 		}
+	}
+	else if(self.image_type == IMAGE_TYPE_ROM_NAOMI) {
+		GUI_WidgetSetState(self.irq, 1);
 	}
 }
 
