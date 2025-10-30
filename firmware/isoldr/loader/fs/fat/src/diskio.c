@@ -203,9 +203,8 @@ DRESULT disk_pre_read (
 	(void)drv;
 
 #ifdef DEV_TYPE_SD
-	(void)sector;
-	(void)count;
-	return RES_OK;
+	/* Start async read for SD card */
+	return sd_read_blocks(sector, count, NULL, 0) ? RES_ERROR : RES_OK;
 #endif
 
 #ifdef DEV_TYPE_IDE

@@ -17,6 +17,7 @@
 
 #if defined(DEV_TYPE_SD)
 #include <sd/spi.h>
+#include <sd/sd.h>
 #elif defined(DEV_TYPE_IDE)
 #include <ide/ide.h>
 #endif
@@ -123,6 +124,13 @@ int pre_read(int fd, unsigned int size);
 #	define pre_read_xfer_done   g1_ata_has_irq
 #	define pre_read_xfer_end    g1_ata_ack_irq
 #	define pre_read_xfer_abort  g1_ata_abort
+#elif defined(DEV_TYPE_SD)
+#	define pre_read_xfer_start  sd_xfer
+#	define pre_read_xfer_busy   sd_in_progress
+#	define pre_read_xfer_size   sd_transfered
+#	define pre_read_xfer_done   sd_is_done
+#	define pre_read_xfer_end()  do { } while(0)
+#	define pre_read_xfer_abort  sd_abort
 #else
 #	define pre_read_xfer_start(addr, bytes) do { } while(0)
 #	define pre_read_xfer_busy() 0

@@ -42,6 +42,7 @@
 #define __DC_SD_H
 
 #include <sys/cdefs.h>
+#include <sys/types.h>
 __BEGIN_DECLS
 
 #include <arch/types.h>
@@ -192,6 +193,31 @@ int sd_poll(size_t blocks);
  * 
  */
 int sd_abort();
+
+/** \brief  Check if SD card transfer is in progress.
+ * 
+ *  \return                 1 if transfer is in progress, 0 otherwise.
+ */
+int sd_in_progress(void);
+
+/** \brief  Get number of bytes transferred.
+ * 
+ *  \return                 Number of bytes transferred so far.
+ */
+int sd_transfered(void);
+
+/** \brief  Check if SD card transfer is complete.
+ * 
+ *  \return                 1 if all data has been read, 0 otherwise.
+ */
+int sd_is_done(void);
+
+/** \brief  Start SD card data transfer.
+ * 
+ *  \param  addr            Memory address for transfer.
+ *  \param  bytes           Number of bytes to transfer.
+ */
+void sd_xfer(uintptr_t addr, size_t bytes);
 
 __END_DECLS
 #endif /* !__DC_SD_H */

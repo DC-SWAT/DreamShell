@@ -203,6 +203,7 @@ static struct {
 	size_t rcount;
 	size_t count;
 	uint8 *buff;
+	size_t xfer_blocks;
 } sds;
 
 #define SELECT() f_spi_cs_on()
@@ -681,7 +682,7 @@ static int read_data (
 
 
 int sd_read_blocks(uint32 block, size_t count, uint8 *buf, int blocked) {
-	
+
 #ifdef SD_DEBUG
 	LOGFF("block=%ld count=%d\n", block, count);
 #endif
@@ -696,34 +697,32 @@ retry_read:
 	for (retry = 0; retry < MAX_RETRY; retry++) {
 		p = buf;
 		cnt = count;
-		
+
 		SELECT();
 
 		if (cnt == 1) { /* Single block read */
-		
 			if ((send_cmd(CMD17, block) == 0) && !read_data(p, 512)) {
 				cnt = 0;
 			}
-			
-		} else { /* Multiple block read */
-			if (send_cmd(CMD18, block) == 0) {	
+		}
+		else { /* Multiple block read */
+			if (send_cmd(CMD18, block) == 0) {
 
 				if(blocked) {
-				
 					do {
 						if (read_data(p, 512)) 
 							break;
 							
 						p += 512;
 					} while (--cnt);
-					
+
 					send_cmd(CMD12, 0); /* STOP_TRANSMISSION */
-					
-				} else {
-					
+				}
+				else {
 					sds.block = block;
 					sds.count = sds.rcount = count;
 					sds.buff = buf;
+					sds.xfer_blocks = 0;
 					DESELECT();
 					return 0;
 				}
@@ -864,6 +863,13 @@ int sd_poll(size_t blocks) {
 
 		int cnt = sds.count > blocks ? blocks : sds.count;
 		int original_cnt = cnt;
+
+		if(!sds.buff) {
+			return 0;
+		}
+		if(sds.xfer_blocks > 0 && cnt > (int)sds.xfer_blocks) {
+			cnt = sds.xfer_blocks;
+		}
 		sds.count -= cnt;
 		SELECT();
 
@@ -882,6 +888,8 @@ int sd_poll(size_t blocks) {
 
 				if(sd_reinit()) {
 					sds.count = 0;
+					sds.buff = NULL;
+					sds.xfer_blocks = 0;
 					sd_stop_trans();
 					return -1;
 				}
@@ -892,6 +900,8 @@ int sd_poll(size_t blocks) {
 				}
 				else {
 					sds.count = 0;
+					sds.buff = NULL;
+					sds.xfer_blocks = 0;
 					sd_stop_trans();
 					return -1;
 				}
@@ -901,8 +911,18 @@ int sd_poll(size_t blocks) {
 
 		} while (--cnt);
 
-		if(sds.count <= 0) {
+		if(sds.xfer_blocks > 0) {
+			sds.xfer_blocks -= (original_cnt - cnt);
+
+			if(sds.xfer_blocks == 0) {
+				sds.buff = NULL;
+			}
+		}
+
+		if(sds.count == 0) {
 			sd_stop_trans();
+			sds.buff = NULL;
+			sds.xfer_blocks = 0;
 		}
 		else {
 			DESELECT();
@@ -921,9 +941,32 @@ int sd_abort() {
 	} 
 	
 	sds.count = 0;
+	sds.buff = NULL;
+	sds.xfer_blocks = 0;
 	return 0;
 }
 
+int sd_in_progress(void) {
+	return sds.xfer_blocks > 0;
+}
+
+int sd_transfered(void) {
+	if(sds.rcount == 0) {
+		return 0;
+	}
+	return (sds.rcount - sds.count) * 512;
+}
+
+int sd_is_done(void) {
+	return sds.count == 0;
+}
+
+void sd_xfer(uintptr_t addr, size_t bytes) {
+	if(sds.count > 0) {
+		sds.buff = (uint8_t *)addr;
+		sds.xfer_blocks = bytes / 512;
+	}
+}
 
 #if _USE_MKFS && !_FS_READONLY
 
