@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
 			goto error;
 		}
 	}
-
+#ifdef HAVE_EXT_SYSCALLS
 	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI) {
 
 		/* Clear ROM DMA busy flag */
@@ -149,12 +149,16 @@ int main(int argc, char *argv[]) {
 			(uintptr_t)src, (uintptr_t)dst, 0x7000);
 		memcpy(dst, src, 0x7000);
 
-#ifdef HAVE_EXPT
-		exception_init(boot_vbr);
-		asic_init();
-#endif
+# ifdef HAVE_EXPT
+		if(IsoInfo->use_irq) {
+			exception_init(boot_vbr);
+			asic_init();
+		}
+# endif
 	}
-	else {
+	else 
+#endif
+	{
 		if((IsoInfo->boot_mode != BOOT_MODE_DIRECT) ||
 			((loader_end < CACHED_ADDR(IP_BIN_ADDR) ||
 				loader_addr > CACHED_ADDR(APP_BIN_ADDR)) &&

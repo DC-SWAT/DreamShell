@@ -97,6 +97,9 @@ static void *internal_malloc_base = NULL;
 static void *internal_malloc_pos = NULL;
 
 static void internal_malloc_init_auto() {
+    if (!is_dreamcast()) {
+        return;
+    }
     if (loader_addr < CACHED_ADDR(APP_BIN_ADDR) && IsoInfo->exec.type != BIN_TYPE_WINCE) {
 
         if ((loader_addr >= ISOLDR_DEFAULT_ADDR_LOW && IsoInfo->emu_cdda)
