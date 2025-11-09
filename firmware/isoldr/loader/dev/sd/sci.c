@@ -475,7 +475,7 @@ void sci_configure_spi(sci_spi_cs_mode_t cs, size_t buffer_size) {
             free(spi_dma_buffer);
             spi_dma_buffer = NULL;
         }
-        
+
         if(spi_dma_buffer == NULL) {
             spi_dma_buffer = aligned_alloc(32, buffer_size);
             if (spi_dma_buffer == NULL) {
@@ -763,7 +763,7 @@ void sci_spi_set_cs(bool enabled) {
 sci_result_t sci_spi_rw_byte(uint8_t b, uint8_t *data) {
     uint32_t timeout_cnt;
     uint8_t byte, status;
-
+/*
     if(!initialized || sci_mode != SCI_MODE_SPI) {
         return SCI_ERR_NOT_INITIALIZED;
     }
@@ -771,6 +771,7 @@ sci_result_t sci_spi_rw_byte(uint8_t b, uint8_t *data) {
     if(data == NULL) {
         return SCI_ERR_PARAM;
     }
+*/
     /* Set for full-duplex mode */
     sci_set_transfer_mode(TE | RE);
 
@@ -814,7 +815,7 @@ sci_result_t sci_spi_rw_byte(uint8_t b, uint8_t *data) {
 sci_result_t sci_spi_rw_data(const uint8_t *tx_data, uint8_t *rx_data, size_t len) {
     uint32_t timeout_cnt;
     uint8_t byte, status;
-
+/*
     if(!initialized || sci_mode != SCI_MODE_SPI) {
         return SCI_ERR_NOT_INITIALIZED;
     }
@@ -822,7 +823,7 @@ sci_result_t sci_spi_rw_data(const uint8_t *tx_data, uint8_t *rx_data, size_t le
     if(tx_data == NULL || rx_data == NULL || len == 0) {
         return SCI_ERR_PARAM;
     }
-
+*/
     /* Set for full-duplex mode */
     sci_set_transfer_mode(TE | RE);
 
@@ -872,11 +873,11 @@ sci_result_t sci_spi_rw_data(const uint8_t *tx_data, uint8_t *rx_data, size_t le
 sci_result_t sci_spi_write_byte(uint8_t b) {
     uint32_t timeout_cnt;
     uint8_t byte;
-
+/*
     if(!initialized || sci_mode != SCI_MODE_SPI) {
         return SCI_ERR_NOT_INITIALIZED;
     }
-
+*/
     /* Set for transmit-only mode */
     sci_set_transfer_mode(TE);
 
@@ -913,7 +914,7 @@ sci_result_t sci_spi_write_byte(uint8_t b) {
 sci_result_t sci_spi_read_byte(uint8_t *data) {
     uint32_t timeout_cnt;
     uint8_t byte, status;
-
+/*
     if(!initialized || sci_mode != SCI_MODE_SPI) {
         return SCI_ERR_NOT_INITIALIZED;
     }
@@ -921,7 +922,7 @@ sci_result_t sci_spi_read_byte(uint8_t *data) {
     if(data == NULL) {
         return SCI_ERR_PARAM;
     }
-
+*/
     /* Set for full-duplex mode,
        because SCI cannot clock in received data properly without transmitting. */
     sci_set_transfer_mode(RE | TE);
@@ -964,7 +965,7 @@ sci_result_t sci_spi_read_byte(uint8_t *data) {
 sci_result_t sci_spi_write_data(const uint8_t *tx_data, size_t len) {
     uint32_t timeout_cnt;
     uint8_t byte;
-
+/*
     if(!initialized || sci_mode != SCI_MODE_SPI) {
         return SCI_ERR_NOT_INITIALIZED;
     }
@@ -972,7 +973,7 @@ sci_result_t sci_spi_write_data(const uint8_t *tx_data, size_t len) {
     if(tx_data == NULL || len == 0) {
         return SCI_ERR_PARAM;
     }
-
+*/
     /* Set for transmit-only mode */
     sci_set_transfer_mode(TE);
 
@@ -1012,7 +1013,7 @@ sci_result_t sci_spi_write_data(const uint8_t *tx_data, size_t len) {
 sci_result_t sci_spi_read_data(uint8_t *rx_data, size_t len) {
     uint32_t timeout_cnt = 0;
     uint8_t byte, status;
-
+/*
     if(!initialized || sci_mode != SCI_MODE_SPI) {
         return SCI_ERR_NOT_INITIALIZED;
     }
@@ -1020,7 +1021,7 @@ sci_result_t sci_spi_read_data(uint8_t *rx_data, size_t len) {
     if(rx_data == NULL || len == 0) {
         return SCI_ERR_PARAM;
     }
-
+*/
     /* Set for full-duplex mode,
        because SCI cannot clock in received data properly without transmitting. */
     sci_set_transfer_mode(RE | TE);
@@ -1067,15 +1068,15 @@ sci_result_t sci_spi_dma_write_data(const uint8_t *data, size_t len, dma_callbac
     size_t i;
     sci_result_t result;
     uint32_t timeout_cnt = 0;
+/*
+    if(!initialized || sci_mode != SCI_MODE_SPI) {
+        return SCI_ERR_NOT_INITIALIZED;
+    }
 
-    // if(!initialized || sci_mode != SCI_MODE_SPI) {
-    //     return SCI_ERR_NOT_INITIALIZED;
-    // }
-
-    // if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
-    //     return SCI_ERR_PARAM;
-    // }
-
+    if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
+        return SCI_ERR_PARAM;
+    }
+*/
     /* Reverse each byte */
     for(i = 0; i < len; i++) {
         spi_dma_buffer[i] = bit_reverse8(data[i]);
@@ -1130,14 +1131,15 @@ sci_result_t sci_spi_dma_read_data(uint8_t *data, size_t len, dma_callback_t cal
     uint32_t timeout_cnt;
     uint8_t *buffer = spi_dma_buffer;
 
-    // if(!initialized || sci_mode != SCI_MODE_SPI) {
-    //     return SCI_ERR_NOT_INITIALIZED;
-    // }
+/*
+    if(!initialized || sci_mode != SCI_MODE_SPI) {
+        return SCI_ERR_NOT_INITIALIZED;
+    }
 
-    // if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
-    //     return SCI_ERR_PARAM;
-    // }
-
+    if(data == NULL || len == 0 || spi_dma_buffer == NULL || len > spi_buffer_size) {
+        return SCI_ERR_PARAM;
+    }
+*/
     /* Configure DMA */
     dma_config_t config = sci_dma_rx_config;
     config.callback = callback;
