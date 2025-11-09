@@ -81,8 +81,8 @@ static void *katana_realloc(void *data, uint32 size) {
  * @brief Simple memory allocation
  */
 
-static inline size_t word_align(size_t size) {
-    return size + ((sizeof(size_t) - 1) & ~(sizeof(size_t) - 1));
+static inline size_t memory_align(size_t alignment, size_t size) {
+    return (size + alignment - 1) & ~(alignment - 1);
 }
 
 struct chunk {
@@ -178,7 +178,7 @@ static int internal_malloc_init(int first) {
         internal_malloc_init_maple(first);
     }
 
-    internal_malloc_pos = internal_malloc_base + word_align(sizeof(struct chunk));
+    internal_malloc_pos = internal_malloc_base + memory_align(32, sizeof(struct chunk));
     Chunk b = internal_malloc_base;
     b->next = NULL;
     b->prev = NULL;
@@ -241,25 +241,32 @@ void internal_malloc_split_next(Chunk c, size_t size) {
     c->size = size - sizeof(struct chunk);
 }
 
-void *internal_malloc(size_t size) {
+void *internal_malloc(size_t alignment, size_t size) {
 
     if (!size) {
         return NULL;
     }
 
-    size_t length = word_align(size + sizeof(struct chunk));
+    size_t length = size; // memory_align(alignment, size + sizeof(struct chunk));
     Chunk prev = NULL;
     Chunk c = internal_malloc_chunk_find(size, &prev);
 
     if (!c) {
-        Chunk newc = internal_malloc_pos;
-        internal_malloc_pos += length;
+        uintptr_t potential_data_addr = (uintptr_t)internal_malloc_pos + sizeof(struct chunk);
+        uintptr_t aligned_data_addr = memory_align(alignment, potential_data_addr);
+        uintptr_t newc_addr = aligned_data_addr - sizeof(struct chunk);
+        
+        Chunk newc = (Chunk)newc_addr;
+        prev->next = newc;
         newc->next = NULL;
         newc->prev = prev;
-        newc->size = length - sizeof(struct chunk);
-        newc->data = newc + 1;
-        prev->next = newc;
+        
+        uintptr_t end_of_alloc = aligned_data_addr + size;
+        newc->size = end_of_alloc - newc_addr - sizeof(struct chunk);
+        newc->data = (void*)(newc + 1);
+        internal_malloc_pos = (void*)end_of_alloc;
         c = newc;
+
     } else if (length + sizeof(size_t) < c->size) {
         internal_malloc_split_next(c, length);
     }
@@ -289,12 +296,12 @@ void internal_free(void *ptr) {
     }
     if (!c->next) {
         c->prev->next = NULL;
-        internal_malloc_pos -= (c->size + sizeof(struct chunk));
+        internal_malloc_pos = (void*)((uintptr_t)c->prev + sizeof(struct chunk) + c->prev->size);
     }
 }
 
 void *internal_realloc(void *ptr, size_t size) {
-    void *newptr = internal_malloc(size);
+    void *newptr = internal_malloc(sizeof(size_t), size);
 
     if (newptr && ptr && ptr >= internal_malloc_base) {
 
@@ -360,14 +367,14 @@ void *malloc(uint32 size) {
             if (internal_malloc_pos == NULL) {
                 internal_malloc_init(0);
             }
-            return internal_malloc(size);
+            return internal_malloc(sizeof(size_t), size);
         }
         return ptr;
     }
     else
 #endif
     {
-        return internal_malloc(size);
+        return internal_malloc(sizeof(size_t), size);
     }
 }
 
@@ -395,12 +402,6 @@ void *realloc(void *data, uint32 size) {
     }
 }
 
-// FIXME: This is a hack to get aligned memory.
 void *aligned_alloc(size_t alignment, size_t size) {
-    void *ptr = malloc(size + alignment);
-    if (ptr) {
-        void *aligned_ptr = (void*)(((uintptr_t)ptr + alignment - 1) & ~(alignment - 1));
-        return aligned_ptr;
-    }
-    return NULL;
+    return internal_malloc(alignment, size);
 }
