@@ -124,6 +124,11 @@ int main(int argc, char *argv[]) {
 
 		/* Clear ROM DMA busy flag */
 		*((uint32_t *)NONCACHED_ADDR(0x0c0000ac)) = 0;
+		/* Patch some values */
+		*((uint32_t *)NONCACHED_ADDR(0x0c01f100)) = 0;
+		*((uint32_t *)NONCACHED_ADDR(0x0c01f104)) = 1;
+		*((uint32_t *)NONCACHED_ADDR(0x0c01f108)) = 0;
+		*((uint32_t *)NONCACHED_ADDR(0x0c01f10c)) = 1; // 31 KHz
 
 		/* Set VBR address for IRQ vectors */
 		boot_vbr = 0x0c000000;
