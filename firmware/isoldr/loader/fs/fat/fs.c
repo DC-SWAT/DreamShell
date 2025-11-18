@@ -13,7 +13,8 @@
 enum FILE_STATE {
 	FILE_STATE_UNUSED = 0,
 	FILE_STATE_USED = 1,
-	FILE_STATE_POLL = 2
+	FILE_STATE_POLL = 2,
+	FILE_STATE_ASYNC = 3
 };
 
 typedef struct {
@@ -226,14 +227,21 @@ int open(const char *path, int flags) {
 	return fd;
 }
 
+static void abort_current_async(int fd) {
+	LOGF("FS: aborting async, fd=%d\n", fd);
+	abort_async(fd);
+	do {} while (pre_read_xfer_busy());
+	pre_read_xfer_end();
+}
+
 int close(int fd) {
 
 	FRESULT rc;
 	CHECK_FD();
 
-	if(file->poll_cb) {
-		LOGFF("WARNING, aborting async for fd %d\n", fd);
-		abort_async(fd);
+	if(file->state == FILE_STATE_ASYNC) {
+		abort_current_async(fd);
+		file->state = FILE_STATE_USED;
 	}
 
 	rc = f_close(&file->fp);
@@ -257,9 +265,9 @@ int read(int fd, void *ptr, unsigned int size) {
 
 	CHECK_FD();
 
-	if(file->poll_cb) {
-		LOGFF("WARNING, aborting async for fd %d\n", fd);
-		abort_async(fd);
+	if(file->state == FILE_STATE_ASYNC) {
+		abort_current_async(fd);
+		file->state = FILE_STATE_USED;
 	}
 
 	int old_dma_mode = fs_dma_enabled();
@@ -284,6 +292,12 @@ int read(int fd, void *ptr, unsigned int size) {
 int pre_read(int fd, unsigned int size) {
 
 	CHECK_FD();
+
+	if(file->state == FILE_STATE_ASYNC) {
+		abort_current_async(fd);
+		file->state = FILE_STATE_USED;
+	}
+
 	FRESULT rc = f_pre_read(&file->fp, size);
 
 	if(rc != FR_OK) {
@@ -291,6 +305,7 @@ int pre_read(int fd, unsigned int size) {
 		return FS_ERR_SYSERR;
 	}
 
+	file->state = FILE_STATE_ASYNC;
 	return 0;
 }
 
@@ -298,25 +313,28 @@ int read_async(int fd, void *ptr, unsigned int size, fs_callback_f *cb) {
 
 	CHECK_FD();
 
-	if(file->poll_cb) {
-		LOGFF("WARNING, aborting async for fd %d\n", fd);
-		// abort_async(fd);
+	if(file->state == FILE_STATE_ASYNC) {
+		abort_current_async(fd);
 		file->state = FILE_STATE_USED;
 	}
 
 	if (fs_dma_enabled() == FS_DMA_DISABLED) {
 		int rv = read(fd, ptr, size);
-		cb(rv);
+		if(cb) {
+			cb(rv);
+		}
 		return 0;
 	}
 
 	file->poll_cb = cb;
+	file->state = FILE_STATE_ASYNC;
 
 	if(f_read_async(&file->fp, ptr, size) == FR_OK) {
 		return 0;
 	}
 
 	file->poll_cb = NULL;
+	file->state = FILE_STATE_USED;
 	return FS_ERR_SYSERR;
 }
 
@@ -342,38 +360,41 @@ int poll(int fd) {
 
 	CHECK_FD();
 
-	if(!file->poll_cb) {
-		return 0;
-	}
-
 	if(file->state == FILE_STATE_POLL) {
 		LOGFF("Busy\n");
 		return 1;
+	}
+	if(file->state != FILE_STATE_ASYNC) {
+		return 0;
 	}
 
 	file->state = FILE_STATE_POLL;
 	rc = f_poll(&file->fp, &bp);
 
-	DBGFF("%d %d %d\n", fd, rc, bp);
+	DBGFF("fd=%d rc=%d bp=%d\n", fd, rc, bp);
 
 	switch(rc) {
 		case FR_OK:
 			cb = file->poll_cb;
 			file->poll_cb = NULL;
 			file->state = FILE_STATE_USED;
-			cb(bp);
+			if(cb) {
+				cb(bp);
+			}
 			rv = 0;
 			break;
 		case FR_NOT_READY:
 			rv = bp;
-			file->state = FILE_STATE_USED;
+			file->state = FILE_STATE_ASYNC;
 			break;
 		default:
 			LOGFF("ERROR, fd %d code %d bytes %d\n", fd, rc, bp);
 			cb = file->poll_cb;
 			file->poll_cb = NULL;
 			file->state = FILE_STATE_USED;
-			cb(-1);
+			if(cb) {
+				cb(-1);
+			}
 			rv = -1;
 			break;
 	}
@@ -384,12 +405,16 @@ int poll(int fd) {
 void poll_all(int err) {
 	for(int i = 0; i < MAX_OPEN_FILES; i++) {
 		FILE *file = &_files[i];
-		if(file->state == FILE_STATE_USED && file->poll_cb != NULL) {
+		if(file->state == FILE_STATE_ASYNC) {
 			if (err) {
 				fs_callback_f *cb = file->poll_cb;
 				file->poll_cb = NULL;
-				cb(err);
-			} else {
+				file->state = FILE_STATE_USED;
+				if(cb) {
+					cb(err);
+				}
+			}
+			else {
 				poll(i);
 			}
 		}
