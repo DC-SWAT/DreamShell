@@ -45,20 +45,32 @@ int snd_init_firmware(const char *filename) {
 	return 0;
 }
 
-
 int flashrom_get_region_only() {
-	
+	int hw_region = 0;
+
+	if(hardware_sys_mode(&hw_region) != HW_TYPE_RETAIL) {
+		switch(hw_region) {
+			case HW_REGION_ASIA:
+				return FLASHROM_REGION_JAPAN;
+			case HW_REGION_US:
+				return FLASHROM_REGION_US;
+			case HW_REGION_EUROPE:
+				return FLASHROM_REGION_EUROPE;
+			case HW_REGION_UNKNOWN:
+			default:
+				return FLASHROM_REGION_JAPAN;
+		}
+	}
+
 	int start, size;
-	uint8 region[6] = { 0 };
-	region[2] = *(uint8*)0x0021A002;
+	uint8_t region[6] = { 0 };
+	region[2] = *(uint8_t *)0x0021A002;
 
 	/* Find the partition */
 	if(flashrom_info(FLASHROM_PT_SYSTEM, &start, &size) < 0) {
-		
 		dbglog(DBG_ERROR, "%s: can't find partition %d\n", __func__, FLASHROM_PT_SYSTEM);
-		
-	} else {
-
+	}
+	else {
 		/* Read the first 5 characters of that partition */
 		if(flashrom_read(start, region, 5) < 0) {
 			dbglog(DBG_ERROR, "%s: can't read partition %d\n", __func__, FLASHROM_PT_SYSTEM);
@@ -67,11 +79,14 @@ int flashrom_get_region_only() {
 
 	if(region[2] == 0x58 || region[2] == 0x30) {
 		return FLASHROM_REGION_JAPAN;
-	} else if(region[2] == 0x59 || region[2] == 0x31) {
+	}
+	else if(region[2] == 0x59 || region[2] == 0x31) {
 		return FLASHROM_REGION_US;
-	} else if(region[2] == 0x5A || region[2] == 0x32) {
+	}
+	else if(region[2] == 0x5A || region[2] == 0x32) {
 		return FLASHROM_REGION_EUROPE;
-	} else {
+	}
+	else {
 		dbglog(DBG_ERROR, "%s: Unknown region code %02x\n", __func__, region[2]);
 		return FLASHROM_REGION_UNKNOWN;
 	}
