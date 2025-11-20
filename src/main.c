@@ -12,17 +12,8 @@
 #include "profiler.h"
 #include "network/net.h"
 #include "sfx.h"
+#include <dc/syscalls.h>
 
-static void early_init(void) {
-	/*
-		Older KallistiOS doesn't get back the Master after working with G1 ATA.
-		But some users can use old bootloader with this KOS version.
-		So need select the Master before cdrom_init() is called.
-	*/
-	g1_ata_select_device(G1_ATA_MASTER);
-}
-
-KOS_INIT_EARLY(early_init);
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT);
 
 static uint32 ver_int = 0;
@@ -56,15 +47,16 @@ void SetVersion(uint32 ver) {
 					(uint)DS_VER_MAJOR(ver_int),
 					(uint)DS_VER_MINOR(ver_int),
 					(uint)DS_VER_MICRO(ver_int),
-					DS_VER_BUILD_TYPE_STR(ver_bld));
+					getenv("ARCH"));
 	}
 	else {
-		snprintf(ver_str, sizeof(ver_str), "%d.%d.%d.%s.%d",
+		snprintf(ver_str, sizeof(ver_str), "%d.%d.%d.%s.%d %s",
 					(uint)DS_VER_MAJOR(ver_int),
 					(uint)DS_VER_MINOR(ver_int),
 					(uint)DS_VER_MICRO(ver_int),
 					DS_VER_BUILD_TYPE_STR(ver_bld),
-					DS_VER_BUILD_NUM(ver_bld));
+					DS_VER_BUILD_NUM(ver_bld),
+					getenv("ARCH"));
 	}
 	setenv("VERSION", ver_str, 1);
 	snprintf(ver_str, sizeof(ver_str), "%d.%d.%d",
@@ -78,21 +70,6 @@ void SetVersion(uint32 ver) {
 const char *GetVersionBuildTypeString(int type) {
 	return build_str[type];
 }
-
-static int sys_info_init() {
-	int (*sc)(int, int, int, int) = NULL;
-	uint32 *scv = (uint32 *)&sc;
-	*scv = *((uint32 *)0x8c0000b0);
-	return sc(0, 0, 0, 0);
-}
-
-static uint8 *get_board_id() {
-	uint8 *(*sc)(int, int, int, int) = NULL;
-	uint32 *scv = (uint32 *)&sc;
-	*scv = *((uint32 *)0x8c0000b0);
-	return sc(0, 0, 0, 3);
-}
-
 
 int InitNet(uint32 ipl) {
 
@@ -162,16 +139,15 @@ void ShutdownNet() {
 int InitDS() {
 
 	char fn[NAME_MAX], bf[32];
-	int tmpi = 0;
-	uint8 *tmpb = NULL;
+	int tmpi;
+	uint8_t *tmpb;
+	uint64_t tmpd;
 	Settings_t *settings;
 #ifdef DS_EMU
 	int emu = 1;
 #else
 	int emu = 0;
 #endif
-
-	SetVersion(0);
 
 #if defined(DS_DEBUG) && DS_DEBUG == 2
 	gdb_init();
@@ -187,11 +163,8 @@ int InitDS() {
 	if(!emu) {
 		InitIDE();
 		InitSDCard();
-
-		if(is_custom_bios()) {
-			InitRomdisk();
-		}
-	} else {
+	}
+	else {
 		setenv("EMU", "Unknown", 1);
 	}
 
@@ -211,8 +184,45 @@ int InitDS() {
 	setenv("HOST", "DreamShell", 1);
 	setenv("OS", getenv("HOST"), 1);
 	setenv("USER", getenv("HOST"), 1);
-	setenv("ARCH", hardware_sys_mode(&tmpi) == HW_TYPE_SET5 ? "Set5.xx" : "Dreamcast", 1);
 
+	tmpi = hardware_sys_mode(NULL);
+	switch(tmpi) {
+		case HW_TYPE_SET5:
+			setenv("ARCH", "Set5.xx", 1);
+			break;
+		case HW_TYPE_NAOMI:
+			// TODO: Add NAOMI 2 detection
+			setenv("ARCH", "NAOMI", 1);
+			break;
+		case HW_TYPE_RETAIL:
+			setenv("ARCH", "Dreamcast", 1);
+			break;
+		default:
+			setenv("ARCH", "Unknown", 1);
+			break;
+	}
+
+	if(tmpi != HW_TYPE_RETAIL) {
+		// FIXME: Get some real ID for NAOMI.
+		tmpb = (uint8_t *)0xa021a056;
+	}
+	else {
+		tmpd = syscall_sysinfo_id();
+		tmpb = (uint8_t *)&tmpd;
+		if(strncmp(getenv("PATH"), "/cd", 3)) {
+			/* Relax GD drive =) */
+			cdrom_spin_down();
+		}
+	}
+	memset(fn, 0, sizeof(fn));
+
+	for(tmpi = 0; tmpi < 8; tmpi++) {
+		snprintf(bf, sizeof(bf), "%02X", tmpb[tmpi]);
+		strcat(fn, bf);
+	}
+	setenv("BOARD_ID", fn, 1);
+
+	SetVersion(0);
 	snprintf(bf, sizeof(bf), "%s v%s", getenv("HOST"), getenv("VERSION_SHORT"));
 	setenv("TITLE", bf, 1);
 
@@ -238,26 +248,6 @@ int InitDS() {
 	setenv("LUA_CPATH", getenv("PATH"), 1);
 	setenv("PWD", fs_getwd(), 1);
 	setenv("APP", (settings->app[0] != 0 ? settings->app : "Main"), 1);
-
-	/* If used custom BIOS and syscalls is not installed, setting up it */
-	if(is_custom_bios() && is_no_syscalls()) {
-		tmpb = (uint8 *)0xa021a056;
-	}
-	else {
-		sys_info_init();
-		tmpb = get_board_id();
-		if(strncmp(getenv("PATH"), "/cd", 3)) {
-			/* Relax GD drive =) */
-			cdrom_spin_down();
-		}
-	}
-	memset(fn, 0, sizeof(fn));
-
-	for(tmpi = 0; tmpi < 8; tmpi++) {
-		snprintf(bf, sizeof(bf), "%02X", tmpb[tmpi]);
-		strcat(fn, bf);
-	}
-	setenv("BOARD_ID", fn, 1);
 
 	IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 	InitEvents();
