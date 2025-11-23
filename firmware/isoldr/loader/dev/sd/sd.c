@@ -199,10 +199,10 @@ static int byte_mode = 0;
 
 
 static struct {
-	uint32 block;
+	uint32_t block;
 	size_t rcount;
 	size_t count;
-	uint8 *buff;
+	uint8_t *buff;
 	size_t xfer_blocks;
 } sds;
 
@@ -721,8 +721,10 @@ retry_read:
 				else {
 					sds.block = block;
 					sds.count = sds.rcount = count;
-					sds.buff = buf;
-					sds.xfer_blocks = 0;
+					if(buf) {
+						sds.buff = buf;
+						sds.xfer_blocks = 0;
+					}
 					DESELECT();
 					return 0;
 				}
@@ -848,16 +850,23 @@ retry_write:
 
 #endif
 
-
 static void sd_stop_trans() {
+	SELECT();
 	send_cmd(CMD12, 0);   /* STOP_TRANSMISSION */
 	DESELECT();
 	(void)f_spi_rec_byte();	 /* Idle (Release DO) */
 }
 
+int sd_pre_read(uint32 block, size_t count) {
+	return sd_read_blocks(block, count, NULL, 0);
+}
 
 /* For now only read supported (really write is not need) */
 int sd_poll(size_t blocks) {
+
+#ifdef SD_DEBUG
+	LOGFF("blocks=%d count=%d xfer_blocks=%d\n", blocks, sds.count, sds.xfer_blocks);
+#endif
 
 	if(sds.count > 0) {
 
@@ -911,21 +920,25 @@ int sd_poll(size_t blocks) {
 
 		} while (--cnt);
 
-		if(sds.xfer_blocks > 0) {
-			sds.xfer_blocks -= (original_cnt - cnt);
+		DESELECT();
 
-			if(sds.xfer_blocks == 0) {
+		if(sds.xfer_blocks > 0) {
+			int blocks_read = (original_cnt - cnt);
+			sds.xfer_blocks -= blocks_read;
+
+			if(sds.xfer_blocks <= 0) {
+				sds.xfer_blocks = 0;
 				sds.buff = NULL;
 			}
 		}
 
 		if(sds.count == 0) {
 			sd_stop_trans();
-			sds.buff = NULL;
-			sds.xfer_blocks = 0;
+			if(sds.xfer_blocks == 0) {
+				sds.buff = NULL;
+			}
 		}
 		else {
-			DESELECT();
 			return sds.rcount - sds.count;
 		}
 	}
@@ -934,12 +947,15 @@ int sd_poll(size_t blocks) {
 
 
 int sd_abort() {
-	
-	if(sds.count > 0) {
-		SELECT();
+
+#ifdef SD_DEBUG
+	LOGFF("count=%d xfer_blocks=%d\n", sds.count, sds.xfer_blocks);
+#endif
+
+	if(sds.count > 0 || sds.xfer_blocks > 0) {
 		sd_stop_trans();
 	} 
-	
+
 	sds.count = 0;
 	sds.buff = NULL;
 	sds.xfer_blocks = 0;
@@ -966,6 +982,9 @@ void sd_xfer(uintptr_t addr, size_t bytes) {
 		sds.buff = (uint8_t *)addr;
 		sds.xfer_blocks = bytes / 512;
 	}
+#ifdef SD_DEBUG
+	LOGFF("count=%d xfer_blocks=%d addr=0x%08lx bytes=%d\n", sds.count, sds.xfer_blocks, addr, bytes);
+#endif
 }
 
 #if _USE_MKFS && !_FS_READONLY

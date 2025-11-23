@@ -139,6 +139,21 @@ int sd_shutdown(void);
 */
 int sd_read_blocks(uint32 block, size_t count, uint8 *buf, int blocked);
 
+/** \brief  Pre-read blocks for streaming mode.
+
+    This function is used to pre-read blocks for streaming mode.
+
+    \param  block           The starting block number to read from.
+    \param  count           The number of 512 byte blocks of data to read.
+    \retval 0               On success.
+    \retval -1              On error, errno will be set as appropriate.
+
+    \par    Error Conditions:
+    \em     EIO - an I/O error occurred in reading data \n
+    \em     ENXIO - SD card support was not initialized
+*/
+int sd_pre_read(uint32_t block, size_t count);
+
 /** \brief  Write one or more blocks to the SD card.
 
     This function writes the specified number of blocks to the SD card at the
