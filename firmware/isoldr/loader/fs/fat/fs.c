@@ -293,10 +293,13 @@ int pre_read(int fd, unsigned int size) {
 
 	CHECK_FD();
 
+#ifdef DEV_TYPE_SD
 	if(file->state == FILE_STATE_ASYNC) {
 		abort_current_async(fd);
 		file->state = FILE_STATE_USED;
 	}
+	file->state = FILE_STATE_ASYNC;
+#endif
 
 	FRESULT rc = f_pre_read(&file->fp, size);
 
@@ -305,7 +308,6 @@ int pre_read(int fd, unsigned int size) {
 		return FS_ERR_SYSERR;
 	}
 
-	file->state = FILE_STATE_ASYNC;
 	return 0;
 }
 
