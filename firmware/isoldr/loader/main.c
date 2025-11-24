@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
 	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI) {
 
 		/* Clear ROM DMA busy flag */
-		*((uint32_t *)NONCACHED_ADDR(0x0c0000ac)) = 0;
+		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
 		/* Patch some values */
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f100)) = 0;
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f104)) = 1;
@@ -184,7 +184,7 @@ int main(int argc, char *argv[]) {
 		if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
 			/* Patch GPIO register to prevent cable detection */
 			argc = patch_memory(0xff800030,
-				IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 0);
+				(uintptr_t)&IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 0);
 			LOGF("Patch GPIO register: %d\n", argc);
 		}
 	}

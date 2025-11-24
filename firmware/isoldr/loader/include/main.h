@@ -35,7 +35,7 @@
 #define RAM_END_ADDR                 0x0d000000
 #define RAM_END_32MB_ADDR            0x0e000000
 
-/* Software environment structure in RAM */
+/* Dreamcast software environment structure in RAM */
 #define SYSCALLS_INFO_ADDR           (RAM_START_ADDR)
 #define SYSCALLS_INFO_SYS_ID_ADDR    (RAM_START_ADDR + 0x68)
 #define SYSCALLS_INFO_REGION_ADDR    (RAM_START_ADDR + 0x70)
@@ -48,6 +48,9 @@
 #define IP_BIN_BOOTSTRAP_1_ADDR      (RAM_START_ADDR + 0x8300)
 #define IP_BIN_BOOTSTRAP_2_ADDR      (RAM_START_ADDR + 0xe000)
 #define APP_BIN_ADDR                 (RAM_START_ADDR + 0x10000)
+
+/* NAOMI software environment */
+#define NAOMI_CART_DMA_STATUS_ADDR   (RAM_START_ADDR + 0xac)
 
 /* Address conversion */
 #define PHYS_ADDR(addr) ((addr) & 0x1fffffff)

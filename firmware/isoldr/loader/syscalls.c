@@ -16,6 +16,7 @@
 #include <arch/timer.h>
 #include <arch/gdb.h>
 #include <arch/irq.h>
+#include <drivers/aica.h>
 
 #ifdef DEV_TYPE_SD
 #include <sd/spi.h>
@@ -60,7 +61,7 @@ static void reset_GDS(gd_state_t *GDS) {
 #elif defined(DEV_TYPE_SD)
 		&& IsoInfo->emu_async
 #endif
-		&& IsoInfo->sector_size == 2048
+		&& IsoInfo->sector_size <= 2048
 		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_CSO
 		&& IsoInfo->image_type != ISOFS_IMAGE_TYPE_ZSO
 	) {
@@ -746,7 +747,7 @@ static int init_cmd() {
 	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
 		/* Patch GPIO register to prevent cable detection */
 		patch_memory(0xff800030,
-			IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 5 << 20);
+			(uintptr_t)&IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 5 << 20);
 	}
 	return CMD_STAT_COMPLETED;
 }
@@ -1398,21 +1399,58 @@ void gdGdcChangeDisc(int disc_num) {
 }
 
 void gdGdcCartRead(gdc_cart_read_params_t *params) {
-	LOGFF("offset=%d dst=%08lx size=%d type=%d\n",
-		params->offset, (uint32)params->dst_buf,
-		params->size, params->type);
+#ifdef HAVE_EXT_SYSCALLS
 
+	LOGFF("%s %ld %08lx %d\n",
+		params->type ? "DMA" : "PIO",
+		params->offset,
+		(uintptr_t)params->dst_buf,
+		params->size);
+
+# ifdef DEV_TYPE_SD
+	void *dst_buf = params->dst_buf;
+	static uint8_t *stream_buffer = NULL;
+
+	if(params->type) {
+		fs_enable_dma(IsoInfo->emu_async);
+
+		if((uintptr_t)params->dst_buf >> 24 == 0) {
+			if(stream_buffer == NULL) {
+				stream_buffer = aligned_alloc(32, params->size);
+			}
+			dst_buf = stream_buffer;
+		}
+	}
+	else {
+		fs_enable_dma(FS_DMA_DISABLED);
+	}
+	ReadSectors(dst_buf,
+		params->offset / IsoInfo->sector_size,
+		params->size / IsoInfo->sector_size, NULL);
+
+	if(params->type) {
+		dcache_purge_range((uintptr_t)dst_buf, params->size);
+		if(dst_buf != params->dst_buf) {
+			aica_dma_transfer(PHYS_ADDR((uintptr_t)stream_buffer),
+				(uintptr_t)params->dst_buf, params->size);
+		}
+	}
+# else
 	if(params->type) {
 		fs_enable_dma(FS_DMA_SHARED);
 	}
 	else {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
-
 	/* TODO: Async DMA support */
 	ReadSectors(params->dst_buf,
 		params->offset / IsoInfo->sector_size,
 		params->size / IsoInfo->sector_size, NULL);
+# endif
+
+#else
+	(void)params;
+#endif
 }
 
 void gdcDummy(int gd_chn, int *arg2) {
