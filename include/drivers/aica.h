@@ -9,6 +9,8 @@
 #ifndef _DS_AICA_H
 #define _DS_AICA_H
 
+#include <stdint.h>
+
 /**
  * Sound memory start address (0x00800000 - 0x009FFFE0) 
  */
@@ -91,6 +93,14 @@
 #define AICA_DMA_G2APRO_LOCK   0x46597F00
 #define AICA_DMA_G2APRO_UNLOCK 0x4659007F
 
+#define AICA_DMA_DIR_SYS_TO_SND 0
+#define AICA_DMA_DIR_SND_TO_SYS 1
+#define AICA_DMA_TRG_CPU        0x00000001
+#define AICA_DMA_TRG_SUSPEND    0x00000004
+#define AICA_DMA_LEN_AUTO_CLR   0x80000000
+#define AICA_DMA_DISABLE        0
+#define AICA_DMA_ENABLE         1
+
 /**
  * AICA macros
  */
@@ -103,5 +113,17 @@
 
 /* Initialize AICA with custom firmware */
 int snd_init_firmware(const char *filename);
+
+static inline void aica_dma_transfer(uintptr_t sys_src_phys, uintptr_t sound_dst, size_t size) {
+	AICA_DMA_G2APRO = AICA_DMA_G2APRO_UNLOCK;
+	AICA_DMA_ADEN = AICA_DMA_DISABLE;
+	AICA_DMA_ADDIR = AICA_DMA_DIR_SYS_TO_SND;
+	AICA_DMA_ADTRG = AICA_DMA_TRG_SUSPEND | AICA_DMA_TRG_CPU;
+	AICA_DMA_ADSTAR = sys_src_phys;
+	AICA_DMA_ADSTAG = sound_dst;
+	AICA_DMA_ADLEN = size | AICA_DMA_LEN_AUTO_CLR;
+	AICA_DMA_ADEN = AICA_DMA_ENABLE;
+	AICA_DMA_ADST = AICA_DMA_ENABLE;
+}
 
 #endif /* _DS_AICA_H */

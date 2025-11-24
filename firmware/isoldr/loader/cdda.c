@@ -136,22 +136,6 @@ static void aica_dma_irq_restore() {
 	cdda->int_irq_code = 0;
 }
 
-static void aica_dma_transfer(uint8 *data, uint32 dest, uint32 size) {
-
-	DBGFF("0x%08lx %ld\n", data, size);
-	uint32 addr = (uint32)data;
-
-	AICA_DMA_G2APRO = 0x4659007f;      // Protection code
-	AICA_DMA_ADEN   = 0;               // Disable wave DMA
-	AICA_DMA_ADDIR  = 0;               // To wave memory
-	AICA_DMA_ADTRG  = 0x00000004 | 1;  // Suspend enabled, initiate by CPU + SPU
-	AICA_DMA_ADSTAR = PHYS_ADDR(addr); // System memory address
-	AICA_DMA_ADSTAG = dest;            // Wave memory address
-	AICA_DMA_ADLEN  = size|0x80000000; // Data size, disable after DMA end
-	AICA_DMA_ADEN   = 1;               // Enable wave DMA
-	AICA_DMA_ADST   = 1;               // Start wave DMA by CPU
-}
-
 #ifdef HAVE_CDDA_ADPCM
 static void aica_sq_transfer(uint8 *data, uint32 dest, uint32 size) {
 
@@ -196,7 +180,7 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 // #endif
 		int old = irq_disable();
 		aica_dma_irq_hide();
-		aica_dma_transfer(data, dest, size);
+		aica_dma_transfer(PHYS_ADDR((uintptr_t)data), dest, size);
 		irq_restore(old);
 		if (cdda->trans_method == PCM_TRANS_DMA_BLOCKED) {
 			do { } while(aica_dma_in_progress());
