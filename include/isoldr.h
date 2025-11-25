@@ -189,8 +189,9 @@ typedef struct isoldr_info {
 	uint32 alt_read;                    /* Use alternative reading without aborting. */
 	uint32 use_gpio;                    /* Use GPIO-0 as button for IGR. */
 	uint32 exec_addr;                   /* Alternative memory address for executing */
+	uint32 firmware;                    /* Memory address for flashrom dump or IRQ table. Set 1 for auto load. */
 
-	uint32 cdda_offset[41];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[40];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

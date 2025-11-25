@@ -635,7 +635,37 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		}
 	}
 
+	if(info->firmware == 1) {
+
+		snprintf(fn, NAME_MAX, "%s/firmware/flash/dcus_ntsc.bin", getenv("PATH"));
+		fd = fs_open(fn, O_RDONLY);
+
+		if(fd != FILEHND_INVALID) {
+			size_t flen = fs_total(fd);
+			uint8_t *buff = (uint8_t *) memalign(32, flen);
+
+			if(buff != NULL) {
+				if(fs_read(fd, buff, flen) == flen) {
+					dcache_flush_range((uintptr_t)buff, flen);
+					info->firmware = (uintptr_t)buff;
+				}
+				else {
+					ds_printf("DS_ERROR: Can't read flashrom dump file: %s\n", fn);
+					free(buff);
+				}
+			}
+			else {
+				ds_printf("DS_ERROR: No memory for flashrom\n");
+			}
+			fs_close(fd);
+		}
+		else {
+			ds_printf("DS_ERROR: Can't open flashrom dump file: %s\n", fn);
+		}
+	}
+
 	if(info->image_type == IMAGE_TYPE_ROM_NAOMI) {
+
 		snprintf(fn, NAME_MAX, "%s/firmware/bios/naomi_irq_vec.bin", getenv("PATH"));
 		fd = fs_open(fn, O_RDONLY);
 
@@ -645,6 +675,11 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		}
 		size_t hlen = fs_total(fd);
 		uint8_t *buff = (uint8_t *) memalign(32, 0x10000);
+
+		if(buff == NULL) {
+			ds_printf("DS_ERROR: No memory for naomi irq table\n");
+			return;
+		}
 		ds_printf("DS_PROCESS: Loading %s %d bytes to %08lx\n",
 			fn, hlen, (uintptr_t)buff);
 
@@ -673,8 +708,7 @@ void isoldr_exec(isoldr_info_t *info, uint32 addr) {
 		fs_close(fd);
 
 		dcache_flush_range((uintptr_t)buff, hlen + vlen);
-		info->syscalls = (uintptr_t)buff;
-		addr = ISOLDR_DEFAULT_ADDR_LOW + 0x1000;
+		info->firmware = (uintptr_t)buff;
 	}
 
 	if(addr != ISOLDR_DEFAULT_ADDR) {
