@@ -405,10 +405,21 @@ static void showROMInfo(const char *path) {
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
-	for(int i = 0; i < 8; i++) {
-		if(cart_hdr.regional_name[i][0] != 0) {
-			trim_spaces(cart_hdr.regional_name[i], title, 32);
-			break;
+	/* Try US regional name first */
+	if(cart_hdr.regional_name[NAOMI_REGION_USA][0] != 0) {
+		trim_spaces(cart_hdr.regional_name[NAOMI_REGION_USA], title, 32);
+	}
+	/* Then try Japan regional name */
+	else if(cart_hdr.regional_name[NAOMI_REGION_JAPAN][0] != 0) {
+		trim_spaces(cart_hdr.regional_name[NAOMI_REGION_JAPAN], title, 32);
+	}
+	else {
+		/* Otherwise use first non-empty regional name */
+		for(int i = 0; i < 8; i++) {
+			if(cart_hdr.regional_name[i][0] != 0) {
+				trim_spaces(cart_hdr.regional_name[i], title, 32);
+				break;
+			}
 		}
 	}
 
@@ -1364,8 +1375,13 @@ void isoLoader_Run(GUI_Widget *widget) {
 		self.isoldr->scr_hotkey = SCREENSHOT_HOTKEY;
 	}
 
-	if(GUI_WidgetGetState(self.alt_boot) && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
-		isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
+	if(self.image_type != IMAGE_TYPE_ROM_NAOMI) {
+		if(GUI_WidgetGetState(self.alt_boot)) {
+			isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
+		}
+		if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
+			self.isoldr->firmware = 1;
+		}
 	}
 
 	if(GUI_WidgetGetState(self.use_gpio)) {
@@ -1651,8 +1667,20 @@ void isoLoader_DefaultPreset() {
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 
-	GUI_WidgetSetState(self.memory_chk[2], 1);
-	isoLoader_toggleMemory(self.memory_chk[2]);
+	int memory_idx = 2; /* Default: 0x8c004000 */
+
+	if (self.image_type == IMAGE_TYPE_ROM_NAOMI) {
+		/* NAOMI ROM: use 0x8c005000 */
+		memory_idx = 4;
+		// GUI_WidgetSetState(self.irq, 1);
+	}
+	else if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
+		/* NAOMI platform: use 0x8dfe0000 */
+		memory_idx = 13;
+	}
+
+	GUI_WidgetSetState(self.memory_chk[memory_idx], 1);
+	isoLoader_toggleMemory(self.memory_chk[memory_idx]);
 
 	GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
 	isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
@@ -1676,9 +1704,6 @@ void isoLoader_DefaultPreset() {
 			GUI_WidgetSetState(self.cdda, 1);
 			isoLoader_toggleCDDA(self.cdda);
 		}
-	}
-	else if(self.image_type == IMAGE_TYPE_ROM_NAOMI) {
-		GUI_WidgetSetState(self.irq, 1);
 	}
 }
 
@@ -1921,7 +1946,6 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 
 	setModeCDDA(emu_cdda);
 	GUI_WidgetSetState(self.fastboot, fastboot);
-	GUI_WidgetSetState(self.irq, use_irq);
 	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
 	GUI_WidgetSetState(self.low, low);
 	GUI_WidgetSetState(self.use_gpio, use_gpio);
@@ -1974,9 +1998,6 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 	
 	GUI_WidgetSetState(self.os_chk[bin_type], 1);
 	isoLoader_toggleOS(self.os_chk[bin_type]);
-	
-	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
-	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
 
 	if (strlen(bin_file) > 0) {
 		GUI_WidgetSetState(self.alt_boot, 1);
@@ -1992,20 +2013,38 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		GUI_TextEntrySetText(self.device, "auto");
 	}
 
-	for (i = 0; self.memory_chk[i]; i++) {
+	if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
+		/* NAOMI platform: use 0x8dfe0000 */
+		i = 13;
+		boot_mode = BOOT_MODE_IPBIN;
 
-		name = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
-		len = strlen(name);
+		if(bin_type == BIN_TYPE_AUTO) {
+			/* Without WinCE support, IRQ is not needed yet. */
+			use_irq = 0;
+		}
+		GUI_WidgetSetState(self.memory_chk[i], 1);
+		isoLoader_toggleMemory(self.memory_chk[i]);
+	}
+	else {
+		for (i = 0; self.memory_chk[i]; i++) {
 
-		if (!strncmp(name, memory, sizeof(memory)) || len < 8) {
-			GUI_WidgetSetState(self.memory_chk[i], 1);
-			isoLoader_toggleMemory(self.memory_chk[i]);
-			if (len < 8) {
-				GUI_TextEntrySetText(self.memory_text, &memory[4]);
+			name = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
+			len = strlen(name);
+
+			if (!strncmp(name, memory, sizeof(memory)) || len < 8) {
+				GUI_WidgetSetState(self.memory_chk[i], 1);
+				isoLoader_toggleMemory(self.memory_chk[i]);
+				if (len < 8) {
+					GUI_TextEntrySetText(self.memory_text, &memory[4]);
+				}
+				break;
 			}
-			break;
 		}
 	}
+
+	GUI_WidgetSetState(self.irq, use_irq);
+	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
+	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
 
 	for(int i = 0; i < sizeof(self.wpa) >> 2; ++i) {
 		if (patch_a[i][1] != '0' && strlen(patch_a[i]) == 8 && strlen(patch_v[i])
