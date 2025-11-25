@@ -2056,6 +2056,7 @@ kos_img_free
 kos_md5
 dcload_type
 vid_builtin
+hardware_sys_mode
 #
 arch_main
 arch_set_exit_path

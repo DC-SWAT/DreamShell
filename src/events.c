@@ -171,8 +171,7 @@ void ProcessVideoEventsRender() {
 
 		e = (Event_t *) i->data;
 
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY
-		) {
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
 			e->event(e, e->param, EVENT_ACTION_RENDER);
 		}
 	}
@@ -201,7 +200,6 @@ void ProcessVideoEventsRenderPost() {
 		}
 	}
 }
-
 
 void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
 
