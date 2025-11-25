@@ -12,6 +12,14 @@
 
 #include <sys/types.h>
 
+typedef enum naomi_region {
+    NAOMI_REGION_JAPAN = 0,
+    NAOMI_REGION_USA = 1,
+    NAOMI_REGION_EXPORT = 2,
+    NAOMI_REGION_KOREA = 3,
+    NAOMI_REGION_AUSTRALIA = 4,
+} naomi_region_t;
+
 /** \brief   NAOMI ROM load entry. */
 typedef struct naomi_load_entry {
     uint32_t offset;

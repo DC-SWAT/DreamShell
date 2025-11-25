@@ -6,6 +6,7 @@
 #include <main.h>
 #include <arch/timer.h>
 #include <arch/cache.h>
+#include <naomi/cart.h>
 #include <asic.h>
 #include <exception.h>
 #include <ubc.h>
@@ -125,7 +126,7 @@ int main(int argc, char *argv[]) {
 		/* Clear ROM DMA busy flag */
 		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
 		/* Patch some values */
-		*((uint32_t *)NONCACHED_ADDR(0x0c01f100)) = 0;
+		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_REGION_ADDR)) = NAOMI_REGION_USA;
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f104)) = 1;
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f108)) = 0;
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f10c)) = 1; // 31 KHz
@@ -143,13 +144,13 @@ int main(int argc, char *argv[]) {
 		LOGF("Setting SR to %08lx\n", boot_sr);
 
 		uint8_t *dst = (uint8_t *) NONCACHED_ADDR(SYSCALLS_FW_ADDR);
-		uint8_t *src = (uint8_t *) IsoInfo->syscalls;
+		uint8_t *src = (uint8_t *) IsoInfo->firmware;
 		LOGF("Loading IRQ vectors from %08lx to %08lx %d bytes\n",
 			(uintptr_t)src, (uintptr_t)dst, 0x4f00);
 		memcpy(dst, src, 0x4f00);
 
 		dst = (uint8_t *) NONCACHED_ADDR(0x0c018000);
-		src = (uint8_t *) IsoInfo->syscalls + 0x4f00;
+		src = (uint8_t *) IsoInfo->firmware + 0x4f00;
 		LOGF("Loading IRQ handlers from %08lx to %08lx %d bytes\n",
 			(uintptr_t)src, (uintptr_t)dst, 0x7000);
 		memcpy(dst, src, 0x7000);
@@ -186,6 +187,13 @@ int main(int argc, char *argv[]) {
 			argc = patch_memory(0xff800030,
 				(uintptr_t)&IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 0);
 			LOGF("Patch GPIO register: %d\n", argc);
+
+			if(IsoInfo->firmware) {
+				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - ISOLDR_PARAMS_SIZE - 0x20000);
+				memcpy((void *)new_addr, (void *)IsoInfo->firmware, 0x20000);
+				IsoInfo->firmware = new_addr;
+				LOGF("Loading flashROM dump to %08lx\n", new_addr);
+			}
 		}
 	}
 

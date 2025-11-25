@@ -1525,9 +1525,43 @@ int flashrom_info(int part, uint32 *info) {
 }
 
 int flashrom_read(int offset, void *buffer, int bytes) {
-	DBGFF("0x%08lx 0x%08lx %d\n", offset, (uint32)buffer, bytes);
-	uint8 *src = (uint8 *)(NONCACHED_ADDR(FLASH_ROM_ADDR) + offset);
-	rom_memcpy(buffer, src, bytes);
+	DBGFF("0x%08lx 0x%08lx %d\n", offset, (uintptr_t)buffer, bytes);
+
+	const int region_offset = FLASH_ROM_REGION_ADDR - FLASH_ROM_ADDR;
+	const int region_size = 8;
+	const int sysid_offset = FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR;
+	const int sysid_size = 8;
+	uint8_t *src;
+
+	if(offset >= region_offset && offset < region_offset + region_size) {
+		src = (uint8_t *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR) + (offset - region_offset);
+		memcpy(buffer, src, bytes);
+		LOGFF("region: %c%c%c%c%c\n",
+			((uint8_t *)buffer)[0], ((uint8_t *)buffer)[1],
+			((uint8_t *)buffer)[2], ((uint8_t *)buffer)[3],
+			((uint8_t *)buffer)[4]);
+		return 0;
+	}
+
+	if(offset >= sysid_offset && offset < sysid_offset + sysid_size) {
+		src = (uint8_t *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR) + (offset - sysid_offset);
+		memcpy(buffer, src, bytes);
+		LOGFF("sysid: %x%x%x%x%x%x%x%x\n",
+			((uint8_t *)buffer)[0], ((uint8_t *)buffer)[1],
+			((uint8_t *)buffer)[2], ((uint8_t *)buffer)[3],
+			((uint8_t *)buffer)[4], ((uint8_t *)buffer)[5],
+			((uint8_t *)buffer)[6], ((uint8_t *)buffer)[7]);
+		return 0;
+	}
+
+	if(IsoInfo->firmware) {
+		src = (uint8_t *)(IsoInfo->firmware + offset);
+		memcpy(buffer, src, bytes);
+	}
+	else {
+		src = (uint8_t *)(NONCACHED_ADDR(FLASH_ROM_ADDR) + offset);
+		rom_memcpy(buffer, src, bytes);
+	}
 	return 0;
 }
 
@@ -1550,9 +1584,15 @@ int flashrom_delete(int offset) {
  */
 int sys_misc_init(void) {
 	LOGFF(NULL);
-	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
-	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
-	rom_memcpy(dst, src, 8);
+	uint8 *src;
+	if(IsoInfo->firmware) {
+		src = (uint8 *)(IsoInfo->firmware + (FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR));
+		memcpy((uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR), src, 8);
+	}
+	else {
+		src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);
+		rom_memcpy((uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR), src, 8);
+	}
 	setup_region();
 	return 0;
 }
@@ -1564,8 +1604,15 @@ int sys_unknown(void) {
 
 int sys_icon(int icon, uint8 *dest) {
 	LOGFF("%d 0x%08lx\n", icon, dest);
-	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_ICON_ADDR + (icon * 704));
-	rom_memcpy(dest, src, 704);
+	uint8_t *src;
+	if(IsoInfo->firmware) {
+		src = (uint8 *)(IsoInfo->firmware + (FLASH_ROM_ICON_ADDR - FLASH_ROM_ADDR) + (icon * 704));
+		memcpy(dest, src, 704);
+	}
+	else {
+		src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_ICON_ADDR + (icon * 704));
+		rom_memcpy(dest, src, 704);
+	}
 	return 704;
 }
 

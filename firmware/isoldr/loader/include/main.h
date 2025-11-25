@@ -51,6 +51,7 @@
 
 /* NAOMI software environment */
 #define NAOMI_CART_DMA_STATUS_ADDR   (RAM_START_ADDR + 0xac)
+#define NAOMI_CART_REGION_ADDR       (RAM_START_ADDR + 0x1f100)
 
 /* Address conversion */
 #define PHYS_ADDR(addr) ((addr) & 0x1fffffff)
