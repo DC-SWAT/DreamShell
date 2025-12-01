@@ -2,7 +2,7 @@
 
 	bflash.c
 
-	(c)2009-2014 SWAT
+	(c)2009-2014, 2025 SWAT
 	http://www.dc-swat.ru
 
 	04/10/2016 jfdelnero : MX29L3211 & MX29F1610 support fixed.
@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "ds.h"
 #include "drivers/bflash.h"
 #include "flash_if.h"
@@ -451,7 +452,7 @@ int bflash_erase_all(bflash_dev_t *dev) {
 			send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
 			send_cmd(dev, CMD_ERASE_ALL);
 
-			if (bflash_wait_ready(dev, 0, -30000) < 0) {
+			if (bflash_wait_ready(dev, 0, -300000) < 0) {
 				ds_printf("DS_ERROR: Failed erasing full chip.\n");
 				return -1;
 			}
@@ -461,7 +462,7 @@ int bflash_erase_all(bflash_dev_t *dev) {
 			send_cmd(dev, CMD_SECTOR_ERASE_UNLOCK_DATA);
 			send_cmd(dev, CMD_ERASE_ALL);
 
-			if (bflash_wait_flag(dev, 0, -30000,D6_MASK) < 0) {
+			if (bflash_wait_flag(dev, 0, -300000, D6_MASK) < 0) {
 				ds_printf("DS_ERROR: Failed erasing full chip. (ready timeout...)\n");
 				send_cmd(dev, CMD_RESET_DATA);
 				return -1;
@@ -662,7 +663,7 @@ int bflash_auto_reflash(const char *file, uint32 start_sector, int erase_mode) {
 	}
 	
 	ds_printf("DS_PROCESS: Loading firmware in to memory...\n");
-	ptr = (uint8 *) malloc(len);
+	ptr = (uint8 *) aligned_alloc(32, len);
 
 	if(ptr == NULL) {
 		ds_printf("DS_ERROR: Not enough memory\n");
@@ -671,7 +672,12 @@ int bflash_auto_reflash(const char *file, uint32 start_sector, int erase_mode) {
 	}
 
 	memset(ptr, 0, len);
-	fs_read(f, ptr, len);
+	if(fs_read(f, ptr, len) != len) {
+		ds_printf("DS_ERROR: Failed to read firmware\n");
+		free(ptr);
+		fs_close(f);
+		return -1;
+	}
 	fs_close(f);
 
 	ds_printf("DS_WARTING: Don't power off your DC and don't switch the bios!\n");
