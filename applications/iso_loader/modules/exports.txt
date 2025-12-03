@@ -40,3 +40,4 @@ isoLoader_toggleExtension
 isoLoader_toggleVMU
 isoLoader_FwItemClick
 isoLoader_FwItemSelect
+isoLoader_toggleRegion

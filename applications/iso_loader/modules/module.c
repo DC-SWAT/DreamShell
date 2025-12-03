@@ -13,6 +13,7 @@
 
 #include <stdbool.h>
 #include <kos/md5.h>
+#include <dc/flashrom.h>
 #include <naomi/cart.h>
 
 #include "app_utils.h"
@@ -100,6 +101,7 @@ static struct {
 	GUI_Widget *alt_boot;
 	GUI_Widget *alt_read;
 	GUI_Widget *use_gpio;
+	GUI_Widget *region_chk[5];
 
 	GUI_Widget *device;
 	GUI_Widget *fw_browser;
@@ -162,9 +164,6 @@ void isoLoader_DefaultPreset();
 void isoLoader_RemovePreset(GUI_Widget *widget);
 int isoLoader_LoadPreset(GUI_Widget *widget);
 int isoLoader_SavePreset(GUI_Widget *widget);
-void isoLoader_toggleMemory(GUI_Widget *widget);
-void isoLoader_toggleBootMode(GUI_Widget *widget);
-void isoLoader_toggleIconSize(GUI_Widget *widget);
 static void setIcon(int size);
 
 static int canUseTrueAsyncDMA(void) {
@@ -405,8 +404,20 @@ static void showROMInfo(const char *path) {
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
+	int preferred_region = -1;
+
+	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
+		if(GUI_WidgetGetState(self.region_chk[i])) {
+			preferred_region = i;
+			break;
+		}
+	}
+
+	if(preferred_region > -1 && cart_hdr.regional_name[preferred_region][0] != 0) {
+		trim_spaces(cart_hdr.regional_name[preferred_region], title, 32);
+	}
 	/* Try US regional name first */
-	if(cart_hdr.regional_name[NAOMI_REGION_USA][0] != 0) {
+	else if(cart_hdr.regional_name[NAOMI_REGION_USA][0] != 0) {
 		trim_spaces(cart_hdr.regional_name[NAOMI_REGION_USA], title, 32);
 	}
 	/* Then try Japan regional name */
@@ -686,6 +697,15 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 
 	if(GUI_WidgetGetState(self.use_gpio)) {
 		strcat(cmd, " --gpio");
+	}
+
+	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
+		if(GUI_WidgetGetState(self.region_chk[i])) {
+			char region[16];
+			sprintf(region, " --region %d", i + 1);
+			strcat(cmd, region);
+			break;
+		}
 	}
 
 	fprintf(fd, "%s\n", cmd);
@@ -1152,6 +1172,22 @@ void isoLoader_toggleExtension(GUI_Widget *widget) {
 	}
 }
 
+void isoLoader_toggleRegion(GUI_Widget *widget) {
+	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
+		if(widget != self.region_chk[i]) {
+			GUI_WidgetSetState(self.region_chk[i], 0);
+		} else {
+			GUI_WidgetSetState(widget, 1);
+		}
+	}
+
+	if (self.image_type == IMAGE_TYPE_ROM_NAOMI) {
+		char path[NAME_MAX];
+		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+		showROMInfo(path);
+	}
+}
+
 void isoLoader_toggleVMU(GUI_Widget *widget) {
 	GUI_WidgetSetState(widget, 1);
 
@@ -1386,6 +1422,13 @@ void isoLoader_Run(GUI_Widget *widget) {
 
 	if(GUI_WidgetGetState(self.use_gpio)) {
 		self.isoldr->use_gpio = 1;
+	}
+
+	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
+		if(GUI_WidgetGetState(self.region_chk[i])) {
+			self.isoldr->region = i + 1;
+			break;
+		}
 	}
 
 	isoldr_exec(self.isoldr, addr);
@@ -1664,6 +1707,24 @@ void isoLoader_DefaultPreset() {
 	GUI_WidgetSetState(self.screenshot, 0);
 	GUI_WidgetSetState(self.use_gpio, 0);
 
+	int region = NAOMI_REGION_JAPAN;
+
+	switch(flashrom_get_region_only()) {
+		case FLASHROM_REGION_US:
+			region = NAOMI_REGION_USA;
+			break;
+		case FLASHROM_REGION_EUROPE:
+			region = NAOMI_REGION_EXPORT;
+			break;
+		case FLASHROM_REGION_JAPAN:
+		default:
+			region = NAOMI_REGION_JAPAN;
+			break;
+	}
+
+	GUI_WidgetSetState(self.region_chk[region], 1);
+	isoLoader_toggleRegion(self.region_chk[region]);
+
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 
@@ -1740,7 +1801,7 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	char result[1024];
 	char memory[24];
 	char title[32];
-	int async = 0, type = 0, mode = 0;
+	int async = 0, type = 0, mode = 0, region = 0;
 	uint32 heap = HEAP_MODE_AUTO;
 	uint32 cdda_mode = CDDA_MODE_DISABLED;
 	int vmu_num = 0;
@@ -1825,6 +1886,13 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 		}
 	}
 
+	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
+		if(GUI_WidgetGetState(self.region_chk[i])) {
+			region = i;
+			break;
+		}
+	}
+
 	trim_spaces(ipbin->title, title, sizeof(ipbin->title));
 
 	if(GUI_WidgetGetState(self.vmu_disabled) == 0) {
@@ -1834,13 +1902,13 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	snprintf(result, sizeof(result),
 			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %08lx\n"
 			"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
-			"vmu = %d\nscrhotkey = %lx\naltread = %d\ngpio = %d\n"
+			"vmu = %d\nscrhotkey = %lx\naltread = %d\ngpio = %d\nregion = %d\n"
 			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
 			title, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
 			cdda_mode, GUI_WidgetGetState(self.irq), GUI_WidgetGetState(self.low), heap,
 			GUI_WidgetGetState(self.fastboot), type, mode, memory,
 			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
-			GUI_WidgetGetState(self.alt_read), GUI_WidgetGetState(self.use_gpio),
+			GUI_WidgetGetState(self.alt_read), GUI_WidgetGetState(self.use_gpio), region,
 			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
 
 	if(GUI_WidgetGetState(self.alt_boot)) {
@@ -1878,7 +1946,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		return -1;
 	}
 
-	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0, use_gpio = 0;
+	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0, use_gpio = 0, region = 0;
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
@@ -1904,6 +1972,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		{ "vmu",      CONF_INT,   (void *) &emu_vmu    },
 		{ "scrhotkey",CONF_INT,   (void *) &scr_hotkey },
 		{ "gpio",     CONF_INT,   (void *) &use_gpio   },
+		{ "region",   CONF_INT,   (void *) &region     },
 		{ "heap",     CONF_STR,   (void *) &heap_memory},
 		{ "memory",   CONF_STR,   (void *) memory      },
 		{ "async",    CONF_INT,   (void *) &emu_async  },
@@ -1949,6 +2018,10 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
 	GUI_WidgetSetState(self.low, low);
 	GUI_WidgetSetState(self.use_gpio, use_gpio);
+
+	if(region < 0 || region > (sizeof(self.region_chk) >> 2) - 1) region = 0;
+	GUI_WidgetSetState(self.region_chk[region], 1);
+	isoLoader_toggleRegion(self.region_chk[region]);
 
 	if (emu_vmu) {
 		char num[8], fn[32];
@@ -2196,7 +2269,12 @@ void isoLoader_Init(App_t *app) {
 		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
 		self.alt_boot      = APP_GET_WIDGET("alt-boot-checkbox");
 		self.use_gpio      = APP_GET_WIDGET("gpio-checkbox");
-		
+
+		w = APP_GET_WIDGET("region-panel");
+		for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
+			self.region_chk[i] = GUI_ContainerGetChild(w, i);
+		}
+
 		self.options_panel	  = APP_GET_WIDGET("options-panel");
 		self.wpa[0]	          = APP_GET_WIDGET("pa1-text");
 		self.wpa[1]	          = APP_GET_WIDGET("pa2-text");

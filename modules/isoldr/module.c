@@ -776,7 +776,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf(" -k, --scrhot     -Screenshots from video frame buffer\n"
 		          "                      0 = disabled (default)\n"
 		          "                   XXXX = bit mask for pad buttons to me pressed\n");
-		ds_printf("     --pa1        -Patch address 1\n"
+		ds_printf("     --region     -Hardware region (1-Japan, 2-USA, 3-EU, 4-KR, 5-AU)\n"
+		          "     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"
 		          "     --pv2        -Patch value 2\n\n"
@@ -792,7 +793,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
 	uint32 low_level = 0, scr_hotkey = 0, bleem = 0, alt_read = 0;
-	uint32 use_gpio = 0;
+	uint32 use_gpio = 0, region = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -820,6 +821,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"bleem",     'u', NULL, CFG_ULONG, (void *) &bleem,       0},
 		{"altread",   'y', NULL, CFG_BOOL,  (void *) &alt_read,    0},
 		{"gpio",     '\0', NULL, CFG_BOOL,  (void *) &use_gpio,    0},
+		{"region",   '\0', NULL, CFG_ULONG, (void *) &region,      0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -893,6 +895,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->bleem = bleem;
 	info->alt_read = alt_read;
 	info->use_gpio = use_gpio;
+	info->region = region;
 
 	if (cdda_mode > CDDA_MODE_DISABLED) {
 		info->emu_cdda  = cdda_mode;

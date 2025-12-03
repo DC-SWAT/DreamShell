@@ -623,22 +623,22 @@
 
 					<label align="left" color="#31799F" font="m23" height="40" text="Extensions:" width="45%" x="12%" y="5" />
 
-					<panel height="30" width="86%" x="12%" y="45">
-						<input height="25" name="alt-boot-checkbox" type="checkbox">
+					<panel height="25" width="86%" x="12%" y="45">
+						<input height="20" name="alt-boot-checkbox" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Boot from 2ND_READ.BIN" x="9%" />
 						</input>
 					</panel>
-					<panel height="30" width="86%" x="12%" y="75">
-						<input height="25" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
+					<panel height="25" width="86%" x="12%" y="70">
+						<input height="20" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Enable screenshots (START + A + B)" x="9%" />
 						</input>
 					</panel>
-					<panel height="30" width="86%" x="12%" y="105">
-						<input height="25" name="gpio-checkbox" type="checkbox">
+					<panel height="25" width="86%" x="12%" y="95">
+						<input height="20" name="gpio-checkbox" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Use GPIO-0 as IGR button" x="9%" />
 						</input>
 					</panel>
-					<panel height="150" width="86%" x="12%" y="135">
+					<panel height="150" width="86%" x="12%" y="130">
 						<label align="left" color="#31799F" font="arial" height="25" width="100%" text="VMU emulation:" />
 						<input font="arial" fontcolor="#000000" height="22" name="vmu-number" size="20" type="text" value="001" width="40" />
 						<input height="25" y="50" name="vmu-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
@@ -652,6 +652,27 @@
 						</input>
 						<input height="25" name="vmu-priv-1mb-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Private dump 1800 blocks (1024 KB)" x="9%" />
+						</input>
+					</panel>
+				</panel>
+
+				<panel height="350" width="40%" x="58%" y="10">
+					<label align="left" color="#31799F" font="m23" height="40" text="Region:" width="100%" y="5" />
+					<panel height="130" width="100%" y="45" name="region-panel">
+						<input height="25" width="50%" onclick="export:isoLoader_toggleRegion()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Japan" x="25" />
+						</input>
+						<input height="25" width="50%" onclick="export:isoLoader_toggleRegion()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="USA" x="25" />
+						</input>
+						<input height="25" width="50%" onclick="export:isoLoader_toggleRegion()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Europe" x="25" />
+						</input>
+						<input height="25" width="50%" onclick="export:isoLoader_toggleRegion()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Korea" x="25" />
+						</input>
+						<input height="25" width="50%" onclick="export:isoLoader_toggleRegion()" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="Australia" x="25" />
 						</input>
 					</panel>
 				</panel>

@@ -126,7 +126,8 @@ int main(int argc, char *argv[]) {
 		/* Clear ROM DMA busy flag */
 		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
 		/* Patch some values */
-		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_REGION_ADDR)) = NAOMI_REGION_USA;
+		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_REGION_ADDR)) = IsoInfo->region > 0 ?
+			IsoInfo->region - 1 : 0; // See naomi/cart.h for region values
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f104)) = 1;
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f108)) = 0;
 		*((uint32_t *)NONCACHED_ADDR(0x0c01f10c)) = 1; // 31 KHz

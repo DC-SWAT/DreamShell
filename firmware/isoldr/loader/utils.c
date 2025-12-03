@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Utils
- * (c)2011-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2025 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -193,7 +193,18 @@ void setup_region() {
 	uint32 ipbin_reg = NONCACHED_ADDR(IP_BIN_REGION_ADDR);
 	char *ipbin = (char *)ipbin_reg;
 
-	if(ipbin[2] == 'E') {
+	if(IsoInfo->region > 0) {
+		if(IsoInfo->region <= 3) {
+			*reg = IsoInfo->region;
+		}
+		else if(IsoInfo->region == 4) { // Korea
+			*reg = 1; // Japan
+		}
+		else { // Australia
+			*reg = 3; // Europe
+		}
+	}
+	else if(ipbin[2] == 'E') {
 		*reg = 3;
 	}
 	else if(ipbin[1] == 'U') {

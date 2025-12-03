@@ -190,8 +190,9 @@ typedef struct isoldr_info {
 	uint32 use_gpio;                    /* Use GPIO-0 as button for IGR. */
 	uint32 exec_addr;                   /* Alternative memory address for executing */
 	uint32 firmware;                    /* Memory address for flashrom dump or IRQ table. Set 1 for auto load. */
+	uint32 region;                      /* Hardware region. 1 = Japan, 2 = USA, 3 = Europe, 4 = Korea, 5 = Australia */
 
-	uint32 cdda_offset[40];             /* CDDA tracks offset, only for CDI images */
+	uint32 cdda_offset[39];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 

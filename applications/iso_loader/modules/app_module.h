@@ -101,3 +101,5 @@ void setModeCDDA(uint32 mode);
 void isoLoader_FwItemClick(dirent_fm_t *fm_ent);
 
 void isoLoader_FwItemSelect(dirent_fm_t *fm_ent);
+
+void isoLoader_toggleRegion(GUI_Widget *widget);
