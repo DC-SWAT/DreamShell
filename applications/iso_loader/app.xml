@@ -624,21 +624,26 @@
 					<label align="left" color="#31799F" font="m23" height="40" text="Extensions:" width="45%" x="12%" y="5" />
 
 					<panel height="25" width="86%" x="12%" y="45">
-						<input height="20" name="alt-boot-checkbox" type="checkbox">
+						<input height="25" name="alt-boot-checkbox" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Boot from 2ND_READ.BIN" x="9%" />
 						</input>
 					</panel>
 					<panel height="25" width="86%" x="12%" y="70">
-						<input height="20" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
+						<input height="25" name="screenshot-checkbox" onclick="export:isoLoader_toggleExtension()" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Enable screenshots (START + A + B)" x="9%" />
 						</input>
 					</panel>
 					<panel height="25" width="86%" x="12%" y="95">
-						<input height="20" name="gpio-checkbox" type="checkbox">
+						<input height="25" name="gpio-checkbox" type="checkbox">
 							<label align="left" color="#000000" font="arial" height="20" text="Use GPIO-0 as IGR button" x="9%" />
 						</input>
 					</panel>
-					<panel height="150" width="86%" x="12%" y="130">
+					<panel height="25" width="86%" x="12%" y="120">
+						<input height="25" name="test-mode-checkbox" type="checkbox">
+							<label align="left" color="#000000" font="arial" height="20" text="NAOMI game test mode" x="9%" />
+						</input>
+					</panel>
+					<panel height="150" width="86%" x="12%" y="153">
 						<label align="left" color="#31799F" font="arial" height="25" width="100%" text="VMU emulation:" />
 						<input font="arial" fontcolor="#000000" height="22" name="vmu-number" size="20" type="text" value="001" width="40" />
 						<input height="25" y="50" name="vmu-checkbox" onclick="export:isoLoader_toggleVMU()" type="checkbox">

@@ -113,7 +113,7 @@ static int get_executable_info(isoldr_info_t *info, file_t fd) {
 	return 0;
 }
 
-static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_file) {
+static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_file, int test_mode) {
 	naomi_cart_header_t cart_hdr;
 	char *pbuf = NULL;
 
@@ -148,18 +148,26 @@ static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_fi
 	info->track_lba[1] = 0;
 	info->sector_size = 4;
 
-	info->exec.addr = (uint32)cart_hdr.game_exe[0].dst_buf;
-	info->exec.size = cart_hdr.game_exe[0].size;
-	info->exec.lba = cart_hdr.game_exe[0].offset / info->sector_size;
+	if (test_mode) {
+		info->exec.addr = (uint32)cart_hdr.test_exe[0].dst_buf;
+		info->exec.size = cart_hdr.test_exe[0].size;
+		info->exec.lba = cart_hdr.test_exe[0].offset / info->sector_size;
+		info->exec_addr = cart_hdr.test_execute_adr;
+	}
+	else {
+		info->exec.addr = (uint32)cart_hdr.game_exe[0].dst_buf;
+		info->exec.size = cart_hdr.game_exe[0].size;
+		info->exec.lba = cart_hdr.game_exe[0].offset / info->sector_size;
+		info->exec_addr = cart_hdr.game_execute_adr;
+	}
 	info->exec.type = BIN_TYPE_NAOMI;
 	strncpy(info->exec.file, "NAOMI.BIN", 9);
 	info->exec.file[9] = '\0';
-	info->exec_addr = cart_hdr.game_execute_adr;
 
 	return 0;
 }
 
-static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdtex) {
+static int get_image_info(isoldr_info_t *info, const char *iso_file) {
 
 	file_t fd;
 	char fn[NAME_MAX];
@@ -168,7 +176,6 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 	char *psec = (char *)sec;
 	mount[7] = '\0';
 	int len = 0;
-	SDL_Surface *gd_tex = NULL;
 
 	info->track_lba[0] = 150;
 	info->track_lba[1] = info->track_lba[0];
@@ -189,40 +196,11 @@ static int get_image_info(isoldr_info_t *info, const char *iso_file, int use_gdt
 		return -1;
 	}
 
-	if(use_gdtex) {
+	fd = fs_iso_first_file(mount);
 
-		snprintf(fn, NAME_MAX, "%s/0GDTEX.PVR", mount);
-		fd = fs_open(fn, O_RDONLY);
-
-		if(fd != FILEHND_INVALID) {
-
-			get_ipbin_info(info, fd, sec, psec);
-			fs_close(fd);
-
-			gd_tex = IMG_Load(fn);
-
-			if(gd_tex != NULL) {
-				info->gdtex = (uint32)gd_tex->pixels;
-			}
-
-		} else {
-
-			fd = fs_iso_first_file(mount);
-
-			if(fd != FILEHND_INVALID) {
-				get_ipbin_info(info, fd, sec, psec);
-				fs_close(fd);
-			}
-		}
-
-	} else {
-
-		fd = fs_iso_first_file(mount);
-
-		if(fd != FILEHND_INVALID) {
-			get_ipbin_info(info, fd, sec, psec);
-			fs_close(fd);
-		}
+	if(fd != FILEHND_INVALID) {
+		get_ipbin_info(info, fd, sec, psec);
+		fs_close(fd);
 	}
 
 	memset(&sec, 0, sizeof(sec));
@@ -315,7 +293,6 @@ image_error:
 		fs_close(fd);
 	}
 	fs_iso_unmount(mount);
-	if(gd_tex) SDL_FreeSurface(gd_tex);
 	return -1;
 }
 
@@ -360,7 +337,7 @@ static int get_device_info(isoldr_info_t *info, const char *iso_file) {
 }
 
 
-isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
+isoldr_info_t *isoldr_get_info(const char *file, int test_mode) {
 
 	isoldr_info_t *info = NULL;
 	file_t fd;
@@ -384,7 +361,7 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	ext = strrchr(file, '.');
 
 	if(ext != NULL && !strcasecmp(ext, ".dni")) {
-		if(get_naomi_rom_info(info, fd, file) < 0) {
+		if(get_naomi_rom_info(info, fd, file, test_mode) < 0) {
 			fs_close(fd);
 			goto error;
 		}
@@ -393,7 +370,7 @@ isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex) {
 	else {
 		fs_close(fd);
 
-		if(get_image_info(info, file, use_gdtex) < 0) {
+		if(get_image_info(info, file) < 0) {
 			goto error;
 		}
 	}
@@ -731,7 +708,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf("\n  ## ISO Loader v%d.%d.%d build %d ##\n\n"
 		          "Usage: %s options args\n"
 		          "Options: \n", VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD, argv[0]);
-		ds_printf(" -s, --fast       -Don't show loader text and disc texture on screen\n",
+		ds_printf(" -s, --fast       -Don't show loader text on screen\n",
 		          " -i, --verbose    -Show additional info\n",
 		          " -a, --dma        -Use DMA transfer if available\n"
 		          " -q, --irq        -Use IRQ hooking\n"
@@ -777,6 +754,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "                      0 = disabled (default)\n"
 		          "                   XXXX = bit mask for pad buttons to me pressed\n");
 		ds_printf("     --region     -Hardware region (1-Japan, 2-USA, 3-EU, 4-KR, 5-AU)\n"
+		          "     --test       -NAOMI game test mode\n"
 		          "     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"
@@ -793,7 +771,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
 	uint32 low_level = 0, scr_hotkey = 0, bleem = 0, alt_read = 0;
-	uint32 use_gpio = 0, region = 0;
+	uint32 use_gpio = 0, region = 0, test_mode = 0;
 	int fspart = -1;
 	isoldr_info_t *info;
 
@@ -822,6 +800,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"altread",   'y', NULL, CFG_BOOL,  (void *) &alt_read,    0},
 		{"gpio",     '\0', NULL, CFG_BOOL,  (void *) &use_gpio,    0},
 		{"region",   '\0', NULL, CFG_ULONG, (void *) &region,      0},
+		{"test",     '\0', NULL, CFG_BOOL,  (void *) &test_mode,   0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
@@ -844,7 +823,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		}
 	}
 
-	info = isoldr_get_info(file, fast_boot);
+	info = isoldr_get_info(file, test_mode);
 
 	if(info == NULL) {
 		return CMD_ERROR;

@@ -102,6 +102,7 @@ static struct {
 	GUI_Widget *alt_read;
 	GUI_Widget *use_gpio;
 	GUI_Widget *region_chk[5];
+	GUI_Widget *test_mode;
 
 	GUI_Widget *device;
 	GUI_Widget *fw_browser;
@@ -708,6 +709,10 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 		}
 	}
 
+	if(GUI_WidgetGetState(self.test_mode)) {
+		strcat(cmd, " --test");
+	}
+
 	fprintf(fd, "%s\n", cmd);
 	fprintf(fd, "console --show\n");
 	fclose(fd);
@@ -1256,7 +1261,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
 		isoLoader_SavePreset(NULL);
 	}
-	self.isoldr = isoldr_get_info(filepath, 0);
+	self.isoldr = isoldr_get_info(filepath, GUI_WidgetGetState(self.test_mode));
 
 	if(self.isoldr == NULL) {
 		ShowConsole();
@@ -1706,6 +1711,7 @@ void isoLoader_DefaultPreset() {
 	isoLoader_toggleVMU(self.vmu_disabled);
 	GUI_WidgetSetState(self.screenshot, 0);
 	GUI_WidgetSetState(self.use_gpio, 0);
+	GUI_WidgetSetState(self.test_mode, 0);
 
 	int region = NAOMI_REGION_JAPAN;
 
@@ -2269,6 +2275,7 @@ void isoLoader_Init(App_t *app) {
 		self.screenshot    = APP_GET_WIDGET("screenshot-checkbox");
 		self.alt_boot      = APP_GET_WIDGET("alt-boot-checkbox");
 		self.use_gpio      = APP_GET_WIDGET("gpio-checkbox");
+		self.test_mode     = APP_GET_WIDGET("test-mode-checkbox");
 
 		w = APP_GET_WIDGET("region-panel");
 		for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {

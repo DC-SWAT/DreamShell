@@ -177,7 +177,7 @@ typedef struct isoldr_info {
 
 	isoldr_exec_info_t exec;            /* Executable info */
 
-	uint32 gdtex;                       /* Memory address for GD texture (draw it on screen) */
+	uint32 gdtex;                       /* Memory address for GD texture (unused) */
 	uint32 patch_addr[2];               /* Memory addresses for patching every frame or interrupt */
 	uint32 patch_value[2];              /* Values for patching */
 	uint32 heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
@@ -200,7 +200,7 @@ typedef struct isoldr_info {
 /**
  * Get some info from CD image or NAOMI ROM dump and fill info structure
  */
-isoldr_info_t *isoldr_get_info(const char *file, int use_gdtex);
+isoldr_info_t *isoldr_get_info(const char *file, int test_mode);
 
 /**
  * Set alternative boot file
