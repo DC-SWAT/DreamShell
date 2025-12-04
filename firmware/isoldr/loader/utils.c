@@ -13,6 +13,7 @@
 #include <reader.h>
 #include <syscalls.h>
 #include <exception.h>
+#include <naomi/cart.h>
 
 #ifndef HAVE_EXPT
 // Just for decreasing ifdef's with HAVE_EXPT
@@ -166,6 +167,43 @@ uint Load_BootBin() {
 
 	return rv == COMPLETED ? 1 : 0;
 }
+
+#ifdef HAVE_EXT_SYSCALLS
+uint Load_NaomiBin() {
+	naomi_cart_header_t hdr __attribute__((aligned(32)));
+	const uint32 sec_size = IsoInfo->sector_size;
+
+	if(ReadSectors((uint8 *)&hdr, 0, sizeof(hdr) / sec_size, NULL) != COMPLETED) {
+		LOGF("Failed to read NAOMI header\n");
+		return 0;
+	}
+	int test_mode = (IsoInfo->exec.addr == hdr.test_execute_adr);
+	naomi_load_entry_t *exe = test_mode ? hdr.test_exe : hdr.game_exe;
+
+	for(int i = 0; i < 8; i++) {
+		if(exe[i].offset == (uint32)-1) {
+			break;
+		}
+		if(exe[i].size == 0) {
+			continue;
+		}
+
+		uint32 lba = exe[i].offset / sec_size;
+		int sectors = exe[i].size / sec_size;
+		uint8 *dst = (uint8 *)NONCACHED_ADDR((uint32)exe[i].dst_buf);
+
+		LOGF("Loading %d: %08lx -> %p, %d bytes\n",
+			i, exe[i].offset, exe[i].dst_buf, exe[i].size);
+
+		if(ReadSectors(dst, lba, sectors, NULL) != COMPLETED) {
+			LOGF("Failed to load NAOMI binary %d\n", i);
+			return 0;
+		}
+	}
+
+	return 1;
+}
+#endif
 
 void rom_memcpy(void* dst, void* src, size_t cnt) {
 	irq_disable_scoped();

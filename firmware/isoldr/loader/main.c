@@ -77,12 +77,11 @@ int main(int argc, char *argv[]) {
 		IsoInfo->image_type
 	);
 
-	LOGF("Boot: %s at %d size %d load %08lx exec %08lx type %d mode %d\n",
+	LOGF("Boot: %s at %d size %d addr %08lx type %d mode %d\n",
 		IsoInfo->exec.file,
 		IsoInfo->exec.lba,
 		IsoInfo->exec.size,
 		IsoInfo->exec.addr,
-		IsoInfo->exec_addr > 0 ? IsoInfo->exec_addr : IsoInfo->exec.addr,
 		IsoInfo->exec.type,
 		IsoInfo->boot_mode
 	);
@@ -106,23 +105,13 @@ int main(int argc, char *argv[]) {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
 
-#ifdef HAVE_BLEEM
-	if(IsoInfo->bleem) {
-		printf("Loading Bleem!...\n");
-		Load_Bleem();
-	}
-	else 
-#endif
-	{
-		printf("Loading executable...\n");
-
-		if(!Load_BootBin()) {
-			goto error;
-		}
-	}
 #ifdef HAVE_EXT_SYSCALLS
 	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI) {
+		printf("Loading executable...\n");
 
+		if(!Load_NaomiBin()) {
+			goto error;
+		}
 		/* Clear ROM DMA busy flag */
 		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
 		/* Patch some values */
@@ -166,6 +155,19 @@ int main(int argc, char *argv[]) {
 	else 
 #endif
 	{
+#ifdef HAVE_BLEEM
+		if(IsoInfo->bleem) {
+			printf("Loading Bleem!...\n");
+			Load_Bleem();
+		}
+		else 
+#endif
+		{
+			printf("Loading executable...\n");
+			if(!Load_BootBin()) {
+				goto error;
+			}
+		}
 		if((IsoInfo->boot_mode != BOOT_MODE_DIRECT) ||
 			((loader_end < CACHED_ADDR(IP_BIN_ADDR) ||
 				loader_addr > CACHED_ADDR(APP_BIN_ADDR)) &&
@@ -229,7 +231,7 @@ int main(int argc, char *argv[]) {
 
 	if(IsoInfo->boot_mode == BOOT_MODE_DIRECT) {
 		printf("Executing...\n");
-		launch(IsoInfo->exec_addr > 0 ? IsoInfo->exec_addr : IsoInfo->exec.addr);
+		launch(IsoInfo->exec.addr);
 	} else {
 		printf("Executing from IP.BIN...\n");
 		launch(IP_BIN_BOOTSTRAP_2_ADDR);

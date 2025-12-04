@@ -149,16 +149,14 @@ static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_fi
 	info->sector_size = 4;
 
 	if (test_mode) {
-		info->exec.addr = (uint32)cart_hdr.test_exe[0].dst_buf;
+		info->exec.addr = cart_hdr.test_execute_adr;
 		info->exec.size = cart_hdr.test_exe[0].size;
 		info->exec.lba = cart_hdr.test_exe[0].offset / info->sector_size;
-		info->exec_addr = cart_hdr.test_execute_adr;
 	}
 	else {
-		info->exec.addr = (uint32)cart_hdr.game_exe[0].dst_buf;
+		info->exec.addr = cart_hdr.game_execute_adr;
 		info->exec.size = cart_hdr.game_exe[0].size;
 		info->exec.lba = cart_hdr.game_exe[0].offset / info->sector_size;
-		info->exec_addr = cart_hdr.game_execute_adr;
 	}
 	info->exec.type = BIN_TYPE_NAOMI;
 	strncpy(info->exec.file, "NAOMI.BIN", 9);
