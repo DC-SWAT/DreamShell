@@ -2,7 +2,7 @@
 
    module.c - ISO Loader app module
    Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2024 SWAT
+   Copyright (C) 2011-2025 SWAT
 
 */
 
@@ -378,8 +378,7 @@ static void showROMInfo(const char *path) {
 	file_t fd;
 	naomi_cart_header_t cart_hdr;
 
-	GUI_PanelSetBackground(self.cover_widget, self.default_cover);
-	self.current_cover = self.default_cover;
+	memset(self.md5, 0, sizeof(self.md5));
 
 	fd = fs_open(path, O_RDONLY);
 	if(fd == FILEHND_INVALID) {
@@ -458,22 +457,22 @@ static void showCover() {
 	char title[128];
 	ipbin_meta_t *ipbin;
 	int use_cover = 0;
+	int is_dni = 0;
 	const char *ext;
 
 	setTitle("Loading...");
 	snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 
 	ext = strrchr(self.filename, '.');
-	if(ext != NULL && !strcasecmp(ext, ".dni")) {
-		showROMInfo(path);
-		return;
-	}
+	is_dni = (ext != NULL && !strcasecmp(ext, ".dni"));
 
-	if(fs_iso_mount("/isocover", path)) {
-		setTitle("None");
-		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
-		self.current_cover = self.default_cover;
-		return;
+	if(!is_dni) {
+		if(fs_iso_mount("/isocover", path)) {
+			setTitle("None");
+			GUI_PanelSetBackground(self.cover_widget, self.default_cover);
+			self.current_cover = self.default_cover;
+			return;
+		}
 	}
 
 	memset(title, 0, sizeof(title));
@@ -482,55 +481,72 @@ static void showCover() {
 	strncpy(noext, (!strchr(self.filename, '/')) ? self.filename : (strchr(self.filename, '/')+1), sizeof(noext));
 	strcpy(noext, strtok(noext, "."));
 
-	get_md5_hash("/isocover");
-	ipbin = (ipbin_meta_t *)self.boot_sector;
-	trim_spaces(ipbin->title, title, sizeof(ipbin->title));
-
-	if(strlen(title) > 0) {
-		setTitle(title);
-	} else {
-		setTitle(noext);
+	if(is_dni) {
+		showROMInfo(path);
 	}
-	
-	if (strstr(self.filename, ".gdi")) {
+	else {
+		get_md5_hash("/isocover");
+		ipbin = (ipbin_meta_t *)self.boot_sector;
+		trim_spaces(ipbin->title, title, sizeof(ipbin->title));
+
+		if(strlen(title) > 0) {
+			setTitle(title);
+		}
+		else {
+			setTitle(noext);
+		}
+	}
+
+	if (strchr(self.filename, '/')) {
 		snprintf(path, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
 		char *c = strrchr(path, '/');
 		strcpy(c+1, "cover.png");
-		
+
 		if(FileExists(path)) {
 			use_cover = 1;
 		}
+		else {
+			strcpy(c+1, "cover.jpg");
+			if(FileExists(path)) {
+				use_cover = 1;
+			}
+		}
 	}
-	
-	if(!use_cover) {
+	else {
 		snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.png", getenv("PATH"), noext);
 		if(FileExists(path)) {
 			use_cover = 1;
-		} else {
+		}
+		else {
 			snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
 			if(FileExists(path)) {
 				use_cover = 1;
-			} else {
-				memset(path, 0, sizeof(path));
-				strcpy(path, "/isocover/0GDTEX.PVR");
-				if (FileExists(path)) {
-					use_cover = 1;
-				}
 			}
-		} 
+		}
+	}
+
+	if(!use_cover && !is_dni) {
+		memset(path, 0, sizeof(path));
+		strcpy(path, "/isocover/0GDTEX.PVR");
+		if (FileExists(path)) {
+			use_cover = 1;
+		}
 	}
 
 	if (use_cover) {
 		s = GUI_SurfaceLoad(path);
 	}
 
-	fs_iso_unmount("/isocover");
+	if(!is_dni) {
+		fs_iso_unmount("/isocover");
+	}
 
 	if(s != NULL) {
 		GUI_PanelSetBackground(self.cover_widget, s);
 		GUI_ObjectDecRef((GUI_Object *) s);
 		self.current_cover = s;
-	} else if(self.current_cover != self.default_cover) {
+	}
+	else if(self.current_cover != self.default_cover) {
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
 	}
@@ -1600,52 +1616,97 @@ static void changeDir(dirent_t *ent) {
 	GUI_WidgetSetEnabled(self.btn_run, 0);
 }
 
-void isoLoader_ItemChange(dirent_fm_t *fm_ent, int change_dir) {
+enum {
+	IMG_PRIORITY_NONE = 0,
+	IMG_PRIORITY_OTHER,
+	IMG_PRIORITY_DNI,
+	IMG_PRIORITY_GDI
+};
 
+static int getImagePriority(const char *filename) {
+	int len = strlen(filename);
+	if(len < 5) {
+		return IMG_PRIORITY_NONE;
+	}
+	const char *ext = filename + len - 4;
+
+	if(strncasecmp(ext, ".gdi", 4) == 0) return IMG_PRIORITY_GDI;
+	if(strncasecmp(ext, ".dni", 4) == 0) return IMG_PRIORITY_DNI;
+	if(strncasecmp(ext, ".iso", 4) == 0) return IMG_PRIORITY_OTHER;
+	if(strncasecmp(ext, ".cdi", 4) == 0) return IMG_PRIORITY_OTHER;
+	if(strncasecmp(ext, ".cso", 4) == 0) return IMG_PRIORITY_OTHER;
+
+	return IMG_PRIORITY_NONE;
+}
+
+static int scanDirectoryForImage(const char *dir_path, const char *dir_name, char *result) {
+	file_t fd = fs_open(dir_path, O_RDONLY | O_DIR);
+	if(fd == FILEHND_INVALID) {
+		return 0;
+	}
+
+	int file_count = 0;
+	int subdir_found = 0;
+	int best_priority = IMG_PRIORITY_NONE;
+	int same_priority_count = 0;
+	dirent_t *dent;
+
+	result[0] = '\0';
+
+	while((dent = fs_readdir(fd)) != NULL) {
+		if(++file_count > 100) {
+			break;
+		}
+		if(dent->name[0] == '.') {
+			continue;
+		}
+		if(dent->attr == O_DIR) {
+			subdir_found = 1;
+			break;
+		}
+
+		int priority = getImagePriority(dent->name);
+		if(priority == IMG_PRIORITY_NONE) {
+			continue;
+		}
+
+		if(priority > best_priority) {
+			best_priority = priority;
+			same_priority_count = 1;
+			snprintf(result, NAME_MAX, "%s/%s", dir_name, dent->name);
+		}
+		else if(priority == best_priority) {
+			same_priority_count++;
+		}
+	}
+	fs_close(fd);
+
+	if(subdir_found || same_priority_count != 1) {
+		result[0] = '\0';
+		return 0;
+	}
+
+	return (result[0] != '\0');
+}
+
+void isoLoader_ItemChange(dirent_fm_t *fm_ent, int change_dir) {
 	if(!fm_ent) {
 		return;
 	}
+
 	dirent_t *ent = &fm_ent->ent;
 
 	if(ent->attr == O_DIR && self.current_item_dir != fm_ent->index) {
-
 		char filepath[NAME_MAX];
-		memset(filepath, 0, NAME_MAX);
-		snprintf(filepath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), ent->name);
+		char found_image[NAME_MAX];
 
-		file_t fd = fs_open(filepath, O_RDONLY | O_DIR);
+		snprintf(filepath, NAME_MAX, "%s/%s",
+			GUI_FileManagerGetPath(self.filebrowser), ent->name);
 
-		if(fd != FILEHND_INVALID) {
-
-			int total_count = 0;
-			int dir_count = 0;
-			dirent_t *dent;
-
-			while ((dent = fs_readdir(fd)) != NULL) {
-
-				if(++total_count > 100) {
-					break;
-				}
-				if(dent->name[0] == '.') {
-					continue;
-				}
-				if(dent->attr == O_DIR && ++dir_count > 1) {
-					break;
-				}
-				int len = strlen(dent->name);
-
-				if(len > 4 && strncasecmp(dent->name + len - 4, ".gdi", 4) == 0) {
-					fs_close(fd);
-
-					memset(filepath, 0, NAME_MAX);
-					snprintf(filepath, NAME_MAX, "%s/%s", ent->name, dent->name);
-					selectFile(filepath, fm_ent->index);
-
-					self.current_item_dir = fm_ent->index;
-					return;
-				}
-			}
-			fs_close(fd);
+		if(scanDirectoryForImage(filepath, ent->name, found_image)) {
+			selectFile(found_image, fm_ent->index);
+			self.current_item_dir = fm_ent->index;
+			return;
 		}
 
 		if(change_dir) {
@@ -1657,6 +1718,7 @@ void isoLoader_ItemChange(dirent_fm_t *fm_ent, int change_dir) {
 	}
 	else if(IsFileSupportedByApp(self.app, ent->name)) {
 		selectFile(ent->name, fm_ent->index);
+		self.current_item_dir = -1;
 	}
 }
 
@@ -1899,7 +1961,13 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 		}
 	}
 
-	trim_spaces(ipbin->title, title, sizeof(ipbin->title));
+	if(self.image_type == IMAGE_TYPE_ROM_NAOMI) {
+		strncpy(title, GUI_LabelGetText(self.title), sizeof(title) - 1);
+		title[sizeof(title) - 1] = '\0';
+	}
+	else {
+		trim_spaces(ipbin->title, title, sizeof(ipbin->title));
+	}
 
 	if(GUI_WidgetGetState(self.vmu_disabled) == 0) {
 		vmu_num = atoi(GUI_TextEntryGetText(self.vmu_number));
@@ -2092,8 +2160,8 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		GUI_TextEntrySetText(self.device, "auto");
 	}
 
-	if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
-		/* NAOMI platform: use 0x8dfe0000 */
+	if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
+		/* NAOMI platform with non-DNI image: use 0x8dfe0000 */
 		i = 13;
 		boot_mode = BOOT_MODE_IPBIN;
 
