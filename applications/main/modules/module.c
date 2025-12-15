@@ -15,12 +15,20 @@ DEFAULT_MODULE_EXPORTS(app_main);
 #define ICON_CELL_PADDING_Y 20
 #define ICON_HIGHLIGHT_PADDING 8
 
+typedef struct script_item {
+
+	char name[64];
+	char file[NAME_MAX];
+
+} script_item_t;
+
 static struct {
 
 	App_t *app;
 	
 	GUI_Font *font;
 	GUI_Widget *panel;
+	GUI_Widget *dialog;
 	SDL_Rect panel_area;
 
 	int x;
@@ -36,16 +44,11 @@ static struct {
 	int net_status;
 
 	Event_t *input_event;
+	script_item_t pending_shortcut;
 } self;
 
-typedef struct script_item {
-
-	char name[64];
-	char file[NAME_MAX];
-
-} script_item_t;
-
 static void Slide_EventHandler(void *ds_event, void *param, int action);
+static void ShortcutContextCB(void *param);
 
 static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
 
@@ -102,10 +105,12 @@ static void RunScriptCB(void *param) {
 static void AddToList(const char *name, const char *icon, 
 						GUI_CallbackFunction *callback, 
 						GUI_CallbackFunction *free_data, 
-						void *callback_data) {
+						void *callback_data,
+						GUI_CallbackFunction *context_callback,
+						void *context_data) {
 
 	SDL_Rect ts;
-	int pad_x;
+	int pad_x = ICON_CELL_PADDING_X;
 	int pad_y = ICON_CELL_PADDING_Y;
 
 	GUI_Surface *s = GUI_SurfaceLoad(icon);
@@ -114,7 +119,6 @@ static void AddToList(const char *name, const char *icon,
 	if(name) {
 		ts = GUI_FontGetTextSize(self.font, name);
 		ts.w += 6;
-		pad_x = ICON_CELL_PADDING_X;
 	}
 	else {
 		ts.w = 0;
@@ -161,6 +165,12 @@ static void AddToList(const char *name, const char *icon,
 	GUI_ButtonSetClick(b, c);
 	GUI_ObjectDecRef((GUI_Object *) c);
 
+	if(context_callback) {
+		GUI_Callback *cc = GUI_CallbackCreate(context_callback, NULL, context_data);
+		GUI_ButtonSetContextClick(b, cc);
+		GUI_ObjectDecRef((GUI_Object *) cc);
+	}
+
 	if(name) {
 		GUI_Widget *l = GUI_LabelCreate(name, 0, 0, w, h, self.font, name);
 		GUI_LabelSetTextColor(l, 51, 41, 90);
@@ -198,7 +208,7 @@ static void BuildAppList() {
 			app = (App_t*)item->data;
 
 			if(strncasecmp(app->name, app_name, sizeof(app->name))) {
-				AddToList(app->name, app->icon, (GUI_CallbackFunction *)OpenAppCB, NULL, (void*)app->id);
+				AddToList(app->name, app->icon, (GUI_CallbackFunction *)OpenAppCB, NULL, (void*)app->id, NULL, NULL);
 			}
 			item = listGetItemNext(item);
 		}
@@ -210,26 +220,26 @@ static void BuildAppList() {
 		self.col_width = 0;
 		self.pages++;
 	}
-	
+
 	snprintf(path, NAME_MAX, "%s/apps/%s/scripts", getenv("PATH"), app_name);
 	fd = fs_open(path, O_RDONLY | O_DIR);
-	
+
 	if(fd == FILEHND_INVALID)
 		return;
-		
+
 	while((ent = fs_readdir(fd)) != NULL) {
-		
+
 		if(ent->name[0] == '.') continue;
 		elen = strlen(ent->name);
 		type = elen > 3 ? ent->name[elen - 3] : 'd';
-		
+
 		if(!ent->attr && (type == 'l' || type == 'd')) {
-		
+
 			script_item_t *si = (script_item_t *) calloc(1, (sizeof(script_item_t)));
-			
+
 			if(si == NULL)
 				break;
-			
+
 			snprintf(si->file, NAME_MAX, "%s/apps/%s/scripts/%s", getenv("PATH"), app_name, ent->name);
 			snprintf(path, NAME_MAX, "%s/apps/%s/images/%s", getenv("PATH"), app_name, ent->name);
 			plen = strlen(path);
@@ -237,48 +247,135 @@ static void BuildAppList() {
 			path[plen - 3] = 'p';
 			path[plen - 2] = 'n';
 			path[plen - 1] = 'g';
-			
+
 			if(!FileExists(path)) {
-				
+
 				path[plen - 3] = 'p';
 				path[plen - 2] = 'v';
 				path[plen - 1] = 'r';
-				
+
 				if(!FileExists(path)) {
-				
-					path[plen - 3] = 'b';
-					path[plen - 2] = 'm';
-					path[plen - 1] = 'p';
-				
-					if(!FileExists(path)) {
-						snprintf(path, NAME_MAX, "%s/gui/icons/normal/%s.png", 
-									getenv("PATH"), (type == 'l' ? "lua" : "script"));
-					}
+					snprintf(path, NAME_MAX, "%s/gui/icons/normal/%s.png", 
+								getenv("PATH"), (type == 'l' ? "lua" : "script"));
 				}
 			}
 
 			elen -= 4;
-			
-			if(elen > sizeof(si->name))
-				elen = sizeof(si->name);
-			
+
+			if(elen >= sizeof(si->name))
+				elen = sizeof(si->name) - 1;
+
 			strncpy(si->name, ent->name, elen);
 			si->name[elen] = '\0';
-			
-			AddToList((si->name[0] != '_' ? si->name : NULL), path, RunScriptCB, free, (void *)si);
+
+			AddToList((si->name[0] != '_' ? si->name : NULL), path, RunScriptCB, free, (void *)si, ShortcutContextCB, (void *)si);
 		}
 	}
-	
 	fs_close(fd);
 }
 
+static void ResetAppListState(void) {
+
+	self.x = ICON_CELL_PADDING_X / 2;
+	self.y = ICON_CELL_PADDING_Y;
+	self.cur_x = 0;
+	self.col_width = 0;
+	self.pages = 1;
+
+	if(self.panel) {
+		GUI_PanelSetXOffset(self.panel, 0);
+	}
+}
+
+static void RebuildAppList(void) {
+	if(!self.panel) {
+		return;
+	}
+
+	int old_x = self.cur_x;
+
+	LockVideo();
+	GUI_ContainerRemoveAll(self.panel);
+	ResetAppListState();
+	BuildAppList();
+
+	int max_x = (self.pages - 1) * self.panel_area.w;
+	if(max_x < 0) {
+		max_x = 0;
+	}
+	if(old_x > max_x) {
+		old_x = max_x;
+	}
+	if(old_x < 0) {
+		old_x = 0;
+	}
+
+	self.cur_x = old_x;
+	GUI_PanelSetXOffset(self.panel, self.cur_x);
+	UnlockVideo();
+}
+
+static int DeleteShortcutFiles(const char *file, const char *name) {
+
+	static const char *icon_exts[] = {
+		"png",
+		"pvr",
+		NULL
+	};
+	const char *app_name = lib_get_name() + 4;
+	char icon_path[NAME_MAX];
+	int i;
+
+	if(!file || !name || !name[0]) {
+		return 0;
+	}
+
+	if(fs_unlink(file) < 0) {
+		ds_printf("DS_ERROR: Can't delete shortcut script: %s\n", file);
+		return 0;
+	}
+
+	for(i = 0; icon_exts[i]; i++) {
+		snprintf(icon_path, sizeof(icon_path), "%s/apps/%s/images/%s.%s", getenv("PATH"), app_name, name, icon_exts[i]);
+		fs_unlink(icon_path);
+	}
+	return 1;
+}
+
+static void ShortcutContextCB(void *param) {
+	script_item_t *si = (script_item_t *)param;
+	char body[256];
+
+	if(!si || !self.dialog) {
+		return;
+	}
+	memcpy(&self.pending_shortcut, si, sizeof(self.pending_shortcut));
+	snprintf(body, sizeof(body), "Do you want to delete shortcut <b>%s</b>?", self.pending_shortcut.name);
+	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Delete shortcut?", body);
+}
+
+void MainApp_ShortcutDeleteConfirm(GUI_Widget *widget) {
+	GUI_DialogHide(widget);
+
+	if(!self.pending_shortcut.file[0]) {
+		return;
+	}
+	if(DeleteShortcutFiles(self.pending_shortcut.file, self.pending_shortcut.name)) {
+		RebuildAppList();
+	}
+	memset(&self.pending_shortcut, 0, sizeof(self.pending_shortcut));
+}
+
+void MainApp_ShortcutDeleteCancel(GUI_Widget *widget) {
+	memset(&self.pending_shortcut, 0, sizeof(self.pending_shortcut));
+	GUI_DialogHide(widget);
+}
 
 static void ShowVersion(GUI_Widget *widget) {
-	
+
 	if(!widget) {
 		return;
 	}
-	
 	char vers[32];	
 	snprintf(vers, sizeof(vers), "%s %s", getenv("OS"), getenv("VERSION"));
 	GUI_LabelSetText(widget, vers);
@@ -374,17 +471,16 @@ void MainApp_Init(App_t *app) {
 		memset(&self, 0, sizeof(self));
 		self.app = app;
 
-		self.x = ICON_CELL_PADDING_X / 2;
-		self.y = ICON_CELL_PADDING_Y;
-		self.pages = 1;
-
 		self.font = APP_GET_FONT("comic");
 		self.panel = APP_GET_WIDGET("app-list");
+		self.dialog = APP_GET_WIDGET("modal-dialog");
 
 		if(self.font && self.panel) {
 			self.panel_area = GUI_WidgetGetArea(self.panel);
+			ResetAppListState();
 			BuildAppList();
-		} else {
+		}
+		else {
 			ds_printf("DS_ERROR: Couldt'n find font and app-list panel\n");
 			return;
 		}

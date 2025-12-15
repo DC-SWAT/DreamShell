@@ -4,4 +4,6 @@ include app_module.h
 MainApp_Init
 MainApp_SlideLeft
 MainApp_SlideRight
+MainApp_ShortcutDeleteConfirm
+MainApp_ShortcutDeleteCancel
 MainApp_Shutdown

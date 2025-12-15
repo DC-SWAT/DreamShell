@@ -24,10 +24,10 @@
 			</panel>
 			<panel x="13%" background="taskbar-bg" width="73%">
 				<panel x="2%" width="96%">
-					<panel width="22%">
+					<panel width="21%">
 						<label name="date" text="00.00.0000" color="#33295A" align="left" valign="center" font="comic" />
 					</panel>
-					<panel width="62%">
+					<panel width="63%">
 						<label name="version" text="DreamShell" color="#33295A" align="center" valign="center" font="comic" />
 					</panel>
 					<panel width="16%">
@@ -45,5 +45,9 @@
 					normal="right" highlight="right-hover" pressed="right" disabled="right" />
 			</panel>
 		</panel>
+		<dialog name="modal-dialog" font="comic"
+				x="120" y="160" width="400" height="160"
+				onconfirm="export:MainApp_ShortcutDeleteConfirm()"
+				oncancel="export:MainApp_ShortcutDeleteCancel()" />
 	</body>
 </app>
