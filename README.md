@@ -126,3 +126,15 @@ cd ${KOS_BASE}/ds/firmware/isoldr && make -j8 && make install
 - Website: http://www.dc-swat.ru/ 
 - Forum: http://www.dc-swat.ru/forum/ 
 - Donate: http://www.dc-swat.ru/page/donate/
+
+## Licensing
+
+DreamShell core and DreamShell-specific components (including ISO Loader) are licensed under the PolyForm Noncommercial License 1.0.0 in `LICENSE`.
+
+Required notices are in `NOTICE`.
+
+This distribution also includes third-party components under their own licenses (for example, `lib/`, `modules/`, and parts of `sdk/`). For those, the license stated in the corresponding file or directory applies.
+
+## Contributing
+
+Contributions require acceptance of `CONTRIBUTING.md` and `CLA.md`.

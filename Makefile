@@ -175,6 +175,7 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua $(SFX_TARGETS)
 	@mkdir -p $(DS_BUILD)/screenshot
 	@mkdir -p $(DS_BUILD)/vmu
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
+	@cp LICENSE NOTICE $(DS_BUILD)/doc
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
 	@cp -R $(DS_RES)/gui $(DS_BUILD)
