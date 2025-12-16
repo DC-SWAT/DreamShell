@@ -14,3 +14,4 @@ VMU_Manager_format
 VMU_Manager_sel_dst_vmu
 VMU_Manager_make_folder
 VMU_Manager_clr_name
+VMU_Manager_ItemSelect

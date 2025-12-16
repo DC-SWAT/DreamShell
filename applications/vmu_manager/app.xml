@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="VMU Manager" version="1.1.0" icon="images/icon.png" extensions=".vmd .vmu .dci .vms .vmi">
+<app name="VMU Manager" version="1.2.0" icon="images/icon.png" extensions=".vmd .vmu .dci .vms .vmi">
 	<resources>
 		<module src="modules/app_vmu_manager.klf" />
 		<font src="../../fonts/ttf/m23.ttf" type="ttf" size="18" name="m23" />
@@ -236,13 +236,11 @@
 								onmouseout="export:VMU_Manager_info_bar_clr()"
 								x="380" y="110" width="80" height="80" name="D2" />			
 				</panel>
-				
 				<panel x="20" y="340" width="300" height="40">
 					<label width="300" height="40" font="m23" color="#FFFFFF" text="SELECT SOURCE VMU" name="drection" />
 				</panel>
-
 			</panel>
-			
+
 			<panel  width="100%" height="100%" name="vmu_page" background="vmu_frame" >
 
 				<panel x="220" y="25" width="200" height="350" name="progressbar_container">	
@@ -269,8 +267,7 @@
 							disabled="dump_d" 
 							onclick="export:VMU_Manager_Dump()" 
 							x="220" y="260" width="100" height="50" name="dump-button" />
-				
-				
+
 				<filemanager path="/" name="file_browser" 
 					width="180" height="300" x="20" y="15"
 					item_normal="item-normal" 
@@ -279,9 +276,9 @@
 					item_disabled="item-normal"
 					item_font="arial"
 					item_font_color="#FFFFFF"
-					onclick="export:VMU_Manager_ItemClick()" />
-				
-					
+					onclick="export:VMU_Manager_ItemClick()" 
+					onselect="export:VMU_Manager_ItemSelect()"/>
+
 				<filemanager path="/" name="file_browser2" 
 					width="300" height="300" x="340" y="15"
 					item_normal="item-normal2" 
@@ -290,8 +287,9 @@
 					item_disabled="item-normal2"
 					item_font="arial"
 					item_font_color="#FFFFFF"
-					onclick="export:VMU_Manager_ItemClick()" />
-					
+					onclick="export:VMU_Manager_ItemClick()" 
+					onselect="export:VMU_Manager_ItemSelect()"/>
+
 					<input type="button" 
 							normal="sd" 
 							highlight="sd_h" 
@@ -334,35 +332,30 @@
 							disabled="format" 
 							onclick="export:VMU_Manager_format()" 
 							x="460" y="230" width="80" height="80" name="format-c" />
-					
+		
 				<panel x="20" y="315" width="60" height="70" >
 					<image width="48" height="48" x="5" y="0" name="vmu-icon" src="logo" />
-				</panel>	
-				
+				</panel>
 				<panel x="80" y="315" width="200" height="35" >	
 					<label width="200" height="25" font="arial" color="#ffffff" name="save-name" text=" " align="left"/>
 				</panel>
-					
 				<panel x="80" y="350" width="200" height="35" >	
 					<label width="200" height="25" font="arial" color="#ffffff" name="save-size" text=" " align="left"/>	
 				</panel>	
-				
 				<panel x="280" y="315" width="280" height="35" >	
 					<label width="270" height="25" x="10" y="0" font="arial" color="#ffffff" name="desc-short" text=" " align="left"/>	
 				</panel>
-				
 				<panel x="280" y="350" width="280" height="35" >	
 					<label width="270" height="25" x="10" y="0" font="arial" color="#ffffff" name="desc-long" text=" " align="left"/>	
 				</panel>
-				
 			</panel>		
-		
+
 			<panel width="100%" height="100%" name="folder_page" background="vmu_frame" >
-				
+
 				<panel x="170" y="60" width="300" height="40" >
 					<label width="300" height="40" font="m23" color="#FFFFFF" text="ENTER NAME NEW FOLDER" align="center" valign="center"/>
 				</panel>
-				
+
 				<input  type="text" 
 					onfocus="export:VMU_Manager_clr_name()"
 					font="arial" 
@@ -375,7 +368,7 @@
 					highlight="input-normal"
 					focus="input-focus">
 				</input>
-				
+
 				<input type="button" 
 					normal="iOkNorm" 
 					highlight="iOkHigh" 
@@ -385,7 +378,7 @@
 					x="270" y="160" width="48" height="48"
 					onclick="export:VMU_Manager_make_folder()" >
 				</input>
-					
+
 				<input type="button" 
 					normal="iExitNorm" 
 					highlight="iExitHigh" 
@@ -395,9 +388,7 @@
 					x="322" y="160" width="48" height="48" 
 					onclick="export:VMU_Manager_make_folder()" >
 				</input>
-				
 			</panel>
-			
 		</cardstack>
 	</body>
 </app>

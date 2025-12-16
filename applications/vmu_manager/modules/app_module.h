@@ -40,3 +40,5 @@ void VMU_Manager_sel_dst_vmu(GUI_Widget *widget);
 void VMU_Manager_make_folder(GUI_Widget *widget);
 
 void VMU_Manager_clr_name(GUI_Widget *widget);
+
+void VMU_Manager_ItemSelect(dirent_fm_t *fm_ent);
