@@ -15,6 +15,7 @@
 #include <malloc.h>
 #include <sys/stat.h>
 #include <kos/net.h>
+#include <kos/thread.h>
 
 #include "lftpd.h"
 
@@ -170,6 +171,8 @@ static int send_file(int socket, const char* path) {
 	uint8_t *p;
 	uint8_t *buffer;
 	int read_len, write_len, rv = -1;
+
+	lftpd_log_info("start sending '%s'", path);
 	file_t fd = fs_open(path, O_RDONLY);
 
 	if (fd < 0) {
@@ -177,16 +180,27 @@ static int send_file(int socket, const char* path) {
 		return rv;
 	}
 
-	buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
+	buffer = (uint8_t *)aligned_alloc(32, FILE_BUFFER_SIZE);
 
 	if (!buffer) {
 		lftpd_log_error("no free memory");
+		fs_close(fd);
 		return rv;
 	}
 
 	rv = 0;
 
-	while ((read_len = fs_read(fd, buffer, FILE_BUFFER_SIZE)) > 0) {
+	while (true) {
+		read_len = fs_read(fd, buffer, FILE_BUFFER_SIZE);
+
+		if (read_len < 0) {
+			lftpd_log_error("read error");
+			rv = -1;
+			break;
+		}
+		if (read_len == 0) {
+			break;
+		}
 		p = buffer;
 		while (read_len > 0) {
 			write_len = write(socket, p, read_len);
@@ -195,8 +209,14 @@ static int send_file(int socket, const char* path) {
 				rv = -1;
 				break;
 			}
+			else if (write_len == 0) {
+				thd_pass();
+			}
 			p += write_len;
 			read_len -= write_len;
+		}
+		if (rv < 0) {
+			break;
 		}
 	}
 
@@ -206,29 +226,65 @@ static int send_file(int socket, const char* path) {
 }
 
 static int receive_file(int socket, const char* path) {
-
 	uint8_t *buffer;
 	int read_len, rv = -1;
+	size_t buffer_filled = 0;
+
+	lftpd_log_info("start receiving '%s'", path);
 	file_t fd = fs_open(path, O_WRONLY | O_TRUNC | O_CREAT);
 
 	if (fd < 0) {
-		lftpd_log_error("failed to open file for read");
+		lftpd_log_error("failed to open file for write");
 		return rv;
 	}
 
-	buffer = (uint8_t *)memalign(32, FILE_BUFFER_SIZE);
+	buffer = (uint8_t *)aligned_alloc(32, FILE_BUFFER_SIZE);
 
 	if (!buffer) {
 		lftpd_log_error("no free memory");
+		fs_close(fd);
 		return rv;
 	}
 
 	rv = 0;
 
-	while ((read_len = read(socket, buffer, FILE_BUFFER_SIZE)) > 0) {
-		if (fs_write(fd, buffer, read_len) < 0) {
-			lftpd_log_error("write error");
+	while (true) {
+		read_len = read(socket, buffer + buffer_filled, FILE_BUFFER_SIZE - buffer_filled);
+
+		if (read_len < 0) {
+			lftpd_log_error("read error");
 			rv = -1;
+			break;
+		}
+
+		bool flush = false;
+		if (read_len == 0) {
+			flush = true;
+		}
+		else {
+			buffer_filled += read_len;
+			if (buffer_filled == FILE_BUFFER_SIZE) {
+				flush = true;
+			}
+		}
+
+		if (flush && buffer_filled > 0) {
+			uint8_t *p = buffer;
+			size_t remaining = buffer_filled;
+			while (remaining > 0) {
+				int written = fs_write(fd, p, remaining);
+				if (written < 0) {
+					lftpd_log_error("write error");
+					rv = -1;
+					break;
+				}
+				p += written;
+				remaining -= written;
+			}
+			buffer_filled = 0;
+		}
+
+		if (rv < 0 || read_len == 0) {
 			break;
 		}
 	}
