@@ -5,10 +5,10 @@ include app_module.h
 NetworkApp_Init
 NetworkApp_Shutdown
 NetworkApp_Open
-NetworkApp_ConnectBBA
-NetworkApp_ConnectModem
-NetworkApp_FTP
-NetworkApp_HTTP
+NetworkApp_ToggleEthernet
+NetworkApp_ToggleModem
+NetworkApp_ToggleFTP
+NetworkApp_ToggleHTTP
 NetworkApp_Exit
 NetworkApp_DialogConfirm
 NetworkApp_DialogCancel

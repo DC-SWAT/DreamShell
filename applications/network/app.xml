@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Network" version="0.3.0" icon="images/icon.png">
+<app name="Network" version="0.4.0" icon="images/icon.png">
 	<resources>
-		<module src="../../modules/ppp.klf" />
-		<module src="../../modules/ftpd.klf" />
-		<module src="../../modules/httpd.klf" />
 		<module src="modules/app_network.klf" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="22" name="comic-22" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="20" name="comic-20" />
@@ -25,26 +22,26 @@
 			<panel name="main-page" y="30">
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:NetworkApp_ConnectBBA()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="Connect BBA" />
+						onclick="export:NetworkApp_ToggleEthernet()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="" name="eth-but-txt" />
 					</input>
 				</panel>
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:NetworkApp_FTP()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="FTP Server" />
+						onclick="export:NetworkApp_ToggleFTP()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="" name="ftpd-but-txt" />
 					</input>
 				</panel>
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:NetworkApp_ConnectModem()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="Connect Modem" />
+						onclick="export:NetworkApp_ToggleModem()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="" name="ppp-but-txt" />
 					</input>
 				</panel>
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="export:NetworkApp_HTTP()" align="center">
-						<label font="comic-22" color="#EEEEEE" text="HTTP Server" />
+						onclick="export:NetworkApp_ToggleHTTP()" align="center">
+						<label font="comic-22" color="#EEEEEE" text="" name="httpd-but-txt" />
 					</input>
 				</panel>
 				<panel height="65" width="100%">
@@ -98,21 +95,30 @@
 					</panel>
 				</panel>
 				<panel height="85" width="100%">
-					<panel x="20">
-						<panel width="100%" height="25">
-							<input type="checkbox" name="startup-connect-eth-but" onclick="export:NetworkApp_ToggleEth">
-								<label x="27" height="20" font="comic-16" color="#31799F" text="Connect ethernet at startup" align="left" />
-							</input>
+					<panel x="3%" width="94%">
+						<panel width="48%">
+							<panel width="100%" height="25">
+								<input type="checkbox" name="startup-connect-eth-but" onclick="export:NetworkApp_ToggleEth">
+									<label x="27" height="20" font="comic-16" color="#31799F" text="Connect ethernet at startup" align="left" />
+								</input>
+							</panel>
+							<panel width="100%" height="25">
+								<input type="checkbox" name="startup-connect-ppp-but" onclick="export:NetworkApp_TogglePpp">
+									<label x="27" height="20" font="comic-16" color="#31799F" text="Connect dial up at startup" align="left" />
+								</input>
+							</panel>
+							<panel width="100%" height="25">
+								<input type="checkbox" name="startup-ntp-but">
+									<label x="27" height="20" font="comic-16" color="#31799F" text="Sync time at startup (NTP)" align="left" />
+								</input>
+							</panel>
 						</panel>
-						<panel width="100%" height="25">
-							<input type="checkbox" name="startup-connect-ppp-but" onclick="export:NetworkApp_TogglePpp">
-								<label x="27" height="20" font="comic-16" color="#31799F" text="Connect dial up at startup" align="left" />
-							</input>
-						</panel>
-						<panel width="100%" height="25">
-							<input type="checkbox" name="startup-ntp-but">
-								<label x="27" height="20" font="comic-16" color="#31799F" text="Sync time at startup (NTP)" align="left" />
-							</input>
+						<panel x="48%" width="52%">
+							<panel width="100%" height="25">
+								<input type="checkbox" name="keep-running-but">
+									<label x="27" height="20" font="comic-16" color="#31799F" text="Keep servers running in background" align="left" />
+								</input>
+							</panel>
 						</panel>
 					</panel>
 				</panel>
