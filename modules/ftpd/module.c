@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - FTP server module
-   Copyright (C) 2023, 2024 SWAT 
+   Copyright (C) 2023-2025 SWAT 
 */
 
 #include <ds.h>
@@ -39,7 +39,8 @@ int builtin_ftpd_cmd(int argc, char *argv[]) {
         ds_printf("Usage: %s options args\n"
                   "Options: \n"
                   " -s, --start     	-Start FTP server\n"
-                  " -t, --stop   		-Stop FTP server\n\n");
+                  " -t, --stop   		-Stop FTP server\n"
+                  " -q, --status        -Check FTP server status\n\n");
         ds_printf("Arguments: \n"
                   " -p, --port      	-Server listen port (default 21)\n"
                   " -d, --dir           -Root directory (default /)\n\n"
@@ -47,7 +48,7 @@ int builtin_ftpd_cmd(int argc, char *argv[]) {
         return CMD_NO_ARG; 
     }
 
-    int start_srv = 0, stop_srv = 0, port = 21;
+    int start_srv = 0, stop_srv = 0, status_srv = 0, port = 21;
     char *dir = NULL;
     Item_t *item;
     ftpd_t *srv;
@@ -55,12 +56,24 @@ int builtin_ftpd_cmd(int argc, char *argv[]) {
     struct cfg_option options[] = {
         {"start",  	's', NULL, CFG_BOOL, (void *) &start_srv, 0},
         {"stop",  	't', NULL, CFG_BOOL, (void *) &stop_srv,  0},
+        {"status",  'q', NULL, CFG_BOOL, (void *) &status_srv, 0},
         {"port", 	'p', NULL, CFG_INT,  (void *) &port,      0},
 		{"dir",     'd', NULL, CFG_STR,  (void *) &dir,       0},
         CFG_END_OF_LIST
     };
 
     CMD_DEFAULT_ARGS_PARSER(options);
+
+    if(status_srv) {
+        if(listGetItemFirst(servers) != NULL) {
+            ds_printf("DS_INFO: FTP server is running\n");
+            return CMD_OK;
+        }
+        else {
+            ds_printf("DS_INFO: FTP server is not running\n");
+            return CMD_ERROR;
+        }
+    }
 
     if(start_srv) {
 
