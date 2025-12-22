@@ -36,6 +36,7 @@ void _url_split(char *proto, int proto_size,
 /* httpd server */
 int httpd_init(int port);
 void httpd_shutdown();
+int httpd_is_running();
 
 
 #endif /* _DS_HTTP_H */

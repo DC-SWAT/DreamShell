@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - httpd module
-   Copyright (C)2012-2013, 2024 SWAT 
+   Copyright (C)2012, 2013, 2024, 2025 SWAT 
 
 */
 
@@ -16,23 +16,36 @@ int builtin_httpd_cmd(int argc, char *argv[]) {
 		ds_printf("Usage: %s options args\n"
 	              "Options: \n"
 				  " -s, --start     	-Start server\n"
-				  " -t, --stop   		-Stop server\n\n"
+				  " -t, --stop   		-Stop server\n"
+                  " -q, --status        -Check server status\n\n"
 	              "Arguments: \n"
 				  " -p, --port      	-Server listen port (default 80)\n\n"
 	              "Example: %s --start\n\n", argv[0], argv[0]);
         return CMD_NO_ARG; 
     }
     
-    int start_srv = 0, stop_srv = 0, port = 0;
+    int start_srv = 0, stop_srv = 0, status_srv = 0, port = 0;
 
 	struct cfg_option options[] = {
 		{"start",  	's', NULL, CFG_BOOL, (void *) &start_srv, 0},
 		{"stop",  	't', NULL, CFG_BOOL, (void *) &stop_srv, 0},
+        {"status",  'q', NULL, CFG_BOOL, (void *) &status_srv, 0},
 		{"port", 	'p', NULL, CFG_INT,  (void *) &port, 0},
 		CFG_END_OF_LIST
 	};
 	
   	CMD_DEFAULT_ARGS_PARSER(options);
+
+    if(status_srv) {
+        if(httpd_is_running()) {
+            ds_printf("DS_INFO: HTTP server is running\n");
+            return CMD_OK;
+        }
+		else {
+            ds_printf("DS_INFO: HTTP server is not running\n");
+            return CMD_ERROR;
+        }
+    }
 	
 	if(start_srv) {
 		httpd_init(port);

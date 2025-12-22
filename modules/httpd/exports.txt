@@ -3,3 +3,4 @@ include network/http.h
 
 httpd_init
 httpd_shutdown
+httpd_is_running

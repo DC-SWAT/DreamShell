@@ -29,6 +29,10 @@ static int server_state = 0;
 static kthread_t *server_thd = NULL;
 static int server_socket = -1;
 
+int httpd_is_running() {
+    return server_state;
+}
+
 #if 0
 static mutex_t list_mutex = MUTEX_INITIALIZER;
 static httpd_state_list_t states;
