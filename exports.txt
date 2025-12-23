@@ -1975,7 +1975,6 @@ net_icmp_echo_cb
 cond_init
 mutex_init
 sem_init
-mutex_unlock_as_thread
 #
 kthread_key_next
 kthread_key_create
@@ -1991,13 +1990,10 @@ thd_remove_from_runnable
 thd_current
 #
 rwsem_destroy
-rwsem_read_lock
-rwsem_write_lock
 rwsem_read_unlock
 rwsem_write_unlock
 rwsem_read_trylock
 rwsem_write_trylock
-rwsem_read_upgrade
 rwsem_read_tryupgrade
 rwsem_read_count
 rwsem_write_locked

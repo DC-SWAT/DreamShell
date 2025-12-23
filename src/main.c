@@ -13,12 +13,13 @@
 #include "network/net.h"
 #include "sfx.h"
 #include <dc/syscalls.h>
+#include <dc/net/w5500_adapter.h>
 
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT);
 
 static uint32 ver_int = 0;
 static const char *build_str[4] = {"Alpha", "Beta", "RC", "Release"};
-static uint32 net_inited = 0;
+static int net_inited = -1;
 
 void gdb_init();
 uint32 _fs_dclsocket_get_ip(void);
@@ -73,11 +74,10 @@ const char *GetVersionBuildTypeString(int type) {
 
 int InitNet(uint32 ipl) {
 
-	if(net_inited) {
+	if(net_inited > 0) {
 		ds_printf("DS_OK: Network already initialized.\n");
 		return 0;
 	}
-
 	union {
 		uint32 ipl;
 		uint8 ipb[4];
@@ -94,16 +94,18 @@ int InitNet(uint32 ipl) {
 		dbgio_dev_select("scif");
 	}
 
-	if(net_default_dev == NULL) {
-		/* Trying init LAN network devices */
+	if(net_inited < 0) {
+		/* Trying initialize Ethernet devices */
 		la_init();
 		bba_init();
+		w5500_adapter_init(NULL, true);
 	}
 
-	/* Trying enable networking */
+	/* Trying initialize network stack */
 	int rv = net_init(ip.ipl);
 
 	if(rv < 0) {
+		net_inited = 0;
 		return -1;
 	}
 	if(dcload_type == DCLOAD_TYPE_IP) {
