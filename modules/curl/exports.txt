@@ -1,0 +1,19 @@
+include kos/exports.h
+include curl/curl.h
+
+curl_easy_init
+curl_easy_setopt
+curl_easy_perform
+curl_easy_cleanup
+curl_easy_getinfo
+curl_easy_duphandle
+curl_easy_reset
+curl_easy_recv
+curl_easy_send
+curl_easy_upkeep
+curl_global_init
+curl_global_init_mem
+curl_global_cleanup
+curl_global_sslset
+curl_slist_append
+curl_slist_free_all
