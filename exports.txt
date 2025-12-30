@@ -1825,6 +1825,7 @@ cosf
 atan2f
 atanf
 gmtime
+gmtime_r
 mktime
 sleep
 usleep
@@ -1956,6 +1957,7 @@ getaddrinfo
 gethostbyname
 gethostbyname2
 in6addr_any
+getpeername
 #
 htonl
 ntohl
@@ -2198,3 +2200,4 @@ oneshot_timer_start
 oneshot_timer_stop
 oneshot_timer_destroy
 __dreamcast_get_ticks
+clock_gettime

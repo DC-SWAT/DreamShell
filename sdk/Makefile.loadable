@@ -1,6 +1,6 @@
 #
 # DreamShell SDK Makefile.loadable
-# Copyright (C) 2009-2024 SWAT
+# Copyright (C) 2009-2025 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -22,7 +22,9 @@ ifndef EXPORTS_SYMBOL
 EXPORTS_SYMBOL = ds_$(TARGET_NAME)_symtab
 endif
 
-TARGET_LIB = lib$(TARGET_NAME).a
+ifndef TARGET_LIB
+TARGET_LIB := lib$(TARGET_NAME).a
+endif
 
 endif
 

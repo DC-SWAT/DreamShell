@@ -1,0 +1,71 @@
+include kos/exports.h
+include polarssl/ssl.h
+include polarssl/version.h
+include polarssl/x509_crt.h
+include polarssl/x509_crl.h
+include polarssl/pk.h
+include polarssl/sha256.h
+include polarssl/entropy.h
+include polarssl/ctr_drbg.h
+include polarssl/error.h
+include polarssl/rsa.h
+include polarssl/net.h
+
+ssl_init
+ssl_free
+ssl_set_endpoint
+ssl_set_authmode
+ssl_set_verify
+ssl_set_rng
+ssl_set_dbg
+ssl_set_bio
+ssl_set_session
+ssl_set_ciphersuites
+ssl_set_ca_chain
+ssl_set_hostname
+ssl_handshake
+ssl_read
+ssl_write
+ssl_close_notify
+ssl_session_init
+ssl_session_free
+ssl_session_reset
+ssl_get_session
+ssl_get_verify_result
+ssl_get_ciphersuite
+ssl_get_peer_cert
+ssl_get_alpn_protocol
+ssl_set_min_version
+ssl_set_max_version
+ssl_list_ciphersuites
+ssl_set_own_cert_rsa
+ssl_set_alpn_protocols
+ssl_get_bytes_avail
+version_get_number
+version_get_string
+version_get_string_full
+x509_crt_init
+x509_crt_free
+x509_crt_info
+x509_crt_parse_der
+x509_crt_parse_path
+x509_crt_parse_file
+x509_crl_free
+x509_crl_parse_file
+pk_init
+pk_free
+pk_can_do
+pk_parse_keyfile
+pk_write_pubkey_der
+sha256
+entropy_init
+entropy_func
+entropy_free
+ctr_drbg_init
+ctr_drbg_free
+ctr_drbg_random
+error_strerror
+rsa_free
+rsa_copy
+net_send
+net_recv
