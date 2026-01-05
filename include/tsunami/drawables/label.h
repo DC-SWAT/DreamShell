@@ -27,6 +27,9 @@ public:
 	void setText(const std::string &text);
 	void setFont(Font *f);
 	Font* getFont();
+	void setWidth(float width);
+	float getWidth();
+	std::string fixTextWidth(const std::string &text);
 
 	virtual void draw(int list);
 	const std::string getText();
@@ -40,6 +43,7 @@ private:
 	int		m_size;
 	bool	m_centered;
 	bool	m_smear;
+	float	m_width;
 };
 
 #else
@@ -64,6 +68,8 @@ void TSU_LabelSetSmear(Label *label_ptr, bool smear);
 void TSU_LabelSetTranslate(Label *label_ptr, const Vector *v);
 void TSU_LabelSetTint(Label *label_ptr, const Color *tint);
 void TSU_LabelIsCentered(Label *label_ptr);
+void TSU_LabelSetWidth(Label *font_ptr, float width);
+float TSU_LabelGetWidth(Label *font_ptr);
 
 #ifdef __cplusplus
 };

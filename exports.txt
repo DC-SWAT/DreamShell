@@ -1428,6 +1428,8 @@ TSU_LabelSetSmear
 TSU_LabelSetTranslate
 TSU_LabelSetTint
 TSU_LabelIsCentered
+TSU_LabelSetWidth
+TSU_LabelGetWidth
 TSU_BoxCreate
 TSU_BoxDestroy
 TSU_BoxSetSize
