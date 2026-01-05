@@ -760,10 +760,7 @@ static void CalculatePages()
 
 static bool LoadPage(bool change_view, uint8 direction)
 {
-	const int LENGTH_NAME_TEXT_PLANE = 27;
-	const int LENGTH_NAME_TEXT_64_5X2 = 18;
 	bool loaded = false;
-	char name_truncated[LENGTH_NAME_TEXT_PLANE];
 	char game_cover_path[NAME_MAX];
 	char name[NAME_MAX];
 	char *game_cover_path_tmp = NULL;
@@ -914,19 +911,10 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 				if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 				{
-					memset(name_truncated, 0, LENGTH_NAME_TEXT_PLANE);
-					if (strlen(name) > LENGTH_NAME_TEXT_64_5X2 - 1)
-					{
-						strncpy(name_truncated, name, LENGTH_NAME_TEXT_64_5X2 - 1);
-					}
-					else
-					{
-						strcpy(name_truncated, name);
-					}
-
 					self.item_game[self.game_count - 1] = TSU_ItemMenuCreate(game_cover_path, menu_data.menu_option.image_size, menu_data.menu_option.image_size
 								, ContainsCoverType(game_index, cover_menu_type, IT_JPG) ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY								
-								, name_truncated, self.menu_font, 19, false, PVR_TXRLOAD_DMA);
+								, name, self.menu_font, 19, false, PVR_TXRLOAD_DMA);
+					TSU_LabelSetWidth(TSU_ItemMenuGetLabel(self.item_game[self.game_count - 1]), 225);
 
 					Color color_unselected = { 1, 1.0f, 1.0f, 1.0f };
 					TSU_ItemMenuSetColorUnselected(self.item_game[self.game_count - 1], &color_unselected);
@@ -936,17 +924,9 @@ static bool LoadPage(bool change_view, uint8 direction)
 				}
 				else if (menu_data.menu_type == MT_PLANE_TEXT)
 				{
-					memset(name_truncated, 0, LENGTH_NAME_TEXT_PLANE);
-					if (strlen(name) > LENGTH_NAME_TEXT_PLANE - 1)
-					{
-						strncpy(name_truncated, name, LENGTH_NAME_TEXT_PLANE - 1);
-					}
-					else
-					{
-						strcpy(name_truncated, name);
-					}
-
-					self.item_game[self.game_count - 1] = TSU_ItemMenuCreateLabel(name_truncated, self.menu_font, 18);
+					self.item_game[self.game_count - 1] = TSU_ItemMenuCreateLabel(name, self.menu_font, 18);
+					TSU_LabelSetWidth(TSU_ItemMenuGetLabel(self.item_game[self.game_count - 1]), 328);
+					
 					Color color_unselected = { 1, 1.0f, 1.0f, 1.0f };
 					TSU_ItemMenuSetColorUnselected(self.item_game[self.game_count - 1], &color_unselected);
 
@@ -1598,6 +1578,7 @@ static void GamesApp_InputEvent(int type, int key)
 	mutex_lock(&change_page_mutex);
 
 	bool skip_cursor = false;
+	bool is_playing = menu_data.ffplay && menu_data.ffplay_is_playing();
 	float speed_cursor = 7.0f;
 	timer_ms_gettime(&self.scan_covers_start_time, NULL);
 
@@ -1605,7 +1586,7 @@ static void GamesApp_InputEvent(int type, int key)
 	{
 		speed_cursor = 6.5;
 	}
-	else if (menu_data.ffplay && menu_data.ffplay_is_playing())
+	else if (is_playing)
 	{
 		goto SkipCommand;
 	}
@@ -1618,6 +1599,9 @@ static void GamesApp_InputEvent(int type, int key)
 		{	
 			if (menu_data.games_array_count > 0)
 			{
+				if (is_playing)
+					menu_data.ffplay_shutdown();
+
 				menu_data.state_app = SA_SYSTEM_MENU;
 				ShowSystemMenu();
 			}
@@ -1629,6 +1613,9 @@ static void GamesApp_InputEvent(int type, int key)
 		{
 			if (menu_data.games_array_count > 0)
 			{
+				if (is_playing)
+					menu_data.ffplay_shutdown();
+
 				menu_data.state_app = SA_PRESET_MENU;
 				ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
 			}
@@ -1873,7 +1860,7 @@ static void GamesApp_InputEvent(int type, int key)
 	{	
 		self.game_changed = true;		
 		
-		if (key != KeyMiscX || (menu_data.ffplay && menu_data.ffplay_is_playing()))
+		if (key != KeyMiscX || is_playing)
 			StopCDDA();
 		
 		for (int i = 0; i < self.game_count; i++)

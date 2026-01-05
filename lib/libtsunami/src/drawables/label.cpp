@@ -17,6 +17,7 @@ Label::Label(Font *fh, const std::string &text,
 	     int size, bool centered, bool smear) {
 	
 	setObjectType(ObjectTypeEnum::LABEL_TYPE);
+	m_width = 0;
 	m_fh = fh;
 	m_text = text;
 	m_size = size;
@@ -40,6 +41,37 @@ Font* Label::getFont() {
 	return m_fh;
 }
 
+void Label::setWidth(float width) {
+	if (width > 0) {
+		m_width = width;
+	}
+}
+
+float Label::getWidth() {
+	return m_width;
+}
+
+std::string Label::fixTextWidth(const std::string &text) {
+	std::string draw_text = "";
+	if (m_width > 0 && !text.empty()) {		
+		float tw, th;
+		for (size_t i = 0; i < text.size(); i++) {
+			draw_text += text[i];
+			m_fh->getTextSize(draw_text, &tw, &th);
+
+			if (tw >= m_width) {
+				draw_text.pop_back();
+				break;
+			}
+		}
+	}
+	else {
+		draw_text = text;
+	}
+
+	return draw_text;
+}
+
 void Label::draw(int list) {
 	if (list != PLX_LIST_TR_POLY)
 		return;
@@ -50,16 +82,18 @@ void Label::draw(int list) {
 	m_fh->setSize(m_size);
 	m_fh->setAlpha(t.a);
 	m_fh->setColor(t.r, t.g, t.b);
+
 	if (m_centered) {
 		if (m_smear)
 			m_fh->smearDrawCentered(p.x, p.y, p.z, m_text.c_str());
 		else
 			m_fh->drawCentered(p.x, p.y, p.z, m_text.c_str());
 	} else {
+		std::string draw_text = fixTextWidth(m_text.c_str());
 		if (m_smear)
-			m_fh->smearDraw(p.x, p.y, p.z, m_text.c_str());
+			m_fh->smearDraw(p.x, p.y, p.z, draw_text.c_str());
 		else
-			m_fh->draw(p.x, p.y, p.z, m_text.c_str());
+			m_fh->draw(p.x, p.y, p.z, draw_text.c_str());
 	}
 }
 
@@ -169,5 +203,21 @@ extern "C"
 		if (label_ptr != NULL) {
 			label_ptr->isCentered();
 		}
+	}
+
+	void TSU_LabelSetWidth(Label *label_ptr, float width)
+	{
+		if (label_ptr != NULL) {
+			label_ptr->setWidth(width);
+		}
+	}
+
+	float TSU_LabelGetWidth(Label *label_ptr)
+	{
+		if (label_ptr != NULL) {
+			return label_ptr->getWidth();
+		}
+		
+		return 0;
 	}
 }
