@@ -1,6 +1,6 @@
 #
 # DreamShell modules Makefile
-# Copyright (C) 2009-2025 SWAT
+# Copyright (C) 2009-2026 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -10,7 +10,7 @@ _SUBDIRS = minilzo isofs isoldr ppp bflash dreameye \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
 		SDL_net http httpd telnetd mongoose gumbo \
 		adx s3m mp3 ogg wav ffmpeg bitcoin openssl ftpd quirc \
-		polarssl curl
+		polarssl curl luaCURL
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
