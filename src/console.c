@@ -10,7 +10,6 @@
 #include "ds.h"
 #include "video.h"
 #include "console.h"
-#include <arch/spinlock.h>
 
 //#define CONSOLE_DEBUG 1
 
@@ -31,7 +30,7 @@ void SetConsoleDebug(int mode) {
 
 int ds_printf(const char *fmt, ...) {
 
-	char *ptemp, *b, *cr;
+	char *ptemp, *b;
 	va_list args;
 	int i, len;
 
@@ -65,9 +64,12 @@ int ds_printf(const char *fmt, ...) {
 			}
 
 			len = strlen(b);
-			cr = b + len - 1;
 
-			if(*cr != '\r') {
+			if(len > 0 && b[len - 1] == '\r') {
+				b[len - 1] = '\0';
+				len--;
+			}
+			else {
 				CON_NewLineConsole(DSConsole);
 			}
 
@@ -76,7 +78,13 @@ int ds_printf(const char *fmt, ...) {
 			}
 
 			memcpy(DSConsole->ConsoleLines[0], b, len);
-			DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
+
+			if(len < DSConsole->VChars) {
+				DSConsole->ConsoleLines[0][len] = '\0';
+			}
+			else {
+				DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
+			}
 		}
 
 		if(ConsoleIsVisible()) {

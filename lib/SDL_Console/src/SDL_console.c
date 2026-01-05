@@ -142,6 +142,8 @@ SDL_Event* CON_Events(SDL_Event *event) {
 					break;
 				case SDLK_RETURN:
 					if(strlen(Topmost->Command) > 0) {
+						char temp[CON_CHARS_PER_LINE + 1];
+
 						CON_NewLineCommand(Topmost);
 
 						/* copy the input into the past commands strings */
@@ -150,11 +152,16 @@ SDL_Event* CON_Events(SDL_Event *event) {
 						/* display the command including the prompt */
 						CON_Out(Topmost, "%s%s", Topmost->Prompt, Topmost->Command);
 
-						CON_Execute(Topmost, Topmost->Command);
-						/* printf("Command: %s\n", Topmost->Command); */
+						strcpy(temp, Topmost->Command);
 
 						Clear_Command(Topmost);
 						Topmost->CommandScrollBack = -1;
+
+						Topmost->WasUnicode = 1;
+						CON_DrawConsole(Topmost);
+
+						CON_Execute(Topmost, temp);
+						/* printf("Command: %s\n", Topmost->Command); */
 					}
 					break;
 				// case SDLK_ESCAPE:

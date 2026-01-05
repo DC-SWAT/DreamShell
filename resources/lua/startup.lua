@@ -61,7 +61,7 @@ local DreamShell = {
 		--"wave",
 		--"xvid",
 		--"SDL_mixer",        -- Depends: oggvorbis
-		--"ffmpeg",           -- Depends: oggvorbis, mpg123, bzip2
+		--"ffmpeg",
 		--"opengl",
 		--"isofs",            -- Depends: minilzo
 		--"isoldr",           -- Depends: isofs
@@ -73,7 +73,9 @@ local DreamShell = {
 		--"bflash",
 		--"openssl",
 		--"bitcoin",
-		--"quirc"
+		--"quirc",
+		--"polarssl",
+		--"curl"              -- Depends: polarssl
 	},
 
 	Initialize = function(self)
