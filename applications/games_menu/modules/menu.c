@@ -100,7 +100,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.change_page_with_pad = false;
 	menu_data.start_in_last_game = false;
 	menu_data.rebuild_cache = false;
-	menu_data.enable_cache = false;
+	menu_data.enable_cache = true;
 	menu_data.last_game_played_index = -1;
 	menu_data.last_device = 0;
 	menu_data.cache_array_count = 0;
@@ -1859,7 +1859,7 @@ void LoadDefaultMenuConfig()
 	menu_data.app_config.cover_to_pvr = 1;
 	menu_data.app_config.change_page_with_pad = 0;
 	menu_data.app_config.start_in_last_game = 0;
-	menu_data.app_config.enable_cache = 0;
+	menu_data.app_config.enable_cache = 1;
 	menu_data.app_config.last_device = 0;
 
 	ThemeStruct theme = GetTheme(DEFAULT_THEME);

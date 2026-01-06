@@ -420,7 +420,7 @@ static void SetCursor()
 	{
 		if (menu_data.menu_type == MT_IMAGE_TEXT_64_5X2)
 		{
-			Color color = { 0.30f, 0.10f, 0.10f, 0.10f };
+			Color color = { 0.30f, menu_data.title_color.r, menu_data.title_color.g, menu_data.title_color.g };
 			Color border_color = {1, 1.0f, 1.0f, 0.1f};
 
 			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 3, &border_color, DEFAULT_RADIUS);
@@ -436,7 +436,7 @@ static void SetCursor()
 		}
 		else if (menu_data.menu_type == MT_PLANE_TEXT)
 		{
-			Color color = { 0.50f, 0.10f, 0.10f, 0.10f };
+			Color color = { 0.50f, menu_data.title_color.r, menu_data.title_color.g, menu_data.title_color.g };
 			Color border_color = {1, 1.0f, 1.0f, 0.1f};
 			
 			self.item_selector = TSU_RectangleCreateWithBorder(PVR_LIST_TR_POLY, 0, 0, 0, 0, &color, ML_CURSOR, 2, &border_color, DEFAULT_RADIUS);			
