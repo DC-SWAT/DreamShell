@@ -85,7 +85,7 @@ AR_FLAGS="cru"
 LTCC="/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-O2 -fomit-frame-pointer -ml -m4-single-only -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing"
+LTCFLAGS="-O2 -fomit-frame-pointer -ml -m4-single -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing"
 
 # A language-specific compiler.
 CC="/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc"
@@ -7358,7 +7358,7 @@ AR_FLAGS="cru"
 LTCC="/opt/toolchains/dc/sh-elf/bin/sh-elf-gcc"
 
 # LTCC compiler flags.
-LTCFLAGS="-O2 -fomit-frame-pointer -ml -m4-single-only -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing"
+LTCFLAGS="-O2 -fomit-frame-pointer -ml -m4-single -fno-crossjumping -I/usr/local/dc/kos/kos/../kos-ports/include -I/usr/local/dc/kos/kos/include -I/usr/local/dc/kos/kos/kernel/arch/dreamcast/include -I/usr/local/dc/kos/kos/addons/include -D_arch_dreamcast -D_arch_sub_pristine -Wall -g -fno-builtin -fno-strict-aliasing"
 
 # A language-specific compiler.
 CC="sh-elf-g++"
