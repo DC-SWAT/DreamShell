@@ -9,7 +9,7 @@
 /* This library is designed to be called from another program in a thread. It
    expects an input filename, and it will do all the setup and playback work.
   
-   This requires a working math library for m4-single-only (such as newlib).
+   This requires a working math library for m4-single (such as newlib).
    
  */
 

@@ -16,7 +16,7 @@ TARGETLD		= $(TARGETPREFIX)-ld
 TARGETAS		= $(TARGETPREFIX)-as
 TARGETSIZE		= $(TARGETPREFIX)-size
 TARGETLDFLAGS	= -Wl,--gc-sections -Tshlelf.xc -nostartfiles -nostdlib -nodefaultlibs
-TARGETCFLAGS	= -ml -m4-single-only -ffunction-sections -fdata-sections -ffreestanding \
+TARGETCFLAGS	= -ml -m4-single -ffunction-sections -fdata-sections -ffreestanding \
 					-fno-builtin -fno-strict-aliasing -fomit-frame-pointer \
 					-Wall -std=c17 -Wextra -Werror
 
