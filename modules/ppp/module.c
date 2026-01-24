@@ -60,7 +60,7 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 		}
 		
 		if(rc < 0) {
-			ds_printf("DS_ERROR: Modem PPP initialization failed!\n");
+			ds_printf("DS_ERROR: Modem PPP initialization failed: %d\n", rc);
 			if (isSerial) {
 				scif_shutdown();
 			} else {
@@ -73,7 +73,7 @@ int builtin_ppp_cmd(int argc, char *argv[]) {
 		rc = ppp_connect();
 
 		if(rc < 0) {
-			ds_printf("DS_ERROR: Link establishment failed!\n");
+			ds_printf("DS_ERROR: Link establishment failed: %d\n", rc);
 			return CMD_ERROR;
 		}
 

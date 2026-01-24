@@ -284,7 +284,7 @@ int builtin_curl_cmd(int argc, char *argv[]) {
 }
 
 int lib_open(klibrary_t *lib) {
-    AddCmd(lib_get_name(), "curl", (CmdHandler *) builtin_curl_cmd);
+    AddCmd(lib_get_name(), "cURL command line tool", (CmdHandler *) builtin_curl_cmd);
     return 0;
 }
 
