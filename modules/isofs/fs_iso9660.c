@@ -1127,7 +1127,7 @@ static void fn_postprocess(char *fnin) {
 
 /* Read a directory entry */
 #ifdef __DREAMCAST__
-static dirent_t *virt_iso_readdir(void * h) {
+static const dirent_t *virt_iso_readdir(void * h) {
 	file_t fd = (file_t)h;
 #else
 dirent_t *virt_iso_readdir(int fd) {

@@ -2,6 +2,7 @@ include kos.h
 include kos/exports.h
 include kos/md5.h
 include kos/net.h
+include kos/irq.h
 include stdio.h
 include wchar.h
 include wctype.h
@@ -1980,12 +1981,10 @@ cond_init
 mutex_init
 sem_init
 #
-kthread_key_next
 kthread_key_create
 kthread_getspecific
 kthread_setspecific
 kthread_key_delete
-kthread_key_delete_destructor
 kthread_tls_init
 kthread_tls_shutdown
 kthread_once
@@ -2057,14 +2056,14 @@ kos_md5
 dcload_type
 vid_builtin
 hardware_sys_mode
+inside_int
 #
 arch_main
 arch_set_exit_path
 arch_return
 arch_shutdown
 #
-mm_init
-mm_sbrk
+sbrk
 #
 fs_iso9660_init
 fs_iso9660_shutdown

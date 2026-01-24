@@ -2,13 +2,14 @@
 
    module.c - VMU Manager app module
    Copyright (C)2014-2015 megavolt85
-   Copyright (C)2024-2025 SWAT
+   Copyright (C)2024-2026 SWAT
 
 */
 
 #include "ds.h"
 #include "fs_vmd.h"
 #include <stdbool.h>
+#include <dc/maple/mouse.h>
 
 DEFAULT_MODULE_EXPORTS(app_vmu_manager);
 
@@ -237,7 +238,7 @@ static void* vmu_dev(const char* path) {
 static void rmdir_recursive(const char* folder) {
 
 	file_t d;
-	dirent_t *de;
+	const dirent_t *de;
 	char dst[NAME_MAX];
 
 	d = fs_open(folder, O_DIR);
@@ -343,7 +344,7 @@ static int Confirm_Window() {
 		controller_dev = maple_enum_type(0, MAPLE_FUNC_CONTROLLER);
 
 		if(mouse_dev) {
-			mouse_cond_t *state = (mouse_cond_t *)maple_dev_status(mouse_dev);
+			mouse_state_t *state = (mouse_state_t *)maple_dev_status(mouse_dev);
 
 			if(state) {
 				if(state->buttons & MOUSE_LEFTBUTTON) {

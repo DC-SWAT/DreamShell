@@ -863,7 +863,6 @@ int dreameye_poll(maple_device_t *dev) {
     dreameye_state_ext_t *de = first_state;
 
     if(!de || !de->is_capturing || !de->callback) {
-        dev->status_valid = 1;
         return 0;
     }
 
@@ -895,7 +894,6 @@ int dreameye_poll(maple_device_t *dev) {
         dreameye_get_video_frame_part(dev);
     }
 
-    dev->status_valid = 1;
     return 0;
 }
 
@@ -920,7 +918,6 @@ static int dreameye_attach(maple_driver_t *drv, maple_device_t *dev) {
     de->is_capturing = 0;
     de->callback = NULL;
 
-    dev->status_valid = 1;
     return 0;
 }
 #endif

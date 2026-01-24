@@ -28,6 +28,7 @@
 #define __DC_FS_VMD_H
 
 #include <sys/cdefs.h>
+#include <stdint.h>
 __BEGIN_DECLS
 
 #include <kos/fs.h>
@@ -48,51 +49,51 @@ void fs_vmd_vmdfile(const char *infile);
     \headerfile vmdfs.h
 */
 typedef struct {
-    uint8   cent;   /**< \brief Century */
-    uint8   year;   /**< \brief Year, within century */
-    uint8   month;  /**< \brief Month of the year */
-    uint8   day;    /**< \brief Day of the month */
-    uint8   hour;   /**< \brief Hour of the day */
-    uint8   min;    /**< \brief Minutes */
-    uint8   sec;    /**< \brief Seconds */
-    uint8   dow;    /**< \brief Day of week (0 = monday, etc) */
+    uint8_t   cent;   /**< \brief Century */
+    uint8_t   year;   /**< \brief Year, within century */
+    uint8_t   month;  /**< \brief Month of the year */
+    uint8_t   day;    /**< \brief Day of the month */
+    uint8_t   hour;   /**< \brief Hour of the day */
+    uint8_t   min;    /**< \brief Minutes */
+    uint8_t   sec;    /**< \brief Seconds */
+    uint8_t   dow;    /**< \brief Day of week (0 = monday, etc) */
 } __packed__ vmd_timestamp_t;
 
 /** \brief  VMD FS Root block layout.
     \headerfile vmdfs.h
 */
 typedef struct {
-    uint8           magic[16];      /**< \brief All should contain 0x55 */
-    uint8           use_custom;     /**< \brief 0 = standard, 1 = custom */
-    uint8           custom_color[4];/**< \brief blue, green, red, alpha */
-    uint8           pad1[27];       /**< \brief All zeros */
+    uint8_t           magic[16];      /**< \brief All should contain 0x55 */
+    uint8_t           use_custom;     /**< \brief 0 = standard, 1 = custom */
+    uint8_t           custom_color[4];/**< \brief blue, green, red, alpha */
+    uint8_t           pad1[27];       /**< \brief All zeros */
     vmd_timestamp_t timestamp;      /**< \brief BCD timestamp */
-    uint8           pad2[8];        /**< \brief All zeros */   
-    uint16			size;			/**< \brief blocks count - 1 */
-    uint16			partition;		/**< \brief partition num */
-    uint16			root_loc;		/**< \brief Root location */
-    uint16          fat_loc;        /**< \brief FAT location */
-    uint16          fat_size;       /**< \brief FAT size in blocks */
-    uint16          dir_loc;        /**< \brief Directory location */
-    uint16          dir_size;       /**< \brief Directory size in blocks */
-    uint16          icon_shape;     /**< \brief Icon shape for this VMS */
-    uint16          blk_cnt;        /**< \brief Number of user blocks */
-    uint8           unk2[430];      /**< \brief ??? */
+    uint8_t           pad2[8];        /**< \brief All zeros */   
+    uint16_t			size;			/**< \brief blocks count - 1 */
+    uint16_t			partition;		/**< \brief partition num */
+    uint16_t			root_loc;		/**< \brief Root location */
+    uint16_t          fat_loc;        /**< \brief FAT location */
+    uint16_t          fat_size;       /**< \brief FAT size in blocks */
+    uint16_t          dir_loc;        /**< \brief Directory location */
+    uint16_t          dir_size;       /**< \brief Directory size in blocks */
+    uint16_t          icon_shape;     /**< \brief Icon shape for this VMS */
+    uint16_t          blk_cnt;        /**< \brief Number of user blocks */
+    uint8_t           unk2[430];      /**< \brief ??? */
 } __packed__ vmd_root_t;
 
 /** \brief  VMD FS Directory entries, 32 bytes each.
     \headerfile vmdfs.h
 */
 typedef struct {
-    uint8           filetype;       /**< \brief 0x00 = no file; 0x33 = data; 0xcc = a game */
-    uint8           copyprotect;    /**< \brief 0x00 = copyable; 0xff = copy protected */
-    uint16          firstblk;       /**< \brief Location of the first block in the file */
+    uint8_t           filetype;       /**< \brief 0x00 = no file; 0x33 = data; 0xcc = a game */
+    uint8_t           copyprotect;    /**< \brief 0x00 = copyable; 0xff = copy protected */
+    uint16_t          firstblk;       /**< \brief Location of the first block in the file */
     char            filename[12];   /**< \brief Note: there is no null terminator */
     vmd_timestamp_t timestamp;      /**< \brief File time */
-    uint16          filesize;       /**< \brief Size of the file in blocks */
-    uint16          hdroff;         /**< \brief Offset of header, in blocks from start of file */
-    uint8           dirty;          /**< \brief See header notes */
-    uint8           pad1[3];        /**< \brief All zeros */
+    uint16_t          filesize;       /**< \brief Size of the file in blocks */
+    uint16_t          hdroff;         /**< \brief Offset of header, in blocks from start of file */
+    uint8_t           dirty;          /**< \brief See header notes */
+    uint8_t           pad1[3];        /**< \brief All zeros */
 } __packed__ vmd_dir_t;
 
 #undef __packed__

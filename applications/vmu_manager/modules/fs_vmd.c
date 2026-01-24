@@ -283,7 +283,7 @@ static ssize_t vmd_read(void * hnd, void *buffer, size_t cnt) {
 }
 
 /* read a directory handle */
-static dirent_t *vmd_readdir(void * fd) {
+static const dirent_t *vmd_readdir(void * fd) {
     vmd_dh_t    *dh;
     vmd_dir_t   *dir;
 

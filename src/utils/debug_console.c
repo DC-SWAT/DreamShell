@@ -137,14 +137,12 @@ dbgio_handler_t dbgio_sd = {
 
 
 void dbgio_set_dev_ds() {
-	// Replace null device
-	dbgio_handlers[dbgio_handler_cnt - 2] = &dbgio_ds;
+	dbgio_add_handler(&dbgio_ds);
 	dbgio_dev_select("ds");
 }
 
 void dbgio_set_dev_sd() {
-	// Replace null device
-	dbgio_handlers[dbgio_handler_cnt - 2] = &dbgio_sd;
+	dbgio_add_handler(&dbgio_sd);
 	dbgio_dev_select("sd");
 }
 
@@ -155,5 +153,3 @@ void dbgio_set_dev_scif() {
 void dbgio_set_dev_fb() {
 	dbgio_dev_select("fb");
 }
-
-

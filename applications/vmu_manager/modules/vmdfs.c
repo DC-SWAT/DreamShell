@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include <stdint.h>
 #include <time.h>
 #include <kos/mutex.h>
 #include "fs_vmd.h"
@@ -57,7 +58,7 @@ static int vmdfs_fat_blocks(vmd_root_t * root_buf) {
 
 /* Common code for both dir_read and dir_write */
 static int vmdfs_dir_read(const char *vmdfile, vmd_root_t * root, vmd_dir_t * dir_buf) {
-    uint16  dir_block, dir_size;
+    uint16_t  dir_block, dir_size;
     unsigned int i;
     int needsop;//, rv;
     int write = 0;
@@ -87,7 +88,7 @@ static int vmdfs_dir_read(const char *vmdfile, vmd_root_t * root, vmd_dir_t * di
             
                 file_t f = fs_open(vmdfile,O_RDONLY);
                 fs_seek(f,dir_block*BLOCK_SIZE,SEEK_SET);
-                fs_read(f,(uint8 *)dir_buf,BLOCK_SIZE);
+                fs_read(f,(uint8_t *)dir_buf,BLOCK_SIZE);
                 fs_close(f);
             }
         }
@@ -101,8 +102,8 @@ static int vmdfs_dir_read(const char *vmdfile, vmd_root_t * root, vmd_dir_t * di
 }
 
 /* Common code for both fat_read and fat_write */
-static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16 * fat_buf) {
-    uint16  fat_block, fat_size;
+static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16_t * fat_buf) {
+    uint16_t  fat_block, fat_size;
 
     /* Find the FAT starting block and length */
     fat_block = root->fat_loc;
@@ -122,7 +123,7 @@ static int vmdfs_fat_read(const char *vmdfile, vmd_root_t * root, uint16 * fat_b
     }
 
     fs_seek(fd, fat_block * BLOCK_SIZE, SEEK_SET);
-    fs_read(fd, (uint8 *)fat_buf, fat_size * BLOCK_SIZE);
+    fs_read(fd, (uint8_t *)fat_buf, fat_size * BLOCK_SIZE);
     fs_close(fd);
 
     if(!*fat_buf) {
@@ -153,11 +154,11 @@ static int vmdfs_dir_find(vmd_root_t * root, vmd_dir_t * dir, const char * fn) {
     return -1;
 }
 
-static int vmdfs_file_read(const char *vmdfile, uint16 * fat, vmd_dir_t * dirent, void * outbuf) {
+static int vmdfs_file_read(const char *vmdfile, uint16_t * fat, vmd_dir_t * dirent, void * outbuf) {
     int curblk, blkleft;
-    uint8   * out;
+    uint8_t   * out;
 
-    out = (uint8 *)outbuf;
+    out = (uint8_t *)outbuf;
 
     /* Find the first block */
     curblk = dirent->firstblk;
@@ -183,7 +184,7 @@ static int vmdfs_file_read(const char *vmdfile, uint16 * fat, vmd_dir_t * dirent
             return -1;
         }
         fs_seek(fd, curblk * BLOCK_SIZE, SEEK_SET);
-        int rv = fs_read(fd, (uint8 *)out, BLOCK_SIZE);
+        int rv = fs_read(fd, (uint8_t *)out, BLOCK_SIZE);
         fs_close(fd);
 
         if(rv != BLOCK_SIZE) {
@@ -220,7 +221,7 @@ static int vmdfs_mutex_unlock() {
 
 /* Internal function gets everything setup for you */
 static int vmdfs_setup(const char *vmdfile, vmd_root_t * root, vmd_dir_t ** dir, int * dirsize,
-                       uint16 ** fat, int * fatsize) {
+                       uint16_t ** fat, int * fatsize) {
     if(!root) {
         return -1;
     }
@@ -234,7 +235,7 @@ static int vmdfs_setup(const char *vmdfile, vmd_root_t * root, vmd_dir_t ** dir,
     vmdfs_mutex_lock();
 
     fs_seek(fd, -BLOCK_SIZE, SEEK_END);
-    fs_read(fd, (uint8 *)root, BLOCK_SIZE);
+    fs_read(fd, (uint8_t *)root, BLOCK_SIZE);
     fs_close(fd);
 
     if(dir) {
@@ -258,7 +259,7 @@ static int vmdfs_setup(const char *vmdfile, vmd_root_t * root, vmd_dir_t ** dir,
     if(fat) {
         /* Alloc enough space for the fat */
         *fatsize = vmdfs_fat_blocks(root);
-        *fat = (uint16 *)memalign(32, *fatsize);
+        *fat = (uint16_t *)memalign(32, *fatsize);
 
         if(!*fat) {
             dbglog(DBG_ERROR, "vmdfs_setup: can't alloc %d bytes for FAT\n", *fatsize);
@@ -279,7 +280,7 @@ dead:
 }
 
 /* Internal function to tear everything down for you */
-static void vmdfs_teardown(vmd_dir_t * dir, uint16 * fat) {
+static void vmdfs_teardown(vmd_dir_t * dir, uint16_t * fat) {
     if(dir)
         free(dir);
 
@@ -341,7 +342,7 @@ ex:
 }
 
 /* Shared code between read/read_dirent */
-static int vmdfs_read_common(const char *vmdfile, vmd_dir_t * dirent, uint16 * fat, void ** outbuf, int * outsize) {
+static int vmdfs_read_common(const char *vmdfile, vmd_dir_t * dirent, uint16_t * fat, void ** outbuf, int * outsize) {
     /* Allocate the output space */
     *outsize = dirent->filesize * 512;
     *outbuf = memalign(32, *outsize);
@@ -365,7 +366,7 @@ static int vmdfs_read_common(const char *vmdfile, vmd_dir_t * dirent, uint16 * f
 int vmdfs_read(const char *vmdfile, const char * fn, void ** outbuf, int * outsize) {
     vmd_root_t  root;
     vmd_dir_t   * dir = NULL;
-    uint16      * fat = NULL;
+    uint16_t      * fat = NULL;
     int     fatsize, dirsize, idx, rv = 0;
 
     *outbuf = NULL;

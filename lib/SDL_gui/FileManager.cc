@@ -293,7 +293,7 @@ static int alpha_sort(dirent_t *a, dirent_t *b)
 void GUI_FileManager::Scan() 
 {
 	file_t f;
-	dirent_t *ent;
+	const dirent_t *ent;
 	dirent_t *sorts = NULL;
 	int n = 0;
 
