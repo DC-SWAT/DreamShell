@@ -1582,17 +1582,6 @@ cfg_fprint_error
 cfg_get_error_str
 cfg_get_static_error_str
 #
-spi_init
-spi_shutdown
-spi_cs_on
-spi_cs_off
-spi_send_byte
-spi_rec_byte
-spi_sr_byte
-spi_slow_sr_byte
-spi_send_data
-spi_rec_data
-#
 # Parallax
 plx_font_load
 plx_font_destroy
