@@ -59,7 +59,7 @@ CheckBox::CheckBox(Font *display_font, uint text_size, float width, float height
 		this->subAdd(m_control_rectangle);
 		this->subAdd(m_rectangle);
 
-		m_display_label = new Label(display_font, m_off_text, text_size, true, false);
+		m_display_label = new Label(display_font, m_off_text, text_size, true, false, false);
 		this->subAdd(m_display_label);
 
 		Vector rectangle_vector = m_rectangle->getTranslate();
@@ -137,14 +137,6 @@ void CheckBox::inputEvent(int event_type, int key) {
 		}
 		break;
 	}
-}
-
-void CheckBox::setSize(float width, float height){
-
-}
-
-void CheckBox::setPosition(float x, float y) {
-
 }
 
 const std::string CheckBox::getText() {
@@ -259,5 +251,23 @@ extern "C"
 		if (checkbox_ptr != NULL) {
 			return checkbox_ptr->setOff();
 		}
+	}
+
+	void TSU_CheckBoxSetWindowState(CheckBox *checkbox_ptr, int window_state)
+	{
+		if (checkbox_ptr != NULL)
+		{
+			checkbox_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_CheckBoxGetWindowState(CheckBox *checkbox_ptr)
+	{
+		if (checkbox_ptr != NULL)
+		{
+			return checkbox_ptr->getWindowState();
+		}
+
+		return 0;
 	}
 }

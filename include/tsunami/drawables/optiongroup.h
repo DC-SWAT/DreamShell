@@ -3,7 +3,7 @@
 
    optiongroup.h
 
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -37,8 +37,7 @@ private:
 	const float m_padding_width = 32;
 	const float m_padding_height = 6;
 	Font *m_display_font;
-	int m_control_state, m_previous_state, m_index_selected, m_previous_index;
-	int *m_change_state;
+	int m_index_selected, m_previous_index;
 	LogXYMover *m_text_animation;
 
 	OptionValueStruct* m_option_selected;
@@ -55,8 +54,6 @@ public:
 	OptionGroup(Font *font_ptr, uint text_size, float width, float height, const Color &body_color);
 	virtual ~OptionGroup();
 
-	void setStates(int control_state, int previous_state, int *change_state);
-	int getControlState();
 	void setFocus(bool focus);
 	void inputEvent(int event_type, int key);
 	void setCursor(Drawable *drawable);
@@ -98,8 +95,10 @@ extern "C"
 
 	OptionGroup* TSU_OptionGroupCreate(Font *display_font, uint text_size, float width, float height, Color *body_color);
 	void TSU_OptionGroupDestroy(OptionGroup **optiongroup_ptr);
-	void TSU_OptionGroupSetStates(OptionGroup *optiongroup_ptr, int control_state, int previous_state, int *change_state);
+	void TSU_OptionGroupSetStates(OptionGroup *optiongroup_ptr, int control_state, int previous_state);
 	int TSU_OptionGroupGetControlState(OptionGroup *optiongroup_ptr);
+	void TSU_OptionGroupSetWindowState(OptionGroup *optiongroup_ptr, int window_state);
+	int TSU_OptionGroupGetWindowState(OptionGroup *optiongroup_ptr);
 	void TSU_OptionGroupSetFocus(OptionGroup *optiongroup_ptr, bool focus);
 	void TSU_OptionGroupInputEvent(OptionGroup *optiongroup_ptr, int event_type, int key);
 	void TSU_OptionGroupAdd(OptionGroup *optiongroup_ptr, int32 key, const char *text);

@@ -3,7 +3,7 @@
 
    form.cpp
 
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -19,6 +19,7 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, in
 	setObjectType(ObjectTypeEnum::FORM_TYPE);
 
 	m_sfx_volume = -1;
+	m_close_button = nullptr;
 	m_sfx_click = NULL;
 	m_sfx_cursor = NULL;
 	m_cursor_animation_enable = false;
@@ -63,7 +64,7 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, in
 
 	if (title_font) {
 		m_title_font = title_font;
-		m_title_label = new Label(title_font, "", 20, true, false);
+		m_title_label = new Label(title_font, "", 20, true, false, false);
 	}
 
 	m_background_color = DEFAULT_SHADOW_COLOR;
@@ -76,6 +77,10 @@ Form::Form(int x, int y, uint width, uint height, bool is_popup, int z_index, in
 }
 
 Form::~Form() {
+
+	if (m_close_button != nullptr) {
+		m_close_button->setFinished();
+	}
 
 	if (m_sfx_click) {
 		delete m_sfx_click;
@@ -144,6 +149,11 @@ Form::~Form() {
 
 	clearObjects();
 	clearBottomObjects();
+
+	if (m_close_button != nullptr) {
+		delete m_close_button;
+		m_close_button = nullptr;
+	}
 
 	if (m_cursor != nullptr) {
 		delete m_cursor;
@@ -438,7 +448,7 @@ void Form::addBodyObject(Drawable *drawable_ptr, uint object_type, uint column_n
 	object->column = column_number;
 	object->row = row_number;
 	object->view_index = m_current_view_index;
-
+	
 	m_objects.push_front(object);
 
 	Vector body_position = m_body_rectangle->getTranslate();
@@ -981,19 +991,30 @@ void Form::setCursor(Drawable *drawable) {
 		float border_width = 3;
 		float drawable_width = 0, drawable_height = 0;
 
+		Vector drawable_position;
 		if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE) {
 			Label *label = (Label *)drawable;
 			label->getFont()->getTextSize(label->getText(), &drawable_width, &drawable_height);
-			label = NULL;
-
+			
 			drawable_width += 4;
 			drawable_height += 2;
+			
+			if (label->isCentered()) {
+				drawable_position = drawable->getPosition();
+				drawable_position.x -= drawable_width / 2;
+				drawable_position.y += 3;
+			}
+			else {
+				drawable_position = drawable->getPosition();
+			}
+
+			label = NULL;
 		}
 		else {
 			drawable->getSize(&drawable_width, &drawable_height);
+			drawable_position = drawable->getPosition();
 		}
 
-		Vector drawable_position = drawable->getPosition();
 
 		if (drawable_width > 0 && drawable_height > 0) {
 			column_width = drawable_width + border_width + 2;
@@ -1014,7 +1035,24 @@ void Form::setCursor(Drawable *drawable) {
 		m_selector_translate.x = drawable_position.x;
 		m_selector_translate.y = drawable_position.y + (row_height/2) - border_width;
 
-		if (drawable->getObjectType() == ObjectTypeEnum::ITEMMENU_TYPE || drawable->getObjectType() == ObjectTypeEnum::BANNER_TYPE) {
+		if (drawable->getObjectType() == ObjectTypeEnum::ITEMMENU_TYPE) {
+			const float padding_x = 20.0f;
+			const float padding_y = 20.0f;
+
+			if (drawable->getObjectSubType() == BANNER_TYPE) {
+				m_selector_translate.x -= drawable_width / 2;
+				m_selector_translate.x += padding_x;
+
+				m_selector_translate.y += padding_y;
+			}
+			else if (drawable->getObjectSubType() == LABEL_TYPE) {
+				m_selector_translate.y += drawable_height/2;
+			}
+			else {
+				m_selector_translate.y += drawable_height/2;
+			}
+		}
+		else if (drawable->getObjectType() == ObjectTypeEnum::BANNER_TYPE) {
 			m_selector_translate.y += drawable_height/2;
 		}
 		else if (drawable->getObjectType() == ObjectTypeEnum::LABEL_TYPE) {
@@ -1143,6 +1181,52 @@ void Form::inputEvent(int event_type, int key) {
 	}
 }
 
+void Form::setCloseButton(const std::string &image, ClickEventFunctionPtr click_func_ptr, OnMouseOverEventFunctionPtr mouse_over_func_ptr) {
+	if (m_visible_title) {
+		Vector position = m_title_rectangle->getTranslate();
+		m_close_button = new ItemMenu(image.c_str(), 24, 24, PVR_LIST_TR_POLY, false, PVR_TXRLOAD_DMA);
+
+		position.x += m_width - 36;
+		position.y -= 40;
+		position.z = m_zIndex + ML_ITEM;
+		m_close_button->setTranslate(position);
+
+		if (click_func_ptr) {
+			m_close_button->setClickEvent(click_func_ptr);
+		}
+
+		if (mouse_over_func_ptr) {
+			m_close_button->setOnMouseOverEvent(mouse_over_func_ptr);
+		}
+
+		subAdd(m_close_button);
+	}
+}
+
+void Form::setViewIndex(int view_index) {
+	if (view_index >= 0 && view_index < (int)m_bottom_objects.size()) {
+		onGetObjectsCurrentViewEvent();
+		m_current_view_index = view_index;
+		onViewIndexChangedEvent();
+
+		Drawable *drawable = NULL;
+		m_current_row = 0;
+		drawable = findNextNearestObject(SearchDirectionEnum::SDE_UP);
+
+		m_current_column = 0;
+		drawable = findNextNearestObject(SearchDirectionEnum::SDE_RIGHT);
+
+		bool changed = (drawable && m_current_object_selected != drawable ? true : false);
+
+		setCursor(drawable);
+		if (changed) {
+			if (selected_event) {
+				selected_event(drawable, 0, m_current_column, m_current_row);
+			}
+		}
+	}
+}
+
 void Form::onViewIndexChangedEvent() {
 	if (view_index_changed_event != nullptr) {
 
@@ -1249,7 +1333,6 @@ void Form::setSfxVolume(int volume) {
 		m_sfx_volume = volume;
 	}
 }
-
 
 extern "C"
 {
@@ -1683,6 +1766,22 @@ extern "C"
 		}
 	}
 
+	void TSU_FormSetCloseButton(Form *form_ptr, const char *image, ClickEventFunctionPtr click_func_ptr, OnMouseOverEventFunctionPtr mouse_over_func_ptr)
+	{
+		if (form_ptr != NULL)
+		{
+			form_ptr->setCloseButton(image, click_func_ptr, mouse_over_func_ptr);
+		}
+	}
+
+	void TSU_FormSetViewIndex(Form *form_ptr, int view_index)
+	{
+		if (form_ptr != NULL)
+		{
+			form_ptr->setViewIndex(view_index);
+		}
+	}
+
 	void TSU_FormSetCursor(Form *form_ptr, Drawable *drawable_ptr)
 	{
 		if (form_ptr != NULL && drawable_ptr != NULL)
@@ -1707,4 +1806,21 @@ extern "C"
 		}
 	}
 	
+	void TSU_FormSetWindowState(Form *form_ptr, int window_state)
+	{
+		if (form_ptr != NULL)
+		{
+			form_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_FormGetWindowState(Form *form_ptr)
+	{
+		if (form_ptr != NULL)
+		{
+			return form_ptr->getWindowState();
+		}
+
+		return 0;
+	}
 }

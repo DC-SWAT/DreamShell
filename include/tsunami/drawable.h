@@ -4,35 +4,38 @@
    drawable.h
 
    Copyright (C) 2002 Megan Potter
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
 #ifndef __TSUNAMI_DRAWABLE_H
 #define __TSUNAMI_DRAWABLE_H
 
+#include "inputeventstate.h"
 #include "animation.h"
 
 #include "vector.h"
 #include "color.h"
 
 typedef void (*ClickEventFunctionPtr)(Drawable *drawable);
+typedef void (*OnMouseOverEventFunctionPtr)(Drawable *drawable, uint object_type, int id);
 
 enum ObjectTypeEnum
 {
-	DRAWABLE_TYPE = 1,
-	SCENE_TYPE,
-	FORM_TYPE,
-	BANNER_TYPE,
-	LABEL_TYPE,
-	ITEMMENU_TYPE,
-	OPTIONGROUP_TYPE,
-	TEXTBOX_TYPE,
-	COMBOBOX_TYPE,
-	CHECKBOX_TYPE,
-	RECTANGLE_TYPE,
-	BOX_TYPE,
-	TRIANGLE_TYPE
+	NONE_TYPE = 0,
+	DRAWABLE_TYPE = 1<<0,
+	SCENE_TYPE = 1<<2,
+	FORM_TYPE = 1<<3,
+	BANNER_TYPE = 1<<4,
+	LABEL_TYPE = 1<<5,
+	ITEMMENU_TYPE = 1<<6,
+	OPTIONGROUP_TYPE = 1<<7,
+	TEXTBOX_TYPE = 1<<8,
+	COMBOBOX_TYPE = 1<<9,
+	CHECKBOX_TYPE = 1<<10,
+	RECTANGLE_TYPE = 1<<11,
+	BOX_TYPE = 1<<12,
+	TRIANGLE_TYPE = 1<<13
 };
 
 #ifdef __cplusplus
@@ -40,7 +43,7 @@ enum ObjectTypeEnum
 #include <deque>
 #include <memory>
 
-class Drawable {
+class Drawable : public InputEventState {
 public:
 	/// Constructor / Destructor
 	Drawable();
@@ -54,6 +57,8 @@ public:
 
 	/// Remove all animation objects from us
 	void animRemoveAll();
+
+	void inputEvent(int event_type, int key) {} 
 
 	/// Checks to see if this object is still not finished (for screen
 	/// closing type stuff). Returns true if this object and all
@@ -86,6 +91,8 @@ public:
 
 	/// Move to the next frame of animation
 	virtual void nextFrame();
+
+	virtual void onMouseOver();	
 
 	/// Modify the drawn position of this drawable
 	void setTranslate(const Vector & v) { m_trans = v; }
@@ -132,8 +139,13 @@ public:
 	Drawable * getParent() const { return m_parent; }
 
 	virtual void setSize(float width, float height) { 
-		m_width = width;
-		m_height = height;
+		if (width > 0) {
+			m_width = width;
+		}
+
+		if (height > 0) {
+			m_height = height;
+		}
 	}
 
 	virtual void getSize(float *width, float *height) { 
@@ -150,8 +162,11 @@ public:
 
 	virtual void click();
 	void setClickEvent(ClickEventFunctionPtr click_function);
+	void setOnMouseOverEvent(OnMouseOverEventFunctionPtr mouse_over_function);
 
 	uint getObjectType();
+	uint getObjectSubType();
+	static bool isMouseInside(Drawable *drawable, int mx, int my);
 
 protected:
 	/// Setup a transform matrix, taking into account the
@@ -163,8 +178,10 @@ protected:
 	void popTransformMatrix() const;
 
 	void setObjectType(uint type);
+	void setObjectSubType(uint subType);
 
 	float		m_width, m_height;
+	OnMouseOverEventFunctionPtr m_mouse_over_function;
 
 private:
 	Vector		m_trans;		///< Translation
@@ -182,6 +199,7 @@ private:
 	bool		m_readonly;
 	int			m_id;
 	uint		m_object_type;
+	uint		m_object_subtype;
 
 	Drawable	* m_parent;		///< Our parent object
 
@@ -205,6 +223,8 @@ extern "C"
 #endif
 
 	void TSU_DrawableEventSetClick(Drawable *drawable_ptr, ClickEventFunctionPtr click_function);
+	void TSU_DrawableEventSetOnMouseOver(Drawable *drawable_ptr, OnMouseOverEventFunctionPtr mouse_over_function);
+	bool TSU_DrawableIsMouseInside(Drawable *drawable_ptr, int mx, int my);
 	void TSU_DrawableAnimAdd(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemove(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemoveAll(Drawable *drawable_ptr);
@@ -234,6 +254,10 @@ extern "C"
 	void TSU_DrawableSetReadOnly(Drawable *drawable_ptr, bool is_readonly);
 	int TSU_DrawableGetId(Drawable *drawable_ptr);
 	void TSU_DrawableSetId(Drawable *drawable_ptr, int id);
+	void TSU_DrawableGetSize(Drawable *drawable_ptr, float *w, float *h);
+	void TSU_DrawableSetSize(Drawable *drawable_ptr, float w, float h);
+	void TSU_DrawableSetWindowState(Drawable *drawable_ptr, int window_state);
+	int TSU_DrawableGetWindowState(Drawable *drawable_ptr);
 
 #ifdef __cplusplus
 };

@@ -30,8 +30,8 @@ Rectangle::Rectangle(int list, float x, float y, float width, float height, cons
 		radius = 0;
 	}
 
-	this->width = width;
-	this->height = height;
+	this->m_width = width;
+	this->m_height = height;
 	this->zIndex = zIndex;
 	this->radius = radius;
 	this->borderWidth = borderWidth;
@@ -52,18 +52,6 @@ Rectangle::Rectangle(int list, float x, float y, float width, float height, cons
 
 Rectangle::~Rectangle()
 {
-}
-
-void Rectangle::setSize(float w, float h)
-{
-	width = w;
-	height = h;
-}
-
-void Rectangle::getSize(float *w, float *h)
-{
-	*w = width;
-	*h = height;
 }
 
 void Rectangle::setBorderColor(Color color)
@@ -269,10 +257,10 @@ void Rectangle::draw(int list)
 	pvr_prim(&hdr, sizeof(hdr));
 
 	float w, h;
-	if (width != -1 && height != -1)
+	if (m_width != -1 && m_height != -1)
 	{
-		w = width;
-		h = height;
+		w = m_width;
+		h = m_height;
 	}
 	else
 	{
