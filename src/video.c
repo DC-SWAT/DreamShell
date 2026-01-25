@@ -71,8 +71,6 @@ static float sdl_dc_v1 = 0.9f;
 static float sdl_dc_v2 = 0.6f;
 
 static void *VideoThread(void *ptr);
-static void SDL_DS_Blit_Cursor(void);
-
 
 SDL_Surface *GetScreen() {
     return DScreen;
@@ -483,7 +481,7 @@ int InitVideo(int w, int h, int bpp) {
 
 
 void ShutdownVideo() { 
-
+	
 	mutex_destroy(&video_mutex);
 
 	if(plx_screen_txr) {
@@ -552,12 +550,12 @@ void SDL_DS_Blit_Textured() {
 	plx_vert_ifp(PLX_VERT_EOS, sdl_dc_x + native_width, sdl_dc_y + native_height, sdl_dc_z, color, sdl_dc_u2, sdl_dc_v2);
 }
 
-static void SDL_DS_Blit_Cursor(void) {
+void SDL_DS_Blit_Cursor() {
 	if (!ConsoleIsVisible() && plx_cursor_txr) {
 		int mouse_cursor_x = 0;
 		int mouse_cursor_y = 0;
 		uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);
-		const float mouse_cursor_z = sdl_dc_z + 100.0f;
+		const float mouse_cursor_z = sdl_dc_z + 300.0f;
 
 		SDL_GetMouseState(&mouse_cursor_x, &mouse_cursor_y);
 
