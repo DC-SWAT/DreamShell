@@ -46,8 +46,6 @@ public:
 
 	void inputEvent(int event_type, int key);
 	void setCursor(Drawable *drawable);
-	void setSize(float width, float height);
-	void setPosition(float x, float y);
 	const std::string getText();
 	int getValue();
 	void setOn();
@@ -73,6 +71,8 @@ extern "C"
 	int TSU_CheckBoxGetValue(CheckBox *checkbox_ptr);
 	void TSU_CheckBoxSetOn(CheckBox *checkbox_ptr);
 	void TSU_CheckBoxSetOff(CheckBox *checkbox_ptr);
+	void TSU_CheckBoxSetWindowState(CheckBox *checkbox_ptr, int window_state);
+	int TSU_CheckBoxGetWindowState(CheckBox *checkbox_ptr);
 
 #ifdef __cplusplus
 };

@@ -15,6 +15,7 @@
 ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags)
 {
 	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
+	setObjectSubType(ObjectTypeEnum::BANNER_TYPE);
 	Init();
 
 	Vector translateVector = Vector(padding_x, padding_y, 2);
@@ -24,14 +25,15 @@ ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr
 
 	image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY, yflip, flags);
 	image = new Banner(pvr_type, image_texture);
-	image->setSize(width, height);        
+	image->setSize(width, height);
 	image->setTranslate(translateVector);
 	this->subAdd(image);
 }
 
-ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
+ItemMenu::ItemMenu(const char *text, Font *font, int font_size, float width, float height)
 {
 	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
+	setObjectSubType(ObjectTypeEnum::LABEL_TYPE);
 	Init();
 
 	Vector translateVector = Vector(padding_x, padding_y, 2);
@@ -40,15 +42,28 @@ ItemMenu::ItemMenu(const char *text, Font *font, int font_size)
 		this->font = font;
 	}
 
-	this->text = new Label(font, text, font_size, false, false);       
+	this->text = new Label(font, text, font_size, false, false, true);
 	this->text->setTranslate(translateVector);
 	this->subAdd(this->text);
 	this->text->getFont()->getTextSize(text, &m_width, &m_height);
+
+	if (width > 0 || height > 0) {
+		this->text->setSize(width, height);
+
+		if (width > 0) {
+			m_width = width;
+		}
+
+		if (height > 0) {
+			m_height = height;
+		}
+	}
 }
 
-ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size, bool yflip, uint flags)
+ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size, float label_width, float label_height, bool yflip, uint flags)
 {
 	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
+	setObjectSubType(ObjectTypeEnum::BANNER_TYPE | ObjectTypeEnum::LABEL_TYPE);
 	Init();
 
 	Vector translateVector = Vector(padding_x, padding_y, 2);
@@ -65,12 +80,17 @@ ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr
 
 	translateVector = image->getPosition();
 	translateVector.x += width/2 + 6.f;
-	this->text = new Label(font, text, font_size, false, false);
+	this->text = new Label(font, text, font_size, false, false, true);
 
-	float w, h;
-	this->text->getFont()->getTextSize(text, &w, &h);
-	m_width = width + w + padding_x;
-	m_height = (height > h ? height : h) + padding_y/2;
+	if (label_width > 0 || label_height > 0) {
+		this->text->setSize(label_width, label_height);
+	}
+	else {
+		this->text->getFont()->getTextSize(text, &label_width, &label_height);
+	}
+
+	m_width = width + label_width + padding_x;
+	m_height = (height > label_height ? height : label_height) + padding_y/2;
 
 	translateVector.y = m_height - (m_height/2 + height/2 - padding_y);
 	this->text->setTranslate(translateVector);
@@ -219,10 +239,10 @@ Banner* ItemMenu::GetBanner()
 extern "C"
 {
 
-	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, bool yflip, uint flags)
+	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, float label_width, float label_height, bool yflip, uint flags)
 	{
 		if (font_ptr != NULL) {
-			return new ItemMenu(image_file, width, height, pvr_type, text, font_ptr, font_size, yflip, flags);
+			return new ItemMenu(image_file, width, height, pvr_type, text, font_ptr, font_size, label_width, label_height, yflip, flags);
 		}
 		else {
 			return NULL;
@@ -234,10 +254,10 @@ extern "C"
 		return new ItemMenu(image_file, width, height, pvr_type, yflip, flags);
 	}
 
-	ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size)
+	ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size, float width, float height)
 	{
 		if (font_ptr != NULL) {
-			return new ItemMenu(text, font_ptr, font_size);
+			return new ItemMenu(text, font_ptr, font_size, width, height);
 		}
 		else {
 			return NULL;
@@ -419,5 +439,23 @@ extern "C"
 		if (item_menu_ptr != NULL) {
 			item_menu_ptr->setTint(text_color, image_color);
 		}
+	}
+
+	void TSU_ItemMenuSetWindowState(ItemMenu *itemmenu_ptr, int window_state)
+	{
+		if (itemmenu_ptr != NULL)
+		{
+			itemmenu_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_ItemMenuGetWindowState(ItemMenu *itemmenu_ptr)
+	{
+		if (itemmenu_ptr != NULL)
+		{
+			return itemmenu_ptr->getWindowState();
+		}
+
+		return 0;
 	}
 }

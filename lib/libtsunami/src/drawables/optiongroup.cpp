@@ -14,6 +14,10 @@
 #include <cstring>
 #include <string>
 
+extern "C" {
+	uint8 SDL_GetMouseState (int *x, int *y);
+}
+
 OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float height, const Color &body_color) {
 	setObjectType(ObjectTypeEnum::OPTIONGROUP_TYPE);
 
@@ -23,7 +27,6 @@ OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float 
 	m_previous_index = m_index_selected = -1;
 	m_option_selected = nullptr;
 	m_display_label = nullptr;
-	m_change_state = nullptr;
 	m_text_animation = nullptr;
 	m_left_triangle = nullptr;
 	m_right_triangle = nullptr;
@@ -52,7 +55,7 @@ OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float 
 		this->subAdd(m_left_rectangle);
 		this->subAdd(m_right_rectangle);
 
-		m_display_label = new Label(display_font, "", text_size, true, false);
+		m_display_label = new Label(display_font, "", text_size, true, false, false);
 		this->subAdd(m_display_label);
 
 		Vector left_rectangle_vector = m_left_rectangle->getTranslate();
@@ -175,23 +178,12 @@ OptionGroup::~OptionGroup() {
 
 	m_option_selected = nullptr;
 	m_display_font = nullptr;
-	m_change_state = nullptr;
-}
-
-void OptionGroup::setStates(int control_state, int previous_state, int *change_state) {
-	m_previous_state = previous_state;
-	m_change_state = change_state;
-	m_control_state = control_state;
-}
-
-int OptionGroup::getControlState() {
-	return m_control_state;
 }
 
 void OptionGroup::setFocus(bool focus) {
 	if (focus) {
 		m_previous_index = m_index_selected;
-		*m_change_state = m_control_state;
+		ToggleToControlState();
 		Color text_color = {1, 1.0f, 1.0f, 0.1f};
 		Color rectangle_color = {1, 1.0f, 0.67f, 0.10f};
 		m_display_label->setTint(text_color);
@@ -199,7 +191,7 @@ void OptionGroup::setFocus(bool focus) {
 		m_right_rectangle->setTint(rectangle_color);
 	}
 	else {		
-		*m_change_state = m_previous_state;
+		ToggleToPreviousState();
 		Color text_color = {1, 1.0f, 1.0f, 1.0f};
 		Color rectangle_color = {1, 1.0f, 1.0f, 1.0f};
 		m_display_label->setTint(text_color);
@@ -256,7 +248,28 @@ void OptionGroup::inputEvent(int event_type, int key) {
 
 		case GenericMenu::Event::KeySelect:
 		{
-			setFocus(false);
+			Vector lpos = m_left_rectangle->getPosition();
+			float lwidth = 0;
+			float lheight = 0;
+			m_left_rectangle->getSize(&lwidth, &lheight);
+
+			Vector rpos = m_right_rectangle->getPosition();
+			float rwidth = 0;
+			float rheight = 0;
+			m_right_rectangle->getSize(&rwidth, &rheight);
+
+			int x, y;
+			SDL_GetMouseState(&x, &y);
+			
+			if ((x >= lpos.x) && (x < lpos.x + lwidth) && (y <= lpos.y) && (y > lpos.y - lheight)) {
+				option = previousOption();
+			}
+			else if ((x >= rpos.x) && (x < rpos.x + rwidth) && (y <= rpos.y) && (y > rpos.y - rheight)) {
+				option = nextOption();
+			}
+			else {
+				setFocus(false);
+			}
 		}
 		break;
 	}
@@ -434,11 +447,11 @@ extern "C"
 		}
 	}
 
-	void TSU_OptionGroupSetStates(OptionGroup *optiongroup_ptr, int control_state, int previous_state, int *change_state)
+	void TSU_OptionGroupSetStates(OptionGroup *optiongroup_ptr, int control_state, int previous_state)
 	{
 		if (optiongroup_ptr != NULL)
 		{
-			optiongroup_ptr->setStates(control_state, previous_state, change_state);
+			optiongroup_ptr->setStates(control_state, previous_state);
 		}	
 	}
 
@@ -452,6 +465,24 @@ extern "C"
 		{
 			return -1;
 		}
+	}
+
+	void TSU_OptionGroupSetWindowState(OptionGroup *optiongroup_ptr, int window_state)
+	{
+		if (optiongroup_ptr != NULL)
+		{
+			optiongroup_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_OptionGroupGetWindowState(OptionGroup *optiongroup_ptr)
+	{
+		if (optiongroup_ptr != NULL)
+		{
+			return optiongroup_ptr->getWindowState();
+		}
+
+		return 0;
 	}
 
 	void TSU_OptionGroupSetFocus(OptionGroup *optiongroup_ptr, bool focus)

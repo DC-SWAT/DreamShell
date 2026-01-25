@@ -14,11 +14,15 @@
 DSApp::DSApp(InputEventPtr *input_event_callback)
 {
     InputEventCallback = input_event_callback;
+	DrawOpaquePolyEventCallback = nullptr;
+	DrawTransparentPolyEventCallback = nullptr;
 }
 
 DSApp::~DSApp()
 {   
     InputEventCallback = nullptr;
+	DrawOpaquePolyEventCallback = nullptr;
+	DrawTransparentPolyEventCallback = nullptr;
 }
 
 void DSApp::inputEvent(const Event & evt)
@@ -26,6 +30,16 @@ void DSApp::inputEvent(const Event & evt)
     if (InputEventCallback != NULL) {
         InputEventCallback(evt.type, evt.key);
     }
+}
+
+void DSApp::setDrawOpaquePolyEvent(DrawOpaquePolyEventPtr event_callback_ptr)
+{
+	DrawOpaquePolyEventCallback = event_callback_ptr;
+}
+
+void DSApp::setDrawTransparentPolyEvent(DrawTransparentPolyEventPtr event_callback_ptr)
+{
+	DrawTransparentPolyEventCallback = event_callback_ptr;
 }
 
 void DSApp::beginApp()
@@ -54,8 +68,16 @@ void DSApp::visualPerFrame()
 	pvr_list_begin(PLX_LIST_OP_POLY);
 	visualOpaqueList();
 
+	if (DrawOpaquePolyEventCallback != nullptr) {
+		DrawOpaquePolyEventCallback();
+	}
+
 	pvr_list_begin(PLX_LIST_TR_POLY);
 	visualTransList();
+	
+	if (DrawTransparentPolyEventCallback != nullptr) {
+		DrawTransparentPolyEventCallback();
+	}
 
 	m_scene->nextFrame();
 }
@@ -184,6 +206,20 @@ extern "C"
 	{
 		if (dsApp != nullptr) {          
 			dsApp->doAppFrame();
+		}
+	}
+
+	void TSU_AppSetDrawOpaquePolyEvent(DSApp *dsApp, DrawOpaquePolyEventPtr *event_callback)
+	{
+		if (dsApp != nullptr && event_callback != nullptr) {
+			dsApp->setDrawOpaquePolyEvent(event_callback);
+		}
+	}
+
+	void TSU_AppSetDrawTransparentPolyEvent(DSApp *dsApp, DrawTransparentPolyEventPtr *event_callback)
+	{
+		if (dsApp != nullptr && event_callback != nullptr) {
+			dsApp->setDrawTransparentPolyEvent(event_callback);
 		}
 	}
 

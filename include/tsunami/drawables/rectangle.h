@@ -26,16 +26,12 @@ class Rectangle : public Drawable {
 public:
 	Rectangle(int list, float x, float y, float width, float height, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius);
 	virtual ~Rectangle();
-
-	void setSize(float w, float h);
-	void getSize(float *w, float *h);
-
 	virtual void draw(int list);
 	virtual void setBorderColor(Color color);
 
 private:
 	int m_list;
-	float width, height, radius, zIndex, borderWidth;
+	float radius, zIndex, borderWidth;
 	uint32 borderColor;
 	pvr_poly_hdr_t hdr;
 	pvr_poly_cxt_t cxt;

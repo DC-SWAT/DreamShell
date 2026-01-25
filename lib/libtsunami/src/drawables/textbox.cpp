@@ -23,7 +23,6 @@ TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width,
 	m_height = height + m_padding_height + m_border_width;
 	m_char_index = -1;
 	m_display_label = nullptr;
-	m_change_state = nullptr;
 	m_chars_type = 0;
 	m_chars_type_ptr = nullptr;
 	m_enable_chars_type = 0;
@@ -66,7 +65,7 @@ TextBox::TextBox(Font *display_font, uint text_size, bool centered, float width,
 		m_control_rectangle = new Rectangle (PVR_LIST_OP_POLY, position.x - width/2 - m_padding_width/2 + 1, position.y + height/2 + m_padding_height, width + m_padding_width, height + m_padding_height, m_body_color, z_index, m_border_width, border_color, radius);
 		this->subAdd(m_control_rectangle);
 
-		m_display_label = new Label(display_font, "", text_size, centered, false);
+		m_display_label = new Label(display_font, "", text_size, centered, false, false);
 		this->subAdd(m_display_label);
 		
 		Vector control_rectangle_vector = m_control_rectangle->getTranslate();
@@ -125,24 +124,13 @@ TextBox::~TextBox() {
 	}
 
 	m_display_font = nullptr;
-	m_change_state = nullptr;
-}
-
-void TextBox::setStates(int control_state, int previous_state, int *change_state) {
-	m_previous_state = previous_state;
-	m_change_state = change_state;
-	m_control_state = control_state;
-}
-
-int TextBox::getControlState() {
-	return m_control_state;
 }
 
 void TextBox::setFocus(bool focus) {
 	m_display_label->getFont();
 
 	if (focus) {
-		*m_change_state = m_control_state;
+		ToggleToControlState();
 		Color text_color = {1, 1.0f, 1.0f, 0.1f};
 		m_display_label->setTint(text_color);
 		
@@ -151,8 +139,7 @@ void TextBox::setFocus(bool focus) {
 		setTextCursor();
 	}
 	else {		
-		*m_change_state = m_previous_state;
-
+		ToggleToPreviousState();
 		if (m_text_cursor != nullptr) {
 			this->subRemove(m_text_cursor);
 			delete m_text_cursor;
@@ -608,11 +595,11 @@ extern "C"
 		}
 	}
 
-	void TSU_TextBoxSetStates(TextBox *textbox_ptr, int control_state, int previous_state, int *change_state)
+	void TSU_TextBoxSetStates(TextBox *textbox_ptr, int control_state, int previous_state)
 	{
 		if (textbox_ptr != NULL)
 		{
-			textbox_ptr->setStates(control_state, previous_state, change_state);
+			textbox_ptr->setStates(control_state, previous_state);
 		}	
 	}
 
@@ -626,6 +613,24 @@ extern "C"
 		{
 			return -1;
 		}
+	}
+
+	void TSU_TextBoxSetWindowState(TextBox *textbox_ptr, int window_state)
+	{
+		if (textbox_ptr != NULL)
+		{
+			textbox_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_TextBoxGetWindowState(TextBox *textbox_ptr)
+	{
+		if (textbox_ptr != NULL)
+		{
+			return textbox_ptr->getWindowState();
+		}
+
+		return 0;
 	}
 
 	void TSU_TextBoxSetFocus(TextBox *textbox_ptr, bool focus)

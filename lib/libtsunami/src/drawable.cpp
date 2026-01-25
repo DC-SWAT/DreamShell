@@ -4,13 +4,13 @@
    drawable.cpp
 
    Copyright (C) 2002 Megan Potter
-   Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
    
 */
 
 #include "drawable.h"
 #include <plx/matrix.h>
-
+#include <kos/dbglog.h>
 #include <algorithm>
 #include "tsunamiutils.h"
 
@@ -18,11 +18,13 @@ extern "C" {
 	void LockVideo();
 	void UnlockVideo();
 	int VideoMustLock();
+	uint8 SDL_GetMouseState (int *x, int *y);
 }
 
 // Constructor / Destructor
 Drawable::Drawable() {
 	m_object_type = ObjectTypeEnum::DRAWABLE_TYPE;
+	m_object_subtype = ObjectTypeEnum::NONE_TYPE;
 	m_id = -1;
 	m_trans.zero();
 	m_rotate.zero();
@@ -42,6 +44,7 @@ Drawable::Drawable() {
 	m_height = 0;
 	m_parent = nullptr;
 	m_click_function = nullptr;
+	m_mouse_over_function = nullptr;
 }
 
 Drawable::~Drawable() {
@@ -151,7 +154,78 @@ void Drawable::subRemoveAll() {
 	UnlockVideo();
 }
 
+bool Drawable::isMouseInside(Drawable *drawable, int mx, int my) {
+	if (!drawable) {
+		return false;
+	}
+
+	Vector pos = drawable->getPosition();
+
+	float width = 0, height = 0; 
+	drawable->getSize(&width, &height);
+
+	switch(drawable->getObjectType()) {
+		
+		case ITEMMENU_TYPE: {
+			const float padding_x = 20.0f;
+			const float padding_y = 20.0f;
+
+			if (drawable->getObjectSubType() == BANNER_TYPE) {
+				pos.x -= width / 2;
+				pos.x += padding_x;
+
+				pos.y += height / 2 + padding_y;
+			}
+			else if (drawable->getObjectSubType() == LABEL_TYPE) {
+				pos.y += height;
+				pos.x += padding_x;
+			}
+			else {
+				pos.y += height / 2 + padding_y;
+				pos.x -= padding_x;
+			}
+			
+			break;
+		}
+
+		case BANNER_TYPE: {
+			pos.x -= width / 2;
+			pos.y += height / 2;
+			break;
+		}
+
+		case OPTIONGROUP_TYPE:
+		case CHECKBOX_TYPE:
+		case TEXTBOX_TYPE: {
+			const float m_border_width = 2;
+			const float m_padding_height = 6;
+
+			pos.x -= m_border_width / 2;
+			pos.y += m_padding_height + m_border_width;
+			break;
+		}
+
+		default:
+			break;
+	}
+
+	return ((mx >= pos.x) && (mx < pos.x + width) && (my <= pos.y) && (my > pos.y - height));
+}
+
+void Drawable::onMouseOver() {
+	if (m_mouse_over_function != nullptr && getWindowState() == InputEventState::getGlobalWindowState()
+		&& !isReadOnly() && m_height > 0 && m_width > 0) {
+		int x, y;
+		SDL_GetMouseState(&x, &y);
+
+		if (isMouseInside(this, x, y)) {
+			m_mouse_over_function(this, getObjectType(), getId());
+		}
+	}
+}
+
 void Drawable::draw(int list) {
+	onMouseOver();
 	subDraw(list);
 }
 
@@ -192,6 +266,14 @@ void Drawable::setObjectType(uint type) {
 	m_object_type = type;
 }
 
+uint Drawable::getObjectSubType() {
+	return m_object_subtype;
+}
+
+void Drawable::setObjectSubType(uint subType) {
+	m_object_subtype = subType;
+}
+
 
 void Drawable::pushTransformMatrix() const {
 	const Vector & pos = getTranslate();
@@ -216,6 +298,10 @@ void Drawable::click() {
 
 void Drawable::setClickEvent(ClickEventFunctionPtr click_function) {
 	m_click_function = click_function;
+}
+
+void Drawable::setOnMouseOverEvent(OnMouseOverEventFunctionPtr mouse_over_function) {
+	m_mouse_over_function = mouse_over_function;
 }
 
 extern "C" 
@@ -419,5 +505,45 @@ extern "C"
 		if (drawable_ptr != NULL) {
 			drawable_ptr->setId(id);
 		}
+	}
+
+	void TSU_DrawableEventSetOnMouseOver(Drawable *drawable_ptr, OnMouseOverEventFunctionPtr mouse_over_function) {
+		if (drawable_ptr != NULL) {
+			drawable_ptr->setOnMouseOverEvent(mouse_over_function);
+		}
+	}
+
+	bool TSU_DrawableIsMouseInside(Drawable *drawable_ptr, int mx, int my) {
+		if (drawable_ptr != NULL) {
+			return Drawable::isMouseInside(drawable_ptr, mx, my);
+		}
+
+		return false;
+	}
+
+	void TSU_DrawableGetSize(Drawable *drawable_ptr, float *w, float *h) {
+		if (drawable_ptr != NULL) {
+			drawable_ptr->getSize(w, h);
+		}
+	}
+
+	void TSU_DrawableSetSize(Drawable *drawable_ptr, float w, float h) {
+		if (drawable_ptr != NULL) {
+			drawable_ptr->setSize(w, h);
+		}
+	}
+
+	void TSU_DrawableSetWindowState(Drawable *drawable_ptr, int window_state) {
+		if (drawable_ptr != NULL) {
+			drawable_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_DrawableGetWindowState(Drawable *drawable_ptr) {
+		if (drawable_ptr != NULL) {
+			return drawable_ptr->getWindowState();
+		}
+
+		return 0;
 	}
 }

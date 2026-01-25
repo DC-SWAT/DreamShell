@@ -41,8 +41,8 @@ public:
     Label *text;
 
     ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip = false, uint flags = 0);
-    ItemMenu(const char *text, Font* font, int font_size = 24);
-    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font* font, int font_size = 24, bool yflip = false, uint flags = 0);
+    ItemMenu(const char *text, Font* font, int font_size = 24, float width = 0, float height = 0);
+    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font* font, int font_size = 24, float label_width = 0, float label_height = 0, bool yflip = false, uint flags = 0);
     virtual ~ItemMenu();
 
     virtual void draw(int list);
@@ -72,9 +72,9 @@ extern "C"
 {
 #endif
 
-ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, bool yflip, uint flags);
+ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, float label_width, float label_height, bool yflip, uint flags);
 ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags);
-ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size);
+ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size, float width, float height);
 void TSU_ItemMenuDestroy(ItemMenu **item_menu_ptr);
 void TSU_ItemMenuSetItemValue(ItemMenu *item_menu_ptr, const char *value);
 const char* TSU_ItemMenuGetItemValue(ItemMenu *item_menu_ptr);
@@ -96,6 +96,8 @@ void TSU_ItemMenuSetLabelText(ItemMenu *item_menu_ptr, const char *text);
 const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr);
 void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, uint16 pvr_type);
 void TSU_ItemMenuSetTint(ItemMenu *item_menu_ptr, Color text_color, Color image_color);
+void TSU_ItemMenuSetWindowState(ItemMenu *itemmenu_ptr, int window_state);
+int TSU_ItemMenuGetWindowState(ItemMenu *itemmenu_ptr);
 
 #ifdef __cplusplus
 };

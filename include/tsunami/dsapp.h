@@ -19,6 +19,9 @@
 #include "drawables/itemmenu.h"
 
 typedef void InputEventPtr(int type, int key);
+typedef void DrawOpaquePolyEventPtr();
+typedef void DrawTransparentPolyEventPtr();
+
 
 #ifdef __cplusplus
 
@@ -26,9 +29,13 @@ class DSApp : public GenericMenu
 {
 private:
     InputEventPtr *InputEventCallback;
+    DrawOpaquePolyEventPtr *DrawOpaquePolyEventCallback;
+    DrawTransparentPolyEventPtr *DrawTransparentPolyEventCallback;
 
 public:
     virtual void inputEvent(const Event & evt);
+    virtual void setDrawOpaquePolyEvent(DrawOpaquePolyEventPtr event_callback_ptr);
+    virtual void setDrawTransparentPolyEvent(DrawTransparentPolyEventPtr event_callback_ptr);
     virtual void beginApp();
     virtual void doMenu();
     virtual void doAppFrame();
@@ -71,6 +78,8 @@ DSApp* TSU_AppCreate(InputEventPtr *input_event_callback);
 void TSU_AppBegin(DSApp *dsApp);
 void TSU_AppDoControl(DSApp *dsApp);
 void TSU_AppDoFrame(DSApp *dsApp);
+void TSU_AppSetDrawOpaquePolyEvent(DSApp *dsApp, DrawOpaquePolyEventPtr *event_callback);
+void TSU_AppSetDrawTransparentPolyEvent(DSApp *dsApp, DrawTransparentPolyEventPtr *event_callback);
 bool TSU_AppEnd(DSApp *dsApp);
 void TSU_AppDoMenuAsync(DSApp *dsApp);
 void TSU_AppDestroy(DSApp **dsApp);

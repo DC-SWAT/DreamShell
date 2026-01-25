@@ -3,7 +3,7 @@
 
    form.h
 
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -75,6 +75,7 @@ private:
 	int m_current_view_index;
 	int m_sfx_volume;
 	
+	ItemMenu *m_close_button;
 	Sound *m_sfx_cursor, *m_sfx_click;
 	Color m_body_color, m_title_background_color, m_bottom_background_color, m_border_color, m_background_color;
 	Rectangle *m_background_rectangle, *m_title_rectangle, *m_body_rectangle, *m_bottom_rectangle, *m_cursor, *m_bottom_cursor;
@@ -108,6 +109,8 @@ public:
 	virtual ~Form();
 
 	void inputEvent(int event_type, int key);
+	void setCloseButton(const std::string &image, ClickEventFunctionPtr click_func_ptr, OnMouseOverEventFunctionPtr mouse_over_func_ptr);
+	void setViewIndex(int view_index);
 	void setAttributes(uint number_columns, uint number_rows, uint columns_size, uint rows_size);
 	void setCursor(Drawable *drawable);
 	void setCursorSize(float width, float height);
@@ -192,6 +195,8 @@ extern "C"
 						Color *border_color, Color *title_background_color, Color *body_color, Color *bottom_background_color,
 						ViewIndexChangedEventPtr view_index_changed_event_ptr);
 
+	void TSU_FormSetCloseButton(Form *form_ptr, const char *image, ClickEventFunctionPtr click_func_ptr, OnMouseOverEventFunctionPtr mouse_over_func_ptr);
+	void TSU_FormSetViewIndex(Form *form_ptr, int view_index);
 	void TSU_FormSetAttributes(Form *form_ptr, uint number_columns, uint number_rows, uint columns_size, uint rows_size);	
 	void TSU_FormSetSfxClick(Form *form_ptr, const char *file);
 	void TSU_FormSetSfxCursor(Form *form_ptr, const char *file);
@@ -251,6 +256,8 @@ extern "C"
 	void TSU_FormSetCursor(Form *form_ptr, Drawable *drawable_ptr);
 	void TSU_FormSetCursorSize(Form *form_ptr, float width, float height);
 	void TSU_FormClearBodyObjects(Form *form_ptr);
+	int TSU_FormGetWindowState(Form *form_ptr);
+	void TSU_FormSetWindowState(Form *form_ptr, int window_state);
 
 #ifdef __cplusplus
 };

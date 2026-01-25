@@ -13,18 +13,22 @@
 #include "tsunamiutils.h"
 #include <cstring>
 
+extern "C" {
+	uint8 SDL_GetMouseState (int *x, int *y);
+}
+
 Label::Label(Font *fh, const std::string &text,
-	     int size, bool centered, bool smear) {
-	
+	     int size, bool centered, bool smear, bool fix_width) {
 	setObjectType(ObjectTypeEnum::LABEL_TYPE);
-	m_width = 0;
 	m_fh = fh;
 	m_text = text;
 	m_size = size;
 	m_centered = centered;
 	m_smear = smear;
-
+	m_fix_width = fix_width;
+	refreshSize();
 }
+
 Label::~Label() {
 }
 
@@ -41,19 +45,9 @@ Font* Label::getFont() {
 	return m_fh;
 }
 
-void Label::setWidth(float width) {
-	if (width > 0) {
-		m_width = width;
-	}
-}
-
-float Label::getWidth() {
-	return m_width;
-}
-
 std::string Label::fixTextWidth(const std::string &text) {
 	std::string draw_text = "";
-	if (m_width > 0 && !text.empty()) {		
+	if (m_fix_width && m_width > 0 && !text.empty()) {		
 		float tw, th;
 		for (size_t i = 0; i < text.size(); i++) {
 			draw_text += text[i];
@@ -72,16 +66,38 @@ std::string Label::fixTextWidth(const std::string &text) {
 	return draw_text;
 }
 
+void Label::onMouseOver() {
+	if (m_mouse_over_function != nullptr && getWindowState() == InputEventState::getGlobalWindowState()
+		&& !isReadOnly() && m_height > 0 && m_width > 0) {
+		int x, y;
+		SDL_GetMouseState(&x, &y);
+		Vector pos = getPosition();
+
+		float drawable_width = 0, drawable_height = 0;
+		getFont()->getTextSize(getText(), &drawable_width, &drawable_height);
+		
+		if (isCentered()) {
+			pos.x -= drawable_width / 2;
+			pos.y += drawable_height / 2;
+		}
+
+		if ((x >= pos.x) && (x < pos.x + drawable_width) && (y <= pos.y) && (y > pos.y - drawable_height)) {
+			m_mouse_over_function(this, getObjectType(), getId());
+		}
+	}
+}
+
 void Label::draw(int list) {
 	if (list != PLX_LIST_TR_POLY)
 		return;
-
+	
 	const Vector & p = getPosition();
 	Color t = getColor();
 
 	m_fh->setSize(m_size);
 	m_fh->setAlpha(t.a);
 	m_fh->setColor(t.r, t.g, t.b);
+	onMouseOver();
 
 	if (m_centered) {
 		if (m_smear)
@@ -109,13 +125,31 @@ void Label::setSmear(bool smear) {
 	m_smear = smear;
 }
 
+void Label::setFixWidth(bool fix_width) {
+	m_fix_width = fix_width;
+}
+
+void Label::getSize(float *width, float *height) { 
+	refreshSize();
+	*width = m_width;
+	*height = m_height;
+}
+
+void Label::refreshSize() {
+	m_fh->setSize(m_size);
+	float tw, th;
+	m_fh->getTextSize(m_text, &tw, &th);
+
+	m_width = tw;
+	m_height = th;
+}
 
 extern "C"
 {
-	Label *TSU_LabelCreate(Font *font_ptr, const char *text, int size, bool centered, bool smear)
+	Label *TSU_LabelCreate(Font *font_ptr, const char *text, int size, bool centered, bool smear, bool fix_width)
 	{
 		if (font_ptr != NULL) {
-			return new Label(font_ptr, text, size, centered, smear);
+			return new Label(font_ptr, text, size, centered, smear, fix_width);
 		}
 		else {
 			return NULL;
@@ -184,6 +218,13 @@ extern "C"
 		}
 	}
 
+	void TSU_LabelSetFixWidth(Label *label_ptr, bool fix_width)
+	{
+		if (label_ptr != NULL) {
+			label_ptr->setFixWidth(fix_width);
+		}
+	}
+
 	void TSU_LabelSetTranslate(Label *label_ptr, const Vector *v)
 	{
 		if (label_ptr != NULL) {
@@ -205,19 +246,35 @@ extern "C"
 		}
 	}
 
-	void TSU_LabelSetWidth(Label *label_ptr, float width)
+	void TSU_LabelGetSize(Label *label_ptr, float *x, float *y)
 	{
 		if (label_ptr != NULL) {
-			label_ptr->setWidth(width);
+			return label_ptr->getSize(x, y);
 		}
 	}
 
-	float TSU_LabelGetWidth(Label *label_ptr)
+	void TSU_LabelSetSize(Label *label_ptr, float x, float y)
 	{
 		if (label_ptr != NULL) {
-			return label_ptr->getWidth();
+			return label_ptr->setSize(x, y);
 		}
-		
+	}
+
+	void TSU_LabelSetWindowState(Label *label_ptr, int window_state)
+	{
+		if (label_ptr != NULL)
+		{
+			label_ptr->setWindowState(window_state);
+		}
+	}
+
+	int TSU_LabelGetWindowState(Label *label_ptr)
+	{
+		if (label_ptr != NULL)
+		{
+			return label_ptr->getWindowState();
+		}
+
 		return 0;
 	}
 }

@@ -3,7 +3,7 @@
 
    textbox.h
 
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -58,8 +58,7 @@ private:
 	uint8 m_enable_chars_type;
 
 	Font *m_display_font;
-	int m_control_state, m_previous_state, m_char_index, m_char_type_index, m_chars_type_size, m_chars_type_displacement;
-	int *m_change_state;
+	int  m_char_index, m_char_type_index, m_chars_type_size, m_chars_type_displacement;
 	int m_chars_type;
 	std::string m_text;	
 
@@ -91,8 +90,6 @@ public:
 
 	virtual ~TextBox();
 
-	void setStates(int control_state, int previous_state, int *change_state);
-	int getControlState();
 	void setFocus(bool focus);
 	void inputEvent(int event_type, int key);
 	void setCursor(Drawable *drawable);
@@ -120,8 +117,10 @@ extern "C"
 	TextBox* TSU_TextBoxCreate(Font *display_font, uint text_size, bool centered, float width, float height, Color *body_color, bool enable_chars_type_letter, bool enable_chars_type_cap_letter, 
 			bool enable_chars_type_number, bool enable_chars_type_symbol);
 	void TSU_TextBoxDestroy(TextBox **textbox_ptr);
-	void TSU_TextBoxSetStates(TextBox *textbox_ptr, int control_state, int previous_state, int *change_state);
+	void TSU_TextBoxSetStates(TextBox *textbox_ptr, int control_state, int previous_state);
 	int TSU_TextBoxGetControlState(TextBox *textbox_ptr);
+	void TSU_TextBoxSetWindowState(TextBox *textbox_ptr, int window_state);
+	int TSU_TextBoxGetWindowState(TextBox *textbox_ptr);
 	void TSU_TextBoxSetFocus(TextBox *textbox_ptr, bool focus);
 	void TSU_TextBoxInputEvent(TextBox *textbox_ptr, int event_type, int key);
 	const char* TSU_TextBoxGetText(TextBox *textbox_ptr);
