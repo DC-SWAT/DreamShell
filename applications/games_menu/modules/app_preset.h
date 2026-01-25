@@ -19,9 +19,11 @@
 #include "app_utils.h"
 #include "app_definition.h"
 
+void PresetMenuResetMouseOver();
 void CreatePresetMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font);
 void DestroyPresetMenu();
 void PresetMenuRemoveAll();
+void PresetMenuOnMouseOver();
 void OnViewIndexChangedEvent(Drawable *drawable, int view_index);
 void CreateGeneralView(Form *form_ptr);
 void CreateCDDAView(Form *form_ptr);
@@ -34,6 +36,12 @@ int StatePresetMenu();
 void ShowPresetMenu(int game_index);
 void HidePresetMenu();
 void PresetMenuSelectedEvent(Drawable *drawable, uint bottom_index, uint column, uint row);
+
+void GeneralTabClick(Drawable *drawable);
+void CDDATabClick(Drawable *drawable);
+void PatchTabClick(Drawable *drawable);
+void ExtensionsTabClick(Drawable *drawable);
+void ShortcutTabClick(Drawable *drawable);
 
 void ExitPresetMenuClick(Drawable *drawable);
 void SavePresetOptionClick(Drawable *drawable);

@@ -28,6 +28,9 @@ enum ViewEnum
 
 static struct
 {
+	Drawable *over_drawable_ptr;
+	Drawable *last_over_drawable_ptr;
+	uint over_object_type;
 	bool first_scan_cover;
 	bool general_changes_flag;
 	bool style_changes_flag;
@@ -72,6 +75,19 @@ static struct
 	Font *menu_font;
 } self;
 
+static void SystemMenu_OnMouseOverEvent(Drawable *drawable, uint object_type, int id)
+{
+	self.over_drawable_ptr = drawable;
+	self.over_object_type = object_type;
+}
+
+void SystemMenuResetMouseOver()
+{
+	self.over_drawable_ptr = NULL;
+	self.over_object_type = 0;
+	self.last_over_drawable_ptr = NULL;
+}
+
 void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font, void (*RefreshMainView)(), void (*ReloadPage)())
 {
 	self.dsapp_ptr = dsapp_ptr;
@@ -108,6 +124,18 @@ void SystemMenuRemoveAll()
 void SystemMenuInputEvent(int type, int key)
 {
 	TSU_FormInputEvent(self.system_menu_form, type, key);
+}
+
+void SystemMenuOnMouseOver()
+{
+	if (self.system_menu_form)
+	{
+		if (self.last_over_drawable_ptr != self.over_drawable_ptr)
+		{
+			self.last_over_drawable_ptr = self.over_drawable_ptr;
+			TSU_FormSetCursor(self.system_menu_form, self.last_over_drawable_ptr);
+		}
+	}
 }
 
 int StateSystemMenu()
@@ -157,9 +185,14 @@ void ShowSystemMenu()
 		uint width = 380;
 		uint height = 440;
 		self.system_menu_form = TSU_FormCreate(640 / 2 - width / 2, 480 / 2 + (height - 10) / 2, width, height, true, 3, DEFAULT_RADIUS
-		, true, true, form_font, &menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
-		&OnSystemViewIndexChangedEvent);
+			, true, true, form_font, &menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
+			&OnSystemViewIndexChangedEvent);
 
+		char close_image_path[NAME_MAX] = {};
+		snprintf(close_image_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/close.png");
+		TSU_FormSetCloseButton(self.system_menu_form, close_image_path, ExitSystemMenuClick, SystemMenu_OnMouseOverEvent);
+
+		TSU_FormSetWindowState(self.system_menu_form, SA_SYSTEM_MENU);
 		char sfx_path[NAME_MAX];
 		int volume = GetVolumeFromSettings();
 		if (ds_sfx_is_enabled(DS_SFX_CLICK2))
@@ -177,20 +210,26 @@ void ShowSystemMenu()
 		}
 
 		{
-			Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 14, false, false);
+			Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 14, false, false, false);
 			TSU_FormAddBottomLabel(self.system_menu_form, general_label);
+			TSU_DrawableEventSetClick((Drawable *)general_label, &SystemMenuTabClick);
+			TSU_DrawableEventSetOnMouseOver((Drawable *)general_label, SystemMenu_OnMouseOverEvent);
 			general_label = NULL;
 		}
 
 		{
-			Label *style_label = TSU_LabelCreate(form_font, "STYLE", 14, false, false);
+			Label *style_label = TSU_LabelCreate(form_font, "STYLE", 14, false, false, false);
 			TSU_FormAddBottomLabel(self.system_menu_form, style_label);
+			TSU_DrawableEventSetClick((Drawable *)style_label, &StyleTabClick);
+			TSU_DrawableEventSetOnMouseOver((Drawable *)style_label, SystemMenu_OnMouseOverEvent);
 			style_label = NULL;
 		}
 
 		{
-			Label *cache_label = TSU_LabelCreate(form_font, "CACHE", 14, false, false);
+			Label *cache_label = TSU_LabelCreate(form_font, "CACHE", 14, false, false, false);
 			TSU_FormAddBottomLabel(self.system_menu_form, cache_label);
+			TSU_DrawableEventSetClick((Drawable *)cache_label, &CacheTabClick);
+			TSU_DrawableEventSetOnMouseOver((Drawable *)cache_label, SystemMenu_OnMouseOverEvent);
 			cache_label = NULL;
 		}
 
@@ -218,9 +257,10 @@ void CreateSystemMenuView(Form *form_ptr)
 	// THE ALIGN SHOULD BE IN FORM CLASS
 	{
 		// SCAN MISSING COVERS
-		Label *missing_covers_label = TSU_LabelCreate(form_font, "Scan missing covers", font_size, false, false);
+		Label *missing_covers_label = TSU_LabelCreate(form_font, "Scan missing covers", font_size, false, false, false);
 		TSU_FormAddBodyLabel(form_ptr, missing_covers_label, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)missing_covers_label, &ScanMissingCoversClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)missing_covers_label, SystemMenu_OnMouseOverEvent);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)missing_covers_label);
 		option_vector.x -= 167;
@@ -232,9 +272,10 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// OPTIMIZE COVERS
-		Label *optimize_covers_label = TSU_LabelCreate(form_font, "Optimize covers", font_size, false, false);
+		Label *optimize_covers_label = TSU_LabelCreate(form_font, "Optimize covers", font_size, false, false, false);
 		TSU_FormAddBodyLabel(form_ptr, optimize_covers_label, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)optimize_covers_label, &OptimizeCoversClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)optimize_covers_label, SystemMenu_OnMouseOverEvent);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)optimize_covers_label);
 		option_vector.x -= 144;
@@ -245,7 +286,7 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// DEFAULT SAVE PRESET
-		Label *save_preset_label = TSU_LabelCreate(form_font, "Default save preset:", font_size, false, false);
+		Label *save_preset_label = TSU_LabelCreate(form_font, "Default save preset:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)save_preset_label, true);
 		TSU_FormAddBodyLabel(form_ptr, save_preset_label, 1, 3);
 
@@ -257,6 +298,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetTranslate((Drawable *)self.save_preset_option, &option_vector);
 
 		TSU_DrawableEventSetClick((Drawable *)self.save_preset_option, &DefaultSavePresetOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.save_preset_option, SystemMenu_OnMouseOverEvent);
 
 		if (menu_data.save_preset)
 		{
@@ -268,7 +310,7 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// COVER BACKGROUND
-		Label *cover_background_label = TSU_LabelCreate(form_font, "Cover background:", font_size, false, false);
+		Label *cover_background_label = TSU_LabelCreate(form_font, "Cover background:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cover_background_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cover_background_label, 1, 4);
 
@@ -280,6 +322,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetTranslate((Drawable *)self.cover_background_option, &option_vector);
 
 		TSU_DrawableEventSetClick((Drawable *)self.cover_background_option, &CoverBackgroundOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cover_background_option, SystemMenu_OnMouseOverEvent);
 
 		if (menu_data.cover_background)
 		{
@@ -291,7 +334,7 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// CHANGE PAGE WITH PAD
-		Label *change_page_with_page_label = TSU_LabelCreate(form_font, "Change page with pad:", font_size, false, false);
+		Label *change_page_with_page_label = TSU_LabelCreate(form_font, "Change page with pad:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)change_page_with_page_label, true);
 		TSU_FormAddBodyLabel(form_ptr, change_page_with_page_label, 1, 5);
 
@@ -303,6 +346,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetTranslate((Drawable *)self.change_page_with_page_option, &option_vector);
 
 		TSU_DrawableEventSetClick((Drawable *)self.change_page_with_page_option, &ChangePageWithPadOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.change_page_with_page_option, SystemMenu_OnMouseOverEvent);
 
 		if (menu_data.change_page_with_pad)
 		{
@@ -314,7 +358,7 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// START IN LAST GAME
-		Label *start_in_last_game_label = TSU_LabelCreate(form_font, "Start in last game:", font_size, false, false);
+		Label *start_in_last_game_label = TSU_LabelCreate(form_font, "Start in last game:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)start_in_last_game_label, true);
 		TSU_FormAddBodyLabel(form_ptr, start_in_last_game_label, 1, 6);
 
@@ -326,6 +370,7 @@ void CreateSystemMenuView(Form *form_ptr)
 		TSU_DrawableSetTranslate((Drawable *)self.start_in_last_game_option, &option_vector);
 
 		TSU_DrawableEventSetClick((Drawable *)self.start_in_last_game_option, &StartInLastGameOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.start_in_last_game_option, SystemMenu_OnMouseOverEvent);
 
 		if (menu_data.start_in_last_game)
 		{
@@ -337,7 +382,7 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// CATEGORY
-		Label *category_label = TSU_LabelCreate(form_font, "Category folder:", font_size, false, false);
+		Label *category_label = TSU_LabelCreate(form_font, "Category folder:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)category_label, true);
 		TSU_FormAddBodyLabel(form_ptr, category_label, 1, 7);
 
@@ -353,9 +398,10 @@ void CreateSystemMenuView(Form *form_ptr)
 			TSU_OptionGroupAdd(self.category_option, ++count, current_category->category);			
 		}
 
-		TSU_OptionGroupSetStates(self.category_option, SA_CONTROL + CATEGORY_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.category_option, SA_CONTROL + CATEGORY_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.category_option, 2, 7);
 		TSU_DrawableEventSetClick((Drawable *)self.category_option, &CategoryOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.category_option, SystemMenu_OnMouseOverEvent);
 
 		if (menu_data.category[0] != '\0' && menu_data.category[0] != ' ')
 			TSU_OptionGroupSelectOptionByText(self.category_option, menu_data.category);
@@ -372,9 +418,10 @@ void CreateSystemMenuView(Form *form_ptr)
 
 	{
 		// EXIT TO MAIN MENU
-		Label *exit_covers_label = TSU_LabelCreate(form_font, "Return", font_size, false, false);
+		Label *exit_covers_label = TSU_LabelCreate(form_font, "Return", font_size, false, false, false);
 		TSU_FormAddBodyLabel(form_ptr, exit_covers_label, 1, 8);
 		TSU_DrawableEventSetClick((Drawable *)exit_covers_label, &ExitSystemMenuClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)exit_covers_label, SystemMenu_OnMouseOverEvent);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)exit_covers_label);
 		option_vector.y += 25;
@@ -403,7 +450,7 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// THEME
-		Label *theme_label = TSU_LabelCreate(form_font, "Theme:", font_size, false, false);
+		Label *theme_label = TSU_LabelCreate(form_font, "Theme:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)theme_label, true);
 		TSU_FormAddBodyLabel(form_ptr, theme_label, 1, 1);
 
@@ -414,25 +461,27 @@ void CreateStyleView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.theme_option, 1, PSYCHEDELIC_THEME);
 		TSU_OptionGroupAdd(self.theme_option, 2, MINT_THEME);
 		TSU_OptionGroupAdd(self.theme_option, 3, CUSTOM_THEME);
-		TSU_OptionGroupSetStates(self.theme_option, SA_CONTROL + THEME_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.theme_option, SA_CONTROL + THEME_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.theme_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.theme_option, &ThemeOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.theme_option, SystemMenu_OnMouseOverEvent);
 
 		theme_label = NULL;
 	}
 
 	{
 		// BACKGROUND COLOR
-		Label *label = TSU_LabelCreate(form_font, "Background color:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Background color:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 2);
 
 		self.background_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.background_color_option, BACKGROUND_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.background_color_option, SA_CONTROL + BACKGROUND_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.background_color_option, SA_CONTROL + BACKGROUND_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.background_color_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.background_color_option, &BackgroundColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.background_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.background_color.a, menu_data.background_color.r, menu_data.background_color.g, menu_data.background_color.b);
 
@@ -448,16 +497,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// TITLE COLOR
-		Label *label = TSU_LabelCreate(form_font, "Title color:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Title color:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 3);
 
 		self.title_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.title_color_option, TITLE_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.title_color_option , SA_CONTROL + TITLE_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.title_color_option , SA_CONTROL + TITLE_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.title_color_option, 2, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.title_color_option, &TitleColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.title_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.title_color.a, menu_data.title_color.r, menu_data.title_color.g, menu_data.title_color.b);
 
@@ -473,16 +523,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// BORDER COLOR
-		Label *label = TSU_LabelCreate(form_font, "Border color:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Border color:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 4);
 
 		self.border_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.border_color_option, BORDER_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.border_color_option , SA_CONTROL + BORDER_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.border_color_option , SA_CONTROL + BORDER_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.border_color_option, 2, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.border_color_option , &BorderColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.border_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.border_color.a, menu_data.border_color.r, menu_data.border_color.g, menu_data.border_color.b);
 
@@ -498,16 +549,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// AREA COLOR
-		Label *label = TSU_LabelCreate(form_font, "Area color:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Area color:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 5);
 
 		self.area_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.area_color_option, AREA_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.area_color_option , SA_CONTROL + AREA_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.area_color_option , SA_CONTROL + AREA_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.area_color_option, 2, 5);
 		TSU_DrawableEventSetClick((Drawable *)self.area_color_option , &AreaColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.area_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.area_color.a, menu_data.area_color.r, menu_data.area_color.g, menu_data.area_color.b);
 
@@ -523,16 +575,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// BODY COLOR
-		Label *label = TSU_LabelCreate(form_font, "Body color:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Body color:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 6);
 
 		self.body_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.body_color_option, BODY_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.body_color_option , SA_CONTROL + BODY_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.body_color_option , SA_CONTROL + BODY_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.body_color_option, 2, 6);
-		TSU_DrawableEventSetClick((Drawable *)self.body_color_option , &BodyColorOptionClick);
+		TSU_DrawableEventSetClick((Drawable *)self.body_color_option, &BodyColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.body_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.body_color.a, menu_data.body_color.r, menu_data.body_color.g, menu_data.body_color.b);
 
@@ -548,16 +601,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// CONTROL TOP COLOR
-		Label *label = TSU_LabelCreate(form_font, "Control Top\nColor:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Control Top\nColor:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 7);
 
 		self.control_top_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.control_top_color_option, CONTROL_TOP_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.control_top_color_option , SA_CONTROL + CONTROL_TOP_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.control_top_color_option , SA_CONTROL + CONTROL_TOP_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.control_top_color_option, 2, 7);
 		TSU_DrawableEventSetClick((Drawable *)self.control_top_color_option, &ControlTopColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.control_top_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.control_top_color.a, menu_data.control_top_color.r, menu_data.control_top_color.g, menu_data.control_top_color.b);
 
@@ -573,16 +627,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// CONTROL BODY COLOR
-		Label *label = TSU_LabelCreate(form_font, "Control Body\nColor:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Control Body\nColor:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 8);
 
 		self.control_body_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.control_body_color_option, CONTROL_BODY_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.control_body_color_option, SA_CONTROL + CONTROL_BODY_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.control_body_color_option, SA_CONTROL + CONTROL_BODY_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.control_body_color_option, 2, 8);
 		TSU_DrawableEventSetClick((Drawable *)self.control_body_color_option, &ControlBodyColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.control_body_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.control_body_color.a, menu_data.control_body_color.r, menu_data.control_body_color.g, menu_data.control_body_color.b);
 
@@ -598,16 +653,17 @@ void CreateStyleView(Form *form_ptr)
 
 	{
 		// CONTROL BOTTOM COLOR
-		Label *label = TSU_LabelCreate(form_font, "Control Bottom\nColor:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Control Bottom\nColor:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 9);
 
 		self.control_bottom_color_option = TSU_TextBoxCreate(self.menu_font, (uint)font_size, false, 100, control_height, &self.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.control_bottom_color_option, CONTROL_BOTTOM_COLOR_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.control_bottom_color_option, SA_CONTROL + CONTROL_BOTTOM_COLOR_CONTROL_ID, SA_SYSTEM_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.control_bottom_color_option, SA_CONTROL + CONTROL_BOTTOM_COLOR_CONTROL_ID, SA_SYSTEM_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.control_bottom_color_option, 2, 9);
 		TSU_DrawableEventSetClick((Drawable *)self.control_bottom_color_option, &ControlBottomColorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.control_bottom_color_option, SystemMenu_OnMouseOverEvent);
 
 		uint32 value = plx_pack_color(menu_data.control_bottom_color.a, menu_data.control_bottom_color.r, menu_data.control_bottom_color.g, menu_data.control_bottom_color.b);
 
@@ -646,7 +702,7 @@ void CreateCacheView(Form *form_ptr)
 
 	{
 		// CACHE IN GAMES
-		Label *label = TSU_LabelCreate(form_font, "Enable cache:", font_size, false, false);
+		Label *label = TSU_LabelCreate(form_font, "Enable cache:", font_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)label, true);
 		TSU_FormAddBodyLabel(form_ptr, label, 1, 1);
 
@@ -658,6 +714,7 @@ void CreateCacheView(Form *form_ptr)
 		TSU_DrawableSetTranslate((Drawable *)self.cache_game_option, &option_vector);
 
 		TSU_DrawableEventSetClick((Drawable *)self.cache_game_option, &CacheGamesOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cache_game_option, SystemMenu_OnMouseOverEvent);
 
 		if (menu_data.enable_cache)
 		{
@@ -669,9 +726,10 @@ void CreateCacheView(Form *form_ptr)
 
 	{
 		// REBUILD CACHE
-		self.cache_rebuild_option = TSU_LabelCreate(form_font, "Rebuild cache", font_size, false, false);
+		self.cache_rebuild_option = TSU_LabelCreate(form_font, "Rebuild cache", font_size, false, false, false);
 		TSU_FormAddBodyLabel(form_ptr, self.cache_rebuild_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.cache_rebuild_option, &RebuildCacheClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cache_rebuild_option, SystemMenu_OnMouseOverEvent);
 
 		Vector option_vector = TSU_DrawableGetPosition((Drawable *)self.cache_rebuild_option);
 		option_vector.x -= 80;
@@ -696,6 +754,21 @@ void SystemMenuSelectedEvent(Drawable *drawable, uint bottom_index, uint column,
 {
 }
 
+void SystemMenuTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.system_menu_form, SYSTEM_MENU_VIEW);
+}
+
+void StyleTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.system_menu_form, STYLE_VIEW);
+}
+
+void CacheTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.system_menu_form, CACHE_VIEW);
+}
+
 void ScanMissingCoversClick(Drawable *drawable)
 {
 	HideSystemMenu();
@@ -718,7 +791,7 @@ void ScanMissingCoversClick(Drawable *drawable)
 	}
 	else
 	{
-		menu_data.state_app = SA_GAMES_MENU;
+		TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 	}
 }
 
@@ -733,12 +806,12 @@ void OptimizeCoversClick(Drawable *drawable)
 			menu_data.stop_optimize_game_cover = false;
 			menu_data.optimize_game_cover_thread = thd_create(0, OptimizeCoverThread, NULL);
 			ShowOptimizeCoverPopup();
-			menu_data.state_app = SA_OPTIMIZE_COVER;
+			TSU_InputEventStateSetGlobalWindowState(SA_OPTIMIZE_COVER);
 		}
 	}
 	else
 	{
-		menu_data.state_app = SA_GAMES_MENU;
+		TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 	}
 }
 
@@ -781,6 +854,7 @@ void SaveSystemMenuConfig()
 void ExitSystemMenuClick(Drawable *drawable)
 {
 	HideSystemMenu();
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 
 	bool config_saved = false;
 	if (self.general_changes_flag || self.style_changes_flag)
@@ -803,8 +877,6 @@ void ExitSystemMenuClick(Drawable *drawable)
 
 		SaveSystemMenuConfig();
 	}
-
-	menu_data.state_app = SA_GAMES_MENU;
 
 	if (menu_data.games_array_count > 0)
 	{
@@ -1132,8 +1204,8 @@ void ShowOptimizeCoverPopup()
 
 		TSU_FormSetAttributes(self.optimize_cover_popup, 1, 2, 500, 32);
 
-		self.optimize_covers_label = TSU_LabelCreate(form_font, "", 16, false, false);
-		Label *exit_covers_label = TSU_LabelCreate(form_font, "                Press any key to exit", 16, false, false);
+		self.optimize_covers_label = TSU_LabelCreate(form_font, "", 16, false, false, false);
+		Label *exit_covers_label = TSU_LabelCreate(form_font, "                Press any key to exit", 16, false, false, false);
 
 		TSU_DrawableSetReadOnly((Drawable *)self.optimize_covers_label, true);
 		TSU_DrawableSetReadOnly((Drawable *)exit_covers_label, true);
@@ -1193,7 +1265,7 @@ int StopOptimizeCovers()
 
 void ShowCoverScan()
 {
-	menu_data.state_app = SA_SCAN_COVER;
+	TSU_InputEventStateSetGlobalWindowState(SA_SCAN_COVER);
 
 	StopCDDA();
 	HideCoverScan();
@@ -1205,14 +1277,14 @@ void ShowCoverScan()
 	TSU_AppSubAddRectangle(self.dsapp_ptr, self.modal_cover_scan);
 
 	static Color color = {1, 1.0f, 1.0f, 1.0f};
-	self.title_cover_scan = TSU_LabelCreate(self.menu_font, "SCANNING MISSING COVER", 26, true, true);
+	self.title_cover_scan = TSU_LabelCreate(self.menu_font, "SCANNING MISSING COVER", 26, true, true, false);
 	TSU_LabelSetTint(self.title_cover_scan, &color);
 	TSU_AppSubAddLabel(self.dsapp_ptr, self.title_cover_scan);
 	TSU_LabelSetTranslate(self.title_cover_scan, &vector_init_title);
 
 	vector_init_title.x = 640 / 2;
 	vector_init_title.y = 400 / 2 + 100;
-	self.note_cover_scan = TSU_LabelCreate(self.menu_font, "\n\nPress any key to exit", 14, true, true);
+	self.note_cover_scan = TSU_LabelCreate(self.menu_font, "\n\nPress any key to exit", 14, true, true, false);
 	TSU_LabelSetTint(self.note_cover_scan, &color);
 	TSU_AppSubAddLabel(self.dsapp_ptr, self.note_cover_scan);
 	TSU_LabelSetTranslate(self.note_cover_scan, &vector_init_title);
@@ -1267,7 +1339,7 @@ void SetMessageScan(const char *fmt, const char *message)
 		vector_init_title.x = 50;
 		vector_init_title.y += 40;
 		
-		self.message_cover_scan = TSU_LabelCreate(self.message_font, message_scan, 16, false, true);
+		self.message_cover_scan = TSU_LabelCreate(self.message_font, message_scan, 16, false, true, false);
 		TSU_LabelSetTint(self.message_cover_scan, &color);
 		TSU_AppSubAddLabel(self.dsapp_ptr, self.message_cover_scan);
 		TSU_LabelSetTranslate(self.message_cover_scan, &vector_init_title);

@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    preset.c
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -44,6 +44,9 @@ static struct
 	DSApp *dsapp_ptr;
 	Scene *scene_ptr;
 	Form *preset_menu_form;
+	Drawable *over_drawable_ptr;
+	Drawable *last_over_drawable_ptr;
+	uint over_object_type;
 
 	bool save;
 	int body_letter_size;
@@ -74,7 +77,7 @@ static struct
 	CheckBox *bypass_option;
 	CheckBox *cdda_option;
 	CheckBox *irq_option;
-	Label *default_preset_option;
+	ItemMenu *default_preset_option;
 	OptionGroup *os_option;
 	OptionGroup *loader_option;
 	OptionGroup *boot_option;
@@ -118,6 +121,18 @@ static struct
 	Banner *cover_banner;
 } self;
 
+static void PresetMenu_OnMouseOverEvent(Drawable *drawable, uint object_type, int id)
+{
+	self.over_drawable_ptr = drawable;
+	self.over_object_type = object_type;
+}
+
+void PresetMenuResetMouseOver()
+{
+	self.over_drawable_ptr = NULL;
+	self.over_object_type = 0;
+	self.last_over_drawable_ptr = NULL;
+}
 
 void CreatePresetMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font)
 {
@@ -163,6 +178,18 @@ void PresetMenuRemoveAll()
 void PresetMenuInputEvent(int type, int key)
 {
 	TSU_FormInputEvent(self.preset_menu_form, type, key);
+}
+
+void PresetMenuOnMouseOver()
+{
+	if (self.preset_menu_form)
+	{
+		if (self.last_over_drawable_ptr != self.over_drawable_ptr)
+		{
+			self.last_over_drawable_ptr = self.over_drawable_ptr;
+			TSU_FormSetCursor(self.preset_menu_form, self.last_over_drawable_ptr);
+		}
+	}
 }
 
 int StatePresetMenu()
@@ -407,7 +434,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// SAVE
-		Label *save_label = TSU_LabelCreate(form_font, "SAVE AS PRESET:", body_letter_size, false, false);
+		Label *save_label = TSU_LabelCreate(form_font, "SAVE AS PRESET:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)save_label, true);
 		TSU_FormAddBodyLabel(form_ptr, save_label, 1, 1);
 
@@ -416,6 +443,7 @@ void CreateGeneralView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.save_preset_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.save_preset_option, &SavePresetOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.save_preset_option, PresetMenu_OnMouseOverEvent);
 
 		if (self.save)
 		{
@@ -432,15 +460,16 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// DMA
-		Label *dma_label = TSU_LabelCreate(form_font, "DMA:", body_letter_size, false, false);
+		Label *dma_label = TSU_LabelCreate(form_font, "DMA:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)dma_label, true);
 		TSU_FormAddBodyLabel(form_ptr, dma_label, 1, 2);
-
+		
 		self.dma_option = TSU_CheckBoxCreate(form_font, (uint)body_letter_size, 50, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.dma_option, DMA_CONTROL_ID);
-
+		
 		TSU_FormAddBodyCheckBox(form_ptr, self.dma_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.dma_option, &DMAOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.dma_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->use_dma)
 		{
@@ -452,10 +481,10 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// ASYNC
-		Label *async_label = TSU_LabelCreate(form_font, "ASYNC:", body_letter_size, false, false);
+		Label *async_label = TSU_LabelCreate(form_font, "ASYNC:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)async_label, true);
 		TSU_FormAddBodyLabel(form_ptr, async_label, 1, 3);
-
+		
 		self.async_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 80, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.async_option, ASYNC_CONTROL_ID);
 
@@ -465,7 +494,7 @@ void CreateGeneralView(Form *form_ptr)
 		}
 		else
 		{
-			TSU_OptionGroupAdd(self.async_option, 0, "NONE");			
+			TSU_OptionGroupAdd(self.async_option, 0, "NONE");
 		}
 
 		TSU_OptionGroupAdd(self.async_option, 1, "1");
@@ -477,9 +506,10 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.async_option, 7, "7");
 		TSU_OptionGroupAdd(self.async_option, 8, "8");
 		TSU_OptionGroupAdd(self.async_option, 16, "16");
-		TSU_OptionGroupSetStates(self.async_option, SA_CONTROL + ASYNC_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.async_option, SA_CONTROL + ASYNC_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.async_option, 2, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.async_option, &AsyncOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.async_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->emu_async)
 		{
@@ -491,7 +521,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// BY PASS
-		Label *bypass_label = TSU_LabelCreate(form_font, "BY PASS:", body_letter_size, false, false);
+		Label *bypass_label = TSU_LabelCreate(form_font, "BY PASS:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)bypass_label, true);
 		TSU_FormAddBodyLabel(form_ptr, bypass_label, 1, 4);
 
@@ -500,6 +530,7 @@ void CreateGeneralView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.bypass_option, 2, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.bypass_option, &ByPassOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.bypass_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->alt_read)
 		{
@@ -511,7 +542,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// IRQ
-		Label *irq_label = TSU_LabelCreate(form_font, "IRQ:", body_letter_size, false, false);
+		Label *irq_label = TSU_LabelCreate(form_font, "IRQ:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)irq_label, true);
 		TSU_FormAddBodyLabel(form_ptr, irq_label, 1, 5);
 
@@ -520,6 +551,7 @@ void CreateGeneralView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.irq_option, 2, 5);
 		TSU_DrawableEventSetClick((Drawable *)self.irq_option, &IRQOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.irq_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->use_irq)
 		{
@@ -531,14 +563,14 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// LOADER
-		Label *loader_label = TSU_LabelCreate(form_font, "LOADER FW:", body_letter_size, false, false);
+		Label *loader_label = TSU_LabelCreate(form_font, "LOADER FW:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)loader_label, true);
 		TSU_FormAddBodyLabel(form_ptr, loader_label, 1, 6);
 
 		self.loader_option = TSU_OptionGroupCreate(form_font, (uint)body_letter_size, 130, body_height_size, &menu_data.control_body_color);
 		TSU_DrawableSetId((Drawable *)self.loader_option, LOADER_CONTROL_ID);
 
-		TSU_OptionGroupSetStates(self.loader_option, SA_CONTROL + LOADER_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.loader_option, SA_CONTROL + LOADER_CONTROL_ID, SA_PRESET_MENU);
 		TSU_OptionGroupAdd(self.loader_option, 0, "auto");
 
 		for (int i = 0; i < menu_data.firmware_array_count; i++)
@@ -548,6 +580,7 @@ void CreateGeneralView(Form *form_ptr)
 
 		TSU_FormAddBodyOptionGroup(form_ptr, self.loader_option, 2, 6);
 		TSU_DrawableEventSetClick((Drawable *)self.loader_option, &LoaderOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.loader_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->device[0] != '\0')
 		{
@@ -559,19 +592,21 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// GET DEFAULT PRESET
-		self.default_preset_option = TSU_LabelCreate(form_font, "GET DEFAULT PRESET", body_letter_size + 2, false, false);
-		TSU_FormAddBodyLabel(form_ptr, self.default_preset_option, 4, 1);
+		self.default_preset_option = TSU_ItemMenuCreateLabel("GET DEFAULT PRESET", form_font, body_letter_size + 2, 235, 28);
+		TSU_FormAddBodyItemMenu(form_ptr, self.default_preset_option, 4, 1);
 
 		TSU_DrawableEventSetClick((Drawable *)self.default_preset_option, &DefaultPresetOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.default_preset_option, PresetMenu_OnMouseOverEvent);
 
 		Vector position = TSU_DrawableGetPosition((Drawable *)self.default_preset_option);
-		position.x -= 50;
+		position.x -= 65;
+		position.y -= 20;
 		TSU_DrawableSetTranslate((Drawable *)self.default_preset_option, &position);
 	}
 
 	{
 		// OS
-		Label *os_label = TSU_LabelCreate(form_font, "OS:", body_letter_size, false, false);
+		Label *os_label = TSU_LabelCreate(form_font, "OS:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)os_label, true);
 		TSU_FormAddBodyLabel(form_ptr, os_label, 3, 2);
 
@@ -582,9 +617,10 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_KATANA, "KATANA");
 		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_KOS, "HOMEBREW");
 		TSU_OptionGroupAdd(self.os_option, BIN_TYPE_WINCE, "WinCE");
-		TSU_OptionGroupSetStates(self.os_option, SA_CONTROL + OS_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.os_option, SA_CONTROL + OS_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.os_option, 4, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.os_option, &OSOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.os_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->bin_type)
 		{
@@ -596,7 +632,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// BOOT MODE
-		Label *boot_label = TSU_LabelCreate(form_font, "BOOT MODE:", body_letter_size, false, false);
+		Label *boot_label = TSU_LabelCreate(form_font, "BOOT MODE:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)boot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, boot_label, 3, 3);
 
@@ -606,9 +642,10 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.boot_option, BOOT_MODE_DIRECT, "DIRECT");
 		TSU_OptionGroupAdd(self.boot_option, BOOT_MODE_IPBIN, "IP.BIN");
 		TSU_OptionGroupAdd(self.boot_option, BOOT_MODE_IPBIN_TRUNC, "IP.BIN CUT");
-		TSU_OptionGroupSetStates(self.boot_option, SA_CONTROL + BOOT_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.boot_option, SA_CONTROL + BOOT_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.boot_option, 4, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.boot_option, &BootOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.boot_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->boot_mode)
 		{
@@ -620,7 +657,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// FAST BOOT
-		Label *fast_label = TSU_LabelCreate(form_font, "FAST BOOT:", body_letter_size, false, false);
+		Label *fast_label = TSU_LabelCreate(form_font, "FAST BOOT:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)fast_label, true);
 		TSU_FormAddBodyLabel(form_ptr, fast_label, 3, 4);
 
@@ -629,6 +666,7 @@ void CreateGeneralView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.fast_option, 4, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.fast_option, &FastOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.fast_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->fastboot)
 		{
@@ -640,7 +678,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// LOW LEVEL
-		Label *lowlevel_label = TSU_LabelCreate(form_font, "LOW LEVEL:", body_letter_size, false, false);
+		Label *lowlevel_label = TSU_LabelCreate(form_font, "LOW LEVEL:", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)lowlevel_label, true);
 		TSU_FormAddBodyLabel(form_ptr, lowlevel_label, 3, 5);
 
@@ -649,6 +687,7 @@ void CreateGeneralView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.lowlevel_option, 4, 5);
 		TSU_DrawableEventSetClick((Drawable *)self.lowlevel_option, &LowLevelOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.lowlevel_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->low)
 		{
@@ -660,7 +699,7 @@ void CreateGeneralView(Form *form_ptr)
 
 	{
 		// MEMORY
-		Label *memory_label = TSU_LabelCreate(form_font, "LOADER :\n\nMEMORY", body_letter_size, false, false);
+		Label *memory_label = TSU_LabelCreate(form_font, "LOADER :\n\nMEMORY", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)memory_label, true);
 		TSU_FormAddBodyLabel(form_ptr, memory_label, 1, 7);
 
@@ -683,9 +722,10 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.memory_option, 14, "0x8cff4800");
 		TSU_OptionGroupAdd(self.memory_option, 15, "0x8d000000");
 		TSU_OptionGroupAdd(self.memory_option, 16, "0x8c");
-		TSU_OptionGroupSetStates(self.memory_option, SA_CONTROL + MEMORY_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.memory_option, SA_CONTROL + MEMORY_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.memory_option, 2, 7);
 		TSU_DrawableEventSetClick((Drawable *)self.memory_option, &MemoryOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.memory_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->memory[0] != 0)
 		{
@@ -719,16 +759,17 @@ void CreateGeneralView(Form *form_ptr)
 		self.custom_memory_option = TSU_TextBoxCreate(self.menu_font, (uint)body_letter_size, false, 130, body_height_size, &menu_data.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.custom_memory_option, CUSTOM_MEMORY_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.custom_memory_option, SA_CONTROL + CUSTOM_MEMORY_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.custom_memory_option, SA_CONTROL + CUSTOM_MEMORY_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.custom_memory_option, 3, 7);
 		TSU_DrawableEventSetClick((Drawable *)self.custom_memory_option, &CustomMemoryOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.custom_memory_option, PresetMenu_OnMouseOverEvent);
 
 		TSU_TextBoxSetText(self.custom_memory_option, menu_data.preset->custom_memory);
 	}
 
 	{
 		// HEAP
-		Label *heap_label = TSU_LabelCreate(form_font, "HEAP   :\n\nMEMORY", body_letter_size, false, false);
+		Label *heap_label = TSU_LabelCreate(form_font, "HEAP   :\n\nMEMORY", body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)heap_label, true);
 		TSU_FormAddBodyLabel(form_ptr, heap_label, 1, 9);
 
@@ -754,9 +795,10 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cff0000, "0x8cff0000");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8cff4800, "0x8cff4800");
 		TSU_OptionGroupAdd(self.heap_option, (int32)0x8d000000, "0x8d000000");
-		TSU_OptionGroupSetStates(self.heap_option, SA_CONTROL + HEAP_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.heap_option, SA_CONTROL + HEAP_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.heap_option, 2, 9);
 		TSU_DrawableEventSetClick((Drawable *)self.heap_option, &HeapOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.heap_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->heap)
 		{
@@ -780,7 +822,7 @@ void CreateCDDAView(Form *form_ptr)
 
 	{
 		// CDDA
-		Label *cdda_label = TSU_LabelCreate(form_font, "CDDA:", self.body_letter_size, false, false);
+		Label *cdda_label = TSU_LabelCreate(form_font, "CDDA:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cdda_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_label, 1, 1);
 
@@ -789,6 +831,7 @@ void CreateCDDAView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.cdda_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.cdda_option, &CDDAOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cdda_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->cdda)
 		{
@@ -800,7 +843,7 @@ void CreateCDDAView(Form *form_ptr)
 
 	{
 		// CDDA SOURCE
-		Label *cdda_source_label = TSU_LabelCreate(form_font, "Source:", self.body_letter_size, false, false);
+		Label *cdda_source_label = TSU_LabelCreate(form_font, "Source:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cdda_source_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_source_label, 1, 2);
 
@@ -809,9 +852,10 @@ void CreateCDDAView(Form *form_ptr)
 
 		TSU_OptionGroupAdd(self.cdda_source_option, CDDA_MODE_SRC_PIO, "PIO");
 		TSU_OptionGroupAdd(self.cdda_source_option, CDDA_MODE_SRC_DMA, "DMA");
-		TSU_OptionGroupSetStates(self.cdda_source_option, SA_CONTROL + CDDA_SOURCE_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.cdda_source_option, SA_CONTROL + CDDA_SOURCE_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.cdda_source_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.cdda_source_option, &CDDASourceOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cdda_source_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->emu_cdda == CDDA_MODE_DISABLED)
 		{
@@ -831,7 +875,7 @@ void CreateCDDAView(Form *form_ptr)
 
 	{
 		// CDDA DESTINATION
-		Label *cdda_destination_label = TSU_LabelCreate(form_font, "Destination:", self.body_letter_size, false, false);
+		Label *cdda_destination_label = TSU_LabelCreate(form_font, "Destination:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cdda_destination_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_destination_label, 3, 2);
 
@@ -841,9 +885,10 @@ void CreateCDDAView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_PIO, "PIO");
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_SQ, "SQ");
 		TSU_OptionGroupAdd(self.cdda_destination_option, CDDA_MODE_DST_DMA, "DMA");
-		TSU_OptionGroupSetStates(self.cdda_destination_option, SA_CONTROL + CDDA_DESTINATION_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.cdda_destination_option, SA_CONTROL + CDDA_DESTINATION_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.cdda_destination_option, 4, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.cdda_destination_option, &CDDADestinationOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cdda_destination_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->emu_cdda == CDDA_MODE_DISABLED)
 		{
@@ -867,7 +912,7 @@ void CreateCDDAView(Form *form_ptr)
 
 	{
 		// CDDA POSITION
-		Label *cdda_position_label = TSU_LabelCreate(form_font, "Position:", self.body_letter_size, false, false);
+		Label *cdda_position_label = TSU_LabelCreate(form_font, "Position:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cdda_position_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_position_label, 1, 3);
 
@@ -876,9 +921,10 @@ void CreateCDDAView(Form *form_ptr)
 
 		TSU_OptionGroupAdd(self.cdda_position_option, CDDA_MODE_POS_TMU1, "TMU1");
 		TSU_OptionGroupAdd(self.cdda_position_option, CDDA_MODE_POS_TMU2, "TMU2");
-		TSU_OptionGroupSetStates(self.cdda_position_option, SA_CONTROL + CDDA_POSITION_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.cdda_position_option, SA_CONTROL + CDDA_POSITION_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.cdda_position_option, 2, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.cdda_position_option, &CDDAPositionOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cdda_position_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->emu_cdda == CDDA_MODE_DISABLED)
 		{
@@ -898,7 +944,7 @@ void CreateCDDAView(Form *form_ptr)
 
 	{
 		// CDDA CHANNEL
-		Label *cdda_channel_label = TSU_LabelCreate(form_font, "Channel:", self.body_letter_size, false, false);
+		Label *cdda_channel_label = TSU_LabelCreate(form_font, "Channel:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)cdda_channel_label, true);
 		TSU_FormAddBodyLabel(form_ptr, cdda_channel_label, 3, 3);
 
@@ -907,9 +953,10 @@ void CreateCDDAView(Form *form_ptr)
 
 		TSU_OptionGroupAdd(self.cdda_channel_option, CDDA_MODE_CH_ADAPT, "Fixed");
 		TSU_OptionGroupAdd(self.cdda_channel_option, CDDA_MODE_CH_FIXED, "Adaptive");
-		TSU_OptionGroupSetStates(self.cdda_channel_option, SA_CONTROL + CDDA_CHANNEL_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.cdda_channel_option, SA_CONTROL + CDDA_CHANNEL_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.cdda_channel_option, 4, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.cdda_channel_option, &CDDAChannelOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.cdda_channel_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->emu_cdda == CDDA_MODE_DISABLED)
 		{
@@ -939,16 +986,17 @@ void CreatePatchView(Form *form_ptr)
 
 	{
 		// PATCH ADDRESS 1
-		Label *patch_addres1_label = TSU_LabelCreate(form_font, "PATCH ADDRESS 1:", self.body_letter_size, false, false);
+		Label *patch_addres1_label = TSU_LabelCreate(form_font, "PATCH ADDRESS 1:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)patch_addres1_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_addres1_label, 1, 1);
 
 		self.patch_address1_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_address1_option, PATCH_ADDRESS1_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.patch_address1_option, SA_CONTROL + PATCH_ADDRESS1_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.patch_address1_option, SA_CONTROL + PATCH_ADDRESS1_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.patch_address1_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.patch_address1_option, &PatchAddress1OptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.patch_address1_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->pa[0] == 0) {
 			TSU_TextBoxSetText(self.patch_address1_option, "0c000000");
@@ -962,16 +1010,17 @@ void CreatePatchView(Form *form_ptr)
 
 	{
 		// PATCH VALUE 1
-		Label *patch_value1_label = TSU_LabelCreate(form_font, "PATCH VALUE 1:", self.body_letter_size, false, false);
+		Label *patch_value1_label = TSU_LabelCreate(form_font, "PATCH VALUE 1:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)patch_value1_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_value1_label, 1, 2);
 
 		self.patch_value1_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_value1_option, PATCH_VALUE1_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.patch_value1_option, SA_CONTROL + PATCH_VALUE1_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.patch_value1_option, SA_CONTROL + PATCH_VALUE1_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.patch_value1_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.patch_value1_option, &PatchValue1OptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.patch_value1_option, PresetMenu_OnMouseOverEvent);
 	
 		if (menu_data.preset->pv[0] == 0) {
 			TSU_TextBoxSetText(self.patch_value1_option, "00000000");
@@ -985,16 +1034,17 @@ void CreatePatchView(Form *form_ptr)
 
 	{
 		// PATCH ADDRESS 2
-		Label *patch_addres2_label = TSU_LabelCreate(form_font, "PATCH ADDRESS 2:", self.body_letter_size, false, false);
+		Label *patch_addres2_label = TSU_LabelCreate(form_font, "PATCH ADDRESS 2:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)patch_addres2_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_addres2_label, 1, 3);
 
 		self.patch_address2_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_address2_option, PATCH_ADDRESS2_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.patch_address2_option, SA_CONTROL + PATCH_ADDRESS2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.patch_address2_option, SA_CONTROL + PATCH_ADDRESS2_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.patch_address2_option, 2, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.patch_address2_option, &PatchAddress2OptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.patch_address2_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->pa[1] == 0) {
 			TSU_TextBoxSetText(self.patch_address2_option, "0c000000");
@@ -1008,16 +1058,17 @@ void CreatePatchView(Form *form_ptr)
 
 	{
 		// PATCH VALUE 2
-		Label *patch_value2_label = TSU_LabelCreate(form_font, "PATCH VALUE 2:", self.body_letter_size, false, false);
+		Label *patch_value2_label = TSU_LabelCreate(form_font, "PATCH VALUE 2:", self.body_letter_size, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)patch_value2_label, true);
 		TSU_FormAddBodyLabel(form_ptr, patch_value2_label, 1, 4);
 
 		self.patch_value2_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size, false, 155, self.body_height_size, &menu_data.control_body_color, true, false, true, true);
 		TSU_DrawableSetId((Drawable *)self.patch_value2_option, PATCH_VALUE2_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.patch_value2_option, SA_CONTROL + PATCH_VALUE2_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.patch_value2_option, SA_CONTROL + PATCH_VALUE2_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.patch_value2_option, 2, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.patch_value2_option, &PatchValue2OptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.patch_value2_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->pv[1] == 0) {
 			TSU_TextBoxSetText(self.patch_value2_option, "00000000");
@@ -1043,7 +1094,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	{
 		// ALTER BOOT
-		Label *alterboot_label = TSU_LabelCreate(form_font, "Boot from 2ND_READ.BIN:", self.body_letter_size - 2, false, false);
+		Label *alterboot_label = TSU_LabelCreate(form_font, "Boot from 2ND_READ.BIN:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)alterboot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, alterboot_label, 1, 1);
 
@@ -1052,6 +1103,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.altboot_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.altboot_option, &AlterBootOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.altboot_option, PresetMenu_OnMouseOverEvent);
 
 		Vector altboot_vector = TSU_DrawableGetPosition((Drawable *)self.altboot_option);
 		altboot_vector.x += 50;
@@ -1067,7 +1119,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 	{
 		// SCREENSHOT
-		Label *screenshot_label = TSU_LabelCreate(form_font, "Enable screenshots:", self.body_letter_size - 2, false, false);
+		Label *screenshot_label = TSU_LabelCreate(form_font, "Enable screenshots:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)screenshot_label, true);
 		TSU_FormAddBodyLabel(form_ptr, screenshot_label, 1, 2);
 
@@ -1076,6 +1128,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.screenshot_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.screenshot_option, &ScreenshotOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.screenshot_option, PresetMenu_OnMouseOverEvent);
 
 		Vector screenshot_vector = TSU_DrawableGetPosition((Drawable *)self.screenshot_option);
 		screenshot_vector.x += 50;
@@ -1096,6 +1149,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_start_option, 1, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.button_start_option, &ButtonStartOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_start_option, PresetMenu_OnMouseOverEvent);
 
 		init_button_position = start_button_vector = TSU_DrawableGetPosition((Drawable *)self.button_start_option);
 		start_button_vector.x += 40;
@@ -1113,6 +1167,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_x_option, 2, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.button_x_option, &ButtonXOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_x_option, PresetMenu_OnMouseOverEvent);
 
 		start_button_vector.x += 120;
 		TSU_DrawableSetTranslate((Drawable *)self.button_x_option, &start_button_vector);
@@ -1129,6 +1184,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_y_option, 3, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.button_y_option, &ButtonYOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_y_option, PresetMenu_OnMouseOverEvent);
 
 		start_button_vector.x += 100;
 		TSU_DrawableSetTranslate((Drawable *)self.button_y_option, &start_button_vector);
@@ -1145,6 +1201,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_z_option, 4, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.button_z_option, &ButtonZOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_z_option, PresetMenu_OnMouseOverEvent);
 
 		start_button_vector.x += 100;
 		TSU_DrawableSetTranslate((Drawable *)self.button_z_option, &start_button_vector);
@@ -1162,6 +1219,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_lt_option, 5, 3);
 		TSU_DrawableEventSetClick((Drawable *)self.button_lt_option, &ButtonLTOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_lt_option, PresetMenu_OnMouseOverEvent);
 
 		start_button_vector.x += 100;
 		TSU_DrawableSetTranslate((Drawable *)self.button_lt_option, &start_button_vector);
@@ -1179,6 +1237,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_a_option, 2, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.button_a_option, &ButtonAOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_a_option, PresetMenu_OnMouseOverEvent);
 
 		a_button_vector = TSU_DrawableGetPosition((Drawable *)self.button_a_option);
 		a_button_vector.x = init_button_position.x;
@@ -1196,6 +1255,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_b_option, 3, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.button_b_option, &ButtonBOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_b_option, PresetMenu_OnMouseOverEvent);
 
 		a_button_vector.x += 100;
 		TSU_DrawableSetTranslate((Drawable *)self.button_b_option, &a_button_vector);
@@ -1212,6 +1272,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_c_option, 4, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.button_c_option, &ButtonCOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_c_option, PresetMenu_OnMouseOverEvent);
 
 		a_button_vector.x += 100;
 		TSU_DrawableSetTranslate((Drawable *)self.button_c_option, &a_button_vector);
@@ -1229,6 +1290,7 @@ void CreateExtensionsView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.button_rt_option, 5, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.button_rt_option, &ButtonRTOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.button_rt_option, PresetMenu_OnMouseOverEvent);
 
 		a_button_vector.x += 100;
 		TSU_DrawableSetTranslate((Drawable *)self.button_rt_option, &a_button_vector);
@@ -1241,16 +1303,17 @@ void CreateExtensionsView(Form *form_ptr)
 
 	{
 		// VMU EMULATION
-		Label *vmu_label = TSU_LabelCreate(form_font, "VMU EMULATION:", self.body_letter_size - 2, false, false);
+		Label *vmu_label = TSU_LabelCreate(form_font, "VMU EMULATION:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)vmu_label, true);
 		TSU_FormAddBodyLabel(form_ptr, vmu_label, 1, 5);
 
 		self.vmu_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size - 2, false, 130, self.body_height_size, &menu_data.control_body_color, false, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.vmu_option, VMU_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.vmu_option, SA_CONTROL + VMU_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.vmu_option, SA_CONTROL + VMU_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.vmu_option, 2, 5);
 		TSU_DrawableEventSetClick((Drawable *)self.vmu_option, &VMUOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.vmu_option, PresetMenu_OnMouseOverEvent);
 
 		memset(menu_data.preset->vmu_file, 0, sizeof(menu_data.preset->vmu_file));
 		if (menu_data.preset->emu_vmu)
@@ -1277,9 +1340,10 @@ void CreateExtensionsView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.vmu_selector_option, 1, "Shared dump from root");
 		TSU_OptionGroupAdd(self.vmu_selector_option, 2, "Private dump 200 blocks (128 KB)");
 		TSU_OptionGroupAdd(self.vmu_selector_option, 3, "Private dump 1800 blocks (1024 KB)");
-		TSU_OptionGroupSetStates(self.vmu_selector_option, SA_CONTROL + VMUSELECTOR_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.vmu_selector_option, SA_CONTROL + VMUSELECTOR_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.vmu_selector_option, 2, 6);
 		TSU_DrawableEventSetClick((Drawable *)self.vmu_selector_option, &VMUSelectorOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.vmu_selector_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->vmu_mode)
 		{
@@ -1306,7 +1370,7 @@ void CreateShortcutView(Form *form_ptr)
 
 	{
 		// SHORTCUT ICON SIZE
-		Label *shortcut_size_label = TSU_LabelCreate(form_font, "Icon size:", self.body_letter_size - 2, false, false);
+		Label *shortcut_size_label = TSU_LabelCreate(form_font, "Icon size:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)shortcut_size_label, true);
 		TSU_FormAddBodyLabel(form_ptr, shortcut_size_label, 1, 1);
 
@@ -1318,9 +1382,10 @@ void CreateShortcutView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.shortcut_size_option, 3, "96x96");
 		TSU_OptionGroupAdd(self.shortcut_size_option, 4, "128x128 (Default)");
 		TSU_OptionGroupAdd(self.shortcut_size_option, 5, "256x256");
-		TSU_OptionGroupSetStates(self.shortcut_size_option, SA_CONTROL + SHORTCUT_SIZE_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_OptionGroupSetStates(self.shortcut_size_option, SA_CONTROL + SHORTCUT_SIZE_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.shortcut_size_option, 2, 1);
 		TSU_DrawableEventSetClick((Drawable *)self.shortcut_size_option, &ShortcutSizeOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.shortcut_size_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->icon_size)
 		{
@@ -1337,7 +1402,7 @@ void CreateShortcutView(Form *form_ptr)
 
 	{
 		// SHORTCUT ROTATE IMAGE
-		Label *screenshot_rotateimage_label = TSU_LabelCreate(form_font, "Rotate image 180:", self.body_letter_size - 2, false, false);
+		Label *screenshot_rotateimage_label = TSU_LabelCreate(form_font, "Rotate image 180:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)screenshot_rotateimage_label, true);
 		TSU_FormAddBodyLabel(form_ptr, screenshot_rotateimage_label, 1, 2);
 
@@ -1346,6 +1411,7 @@ void CreateShortcutView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.shortcut_rotate_option, 2, 2);
 		TSU_DrawableEventSetClick((Drawable *)self.shortcut_rotate_option, &ShortcutRotateOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.shortcut_rotate_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->rotate_image)
 		{
@@ -1358,7 +1424,7 @@ void CreateShortcutView(Form *form_ptr)
 	Vector name_label_vector;
 	{
 		// SHORTCUT NAME
-		Label *shortcut_name_label = TSU_LabelCreate(form_font, "Icon name:", self.body_letter_size - 2, false, false);
+		Label *shortcut_name_label = TSU_LabelCreate(form_font, "Icon name:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)shortcut_name_label, true);
 		TSU_FormAddBodyLabel(form_ptr, shortcut_name_label, 1, 3);
 		name_label_vector = TSU_DrawableGetPosition((Drawable *)shortcut_name_label);
@@ -1366,9 +1432,10 @@ void CreateShortcutView(Form *form_ptr)
 		self.shortcut_name_option = TSU_TextBoxCreate(self.menu_font, (uint)self.body_letter_size - 2, false, 300, self.body_height_size, &menu_data.control_body_color, true, false, true, false);
 		TSU_DrawableSetId((Drawable *)self.shortcut_name_option, SHORTCUT_NAME_CONTROL_ID);
 
-		TSU_TextBoxSetStates(self.shortcut_name_option, SA_CONTROL + SHORTCUT_NAME_CONTROL_ID, SA_PRESET_MENU, &menu_data.state_app);
+		TSU_TextBoxSetStates(self.shortcut_name_option, SA_CONTROL + SHORTCUT_NAME_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyTextBox(form_ptr, self.shortcut_name_option, 2, 4);
 		TSU_DrawableEventSetClick((Drawable *)self.shortcut_name_option, &ShortcutNameOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.shortcut_name_option, PresetMenu_OnMouseOverEvent);
 
 		Vector shortcut_name_vector = TSU_DrawableGetPosition((Drawable *)self.shortcut_name_option);
 		shortcut_name_vector.y -= 18;
@@ -1391,7 +1458,7 @@ void CreateShortcutView(Form *form_ptr)
 
 	{
 		// SHORTCUT DONT SHOW NAME
-		Label *shortcut_dontshowname_label = TSU_LabelCreate(form_font, "Don't show name:", self.body_letter_size - 2, false, false);
+		Label *shortcut_dontshowname_label = TSU_LabelCreate(form_font, "Don't show name:", self.body_letter_size - 2, false, false, false);
 		TSU_DrawableSetReadOnly((Drawable*)shortcut_dontshowname_label, true);
 		TSU_FormAddBodyLabel(form_ptr, shortcut_dontshowname_label, 1, 5);
 
@@ -1400,6 +1467,7 @@ void CreateShortcutView(Form *form_ptr)
 
 		TSU_FormAddBodyCheckBox(form_ptr, self.shortcut_dontshowname_option, 2, 5);
 		TSU_DrawableEventSetClick((Drawable *)self.shortcut_dontshowname_option, &ShortcutDontShowNameOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.shortcut_dontshowname_option, PresetMenu_OnMouseOverEvent);
 
 		if (menu_data.preset->dont_show_name)
 		{
@@ -1413,12 +1481,14 @@ void CreateShortcutView(Form *form_ptr)
 		// CREATE SHORTCUT
 		char *image_path = (char *)malloc(NAME_MAX);
 		snprintf(image_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/save.png");
-		self.shortcut_create_option = TSU_ItemMenuCreate(image_path, 32, 32, PVR_LIST_TR_POLY, "Create shortcut", self.menu_font, (uint)self.body_letter_size - 2, false, 0);
+		self.shortcut_create_option = TSU_ItemMenuCreate(image_path, 32, 32, PVR_LIST_TR_POLY, "Create shortcut", self.menu_font, (uint)self.body_letter_size - 2, 0, 0, false, 0);
+		TSU_LabelSetFixWidth(TSU_ItemMenuGetLabel(self.shortcut_create_option), false);
 		free(image_path);
 
 		TSU_DrawableSetId((Drawable *)self.shortcut_create_option, SHORTCUT_CREATE_CONTROL_ID);
 		TSU_FormAddBodyItemMenu(form_ptr, self.shortcut_create_option, 2, 6);
 		TSU_DrawableEventSetClick((Drawable *)self.shortcut_create_option, &ShortcutCreateOptionClick);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)self.shortcut_create_option, PresetMenu_OnMouseOverEvent);
 
 		Vector shortcut_vector = TSU_DrawableGetPosition((Drawable *)self.shortcut_create_option);
 		shortcut_vector.y -= 22;	
@@ -1520,6 +1590,11 @@ void ShowPresetMenu(int game_index)
 				&menu_data.border_color, &menu_data.control_top_color, &body_color, &menu_data.control_bottom_color,
 				&OnViewIndexChangedEvent);
 
+			char close_image_path[NAME_MAX] = {};
+			snprintf(close_image_path, NAME_MAX, "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images/close.png");
+			TSU_FormSetCloseButton(self.preset_menu_form, close_image_path, ExitPresetMenuClick, PresetMenu_OnMouseOverEvent);
+
+			TSU_FormSetWindowState(self.preset_menu_form, SA_PRESET_MENU);
 			char sfx_path[NAME_MAX];
 			int volume = GetVolumeFromSettings();
 			if (ds_sfx_is_enabled(DS_SFX_CLICK2))
@@ -1539,32 +1614,47 @@ void ShowPresetMenu(int game_index)
 			TSU_FormGetObjectsCurrentViewEvent(self.preset_menu_form, &OnGetObjectsCurrentViewEvent);
 
 			{
-				Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 14, false, false);
+				Label *general_label = TSU_LabelCreate(form_font, "GENERAL", 14, false, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, general_label);
+				TSU_DrawableSetId((Drawable *)general_label, GENERAL_TAB_ID);
+				TSU_DrawableEventSetClick((Drawable *)general_label, &GeneralTabClick);
+				TSU_DrawableEventSetOnMouseOver((Drawable *)general_label, PresetMenu_OnMouseOverEvent);
 				general_label = NULL;
 			}
 
 			{
-				Label *cdda_label = TSU_LabelCreate(form_font, "CDDA", 14, false, false);
+				Label *cdda_label = TSU_LabelCreate(form_font, "CDDA", 14, false, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, cdda_label);
+				TSU_DrawableSetId((Drawable *)cdda_label, CDDA_TAB_ID);
+				TSU_DrawableEventSetClick((Drawable *)cdda_label, &CDDATabClick);
+				TSU_DrawableEventSetOnMouseOver((Drawable *)cdda_label, PresetMenu_OnMouseOverEvent);
 				cdda_label = NULL;
 			}
 
 			{
-				Label *patch_label = TSU_LabelCreate(form_font, "PATCH", 14, false, false);
+				Label *patch_label = TSU_LabelCreate(form_font, "PATCH", 14, false, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, patch_label);
+				TSU_DrawableSetId((Drawable *)patch_label, PATCH_TAB_ID);
+				TSU_DrawableEventSetClick((Drawable *)patch_label, &PatchTabClick);
+				TSU_DrawableEventSetOnMouseOver((Drawable *)patch_label, PresetMenu_OnMouseOverEvent);
 				patch_label = NULL;
 			}
 
 			{
-				Label *extensions_label = TSU_LabelCreate(form_font, "EXTS.", 14, false, false);
+				Label *extensions_label = TSU_LabelCreate(form_font, "EXTS.", 14, false, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, extensions_label);
+				TSU_DrawableSetId((Drawable *)extensions_label, EXTENSIONS_TAB_ID);
+				TSU_DrawableEventSetClick((Drawable *)extensions_label, &ExtensionsTabClick);
+				TSU_DrawableEventSetOnMouseOver((Drawable *)extensions_label, PresetMenu_OnMouseOverEvent);
 				extensions_label = NULL;
 			}
 
 			{
-				Label *shortcut_label = TSU_LabelCreate(form_font, "SHORTCUT", 13, false, false);
+				Label *shortcut_label = TSU_LabelCreate(form_font, "SHORTCUT", 13, false, false, false);
 				TSU_FormAddBottomLabel(self.preset_menu_form, shortcut_label);
+				TSU_DrawableSetId((Drawable *)shortcut_label, EXTENSIONS_TAB_ID);
+				TSU_DrawableEventSetClick((Drawable *)shortcut_label, &ShortcutTabClick);
+				TSU_DrawableEventSetOnMouseOver((Drawable *)shortcut_label, PresetMenu_OnMouseOverEvent);
 				shortcut_label = NULL;
 			}
 
@@ -1687,7 +1777,7 @@ void DefaultPresetOptionClick(Drawable *drawable)
 		Color press_color = {1, 1.0f, 1.0f, 0.1f};
 		Color drop_color = {1, 1.0f, 1.0f, 1.0f};
 
-		TSU_LabelSetTint(self.default_preset_option , &press_color);
+		TSU_LabelSetTint(TSU_ItemMenuGetLabel(self.default_preset_option), &press_color);
 
 		if (menu_data.preset != NULL)
 		{
@@ -1698,7 +1788,7 @@ void DefaultPresetOptionClick(Drawable *drawable)
 
 		TSU_FormClearBodyObjects(self.preset_menu_form);
 		OnViewIndexChangedEvent((Drawable *)self.preset_menu_form, GENERAL_VIEW);
-		TSU_LabelSetTint(self.default_preset_option, &drop_color);
+		TSU_LabelSetTint(TSU_ItemMenuGetLabel(self.default_preset_option), &drop_color);
 	}
 }
 
@@ -2042,10 +2132,35 @@ void ShortcutCreateOptionClick(Drawable *drawable)
 	TSU_ItemMenuSetLabelText(self.shortcut_create_option, "Rewrite shortcut");
 }
 
+void GeneralTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.preset_menu_form, GENERAL_VIEW);
+}
+
+void CDDATabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.preset_menu_form, CDDA_VIEW);
+}
+
+void PatchTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.preset_menu_form, PATCH_VIEW);
+}
+
+void ExtensionsTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.preset_menu_form, EXTENSIONS_VIEW);
+}
+
+void ShortcutTabClick(Drawable *drawable)
+{
+	TSU_FormSetViewIndex(self.preset_menu_form, SHORTCUT_VIEW);
+}
+
 void ExitPresetMenuClick(Drawable *drawable)
 {
 	HidePresetMenu();
-	menu_data.state_app = SA_GAMES_MENU;
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 }
 
 void SavePresetInputEvent(int type, int key)
