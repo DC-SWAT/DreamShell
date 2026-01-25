@@ -18,6 +18,11 @@
 #include "app_utils.h"
 #include "app_definition.h"
 
+void SystemMenuTabClick(Drawable *drawable);
+void StyleTabClick(Drawable *drawable);
+void CacheTabClick(Drawable *drawable);
+
+void SystemMenuResetMouseOver();
 void SaveSystemMenuConfig();
 void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font, void (*RefreshMainView)(), void (*ReloadPage)());
 void CreateSystemMenuView(Form *form_ptr);
@@ -26,6 +31,7 @@ void CreateCacheView(Form *form_ptr);
 void OnSystemViewIndexChangedEvent(Drawable *drawable, int view_index);
 void DestroySystemMenu();
 void SystemMenuRemoveAll();
+void SystemMenuOnMouseOver();
 void EnableColorControls(bool enable);
 void SetAllThemeProperties(const char *theme);
 void SetColorPropertyValue(TextBox *textbox, Color *property_color, uint32 current_color);

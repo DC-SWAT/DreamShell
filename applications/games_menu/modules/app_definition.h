@@ -31,9 +31,26 @@
 #include <stdbool.h>
 #include <uthash.h>
 
+enum ActionButtonIndexEnum
+{
+	BTN_X_INDEX = 0,
+	BTN_Y_INDEX,
+	BTN_A_INDEX,
+	BTN_B_INDEX,
+	BTN_LT_INDEX,
+	BTN_RT_INDEX,
+	BTN_START_INDEX,
+};
+
 enum PresetControlEnum
 {
-	SAVE_CONTROL_ID = 1,
+	GENERAL_TAB_ID = 1,
+	CDDA_TAB_ID,
+	PATCH_TAB_ID,
+	EXTENSIONS_TAB_ID,
+	SHORTCUT_TAB_ID,
+
+	SAVE_CONTROL_ID,
 	DMA_CONTROL_ID,
 	ASYNC_CONTROL_ID,
 	BYPASS_CONTROL_ID,

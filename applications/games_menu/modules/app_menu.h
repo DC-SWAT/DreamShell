@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    app_menu.h - Games app module
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -70,7 +70,6 @@ struct MenuStructure
 	volatile bool cdda_game_changed;
 	volatile bool stop_load_pvr_cover;
 	volatile bool stop_optimize_game_cover;
-	int state_app;
 	int default_cover_type;
 	int menu_type;
 	int cache_array_count;

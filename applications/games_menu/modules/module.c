@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Games app module
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
@@ -50,6 +50,9 @@ static struct
 	App_t *app;
 	DSApp *dsapp_ptr;
 	Scene *scene_ptr;
+	Drawable *over_drawable_ptr;
+	Drawable *last_over_drawable_ptr;
+	uint over_object_type;
 
 	bool have_args;
 	int image_type;
@@ -85,6 +88,9 @@ static struct
 	LogXYMover *item_game_animation[MAX_SIZE_ITEMS];
 	ItemMenu *item_game[MAX_SIZE_ITEMS];
 	ItemMenu *item_button[MAX_BUTTONS];
+	ItemMenu *action_left_button;
+	ItemMenu *action_right_button;
+	ItemMenu *action_view_button;
 	Banner *img_cover_game_background;
 	Banner *img_cover_game;
 	FadeTo *animation_cover_game;
@@ -217,6 +223,7 @@ static bool StopShowCover()
 		thd_join(self.show_cover_thread, NULL);
 		self.show_cover_thread = NULL;
 	}
+	self.game_changed = false;
 
 	return (self.show_cover_thread == NULL);
 }
@@ -298,7 +305,7 @@ static void SetTitle(int game_index, const char *text, bool limit_length)
 	}
 
 	static Vector vectorInit = {-50, 36, ML_ITEM, 1};
-	static Vector vector = {16, 36, ML_ITEM, 1};
+	static Vector vector = {66, 36, ML_ITEM, 1};
 	vectorInit.z = ML_ITEM + 1;
 	vector.z = ML_ITEM + 1;
 	
@@ -311,7 +318,7 @@ static void SetTitle(int game_index, const char *text, bool limit_length)
 		int font_size = 18;
 		Color color = { 1.0f, 1.0f, 1.0f, 0.35f };
 
-		self.title = TSU_LabelCreate(self.menu_font, titleText, font_size, false, true);
+		self.title = TSU_LabelCreate(self.menu_font, titleText, font_size, false, true, false);
 		TSU_LabelSetTint(self.title, &color);
 		TSU_AppSubAddLabel(self.dsapp_ptr, self.title);
 	}
@@ -366,8 +373,8 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 		TSU_DrawableSetBorderColor(self.title_type_rectangle, &title_type_color);
 		TSU_DrawableSetBorderColor(self.title_rectangle, &title_type_color);
 
-		static Vector vectorInit = {700, 36, ML_ITEM + 6, 1};
-		static Vector vector = {583, 36, ML_ITEM + 6, 1};
+		static Vector vectorInit = {640, 36, ML_ITEM + 6, 1};
+		static Vector vector = {560, 36, ML_ITEM + 6, 1};
 
 		vectorInit.z = ML_ITEM + 6;
 
@@ -380,7 +387,7 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 			int font_size = 18;
 			
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
-			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, false, true);
+			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, false, true, false);
 			TSU_LabelSetTint(self.title_type, &color);
 			TSU_AppSubAddLabel(self.dsapp_ptr, self.title_type);
 		}
@@ -629,6 +636,67 @@ static void RefreshTotal()
 	}
 }
 
+static void GamesApp_OnMouseOverEvent(Drawable *drawable, uint object_type, int id)
+{
+	switch(TSU_InputEventStateGetGlobalWindowState())
+	{
+		case SA_GAMES_MENU:
+		{
+			self.over_drawable_ptr = drawable;
+			self.over_object_type = object_type;
+			break;
+		}
+
+		default:
+			break;
+	}
+}
+
+static void DeselectAllActionButtons()
+{
+	TSU_ItemMenuSetSelected(self.action_left_button, false, false);
+	TSU_ItemMenuSetSelected(self.action_right_button, false, false);
+	TSU_ItemMenuSetSelected(self.action_view_button, false, false);
+
+	for (int i = 0; i < MAX_BUTTONS; i++)
+	{
+		if (self.item_button[i] != NULL)
+		{
+			TSU_ItemMenuSetSelected(self.item_button[i], false, false);
+		}
+	}
+}
+
+static ItemMenu* CreateActionButton(const char *button_file, float x, float y, float width, float height)
+{
+	ItemMenu *item_menu = NULL;
+	char image_path[NAME_MAX] = {};
+	snprintf(image_path, NAME_MAX, "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/images", button_file);
+
+	if (FileExists(image_path))
+	{	
+		item_menu = TSU_ItemMenuCreateImage(image_path
+							, width
+							, height
+							, PVR_LIST_TR_POLY							
+							, false
+							, PVR_TXRLOAD_DMA);
+
+		Vector vector_position = {x, y, ML_ITEM + 3, 1};
+		TSU_DrawableTranslate((Drawable *)item_menu, &vector_position);
+
+		Color color_unselected = { 1, 1.0f, 1.0f, 1.0f };
+		Color color_selected = { 1.0f, 1.0f, 1.0f, 0.35f };
+		
+		TSU_ItemMenuSetColorUnselected(item_menu, &color_unselected);
+		TSU_ItemMenuSetImageColor(item_menu, &color_selected);
+		TSU_ItemMenuSetTextColor(item_menu, &color_selected);
+		TSU_DrawableEventSetOnMouseOver((Drawable *)item_menu, GamesApp_OnMouseOverEvent);
+	}
+
+	return item_menu;
+}
+
 static void CreateInfoButton(uint8 button_index, const char *button_file, const char *text, float x, float y)
 {
 	if(self.item_button[button_index] == NULL)
@@ -640,7 +708,7 @@ static void CreateInfoButton(uint8 button_index, const char *button_file, const 
 		{
 			Color color = {1, 1.0f, 1.0f, 1.0f};
 			Vector vector_translate = { x, y, ML_ITEM + 3, 1};
-			self.item_button[button_index] = TSU_ItemMenuCreate(image_path, 32, 32, PVR_LIST_TR_POLY, text, self.menu_font, 15, false, 0);
+			self.item_button[button_index] = TSU_ItemMenuCreate(image_path, 32, 32, PVR_LIST_TR_POLY, text, self.menu_font, 15, 0, 0, false, 0);
 			TSU_ItemMenuSetTranslate(self.item_button[button_index], &vector_translate);
 			TSU_LabelSetTint(TSU_ItemMenuGetLabel(self.item_button[button_index]), &color);
 
@@ -648,6 +716,14 @@ static void CreateInfoButton(uint8 button_index, const char *button_file, const 
 			Vector new_position = { text_position->x, text_position->y, text_position->z, text_position->w };
 			new_position.x -= 5;
 			TSU_LabelSetTranslate(TSU_ItemMenuGetLabel(self.item_button[button_index]), &new_position);
+			TSU_LabelSetFixWidth(TSU_ItemMenuGetLabel(self.item_button[button_index]), false);
+
+			Color color_unselected = { 1, 1.0f, 1.0f, 1.0f };
+			Color color_selected = { 1.0f, 1.0f, 1.0f, 0.35f };
+			
+			TSU_ItemMenuSetColorUnselected(self.item_button[button_index], &color_unselected);
+			TSU_ItemMenuSetTextColor(self.item_button[button_index], &color_selected);
+			TSU_DrawableEventSetOnMouseOver((Drawable *)self.item_button[button_index], GamesApp_OnMouseOverEvent);
 		}
 
 		free(image_path);
@@ -667,13 +743,13 @@ static void AddInfoButtons()
 
 static void CreateViewTextPlane()
 {
-	CreateInfoButton(0, "btn_x.png", "CHANGE VIEW", 357, 315);
-	CreateInfoButton(1, "btn_y.png", "SETTINGS", 503, 315);
-	CreateInfoButton(2, "btn_a.png", "PLAY", 357, 315 + (30 * 1) + (5 * 1));
-	CreateInfoButton(3, "btn_b.png", "EXIT", 503, 315 + (30 * 1) + (5 * 1));
-	CreateInfoButton(4, "btn_lt.png", "PREVIOUS", 357, 315 + (30 * 2) + (5 * 2));
-	CreateInfoButton(5, "btn_rt.png", "NEXT", 503, 315 + (30 * 2) + (5 * 2));
-	CreateInfoButton(6, "btn_start.png", "SYSTEM MENU", 357, 315 + (30 * 3) + (5 * 3));
+	CreateInfoButton(BTN_X_INDEX, "btn_x.png", "CHANGE VIEW", 357, 315);
+	CreateInfoButton(BTN_Y_INDEX, "btn_y.png", "SETTINGS", 503, 315);
+	CreateInfoButton(BTN_A_INDEX, "btn_a.png", "PLAY", 357, 315 + (30 * 1) + (5 * 1));
+	CreateInfoButton(BTN_B_INDEX, "btn_b.png", "EXIT", 503, 315 + (30 * 1) + (5 * 1));
+	CreateInfoButton(BTN_LT_INDEX, "btn_lt.png", "PREVIOUS", 357, 315 + (30 * 2) + (5 * 2));
+	CreateInfoButton(BTN_RT_INDEX, "btn_rt.png", "NEXT", 503, 315 + (30 * 2) + (5 * 2));
+	CreateInfoButton(BTN_START_INDEX, "btn_start.png", "SYSTEM MENU", 357, 315 + (30 * 3) + (5 * 3));
 	AddInfoButtons();
 
 	if (self.menu_options_rectangle == NULL)
@@ -715,14 +791,14 @@ static void CreateViewTextPlane()
 
 	const int font_size = 18;
 	Color font_color = { 1.0f, 1.0f, 1.0f, 0.35f };	
-	self.page_label = TSU_LabelCreate(self.menu_font, "", font_size, false, true);
+	self.page_label = TSU_LabelCreate(self.menu_font, "", font_size, false, true, false);
 	TSU_LabelSetTint(self.page_label, &font_color);
 	TSU_AppSubAddLabel(self.dsapp_ptr, self.page_label);
 
 	Vector page_vector = { 18, 459, ML_ITEM + 1, 1 };
 	TSU_LabelSetTranslate(self.page_label, &page_vector);
 
-	self.total_label = TSU_LabelCreate(self.menu_font, "", font_size, false, true);
+	self.total_label = TSU_LabelCreate(self.menu_font, "", font_size, false, true, false);
 	TSU_LabelSetTint(self.total_label, &font_color);
 	TSU_AppSubAddLabel(self.dsapp_ptr, self.total_label);
 
@@ -913,8 +989,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 				{
 					self.item_game[self.game_count - 1] = TSU_ItemMenuCreate(game_cover_path, menu_data.menu_option.image_size, menu_data.menu_option.image_size
 								, ContainsCoverType(game_index, cover_menu_type, IT_JPG) ? PVR_LIST_OP_POLY : PVR_LIST_TR_POLY								
-								, name, self.menu_font, 19, false, PVR_TXRLOAD_DMA);
-					TSU_LabelSetWidth(TSU_ItemMenuGetLabel(self.item_game[self.game_count - 1]), 225);
+								, name, self.menu_font, 19, 225, 0, false, PVR_TXRLOAD_DMA);
 
 					Color color_unselected = { 1, 1.0f, 1.0f, 1.0f };
 					TSU_ItemMenuSetColorUnselected(self.item_game[self.game_count - 1], &color_unselected);
@@ -924,8 +999,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 				}
 				else if (menu_data.menu_type == MT_PLANE_TEXT)
 				{
-					self.item_game[self.game_count - 1] = TSU_ItemMenuCreateLabel(name, self.menu_font, 18);
-					TSU_LabelSetWidth(TSU_ItemMenuGetLabel(self.item_game[self.game_count - 1]), 328);
+					self.item_game[self.game_count - 1] = TSU_ItemMenuCreateLabel(name, self.menu_font, 18, 328, 0);
 					
 					Color color_unselected = { 1, 1.0f, 1.0f, 1.0f };
 					TSU_ItemMenuSetColorUnselected(self.item_game[self.game_count - 1], &color_unselected);
@@ -944,6 +1018,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 				}
 
 				ItemMenu *item_menu = self.item_game[self.game_count - 1];
+				TSU_DrawableEventSetOnMouseOver((Drawable *)item_menu, GamesApp_OnMouseOverEvent);
 
 				TSU_ItemMenuSetItemIndex(item_menu, game_index);
 				TSU_ItemMenuSetItemValue(item_menu, name);
@@ -1105,7 +1180,8 @@ static void ReloadPage()
 
 static void InitMenu()
 {
-	menu_data.state_app = SA_GAMES_MENU;
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
+
 	self.scene_ptr = TSU_AppGetScene(self.dsapp_ptr);
 	
 	char font_path[NAME_MAX];
@@ -1159,6 +1235,9 @@ static void RemoveAll()
 	TSU_DrawableSetFinished((Drawable *)self.item_selector);
 	TSU_DrawableSetFinished((Drawable *)self.title);
 	TSU_DrawableSetFinished((Drawable *)self.title_type);
+	TSU_DrawableSetFinished((Drawable *)self.action_left_button);
+	TSU_DrawableSetFinished((Drawable *)self.action_right_button);
+	TSU_DrawableSetFinished((Drawable *)self.action_view_button);
 
 	if (self.img_cover_game != NULL)
 	{
@@ -1271,6 +1350,7 @@ static void GamesApp_SystemMenuInputEvent(int type, int key)
 		return;
 
 	mutex_lock(&change_page_mutex);
+	SystemMenuResetMouseOver();
 
 	switch (key)
 	{
@@ -1278,7 +1358,7 @@ static void GamesApp_SystemMenuInputEvent(int type, int key)
 		{	
 			if (StateSystemMenu())
 			{
-				menu_data.state_app = SA_GAMES_MENU;
+				TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 				ExitSystemMenuClick(NULL);
 			}
 		}
@@ -1303,6 +1383,7 @@ static void GamesApp_PresetMenuInputEvent(int type, int key)
 		return;
 
 	mutex_lock(&change_page_mutex);
+	PresetMenuResetMouseOver();
 
 	switch (key)
 	{
@@ -1312,7 +1393,7 @@ static void GamesApp_PresetMenuInputEvent(int type, int key)
 			if (StatePresetMenu())
 			{
 				HidePresetMenu();
-				menu_data.state_app = SA_GAMES_MENU;
+				TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 			}
 		}
 		break;
@@ -1339,7 +1420,7 @@ static void GamesApp_ScanCoverInputEvent(int type, int key)
 
 	StopScanCovers();
 	HideCoverScan();
-	menu_data.state_app = SA_GAMES_MENU;
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 	timer_ms_gettime(&self.scan_covers_start_time, NULL);
 
 	mutex_unlock(&change_page_mutex);
@@ -1354,7 +1435,7 @@ static void GamesApp_OptimizeCoverInputEvent(int type, int key)
 
 	StopOptimizeCovers();
 	HideOptimizeCoverPopup();
-	menu_data.state_app = SA_GAMES_MENU;
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 	timer_ms_gettime(&self.scan_covers_start_time, NULL);
 	
 	mutex_unlock(&change_page_mutex);
@@ -1576,7 +1657,6 @@ static void GamesApp_InputEvent(int type, int key)
 		return;
 	
 	mutex_lock(&change_page_mutex);
-
 	bool skip_cursor = false;
 	bool is_playing = menu_data.ffplay && menu_data.ffplay_is_playing();
 	float speed_cursor = 7.0f;
@@ -1602,7 +1682,7 @@ static void GamesApp_InputEvent(int type, int key)
 				if (is_playing)
 					menu_data.ffplay_shutdown();
 
-				menu_data.state_app = SA_SYSTEM_MENU;
+				TSU_InputEventStateSetGlobalWindowState(SA_SYSTEM_MENU);
 				ShowSystemMenu();
 			}
 			skip_cursor = true;			
@@ -1616,7 +1696,7 @@ static void GamesApp_InputEvent(int type, int key)
 				if (is_playing)
 					menu_data.ffplay_shutdown();
 
-				menu_data.state_app = SA_PRESET_MENU;
+				TSU_InputEventStateSetGlobalWindowState(SA_PRESET_MENU);
 				ShowPresetMenu(TSU_ItemMenuGetItemIndex(self.item_game[self.menu_cursel]));
 			}
 			skip_cursor = true;
@@ -1858,7 +1938,7 @@ static void GamesApp_InputEvent(int type, int key)
 	SkipCommand:
 	if (!skip_cursor)
 	{	
-		self.game_changed = true;		
+		self.game_changed = true;
 		
 		if (key != KeyMiscX || is_playing)
 			StopCDDA();
@@ -1890,7 +1970,6 @@ static void GamesApp_InputEvent(int type, int key)
 				}
 			}
 		}
-		self.game_changed = false;
 	}
 
 	mutex_unlock(&change_page_mutex);
@@ -2047,6 +2126,21 @@ static void FreeAppData()
 		TSU_RectangleDestroy(&self.game_list_rectangle);
 	}
 
+	if (self.action_left_button != NULL)
+	{
+		TSU_ItemMenuDestroy(&self.action_left_button);
+	}
+
+	if (self.action_right_button != NULL)
+	{
+		TSU_ItemMenuDestroy(&self.action_right_button);
+	}
+
+	if (self.action_view_button != NULL)
+	{
+		TSU_ItemMenuDestroy(&self.action_view_button);
+	}
+
 	if (self.page_label != NULL)
 	{
 		TSU_LabelDestroy(&self.page_label);
@@ -2167,7 +2261,7 @@ static bool PlayGame()
 static void PostOptimizer()
 {
 	HideOptimizeCoverPopup();
-	menu_data.state_app = SA_GAMES_MENU;
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 	menu_data.optimize_game_cover_thread = NULL;
 }
 
@@ -2197,8 +2291,15 @@ static void PostLoadPVRCover(bool new_cover)
 	}
 
 	HideCoverScan();
-	menu_data.state_app = SA_GAMES_MENU;
+	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 	menu_data.load_pvr_cover_thread  = NULL;
+}
+
+static void ResetMouseOver()
+{
+	self.over_drawable_ptr = NULL;
+	self.over_object_type = 0;
+	self.last_over_drawable_ptr = NULL;
 }
 
 static void StateAppInpuEvent(int state_app, int type, int key)
@@ -2206,8 +2307,57 @@ static void StateAppInpuEvent(int state_app, int type, int key)
 	switch (state_app)
 	{
 		case SA_GAMES_MENU:
-			GamesApp_InputEvent(type, key);
+		{
+			if (key == KeySelect)
+			{
+				if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_X_INDEX])
+				{
+					DeselectAllActionButtons();
+					ResetMouseOver();
+					GamesApp_InputEvent(type, KeyMiscX);
+				}
+				else if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_Y_INDEX])
+				{
+					DeselectAllActionButtons();
+					ResetMouseOver();
+					GamesApp_InputEvent(type, KeyMiscY);
+				}
+				else if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_A_INDEX])
+					GamesApp_InputEvent(type, KeySelect);
+				else if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_B_INDEX])
+					GamesApp_InputEvent(type, KeyCancel);
+				else if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_LT_INDEX])
+					GamesApp_InputEvent(type, KeyPgup);
+				else if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_RT_INDEX])
+					GamesApp_InputEvent(type, KeyPgdn);
+				else if (self.last_over_drawable_ptr == (Drawable *)self.item_button[BTN_START_INDEX])
+				{
+					DeselectAllActionButtons();
+					ResetMouseOver();
+					GamesApp_InputEvent(type, KeyStart);
+				}
+				else if (self.last_over_drawable_ptr == (Drawable *)self.action_left_button)
+					GamesApp_InputEvent(type, KeyPgup);
+				else if (self.last_over_drawable_ptr == (Drawable *)self.action_right_button)
+					GamesApp_InputEvent(type, KeyPgdn);
+				else if (self.last_over_drawable_ptr == (Drawable *)self.action_view_button)
+					GamesApp_InputEvent(type, KeyMiscX);
+				else
+				{
+					DeselectAllActionButtons();
+					ResetMouseOver();
+					GamesApp_InputEvent(type, key);
+				}
+			}
+			else
+			{
+				DeselectAllActionButtons();
+				ResetMouseOver();
+				GamesApp_InputEvent(type, key);
+			}
+
 			break;
+		}
 		
 		case SA_SYSTEM_MENU:
 			GamesApp_SystemMenuInputEvent(type, key);
@@ -2233,6 +2383,24 @@ static void StateAppInpuEvent(int state_app, int type, int key)
 	}
 }
 
+static bool IsActionButton(Drawable *drawable)
+{
+	bool itemButtonOptionSelected = false;
+	for (int i = 0; i < MAX_BUTTONS; i++)
+	{
+		if (drawable == (Drawable *)self.item_button[i])
+		{
+			itemButtonOptionSelected = true;
+			break;
+		}
+	}
+
+	return (itemButtonOptionSelected
+		|| drawable == (Drawable *)self.action_left_button
+		|| drawable == (Drawable *)self.action_right_button
+		|| drawable == (Drawable *)self.action_view_button);
+}
+
 static void DoMenuControlHandler(void *ds_event, void *param, int action)
 {
 	if (self.show_cover_game) thd_pass();
@@ -2240,42 +2408,137 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 	SDL_Event *event = (SDL_Event *) param;
 	
 	switch(event->type) {
+		
+		case SDL_MOUSEMOTION: 
+		{
+			switch(TSU_InputEventStateGetGlobalWindowState())
+			{
+				case SA_GAMES_MENU:
+				{
+					if (self.last_over_drawable_ptr == self.over_drawable_ptr)
+					{
+						if (IsActionButton(self.last_over_drawable_ptr))
+						{	
+							if (TSU_DrawableIsMouseInside(self.last_over_drawable_ptr, event->motion.x, event->motion.y))
+							{
+								break;
+							}
+							else
+							{
+								DeselectAllActionButtons();
+								ResetMouseOver();
+							}
+						}
+						else
+						{
+							break;
+						}
+					}
+					
+					self.last_over_drawable_ptr = self.over_drawable_ptr;
+
+					mutex_lock(&change_page_mutex);
+					if (self.last_over_drawable_ptr)
+					{
+						switch(self.over_object_type)
+						{
+							case ITEMMENU_TYPE:
+							{	
+								DeselectAllActionButtons();
+								
+								ItemMenu *itemMenu = (ItemMenu *)self.last_over_drawable_ptr;
+								if (itemMenu != self.item_game[self.menu_cursel])
+								{
+									if (IsActionButton(self.last_over_drawable_ptr))
+									{
+										TSU_ItemMenuSetSelected(itemMenu, true, true);
+									}
+									else
+									{
+										self.game_changed = true;
+										StopCDDA();
+									
+										TSU_ItemMenuSetSelected(self.item_game[self.menu_cursel], false, false);
+										TSU_ItemMenuSetSelected(itemMenu, true, true);
+
+										const int game_index = TSU_ItemMenuGetItemIndex(itemMenu);
+										self.menu_cursel = game_index - ((self.current_page - 1) * menu_data.menu_option.max_page_size);
+
+										SetTitle(game_index, TSU_ItemMenuGetItemValue(itemMenu), true);
+										SetTitleType(GetFullGamePathByIndex(game_index), CheckGdiOptimized(game_index));
+										SetCursor();
+
+										ShowCover(game_index);
+										PlayCDDA(game_index);
+									}
+								}
+
+								break;
+							}
+
+							default:
+								break;
+						}
+					}
+					mutex_unlock(&change_page_mutex);
+					break;
+				}
+
+				case SA_PRESET_MENU:
+				{
+					PresetMenuOnMouseOver();
+					break;
+				}
+
+				case SA_SYSTEM_MENU:
+				{
+					SystemMenuOnMouseOver();
+					break;
+				}
+				
+				default:
+					break;
+			}
+
+			break;
+		}
+
 		case SDL_JOYBUTTONDOWN: {
 			switch(event->jbutton.button) {
 				case SDL_DC_B: // B
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyCancel);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyCancel);
 					break;
 
 				case SDL_DC_A: // A				
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeySelect);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeySelect);
 					break;
 
 				case SDL_DC_Y: // Y
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscY);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyMiscY);
 					break;
 
 				case SDL_DC_X: // X
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscX);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyMiscX);
 					break;
 
 				case SDL_DC_Z: // Z
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyPgup);
 					break;
 
 				case SDL_DC_C: // C
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyPgdn);
 					break;
 
 				case SDL_DC_START: // START
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyStart);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyStart);
 					break;
 
 				case SDL_DC_L:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyPgup);
 					break;
 
 				case SDL_DC_R:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyPgdn);
 					break;
 
 				default:
@@ -2291,19 +2554,19 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 
 			switch(event->jhat.value) {
 				case SDL_HAT_UP: // KEY UP
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyUp);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyUp);
 					break;
 
 				case SDL_HAT_DOWN: // KEY DOWN
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyDown);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyDown);
 					break;
 
 				case SDL_HAT_LEFT: // KEY LEFT
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyLeft);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyLeft);
 					break;
 
 				case SDL_HAT_RIGHT: // KEY RIGHT
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyRight);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyRight);
 					break;
 
 				default:
@@ -2315,48 +2578,48 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 		case SDL_KEYDOWN: {
 			switch (event->key.keysym.sym) {
 				case SDLK_UP:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyUp);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyUp);
 					break;
 				
 				case SDLK_DOWN:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyDown);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyDown);
 					break;
 
 				case SDLK_RIGHT:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyRight);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyRight);
 					break;
 
 				case SDLK_LEFT:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyLeft);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyLeft);
 					break;
 
 				case SDLK_PAGEUP:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgup);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyPgup);
 					break;
 				
 				case SDLK_PAGEDOWN:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyPgdn);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyPgdn);
 					break;
 
 				case SDLK_RETURN:
 				case SDLK_KP_ENTER:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeySelect);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeySelect);
 					break;
 
 				case SDLK_BACKSPACE:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyCancel);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyCancel);
 					break;
 
 				case SDLK_RMETA:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyStart);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyStart);
 					break;
 				
 				case SDLK_SPACE:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscY);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyMiscY);
 					break;
 
 				case SDLK_TAB:
-					StateAppInpuEvent(menu_data.state_app, EvtKeypress, KeyMiscX);
+					StateAppInpuEvent(TSU_InputEventStateGetGlobalWindowState(), EvtKeypress, KeyMiscX);
 					break;
 
 				case SDLK_F4:
@@ -2377,6 +2640,16 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 		default:
 			break;
 	}
+}
+
+static void GamesApp_DrawOpaquePolyEvent()
+{
+}
+
+static void GamesApp_DrawTransparentPolyEvent()
+{
+	SDL_DS_Blit_Cursor();
+	
 }
 
 static void DoMenuVideoHandler(void *ds_event, void *param, int action)
@@ -2470,6 +2743,15 @@ static void CreateMainView()
 	if (self.title_type_rectangle != NULL)
 		TSU_DrawableSetFinished((Drawable *)self.title_type_rectangle);	
 
+	if (self.action_left_button != NULL)
+		TSU_DrawableSetFinished((Drawable *)self.action_left_button);
+
+	if (self.action_right_button != NULL)
+		TSU_DrawableSetFinished((Drawable *)self.action_right_button);
+
+	if (self.action_view_button != NULL)
+		TSU_DrawableSetFinished((Drawable *)self.action_view_button);
+
 	TSU_DrawableSubRemoveFinished((Drawable *)self.scene_ptr);
 	thd_pass();
 
@@ -2488,19 +2770,40 @@ static void CreateMainView()
 	if (self.title_type_rectangle != NULL)
 		TSU_RectangleDestroy(&self.title_type_rectangle);
 
+	if (self.action_left_button != NULL)
+		TSU_ItemMenuDestroy(&self.action_left_button);
+
+	if (self.action_right_button != NULL)
+		TSU_ItemMenuDestroy(&self.action_right_button);
+
+	if (self.action_view_button != NULL)
+		TSU_ItemMenuDestroy(&self.action_view_button);
+
 	self.main_box = TSU_BoxCreate(PVR_LIST_OP_POLY, 10, 480 - 18, 640 - 28, 480 - 30, 5, &menu_data.background_color, ML_BACKGROUND + 2, DEFAULT_RADIUS);
 	Color title_type_color = {1, 1.0f, 1.0f, 0.1f};
 
 	self.area_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 10, 480 - 18, 640 - 28, 415, &menu_data.area_color, ML_BACKGROUND + 1, DEFAULT_RADIUS);
-	self.title_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 13, 40, 640 - 34, 24, &menu_data.title_color, ML_BACKGROUND + 3, 3, &title_type_color, DEFAULT_RADIUS);
+	self.title_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 63, 40, 640 - 112, 24, &menu_data.title_color, ML_BACKGROUND + 3, 3, &title_type_color, DEFAULT_RADIUS);
 	self.title_background_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 5, 54, 640 - 18, 46, &menu_data.background_color, ML_BACKGROUND, DEFAULT_RADIUS);
-	self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 576, 39, 40, 20, &title_type_color, ML_ITEM + 2, 3, &title_type_color, 0);
+	self.title_type_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 558, 39, 30, 20, &title_type_color, ML_ITEM + 2, 3, &title_type_color, 0);
+	self.action_left_button = CreateActionButton("left_arrow.png", 2, 9, 20, 20);
+	self.action_right_button = CreateActionButton("right_arrow.png", 27, 9, 20, 20);
+	self.action_view_button = CreateActionButton("view.png", 588, 9, 24, 24);
 
 	TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
 	TSU_AppSubAddRectangle(self.dsapp_ptr, self.area_rectangle);
 	TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_rectangle);
 	TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_background_rectangle);
 	TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_type_rectangle);
+
+	if (self.action_left_button != NULL)
+		TSU_AppSubAddItemMenu(self.dsapp_ptr, self.action_left_button);
+
+	if (self.action_right_button != NULL)
+		TSU_AppSubAddItemMenu(self.dsapp_ptr, self.action_right_button);
+
+	if (self.action_view_button != NULL)
+		TSU_AppSubAddItemMenu(self.dsapp_ptr, self.action_view_button);
 }
 
 static void RefreshMainView()
@@ -2569,6 +2872,11 @@ void GamesApp_Init(App_t *app)
 
 	if ((self.dsapp_ptr = TSU_AppCreate(GamesApp_InputEvent)) != NULL)
 	{
+		TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
+		
+		TSU_AppSetDrawOpaquePolyEvent(self.dsapp_ptr, GamesApp_DrawOpaquePolyEvent);
+		TSU_AppSetDrawTransparentPolyEvent(self.dsapp_ptr, GamesApp_DrawTransparentPolyEvent);
+
 		CreateMenuData(&SetMessageScan, &SetMessageOptimizer, &PostLoadPVRCover, &PostOptimizer);
 		
 		CreateMainView();
@@ -2586,13 +2894,11 @@ void GamesApp_Open(App_t *app)
 
 	if (self.dsapp_ptr != NULL)
 	{
-		int mx = 0;
-		int my = 0;
-		SDL_GetMouseState(&mx, &my);
-		SDL_DC_EmulateMouse(SDL_FALSE);
-
 		DisableScreen();
 		GUI_Disable();
+
+		SetScreenOpacity(1.0f);
+		SDL_DC_EmulateMouse(SDL_TRUE);
 
 		TSU_AppBegin(self.dsapp_ptr);
 

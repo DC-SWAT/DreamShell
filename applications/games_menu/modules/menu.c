@@ -1,11 +1,12 @@
 /* DreamShell ##version##
 
    menu.c - Games app module
-   Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2024-2026 Maniac Vera
 
 */
 
 #include "app_menu.h"
+#include <tsunami/inputeventstate.h>
 #include <jpeg/jpeg.h>
 #include <png/png.h>
 #include <kmg/kmg.h>
@@ -488,7 +489,7 @@ void *PlayCDDAThread(void *params)
 			char trailer_path[NAME_MAX];
 			snprintf(trailer_path, NAME_MAX, "%s/trailer.avi", GetFolderPathFromFile(full_path_game));
 
-			if (!menu_data.ffmpeg_played && menu_data.state_app == SA_GAMES_MENU && FileExists(trailer_path))
+			if (!menu_data.ffmpeg_played && TSU_InputEventStateGetGlobalWindowState() == SA_GAMES_MENU && FileExists(trailer_path))
 			{
 				menu_data.ffmpeg_played = true;
 				max_time = 1;
@@ -496,7 +497,7 @@ void *PlayCDDAThread(void *params)
 				end_time = 0;
 				timer_ms_gettime(&start_time, NULL);
 				end_time = start_time;
-				while (menu_data.state_app == SA_GAMES_MENU 
+				while (TSU_InputEventStateGetGlobalWindowState() == SA_GAMES_MENU
 					&& !menu_data.cdda_game_changed && (end_time - start_time) <= max_time)
 				{
 					thd_pass();
@@ -529,7 +530,7 @@ void *PlayCDDAThread(void *params)
 						}
 					}
 					
-					if (menu_data.state_app != SA_GAMES_MENU)
+					if (TSU_InputEventStateGetGlobalWindowState() != SA_GAMES_MENU)
 					{
 						menu_data.ffplay_shutdown();
 					}
@@ -899,7 +900,6 @@ void SetCoverType(int game_index, int menu_type, uint16 dw_image_type)
 			menu_data.games_array[game_index].cover_type = 0;
 		}
 
-		// LUIS VERA: ESTA LINEA LIMPIA Y NO PERMITE PONER VARIAS IMAGENES PARA UN MISMO TIPO
 		menu_data.games_array[game_index].cover_type &= ~((uint64)IMAGE_TYPE_MASK << ((menu_type - 1) * 16));
 
 		menu_data.games_array[game_index].cover_type |= (uint64)dw_image_type << ((menu_type - 1) * 16);
