@@ -38,6 +38,7 @@ void SetScreen(SDL_Surface *new_screen);
 
 int GetScreenWidth();
 int GetScreenHeight();
+void SDL_DS_Blit_Cursor();
 
 /* Always RGB565 */
 int GetVideoMode();
