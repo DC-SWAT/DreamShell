@@ -306,7 +306,7 @@ typedef struct dir_data {
 */
 static int dir_iter (lua_State *L) {
 
-	dirent_t *entry;
+	const dirent_t *entry;
 	dir_data *d = (dir_data *)lua_touserdata (L, lua_upvalueindex (1));
 	luaL_argcheck (L, !d->closed, 1, "closed directory");
 

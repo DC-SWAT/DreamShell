@@ -94,7 +94,7 @@ int RootDeviceIsSupported(const char *name) {
 	return 0;
 }
 
-static int SearchRootCheck(char *device, char *path, char *file) {
+static int SearchRootCheck(const char *device, const char *path, const char *file) {
 
 	char check[NAME_MAX];
 
@@ -116,7 +116,7 @@ static int SearchRootCheck(char *device, char *path, char *file) {
 
 int SearchRoot() {
 
-	dirent_t *ent;
+	const dirent_t *ent;
 	file_t hnd;
 	int detected = 0;
 

@@ -68,7 +68,7 @@ static int builtin_help(int argc, char *argv[]) {
 
 		if(hnd != FILEHND_INVALID) {
 
-			dirent_t *ent;
+			const dirent_t *ent;
 			cnt = 0;
 
 			memset_sh4(ac, 0, sizeof(ac));
@@ -162,7 +162,7 @@ int CheckExtCmdType(const char *fn) {
 
 int CallExtCmd(int argc, char *argv[]) {
 
-	dirent_t *ent;
+	const dirent_t *ent;
 	file_t hnd;
 	char dir[NAME_MAX];
 	char fn[NAME_MAX];
@@ -485,7 +485,7 @@ static int builtin_ls(int argc, char *argv[]) {
 		lflag = 1;
 	}
 
-	dirent_t *ent;
+	const dirent_t *ent;
 	file_t fd;
 	char dir[NAME_MAX];
 	int dcnt, fcnt;

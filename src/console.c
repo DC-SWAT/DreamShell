@@ -128,7 +128,7 @@ static char *TabFunction(char* command) {
 	if(!internal) {
 
 		file_t fd;
-		dirent_t *ent;
+		const dirent_t *ent;
 		char dir[NAME_MAX];
 
 		snprintf(dir, NAME_MAX, "%s/cmds", getenv("PATH"));
