@@ -1665,6 +1665,7 @@ int ffplay(const char *filename, ffplay_params_t *params) {
     vid->done = 0;
 
     vid->thread = thd_create(0, player_thread, NULL);
+    thd_set_prio(vid->thread, PRIO_DEFAULT - 2);
 
     if(!vid->thread) {
         ds_printf("DS_ERROR: Can't create player thread!\n");

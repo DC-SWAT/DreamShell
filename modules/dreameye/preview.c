@@ -644,6 +644,7 @@ int dreameye_preview_init(maple_device_t *dev, dreameye_preview_t *params) {
 
     capturing = 1;
     thread = thd_create(0, capture_thread, NULL);
+    thd_set_prio(thread, PRIO_DEFAULT - 2);
 
     if(is_fullscreen) {
         DisableScreen();
