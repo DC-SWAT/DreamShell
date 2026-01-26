@@ -1522,7 +1522,6 @@ static void *selectFile_worker(void *p) {
 
 		strncpy(self.filename, filename, NAME_MAX);
 		trailer_path = relativeFilename("trailer.avi");
-		mutex_unlock(&self.select_mutex);
 
 		showCover();
 		isoLoader_LoadPreset(NULL);
@@ -1649,7 +1648,7 @@ static int scanDirectoryForImage(const char *dir_path, const char *dir_name, cha
 	int subdir_found = 0;
 	int best_priority = IMG_PRIORITY_NONE;
 	int same_priority_count = 0;
-	dirent_t *dent;
+	const dirent_t *dent;
 
 	result[0] = '\0';
 
