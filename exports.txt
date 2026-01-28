@@ -1253,6 +1253,8 @@ TSU_AppSubRemoveRectangle
 TSU_AppSubRemoveBox
 TSU_AppSubRemoveLabel
 TSU_AppSetTranslate
+TSU_AppSubAddWave
+TSU_AppSubRemoveWave
 TSU_SceneCreate
 TSU_SceneDestroy
 TSU_FormCreate
@@ -1431,6 +1433,11 @@ TSU_TextureCreateFromFile
 TSU_TextureCreateEmpty
 TSU_TextureDestroy
 TSU_TextureLoadFromFile
+TSU_WaveCreate
+TSU_WaveDestroy
+TSU_WaveSetColor
+TSU_WaveSetParams
+TSU_WaveSetSize
 TSU_BannerCreate
 TSU_BannerDestroy
 TSU_BannerDestroyAll

@@ -4,7 +4,8 @@
    dsapp.cpp
 
    Copyright (C) 2024 Maniac Vera
-   
+   Copyright (C) 2026 SWAT
+
 */
 
 #include "dsapp.h"
@@ -140,6 +141,11 @@ void DSApp::addBanner(Banner *banner)
     m_scene->subAdd(banner);
 }
 
+void DSApp::addWave(Wave *wave)
+{
+    m_scene->subAdd(wave);
+}
+
 void DSApp::addRectangle(Rectangle *rectangle)
 {
     m_scene->subAdd(rectangle);
@@ -163,6 +169,11 @@ void DSApp::removeLabel(Label *label)
 void DSApp::removeBanner(Banner *banner)
 {
     m_scene->subRemove(banner);
+}
+
+void DSApp::removeWave(Wave *wave)
+{
+    m_scene->subRemove(wave);
 }
 
 void DSApp::removeRectangle(Rectangle *rectangle)
@@ -278,6 +289,13 @@ extern "C"
 		}
 	} 
 
+	void TSU_AppSubAddWave(DSApp *dsApp, Wave *wave_ptr)
+	{
+		if (dsApp != NULL && wave_ptr != NULL) {
+			dsApp->addWave(wave_ptr);
+		}
+	}
+
 	void TSU_AppSubAddRectangle(DSApp *dsApp, Rectangle *rectangle_ptr)
 	{
 		if (dsApp != NULL && rectangle_ptr != NULL) {
@@ -303,6 +321,13 @@ extern "C"
 	{
 		if (dsApp != NULL && banner_ptr != NULL) {
 			dsApp->removeBanner(banner_ptr);
+		}
+	}
+
+	void TSU_AppSubRemoveWave(DSApp *dsApp, Wave *wave_ptr)
+	{
+		if (dsApp != NULL && wave_ptr != NULL) {
+			dsApp->removeWave(wave_ptr);
 		}
 	}
 

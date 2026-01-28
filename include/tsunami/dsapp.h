@@ -4,6 +4,7 @@
    dsapp.h
 
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
 
 */
 
@@ -16,6 +17,7 @@
 #include "drawables/rectangle.h"
 #include "drawables/box.h"
 #include "drawables/banner.h"
+#include "drawables/wave.h"
 #include "drawables/itemmenu.h"
 
 typedef void InputEventPtr(int type, int key);
@@ -50,12 +52,14 @@ public:
     void addItemMenu(ItemMenu *item_menu);
     void addLabel(Label *label);
     void addBanner(Banner *banner);
+    void addWave(Wave *wave);
     void addRectangle(Rectangle *rectangle);
     void addBox(Box *box);
 
     void removeItemMenu(ItemMenu *item_menu);
     void removeLabel(Label *label);
     void removeBanner(Banner *banner);
+    void removeWave(Wave *wave);
     void removeRectangle(Rectangle *rectangle);
     void removeBox(Box *box);
 
@@ -88,11 +92,13 @@ Scene* TSU_AppGetScene(DSApp *dsApp);
 void TSU_AppStartExit(DSApp *dsApp);
 void TSU_AppSubAddLabel(DSApp *dsApp, Label *label_ptr);
 void TSU_AppSubAddBanner(DSApp *dsApp, Banner *banner_ptr);
+void TSU_AppSubAddWave(DSApp *dsApp, Wave *wave_ptr);
 void TSU_AppSubAddRectangle(DSApp *dsApp, Rectangle *rectangle_ptr);
 void TSU_AppSubAddBox(DSApp *dsApp, Box *box_ptr);
 void TSU_AppSubAddItemMenu(DSApp *dsApp, ItemMenu *item_menu_ptr);
 void TSU_AppSubRemoveItemMenu(DSApp *dsApp, ItemMenu *item_menu_ptr);
 void TSU_AppSubRemoveBanner(DSApp *dsApp, Banner *banner_ptr);
+void TSU_AppSubRemoveWave(DSApp *dsApp, Wave *wave_ptr);
 void TSU_AppSubRemoveRectangle(DSApp *dsApp, Rectangle *rectangle_ptr);
 void TSU_AppSubRemoveBox(DSApp *dsApp, Box *box_ptr);
 void TSU_AppSubRemoveLabel(DSApp *dsApp, Label *label_ptr);
