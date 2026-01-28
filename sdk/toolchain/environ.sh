@@ -23,15 +23,13 @@ export KOS_ARCH="dreamcast"
 # is targeting or uses an existing value that
 # can be set externally via your IDE.
 #
+# Only needs to be set if not using default.
+#
 # Valid values:
 #   "pristine" - Dreamcast console or HKT-0120 devkit (default)
 #   "naomi"    - NAOMI or NAOMI 2 arcade board
 #
-if [ -z "${KOS_SUBARCH}" ] ; then
-    export KOS_SUBARCH="pristine"
-else
-    export KOS_SUBARCH
-fi
+#export KOS_SUBARCH="naomi"
 
 # KOS Root Path
 #
@@ -75,7 +73,7 @@ export DC_TOOLS_BASE="/opt/toolchains/dc/bin"
 # Specifies the path to the toolchain file used to target
 # KOS with the "cmake" build utility.
 #
-export KOS_CMAKE_TOOLCHAIN="${KOS_BASE}/utils/cmake/dreamcast.toolchain.cmake"
+export KOS_CMAKE_TOOLCHAIN="${KOS_BASE}/utils/cmake/kallistios.toolchain.cmake"
 
 # Genromfs Utility Path
 #
@@ -107,6 +105,12 @@ export KOS_LOADER="${KOS_BASE}/ds/sdk/bin/dc-tool-ip -t 192.168.1.252 -x"
 #export KOS_LOADER="dc-tool-ip -t 192.168.1.100 -x"
 #export KOS_LOADER="dc-tool-ser -t /dev/ttyS0 -x"
 
+# GDB utility
+#
+# The kos-gdb helper will attempt to auto-detect the proper GDB program
+# to use. You can force it by specifying the path here.
+#export KOS_GDB="sh-elf-gdb"
+
 # Default Compiler Flags
 #
 # Resets build flags. You can also initialize them to some preset
@@ -119,36 +123,56 @@ export KOS_LDFLAGS=""
 export KOS_AFLAGS=""
 export DC_ARM_LDFLAGS=""
 
-# Debug Builds
+# Debug Options
 #
-# Controls whether to disable additional debugging checks and assertions,
-# such as for parameter validation or internal errors. Uncomment this if
-# you do not wish to compile with this additional logic enabled.
+# NDEBUG controls whether to disable `assert` per C standard, and
+# DBGLOG_DISABLED controls whether other debug output will be provided
+# (see ./kos/dbglog.h). Enable these if you want to remove assert checks
+# and disable logging output, as is desirable for release builds.
 #
-#export KOS_CFLAGS="${KOS_CFLAGS} -DNDEBUG"
+#export KOS_CFLAGS="${KOS_CFLAGS} -DNDEBUG -DDBGLOG_DISABLED"
 
 # Optimization Level
 #
 # Controls the baseline optimization level to use when building.
-# Typically this is -Og (debugging), -O0, -01, -02, or -03.
+# Typically this is -Og (debugging), -O0, -O1, -O2, or -O3.
 # NOTE: For our target, -O4 is a valid optimization level that has
-# been seen to have some performance impact as well.
+#       been seen to have some performance impact as well.
 #
 export KOS_CFLAGS="${KOS_CFLAGS} -O2"
 
+# Link-Time Optimization
+#
+# Uncomment this to enable LTO, which can substantially improve performance
+# of the generated code by enabling the linker to perform inlining, at the
+# cost of longer build times and fatter object files.
+# NOTE: Certain ports and examples require fat LTO objects to work with LTO,
+#       and LTO itself is known to cause issues in code with undefined behavior.
+#
+#export KOS_CFLAGS="${KOS_CFLAGS} -flto=auto -ffat-lto-objects"
+
 # Additional Optimizations
 #
-# Uncomment this to enable what has been found empirically to be
-# the optimal set of additional flags for release build performance
-# on the current stable toolchain. NOTE: Certain KOS-ports and examples
-# do not work properly with "-flto=auto"!
+# Uncomment these to enable what have been found empirically to be a decent
+# set of additional flags for optimal release build performance with the
+# current stable toolchain.
 #
-#export KOS_CFLAGS="${KOS_CFLAGS} -freorder-blocks-algorithm=simple -flto=auto"
+#export KOS_CFLAGS="${KOS_CFLAGS} -freorder-blocks-algorithm=simple"
+#export KOS_CFLAGS="${KOS_CFLAGS} -fipa-pta"
+
+# Position-Independent Code
+#
+# Comment this line out to enable position-independent code. Codegen is slightly
+# slower, and you lose a register, but it's required when building dynamically
+# linked libraries or code whose symbols aren't resolved until runtime.
+#
+export KOS_CFLAGS="${KOS_CFLAGS} -fno-PIC -fno-PIE"
 
 # Frame Pointers
 #
-# Controls whether frame pointers are emitted or not. Disabled by
-# default. Enable them if you plan to use GDB for debugging.
+# Controls whether frame pointers are emitted or not. Disabled by default, as
+# they use an extra register. Enable them if you plan to use GDB for debugging
+# or need additional stack trace
 #
 export KOS_CFLAGS="${KOS_CFLAGS} -fomit-frame-pointer"
 #export KOS_CFLAGS="${KOS_CFLAGS} -fno-omit-frame-pointer -DFRAME_POINTERS"
@@ -166,11 +190,10 @@ export KOS_CFLAGS="${KOS_CFLAGS} -fomit-frame-pointer"
 
 # GCC Builtin Functions
 #
-# Comment out this line to enable GCC to use its own builtin implementations of
-# certain standard library functions. Under certain conditions, this can allow
-# compiler-optimized implementations to replace standard function invocations.
-# The downside of this is that it COULD interfere with Newlib or KOS implementations
-# of these functions, and it has not been tested thoroughly to ensure compatibility.
+# Uncomment this line to prevent GCC from using its own builtin implementations of
+# certain standard library functions. Under certain conditions, using builtins
+# allows for compiler-optimized routines to replace function calls to the C standard
+# library which are backed by Newlib or KOS.
 #
 export KOS_CFLAGS="${KOS_CFLAGS} -fno-builtin"
 
@@ -180,21 +203,25 @@ export KOS_CFLAGS="${KOS_CFLAGS} -fno-builtin"
 # FSCA, and FSQRT) for calculating sin/cos, inverse square root, and square roots.
 # These can result in substantial performance gains for these kinds of operations;
 # however, they do so at the price of accuracy and are not IEEE compliant.
-# NOTE: Enabling this option will also override -fno-builtin!
+# NOTE: If these cause issues when enabled globally, it's advised to try to enable
+#       them on individual files in the critical path to still gain performance.
 #
 #export KOS_CFLAGS="${KOS_CFLAGS} -fbuiltin -ffast-math -ffp-contract=fast -mfsrra -mfsca"
 
-# SH4 Floating Point Arithmetic Precision
+# SH4 Floating-Point Arithmetic Precision
 #
-# KallistiOS only officially supports the single-precision-only floating-point
-# arithmetic mode (-m4-single-only), but double precision, single default
-# (-m4-single) or double precision default (-m4) modes can be enabled here by
-# adjusting KOS_SH4_PRECISION.
-# WARNING: Adjusting this setting has a high likelihood of breaking KallistiOS,
-#          kos-ports, and existing codebases which assume -m4-single-only.
-#          Do not touch this setting unless you know what you are doing!
-# NOTE: Altering this setting also requires your toolchain to have been built
-#       with support for these modes, which is not the case by default!
+# KallistiOS supports both the single-precision-default ABI (m4-single) and the
+# single-precision-only ABI (m4-single-only). When using m4-single, the SH4 will
+# be in single-precision mode upon function entry but will switch to double-
+# precision mode if 64-bit doubles are used. When using m4-single-only, the SH4
+# will always be in single-precision mode and 64-bit doubles will be truncated to
+# 32-bit floats. Historically, m4-single-only was used in both official and
+# homebrew Dreamcast software, but m4-single is the default as of KOS 2.2.0 to
+# increase compatibility with newer libraries which require 64-bit doubles.
+#
+# WARNING: When adjusting this setting, make sure all software, including
+#          kos-ports and linked external libraries, are rebuilt using the same
+#          floating-point precision ABI setting!
 #
 export KOS_SH4_PRECISION="-m4-single"
 
