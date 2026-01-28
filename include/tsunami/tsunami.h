@@ -4,6 +4,7 @@
    tsunami.h
 
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
 
 */
 
@@ -32,6 +33,8 @@
 #include "anims/fadeout.h"
 #include "anims/fadeto.h"
 #include "anims/logxymover.h"
+#include "anims/logxyzmover.h"
+#include "anims/logscalemover.h"
 #include "anims/tintfader.h"
 #include "drawables/box.h"
 #include "drawables/rectangle.h"
