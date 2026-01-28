@@ -1,6 +1,6 @@
 #
 # DreamShell libraries Makefile
-# Copyright (C) 2008-2024 SWAT
+# Copyright (C) 2008-2026 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -16,6 +16,7 @@ $(patsubst %, _dir_%, $(_SUBDIRS)):
 	$(MAKE) -C $(patsubst _dir_%, %, $@)
 
 clean: $(patsubst %, _clean_dir_%, $(_SUBDIRS_CLEAN))
+	@rm -f lib*.a
 
 $(patsubst %, _clean_dir_%, $(_SUBDIRS_CLEAN)):
 	$(MAKE) -C $(patsubst _clean_dir_%, %, $@) clean
