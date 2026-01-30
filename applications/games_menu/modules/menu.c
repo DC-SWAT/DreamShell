@@ -512,6 +512,7 @@ void *PlayCDDAThread(void *params)
 					memset(&params, 0, sizeof(params));
 					params.scale = 1.0f;
 					params.loop = 1;
+					params.fade_in = 500;
 
 					switch(menu_data.menu_type)
 					{
@@ -1339,7 +1340,7 @@ bool LoadFirmwareFiles()
 	if (fd == FILEHND_INVALID)
 		return false;
 
-	dirent_t *ent = NULL;
+	const dirent_t *ent = NULL;
 	char *file_type = NULL;
 
 	while ((ent = fs_readdir(fd)) != NULL)
@@ -2782,7 +2783,7 @@ bool HasAnyCover()
 		return false;
 
 	char *file_type = NULL;
-	dirent_t *ent = NULL;
+	const dirent_t *ent = NULL;
 
 	while ((ent = fs_readdir(fd)) != NULL)
 	{
@@ -2877,7 +2878,7 @@ void RetrieveCovers(uint8 device, int menu_type)
 	if (fd == FILEHND_INVALID)
 		return;
 
-	dirent_t *ent = NULL;
+	const dirent_t *ent = NULL;
 	char cover[NAME_MAX];
 	CoverStruct *covers_array = NULL;
 	int covers_array_count = 0;
@@ -3400,7 +3401,7 @@ void RetrieveGamesRecursive()
 			if (fd == FILEHND_INVALID)
 				continue;
 
-			dirent_t *ent = NULL;
+			const dirent_t *ent = NULL;
 			bool checked_unique_file = false;
 			int gdi_index = -1;
 			int unique_file = 0;
