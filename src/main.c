@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * main.c                   *
  * DreamShell main          *
- * (c)2004-2025 SWAT        *
+ * (c)2004-2026 SWAT        *
  * http://www.dc-swat.ru    *
  ***************************/
 
@@ -159,7 +159,7 @@ int InitDS() {
 
 #ifdef DS_DEBUG
 	uint64 t_start = timer_ms_gettime64();
-	dbglog_set_level(DBG_DEBUG);
+	dbglog_set_level(DBG_KDEBUG);
 #endif
 
 	if(!emu) {

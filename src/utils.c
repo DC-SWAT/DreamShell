@@ -246,7 +246,7 @@ int CopyDirectory(const char *src_path, const char *dest_path, int verbose) {
 		
 		char Path[NAME_MAX], *EndPtr = Path;
 		char PathDest[NAME_MAX], *EndDestPtr = PathDest;
-		dirent_t *e;
+		const dirent_t *e;
 		
 		strcpy(Path, src_path);
 		Path[strlen(src_path)] = '/';
