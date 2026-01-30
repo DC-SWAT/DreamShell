@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * events.c                 *
  * DreamShell events        *
- * (c)2007-2023 SWAT        *
+ * (c)2007-2026 SWAT        *
  * http://www.dc-swat.ru    *
  ***************************/
 
@@ -79,6 +79,7 @@ Event_t *AddEvent(const char *name, int type, int prio, Event_func *event, void 
 	e->active = 1;
 	e->type = type;
 	e->param = param;
+	e->prio = prio;
 
 	if(type == EVENT_TYPE_VIDEO) {
 		LockVideo();
