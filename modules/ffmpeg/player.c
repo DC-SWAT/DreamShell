@@ -2,7 +2,7 @@
 
    player.c - FFmpeg player for DreamShell
 
-   Copyright (C) 2011-2025 Ruslan Rostovtsev (a.k.a. SWAT)
+   Copyright (C) 2011-2026 Ruslan Rostovtsev (a.k.a. SWAT)
    http://www.dc-swat.ru
 
    Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -799,7 +799,7 @@ static void PlayerDrawHandler(void *ds_event, void *param, int action) {
                         pvr_list_finish();
                     }
                     else if(!vid->sdl_gui_managed) {
-                        render_video_frame(&vid->txr[vid->txr_idx], PVR_LIST_OP_POLY, alpha);
+                        render_video_frame(&vid->txr[vid->txr_idx], PVR_LIST_TR_POLY, alpha);
                         render_stats();
                     }
                     break;
