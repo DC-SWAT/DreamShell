@@ -21,7 +21,7 @@ LogScaleMover::~LogScaleMover() { }
 void LogScaleMover::nextFrame(Drawable *t) {
     Vector scale = t->getScale();
 
-    if (fabs(scale.x - m_dstx) < 0.01f && fabs(scale.y - m_dsty) < 0.01f) {
+    if (fabs(scale.x - m_dstx) < 0.001f && fabs(scale.y - m_dsty) < 0.001f) {
         scale.x = m_dstx;
         scale.y = m_dsty;
         t->setScale(scale);

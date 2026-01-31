@@ -3,7 +3,7 @@
 
    logxyzmover.cpp
 
-   Copyright (C) 2026 AI Assistant
+   Copyright (C) 2026 SWAT
    
 */
 
@@ -21,9 +21,9 @@ LogXYZMover::~LogXYZMover() { }
 
 void LogXYZMover::nextFrame(Drawable *t) {
     Vector pos = t->getTranslate();
-    if (fabs(pos.x - m_dstx) < 1.0f && 
-        fabs(pos.y - m_dsty) < 1.0f && 
-        fabs(pos.z - m_dstz) < 1.0f) {
+    if (fabs(pos.x - m_dstx) < 0.1f && 
+        fabs(pos.y - m_dsty) < 0.1f && 
+        fabs(pos.z - m_dstz) < 0.1f) {
         t->setTranslate(Vector(m_dstx, m_dsty, m_dstz));
         complete(t);
     }

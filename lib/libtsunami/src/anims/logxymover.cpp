@@ -21,7 +21,7 @@ LogXYMover::~LogXYMover() { }
 
 void LogXYMover::nextFrame(Drawable *t) {
 	Vector pos = t->getTranslate();
-	if (fabs(pos.x - m_dstx) < 1.0f && fabs(pos.y - m_dsty) < 1.0f) {
+	if (fabs(pos.x - m_dstx) < 0.1f && fabs(pos.y - m_dsty) < 0.1f) {
 		t->setTranslate(Vector(m_dstx, m_dsty, pos.z));
 		complete(t);
 	} else {
