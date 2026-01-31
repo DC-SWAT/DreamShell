@@ -1375,7 +1375,9 @@ static void *player_thread(void *p) {
         }
     }
 
-    ds_printf("DS_INFO: Playback stopped.\n");
+    if(vid->params.verbose) {
+        ds_printf("DS_INFO: Playback stopped.\n");
+    }
 
     if(vid->done == 2) {
         ffplay_free();
@@ -1393,9 +1395,11 @@ static int ffplay_open_file(const char *filename, ffplay_params_t *params) {
     char fn[NAME_MAX];
 
     sprintf(fn, "ds:%s", filename);
-
     file_iformat = params->force_format ? av_find_input_format(params->force_format) : NULL;
-    ds_printf("DS_FFMPEG: Opening file: %s\n", filename);
+
+    if(params->verbose) {
+        ds_printf("DS_FFMPEG: Opening file: %s\n", filename);
+    }
     r = av_open_input_file((AVFormatContext**)(&pFormatCtx), fn, file_iformat, 0, NULL);
 
     if(r < 0) {
@@ -1605,8 +1609,8 @@ int ffplay(const char *filename, ffplay_params_t *params) {
         float bbox_w, bbox_h;
 
         if (vid->params.width > 0 && vid->params.height > 0) {
-            bbox_w = vid->params.width;
-            bbox_h = vid->params.height;
+            bbox_w = vid->params.width * vid->params.scale;
+            bbox_h = vid->params.height * vid->params.scale;
         }
         else {
             bbox_w = vid->codec->width * vid->params.scale;
