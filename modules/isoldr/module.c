@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    DreamShell ISO Loader module
-   Copyright (C)2009-2025 SWAT
+   Copyright (C)2009-2026 SWAT
 
 */
 
@@ -483,7 +483,7 @@ static void set_loader_type(isoldr_info_t *info) {
 	}
 }
 
-void isoldr_exec(isoldr_info_t *info, uint32 addr) {
+void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 
 	char fn[NAME_MAX];
 
@@ -756,15 +756,18 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "     --pa1        -Patch address 1\n"
 		          "     --pa2        -Patch address 2\n"
 		          "     --pv1        -Patch value 1\n"
-		          "     --pv2        -Patch value 2\n\n"
+		          "     --pv2        -Patch value 2\n"
+		          " -P, --preset     -Preset file path\n\n"
 		          "Example: %s -f /sd/game.iso\n\n", argv[0]);
 		return CMD_NO_ARG;
 	}
 
 	uint32 p_addr[2]  = {0, 0};
 	uint32 p_value[2] = {0, 0};
-	uint32 addr = 0, use_dma = 0, lex = 0, heap = HEAP_MODE_AUTO;
+	uintptr_t addr = 0;
+	uint32_t use_dma = 0, lex = 0, heap = HEAP_MODE_AUTO;
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
+	char *preset_file = NULL;
 	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
 	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
 	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
@@ -803,6 +806,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
 		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
 		{"pv2",      '\0', NULL, CFG_ULONG, (void *) &p_value[1],  0},
+		{"preset",    'P', NULL, CFG_STR,   (void *) &preset_file, 0},
 		CFG_END_OF_LIST
 	};
 
@@ -813,18 +817,18 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		return CMD_ERROR;
 	}
 
-	if(!lex) {
-		if(boot_mode != BOOT_MODE_DIRECT) {
-			lex = ISOLDR_DEFAULT_ADDR_HIGH;
-		} else {
-			lex = ISOLDR_DEFAULT_ADDR_MIN;
-		}
-	}
-
 	info = isoldr_get_info(file, test_mode);
 
 	if(info == NULL) {
 		return CMD_ERROR;
+	}
+	addr = isoldr_apply_preset(info, preset_file);
+
+	if(preset_file) {
+		if(addr == (uintptr_t)-1) {
+			return CMD_ERROR;
+		}
+		goto exec_loader;
 	}
 
 	if(device != NULL && strncasecmp(device, "auto", 4)) {
@@ -887,6 +891,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 	info->patch_addr[1]  = p_addr[1];
 	info->patch_value[0] = p_value[0];
 	info->patch_value[1] = p_value[1];
+
+exec_loader:
 
 	if(verbose) {
 

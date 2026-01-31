@@ -1,7 +1,7 @@
 /** 
  * \file    isoldr.h
  * \brief   DreamShell ISO loader
- * \date    2009-2025
+ * \date    2009-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -164,7 +164,7 @@ typedef struct isoldr_info {
 	uint32 fs_part;                     /* Partition on device (0-3), only for SD and IDE devices */
 
 	CISO_header_t ciso;                 /* CISO header for CSO/ZSO images */
-	CDROM_TOC toc;                      /* Table of content */
+	cd_toc_t toc;                       /* Table of content */
 	uint32 track_offset;                /* Data track offset, for the CDI images only */
 	uint32 track_lba[2];                /* Data track LBA, second value for the multitrack GDI image */
 	uint32 sector_size;                 /* Data track sector size */
@@ -207,8 +207,14 @@ isoldr_info_t *isoldr_get_info(const char *file, int test_mode);
 int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *boot_file);
 
 /**
+ * Apply preset file (or default if not specified) to isoldr info
+ * and return execution address. Returns -1 on error.
+ */
+uintptr_t isoldr_apply_preset(isoldr_info_t *info, const char *preset_file);
+
+/**
  * Execute loader for specified device at any valid memory address
  */
-void isoldr_exec(isoldr_info_t *info, uint32 addr);
+void isoldr_exec(isoldr_info_t *info, uintptr_t addr);
 
 #endif /* ifndef _DS_ISOLDR_H_*/

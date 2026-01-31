@@ -136,6 +136,8 @@ typedef struct {
     uint32  leadout_sector;     /**< \brief Point A2 information (leadout) */
 } CDROM_TOC;
 
+typedef CDROM_TOC cd_toc_t;
+
 /** \defgroup cd_toc_access         CD-ROM TOC access macros
     @{
 */
