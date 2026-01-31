@@ -39,6 +39,7 @@
 #include "drawables/box.h"
 #include "drawables/rectangle.h"
 #include "drawables/triangle.h"
+#include "drawables/circle.h"
 #include "drawables/banner.h"
 #include "drawables/itemmenu.h"
 #include "drawables/label.h"

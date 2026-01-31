@@ -141,6 +141,11 @@ void DSApp::addBanner(Banner *banner)
     m_scene->subAdd(banner);
 }
 
+void DSApp::addCircle(Circle *circle)
+{
+    m_scene->subAdd(circle);
+}
+
 void DSApp::addWave(Wave *wave)
 {
     m_scene->subAdd(wave);
@@ -169,6 +174,11 @@ void DSApp::removeLabel(Label *label)
 void DSApp::removeBanner(Banner *banner)
 {
     m_scene->subRemove(banner);
+}
+
+void DSApp::removeCircle(Circle *circle)
+{
+    m_scene->subRemove(circle);
 }
 
 void DSApp::removeWave(Wave *wave)
@@ -289,6 +299,13 @@ extern "C"
 		}
 	} 
 
+	void TSU_AppSubAddCircle(DSApp *dsApp, Circle *circle_ptr)
+	{
+		if (dsApp != NULL && circle_ptr != NULL) {
+			dsApp->addCircle(circle_ptr);
+		}
+	}
+
 	void TSU_AppSubAddWave(DSApp *dsApp, Wave *wave_ptr)
 	{
 		if (dsApp != NULL && wave_ptr != NULL) {
@@ -321,6 +338,13 @@ extern "C"
 	{
 		if (dsApp != NULL && banner_ptr != NULL) {
 			dsApp->removeBanner(banner_ptr);
+		}
+	}
+
+	void TSU_AppSubRemoveCircle(DSApp *dsApp, Circle *circle_ptr)
+	{
+		if (dsApp != NULL && circle_ptr != NULL) {
+			dsApp->removeCircle(circle_ptr);
 		}
 	}
 

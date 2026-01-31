@@ -1245,10 +1245,12 @@ TSU_AppStartExit
 TSU_AppSubAddLabel
 TSU_AppSubAddItemMenu
 TSU_AppSubAddBanner
+TSU_AppSubAddCircle
 TSU_AppSubAddRectangle
 TSU_AppSubAddBox
 TSU_AppSubRemoveItemMenu
 TSU_AppSubRemoveBanner
+TSU_AppSubRemoveCircle
 TSU_AppSubRemoveRectangle
 TSU_AppSubRemoveBox
 TSU_AppSubRemoveLabel
@@ -1471,6 +1473,10 @@ TSU_RectangleSetSize
 TSU_TriangleCreate
 TSU_TriangleCreateWithBorder
 TSU_TriangleDestroy
+TSU_CircleCreate
+TSU_CircleDestroy
+TSU_CircleSetRadius
+TSU_CircleSetColors
 TSU_BirthCreate
 TSU_BirthDestroy
 TSU_DeathCreate

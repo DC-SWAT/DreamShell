@@ -5,6 +5,7 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024-2026 Maniac Vera
+   Copyright (C) 2026 SWAT
 
 */
 
@@ -35,7 +36,8 @@ enum ObjectTypeEnum
 	CHECKBOX_TYPE = 1<<10,
 	RECTANGLE_TYPE = 1<<11,
 	BOX_TYPE = 1<<12,
-	TRIANGLE_TYPE = 1<<13
+	TRIANGLE_TYPE = 1<<13,
+	CIRCLE_TYPE = 1<<14
 };
 
 #ifdef __cplusplus
