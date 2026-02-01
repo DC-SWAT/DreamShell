@@ -213,6 +213,11 @@ int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *
 uintptr_t isoldr_apply_preset(isoldr_info_t *info, const char *preset_file);
 
 /**
+ * Save preset file from isoldr info. Returns 0 on success.
+ */
+int isoldr_save_preset(isoldr_info_t *info, const char *filename);
+
+/**
  * Execute loader for specified device at any valid memory address
  */
 void isoldr_exec(isoldr_info_t *info, uintptr_t addr);

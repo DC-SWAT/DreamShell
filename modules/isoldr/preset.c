@@ -213,3 +213,72 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	}
 	return exec_addr;
 }
+
+int isoldr_save_preset(isoldr_info_t *info, const char *filename) {
+	file_t fd;
+	char result[1024] = "";
+	size_t result_len = 0;
+
+	if (!info || !filename) {
+		return -1;
+	}
+
+	fd = fs_open(filename, O_CREAT | O_TRUNC | O_WRONLY);
+
+	if (fd == FILEHND_INVALID) {
+		return -1;
+	}
+
+	snprintf(result, sizeof(result),
+			"title = %s\n"
+			"device = %s\n"
+			"dma = %lu\n"
+			"async = %lu\n"
+			"cdda = %08lx\n"
+			"irq = %lu\n"
+			"low = %lu\n"
+			"heap = %08lx\n"
+			"fastboot = %lu\n"
+			"type = %lu\n"
+			"mode = %lu\n"
+			"file = %s\n"
+			"memory = %08lx\n"
+			"vmu = %lu\n"
+			"scrhotkey = %lu\n"
+			"altread = %lu\n"
+			"gpio = %lu\n"
+			"region = %lu\n"
+			"pa1 = %08lx\n"
+			"pv1 = %08lx\n"
+			"pa2 = %08lx\n"
+			"pv2 = %08lx\n",
+			info->image_file,
+			info->fs_dev,
+			info->use_dma,
+			info->emu_async,
+			info->emu_cdda,
+			info->use_irq,
+			info->syscalls,
+			info->heap,
+			info->fast_boot,
+			info->exec.type,
+			info->boot_mode,
+			info->exec.file,
+			info->exec.addr,
+			info->emu_vmu,
+			info->scr_hotkey,
+			info->alt_read,
+			info->use_gpio,
+			info->region,
+			info->patch_addr[0], info->patch_value[0],
+			info->patch_addr[1], info->patch_value[1]
+	);
+	result_len = strlen(result);
+
+	if(fs_write(fd, result, result_len) != result_len) {
+		fs_close(fd);
+		return -1;
+	}
+	fs_close(fd);
+	return 0;
+}
