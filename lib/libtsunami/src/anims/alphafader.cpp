@@ -5,6 +5,8 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
+
 */
 
 #include "drawable.h"
@@ -16,6 +18,11 @@ AlphaFader::AlphaFader(float fade_to, float delta) {
 }
 
 AlphaFader::~AlphaFader() { }
+
+void AlphaFader::setValues(float fade_to, float delta) {
+	m_fade_to = fade_to;
+	m_delta = delta;
+}
 
 void AlphaFader::nextFrame(Drawable *t) {
 	Color c = t->getTint();
@@ -49,6 +56,13 @@ extern "C"
 		if (*alphafader_ptr != NULL) {
 			delete *alphafader_ptr;
 			*alphafader_ptr = NULL;
+		}
+	}
+
+	void TSU_AlphaFaderSetValues(AlphaFader *alphafader_ptr, float fade_to, float delta)
+	{
+		if (alphafader_ptr != NULL) {
+			alphafader_ptr->setValues(fade_to, delta);
 		}
 	}
 }

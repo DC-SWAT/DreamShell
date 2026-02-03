@@ -45,6 +45,12 @@ void LogXYZMover::setFactor(float factor) {
     }
 }
 
+void LogXYZMover::setTarget(float dstx, float dsty, float dstz) {
+    m_dstx = dstx;
+    m_dsty = dsty;
+    m_dstz = dstz;
+}
+
 extern "C"
 {
     LogXYZMover* TSU_LogXYZMoverCreate(float dstx, float dsty, float dstz)
@@ -64,6 +70,13 @@ extern "C"
     {
         if (logxyzmover_ptr != NULL) {
             logxyzmover_ptr->setFactor(factor);
+        }
+    }
+
+    void TSU_LogXYZMoverSetTarget(LogXYZMover *logxyzmover_ptr, float dstx, float dsty, float dstz)
+    {
+        if (logxyzmover_ptr != NULL) {
+            logxyzmover_ptr->setTarget(dstx, dsty, dstz);
         }
     }
 }

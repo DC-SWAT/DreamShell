@@ -22,6 +22,7 @@ public:
 
     virtual void nextFrame(Drawable *t);
     void setFactor(float factor);
+    void setTarget(float dstx, float dsty);
 
 private:
     float m_dstx, m_dsty, m_factor;
@@ -41,6 +42,7 @@ extern "C"
 LogScaleMover* TSU_LogScaleMoverCreate(float dstx, float dsty);
 void TSU_LogScaleMoverDestroy(LogScaleMover **logscalemover_ptr);
 void TSU_LogScaleMoverSetFactor(LogScaleMover *logscalemover_ptr, float factor);
+void TSU_LogScaleMoverSetTarget(LogScaleMover *logscalemover_ptr, float dstx, float dsty);
 
 #ifdef __cplusplus
 };

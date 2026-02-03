@@ -43,6 +43,11 @@ void LogScaleMover::setFactor(float factor) {
     }
 }
 
+void LogScaleMover::setTarget(float dstx, float dsty) {
+    m_dstx = dstx;
+    m_dsty = dsty;
+}
+
 extern "C"
 {
     LogScaleMover* TSU_LogScaleMoverCreate(float dstx, float dsty)
@@ -62,6 +67,13 @@ extern "C"
     {
         if (logscalemover_ptr != NULL) {
             logscalemover_ptr->setFactor(factor);
+        }
+    }
+
+    void TSU_LogScaleMoverSetTarget(LogScaleMover *logscalemover_ptr, float dstx, float dsty)
+    {
+        if (logscalemover_ptr != NULL) {
+            logscalemover_ptr->setTarget(dstx, dsty);
         }
     }
 }

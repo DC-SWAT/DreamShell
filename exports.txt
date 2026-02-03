@@ -1397,11 +1397,14 @@ TSU_LogXYMoverDestroy
 TSU_LogXYZMoverCreate
 TSU_LogXYZMoverDestroy
 TSU_LogXYZMoverSetFactor
+TSU_LogXYZMoverSetTarget
 TSU_LogScaleMoverCreate
 TSU_LogScaleMoverDestroy
 TSU_LogScaleMoverSetFactor
+TSU_LogScaleMoverSetTarget
 TSU_AlphaFaderCreate
 TSU_AlphaFaderDestroy
+TSU_AlphaFaderSetValues
 TSU_TintFaderCreate
 TSU_TintFaderDestroy
 TSU_FadeInCreate

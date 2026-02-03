@@ -5,6 +5,7 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
 
 */
 
@@ -22,6 +23,7 @@ public:
 	virtual ~AlphaFader();
 
 	virtual void nextFrame(Drawable *t);
+	void setValues(float fade_to, float delta);
 
 private:
 	float	m_fade_to, m_delta;
@@ -40,6 +42,7 @@ extern "C"
 
 AlphaFader* TSU_AlphaFaderCreate(float fade_to, float delta);
 void TSU_AlphaFaderDestroy(AlphaFader **alphafader_ptr);
+void TSU_AlphaFaderSetValues(AlphaFader *alphafader_ptr, float fade_to, float delta);
 
 #ifdef __cplusplus
 };
