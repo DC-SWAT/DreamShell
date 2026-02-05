@@ -156,6 +156,11 @@ void DSApp::addRectangle(Rectangle *rectangle)
     m_scene->subAdd(rectangle);
 }
 
+void DSApp::addGradient(Gradient *gradient)
+{
+    m_scene->subAdd(gradient);
+}
+
 void DSApp::addBox(Box *box)
 {
     m_scene->subAdd(box);
@@ -189,6 +194,11 @@ void DSApp::removeWave(Wave *wave)
 void DSApp::removeRectangle(Rectangle *rectangle)
 {
     m_scene->subRemove(rectangle);
+}
+
+void DSApp::removeGradient(Gradient *gradient)
+{
+    m_scene->subRemove(gradient);
 }
 
 void DSApp::removeBox(Box *box)
@@ -320,6 +330,13 @@ extern "C"
 		}
 	}
 
+    void TSU_AppSubAddGradient(DSApp *dsApp, Gradient *gradient_ptr)
+    {
+        if (dsApp != NULL && gradient_ptr != NULL) {
+            dsApp->addGradient(gradient_ptr);
+        }
+    }
+
 	void TSU_AppSubAddBox(DSApp *dsApp, Box *box_ptr)
 	{
 		if (dsApp != NULL && box_ptr != NULL) {
@@ -361,6 +378,13 @@ extern "C"
 			dsApp->removeRectangle(rectangle_ptr);
 		}
 	}
+
+    void TSU_AppSubRemoveGradient(DSApp *dsApp, Gradient *gradient_ptr)
+    {
+        if (dsApp != NULL && gradient_ptr != NULL) {
+            dsApp->removeGradient(gradient_ptr);
+        }
+    }
 
 	void TSU_AppSubRemoveBox(DSApp *dsApp, Box *box_ptr)
 	{

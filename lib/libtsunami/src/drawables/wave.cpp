@@ -12,7 +12,7 @@
 #include <dc/pvr.h>
 
 Wave::Wave(int list) {
-    setObjectType(ObjectTypeEnum::DRAWABLE_TYPE); 
+    setObjectType(ObjectTypeEnum::WAVE_TYPE); 
     m_list = list;
     m_w = -1.0f;
     m_h = -1.0f;

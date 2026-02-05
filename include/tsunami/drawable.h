@@ -37,7 +37,9 @@ enum ObjectTypeEnum
 	RECTANGLE_TYPE = 1<<11,
 	BOX_TYPE = 1<<12,
 	TRIANGLE_TYPE = 1<<13,
-	CIRCLE_TYPE = 1<<14
+	CIRCLE_TYPE = 1<<14,
+	GRADIENT_TYPE = 1<<15,
+	WAVE_TYPE = 1<<16
 };
 
 #ifdef __cplusplus

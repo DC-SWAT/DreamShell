@@ -37,6 +37,7 @@
 #include "anims/logscalemover.h"
 #include "anims/tintfader.h"
 #include "drawables/box.h"
+#include "drawables/gradient.h"
 #include "drawables/rectangle.h"
 #include "drawables/triangle.h"
 #include "drawables/circle.h"

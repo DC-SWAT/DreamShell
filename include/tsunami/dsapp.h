@@ -16,6 +16,7 @@
 #include "drawables/label.h"
 #include "drawables/rectangle.h"
 #include "drawables/box.h"
+#include "drawables/gradient.h"
 #include "drawables/banner.h"
 #include "drawables/circle.h"
 #include "drawables/wave.h"
@@ -56,6 +57,7 @@ public:
     void addCircle(Circle *circle);
     void addWave(Wave *wave);
     void addRectangle(Rectangle *rectangle);
+    void addGradient(Gradient *gradient);
     void addBox(Box *box);
 
     void removeItemMenu(ItemMenu *item_menu);
@@ -64,6 +66,7 @@ public:
     void removeCircle(Circle *circle);
     void removeWave(Wave *wave);
     void removeRectangle(Rectangle *rectangle);
+    void removeGradient(Gradient *gradient);
     void removeBox(Box *box);
 
     DSApp(InputEventPtr *input_event_callback);
@@ -98,6 +101,7 @@ void TSU_AppSubAddBanner(DSApp *dsApp, Banner *banner_ptr);
 void TSU_AppSubAddCircle(DSApp *dsApp, Circle *circle_ptr);
 void TSU_AppSubAddWave(DSApp *dsApp, Wave *wave_ptr);
 void TSU_AppSubAddRectangle(DSApp *dsApp, Rectangle *rectangle_ptr);
+void TSU_AppSubAddGradient(DSApp *dsApp, Gradient *gradient_ptr);
 void TSU_AppSubAddBox(DSApp *dsApp, Box *box_ptr);
 void TSU_AppSubAddItemMenu(DSApp *dsApp, ItemMenu *item_menu_ptr);
 void TSU_AppSubRemoveItemMenu(DSApp *dsApp, ItemMenu *item_menu_ptr);
@@ -105,6 +109,7 @@ void TSU_AppSubRemoveBanner(DSApp *dsApp, Banner *banner_ptr);
 void TSU_AppSubRemoveCircle(DSApp *dsApp, Circle *circle_ptr);
 void TSU_AppSubRemoveWave(DSApp *dsApp, Wave *wave_ptr);
 void TSU_AppSubRemoveRectangle(DSApp *dsApp, Rectangle *rectangle_ptr);
+void TSU_AppSubRemoveGradient(DSApp *dsApp, Gradient *gradient_ptr);
 void TSU_AppSubRemoveBox(DSApp *dsApp, Box *box_ptr);
 void TSU_AppSubRemoveLabel(DSApp *dsApp, Label *label_ptr);
 void TSU_AppSetTranslate(DSApp *dsApp, const Vector *v);
