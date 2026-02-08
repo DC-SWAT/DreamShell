@@ -54,7 +54,7 @@ bool Texture::loadFromFile(const std::filesystem::path &fn, bool use_alpha, bool
 	m_txr = plx_txr_load(fn.c_str(), use_alpha, flags);
 
 	if (m_txr == nullptr) {
-		dbglog(DBG_WARNING, "Texture::loadFromFile: Can't load '%s'\n", fn.c_str());
+		// dbglog(DBG_WARNING, "Texture::loadFromFile: Can't load '%s'\n", fn.c_str());
 		return false;
 	} else
 		return true;

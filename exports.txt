@@ -1445,6 +1445,7 @@ TSU_WaveDestroy
 TSU_WaveSetColor
 TSU_WaveSetParams
 TSU_WaveSetSize
+TSU_WaveSetColorAnimation
 TSU_GradientCreate
 TSU_GradientDestroy
 TSU_GradientSetColors

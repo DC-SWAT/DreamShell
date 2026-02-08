@@ -9,6 +9,7 @@
 
 #include "drawables/wave.h"
 #include <cmath>
+#include <kos/timer.h>
 #include <dc/pvr.h>
 
 Wave::Wave(int list) {
@@ -20,6 +21,7 @@ Wave::Wave(int list) {
     m_amp = 10.0f;
     m_speed = 0.01f;
     m_phase = 0.0f;
+    m_anim_enabled = false;
 }
 
 Wave::~Wave() {
@@ -38,11 +40,69 @@ void Wave::setParams(float freq, float amp, float speed) {
 
 void Wave::setColor(float r, float g, float b, float a) {
     setTint(Color(a, r, g, b));
+    m_anim_enabled = false;
+}
+
+void Wave::setColorAnimation(float r1, float g1, float b1, float a1,
+                             float r2, float g2, float b2, float a2,
+                             uint32_t duration, uint32_t hold_duration) {
+    m_anim_c1 = Color(a1, r1, g1, b1);
+    m_anim_c2 = Color(a2, r2, g2, b2);
+    m_anim_duration = duration;
+    m_anim_hold_duration = hold_duration;
+
+    m_anim_start = m_anim_c1;
+    m_anim_target = m_anim_c2;
+    m_anim_start_time = timer_ms_gettime64();
+    m_anim_is_holding = true;
+    m_anim_direction = false;
+    m_anim_enabled = true;
+
+    setTint(m_anim_c1);
 }
 
 void Wave::nextFrame() {
     Drawable::nextFrame();
     m_phase += m_speed;
+
+    if (m_anim_enabled) {
+        uint64_t now = timer_ms_gettime64();
+
+        if (m_anim_is_holding) {
+            if (now >= m_anim_start_time + m_anim_hold_duration) {
+                m_anim_is_holding = false;
+                m_anim_start_time = now;
+
+                if (m_anim_direction) {
+                    m_anim_start = m_anim_c2;
+                    m_anim_target = m_anim_c1;
+                }
+                else {
+                    m_anim_start = m_anim_c1;
+                    m_anim_target = m_anim_c2;
+                }
+            }
+        }
+        else {
+            if (now >= m_anim_start_time + m_anim_duration) {
+                m_anim_is_holding = true;
+                m_anim_start_time = now;
+                m_anim_direction = !m_anim_direction;
+                setTint(m_anim_target);
+            }
+            else {
+                float t = (float)(now - m_anim_start_time) / (float)m_anim_duration;
+                if (t > 1.0f) t = 1.0f;
+
+                float r = m_anim_start.r + (m_anim_target.r - m_anim_start.r) * t;
+                float g = m_anim_start.g + (m_anim_target.g - m_anim_start.g) * t;
+                float b = m_anim_start.b + (m_anim_target.b - m_anim_start.b) * t;
+                float a = m_anim_start.a + (m_anim_target.a - m_anim_start.a) * t;
+
+                setTint(Color(a, r, g, b));
+            }
+        }
+    }
 }
 
 void Wave::draw(int list) {
@@ -168,6 +228,15 @@ extern "C"
     {
         if (wave_ptr != NULL) {
             wave_ptr->setColor(r, g, b, a);
+        }
+    }
+
+    void TSU_WaveSetColorAnimation(Wave *wave_ptr, float r1, float g1, float b1, float a1,
+                                   float r2, float g2, float b2, float a2,
+                                   uint32_t duration, uint32_t hold_duration)
+    {
+        if (wave_ptr != NULL) {
+            wave_ptr->setColorAnimation(r1, g1, b1, a1, r2, g2, b2, a2, duration, hold_duration);
         }
     }
 }
