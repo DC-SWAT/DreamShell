@@ -58,7 +58,7 @@ static int send_allinfo(maple_device_t * dev) {
     maple_queue_frame(&dev->frame);
 
     /* Wait for the VM2 to accept it */
-    if(genwait_wait(&dev->frame, "vmu_get_allinfo", 200, NULL) < 0)  {
+    if(genwait_wait(&dev->frame, "vmu_get_allinfo", 200) < 0)  {
         if(dev->frame.state != MAPLE_FRAME_UNSENT) {
             /* It's probably never coming back, so just unlock the frame */
             dev->frame.state = MAPLE_FRAME_VACANT;
@@ -112,7 +112,7 @@ wait_vm2:
     maple_queue_frame(&dev->frame);
     
     /* Wait for the VM2 to accept it */
-    if(genwait_wait(&dev->frame, "vm2_set_id", 200, NULL) < 0) {
+    if(genwait_wait(&dev->frame, "vm2_set_id", 200) < 0) {
         if(dev->frame.state != MAPLE_FRAME_UNSENT) {
             /* It's probably never coming back, so just unlock the frame */
             dev->frame.state = MAPLE_FRAME_VACANT;

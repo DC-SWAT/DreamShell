@@ -318,6 +318,7 @@ void InitVideoThread() {
 	video_inited = 1;
 	video_thd = thd_create(0, VideoThread, NULL);
 	strncpy(video_thd->label, "[video]\0", 8);
+	thd_set_prio(video_thd, PRIO_DEFAULT + 1);
 	thd_pass();
 }
 

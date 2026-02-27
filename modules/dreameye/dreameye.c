@@ -526,8 +526,7 @@ int dreameye_get_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
     maple_queue_frame(&dev->frame);
 
     /* Wait for the Dreameye to accept it */
-    if(genwait_wait(&dev->frame, "dreameye_get_param", 500,
-                    NULL) < 0) {
+    if(genwait_wait(&dev->frame, "dreameye_get_param", 500) < 0) {
         if(dev->frame.state != MAPLE_FRAME_VACANT)  {
             /* Something went wrong... */
             dev->frame.state = MAPLE_FRAME_VACANT;
@@ -638,8 +637,7 @@ int dreameye_set_param(maple_device_t *dev, uint8_t param, uint8_t arg, uint16_t
     maple_queue_frame(&dev->frame);
 
     /* Wait for the Dreameye to accept it */
-    if(genwait_wait(&dev->frame, "dreameye_set_param", 500,
-                    NULL) < 0) {
+    if(genwait_wait(&dev->frame, "dreameye_set_param", 500) < 0) {
         if(dev->frame.state != MAPLE_FRAME_VACANT)  {
             /* Something went wrong... */
             dev->frame.state = MAPLE_FRAME_VACANT;
