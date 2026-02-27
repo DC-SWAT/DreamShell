@@ -40,12 +40,12 @@ public:
     Banner *image;
     Label *text;
 
-    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip = false, uint flags = 0);
+    ItemMenu(const char *image_file, float width, float height, pvr_list_type_t pvr_type, bool yflip = false, uint flags = 0);
     ItemMenu(const char *text, Font* font, int font_size = 24, float width = 0, float height = 0);
-    ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font* font, int font_size = 24, float label_width = 0, float label_height = 0, bool yflip = false, uint flags = 0);
+    ItemMenu(const char *image_file, float width, float height, pvr_list_type_t pvr_type, const char *text, Font* font, int font_size = 24, float label_width = 0, float label_height = 0, bool yflip = false, uint flags = 0);
     virtual ~ItemMenu();
 
-    virtual void draw(int list);
+    virtual void draw(pvr_list_type_t list);
     void FreeItem();
     void Init();    
     bool IsSelected();
@@ -54,7 +54,7 @@ public:
     void SetColorUnselected(Color color);
     void SetSelected(bool selected = true, bool smear = true);
     bool HasTextAndImage(); 
-    void SetImage(const char *image_file, uint16 pvr_type);
+    void SetImage(const char *image_file, pvr_list_type_t pvr_type);
     void setTint(Color text_color, Color image_color);
 
     Label* GetLabel();
@@ -72,8 +72,8 @@ extern "C"
 {
 #endif
 
-ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, float label_width, float label_height, bool yflip, uint flags);
-ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags);
+ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, pvr_list_type_t pvr_type, const char *text, Font *font_ptr, int font_size, float label_width, float label_height, bool yflip, uint flags);
+ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, pvr_list_type_t pvr_type, bool yflip, uint flags);
 ItemMenu* TSU_ItemMenuCreateLabel(const char *text, Font *font_ptr, int font_size, float width, float height);
 void TSU_ItemMenuDestroy(ItemMenu **item_menu_ptr);
 void TSU_ItemMenuSetItemValue(ItemMenu *item_menu_ptr, const char *value);
@@ -94,7 +94,7 @@ Banner* TSU_ItemMenuGetBanner(ItemMenu *item_menu_ptr);
 Label* TSU_ItemMenuGetLabel(ItemMenu *item_menu_ptr);
 void TSU_ItemMenuSetLabelText(ItemMenu *item_menu_ptr, const char *text);
 const char* TSU_ItemMenuGetLabelText(ItemMenu *item_menu_ptr);
-void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, uint16 pvr_type);
+void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, pvr_list_type_t pvr_type);
 void TSU_ItemMenuSetTint(ItemMenu *item_menu_ptr, Color text_color, Color image_color);
 void TSU_ItemMenuSetWindowState(ItemMenu *itemmenu_ptr, int window_state);
 int TSU_ItemMenuGetWindowState(ItemMenu *itemmenu_ptr);

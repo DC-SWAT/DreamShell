@@ -11,7 +11,7 @@
 #include "font.h"
 #include "tsunamiutils.h"
 
-Font::Font(const std::filesystem::path &fn, int list) {
+Font::Font(const std::filesystem::path &fn, pvr_list_type_t list) {
 	m_list = list;
 	m_font = nullptr;
 	m_cxt = nullptr;
@@ -212,7 +212,7 @@ void Font::centerCoords(const std::string &text, float *x, float *y) {
 
 extern "C"
 {
-	Font* TSU_FontCreate(const char *path, int list)
+	Font* TSU_FontCreate(const char *path, pvr_list_type_t list)
 	{
 		if (path != NULL) {
 			return new Font(path, list);

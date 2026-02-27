@@ -87,7 +87,7 @@ void Label::onMouseOver() {
 	}
 }
 
-void Label::draw(int list) {
+void Label::draw(pvr_list_type_t list) {
 	if (list != PLX_LIST_TR_POLY)
 		return;
 	

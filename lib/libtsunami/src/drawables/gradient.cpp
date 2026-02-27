@@ -8,11 +8,11 @@
 */
 
 #include <dc/fmath.h>
-#include <plx/prim.h>
-#include <plx/context.h>
+#include "../plx/prim.h"
+#include "../plx/context.h"
 #include "drawables/gradient.h"
 
-Gradient::Gradient(int list, float width, float height, float zIndex)
+Gradient::Gradient(pvr_list_type_t list, float width, float height, float zIndex)
 {
 	setObjectType(ObjectTypeEnum::GRADIENT_TYPE);
 	m_list = list;
@@ -44,7 +44,7 @@ void Gradient::setColors(uint32_t tl, uint32_t tr, uint32_t br, uint32_t bl)
     m_colors[3] = bl;
 }
 
-void Gradient::draw(int list)
+void Gradient::draw(pvr_list_type_t list)
 {
 	if (list != m_list)
 		return;
@@ -99,7 +99,7 @@ void Gradient::draw(int list)
 
 extern "C"
 {
-	Gradient *TSU_GradientCreate(int list, float width, float height, float zIndex)
+	Gradient *TSU_GradientCreate(pvr_list_type_t list, float width, float height, float zIndex)
 	{
 		if (list >= 0) {
 			if (zIndex < 0) {

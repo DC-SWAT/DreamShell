@@ -24,12 +24,12 @@
 
 class Triangle : public Drawable {
 public:
-	Triangle(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius);
+	Triangle(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius);
 	virtual ~Triangle();
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 
 private:
-	int m_list;
+	pvr_list_type_t m_list;
 	float x1, y1, x2, y2, x3, y3, radius, zIndex, borderWidth;
 	uint32 borderColor;
 	pvr_poly_hdr_t hdr;
@@ -50,8 +50,8 @@ extern "C"
 {
 #endif
 
-Triangle* TSU_TriangleCreate(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float radius);
-Triangle* TSU_TriangleCreateWithBorder(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius);
+Triangle* TSU_TriangleCreate(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float radius);
+Triangle* TSU_TriangleCreateWithBorder(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius);
 void TSU_TriangleDestroy(Triangle **triangle_ptr);
 
 #ifdef __cplusplus

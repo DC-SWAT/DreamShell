@@ -9,7 +9,7 @@
 
 #include "drawables/triangle.h"
 
-Triangle::Triangle(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0) {
+Triangle::Triangle(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0) {
 	setObjectType(ObjectTypeEnum::TRIANGLE_TYPE);
 	m_list = list;
 
@@ -80,7 +80,7 @@ void Triangle::drawTriangle(float x1, float y1, float x2, float y2, float x3, fl
 void Triangle::drawBox(float x1, float y1, float x2, float y2, float x3, float y3, float lineWidth, uint32 color, float zIndex) {
 }
 
-void Triangle::draw(int list) {
+void Triangle::draw(pvr_list_type_t list) {
 	if (list != m_list)
 		return;
 
@@ -107,7 +107,7 @@ void Triangle::draw(int list) {
 
 extern "C"
 {
-	Triangle* TSU_TriangleCreate(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float radius)
+	Triangle* TSU_TriangleCreate(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float radius)
 	{
 		if (list >= 0) {
 			if (zIndex < 0) {
@@ -126,7 +126,7 @@ extern "C"
 		}
 	}
 
-	Triangle* TSU_TriangleCreateWithBorder(int list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius)
+	Triangle* TSU_TriangleCreateWithBorder(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius)
 	{
 		if (list >= 0) {
 			if (borderWidth > 0) {

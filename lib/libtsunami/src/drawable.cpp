@@ -96,7 +96,7 @@ void Drawable::setFinished() {
 	}
 }
 
-void Drawable::subDraw(int list) {
+void Drawable::subDraw(pvr_list_type_t list) {
 	for (auto it: m_subs) {
 		if (!it->isFinished())
 			it->draw(list);
@@ -224,7 +224,7 @@ void Drawable::onMouseOver() {
 	}
 }
 
-void Drawable::draw(int list) {
+void Drawable::draw(pvr_list_type_t list) {
 	onMouseOver();
 	subDraw(list);
 }
@@ -344,7 +344,7 @@ extern "C"
 		}
 	}
 
-	void TSU_DrawableSubDraw(Drawable *drawable_ptr, int list)
+	void TSU_DrawableSubDraw(Drawable *drawable_ptr, pvr_list_type_t list)
 	{
 		if (drawable_ptr != NULL) {
 			drawable_ptr->subDraw(list);

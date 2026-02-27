@@ -24,13 +24,13 @@
 
 class Rectangle : public Drawable {
 public:
-	Rectangle(int list, float x, float y, float width, float height, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius);
+	Rectangle(pvr_list_type_t list, float x, float y, float width, float height, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius);
 	virtual ~Rectangle();
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 	virtual void setBorderColor(Color color);
 
 private:
-	int m_list;
+	pvr_list_type_t m_list;
 	float radius, zIndex, borderWidth;
 	uint32 borderColor;
 	pvr_poly_hdr_t hdr;
@@ -51,8 +51,8 @@ extern "C"
 {
 #endif
 
-Rectangle* TSU_RectangleCreate(int list, float x, float y, float width, float height, const Color *color, float zIndex, float radius);
-Rectangle* TSU_RectangleCreateWithBorder(int list, float x, float y, float width, float height, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius);
+Rectangle* TSU_RectangleCreate(pvr_list_type_t list, float x, float y, float width, float height, const Color *color, float zIndex, float radius);
+Rectangle* TSU_RectangleCreateWithBorder(pvr_list_type_t list, float x, float y, float width, float height, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius);
 void TSU_RectangleDestroy(Rectangle **rectangle_ptr);
 void TSU_RectangleSetSize(Rectangle *rectangle_ptr, float width, float height);
 void TSU_DrawableSetBorderColor(Rectangle *rectangle_ptr, const Color *color);

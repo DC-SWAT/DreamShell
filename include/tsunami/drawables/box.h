@@ -23,15 +23,15 @@
 
 class Box : public Drawable {
 public:
-	Box(int list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius);
+	Box(pvr_list_type_t list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius);
 	virtual ~Box();
 
 	void setSize(float w, float h);
 
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 
 private:
-	int m_list;
+	pvr_list_type_t m_list;
 	float width, height, radius, zIndex, borderWidth;
 	pvr_poly_hdr_t hdr;
 	pvr_poly_cxt_t cxt;
@@ -50,7 +50,7 @@ extern "C"
 {
 #endif
 
-Box* TSU_BoxCreate(int list, float x, float y, float width, float height, float border_width, const Color *color, float zIndex, float radius);
+Box* TSU_BoxCreate(pvr_list_type_t list, float x, float y, float width, float height, float border_width, const Color *color, float zIndex, float radius);
 void TSU_BoxDestroy(Box **box_ptr);
 void TSU_BoxSetSize(Box *box_ptr, float width, float height);
 

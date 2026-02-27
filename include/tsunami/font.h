@@ -23,7 +23,7 @@
 
 class Font {
 public:
-	Font(const std::filesystem::path &path, int list = PVR_LIST_TR_POLY);
+	Font(const std::filesystem::path &path, pvr_list_type_t list = PVR_LIST_TR_POLY);
 	virtual ~Font();
 
 	bool loadFromFile(const std::filesystem::path &path);
@@ -56,7 +56,7 @@ public:
 private:
 	plx_font_t	* m_font;
 	plx_fcxt_t	* m_cxt;
-	int		m_list;
+	pvr_list_type_t	m_list;
 	float		m_a, m_r, m_g, m_b;
 	float		m_ps;
 };
@@ -73,7 +73,7 @@ extern "C"
 {
 #endif
 
-Font* TSU_FontCreate(const char *path, int list);
+Font* TSU_FontCreate(const char *path, pvr_list_type_t list);
 void TSU_FontDestroy(Font **font_ptr);
 bool TSU_FontLoadFromFile(Font *font_ptr, const char *path);
 void TSU_FontSetFilter(Font *font_ptr, int type);

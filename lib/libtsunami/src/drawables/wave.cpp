@@ -12,7 +12,7 @@
 #include <kos/timer.h>
 #include <dc/pvr.h>
 
-Wave::Wave(int list) {
+Wave::Wave(pvr_list_type_t list) {
     setObjectType(ObjectTypeEnum::WAVE_TYPE); 
     m_list = list;
     m_w = -1.0f;
@@ -105,7 +105,7 @@ void Wave::nextFrame() {
     }
 }
 
-void Wave::draw(int list) {
+void Wave::draw(pvr_list_type_t list) {
     if (list != m_list)
         return;
 
@@ -197,7 +197,7 @@ void Wave::draw(int list) {
 
 extern "C"
 {
-    Wave* TSU_WaveCreate(int list)
+    Wave* TSU_WaveCreate(pvr_list_type_t list)
     {
         return new Wave(list);
     }

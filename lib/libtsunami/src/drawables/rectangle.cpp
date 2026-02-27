@@ -10,7 +10,7 @@
 #include <dc/fmath.h>
 #include "drawables/rectangle.h"
 
-Rectangle::Rectangle(int list, float x, float y, float width, float height, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0)
+Rectangle::Rectangle(pvr_list_type_t list, float x, float y, float width, float height, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0)
 {
 	setObjectType(ObjectTypeEnum::RECTANGLE_TYPE);
 	m_list = list;
@@ -246,7 +246,7 @@ void Rectangle::drawBox(float x, float y, float width, float height, float lineW
 	plx_vert_inp(PLX_VERT_EOS, x, (y - radius), zIndex, color);
 }
 
-void Rectangle::draw(int list)
+void Rectangle::draw(pvr_list_type_t list)
 {
 	if (list != m_list)
 		return;
@@ -297,7 +297,7 @@ void Rectangle::draw(int list)
 
 extern "C"
 {
-	Rectangle *TSU_RectangleCreate(int list, float x, float y, float width, float height, const Color *color, float zIndex, float radius)
+	Rectangle *TSU_RectangleCreate(pvr_list_type_t list, float x, float y, float width, float height, const Color *color, float zIndex, float radius)
 	{
 		if (list >= 0)
 		{
@@ -320,7 +320,7 @@ extern "C"
 		}
 	}
 
-	Rectangle *TSU_RectangleCreateWithBorder(int list, float x, float y, float width, float height, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius)
+	Rectangle *TSU_RectangleCreateWithBorder(pvr_list_type_t list, float x, float y, float width, float height, const Color *color, float zIndex, float borderWidth, const Color *borderColor, float radius)
 	{
 		if (list >= 0)
 		{

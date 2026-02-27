@@ -29,7 +29,7 @@ public:
 	Font* getFont();
 	std::string fixTextWidth(const std::string &text);
 
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 	const std::string getText();
 	void setSmear(bool smear);
 	void setFixWidth(bool fiw_width);

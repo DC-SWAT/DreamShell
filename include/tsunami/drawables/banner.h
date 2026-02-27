@@ -27,7 +27,7 @@
     optional UV coordinates) and draws a banner. */
 class Banner : public Drawable {
 public:
-	Banner(int list, Texture *texture);
+	Banner(pvr_list_type_t list, Texture *texture);
 	virtual ~Banner();
 
 	void setTexture(Texture *txr);
@@ -42,7 +42,7 @@ public:
 
 	void setSize(float w, float h);
 
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 
 private:
 	int			m_list;
@@ -64,7 +64,7 @@ extern "C"
 {
 #endif
 
-Banner* TSU_BannerCreate(int list, Texture *texture_ptr);
+Banner* TSU_BannerCreate(pvr_list_type_t list, Texture *texture_ptr);
 void TSU_BannerDestroy(Banner **banner_ptr);
 void TSU_BannerDestroyAll(Banner **banner_ptr);
 void TSU_BannerSetTexture(Banner *banner_ptr, Texture *texture_ptr);

@@ -12,7 +12,7 @@
 #include "tsunamiutils.h"
 #include <cstring>
 
-ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags)
+ItemMenu::ItemMenu(const char *image_file, float width, float height, pvr_list_type_t pvr_type, bool yflip, uint flags)
 {
 	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
 	setObjectSubType(ObjectTypeEnum::BANNER_TYPE);
@@ -60,7 +60,7 @@ ItemMenu::ItemMenu(const char *text, Font *font, int font_size, float width, flo
 	}
 }
 
-ItemMenu::ItemMenu(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font, int font_size, float label_width, float label_height, bool yflip, uint flags)
+ItemMenu::ItemMenu(const char *image_file, float width, float height, pvr_list_type_t pvr_type, const char *text, Font *font, int font_size, float label_width, float label_height, bool yflip, uint flags)
 {
 	setObjectType(ObjectTypeEnum::ITEMMENU_TYPE);
 	setObjectSubType(ObjectTypeEnum::BANNER_TYPE | ObjectTypeEnum::LABEL_TYPE);
@@ -159,7 +159,7 @@ void ItemMenu::Init()
 	image_texture = nullptr;
 }
 
-void ItemMenu::draw(int list)
+void ItemMenu::draw(pvr_list_type_t list)
 {
 	Drawable::draw(list);
 }
@@ -208,7 +208,7 @@ void ItemMenu::SetSelected(bool selected, bool smear)
 	Drawable::setTranslate(translate);
 }
 
-void ItemMenu::SetImage(const char *image_file, uint16 pvr_type)
+void ItemMenu::SetImage(const char *image_file, pvr_list_type_t pvr_type)
 {
 	if (image_file) {
 		Texture *new_image_texture = new Texture(image_file, pvr_type == PVR_LIST_TR_POLY);
@@ -239,7 +239,7 @@ Banner* ItemMenu::GetBanner()
 extern "C"
 {
 
-	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, uint16 pvr_type, const char *text, Font *font_ptr, int font_size, float label_width, float label_height, bool yflip, uint flags)
+	ItemMenu* TSU_ItemMenuCreate(const char *image_file, float width, float height, pvr_list_type_t pvr_type, const char *text, Font *font_ptr, int font_size, float label_width, float label_height, bool yflip, uint flags)
 	{
 		if (font_ptr != NULL) {
 			return new ItemMenu(image_file, width, height, pvr_type, text, font_ptr, font_size, label_width, label_height, yflip, flags);
@@ -249,7 +249,7 @@ extern "C"
 		}
 	}
 
-	ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, uint16 pvr_type, bool yflip, uint flags)
+	ItemMenu* TSU_ItemMenuCreateImage(const char *image_file, float width, float height, pvr_list_type_t pvr_type, bool yflip, uint flags)
 	{
 		return new ItemMenu(image_file, width, height, pvr_type, yflip, flags);
 	}
@@ -427,7 +427,7 @@ extern "C"
 		}
 	}
 
-	void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, uint16 pvr_type)
+	void TSU_ItemMenuSetImage(ItemMenu *item_menu_ptr, const char *image_file, pvr_list_type_t pvr_type)
 	{
 		if (item_menu_ptr != NULL) {
 			item_menu_ptr->SetImage(image_file, pvr_type);

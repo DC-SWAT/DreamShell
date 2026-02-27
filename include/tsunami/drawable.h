@@ -73,7 +73,7 @@ public:
 	virtual void setFinished();
 
 	/// Draw all sub-drawables (if any)
-	void subDraw(int list);
+	void subDraw(pvr_list_type_t list);
 
 	/// Move to all sub-drawables to the next frame (if any)
 	void subNextFrame();
@@ -91,7 +91,7 @@ public:
 	void subRemoveAll();
 
 	/// Draw this drawable for the given list
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 
 	/// Move to the next frame of animation
 	virtual void nextFrame();
@@ -233,7 +233,7 @@ extern "C"
 	void TSU_DrawableAnimRemove(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemoveAll(Drawable *drawable_ptr);
 	bool TSU_DrawableIsFinished(Drawable *drawable_ptr);
-	void TSU_DrawableSubDraw(Drawable *drawable_ptr, int list);
+	void TSU_DrawableSubDraw(Drawable *drawable_ptr, pvr_list_type_t list);
 	void TSU_DrawableSubNextFrame(Drawable *drawable_ptr);
 	void TSU_DrawableSubAdd(Drawable *drawable_ptr, Drawable *new_drawable_ptr);
 	void TSU_DrawableSubRemove(Drawable *drawable_ptr, Drawable *remove_drawable_ptr);

@@ -10,8 +10,8 @@
 #ifndef __TSUNAMI_DRW_WAVE_H
 #define __TSUNAMI_DRW_WAVE_H
 
-#include <plx/list.h>
-#include <plx/sprite.h>
+#include "../plx/list.h"
+#include "../plx/sprite.h"
 #include "../drawable.h"
 #include "../color.h"
 
@@ -19,7 +19,7 @@
 
 class Wave : public Drawable {
 public:
-    Wave(int list);
+    Wave(pvr_list_type_t list);
     virtual ~Wave();
 
     void setSize(float w, float h);
@@ -29,7 +29,7 @@ public:
                            float r2, float g2, float b2, float a2,
                            uint32_t duration, uint32_t hold_duration);
 
-    virtual void draw(int list);
+    virtual void draw(pvr_list_type_t list);
     virtual void nextFrame();
 
 private:
@@ -58,7 +58,7 @@ extern "C"
 {
 #endif
 
-    Wave* TSU_WaveCreate(int list);
+    Wave* TSU_WaveCreate(pvr_list_type_t list);
     void TSU_WaveDestroy(Wave **wave_ptr);
     void TSU_WaveSetParams(Wave *wave_ptr, float freq, float amp, float speed);
     void TSU_WaveSetSize(Wave *wave_ptr, float w, float h);

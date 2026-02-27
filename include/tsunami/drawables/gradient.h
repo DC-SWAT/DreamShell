@@ -20,14 +20,14 @@
 
 class Gradient : public Drawable {
 public:
-	Gradient(int list, float width, float height, float zIndex);
+	Gradient(pvr_list_type_t list, float width, float height, float zIndex);
 	virtual ~Gradient();
-	virtual void draw(int list);
+	virtual void draw(pvr_list_type_t list);
 
     void setColors(uint32_t tl, uint32_t tr, uint32_t br, uint32_t bl);
 
 private:
-	int m_list;
+	pvr_list_type_t m_list;
 	float zIndex;
     uint32_t m_colors[4];
 	pvr_poly_hdr_t hdr;
@@ -45,7 +45,7 @@ extern "C"
 {
 #endif
 
-Gradient* TSU_GradientCreate(int list, float width, float height, float zIndex);
+Gradient* TSU_GradientCreate(pvr_list_type_t list, float width, float height, float zIndex);
 void TSU_GradientDestroy(Gradient **gradient_ptr);
 void TSU_GradientSetSize(Gradient *gradient_ptr, float width, float height);
 void TSU_GradientSetColors(Gradient *gradient_ptr, uint32_t tl, uint32_t tr, uint32_t br, uint32_t bl);

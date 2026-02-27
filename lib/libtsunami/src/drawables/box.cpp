@@ -10,7 +10,7 @@
 #include <dc/fmath.h>
 #include "drawables/box.h"
 
-Box::Box(int list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius = 0) {
+Box::Box(pvr_list_type_t list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius = 0) {
 	m_list = list;
 	setObjectType(ObjectTypeEnum::BOX_TYPE);
 
@@ -153,7 +153,7 @@ void Box::drawBox(float x, float y, float width, float height, float lineWidth, 
 	plx_vert_inp(PLX_VERT_EOS, x, (y - radius), zIndex, color);
 }
 
-void Box::draw(int list) {
+void Box::draw(pvr_list_type_t list) {
 	if (list != m_list)
 		return;
 
@@ -195,7 +195,7 @@ void Box::draw(int list) {
 
 extern "C"
 {
-	Box* TSU_BoxCreate(int list, float x, float y, float width, float height, float border_width, const Color *color, float zIndex, float radius)
+	Box* TSU_BoxCreate(pvr_list_type_t list, float x, float y, float width, float height, float border_width, const Color *color, float zIndex, float radius)
 	{
 		if (list >= 0) {
 			if (zIndex < 0) {

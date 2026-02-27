@@ -30,7 +30,7 @@ public:
 	bool loadFromFile(const std::filesystem::path &fn, bool use_alpha, bool yflip, uint flags);
 	
 	// Submit one of the poly headers
-	void sendHdr(int list);
+	void sendHdr(pvr_list_type_t list);
 
 	// Attribute sets
 	enum FilterType {

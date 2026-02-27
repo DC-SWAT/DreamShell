@@ -17,10 +17,10 @@
 
 class Circle : public Drawable {
 public:
-    Circle(int list, float radius, int points, const Color &centerColor, const Color &edgeColor);
+    Circle(pvr_list_type_t list, float radius, int points, const Color &centerColor, const Color &edgeColor);
     virtual ~Circle();
 
-    virtual void draw(int list);
+    virtual void draw(pvr_list_type_t list);
 
     void setRadius(float r);
     float getRadius() const;
@@ -28,7 +28,7 @@ public:
     void setColors(const Color &center, const Color &edge);
 
 private:
-    int m_list;
+    pvr_list_type_t m_list;
     float m_radius;
     int m_points;
     Color m_centerColor;
@@ -47,7 +47,7 @@ extern "C"
 {
 #endif
 
-    Circle* TSU_CircleCreate(int list, float radius, int points, const Color *centerColor, const Color *edgeColor);
+    Circle* TSU_CircleCreate(pvr_list_type_t list, float radius, int points, const Color *centerColor, const Color *edgeColor);
     void TSU_CircleDestroy(Circle **circle_ptr);
     void TSU_CircleSetRadius(Circle *circle_ptr, float radius);
     void TSU_CircleSetColors(Circle *circle_ptr, const Color *centerColor, const Color *edgeColor);

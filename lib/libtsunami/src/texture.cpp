@@ -45,7 +45,7 @@ void Texture::setUVClamp(UVMode umode, UVMode vmode) {
 }
 
 // Submit one of the poly headers
-void Texture::sendHdr(int list) {
+void Texture::sendHdr(pvr_list_type_t list) {
 	plx_txr_send_hdr(m_txr, list, 0);
 }
 

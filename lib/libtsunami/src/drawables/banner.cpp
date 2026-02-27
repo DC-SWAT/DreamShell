@@ -16,7 +16,7 @@ extern "C" {
 	int VideoMustLock();
 }
 
-Banner::Banner(int list, Texture *texture) {
+Banner::Banner(pvr_list_type_t list, Texture *texture) {
 	setObjectType(ObjectTypeEnum::BANNER_TYPE);
 	m_list = list;
 	m_texture = texture;
@@ -65,7 +65,7 @@ void Banner::setSize(float w, float h) {
 	m_h = h;
 }
 
-void Banner::draw(int list) {
+void Banner::draw(pvr_list_type_t list) {
 	if (list != m_list || !m_texture)
 		return;
 
@@ -127,7 +127,7 @@ void Banner::draw(int list) {
 
 extern "C"
 	{
-	Banner* TSU_BannerCreate(int list, Texture *texture_ptr)
+	Banner* TSU_BannerCreate(pvr_list_type_t list, Texture *texture_ptr)
 	{
 		if (texture_ptr != NULL) {
 			return new Banner(list, texture_ptr);

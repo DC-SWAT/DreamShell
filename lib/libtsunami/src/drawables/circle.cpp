@@ -10,7 +10,7 @@
 #include "drawables/circle.h"
 #include <dc/fmath.h>
 
-Circle::Circle(int list, float radius, int points, const Color &centerColor, const Color &edgeColor) {
+Circle::Circle(pvr_list_type_t list, float radius, int points, const Color &centerColor, const Color &edgeColor) {
     setObjectType(ObjectTypeEnum::CIRCLE_TYPE);
     m_list = list;
     m_radius = radius;
@@ -37,7 +37,7 @@ void Circle::setColors(const Color &center, const Color &edge) {
     m_edgeColor = edge;
 }
 
-void Circle::draw(int list) {
+void Circle::draw(pvr_list_type_t list) {
     if (list != m_list)
         return;
 
@@ -100,7 +100,7 @@ void Circle::draw(int list) {
 }
 
 extern "C" {
-    Circle* TSU_CircleCreate(int list, float radius, int points, const Color *centerColor, const Color *edgeColor) {
+    Circle* TSU_CircleCreate(pvr_list_type_t list, float radius, int points, const Color *centerColor, const Color *edgeColor) {
         return new Circle(list, radius, points, *centerColor, *edgeColor);
     }
     
