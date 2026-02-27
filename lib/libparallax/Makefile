@@ -2,12 +2,12 @@
 #
 # Makefile
 # (c)2002 Dan Potter
-# (c)2014, 2024 SWAT
+# (c)2014, 2024, 2026 SWAT
 
 TARGET = ../libparallax_2.0.0.a
 OBJS := $(patsubst %.c,%.o,$(wildcard src/*.c))
 
-KOS_CFLAGS += -I../../include -I./include
+KOS_CFLAGS += -I../../include -I../../include/plx
 
 # Grab the shared Makefile pieces
 include ../../sdk/Makefile.library
