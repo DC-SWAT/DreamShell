@@ -1,7 +1,7 @@
 /** 
  * \file    ffmpeg.h
  * \brief   DreamShell FFmpeg module
- * \date    2025
+ * \date    2025-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -88,6 +88,12 @@ int ffplay_is_paused();
     Returns: 1 if playing, 0 otherwise.
 */
 int ffplay_is_playing();
+
+/*
+    Set the volume of the currently playing video.
+    Volume level 0-255.
+*/
+void ffplay_set_volume(int vol);
 
 #ifdef __cplusplus
 }

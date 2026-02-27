@@ -9,3 +9,4 @@ ffplay_is_playing
 ffplay_seek
 ffplay_info
 ffplay_get_pos
+ffplay_set_volume

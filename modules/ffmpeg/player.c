@@ -1248,7 +1248,7 @@ static void *player_thread(void *p) {
                 diff = get_video_clock() - get_master_clock();
 
                 if(diff < -1000) {
-                    ffplay_seek_internal(get_master_clock() + 1000, AVSEEK_FLAG_BACKWARD);
+                    ffplay_seek_internal(get_master_clock() + 500, AVSEEK_FLAG_BACKWARD);
                     av_free_packet(&packet);
                     continue;
                 }
@@ -1283,7 +1283,7 @@ static void *player_thread(void *p) {
             // }
 
             if(time_to_wait > 500) {
-                ffplay_seek_internal(get_master_clock() + 1000, AVSEEK_FLAG_BACKWARD);
+                ffplay_seek_internal(get_master_clock() + 500, AVSEEK_FLAG_BACKWARD);
                 av_free_packet(&packet);
                 continue;
             }
@@ -1534,6 +1534,33 @@ int ffplay_is_playing() {
 
 int ffplay_is_paused() {
     return vid->pause;
+}
+
+void ffplay_set_volume(int vol) {
+    if(!aud->playing) {
+        return;
+    }
+    if (vol < 0) vol = 0;
+    if (vol > 255) vol = 255;
+
+    aud->vol = vol;
+
+    AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
+    snd_sh4_to_aica_stop();
+
+    cmd->cmd = AICA_CMD_CHAN;
+    cmd->timestamp = 0;
+    cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
+    cmd->cmd_id = aud->ch[0];
+    chan->cmd = AICA_CH_CMD_UPDATE | AICA_CH_UPDATE_SET_VOL;
+    chan->vol = aud->vol;
+    snd_sh4_to_aica(tmp, cmd->size);
+
+    if(aud->channels == 2) {
+        cmd->cmd_id = aud->ch[1];
+        snd_sh4_to_aica(tmp, cmd->size);
+    }
+    snd_sh4_to_aica_start();
 }
 
 void ffplay_toggle_pause() {
