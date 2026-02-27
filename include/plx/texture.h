@@ -98,7 +98,7 @@ void plx_txr_flush_hdrs(plx_texture_t * txr);
   a non-zero value for the flush parameter, it will call plx_txr_flush_hdrs()
   for you before sending the values.
  */
-void plx_txr_send_hdr(plx_texture_t * txr, int list, int flush);
+void plx_txr_send_hdr(plx_texture_t * txr, pvr_list_type_t list, int flush);
 
 __END_DECLS
 

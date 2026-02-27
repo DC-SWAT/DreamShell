@@ -51,26 +51,25 @@ __BEGIN_DECLS
   Submit a quad using the given coordinates, color, and UV values via
   DR. The coordinates are at the center point.
  */
-static inline void plx_spr_fnd(plx_dr_state_t * state,
-	float wi, float hi,
+static inline void plx_spr_fnd(float wi, float hi,
 	float x, float y, float z,
 	float a, float r, float g, float b)
 {
 	float w = wi / 2.0f;
 	float h = hi / 2.0f;
-	plx_vert_ffd(state, PLX_VERT,
+	plx_vert_ffd(PLX_VERT,
 		x - w, y + h, z,
 		a, r, g, b,
 		0.0f, 1.0f);
-	plx_vert_ffd(state, PLX_VERT,
+	plx_vert_ffd(PLX_VERT,
 		x - w, y - h, z,
 		a, r, g, b,
 		0.0f, 0.0f);
-	plx_vert_ffd(state, PLX_VERT,
+	plx_vert_ffd(PLX_VERT,
 		x + w, y + h, z,
 		a, r, g, b,
 		1.0f, 1.0f);
-	plx_vert_ffd(state, PLX_VERT_EOS,
+	plx_vert_ffd(PLX_VERT_EOS,
 		x + w, y - h, z,
 		a, r, g, b,
 		1.0f, 0.0f);
@@ -79,26 +78,25 @@ static inline void plx_spr_fnd(plx_dr_state_t * state,
 /**
   Like plx_spr_fnd, but with integer color.
  */
-static inline void plx_spr_ind(plx_dr_state_t * state,
-	float wi, float hi,
+static inline void plx_spr_ind(float wi, float hi,
 	float x, float y, float z,
 	uint32 color)
 {
 	float w = wi / 2.0f;
 	float h = hi / 2.0f;
-	plx_vert_ifd(state, PLX_VERT,
+	plx_vert_ifd(PLX_VERT,
 		x - w, y + h, z,
 		color,
 		0.0f, 1.0f);
-	plx_vert_ifd(state, PLX_VERT,
+	plx_vert_ifd(PLX_VERT,
 		x - w, y - h, z,
 		color,
 		0.0f, 0.0f);
-	plx_vert_ifd(state, PLX_VERT,
+	plx_vert_ifd(PLX_VERT,
 		x + w, y + h, z,
 		color,
 		1.0f, 1.0f);
-	plx_vert_ifd(state, PLX_VERT_EOS,
+	plx_vert_ifd(PLX_VERT_EOS,
 		x + w, y - h, z,
 		color,
 		1.0f, 0.0f);
@@ -107,8 +105,7 @@ static inline void plx_spr_ind(plx_dr_state_t * state,
 /**
   Like plx_spr_fnd, but using matrix math.
  */
-static inline void plx_spr_fmd(plx_dr_state_t * state,
-	float wi, float hi,
+static inline void plx_spr_fmd(float wi, float hi,
 	float xi, float yi, float zi,
 	float a, float r, float g, float b)
 {
@@ -118,28 +115,28 @@ static inline void plx_spr_fmd(plx_dr_state_t * state,
 
 	x = xi-w; y = yi+h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ffd(state, PLX_VERT,
+	plx_vert_ffd(PLX_VERT,
 		x, y, z,
 		a, r, g, b,
 		0.0f, 1.0f);
 
 	x = xi-w; y = yi-h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ffd(state, PLX_VERT,
+	plx_vert_ffd(PLX_VERT,
 		x, y, z,
 		a, r, g, b,
 		0.0f, 0.0f);
 
 	x = xi+w; y = yi+h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ffd(state, PLX_VERT,
+	plx_vert_ffd(PLX_VERT,
 		x, y, z,
 		a, r, g, b,
 		1.0f, 1.0f);
 
 	x = xi+w; y = yi-h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ffd(state, PLX_VERT_EOS,
+	plx_vert_ffd(PLX_VERT_EOS,
 		x, y, z,
 		a, r, g, b,
 		1.0f, 0.0f);
@@ -148,8 +145,7 @@ static inline void plx_spr_fmd(plx_dr_state_t * state,
 /**
   Like plx_spr_fmd, but using integer colors.
  */
-static inline void plx_spr_imd(plx_dr_state_t * state,
-	float wi, float hi,
+static inline void plx_spr_imd(float wi, float hi,
 	float xi, float yi, float zi,
 	uint32 color)
 {
@@ -159,28 +155,28 @@ static inline void plx_spr_imd(plx_dr_state_t * state,
 
 	x = xi-w; y = yi+h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ifd(state, PLX_VERT,
+	plx_vert_ifd(PLX_VERT,
 		x, y, z,
 		color,
 		0.0f, 1.0f);
 
 	x = xi-w; y = yi-h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ifd(state, PLX_VERT,
+	plx_vert_ifd(PLX_VERT,
 		x, y, z,
 		color,
 		0.0f, 0.0f);
 
 	x = xi+w; y = yi+h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ifd(state, PLX_VERT,
+	plx_vert_ifd(PLX_VERT,
 		x, y, z,
 		color,
 		1.0f, 1.0f);
 
 	x = xi+w; y = yi-h; z = zi;
 	plx_mat_tfip_2d(x, y, z);
-	plx_vert_ifd(state, PLX_VERT_EOS,
+	plx_vert_ifd(PLX_VERT_EOS,
 		x, y, z,
 		color,
 		1.0f, 0.0f);

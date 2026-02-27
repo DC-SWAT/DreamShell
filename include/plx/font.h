@@ -76,7 +76,7 @@ void plx_font_destroy(plx_font_t * fnt);
   default values. The list given in the list parameter will be used for
   low-level interactions.
  */
-plx_fcxt_t * plx_fcxt_create(plx_font_t * fnt, int list);
+plx_fcxt_t * plx_fcxt_create(plx_font_t * fnt, pvr_list_type_t list);
 
 /**
   Destroy a previously created font context. Note that this will NOT affect

@@ -81,7 +81,7 @@ void plx_cxt_specular(int type);
 /**
   Submit the selected context for rendering.
  */
-void plx_cxt_send(int list);
+void plx_cxt_send(pvr_list_type_t list);
 
 __END_DECLS
 

@@ -313,7 +313,7 @@ void plx_font_destroy(plx_font_t * fnt) {
 
 
 
-plx_fcxt_t * plx_fcxt_create(plx_font_t * fnt, int list) {
+plx_fcxt_t * plx_fcxt_create(plx_font_t * fnt, pvr_list_type_t list) {
 	plx_fcxt_t * cxt;
 
 	assert( fnt != NULL );

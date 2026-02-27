@@ -4,6 +4,7 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Falco Girgis
+   Copyright (C) 2026 SWAT
 
 
 */
@@ -22,26 +23,17 @@ __BEGIN_DECLS
 
 #include <dc/pvr.h>
 
-typedef pvr_dr_state_t plx_dr_state_t;
 typedef pvr_vertex_t plx_vertex_t;
 
-#define PLX_VERT	PVR_CMD_VERTEX
-#define PLX_VERT_EOS	PVR_CMD_VERTEX_EOL
+#define PLX_VERT     PVR_CMD_VERTEX
+#define PLX_VERT_EOS PVR_CMD_VERTEX_EOL
 
-static inline void plx_dr_init(plx_dr_state_t *state) {
-    pvr_dr_init((pvr_dr_state_t *)state);
-}
-
-static inline plx_vertex_t *plx_dr_target(plx_dr_state_t *state) {
-    return (plx_vertex_t *)pvr_dr_target(*(pvr_dr_state_t*)state);
+static inline plx_vertex_t *plx_dr_target(void) {
+    return (plx_vertex_t *)pvr_dr_target();
 }
 
 static inline void plx_dr_commit(plx_vertex_t *vertex) {
     pvr_dr_commit((pvr_vertex_t *)vertex);
-}
-
-static inline void plx_dr_finish(void) {
-    pvr_dr_finish();
 }
 
 static inline int plx_prim(void *data, int size) {
@@ -49,11 +41,10 @@ static inline int plx_prim(void *data, int size) {
 }
 
 static inline void plx_scene_begin() {
-	pvr_wait_ready();
 	pvr_scene_begin();
 }
 
-static inline void plx_list_begin(int type) {
+static inline void plx_list_begin(pvr_list_type_t type) {
 	pvr_list_begin(type);
 }
 

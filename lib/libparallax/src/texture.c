@@ -216,7 +216,7 @@ void plx_txr_flush_hdrs(plx_texture_t * txr) {
 	pvr_poly_compile(&txr->hdr_pt, &txr->cxt_pt);
 }
 
-void plx_txr_send_hdr(plx_texture_t * txr, int list, int flush) {
+void plx_txr_send_hdr(plx_texture_t * txr, pvr_list_type_t list, int flush) {
 	assert( txr != NULL );
 	if (txr == NULL) return;
 
