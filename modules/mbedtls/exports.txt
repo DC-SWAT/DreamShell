@@ -1,0 +1,86 @@
+include kos/exports.h
+include mbedtls/ssl.h
+include mbedtls/version.h
+include mbedtls/x509_crt.h
+include mbedtls/x509_crl.h
+include mbedtls/pk.h
+include mbedtls/entropy.h
+include mbedtls/ctr_drbg.h
+include mbedtls/error.h
+include mbedtls/des.h
+include mbedtls/psa_util.h
+include psa/crypto.h
+
+mbedtls_ctr_drbg_free
+mbedtls_ctr_drbg_init
+mbedtls_ctr_drbg_random
+mbedtls_ctr_drbg_seed
+mbedtls_ctr_drbg_set_prediction_resistance
+mbedtls_des_crypt_ecb
+mbedtls_des_init
+mbedtls_des_key_set_parity
+mbedtls_des_setkey_enc
+mbedtls_entropy_free
+mbedtls_entropy_func
+mbedtls_entropy_init
+mbedtls_pk_can_do
+mbedtls_pk_free
+mbedtls_pk_init
+mbedtls_pk_parse_key
+mbedtls_pk_parse_keyfile
+mbedtls_pk_write_pubkey_der
+mbedtls_psa_crypto_free
+mbedtls_ssl_close_notify
+mbedtls_ssl_config_defaults
+mbedtls_ssl_config_free
+mbedtls_ssl_config_init
+mbedtls_ssl_conf_authmode
+mbedtls_ssl_conf_ca_chain
+mbedtls_ssl_conf_cert_profile
+mbedtls_ssl_conf_ciphersuites
+mbedtls_ssl_conf_own_cert
+mbedtls_ssl_conf_renegotiation
+mbedtls_ssl_conf_rng
+mbedtls_ssl_conf_session_tickets
+mbedtls_ssl_conf_tls13_enable_signal_new_session_tickets
+mbedtls_ssl_conf_verify
+mbedtls_ssl_free
+mbedtls_ssl_get_bytes_avail
+mbedtls_ssl_get_ciphersuite_id_from_ssl
+mbedtls_ssl_get_ciphersuite_name
+mbedtls_ssl_get_peer_cert
+mbedtls_ssl_get_session
+mbedtls_ssl_get_version
+mbedtls_ssl_handshake
+mbedtls_ssl_init
+mbedtls_ssl_list_ciphersuites
+mbedtls_ssl_read
+mbedtls_ssl_session_free
+mbedtls_ssl_session_init
+mbedtls_ssl_session_load
+mbedtls_ssl_session_save
+mbedtls_ssl_set_bio
+mbedtls_ssl_set_hostname
+mbedtls_ssl_set_session
+mbedtls_ssl_setup
+mbedtls_ssl_write
+mbedtls_strerror
+mbedtls_version_get_number
+mbedtls_x509_crl_free
+mbedtls_x509_crl_init
+mbedtls_x509_crl_parse_file
+mbedtls_x509_crt_free
+mbedtls_x509_crt_info
+mbedtls_x509_crt_init
+mbedtls_x509_crt_parse
+mbedtls_x509_crt_parse_der
+mbedtls_x509_crt_parse_file
+mbedtls_x509_crt_parse_path
+mbedtls_x509_crt_profile_next
+mbedtls_x509_crt_verify_info
+psa_crypto_init
+psa_generate_random
+psa_hash_compute
+psa_hash_finish
+psa_hash_setup
+psa_hash_update
