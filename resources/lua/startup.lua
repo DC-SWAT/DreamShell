@@ -75,7 +75,8 @@ local DreamShell = {
 		--"bitcoin",
 		--"quirc",
 		--"polarssl",
-		--"curl"              -- Depends: polarssl
+		--"mbedtls",
+		--"curl"              -- Depends: mbedtls
 	},
 
 	Initialize = function(self)

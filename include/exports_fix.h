@@ -63,6 +63,8 @@ extern uint32 __movmem_i4_odd;
 extern uint32 __movmemSI12_i4;
 extern uint32 __ctzsi2;
 extern uint32 __clzsi2;
+extern uint32 __ctzdi2;
+extern uint32 __popcountdi2;
 extern uint32 __umoddi3;
 extern uint32 __extendsfdf2;
 extern uint32 __muldf3;

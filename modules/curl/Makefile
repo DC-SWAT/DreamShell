@@ -1,6 +1,6 @@
 #
 # cURL module for DreamShell
-# Copyright (C) 2025 SWAT
+# Copyright (C) 2025-2026 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -9,7 +9,7 @@ TARGET_LIB = lib$(TARGET_NAME)-shared.a
 
 OBJS = module.o
 
-DBG_LIBS = -lds -lpolarssl-shared
+DBG_LIBS = -lds -lmbedtls-shared
 LIBS = -lcurl
 
 EXPORTS_FILE = exports.txt

@@ -14,6 +14,9 @@ curl_easy_unescape
 curl_easy_pause
 curl_easy_reset
 curl_easy_upkeep
+curl_easy_option_by_name
+curl_easy_option_by_id
+curl_easy_option_next
 curl_free
 curl_version
 curl_version_info

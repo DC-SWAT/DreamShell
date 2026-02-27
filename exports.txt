@@ -526,6 +526,7 @@ inflateGetHeader
 inflateBack
 inflateBackEnd
 inflateBackInit_
+inflateReset2
 zlibCompileFlags
 deflateInit_
 inflateInit_
@@ -534,6 +535,7 @@ deflateInit2_
 get_crc_table
 zError
 inflateSyncPoint
+zlibVersion
 #
 #
 # SDL
@@ -1918,6 +1920,7 @@ gethostname
 __locale_mb_cur_max
 random
 aligned_alloc
+pipe
 #
 # File System
 opendir

@@ -23,6 +23,8 @@ __movmem_i4_odd
 __movmemSI12_i4
 __ctzsi2
 __clzsi2
+__ctzdi2
+__popcountdi2
 __umoddi3
 __extendsfdf2
 __muldf3
