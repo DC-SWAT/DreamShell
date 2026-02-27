@@ -3,6 +3,7 @@
    font.c
 
    Copyright (C) 2002 Megan Potter
+   Copyright (C) 2024-2026 SWAT
 
 */
 
@@ -56,28 +57,27 @@
 
 */
 
-#define PACKED __attribute__((packed))
-typedef struct {
-	uint8	magic[4]		PACKED;
-	uint32	endian			PACKED;
-	uint32	format			PACKED;
-	uint32	txr_width		PACKED;
-	uint32	txr_height		PACKED;
-	int32	max_ascent		PACKED;
-	int32	max_descent		PACKED;
-	uint32	glyph_cnt		PACKED;
+typedef struct __attribute__((packed)) {
+	uint8	magic[4];
+	uint32	endian;
+	uint32	format;
+	uint32	txr_width;
+	uint32	txr_height;
+	int32	max_ascent;
+	int32	max_descent;
+	uint32	glyph_cnt;
 } txfhdr_t;
 
-typedef struct {
-	int16	idx			PACKED;
-	int8	w			PACKED;
-	int8	h			PACKED;
-	int8	x_offset		PACKED;
-	int8	y_offset		PACKED;
-	int8	advance			PACKED;
-	char	padding			PACKED;
-	uint16	x			PACKED;
-	uint16	y			PACKED;
+typedef struct __attribute__((packed)) {
+	int16	idx;
+	int8	w;
+	int8	h;
+	int8	x_offset;
+	int8	y_offset;
+	int8	advance;
+	char	padding;
+	uint16	x;
+	uint16	y;
 } txfglyph_t;
 
 /* This function DEFINITELY has function growth hormone inbalance syndrome,
@@ -85,8 +85,8 @@ typedef struct {
 plx_font_t * plx_font_load(const char * fn) {
 	plx_font_t	* fnt;
 	file_t		f;
-	txfhdr_t	hdr;
-	txfglyph_t	g;
+	txfhdr_t	hdr __attribute__((aligned(32)));
+	txfglyph_t	g __attribute__((aligned(32)));
 	int		i, x, y;
 	float		xstep, ystep, w, h;
 	uint8		* bmtmp = NULL;
@@ -115,7 +115,7 @@ plx_font_t * plx_font_load(const char * fn) {
 		goto fail_2;	/* bail */
 	}
 
-	if (hdr.magic[0] != 0xff || strncmp("txf", hdr.magic+1, 3)) {
+	if (hdr.magic[0] != 0xff || strncmp("txf", (char *)hdr.magic+1, 3)) {
 		dbglog(DBG_WARNING, "plx_font_load: invalid font file '%s'\n", fn);
 		goto fail_2;	/* bail */
 	}
