@@ -195,7 +195,7 @@ export KOS_CFLAGS="${KOS_CFLAGS} -fomit-frame-pointer"
 # allows for compiler-optimized routines to replace function calls to the C standard
 # library which are backed by Newlib or KOS.
 #
-export KOS_CFLAGS="${KOS_CFLAGS} -fno-builtin"
+#export KOS_CFLAGS="${KOS_CFLAGS} -fno-builtin"
 
 # Fast Math Instructions
 #
@@ -206,7 +206,7 @@ export KOS_CFLAGS="${KOS_CFLAGS} -fno-builtin"
 # NOTE: If these cause issues when enabled globally, it's advised to try to enable
 #       them on individual files in the critical path to still gain performance.
 #
-#export KOS_CFLAGS="${KOS_CFLAGS} -fbuiltin -ffast-math -ffp-contract=fast -mfsrra -mfsca"
+#export KOS_CFLAGS="${KOS_CFLAGS} -fbuiltin -ffast-math -ffp-contract=fast"
 
 # SH4 Floating-Point Arithmetic Precision
 #
