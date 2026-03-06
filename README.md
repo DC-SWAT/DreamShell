@@ -35,7 +35,7 @@ cd /usr/local/dc/kos/kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
 cp ds/sdk/toolchain/environ.sh environ.sh
-cp ds/sdk/toolchain/patches/*.diff utils/dc-chain/patches
+cp ds/sdk/toolchain/patches/*.diff utils/kos-chain/patches
 cd /usr/local/dc/kos/kos/ds
 git submodule update --init --recursive
 ```
@@ -44,8 +44,8 @@ git submodule update --init --recursive
 sudo mkdir -p /opt/toolchains/dc
 sudo chown -R $(id -u):$(id -g) /opt/toolchains/dc
 cd /usr/local/dc/kos/kos
-cp ./ds/sdk/toolchain/Makefile.cfg ./utils/dc-chain/Makefile.cfg
-cd utils/dc-chain && make
+cp ./ds/sdk/toolchain/Makefile.cfg ./utils/kos-chain/Makefile.cfg
+cd utils/kos-chain && make
 ```
 ##### SDK
 ```console

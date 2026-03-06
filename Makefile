@@ -258,10 +258,10 @@ build-ports:
 
 toolchain:
 	@cp $(DS_SDK)/toolchain/environ.sh $(KOS_BASE)/environ.sh
-	@cp $(DS_SDK)/toolchain/patches/*.diff $(KOS_BASE)/utils/dc-chain/patches
-	@cp $(DS_SDK)/toolchain/Makefile.cfg $(KOS_BASE)/utils/dc-chain/Makefile.cfg
+	@cp $(DS_SDK)/toolchain/patches/*.diff $(KOS_BASE)/utils/kos-chain/patches
+	@cp $(DS_SDK)/toolchain/Makefile.cfg $(KOS_BASE)/utils/kos-chain/Makefile.cfg
 	@source $(KOS_BASE)/environ.sh
-	@cd $(KOS_BASE)/utils/dc-chain && make
+	@cd $(KOS_BASE)/utils/kos-chain && make
 
 $(TARGET): libs $(TARGET_BIN) make-build
 
