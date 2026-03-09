@@ -73,7 +73,7 @@ void plx_cxt_specular(int type) {
 	compile_cxts();
 }
 
-void plx_cxt_send(int type) {
+void plx_cxt_send(pvr_list_type_t type) {
 	switch (type) {
 	case PVR_LIST_OP_POLY:
 		pvr_prim(&hdr_working_op, sizeof(pvr_poly_hdr_t));
