@@ -281,11 +281,11 @@ static void SetTitle(int game_index, const char *text, bool limit_length)
 		switch (menu_data.games_array[game_index].device)
 		{
 			case APP_DEVICE_IDE:
-				strncpy(titleText, "IDE: ", sizeof("IDE: "));
+				strncpy(titleText, "IDE: ", strlen("IDE: "));
 				break;
 
 			case APP_DEVICE_SD:
-				strncpy(titleText, "SD: ", sizeof("SD: "));
+				strncpy(titleText, "SD: ", strlen("SD: "));
 				break;
 		}
 	}
@@ -2461,15 +2461,24 @@ static void DoMenuControlHandler(void *ds_event, void *param, int action)
 										TSU_ItemMenuSetSelected(self.item_game[self.menu_cursel], false, false);
 										TSU_ItemMenuSetSelected(itemMenu, true, true);
 
-										const int game_index = TSU_ItemMenuGetItemIndex(itemMenu);
-										self.menu_cursel = game_index - ((self.current_page - 1) * menu_data.menu_option.max_page_size);
+										for (int i = 0; i < self.game_count; i++)
+										{
+											if (self.item_game[i] != NULL && self.item_game[i] == itemMenu)
+											{
+												self.menu_cursel = i;
+												TSU_ItemMenuSetSelected(self.item_game[i], true, true);
+												SetTitle(TSU_ItemMenuGetItemIndex(self.item_game[i]), TSU_ItemMenuGetItemValue(self.item_game[i]), true);
 
-										SetTitle(game_index, TSU_ItemMenuGetItemValue(itemMenu), true);
-										SetTitleType(GetFullGamePathByIndex(game_index), CheckGdiOptimized(game_index));
-										SetCursor();
+												SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.item_game[i]))
+													, CheckGdiOptimized(TSU_ItemMenuGetItemIndex(self.item_game[i])));
 
-										ShowCover(game_index);
-										PlayCDDA(game_index);
+												SetCursor();
+
+												ShowCover(TSU_ItemMenuGetItemIndex(self.item_game[i]));
+
+												PlayCDDA(TSU_ItemMenuGetItemIndex(self.item_game[i]));
+											}
+										}
 									}
 								}
 

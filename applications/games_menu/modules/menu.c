@@ -3300,7 +3300,7 @@ GameItemStruct *FindInCache(const char *game_path)
 		}
 		else if (strcasecmp(game_path_withouth_base, game_file) == 0)
 		{
-			memset(game_item->folder, 0, NAME_MAX);
+			game_item->folder = calloc(NAME_MAX, sizeof(char));
 		}
 		else
 		{
