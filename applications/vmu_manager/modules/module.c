@@ -391,7 +391,7 @@ static int Confirm_Window() {
 
 	if (y > 320) y = 300;
 	SDL_WarpMouse(270, y);
-	UnlockVideo();
+	if (VideoIsLocked()) UnlockVideo();
 
 	return rv;
 }
