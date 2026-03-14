@@ -267,8 +267,9 @@ void *internal_malloc(size_t alignment, size_t size) {
         internal_malloc_pos = (void*)end_of_alloc;
         c = newc;
 
-    } else if (length + sizeof(size_t) < c->size) {
-        internal_malloc_split_next(c, length);
+    }
+    else if (length + sizeof(struct chunk) < c->size) {
+        internal_malloc_split_next(c, length + sizeof(struct chunk));
     }
 
     c->free = 0;
@@ -367,14 +368,14 @@ void *malloc(uint32 size) {
             if (internal_malloc_pos == NULL) {
                 internal_malloc_init(0);
             }
-            return internal_malloc(sizeof(size_t), size);
+            return internal_malloc(8, size);
         }
         return ptr;
     }
     else
 #endif
     {
-        return internal_malloc(sizeof(size_t), size);
+        return internal_malloc(8, size);
     }
 }
 

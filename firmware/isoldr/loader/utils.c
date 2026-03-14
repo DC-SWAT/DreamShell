@@ -314,16 +314,16 @@ int Load_DS() {
 	uint16 *bios_app = (uint16 *)NONCACHED_ADDR(BIOS_ROM_APP_BIN_ADDR);
 
 	/* Check for bootloader in BIOS ROM */
-	if (*bios_app != SH4_OPCODE_NOP) {
+	if (is_dreamcast() && *bios_app != SH4_OPCODE_NOP) {
 		sz = (BIOS_ROM_FONT_ADDR - BIOS_ROM_APP_BIN_ADDR);
 		rom_memcpy(dst, bios_app, sz);
 		LOGFF("from BIOS\n");
-	} else {
+	}
+	else {
 		LOGFF("from FS\n");
 		if (iso_fd > FILEHND_INVALID) {
 			close(iso_fd);
 		}
-
 		fd = get_ds_fd();
 
 		if (fd < 0) {
