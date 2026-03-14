@@ -207,6 +207,19 @@ isoldr_info_t *isoldr_get_info(const char *file, int test_mode);
 int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *boot_file);
 
 /**
+ * Build preset filename for the given image file path and MD5 hash.
+ * Returns pointer to a static buffer.
+*/
+char *isoldr_make_preset_filename(const char *image_file, uint8_t *md5);
+
+/**
+ * Find preset file for the given image file path: checks user presets first,
+ * then bundled romdisk. Pass default_only=1 to skip user presets.
+ * Returns path to the preset file, or NULL if not found.
+*/
+char *isoldr_find_preset(const char *image_file, uint8_t *md5, int default_only);
+
+/**
  * Apply preset file (or default if not specified) to isoldr info
  * and return execution address. Returns -1 on error.
  */
@@ -214,8 +227,13 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *info, const char *preset_file);
 
 /**
  * Save preset file from isoldr info. Returns 0 on success.
+ * title       - game title string (may be NULL)
+ * loader_addr - loader binary memory address (e.g. 0x8c004000)
+ * alt_file    - alternative boot file name, or NULL if not used
  */
-int isoldr_save_preset(isoldr_info_t *info, const char *filename);
+int isoldr_save_preset(isoldr_info_t *info, const char *filename,
+                       const char *title, uintptr_t loader_addr,
+                       const char *alt_file);
 
 /**
  * Execute loader for specified device at any valid memory address

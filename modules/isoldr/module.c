@@ -11,17 +11,28 @@
 #include "naomi/cart.h"
 #include <arch/arch.h>
 
-static uint8 kos_hdr[8] = {0x2D, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x2B, 0xD0};
-static uint8 kos_hdr_2[8] = {0x38, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x36, 0xD0};
-static uint8 kos_hdr_3[8] = {0x37, 0xD0, 0x02, 0x01, 0x12, 0x20, 0x35, 0xD0};
+#define KOS_HDR_OFFSET 1
+static uint8 kos_hdr[5] = {0xD0, 0x02, 0x01, 0x12, 0x20};
 static uint8 ron_hdr[8] = {0x1B, 0xD0, 0x1A, 0xD1, 0x1B, 0x20, 0x2B, 0x40};
 static uint8 win_hdr[4] = {0x45, 0x43, 0x45, 0x43};
 
 void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 params_len);
 void isoldr_vm2_bank_switch(const char *ipbin_info_sec);
+void isoldr_unmount_all_presets_romdisks(void);
+int builtin_isoldr_cmd(int argc, char *argv[]);
 
-DEFAULT_MODULE_EXPORTS_CMD(isoldr, "Runs the games images");
+DEFAULT_MODULE_HEADER(isoldr);
 
+int lib_open(klibrary_t *lib) {
+	AddCmd(lib_get_name(), "ISO Loader command line", (CmdHandler *)builtin_isoldr_cmd);
+	return nmmgr_handler_add(&ds_isoldr_hnd.nmmgr);
+}
+
+int lib_close(klibrary_t *lib) {
+	isoldr_unmount_all_presets_romdisks();
+	RemoveCmd(GetCmdByName(lib_get_name()));
+	return nmmgr_handler_remove(&ds_isoldr_hnd.nmmgr);
+}
 
 static void get_ipbin_info(isoldr_info_t *info, file_t fd, uint8 *sec, char *psec) {
 
@@ -57,16 +68,14 @@ static void get_ipbin_info(isoldr_info_t *info, file_t fd, uint8 *sec, char *pse
 
 static int is_homebrew(file_t fd) {
 
-	uint8 src[sizeof(kos_hdr)];
+	uint8 src[sizeof(kos_hdr) + KOS_HDR_OFFSET];
 
 	fs_seek(fd, 0, SEEK_SET);
-	fs_read(fd, src, sizeof(kos_hdr));
+	fs_read(fd, src, sizeof(src));
 	fs_seek(fd, 0, SEEK_SET);
 
 	/* Check for unscrambled homebrew */
-	if(!memcmp(src, kos_hdr, sizeof(kos_hdr))
-		|| !memcmp(src, kos_hdr_2, sizeof(kos_hdr_2))
-		|| !memcmp(src, kos_hdr_3, sizeof(kos_hdr_3))
+	if(!memcmp(src + KOS_HDR_OFFSET, kos_hdr, sizeof(kos_hdr))
 		|| !memcmp(src, ron_hdr, sizeof(ron_hdr))
 	) {
 		return 1;
