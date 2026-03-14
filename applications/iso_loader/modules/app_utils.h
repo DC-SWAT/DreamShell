@@ -48,6 +48,8 @@ void PlayCDDATrack(const char *file, int loop);
 void StopCDDATrack();
 void PauseCDDATrack();
 void ResumeCDDATrack();
+int IsCDDATrackPlaying();
+void SetCDDAVolume(int vol);
 
 char *lib_get_name();
 uint32 lib_get_version();

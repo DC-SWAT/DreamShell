@@ -237,6 +237,19 @@ void ResumeCDDATrack() {
 	}
 }
 
+int IsCDDATrackPlaying() {
+	if(wav_inited && wav_hnd != SND_STREAM_INVALID) {
+		return wav_is_playing(wav_hnd);
+	}
+	return 0;
+}
+
+void SetCDDAVolume(int vol) {
+	if(wav_inited && wav_hnd != SND_STREAM_INVALID) {
+		wav_volume(wav_hnd, vol);
+	}
+}
+
 void StopCDDATrack() {
 	if(wav_inited) {
 		wav_shutdown();
@@ -255,7 +268,7 @@ void PlayCDDATrack(const char *file, int loop) {
 			ds_printf("DS_ERROR: Can't play file: %s\n", file);
 			return;
 		}
-		ds_printf("DS_OK: Start playing: %s\n", file);
+		// ds_printf("DS_OK: Start playing: %s\n", file);
 
 		int volume = GetVolumeFromSettings();
 		if(volume >= 0) {

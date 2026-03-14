@@ -24,6 +24,10 @@ DEFAULT_MODULE_EXPORTS(app_iso_loader);
 #define SCREENSHOT_HOTKEY (CONT_START | CONT_A | CONT_B)
 #define ALT_BOOT_FILE "2ND_READ.BIN"
 #define FFMPEG_MODULES_COUNT 1
+#define AUDIO_FADE_STEPS 10
+#define AUDIO_FADE_STEP_MS 30
+#define COVER_DISPLAY_MS 1000
+#define COVER_DISPLAY_STEP_MS 50
 
 static const char *ffmpeg_module_names[FFMPEG_MODULES_COUNT] = {
 	// "bzip2",
@@ -150,6 +154,7 @@ static struct {
 	void (*ffplay_toggle_pause)(void);
 	int (*ffplay_is_playing)(void);
 	int (*ffplay_is_paused)(void);
+	void (*ffplay_set_volume)(int vol);
 
 	kthread_t *select_thd;
 	mutex_t select_mutex;
@@ -1483,6 +1488,7 @@ static void loadFFmpegModules() {
         self.ffplay_toggle_pause = (void (*)(void))GET_EXPORT_ADDR("ffplay_toggle_pause");
         self.ffplay_is_playing = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_playing");
         self.ffplay_is_paused = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_paused");
+        self.ffplay_set_volume = (void (*)(int))GET_EXPORT_ADDR("ffplay_set_volume");
     }
 }
 
@@ -1492,6 +1498,7 @@ static void *selectFile_worker(void *p) {
 	uint32_t last_id = 0;
 	int trailer_playing = 0;
 	char *trailer_path = NULL;
+	int trailer_exists = 0;
 
 	mutex_lock(&self.select_mutex);
 
@@ -1511,6 +1518,17 @@ static void *selectFile_worker(void *p) {
 
 		mutex_unlock(&self.select_mutex);
 
+		if(IsCDDATrackPlaying() || (self.ffplay && self.ffplay_is_playing())) {
+			int vol = GetVolumeFromSettings();
+			if(vol < 0) vol = 240;
+
+			for(int i = AUDIO_FADE_STEPS - 1; i >= 0; i--) {
+				int new_vol = vol * i / AUDIO_FADE_STEPS;
+				if(IsCDDATrackPlaying()) SetCDDAVolume(new_vol);
+				if(self.ffplay && self.ffplay_is_playing()) self.ffplay_set_volume(new_vol);
+				thd_sleep(AUDIO_FADE_STEP_MS);
+			}
+		}
 		StopCDDATrack();
 		if(self.ffplay && self.ffplay_is_playing()) {
 			self.ffplay_shutdown();
@@ -1522,6 +1540,7 @@ static void *selectFile_worker(void *p) {
 
 		strncpy(self.filename, filename, NAME_MAX);
 		trailer_path = relativeFilename("trailer.avi");
+		trailer_exists = FileExists(trailer_path);
 
 		showCover();
 		isoLoader_LoadPreset(NULL);
@@ -1535,16 +1554,30 @@ static void *selectFile_worker(void *p) {
 
 		trailer_playing = 0;
 
-		if(FileExists(trailer_path)) {
+		if(trailer_exists) {
 			loadFFmpegModules();
 
 			if(self.ffplay) {
+				if(self.current_cover != self.default_cover) {
+					int cover_elapsed = 0;
 
+					while(cover_elapsed < COVER_DISPLAY_MS) {
+						thd_sleep(COVER_DISPLAY_STEP_MS);
+						cover_elapsed += COVER_DISPLAY_STEP_MS;
+						mutex_lock(&self.select_mutex);
+
+						if(last_id != self.select_id) {
+							mutex_unlock(&self.select_mutex);
+							goto next_item;
+						}
+						mutex_unlock(&self.select_mutex);
+					}
+				}
 				ffplay_params_t params;
 				memset(&params, 0, sizeof(params));
 				params.scale = 1.0f;
 				params.loop = 1;
-				params.fade_in = 2000;
+				params.fade_in = 1000;
 
 				getWidgetAbsolutePosition(self.cover_widget,
 					&params.x, &params.y,
@@ -1566,8 +1599,8 @@ static void *selectFile_worker(void *p) {
 				do {
 					track_size = GetCDDATrackFilename((random() % 15) + 4,
 									GUI_FileManagerGetPath(self.filebrowser), filename, filepath);
-				} while(track_size == 0);
-				PlayCDDATrack(filepath, 3);
+				} while(track_size < (5 << 10));
+				PlayCDDATrack(filepath, 0);
 			}
 		}
 
@@ -2155,18 +2188,16 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 
 	if (strlen(device) > 0) {
 		GUI_TextEntrySetText(self.device, device);
-	} else {
+	}
+	else {
 		GUI_TextEntrySetText(self.device, "auto");
 	}
 
 	if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
 		/* NAOMI platform with non-DNI image: use 0x8dfe0000 */
-		i = 13;
-		boot_mode = BOOT_MODE_IPBIN;
-
-		if(bin_type == BIN_TYPE_AUTO) {
-			/* Without WinCE support, IRQ is not needed yet. */
-			use_irq = 0;
+		if(bin_type != BIN_TYPE_WINCE) {
+			i = 13;
+			boot_mode = BOOT_MODE_IPBIN;
 		}
 		GUI_WidgetSetState(self.memory_chk[i], 1);
 		isoLoader_toggleMemory(self.memory_chk[i]);

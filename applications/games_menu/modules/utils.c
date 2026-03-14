@@ -718,7 +718,7 @@ void PlayCDDATrack(const char *file, int loop)
 			ds_printf("DS_ERROR: Can't play file: %s\n", file);
 			return;
 		}
-		ds_printf("DS_OK: Start playing: %s\n", file);
+		// ds_printf("DS_OK: Start playing: %s\n", file);
 
 		int volume = GetVolumeFromSettings();
 		if(volume >= 0) {
