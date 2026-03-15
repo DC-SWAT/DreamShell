@@ -17,24 +17,19 @@
 		<surface height="104" name="head_bg" width="640">
 			<fill color="#A0DDDD" height="366" />
 			<fill color="#165e93" height="114" width="640" y="366" />
-			
 			<blit height="79" surface="logo" width="122" x="6" y="14" />
 		</surface>
-
 		<surface height="380" name="games_bg" width="640">
 			<fill color="#A0DDDD" height="266" />
 			<fill color="#165e93" height="114" width="640" y="266" />
 		</surface>
-
 		<surface height="380" name="settings_bg" width="640">
 			<fill color="#A0DDDD" height="266" />
 			<fill color="#165e93" height="114" width="640" y="262" />
-
 			<fill color="#B0B0B0" x="20" y="14" width="601" height="309" />
 			<fill color="#E0FFFF" x="19" y="13" width="601" height="309" />
 			<fill color="#e5e3e7" x="25" y="19" width="589" height="297" />
 		</surface>
-
 		<surface height="269" width="269" name="overlay_bg">
 			<fill color="#B0B0B0"/>
 			<fill color="#FFFFFF" width="268" height="268"/>
@@ -168,8 +163,6 @@
 			<fill color="#31799F" width="39" height="24" />
 			<fill color="#61BDEC" height="20" width="35" x="2" y="2" />
 		</surface>
-
-
 		<surface height="50" width="320" name="menu_bg">
 			<fill color="#B0B0B0" />
 			<fill color="#FFFFFF" height="49" />
@@ -463,15 +456,12 @@
 									<input height="22" name="0x8c004800" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8c004800" x="19%" />
 									</input>
-								<input height="22" name="0x8c005000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8c005000" x="19%" />
-								</input>
-								<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
-								</input>
-								<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />
-								</input>
+									<input height="22" name="0x8c005000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c005000" x="19%" />
+									</input>
+									<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
+									</input>
 									<input height="22" name="0x8cfd0000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8cfd0000" x="19%" />
 									</input>
@@ -487,9 +477,9 @@
 									<input height="22" name="0x8cff4800" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
 										<label align="left" color="#000000" font="arial" height="20" text="0x8cff4800" x="19%" />
 									</input>
-								<input height="22" name="0x8dfe0000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8dfe0000" x="19%" />
-								</input>
+									<input height="22" name="0x8dfe0000" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="46%">
+										<label align="left" color="#000000" font="arial" height="20" text="0x8dfe0000" x="19%" />
+									</input>
 									<input height="23" name="0x8c" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="20%">
 										<label align="left" color="#000000" font="arial" height="22" text="0x8c" width="109%" x="45%" />
 									</input>

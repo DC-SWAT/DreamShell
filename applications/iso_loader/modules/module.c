@@ -172,13 +172,6 @@ int isoLoader_LoadPreset(GUI_Widget *widget);
 int isoLoader_SavePreset(GUI_Widget *widget);
 static void setIcon(int size);
 
-static int canUseTrueAsyncDMA(void) {
-	return (self.sector_size <= 2048 && 
-			(self.current_dev == APP_DEVICE_IDE || self.current_dev == APP_DEVICE_CD) &&
-			(self.image_type == ISOFS_IMAGE_TYPE_ISO || self.image_type == ISOFS_IMAGE_TYPE_GDI ||
-				self.image_type == IMAGE_TYPE_ROM_NAOMI));
-}
-
 static char *relativeFilename(char *filename) {
 	static char filepath[NAME_MAX];
 	makeGameRelativePath(filepath, sizeof(filepath), GUI_FileManagerGetPath(self.filebrowser), self.filename, filename);
@@ -232,6 +225,7 @@ void isoLoader_ShowSettings(GUI_Widget *widget) {
 	ScreenFadeOutEx("Settings", 1);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
+	FFplayTogglePlayback(widget);
 }
 
 void isoLoader_ShowExtensions(GUI_Widget *widget) {
@@ -239,6 +233,7 @@ void isoLoader_ShowExtensions(GUI_Widget *widget) {
 	ScreenFadeOutEx("Extensions", 1);
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
+	FFplayTogglePlayback(widget);
 }
 
 void isoLoader_ShowGames(GUI_Widget *widget) {
@@ -902,7 +897,8 @@ void isoLoader_toggleAsync(GUI_Widget *widget) {
 	for(int i = 0; i < sizeof(self.async) >> 2; i++) {
 		if(widget != self.async[i]) {
 			GUI_WidgetSetState(self.async[i], 0);
-		} else {
+		}
+		else {
 			GUI_WidgetSetState(self.async[i], 1);
 		}
 	}
@@ -910,27 +906,27 @@ void isoLoader_toggleAsync(GUI_Widget *widget) {
 
 void isoLoader_toggleDMA(GUI_Widget *widget) {
 	
-	if (GUI_WidgetGetState(widget) && canUseTrueAsyncDMA()) {
-
+	if (GUI_WidgetGetState(widget) && self.isoldr != NULL && isoldr_can_use_dma(self.isoldr) > 1) {
 		if (!strncmp(GUI_LabelGetText(self.async_label), "none", 4)) {
 			GUI_LabelSetText(self.async_label, "true");
 		}
 
 		if (!GUI_WidgetGetState(self.async[0])) {
 			isoLoader_toggleAsync(self.async[0]);
-		} else {
+		}
+		else {
 			GUI_WidgetMarkChanged(self.async[0]);
 		}
-
-	} else {
-
+	}
+	else {
 		if (!strncmp(GUI_LabelGetText(self.async_label), "true", 4)) {
 			GUI_LabelSetText(self.async_label, "none");
 		}
 
 		if (GUI_WidgetGetState(self.async[0])) {
 			isoLoader_toggleAsync(self.async[8]);
-		} else {
+		}
+		else {
 			GUI_WidgetMarkChanged(self.async[0]);
 		}
 	}
@@ -1282,7 +1278,15 @@ void isoLoader_Run(GUI_Widget *widget) {
 	if(GUI_CardStackGetIndex(self.pages) != 0) {
 		isoLoader_SavePreset(NULL);
 	}
-	self.isoldr = isoldr_get_info(filepath, GUI_WidgetGetState(self.test_mode));
+	int want_test_mode = GUI_WidgetGetState(self.test_mode);
+
+	if(!self.isoldr || want_test_mode ||
+	   strncmp(self.isoldr->image_file, filepath, sizeof(self.isoldr->image_file) - 1) != 0) {
+		if(self.isoldr) {
+			free(self.isoldr);
+		}
+		self.isoldr = isoldr_get_info(filepath, want_test_mode);
+	}
 
 	if(self.isoldr == NULL) {
 		ShowConsole();
@@ -1463,6 +1467,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 	ShowConsole();
 	ScreenFadeIn();
 	free(self.isoldr);
+	self.isoldr = NULL;
 }
 
 static void unloadFFmpegModules() {
@@ -1573,19 +1578,21 @@ static void *selectFile_worker(void *p) {
 						mutex_unlock(&self.select_mutex);
 					}
 				}
-				ffplay_params_t params;
-				memset(&params, 0, sizeof(params));
-				params.scale = 1.0f;
-				params.loop = 1;
-				params.fade_in = 1000;
+				if(GUI_CardStackGetIndex(self.pages) == 0) {
+					ffplay_params_t params;
+					memset(&params, 0, sizeof(params));
+					params.scale = 1.0f;
+					params.loop = 1;
+					params.fade_in = 1000;
 
-				getWidgetAbsolutePosition(self.cover_widget,
-					&params.x, &params.y,
-					&params.width, &params.height);
+					getWidgetAbsolutePosition(self.cover_widget,
+						&params.x, &params.y,
+						&params.width, &params.height);
 
-				if(self.ffplay(trailer_path, &params) == 0) {
-					trailer_playing = 1;
-					thd_sleep(50);
+					if(self.ffplay(trailer_path, &params) == 0) {
+						trailer_playing = 1;
+						thd_sleep(50);
+					}
 				}
 			}
 		}
@@ -1780,92 +1787,63 @@ void isoLoader_ItemSelect(dirent_fm_t *fm_ent) {
 
 
 void isoLoader_DefaultPreset() {
+	isoldr_info_t dummy = {0};
+	isoldr_info_t *info = self.isoldr;
 
-	if(canUseTrueAsyncDMA() && !GUI_WidgetGetState(self.dma)) {
-
-		GUI_WidgetSetState(self.dma, 1);
-		isoLoader_toggleDMA(self.dma);
-
-	} else if(!canUseTrueAsyncDMA() && GUI_WidgetGetState(self.dma)) {
-
-		GUI_WidgetSetState(self.dma, 0);
-		isoLoader_toggleDMA(self.dma);
-		isoLoader_toggleAsync(self.async[8]);
+	if(!info) {
+		dummy.image_type = self.image_type;
+		info = &dummy;
 	}
 
-	GUI_TextEntrySetText(self.device, "auto");
+	uintptr_t exec_addr = isoldr_apply_preset(info, NULL);
 
+	if(GUI_WidgetGetState(self.dma) != (int)info->use_dma) {
+		GUI_WidgetSetState(self.dma, info->use_dma);
+		isoLoader_toggleDMA(self.dma);
+		if(!info->use_dma) {
+			isoLoader_toggleAsync(self.async[8]);
+		}
+	}
+
+	GUI_TextEntrySetText(self.device,
+		(info->fs_dev[0] && strncmp(info->fs_dev, "auto", 4)) ? info->fs_dev : "auto");
 	GUI_WidgetSetState(self.preset, 0);
-
-	setModeCDDA(CDDA_MODE_DISABLED);
-
-	GUI_WidgetSetState(self.alt_read, 0);
-	GUI_WidgetSetState(self.irq, 0);
-	GUI_WidgetSetState(self.low, 0);
-	isoLoader_toggleVMU(self.vmu_disabled);
-	GUI_WidgetSetState(self.screenshot, 0);
-	GUI_WidgetSetState(self.use_gpio, 0);
+	setModeCDDA(info->emu_cdda);
+	GUI_WidgetSetState(self.alt_read, info->alt_read);
+	GUI_WidgetSetState(self.irq, info->use_irq);
+	GUI_WidgetSetState(self.low, info->syscalls);
+	isoLoader_toggleVMU(info->emu_vmu ? self.vmu_shared : self.vmu_disabled);
+	GUI_WidgetSetState(self.screenshot, info->scr_hotkey ? 1 : 0);
+	GUI_WidgetSetState(self.use_gpio, info->use_gpio);
 	GUI_WidgetSetState(self.test_mode, 0);
 
-	int region = NAOMI_REGION_JAPAN;
-
-	switch(flashrom_get_region_only()) {
-		case FLASHROM_REGION_US:
-			region = NAOMI_REGION_USA;
-			break;
-		case FLASHROM_REGION_EUROPE:
-			region = NAOMI_REGION_EXPORT;
-			break;
-		case FLASHROM_REGION_JAPAN:
-		default:
-			region = NAOMI_REGION_JAPAN;
-			break;
-	}
-
+	int region = (int)info->region;
+	if(region < 0 || region >= (int)(sizeof(self.region_chk) >> 2)) region = 0;
 	GUI_WidgetSetState(self.region_chk[region], 1);
 	isoLoader_toggleRegion(self.region_chk[region]);
 
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
 
-	int memory_idx = 2; /* Default: 0x8c004000 */
+	char mem_str[12];
+	snprintf(mem_str, sizeof(mem_str), "0x%08lx", (uint32)exec_addr);
 
-	if (self.image_type == IMAGE_TYPE_ROM_NAOMI) {
-		/* NAOMI ROM: use 0x8c005000 */
-		memory_idx = 4;
-		// GUI_WidgetSetState(self.irq, 1);
-	}
-	else if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
-		/* NAOMI platform: use 0x8dfe0000 */
-		memory_idx = 13;
-	}
+	for(int mi = 0; self.memory_chk[mi]; mi++) {
+		char *mname = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[mi]);
+		int mlen = strlen(mname);
 
-	GUI_WidgetSetState(self.memory_chk[memory_idx], 1);
-	isoLoader_toggleMemory(self.memory_chk[memory_idx]);
-
-	GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_DIRECT], 1);
-	isoLoader_toggleBootMode(self.boot_mode_chk[BOOT_MODE_DIRECT]);
-
-	/*
-	 * Enable CDDA if present
-	 */
-	if (self.filename[0] != 0 && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
-
-		char filepath[NAME_MAX];
-		size_t track_size = GetCDDATrackFilename(4,
-			GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
-
-		if (track_size && track_size < 30 * 1024 * 1024) {
-			track_size = GetCDDATrackFilename(6,
-				GUI_FileManagerGetPath(self.filebrowser), self.filename, filepath);
-		}
-
-		if (track_size > 0) {
-			GUI_WidgetSetState(self.irq, 1);
-			GUI_WidgetSetState(self.cdda, 1);
-			isoLoader_toggleCDDA(self.cdda);
+		if(!strncmp(mname, mem_str, sizeof(mem_str)) || mlen < 8) {
+			GUI_WidgetSetState(self.memory_chk[mi], 1);
+			isoLoader_toggleMemory(self.memory_chk[mi]);
+			if(mlen < 8) {
+				GUI_TextEntrySetText(self.memory_text, &mem_str[4]);
+			}
+			break;
 		}
 	}
+
+	GUI_WidgetSetState(self.boot_mode_chk[info->boot_mode], 1);
+	isoLoader_toggleBootMode(self.boot_mode_chk[info->boot_mode]);
 }
 
 void isoLoader_RemovePreset(GUI_Widget *widget) {
@@ -1875,7 +1853,9 @@ void isoLoader_RemovePreset(GUI_Widget *widget) {
 		return;
 	}
 
-	char *preset_filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
+	char filepath[NAME_MAX];
+	snprintf(filepath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+	char *preset_filename = isoldr_make_preset_filename(filepath, self.md5);
 
 	if (preset_filename != NULL) {
 		if (fs_unlink(preset_filename) == 0) {
@@ -1895,16 +1875,11 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 		return 0;
 	}
 
-	char *filename;
-	file_t fd;
 	ipbin_meta_t *ipbin = (ipbin_meta_t *)self.boot_sector;
-	char result[1024];
-	char memory[24];
+	char tmpbuf[24];
 	char title[32];
-	int async = 0, type = 0, mode = 0, region = 0;
-	uint32 heap = HEAP_MODE_AUTO;
-	uint32 cdda_mode = CDDA_MODE_DISABLED;
-	int vmu_num = 0;
+	uintptr_t loader_addr = ISOLDR_DEFAULT_ADDR_LOW;
+	isoldr_info_t info;
 	int ffplay_paused = 0;
 
 	if(self.ffplay && self.ffplay_is_playing() && !self.ffplay_is_paused()) {
@@ -1913,39 +1888,30 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	}
 	PauseCDDATrack();
 
-	filename = makePresetFilename(GUI_FileManagerGetPath(self.filebrowser), self.md5);
+	char filepath[NAME_MAX];
+	snprintf(filepath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+	char *filename = isoldr_make_preset_filename(filepath, self.md5);
 
-	fd = fs_open(filename, O_CREAT | O_TRUNC | O_WRONLY);
-
-	if(fd == FILEHND_INVALID) {
-		if(ffplay_paused) {
-			self.ffplay_toggle_pause();
-		}
-		ResumeCDDATrack();
-		return -1;
-	}
-
-	memset(result, 0, sizeof(result));
+	memset(&info, 0, sizeof(info));
 	memset(title, 0, sizeof(title));
-	memset(memory, 0, sizeof(memory));
 
 	for(int i = 1; i < sizeof(self.async) >> 2; i++) {
 		if(GUI_WidgetGetState(self.async[i])) {
-			async = atoi(GUI_LabelGetText(GUI_ButtonGetCaption(self.async[i])));
+			info.emu_async = atoi(GUI_LabelGetText(GUI_ButtonGetCaption(self.async[i])));
 			break;
 		}
 	}
 
 	for(int i = 0; i < sizeof(self.os_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.os_chk[i])) {
-			type = i;
+			info.exec.type = i;
 			break;
 		}
 	}
 
 	for(int i = 0; i < sizeof(self.boot_mode_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.boot_mode_chk[i])) {
-			mode = i;
+			info.boot_mode = i;
 			break;
 		}
 	}
@@ -1953,42 +1919,40 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
 		if(self.heap[i] && GUI_WidgetGetState(self.heap[i])) {
 			if (i <= HEAP_MODE_MAPLE) {
-				heap = i;
+				info.heap = i;
 			} else {
 				char *tmpval = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
 
 				if(strlen(tmpval) < 8) {
-					strncpy(memory, tmpval, 10);
-					tmpval = strncat(memory, GUI_TextEntryGetText(self.heap_memory_text), 10);
+					strncpy(tmpbuf, tmpval, 10);
+					tmpval = strncat(tmpbuf, GUI_TextEntryGetText(self.heap_memory_text), 10);
 				}
-				heap = strtoul(tmpval, NULL, 16);
-				memset(memory, 0, sizeof(memory));
+				info.heap = strtoul(tmpval, NULL, 16);
 			}
 			break;
 		}
 	}
 
 	if(GUI_WidgetGetState(self.cdda)) {
-		cdda_mode = getModeCDDA();
+		info.emu_cdda = getModeCDDA();
 	}
 
 	for(int i = 0; self.memory_chk[i]; i++) {
-
 		if(GUI_WidgetGetState(self.memory_chk[i])) {
-
 			char *tmpval = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
-			strncpy(memory, tmpval, 10);
+			strncpy(tmpbuf, tmpval, 10);
 
 			if(strlen(tmpval) < 8) {
-				strncat(memory, GUI_TextEntryGetText(self.memory_text), 10);
+				strncat(tmpbuf, GUI_TextEntryGetText(self.memory_text), 10);
 			}
+			loader_addr = strtoul(tmpbuf, NULL, 16);
 			break;
 		}
 	}
 
 	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.region_chk[i])) {
-			region = i;
+			info.region = i;
 			break;
 		}
 	}
@@ -2002,37 +1966,34 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	}
 
 	if(GUI_WidgetGetState(self.vmu_disabled) == 0) {
-		vmu_num = atoi(GUI_TextEntryGetText(self.vmu_number));
+		info.emu_vmu = atoi(GUI_TextEntryGetText(self.vmu_number));
 	}
 
-	snprintf(result, sizeof(result),
-			"title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %08lx\n"
-			"irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
-			"vmu = %d\nscrhotkey = %lx\naltread = %d\ngpio = %d\nregion = %d\n"
-			"pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
-			title, GUI_TextEntryGetText(self.device), GUI_WidgetGetState(self.dma), async,
-			cdda_mode, GUI_WidgetGetState(self.irq), GUI_WidgetGetState(self.low), heap,
-			GUI_WidgetGetState(self.fastboot), type, mode, memory,
-			vmu_num, (uint32)(GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0),
-			GUI_WidgetGetState(self.alt_read), GUI_WidgetGetState(self.use_gpio), region,
-			self.pa[0], self.pv[0], self.pa[1], self.pv[1]);
+	info.use_dma = GUI_WidgetGetState(self.dma);
+	info.use_irq = GUI_WidgetGetState(self.irq);
+	info.syscalls = GUI_WidgetGetState(self.low);
+	info.fast_boot = GUI_WidgetGetState(self.fastboot);
+	info.alt_read = GUI_WidgetGetState(self.alt_read);
+	info.use_gpio = GUI_WidgetGetState(self.use_gpio);
+	info.scr_hotkey = GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0;
+	info.patch_addr[0] = self.pa[0];
+	info.patch_value[0] = self.pv[0];
+	info.patch_addr[1] = self.pa[1];
+	info.patch_value[1] = self.pv[1];
+	strncpy(info.fs_dev, GUI_TextEntryGetText(self.device), sizeof(info.fs_dev) - 1);
 
-	if(GUI_WidgetGetState(self.alt_boot)) {
-		strcat(result, "file = " ALT_BOOT_FILE "\n");
-	}
-
-	fs_write(fd, result, strlen(result));
-	fs_close(fd);
+	const char *alt_file = GUI_WidgetGetState(self.alt_boot) ? ALT_BOOT_FILE : NULL;
+	int result = isoldr_save_preset(&info, filename, title, loader_addr, alt_file);
 
 	if(ffplay_paused) {
 		self.ffplay_toggle_pause();
 	}
 	ResumeCDDATrack();
 
-	if(widget) {
+	if(widget && result == 0) {
 		GUI_LabelSetText(self.preset_status, "Saved");
 	}
-	return 0;
+	return result;
 }
 
 int isoLoader_LoadPreset(GUI_Widget *widget) {
@@ -2042,76 +2003,56 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		return -1;
 	}
 
-	char *filename = findPresetFile(GUI_FileManagerGetPath(self.filebrowser), self.md5, !!widget);
+	char filepath[NAME_MAX];
+	snprintf(filepath, NAME_MAX, "%s/%s", GUI_FileManagerGetPath(self.filebrowser), self.filename);
+	char *filename = isoldr_find_preset(filepath, self.md5, !!widget);
 
-	if (filename == NULL) {
-		if(widget) {
-			GUI_LabelSetText(self.preset_status, "Applied");
+	if(self.isoldr) {
+		free(self.isoldr);
+		self.isoldr = NULL;
+	}
+
+	self.isoldr = isoldr_get_info(filepath, 0);
+
+	if (!self.isoldr) {
+		self.isoldr = (isoldr_info_t *)malloc(sizeof(isoldr_info_t));
+		if (!self.isoldr) {
+			isoLoader_DefaultPreset();
+			return -1;
 		}
-		isoLoader_DefaultPreset();
-		return -1;
+		memset(self.isoldr, 0, sizeof(isoldr_info_t));
+		self.isoldr->image_type = self.image_type;
+		strncpy(self.isoldr->image_file, filepath, sizeof(self.isoldr->image_file) - 1);
 	}
 
-	int use_dma = 0, emu_async = 16, use_irq = 0, alt_read = 0, use_gpio = 0, region = 0;
-	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0;
-	int boot_mode = BOOT_MODE_DIRECT;
-	int bin_type = BIN_TYPE_AUTO;
-	uint32 heap = HEAP_MODE_AUTO, emu_cdda = 0;
-	char title[32] = "";
-	char device[8] = "";
-	char memory[12] = "0x8c000100";
-	char heap_memory[12] = "";
-	char bin_file[12] = "";
-	char patch_a[2][10];
-	char patch_v[2][10];
-	int i, len;
-	char *name;
-	memset(patch_a, 0, 2 * 10);
-	memset(patch_v, 0, 2 * 10);
+	int detected_type = self.isoldr->exec.type;
+	uintptr_t exec_addr = isoldr_apply_preset(self.isoldr, filename);
 
-	isoldr_conf options[] = {
-		{ "dma",      CONF_INT,   (void *) &use_dma    },
-		{ "altread",  CONF_INT,   (void *) &alt_read   },
-		{ "cdda",     CONF_ULONG, (void *) &emu_cdda   },
-		{ "irq",      CONF_INT,   (void *) &use_irq    },
-		{ "low",      CONF_INT,   (void *) &low        },
-		{ "vmu",      CONF_INT,   (void *) &emu_vmu    },
-		{ "scrhotkey",CONF_INT,   (void *) &scr_hotkey },
-		{ "gpio",     CONF_INT,   (void *) &use_gpio   },
-		{ "region",   CONF_INT,   (void *) &region     },
-		{ "heap",     CONF_STR,   (void *) &heap_memory},
-		{ "memory",   CONF_STR,   (void *) memory      },
-		{ "async",    CONF_INT,   (void *) &emu_async  },
-		{ "mode",     CONF_INT,   (void *) &boot_mode  },
-		{ "type",     CONF_INT,   (void *) &bin_type   },
-		{ "file",     CONF_STR,   (void *) bin_file    },
-		{ "title",    CONF_STR,   (void *) title       },
-		{ "device",   CONF_STR,   (void *) device      },
-		{ "fastboot", CONF_INT,   (void *) &fastboot   },
-		{ "pa1",      CONF_STR,   (void *) patch_a[0]  },
-		{ "pv1",      CONF_STR,   (void *) patch_v[0]  },
-		{ "pa2",      CONF_STR,   (void *) patch_a[1]  },
-		{ "pv2",      CONF_STR,   (void *) patch_v[1]  },
-		{ NULL,       CONF_END,   NULL				   }
-	};
-
-	if (conf_parse(options, filename)) {
+	if (exec_addr == (uintptr_t)-1) {
 		ds_printf("DS_ERROR: Can't parse preset\n");
+		free(self.isoldr);
+		self.isoldr = NULL;
 		isoLoader_DefaultPreset();
 		return -1;
 	}
 
-	GUI_WidgetSetState(self.dma, use_dma);
-	isoLoader_toggleDMA(self.dma);
-	GUI_WidgetSetState(self.alt_read, alt_read);
+	if(filename == NULL) {
+		GUI_WidgetSetState(self.preset, 0);
+	}
 
-	if (emu_async == 0) {
+	int bin_type = (self.isoldr->exec.type != BIN_TYPE_AUTO) ? self.isoldr->exec.type : detected_type;
+
+	GUI_WidgetSetState(self.dma, self.isoldr->use_dma);
+	isoLoader_toggleDMA(self.dma);
+	GUI_WidgetSetState(self.alt_read, self.isoldr->alt_read);
+
+	if (self.isoldr->emu_async == 0) {
 		GUI_WidgetSetState(self.async[0], 1);
 		isoLoader_toggleAsync(self.async[0]);
 	} else {
 		for(int i = 1; i < sizeof(self.async) >> 2; i++) {
 			int val = atoi(GUI_LabelGetText(GUI_ButtonGetCaption(self.async[i])));
-			if(emu_async == val) {
+			if(self.isoldr->emu_async == val) {
 				GUI_WidgetSetState(self.async[i], 1);
 				isoLoader_toggleAsync(self.async[i]);
 				break;
@@ -2119,22 +2060,23 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		}
 	}
 
-	setModeCDDA(emu_cdda);
-	GUI_WidgetSetState(self.fastboot, fastboot);
-	GUI_WidgetSetState(self.screenshot, scr_hotkey ? 1 : 0);
-	GUI_WidgetSetState(self.low, low);
-	GUI_WidgetSetState(self.use_gpio, use_gpio);
+	setModeCDDA(self.isoldr->emu_cdda);
+	GUI_WidgetSetState(self.fastboot, self.isoldr->fast_boot);
+	GUI_WidgetSetState(self.screenshot, self.isoldr->scr_hotkey ? 1 : 0);
+	GUI_WidgetSetState(self.low, self.isoldr->syscalls);
+	GUI_WidgetSetState(self.use_gpio, self.isoldr->use_gpio);
 
-	if(region < 0 || region > (sizeof(self.region_chk) >> 2) - 1) region = 0;
+	int region = (int)self.isoldr->region;
+	if(region < 0 || region > (int)(sizeof(self.region_chk) >> 2) - 1) region = 0;
 	GUI_WidgetSetState(self.region_chk[region], 1);
 	isoLoader_toggleRegion(self.region_chk[region]);
 
-	if (emu_vmu) {
+	if (self.isoldr->emu_vmu) {
 		char num[8], fn[32];
-		sprintf(num, "%03d", emu_vmu);
+		sprintf(num, "%03d", (int)self.isoldr->emu_vmu);
 		GUI_TextEntrySetText(self.vmu_number, num);
 
-		snprintf(fn, sizeof(fn), "vmu%03ld.vmd", self.isoldr->emu_vmu);
+		snprintf(fn, sizeof(fn), "vmu%03d.vmd", (int)self.isoldr->emu_vmu);
 		char *dst_path = relativeFilename(fn);
 		int dst_size = FileSize(dst_path);
 
@@ -2151,96 +2093,94 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 		isoLoader_toggleVMU(self.vmu_disabled);
 	}
 
-	heap = strtoul(heap_memory, NULL, 16);
+	uint32 heap = self.isoldr->heap;
 
 	if (heap <= HEAP_MODE_MAPLE) {
 		GUI_WidgetSetState(self.heap[heap], 1);
 		isoLoader_toggleHeap(self.heap[heap]);
 	} else {
+		char heap_str[12];
+		char *hname;
+		int hlen;
+		snprintf(heap_str, sizeof(heap_str), "%08lx", heap);
+
 		for (int i = HEAP_MODE_MAPLE; i < sizeof(self.heap) >> 2; i++) {
 			if (!self.heap[i]) {
 				break;
 			}
-			name = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
-			len = strlen(name);
+			hname = (char *)GUI_ObjectGetName((GUI_Object *)self.heap[i]);
+			hlen = strlen(hname);
 
-			if (len < 8 || strncmp(name + 2, heap_memory, sizeof(heap_memory)) == 0) {
+			if (hlen < 8 || strncmp(hname + 2, heap_str, sizeof(heap_str)) == 0) {
 				GUI_WidgetSetState(self.heap[i], 1);
 				isoLoader_toggleHeap(self.heap[i]);
-				if (len < 8) {
-					GUI_TextEntrySetText(self.heap_memory_text, &heap_memory[4]);
+				if (hlen < 8) {
+					GUI_TextEntrySetText(self.heap_memory_text, &heap_str[4]);
 				}
 				break;
 			}
 		}
 	}
-	
+
 	GUI_WidgetSetState(self.os_chk[bin_type], 1);
 	isoLoader_toggleOS(self.os_chk[bin_type]);
 
-	if (strlen(bin_file) > 0) {
-		GUI_WidgetSetState(self.alt_boot, 1);
-	}
+	GUI_WidgetSetState(self.alt_boot, !strcasecmp(self.isoldr->exec.file, ALT_BOOT_FILE) ? 1 : 0);
 
-	if (strlen(title) > 0) {
-		setTitle(title);
-	}
-
-	if (strlen(device) > 0) {
-		GUI_TextEntrySetText(self.device, device);
+	if (strlen(self.isoldr->fs_dev) > 0 && strncmp(self.isoldr->fs_dev, "auto", 4)) {
+		GUI_TextEntrySetText(self.device, self.isoldr->fs_dev);
 	}
 	else {
 		GUI_TextEntrySetText(self.device, "auto");
 	}
 
-	if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL && self.image_type != IMAGE_TYPE_ROM_NAOMI) {
-		/* NAOMI platform with non-DNI image: use 0x8dfe0000 */
-		if(bin_type != BIN_TYPE_WINCE) {
-			i = 13;
-			boot_mode = BOOT_MODE_IPBIN;
-		}
-		GUI_WidgetSetState(self.memory_chk[i], 1);
-		isoLoader_toggleMemory(self.memory_chk[i]);
-	}
-	else {
-		for (i = 0; self.memory_chk[i]; i++) {
+	/* Memory address (loader address) - platform overrides handled in isoldr_apply_preset */
+	char memory_str[12];
+	char *mname;
+	int mlen, mi;
+	snprintf(memory_str, sizeof(memory_str), "0x%08lx", (uint32)exec_addr);
 
-			name = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[i]);
-			len = strlen(name);
+	for (mi = 0; self.memory_chk[mi]; mi++) {
+		mname = (char *)GUI_ObjectGetName((GUI_Object *)self.memory_chk[mi]);
+		mlen = strlen(mname);
 
-			if (!strncmp(name, memory, sizeof(memory)) || len < 8) {
-				GUI_WidgetSetState(self.memory_chk[i], 1);
-				isoLoader_toggleMemory(self.memory_chk[i]);
-				if (len < 8) {
-					GUI_TextEntrySetText(self.memory_text, &memory[4]);
-				}
-				break;
+		if (!strncmp(mname, memory_str, sizeof(memory_str)) || mlen < 8) {
+			GUI_WidgetSetState(self.memory_chk[mi], 1);
+			isoLoader_toggleMemory(self.memory_chk[mi]);
+			if (mlen < 8) {
+				GUI_TextEntrySetText(self.memory_text, &memory_str[4]);
 			}
+			break;
 		}
 	}
 
-	GUI_WidgetSetState(self.irq, use_irq);
-	GUI_WidgetSetState(self.boot_mode_chk[boot_mode], 1);
-	isoLoader_toggleBootMode(self.boot_mode_chk[boot_mode]);
+	GUI_WidgetSetState(self.irq, self.isoldr->use_irq);
+	GUI_WidgetSetState(self.boot_mode_chk[self.isoldr->boot_mode], 1);
+	isoLoader_toggleBootMode(self.boot_mode_chk[self.isoldr->boot_mode]);
 
-	for(int i = 0; i < sizeof(self.wpa) >> 2; ++i) {
-		if (patch_a[i][1] != '0' && strlen(patch_a[i]) == 8 && strlen(patch_v[i])
-		) {
-			self.pa[i] = strtoul(patch_a[i], NULL, 16);
-			self.pv[i] = strtoul(patch_v[i], NULL, 16);
-			GUI_TextEntrySetText(self.wpa[i], patch_a[i]);
-			GUI_TextEntrySetText(self.wpv[i], patch_v[i]);
-		} else {
-			self.pa[i] = 0;
-			self.pv[i] = 0;
+	for(int j = 0; j < sizeof(self.wpa) >> 2; ++j) {
+		if (self.isoldr->patch_addr[j] != 0) {
+			char pa_str[10], pv_str[10];
+			snprintf(pa_str, sizeof(pa_str), "%08lx", self.isoldr->patch_addr[j]);
+			snprintf(pv_str, sizeof(pv_str), "%08lx", self.isoldr->patch_value[j]);
+			self.pa[j] = self.isoldr->patch_addr[j];
+			self.pv[j] = self.isoldr->patch_value[j];
+			GUI_TextEntrySetText(self.wpa[j], pa_str);
+			GUI_TextEntrySetText(self.wpv[j], pv_str);
+		}
+		else {
+			self.pa[j] = 0;
+			self.pv[j] = 0;
 		}
 	}
 
-	ds_printf("DS_OK: Applied %s\n", filename);
+	if(filename != NULL) {
+		ds_printf("DS_OK: Applied %s\n", filename);
+	}
 	if(widget) {
 		GUI_LabelSetText(self.preset_status, "Applied");
 	}
-	return 0;
+	return filename ? 0 : -1;
 }
 
 static const char *setup_device_partitions(const char *dev_prefix, GUI_Widget *button, char *games_path_buf) {
@@ -2587,7 +2527,6 @@ static void release_resources(void) {
 		unloadFFmpegModules();
 		self.ffplay = NULL;
 	}
-	unmountAllPresetsRomdisks();
 }
 
 void isoLoader_Shutdown(App_t *app) {
