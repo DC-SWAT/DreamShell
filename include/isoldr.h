@@ -8,6 +8,7 @@
 #ifndef _DS_ISOLDR_H_
 #define _DS_ISOLDR_H_
 
+#include <stdint.h>
 #include <arch/types.h>
 #include <dc/cdrom.h>
 #include "isofs/isofs.h"
@@ -89,11 +90,11 @@ typedef enum isoldr_exec_type {
  */
 typedef struct isoldr_exec_info {
 	
-	uint32 lba;               /* File LBA */
-	uint32 size;              /* Size in bytes */
-	uint32 addr;              /* Memory address */
-	char   file[16];          /* File name */
-	uint32 type;              /* See isoldr_exec_type_t */
+	uint32_t lba;             /* File LBA */
+	uint32_t size;            /* Size in bytes */
+	uint32_t addr;            /* Memory address */
+	char file[16];            /* File name */
+	uint32_t type;            /* See isoldr_exec_type_t */
 	
 } isoldr_exec_info_t;
 
@@ -153,45 +154,45 @@ typedef enum isoldr_image_type {
 
 typedef struct isoldr_info {
 
-	char magic[12];                     /* isoldr magic code - 'DSISOLDRXXX' where XXX is version */
+	char magic[12];                       /* isoldr magic code - 'DSISOLDRXXX' where XXX is version */
 
-	uint32 image_type;                  /* See isoldr_image_type_t */
-	char image_file[256];               /* Full path to image */
-	char image_second[12];              /* Second data track file for the multitrack GDI image */
+	uint32_t image_type;                  /* See isoldr_image_type_t */
+	char image_file[256];                 /* Full path to image */
+	char image_second[12];                /* Second data track file for the multitrack GDI image */
 
-	char fs_dev[8];                     /* Device name, see supported devices */
-	char fs_type[8];                    /* Extend device name */
-	uint32 fs_part;                     /* Partition on device (0-3), only for SD and IDE devices */
+	char fs_dev[8];                       /* Device name, see supported devices */
+	char fs_type[8];                      /* Extend device name */
+	uint32_t fs_part;                     /* Partition on device (0-3), only for SD and IDE devices */
 
-	CISO_header_t ciso;                 /* CISO header for CSO/ZSO images */
-	cd_toc_t toc;                       /* Table of content */
-	uint32 track_offset;                /* Data track offset, for the CDI images only */
-	uint32 track_lba[2];                /* Data track LBA, second value for the multitrack GDI image */
-	uint32 sector_size;                 /* Data track sector size */
+	CISO_header_t ciso;                   /* CISO header for CSO/ZSO images */
+	cd_toc_t toc;                         /* Table of content */
+	uint32_t track_offset;                /* Data track offset, for the CDI images only */
+	uint32_t track_lba[2];                /* Data track LBA, second value for the multitrack GDI image */
+	uint32_t sector_size;                 /* Data track sector size */
 
-	uint32 boot_mode;                   /* See isoldr_boot_mode_t */
-	uint32 emu_cdda;                    /* Emulate CDDA audio. See isoldr_cdda_mode_t */
-	uint32 emu_async;                   /* Emulate async data transfer (value is sectors count per frame) */
-	uint32 use_dma;                     /* Use DMA data transfer for G1-bus devices (GD drive and IDE) */
-	uint32 fast_boot;                   /* Don't show any info on screen */
+	uint32_t boot_mode;                   /* See isoldr_boot_mode_t */
+	uint32_t emu_cdda;                    /* Emulate CDDA audio. See isoldr_cdda_mode_t */
+	uint32_t emu_async;                   /* Emulate async data transfer (value is sectors count per frame) */
+	uint32_t use_dma;                     /* Use DMA data transfer for G1-bus devices (GD drive and IDE) */
+	uint32_t fast_boot;                   /* Don't show any info on screen */
 
-	isoldr_exec_info_t exec;            /* Executable info */
+	isoldr_exec_info_t exec;              /* Executable info */
 
-	uint32 gdtex;                       /* Memory address for GD texture (unused) */
-	uint32 patch_addr[2];               /* Memory addresses for patching every frame or interrupt */
-	uint32 patch_value[2];              /* Values for patching */
-	uint32 heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
-	uint32 use_irq;                     /* Use IRQ hooking */
-	uint32 emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
-	uint32 syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
-	uint32 scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
-	uint32 bleem;                       /* Memory address for Bleem! binary or 1 for auto load. */
-	uint32 alt_read;                    /* Use alternative reading without aborting. */
-	uint32 use_gpio;                    /* Use GPIO-0 as button for IGR. */
-	uint32 firmware;                    /* Memory address for flashrom dump or IRQ table. Set 1 for auto load. */
-	uint32 region;                      /* Hardware region. 1 = Japan, 2 = USA, 3 = Europe, 4 = Korea, 5 = Australia */
+	uint32_t gdtex;                       /* Memory address for GD texture (unused) */
+	uint32_t patch_addr[2];               /* Memory addresses for patching every frame or interrupt */
+	uint32_t patch_value[2];              /* Values for patching */
+	uint32_t heap;                        /* Memory address or mode for heap. See isoldr_heap_mode_t */
+	uint32_t use_irq;                     /* Use IRQ hooking */
+	uint32_t emu_vmu;                     /* Emulate VMU on port A1. Set number for VMU dump or zero for disabled. */
+	uint32_t syscalls;                    /* Memory address for syscalls binary or 1 for auto load. */
+	uint32_t scr_hotkey;                  /* Creating screenshots by hotkey (zero for disabled). */
+	uint32_t bleem;                       /* Memory address for Bleem! binary or 1 for auto load. */
+	uint32_t alt_read;                    /* Use alternative reading without aborting. */
+	uint32_t use_gpio;                    /* Use GPIO-0 as button for IGR. */
+	uint32_t firmware;                    /* Memory address for flashrom dump or IRQ table. Set 1 for auto load. */
+	uint32_t region;                      /* Hardware region. 1 = Japan, 2 = USA, 3 = Europe, 4 = Korea, 5 = Australia */
 
-	uint32 cdda_offset[40];             /* CDDA tracks offset, only for CDI images */
+	uint32_t cdda_offset[40];             /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 
@@ -211,6 +212,13 @@ int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *
  * Returns pointer to a static buffer.
 */
 char *isoldr_make_preset_filename(const char *image_file, uint8_t *md5);
+
+/**
+ * Check whether the image supports true async DMA (based on image type,
+ * sector size and device derived from image_file path).
+ * Returns 2 if async DMA can be used, 1 if DMA can be used, 0 otherwise.
+ */
+int isoldr_can_use_dma(const isoldr_info_t *info);
 
 /**
  * Find preset file for the given image file path: checks user presets first,

@@ -218,6 +218,63 @@ char *isoldr_find_preset(const char *image_file, uint8_t *md5, int default_only)
 	return NULL;
 }
 
+int isoldr_can_use_dma(const isoldr_info_t *info) {
+	int can = 0;
+
+	if(strncasecmp(info->fs_dev, ISOLDR_DEV_G1ATA, sizeof(info->fs_dev)) == 0 ||
+		strncasecmp(info->fs_dev, ISOLDR_DEV_GDROM, sizeof(info->fs_dev)) == 0) {
+		if(info->sector_size <= 2048) {
+			++can;
+		}
+		if(info->image_type == IMAGE_TYPE_ISO ||
+			info->image_type == IMAGE_TYPE_GDI ||
+			info->image_type == IMAGE_TYPE_ROM_NAOMI) {
+			++can;
+		}
+	}
+	return can;
+}
+
+static void build_image_full_path(const isoldr_info_t *isoldr, char *out, size_t size) {
+	if(isoldr->fs_dev[0] == '\0') {
+		strncpy(out, isoldr->image_file, size - 1);
+		out[size - 1] = '\0';
+		return;
+	}
+	if(isoldr->fs_part) {
+		snprintf(out, size, "/%s%lu%s", isoldr->fs_dev, isoldr->fs_part, isoldr->image_file);
+	}
+	else {
+		snprintf(out, size, "/%s%s", isoldr->fs_dev, isoldr->image_file);
+	}
+}
+
+static int cdda_track_sz(const char *dir, int num) {
+	char path[NAME_MAX];
+	int sz;
+	snprintf(path, NAME_MAX, "%s/track%02d.raw", dir, num);
+	sz = FileSize(path);
+	if(sz > 0) return sz;
+	snprintf(path, NAME_MAX, "%s/track%02d.wav", dir, num);
+	return FileSize(path);
+}
+
+static int cdda_exists(const char *image_file) {
+	if(!image_file[0]) return 0;
+	const char *slash = strrchr(image_file, '/');
+	if(!slash) return 0;
+	char dir[NAME_MAX];
+	size_t len = slash - image_file;
+	strncpy(dir, image_file, len);
+	dir[len] = '\0';
+	int sz = cdda_track_sz(dir, 4);
+	if(!sz) return 0;
+	if(sz < 30 * 1024 * 1024) {
+		return cdda_track_sz(dir, 6) > 0;
+	}
+	return 1;
+}
+
 uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 
 	uintptr_t exec_addr = ISOLDR_DEFAULT_ADDR_LOW;
@@ -266,6 +323,13 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 		if(conf_parse(options, preset_file) < 0) {
 			ds_printf("DS_ERROR: Can't parse preset\n");
 			return (uintptr_t)-1;
+		}
+	}
+	else if(isoldr->image_file[0]) {
+		use_dma = isoldr_can_use_dma(isoldr);
+		if(use_dma > 1) {
+			emu_async = 0;
+			use_dma = 1;
 		}
 	}
 
@@ -332,7 +396,9 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	}
 
 	if(strlen(bin_file) > 0) {
-		isoldr_set_boot_file(isoldr, isoldr->image_file, bin_file);
+		char image_path[NAME_MAX];
+		build_image_full_path(isoldr, image_path, sizeof(image_path));
+		isoldr_set_boot_file(isoldr, image_path, bin_file);
 	}
 
 	for(int i = 0; i < 2; ++i) {
@@ -341,6 +407,16 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 			isoldr->patch_value[i] = strtoul(patch_v[i], NULL, 16);
 		}
 	}
+
+	if(!preset_file && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI) {
+		char image_path[NAME_MAX];
+		build_image_full_path(isoldr, image_path, sizeof(image_path));
+		if(cdda_exists(image_path)) {
+			isoldr->emu_cdda = CDDA_MODE_DMA_TMU2;
+			isoldr->use_irq = 1;
+		}
+	}
+
 	return exec_addr;
 }
 
