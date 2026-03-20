@@ -240,21 +240,18 @@ update-build:
 	@echo Fetching and build KallistiOS from GitHub...
 	@cd $(KOS_BASE) && git fetch && git checkout `cat $(DS_BASE)/sdk/doc/KallistiOS.txt` && make clean && make -j8
 	@echo Fetching and build kos-ports from GitHub...
-	@mv include include_
-	@cd $(KOS_BASE)/../kos-ports && git fetch && git checkout origin/master && ./utils/build-all.sh
-	@mv include_ include
+	@cd "$(KOS_BASE)/../kos-ports" && git fetch && git checkout origin/master && \
+		. "$(KOS_BASE)/environ.sh" && ./utils/build-all.sh || true
 	@echo Building DreamShell...
 	@make clean-all && make build
 
 build-ports:
 	@echo Fetching and rebuilding kos-ports from GitHub...
-	@mv include include_
-	@cd $(KOS_BASE)/../kos-ports && git fetch && git checkout origin/master
+	@cd "$(KOS_BASE)/../kos-ports" && git fetch && git checkout origin/master
 	@echo Uninstalling previous kos-ports...
-	@$(KOS_BASE)/../kos-ports/utils/uninstall-all.sh
+	@cd "$(KOS_BASE)/../kos-ports" && . "$(KOS_BASE)/environ.sh" && ./utils/uninstall-all.sh || true
 	@echo Building new kos-ports...
-	@$(KOS_BASE)/../kos-ports/utils/build-all.sh
-	@mv include_ include
+	@cd "$(KOS_BASE)/../kos-ports" && . "$(KOS_BASE)/environ.sh" && ./utils/build-all.sh
 
 toolchain:
 	@cp $(DS_SDK)/toolchain/environ.sh $(KOS_BASE)/environ.sh
