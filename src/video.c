@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * video.c                  *
  * DreamShell video         *
- * (c)2004-2024 SWAT        *
+ * (c)2004-2026 SWAT        *
  * http://www.dc-swat.ru    *
  ****************************/
 
@@ -263,6 +263,7 @@ void ScreenFadeStop() {
 	LockVideo();
 	screen_opacity = scr_fade_act == 1 ? 1.0f : 0.0f;
 	scr_fade_act = 0;
+	scr_fade_text = NULL;
 	UnlockVideo();
 }
 
@@ -280,6 +281,7 @@ static inline void ScreenFadeStep() {
 				screen_opacity = 1.0f;
 				scr_fade_text_opacity = 0.0f;
 				scr_fade_act = 0;
+				scr_fade_text = NULL;
 			}
 			break;
 		case 2:
@@ -523,14 +525,12 @@ void SDL_DS_SetWindow(int width, int height) {
 }
 
 
-void SDL_DS_Blit_Textured() {
-
+static void DrawFadeText(float z) {
 	if(screen_opacity < 0.9f && plx_fnt && scr_fade_text) {
-
 		point_t w;
 		w.x = 255.0f;
 		w.y = 230.0f;
-		w.z = 12.0f;
+		w.z = z;
 
 		plx_fcxt_begin(plx_cxt);
 		plx_fcxt_setpos_pnt(plx_cxt, &w);
@@ -538,6 +538,12 @@ void SDL_DS_Blit_Textured() {
 		plx_fcxt_draw(plx_cxt, scr_fade_text);
 		plx_fcxt_end(plx_cxt);
 	}
+}
+
+
+void SDL_DS_Blit_Textured() {
+
+	DrawFadeText(12.0f);
 
 	plx_cxt_texture(plx_screen_txr);
 	plx_cxt_culling(PLX_CULL_NONE);
@@ -620,6 +626,25 @@ static void *VideoThread(void *ptr) {
 		}
 		else {
 			ProcessVideoEventsRender();
+			ScreenFadeStep();
+
+			if(screen_opacity < 1.0f) {
+				pvr_poly_cxt_t cxt;
+				pvr_poly_hdr_t hdr;
+				uint32 color = PVR_PACK_COLOR(1.0f - screen_opacity, 0.0f, 0.0f, 0.0f);
+
+				pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
+				cxt.gen.culling = PVR_CULLING_NONE;
+				pvr_poly_compile(&hdr, &cxt);
+				pvr_prim(&hdr, sizeof(hdr));
+
+				plx_vert_inp(PLX_VERT, 0.0f, 0.0f, 500.0f, color);
+				plx_vert_inp(PLX_VERT, native_width, 0.0f, 500.0f, color);
+				plx_vert_inp(PLX_VERT, 0.0f, native_height, 500.0f, color);
+				plx_vert_inp(PLX_VERT_EOS, native_width, native_height, 500.0f, color);
+
+				DrawFadeText(510.0f);
+			}
 		}
 		pvr_scene_finish();
 		UnlockVideo();

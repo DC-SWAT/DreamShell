@@ -1,7 +1,7 @@
 /** 
  * \file    gui.h
  * \brief   DreamShell GUI
- * \date    2006-2025
+ * \date    2006-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -14,6 +14,8 @@
 #include "events.h"
 #include "module.h"
 #include "SDL/SDL_gui.h"
+
+struct App;
 
 /* Custom GUI events */
 #define DS_SHOW_VKB_EVENT (SDL_USEREVENT + 10)
@@ -44,6 +46,9 @@ void ShutdownGUI();
 
 void GUI_Disable();
 void GUI_Enable();
+int GUI_IsFirstOpen();
+int GUI_OpenApp(struct App *app);
+int GUI_CloseApp(struct App *app);
 
 int GUI_Object2Trash(GUI_Object *object);
 void GUI_ClearTrash();

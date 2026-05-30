@@ -9,6 +9,7 @@ $#include "lua/tolua.h"
 $#include "mxml.h"
 $#include "fs.h"
 $#include "vmu.h"
+$#include "tsunami/dsapp.h"
 $
 $App_t *VoidToApp(void *ptr) {
 $	return (App_t *) ptr;	
@@ -45,7 +46,7 @@ typedef struct Item {
 
 
 typedef enum {
-	
+
 	LIST_ITEM_USERDATA = 0,
 	LIST_ITEM_SDL_SURFACE,
 	LIST_ITEM_SDL_RWOPS,
@@ -59,8 +60,13 @@ typedef enum {
 	LIST_ITEM_EVENT,
 	LIST_ITEM_THREAD,
 	LIST_ITEM_CMD,
-	LIST_ITEM_LUA_LIB
-	
+	LIST_ITEM_LUA_LIB,
+	LIST_ITEM_XML_NODE,
+
+	LIST_ITEM_TSU_IMAGE,
+	LIST_ITEM_TSU_FONT,
+	LIST_ITEM_TSU_DRAWABLE
+
 } ListItemType;
 
 Item_list_t *listMake();
@@ -105,6 +111,7 @@ typedef struct App {
 	void *thd;
 	void *lua;
 	GUI_Widget *body;
+	DSApp *tsunami;
 
 } App_t;
 
@@ -127,7 +134,7 @@ int SetAppSleep(App_t *app, int sleep);
 
 int LoadApp(App_t *app, int build);
 int UnLoadApp(App_t *app);
-void UnloadAppResources(Item_list_t *lst);
+void UnloadAppResources(App_t *app, Item_list_t *lst);
 
 int BuildAppBody(App_t *app);
 int AddToAppBody(App_t *app, GUI_Widget *widget);

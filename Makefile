@@ -1,6 +1,6 @@
 #
 # DreamShell Makefile
-# Copyright (C) 2004-2025 SWAT
+# Copyright (C) 2004-2026 SWAT
 # http://www.dc-swat.ru
 #
 # This Makefile can build CDI image (type "make cdi"),
@@ -115,9 +115,9 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/gui/gui.o $(SRC_DIR)/commands.o \
 		$(SRC_DIR)/module.o $(SRC_DIR)/events.o $(SRC_DIR)/fs/fs.o  \
 		$(SRC_DIR)/lua/lua.o $(SRC_DIR)/lua/lua_ds.o $(SRC_DIR)/lua/packlib.o \
-		$(SRC_DIR)/app/app.o $(SRC_DIR)/app/load.o $(SRC_DIR)/list.o \
+		$(SRC_DIR)/app/app.o $(SRC_DIR)/app/load.o $(SRC_DIR)/app/tsunami.o \
 		$(SRC_DIR)/img/SegaPVRImage.o $(SRC_DIR)/img/stb_image.o \
-		$(SRC_DIR)/img/load.o  $(SRC_DIR)/img/utils.o \
+		$(SRC_DIR)/list.o $(SRC_DIR)/img/load.o $(SRC_DIR)/img/utils.o \
 		$(SRC_DIR)/img/decode.o $(SRC_DIR)/img/convert.o $(SRC_DIR)/img/copy.o  \
 		$(SRC_DIR)/cmd_elf.o $(SRC_DIR)/vmu/vmu.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \

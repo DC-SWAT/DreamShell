@@ -1,10 +1,10 @@
-/*****************************
- * DreamShell ##version##    *
- * load.c                    *
- * DreamShell App loader     *
- * (c)2007-2014, 2024 SWAT   *
- * http://www.dc-swat.ru     *
- ****************************/
+/***********************************
+ * DreamShell ##version##          *
+ * load.c                          *
+ * DreamShell App loader           *
+ * (c)2007-2014, 2024, 2026 SWAT   *
+ * http://www.dc-swat.ru           *
+ **********************************/
 
 
 #include "ds.h"
@@ -37,15 +37,22 @@ typedef struct scrollbar_callback_data {
 
 } scrollbar_callback_data_t;
 
-static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h);
-static void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *y);
-
 static int parseAppResource(App_t *app, mxml_node_t *node);
 static int parseAppSurfaceRes(App_t *app, mxml_node_t *node, char *name);
 static int parseAppFontRes(App_t *app, mxml_node_t *node, char *name, char *src);
 static int parseAppImageRes(App_t *app, mxml_node_t *node, char *name, char *src);
 static int parseAppFileRes(App_t *app, mxml_node_t *node, char *name, char *src);
 static int parseAppTheme(App_t *app, mxml_node_t *node);
+
+int isTsunamiBody(mxml_node_t *node);
+int isTsunamiApp(App_t *app);
+int appTsunamiBuildBody(App_t *app, mxml_node_t *node);
+int appTsunamiParseImageResource(App_t *app, mxml_node_t *node, char *name, char *src);
+int appTsunamiParseFontResource(App_t *app, mxml_node_t *node, char *name, char *src);
+void appTsunamiDestroyApp(App_t *app);
+void appTsunamiDestroyElement(App_t *app, void *object, int type);
+void appTsunamiDestroyImage(void *image);
+void appTsunamiDestroyFont(void *font);
 
 static uint32 GetAppExportFuncAddr(const char *fstr);
 static GUI_Callback *CreateAppElementCallback(App_t *app, const char *event, GUI_Widget *widget);
@@ -140,12 +147,15 @@ int LoadApp(App_t *app, int build) {
 		ds_printf("DS_PROCESS: Creating empty app body...\n");
 #endif
 
-		int x, y, w, h;
+		if(!isTsunamiBody(node)) {
 
-		parseNodeSize(node, NULL, &w, &h);
-		parseNodePosition(node, NULL, &x, &y);
-		
-		app->body = GUI_PanelCreate(app->name, x, y, w, h);
+			int x, y, w, h;
+
+			parseNodeSize(node, NULL, &w, &h);
+			parseNodePosition(node, NULL, &x, &y);
+
+			app->body = GUI_PanelCreate(app->name, x, y, w, h);
+		}
 
 	} else {
 		ds_printf("DS_ERROR: <body> element not found\n");
@@ -196,12 +206,23 @@ int BuildAppBody(App_t *app) {
 	GUI_Widget *el;
 	GUI_Surface *s = NULL;
 	SDL_Rect body_area;
+	char *onload = NULL;
 
 	if((node = mxmlFindElement(app->xml, app->xml, "body", NULL, NULL, MXML_DESCEND)) != NULL) {
 
 #ifdef APP_LOAD_DEBUG
 		ds_printf("DS_PROCESS: Build app body...\n");
 #endif
+
+		onload = FindXmlAttr("onload", node, NULL);
+
+		if(isTsunamiBody(node)) {
+			if(!appTsunamiBuildBody(app, node)) {
+				app->state &= ~APP_STATE_PROCESS;
+				return 0;
+			}
+			goto app_ready;
+		}
 
 		if(!app->body) {
 			parseNodeSize(node, NULL, &w, &h);
@@ -210,8 +231,7 @@ int BuildAppBody(App_t *app) {
 		}
 
 		if(!app->body) return 0;
-		
-		char *onload = FindXmlAttr("onload", node, NULL);
+
 		char *bg = FindXmlAttr("background", node, NULL);
 
 		if(bg != NULL) {
@@ -226,9 +246,11 @@ int BuildAppBody(App_t *app) {
 				c.unused = 0;
 				GUI_PanelSetBackgroundColor(app->body, c);
 
-			} else if((s = getElementSurface(app, bg)) != NULL) {
+			}
+			else if((s = getElementSurface(app, bg)) != NULL) {
 				GUI_PanelSetBackground(app->body, s);
-			} else {
+			}
+			else {
 				ds_printf("DS_ERROR: Can't find resource '%s' or resource is not surface\n", bg);
 			}
 		}
@@ -247,7 +269,8 @@ int BuildAppBody(App_t *app) {
 
 					if(n == NULL) {
 						GUI_ObjectDecRef((GUI_Object *) el);
-					} else {
+					}
+					else {
 						listAddItem(app->elements, LIST_ITEM_GUI_WIDGET, n, (void *) el, 0);
 					}
 				}
@@ -255,6 +278,7 @@ int BuildAppBody(App_t *app) {
 			node = node->next;
 		}
 
+app_ready:
 		app->state &= ~APP_STATE_PROCESS;
 		app->state |= APP_STATE_READY;
 
@@ -266,9 +290,11 @@ int BuildAppBody(App_t *app) {
 
 			if(!strncmp(onload, "export:", 7)) {
 				CallAppExportFunc(app, onload);
-			} else if(!strncmp(onload, "console:", 8)) {
+			}
+			else if(!strncmp(onload, "console:", 8)) {
 				dsystem_buff(onload + 8);
-			} else {
+			}
+			else {
 
 				SetupAppLua(app);
 				LuaDo(LUA_DO_STRING, onload, app->lua);
@@ -308,16 +334,17 @@ int UnLoadApp(App_t *app) {
 	ds_printf("DS_DEBUG: Unloading app elements...\n");
 #endif
 	if(app->elements) {
-		UnloadAppResources(app->elements);
+		UnloadAppResources(app, app->elements);
 		app->elements = NULL;
 	}
 
+	appTsunamiDestroyApp(app);
 
 #ifdef APP_LOAD_DEBUG
 	ds_printf("DS_DEBUG: Unloading app resources...\n");
 #endif
 	if(app->resources) {
-		UnloadAppResources(app->resources);
+		UnloadAppResources(app, app->resources);
 		app->resources = NULL;
 	}
 
@@ -362,7 +389,7 @@ int UnLoadApp(App_t *app) {
 
 
 
-void UnloadAppResources(Item_list_t *lst) {
+void UnloadAppResources(App_t *app, Item_list_t *lst) {
 
 	Item_t *c, *n;
 
@@ -391,6 +418,18 @@ void UnloadAppResources(Item_list_t *lst) {
 				GUI_ObjectDecRef((GUI_Object *) c->data);
 			}
 
+		} else if(c->type == LIST_ITEM_TSU_IMAGE) {
+
+			appTsunamiDestroyImage(c->data);
+
+		} else if(c->type == LIST_ITEM_TSU_FONT) {
+
+			appTsunamiDestroyFont(c->data);
+
+		} else if(c->type == LIST_ITEM_TSU_DRAWABLE) {
+
+			appTsunamiDestroyElement(app, c->data, c->size);
+
 		} else {
 
 			if(c->data && c->size)
@@ -412,7 +451,7 @@ char *FindXmlAttr(char *name, mxml_node_t *node, char *defValue) {
 }
 
 
-static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
+void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
 
 	int parent_w, parent_h;
 	float tmp;
@@ -461,7 +500,7 @@ static void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h) {
 }
 
 
-static void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *y) {
+void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *y) {
 
 	int parent_w, parent_h;
 	float tmp;
@@ -529,6 +568,7 @@ void *getAppElement(App_t *app, const char *name, ListItemType type) {
 	
 	switch(type) {
 		case LIST_ITEM_GUI_WIDGET:
+		case LIST_ITEM_TSU_DRAWABLE:
 			item = listGetItemByName(app->elements, name);
 			break;
 		case LIST_ITEM_GUI_SURFACE:
@@ -968,18 +1008,32 @@ static int parseAppResource(App_t *app, mxml_node_t *node) {
 		return 1;
 
 	char *s = FindXmlAttr("src", node, NULL);
-	char src[NAME_MAX];
+	char src[NAME_MAX] = "";
+	int tsunami = isTsunamiApp(app);
 
 	if(s == NULL && strncmp(node->value.element.name, "surface", 7) && strncmp(node->value.element.name, "theme", 5)) {
 		ds_printf("DS_ERROR: Empty src attribute in %s\n", node->value.element.name);
 		return 0;
-	} else {
+	} else if(s != NULL) {
 		relativeFilePath_wb(src, app->fn, s);
 	}
 
 	char *name = FindXmlAttr("name", node, NULL);
 
-	if(!strncmp(node->value.element.name, "font", 4)) {
+	if(tsunami && !strncmp(node->value.element.name, "image", 5)) {
+
+		return appTsunamiParseImageResource(app, node, name, src);
+
+	} else if(tsunami && !strncmp(node->value.element.name, "font", 4)) {
+
+		return appTsunamiParseFontResource(app, node, name, src);
+
+	} else if(tsunami && !strncmp(node->value.element.name, "surface", 7)) {
+
+		ds_printf("DS_ERROR: TSU surface resource '%s' is not supported yet\n", name);
+		return 0;
+
+	} else if(!strncmp(node->value.element.name, "font", 4)) {
 
 		return parseAppFontRes(app, node, name, src);
 
@@ -1178,7 +1232,6 @@ static int parseAppImageRes(App_t *app, mxml_node_t *node, char *name, char *src
 	return 1;
 }
 
-
 static int parseAppFileRes(App_t *app, mxml_node_t *node, char *name, char *src) {
 
 #ifdef APP_LOAD_DEBUG
@@ -1258,7 +1311,6 @@ static int parseAppTheme(App_t *app, mxml_node_t *node) {
 	
 	return 1;
 }
-
 
 static GUI_Widget *parseAppElement(App_t *app, mxml_node_t *node, SDL_Rect *parent) {
 

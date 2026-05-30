@@ -1,7 +1,7 @@
 /** 
  * \file    list.h
  * \brief   DreamShell lists
- * \date    2007-2014
+ * \date    2007-2014, 2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -20,7 +20,7 @@
  */
 
 typedef enum {
-	
+
 	LIST_ITEM_USERDATA = 0,
 	LIST_ITEM_SDL_SURFACE,
 	LIST_ITEM_SDL_RWOPS,
@@ -35,9 +35,12 @@ typedef enum {
 	LIST_ITEM_THREAD,
 	LIST_ITEM_CMD,
 	LIST_ITEM_LUA_LIB,
-	
-	LIST_ITEM_XML_NODE
-	
+	LIST_ITEM_XML_NODE,
+
+	LIST_ITEM_TSU_IMAGE,
+	LIST_ITEM_TSU_FONT,
+	LIST_ITEM_TSU_DRAWABLE
+
 } ListItemType;
 
 

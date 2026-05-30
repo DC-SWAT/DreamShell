@@ -1,7 +1,7 @@
 /** 
  * \file    app.h
  * \brief   DreamShell applications
- * \date    2007-2014
+ * \date    2007-2014, 2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -12,6 +12,7 @@
 #include "list.h"
 #include "gui.h"
 #include "mxml.h"
+#include "tsunami/dsapp.h"
 #include "console.h"
 #include "lua.h"
 
@@ -47,6 +48,7 @@ typedef struct App {
 	kthread_t *thd;
 	lua_State *lua;
 	GUI_Widget *body;
+	DSApp *tsunami;
 
 } App_t;
 
@@ -156,13 +158,18 @@ int IsFileSupportedByApp(App_t *app, const char *filename);
 
 /* Utils */
 char *FindXmlAttr(char *name, mxml_node_t *node, char *defValue);
+void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h);
+void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *y);
 void UnLoadOldApps();
-void UnloadAppResources(Item_list_t *lst);
+void UnloadAppResources(App_t *app, Item_list_t *lst);
 
 /* Resource helpers */
 void *getAppElement(App_t *app, const char *name, ListItemType type);
 #define APP_GET_WIDGET(name)  ((GUI_Widget *)  getAppElement(self.app, name, LIST_ITEM_GUI_WIDGET))
 #define APP_GET_SURFACE(name) ((GUI_Surface *) getAppElement(self.app, name, LIST_ITEM_GUI_SURFACE))
 #define APP_GET_FONT(name)    ((GUI_Font *)    getAppElement(self.app, name, LIST_ITEM_GUI_FONT))
+#define APP_GET_TSU_DRAWABLE(name) ((Drawable *) getAppElement(self.app, name, LIST_ITEM_TSU_DRAWABLE))
+#define APP_GET_TSU_IMAGE(name)    ((Texture *)  getAppElement(self.app, name, LIST_ITEM_TSU_IMAGE))
+#define APP_GET_TSU_FONT(name)     ((Font *)     getAppElement(self.app, name, LIST_ITEM_TSU_FONT))
 
 #endif

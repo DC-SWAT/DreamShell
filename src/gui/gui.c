@@ -2,7 +2,7 @@
  * DreamShell ##version##   *
  * gui.c                    *
  * DreamShell GUI           *
- * (c)2006-2025 SWAT        *
+ * (c)2006-2026 SWAT        *
  ****************************/
 
 #include "ds.h"
@@ -28,6 +28,10 @@ typedef SLIST_HEAD(TrashItemList, TrashItem) TrashItem_list_t;
 static TrashItem_list_t *trash_list;
 static Event_t *gui_input_event;
 static Event_t *gui_video_event;
+static Event_t *gui_tsunami_video_event;
+static int gui_first_open = 1;
+static int gui_prev_width = 0;
+static int gui_prev_height = 0;
 
 
 static void GUI_DrawHandler(void *ds_event, void *param, int action) {
@@ -41,6 +45,49 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 		default:
 			break;
 	}
+}
+
+static void GUI_TsunamiDrawHandler(void *ds_event, void *param, int action) {
+
+	DSApp *tsunami = (DSApp *) param;
+	(void)ds_event;
+
+	if(action == EVENT_ACTION_RENDER && tsunami != NULL) {
+		TSU_AppDoFrame(tsunami);
+	}
+}
+
+static int GUI_EnableTsunami(DSApp *tsunami) {
+
+	DisableScreen();
+	TSU_AppBegin(tsunami);
+
+	if(gui_tsunami_video_event == NULL) {
+		gui_tsunami_video_event = AddEvent("GUI_Tsunami_Video", EVENT_TYPE_VIDEO, EVENT_PRIO_DEFAULT, GUI_TsunamiDrawHandler, NULL);
+
+		if(gui_tsunami_video_event == NULL) {
+			return 0;
+		}
+	}
+	else {
+		SetEventActive(gui_tsunami_video_event, 1);
+	}
+
+	return 1;
+}
+
+static void GUI_DisableTsunami(DSApp *tsunami) {
+
+	if(gui_tsunami_video_event == NULL) {
+		return;
+	}
+
+	if(tsunami != NULL && gui_tsunami_video_event->param != tsunami) {
+		return;
+	}
+
+	gui_tsunami_video_event->param = NULL;
+	SetEventActive(gui_tsunami_video_event, 0);
 }
 
 static uint8_t scr_joy_state = 0;
@@ -217,8 +264,20 @@ void ShutdownGUI() {
 	GUI_ClearTrash();
 	free(trash_list);
 
-	RemoveEvent(gui_input_event);
-	RemoveEvent(gui_video_event);
+	if(gui_tsunami_video_event != NULL) {
+		RemoveEvent(gui_tsunami_video_event);
+		gui_tsunami_video_event = NULL;
+	}
+
+	if(gui_input_event != NULL) {
+		RemoveEvent(gui_input_event);
+		gui_input_event = NULL;
+	}
+
+	if(gui_video_event != NULL) {
+		RemoveEvent(gui_video_event);
+		gui_video_event = NULL;
+	}
 
 	LockVideo();
 	GUI_ObjectDecRef((GUI_Object *) GUI_GetScreen());
@@ -229,14 +288,97 @@ void ShutdownGUI() {
 
 void GUI_Disable() {
 	SDL_DC_EmulateMouse(SDL_FALSE);
-	SetEventActive(gui_input_event, 0);
-	SetEventActive(gui_video_event, 0);
+
+	if(gui_input_event != NULL) {
+		SetEventActive(gui_input_event, 0);
+	}
+
+	if(gui_video_event != NULL) {
+		SetEventActive(gui_video_event, 0);
+	}
 }
 
 void GUI_Enable() {
-	SetEventActive(gui_video_event, 1);
-	SetEventActive(gui_input_event, 1);
+	if(gui_video_event != NULL) {
+		SetEventActive(gui_video_event, 1);
+	}
+
+	if(gui_input_event != NULL) {
+		SetEventActive(gui_input_event, 1);
+	}
+
 	SDL_DC_EmulateMouse(SDL_TRUE);
+}
+
+int GUI_IsFirstOpen() {
+	return gui_first_open;
+}
+
+int GUI_OpenApp(App_t *app) {
+
+	if(app == NULL) {
+		return 0;
+	}
+
+	if(gui_first_open && !ConsoleIsVisible()) {
+		gui_first_open = 0;
+		while(GetScreenOpacity() > 0.0f) {
+			thd_pass();
+		}
+	}
+
+	if(app->tsunami != NULL) {
+
+		GUI_Disable();
+
+		if(!GUI_EnableTsunami(app->tsunami)) {
+			EnableScreen();
+			GUI_Enable();
+			return 0;
+		}
+
+		gui_tsunami_video_event->param = app->tsunami;
+		return 1;
+	}
+
+	if(app->body != NULL) {
+		SDL_Rect rect = GUI_WidgetGetArea(app->body);
+
+		GUI_DisableTsunami(NULL);
+		GUI_Enable();
+
+		if(rect.w != GetScreenWidth() || rect.h != GetScreenHeight()) {
+			gui_prev_width = GetScreenWidth();
+			gui_prev_height = GetScreenHeight();
+			SetScreenMode(rect.w, rect.h, 0.0f, 0.0f, 1.0f);
+		}
+
+		LockVideo();
+		GUI_ScreenSetContents(GUI_GetScreen(), app->body);
+		UnlockVideo();
+		return 1;
+	}
+
+	return 0;
+}
+
+int GUI_CloseApp(App_t *app) {
+
+	if(app == NULL) {
+		return 0;
+	}
+
+	if(app->tsunami != NULL) {
+		GUI_DisableTsunami(app->tsunami);
+		EnableScreen();
+		GUI_Enable();
+	}
+
+	if(gui_prev_width && (gui_prev_width != GetScreenWidth() || gui_prev_height != GetScreenHeight())) {
+		SetScreenMode(gui_prev_width, gui_prev_height, 0.0f, 0.0f, 1.0f);
+	}
+
+	return 1;
 }
 
 

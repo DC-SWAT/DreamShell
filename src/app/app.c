@@ -2,7 +2,7 @@
  * DreamShell ##version##    *
  * app.c                     *
  * DreamShell App            *
- * (c)2007-2024 SWAT         *
+ * (c)2007-2026 SWAT         *
  * http://www.dc-swat.ru     *
  ****************************/
 
@@ -12,9 +12,6 @@
 
 static Item_list_t *apps;
 static int curOpenedApp;
-static int first_open = 1;
-static int prev_width = 0;
-static int prev_height = 0;
 
 
 static void FreeApp(void *app) {
@@ -229,6 +226,7 @@ App_t *AddApp(const char *fn) {
 	a->thd = NULL;
 	a->lua = NULL;
 	a->body = NULL;
+	a->tsunami = NULL;
 	a->xml = NULL;
 	a->resources = NULL;
 	a->elements = NULL;
@@ -290,7 +288,7 @@ int OpenApp(App_t *app, const char *args) {
 		return 1;
 	}
 
-	if(!ScreenIsHidden() && !ConsoleIsVisible() && !first_open) {
+	if(!ScreenIsHidden() && !ConsoleIsVisible() && !GUI_IsFirstOpen()) {
 		const char *str = "Loading...";
 		vmu_draw_string(str);
 		ScreenFadeOutEx(str, 1);
@@ -324,7 +322,7 @@ int OpenApp(App_t *app, const char *args) {
 		}
 	}
 
-	if(first_open && !ConsoleIsVisible()) {
+	if(GUI_IsFirstOpen() && !ConsoleIsVisible()) {
 		ScreenFadeOutEx(NULL, 0);
 	}
 
@@ -340,27 +338,8 @@ int OpenApp(App_t *app, const char *args) {
 			SetAppSleep(app, 0);
 		}
 
-		if(app->body != NULL) {
-			SDL_Rect rect = GUI_WidgetGetArea(app->body);
-
-			if(first_open && !ConsoleIsVisible()) {
-				first_open = 0;
-				while(GetScreenOpacity() > 0.0f) {
-					thd_pass();
-				}
-			}
-
-			if(rect.w != GetScreenWidth() || rect.h != GetScreenHeight()) {
-				
-				prev_width = GetScreenWidth();
-				prev_height = GetScreenHeight();
-				
-				SetScreenMode(rect.w, rect.h, 0.0f, 0.0f, 1.0f);
-			}
-
-			LockVideo();
-			GUI_ScreenSetContents(GUI_GetScreen(), app->body);
-			UnlockVideo();
+		if(!GUI_OpenApp(app)) {
+			goto error;
 		}
 
 		if(!strncasecmp(app->name, "Main", sizeof(app->name))) {
@@ -416,12 +395,9 @@ int CloseApp(App_t *app, int unload) {
 		return 1;
 	}
 
+	GUI_CloseApp(app);
 	app->state &= ~APP_STATE_OPENED;
 	WaitApp(app);
-
-	if(prev_width && (prev_width != GetScreenWidth() || prev_height != GetScreenHeight())) {
-		SetScreenMode(prev_width, prev_height, 0.0f, 0.0f, 1.0f);
-	}
 
 	if(unload && (app->state & APP_STATE_LOADED)) {
 		app->state |= APP_STATE_WAIT_UNLOAD;
