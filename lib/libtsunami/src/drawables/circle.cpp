@@ -9,6 +9,8 @@
 
 #include "drawables/circle.h"
 #include <dc/fmath.h>
+#include "../plx/prim.h"
+#include "../plx/context.h"
 
 Circle::Circle(pvr_list_type_t list, float radius, int points, const Color &centerColor, const Color &edgeColor) {
     setObjectType(ObjectTypeEnum::CIRCLE_TYPE);
@@ -19,9 +21,25 @@ Circle::Circle(pvr_list_type_t list, float radius, int points, const Color &cent
     m_edgeColor = edgeColor;
     
     if (m_points < 3) m_points = 3;
+    precomputePoints();
+
+    pvr_poly_cxt_t cxt;
+    pvr_poly_cxt_col(&cxt, list);
+    cxt.gen.culling = PVR_CULLING_NONE;
+    pvr_poly_compile(&m_hdr, &cxt);
 }
 
 Circle::~Circle() {
+}
+
+void Circle::precomputePoints() {
+    m_precomputed.resize(m_points + 1);
+    float angle_step = (2.0f * F_PI) / m_points;
+    for (int i = 0; i <= m_points; i++) {
+        float angle = i * angle_step;
+        m_precomputed[i].cos_val = fcos(angle);
+        m_precomputed[i].sin_val = fsin(angle);
+    }
 }
 
 void Circle::setRadius(float r) {
@@ -41,10 +59,7 @@ void Circle::draw(pvr_list_type_t list) {
     if (list != m_list)
         return;
 
-    pvr_poly_cxt_col(&cxt, list);
-    cxt.gen.culling = PVR_CULLING_NONE;
-    pvr_poly_compile(&hdr, &cxt);
-    pvr_prim(&hdr, sizeof(hdr));
+    pvr_prim(&m_hdr, sizeof(m_hdr));
 
     const Vector &tv = getPosition();
     const Vector &sv = getScale();
@@ -60,40 +75,24 @@ void Circle::draw(pvr_list_type_t list) {
     uint32_t c_center = (uint32_t)finalCenter;
     uint32_t c_edge = (uint32_t)finalEdge;
 
-    pvr_vertex_t vert;
-    vert.flags = PVR_CMD_VERTEX;
-    vert.oargb = 0;
-    vert.u = 0.0f;
-    vert.v = 0.0f;
-
-    float angle_step = (2.0f * F_PI) / m_points;
+    float tv_x = tv.x;
+    float tv_y = tv.y;
+    float tv_z = tv.z;
 
     for (int i = 0; i <= m_points; i++) {
-        float angle = i * angle_step;
-        float ca = fcos(angle);
-        float sa = fsin(angle);
+        float ca = m_precomputed[i].cos_val;
+        float sa = m_precomputed[i].sin_val;
 
         // Rim vertex
-        vert.x = tv.x + ca * rx;
-        vert.y = tv.y + sa * ry;
-        vert.z = tv.z;
-        vert.argb = c_edge;
-        vert.flags = PVR_CMD_VERTEX;
-        pvr_prim(&vert, sizeof(vert));
+        plx_vert_inp(PLX_VERT, tv_x + ca * rx, tv_y + sa * ry, tv_z, c_edge);
 
         // Center vertex
-        vert.x = tv.x;
-        vert.y = tv.y;
-        vert.z = tv.z;
-        vert.argb = c_center;
-
         if (i == m_points) {
-            vert.flags = PVR_CMD_VERTEX_EOL;
+            plx_vert_inp(PLX_VERT_EOS, tv_x, tv_y, tv_z, c_center);
         }
         else {
-            vert.flags = PVR_CMD_VERTEX;
+            plx_vert_inp(PLX_VERT, tv_x, tv_y, tv_z, c_center);
         }
-        pvr_prim(&vert, sizeof(vert));
     }
 
     Drawable::draw(list);

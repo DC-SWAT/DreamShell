@@ -14,6 +14,7 @@
 #include "../texture.h"
 
 #ifdef __cplusplus
+#include <vector>
 
 class Circle : public Drawable {
 public:
@@ -29,13 +30,18 @@ public:
 
 private:
     pvr_list_type_t m_list;
+    pvr_poly_hdr_t m_hdr;
     float m_radius;
     int m_points;
     Color m_centerColor;
     Color m_edgeColor;
+    struct PrecomputedPoint {
+        float cos_val;
+        float sin_val;
+    };
+    std::vector<PrecomputedPoint> m_precomputed;
 
-    pvr_poly_cxt_t cxt;
-    pvr_poly_hdr_t hdr;
+    void precomputePoints();
 };
 
 #else

@@ -27,9 +27,16 @@ Gradient::Gradient(pvr_list_type_t list, float width, float height, float zIndex
 
     for(int i = 0; i < 4; i++) {
         m_colors[i] = 0xFFFFFFFF;
+        m_cached_colors[i] = 0xFFFFFFFF;
     }
+    m_cached_alpha = -1.0f;
 
 	Drawable::setTranslate(Vector(0, 0, zIndex, 1.0f));
+
+	pvr_poly_cxt_t cxt;
+	pvr_poly_cxt_col(&cxt, list);
+	cxt.gen.culling = PVR_CULLING_NONE;
+	pvr_poly_compile(&m_hdr, &cxt);
 }
 
 Gradient::~Gradient()
@@ -42,6 +49,7 @@ void Gradient::setColors(uint32_t tl, uint32_t tr, uint32_t br, uint32_t bl)
     m_colors[1] = tr;
     m_colors[2] = br;
     m_colors[3] = bl;
+    m_cached_alpha = -1.0f;
 }
 
 void Gradient::draw(pvr_list_type_t list)
@@ -49,10 +57,7 @@ void Gradient::draw(pvr_list_type_t list)
 	if (list != m_list)
 		return;
 
-	pvr_poly_cxt_col(&cxt, list);
-	cxt.gen.culling = PVR_CULLING_NONE;
-	pvr_poly_compile(&hdr, &cxt);
-	pvr_prim(&hdr, sizeof(hdr));
+	pvr_prim(&m_hdr, sizeof(m_hdr));
 
 	float w, h;
 	if (m_width > 0 && m_height > 0) {
@@ -75,24 +80,26 @@ void Gradient::draw(pvr_list_type_t list)
 
     // Apply alpha from Drawable
     float alpha = getAlpha();
-    uint32_t c[4], col, a;
 
-    for(int i = 0; i < 4; i++) {
-        if (alpha < 0.99f) {
-            col = m_colors[i];
-            a = (col >> 24) & 0xFF;
-            a = (uint32_t)(a * alpha);
-            c[i] = (a << 24) | (col & 0xFFFFFF);
-        }
-		else {
-            c[i] = m_colors[i];
+    if (alpha != m_cached_alpha) {
+        m_cached_alpha = alpha;
+        for(int i = 0; i < 4; i++) {
+            if (alpha < 0.99f) {
+                uint32_t col = m_colors[i];
+                uint32_t a = (col >> 24) & 0xFF;
+                a = (uint32_t)(a * alpha);
+                m_cached_colors[i] = (a << 24) | (col & 0xFFFFFF);
+            }
+            else {
+                m_cached_colors[i] = m_colors[i];
+            }
         }
     }
 
-    plx_vert_inp(PLX_VERT, x, y, z, c[3]);
-    plx_vert_inp(PLX_VERT, x, y - h, z, c[0]);
-    plx_vert_inp(PLX_VERT, x + w, y, z, c[2]);
-    plx_vert_inp(PLX_VERT_EOS, x + w, y - h, z, c[1]);
+    plx_vert_inp(PLX_VERT, x, y, z, m_cached_colors[3]);
+    plx_vert_inp(PLX_VERT, x, y - h, z, m_cached_colors[0]);
+    plx_vert_inp(PLX_VERT, x + w, y, z, m_cached_colors[2]);
+    plx_vert_inp(PLX_VERT_EOS, x + w, y - h, z, m_cached_colors[1]);
 
 	Drawable::draw(list);
 }

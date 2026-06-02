@@ -28,10 +28,11 @@ public:
 
 private:
 	pvr_list_type_t m_list;
+    pvr_poly_hdr_t m_hdr;
 	float zIndex;
     uint32_t m_colors[4];
-	pvr_poly_hdr_t hdr;
-	pvr_poly_cxt_t cxt;
+    float m_cached_alpha;
+    uint32_t m_cached_colors[4];
 };
 
 #else
