@@ -4,11 +4,14 @@
    box.cpp
 
    Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2026 SWAT
    
 */
 
 #include <dc/fmath.h>
 #include "drawables/box.h"
+#include "../plx/prim.h"
+#include "../plx/context.h"
 
 Box::Box(pvr_list_type_t list, float x, float y, float width, float height, float borderWidth, const Color &color, float zIndex, float radius = 0) {
 	m_list = list;
@@ -35,9 +38,29 @@ Box::Box(pvr_list_type_t list, float x, float y, float width, float height, floa
 
 	Drawable::setTranslate(Vector(x, y, zIndex, 1.0f));
 	Drawable::setTint(color);
+	precomputePoints();
+
+	pvr_poly_cxt_t cxt;
+	pvr_poly_cxt_col(&cxt, list);
+	cxt.gen.culling = PVR_CULLING_NONE;
+	pvr_poly_compile(&m_hdr, &cxt);
 }
 
 Box::~Box() {
+}
+
+void Box::precomputePoints() {
+	int rad = radius <= 0 ? 0 : (int)radius + 5;
+	if (rad > 0) {
+		m_precomputed.resize(rad + 1);
+		const float PI_2 = F_PI / 2;
+		float quantity_slices = PI_2 / (float)(rad - 1);
+		for (int i = 0; i <= rad; i++) {
+			float slices_count = i * quantity_slices;
+			m_precomputed[i].cos_val = fcos(slices_count);
+			m_precomputed[i].sin_val = fsin(slices_count);
+		}
+	}
 }
 
 void Box::setSize(float w, float h) {
@@ -47,11 +70,9 @@ void Box::setSize(float w, float h) {
 
 void Box::drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex, int radius)
 {
-	const float PI_2 = F_PI / 2;
 	float dx = 0, dy = 0;
 	radius = radius <= 0 ? 0 : radius + 5;
 
-	float quantity_slices = PI_2 / (float)(radius - 1);
 	x -= lineWidth;
 	y += lineWidth;
 	width += lineWidth * 2;
@@ -63,14 +84,14 @@ void Box::drawBox(float x, float y, float width, float height, float lineWidth, 
 	// LEFT BOTTOM CORNER
 	if (radius > 0)
 	{
-		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		for (int count = 0; count <= radius; count++)
 		{
-			dx = (x + radius) - fcos(slices_count) * radius;
-			dy = (y - radius) + fsin(slices_count) * radius;
+			dx = (x + radius) - m_precomputed[count].cos_val * radius;
+			dy = (y - radius) - m_precomputed[count].sin_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 
-			dx = (x + (radius + lineWidth)) - fcos(slices_count) * radius;
-			dy = (y - (radius + lineWidth)) + fsin(slices_count) * radius;
+			dx = (x + (radius + lineWidth)) - m_precomputed[count].cos_val * radius;
+			dy = (y - (radius + lineWidth)) - m_precomputed[count].sin_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 		}
 	}
@@ -86,14 +107,14 @@ void Box::drawBox(float x, float y, float width, float height, float lineWidth, 
 	// RIGHT BOTTOM CORNER
 	if (radius > 0)
 	{
-		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		for (int count = 0; count <= radius; count++)
 		{
-			dx = (x + width - radius) + fsin(slices_count) * radius;
-			dy = (y - radius) + fcos(slices_count) * radius;
+			dx = (x + width - radius) + m_precomputed[count].sin_val * radius;
+			dy = (y - radius) - m_precomputed[count].cos_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 
-			dx = (x + width - (radius + lineWidth)) + fsin(slices_count) * radius;
-			dy = (y - (radius + lineWidth)) + fcos(slices_count) * radius;
+			dx = (x + width - (radius + lineWidth)) + m_precomputed[count].sin_val * radius;
+			dy = (y - (radius + lineWidth)) - m_precomputed[count].cos_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 		}
 	}
@@ -109,14 +130,14 @@ void Box::drawBox(float x, float y, float width, float height, float lineWidth, 
 	// RIGHT TOP CORNER
 	if (radius > 0)
 	{
-		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		for (int count = 0; count <= radius; count++)
 		{
-			dx = (x + width - radius) + fcos(slices_count) * radius;
-			dy = (y - height + radius) - fsin(slices_count) * radius;
+			dx = (x + width - radius) + m_precomputed[count].cos_val * radius;
+			dy = (y - height + radius) - m_precomputed[count].sin_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 
-			dx = (x + width - (radius + lineWidth)) + fcos(slices_count) * radius;
-			dy = (y - height + (radius + lineWidth)) - fsin(slices_count) * radius;
+			dx = (x + width - (radius + lineWidth)) + m_precomputed[count].cos_val * radius;
+			dy = (y - height + (radius + lineWidth)) - m_precomputed[count].sin_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 		}
 	}
@@ -132,14 +153,14 @@ void Box::drawBox(float x, float y, float width, float height, float lineWidth, 
 	// LEFT TOP CORNER
 	if (radius > 0)
 	{
-		for (float slices_count = 0, count = 0; count <= radius; count++, slices_count += quantity_slices)
+		for (int count = 0; count <= radius; count++)
 		{
-			dx = (x + radius) - fsin(slices_count) * radius;
-			dy = (y - height + radius) - fcos(slices_count) * radius;
+			dx = (x + radius) - m_precomputed[count].sin_val * radius;
+			dy = (y - height + radius) - m_precomputed[count].cos_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 
-			dx = (x + (radius + lineWidth)) - fsin(slices_count) * radius;
-			dy = (y - height + (radius + lineWidth)) - fcos(slices_count) * radius;
+			dx = (x + (radius + lineWidth)) - m_precomputed[count].sin_val * radius;
+			dy = (y - height + (radius + lineWidth)) - m_precomputed[count].cos_val * radius;
 			plx_vert_inp(PLX_VERT, dx, dy, zIndex, color);
 		}
 	}
@@ -157,10 +178,7 @@ void Box::draw(pvr_list_type_t list) {
 	if (list != m_list)
 		return;
 
-	pvr_poly_cxt_col(&cxt, list);
-	cxt.gen.culling = PVR_CULLING_NONE;
-	pvr_poly_compile(&hdr, &cxt);
-	pvr_prim(&hdr, sizeof(hdr));
+	pvr_prim(&m_hdr, sizeof(m_hdr));
 
 	float w, h;
 	if (width != -1 && height != -1) {

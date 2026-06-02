@@ -5,6 +5,7 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
    
 */
 
@@ -13,7 +14,6 @@
 extern "C" {
 	void LockVideo();
 	void UnlockVideo();
-	int VideoMustLock();
 }
 
 Banner::Banner(pvr_list_type_t list, Texture *texture) {
@@ -96,27 +96,33 @@ void Banner::draw(pvr_list_type_t list) {
 	}
 	vert.oargb = 0;
 
+	float tv_x = tv.x;
+	float tv_y = tv.y;
+	float tv_z = tv.z;
+	float w_half = w / 2.0f;
+	float h_half = h / 2.0f;
+
 	vert.flags = PLX_VERT;
-	vert.x = tv.x-w/2;
-	vert.y = tv.y+h/2;
-	vert.z = tv.z;
+	vert.x = tv_x - w_half;
+	vert.y = tv_y + h_half;
+	vert.z = tv_z;
 	vert.u = m_u1;
 	vert.v = m_v1;
 	plx_prim(&vert, sizeof(vert));
 
-	vert.y = tv.y-h/2;
+	vert.y = tv_y - h_half;
 	vert.u = m_u2;
 	vert.v = m_v2;
 	plx_prim(&vert, sizeof(vert));
 
-	vert.x = tv.x+w/2;
-	vert.y = tv.y+h/2;
+	vert.x = tv_x + w_half;
+	vert.y = tv_y + h_half;
 	vert.u = m_u3;
 	vert.v = m_v3;
 	plx_prim(&vert, sizeof(vert));
 
 	vert.flags = PLX_VERT_EOS;
-	vert.y = tv.y-h/2;
+	vert.y = tv_y - h_half;
 	vert.u = m_u4;
 	vert.v = m_v4;
 	plx_prim(&vert, sizeof(vert));

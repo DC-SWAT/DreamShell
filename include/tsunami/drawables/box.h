@@ -5,6 +5,7 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024-2025 Maniac Vera
+   Copyright (C) 2026 SWAT
 
 */
 
@@ -12,13 +13,12 @@
 #define __TSUNAMI_DRW_BOX_H
 
 #include "../../plx/list.h"
-#include "../../plx/sprite.h"
 #include "../drawable.h"
 #include "../texture.h"
 #include "../color.h"
 
 #ifdef __cplusplus
-
+#include <vector>
 #include <memory>
 
 class Box : public Drawable {
@@ -32,9 +32,15 @@ public:
 
 private:
 	pvr_list_type_t m_list;
+	pvr_poly_hdr_t m_hdr;
 	float width, height, radius, zIndex, borderWidth;
-	pvr_poly_hdr_t hdr;
-	pvr_poly_cxt_t cxt;
+	struct PrecomputedPoint {
+		float cos_val;
+		float sin_val;
+	};
+	std::vector<PrecomputedPoint> m_precomputed;
+
+	void precomputePoints();
 
 	void drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex, int radius);
 };
