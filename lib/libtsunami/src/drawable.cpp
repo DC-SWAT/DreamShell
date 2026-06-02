@@ -230,13 +230,15 @@ void Drawable::draw(pvr_list_type_t list) {
 }
 
 void Drawable::nextFrame() {
-	/* Duplicate the array of animations. This makes the "for" loop much
-	 * easier as we don't have to handle it->nextFrame() calling
-	 * animRemove(). */
-	auto anims = m_anims;
+	if (!m_anims.empty()) {
+		/* Duplicate the array of animations. This makes the "for" loop much
+		 * easier as we don't have to handle it->nextFrame() calling
+		 * animRemove(). */
+		auto anims = m_anims;
 
-	for (auto it: anims) {
-		it->nextFrame(this);
+		for (auto it: anims) {
+			it->nextFrame(this);
+		}
 	}
 
 	subNextFrame();

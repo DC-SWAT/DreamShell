@@ -5,11 +5,12 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
    
 */
 
 #include "anims/logxymover.h"
-#include "math.h"
+#include <sh4zam/shz_scalar.h>
 
 LogXYMover::LogXYMover(float dstx, float dsty) {
 	m_dstx = dstx;
@@ -21,15 +22,19 @@ LogXYMover::~LogXYMover() { }
 
 void LogXYMover::nextFrame(Drawable *t) {
 	Vector pos = t->getTranslate();
-	if (fabs(pos.x - m_dstx) < 0.1f && fabs(pos.y - m_dsty) < 0.1f) {
+	if (shz_fabsf(pos.x - m_dstx) < 0.1f &&
+		shz_fabsf(pos.y - m_dsty) < 0.1f) {
 		t->setTranslate(Vector(m_dstx, m_dsty, pos.z));
 		complete(t);
 	} else {
 		// Move 1/8 of the distance each frame
 		float dx = m_dstx - pos.x;
 		float dy = m_dsty - pos.y;
+		float inv_factor = shz_invf(m_factor);
 		t->setTranslate(Vector(
-			pos.x + dx/m_factor, pos.y + dy/m_factor, pos.z));
+			shz_fmaf(dx, inv_factor, pos.x),
+			shz_fmaf(dy, inv_factor, pos.y),
+			pos.z));
 	}
 }
 

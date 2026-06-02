@@ -8,7 +8,7 @@
 */
 
 #include "anims/logxyzmover.h"
-#include "math.h"
+#include <sh4zam/shz_scalar.h>
 
 LogXYZMover::LogXYZMover(float dstx, float dsty, float dstz) {
     m_dstx = dstx;
@@ -21,9 +21,9 @@ LogXYZMover::~LogXYZMover() { }
 
 void LogXYZMover::nextFrame(Drawable *t) {
     Vector pos = t->getTranslate();
-    if (fabs(pos.x - m_dstx) < 0.1f && 
-        fabs(pos.y - m_dsty) < 0.1f && 
-        fabs(pos.z - m_dstz) < 0.1f) {
+    if (shz_fabsf(pos.x - m_dstx) < 0.1f && 
+        shz_fabsf(pos.y - m_dsty) < 0.1f && 
+        shz_fabsf(pos.z - m_dstz) < 0.1f) {
         t->setTranslate(Vector(m_dstx, m_dsty, m_dstz));
         complete(t);
     }
@@ -32,10 +32,11 @@ void LogXYZMover::nextFrame(Drawable *t) {
         float dx = m_dstx - pos.x;
         float dy = m_dsty - pos.y;
         float dz = m_dstz - pos.z;
+        float inv_factor = shz_invf(m_factor);
         t->setTranslate(Vector(
-            pos.x + dx/m_factor, 
-            pos.y + dy/m_factor, 
-            pos.z + dz/m_factor));
+            shz_fmaf(dx, inv_factor, pos.x), 
+            shz_fmaf(dy, inv_factor, pos.y), 
+            shz_fmaf(dz, inv_factor, pos.z)));
     }
 }
 

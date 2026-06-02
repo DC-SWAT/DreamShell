@@ -8,7 +8,7 @@
 */
 
 #include "anims/logscalemover.h"
-#include "math.h"
+#include <sh4zam/shz_scalar.h>
 
 LogScaleMover::LogScaleMover(float dstx, float dsty) {
     m_dstx = dstx;
@@ -21,7 +21,8 @@ LogScaleMover::~LogScaleMover() { }
 void LogScaleMover::nextFrame(Drawable *t) {
     Vector scale = t->getScale();
 
-    if (fabs(scale.x - m_dstx) < 0.001f && fabs(scale.y - m_dsty) < 0.001f) {
+    if (shz_fabsf(scale.x - m_dstx) < 0.001f &&
+        shz_fabsf(scale.y - m_dsty) < 0.001f) {
         scale.x = m_dstx;
         scale.y = m_dsty;
         t->setScale(scale);
@@ -31,8 +32,9 @@ void LogScaleMover::nextFrame(Drawable *t) {
         // Move 1/factor of the distance each frame
         float dx = m_dstx - scale.x;
         float dy = m_dsty - scale.y;
-        scale.x += dx/m_factor;
-        scale.y += dy/m_factor;
+        float inv_factor = shz_invf(m_factor);
+        scale.x = shz_fmaf(dx, inv_factor, scale.x);
+        scale.y = shz_fmaf(dy, inv_factor, scale.y);
         t->setScale(scale);
     }
 }
