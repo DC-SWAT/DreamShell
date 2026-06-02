@@ -5,6 +5,7 @@
 
    Copyright (C) 2002 Megan Potter
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
 
 */
 
@@ -30,10 +31,9 @@ public:
 
 private:
 	pvr_list_type_t m_list;
+	pvr_poly_hdr_t m_hdr;
 	float x1, y1, x2, y2, x3, y3, radius, zIndex, borderWidth;
 	uint32 borderColor;
-	pvr_poly_hdr_t hdr;
-	pvr_poly_cxt_t cxt;
 
 	void drawBox(float x1, float y1, float x2, float y2, float x3, float y3, float lineWidth, uint32 color, float zIndex);
 	void drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, uint32 color, float zIndex);	

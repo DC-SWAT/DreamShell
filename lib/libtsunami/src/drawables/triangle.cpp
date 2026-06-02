@@ -4,10 +4,13 @@
    triangle.cpp
 
    Copyright (C) 2024 Maniac Vera
+   Copyright (C) 2026 SWAT
    
 */
 
 #include "drawables/triangle.h"
+#include "../plx/prim.h"
+#include "../plx/context.h"
 
 Triangle::Triangle(pvr_list_type_t list, float x1, float y1, float x2, float y2, float x3, float y3, const Color &color, float zIndex, float borderWidth, const Color &borderColor, float radius = 0) {
 	setObjectType(ObjectTypeEnum::TRIANGLE_TYPE);
@@ -46,35 +49,21 @@ Triangle::Triangle(pvr_list_type_t list, float x1, float y1, float x2, float y2,
 
 	Drawable::setTranslate(Vector(x1, y1, zIndex, 1.0f));
 	Drawable::setTint(color);
+
+	pvr_poly_cxt_t cxt;
+	pvr_poly_cxt_col(&cxt, list);
+	cxt.gen.culling = PVR_CULLING_NONE;
+	pvr_poly_compile(&m_hdr, &cxt);
 }
 
 Triangle::~Triangle() {
 }
 
 void Triangle::drawTriangle(float x1, float y1, float x2, float y2, float x3, float y3, uint32 color, float zIndex) {
-	pvr_vertex_t vert;
-
-	vert.flags = PVR_CMD_VERTEX;
-	vert.x = x1;
-	vert.y = y1;
-	vert.z = zIndex;
-	vert.u = vert.v = 0.0f;
-	vert.argb = color;
-	vert.oargb = 0;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.x = x2;
-	vert.y = y2;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.x = x3;
-	vert.y = y3;
-	pvr_prim(&vert, sizeof(vert));
-
-	vert.flags = PVR_CMD_VERTEX_EOL;
-	vert.x = x1;
-	vert.y = y1;
-	pvr_prim(&vert, sizeof(vert));
+	plx_vert_inp(PLX_VERT, x1, y1, zIndex, color);
+	plx_vert_inp(PLX_VERT, x2, y2, zIndex, color);
+	plx_vert_inp(PLX_VERT, x3, y3, zIndex, color);
+	plx_vert_inp(PLX_VERT_EOS, x1, y1, zIndex, color);
 }
 
 void Triangle::drawBox(float x1, float y1, float x2, float y2, float x3, float y3, float lineWidth, uint32 color, float zIndex) {
@@ -84,9 +73,7 @@ void Triangle::draw(pvr_list_type_t list) {
 	if (list != m_list)
 		return;
 
-	pvr_poly_cxt_col(&cxt, list);
-	pvr_poly_compile(&hdr, &cxt);
-	pvr_prim(&hdr, sizeof(hdr));
+	pvr_prim(&m_hdr, sizeof(m_hdr));
 
 	const Vector & tv = getPosition();
 
