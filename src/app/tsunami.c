@@ -632,8 +632,8 @@ static int parseAppTsunamiCircleElement(App_t *app, mxml_node_t *node, SDL_Rect 
 	Color center_color = {APP_TSU_DEFAULT_ALPHA, 1.0f, 1.0f, 1.0f};
 	Color edge_color = {APP_TSU_DEFAULT_ALPHA, 1.0f, 1.0f, 1.0f};
 	char *name = FindXmlAttr("name", node, node->value.element.name);
-	float radius = atof(FindXmlAttr("radius", node, "10.0"));
-	int points = atoi(FindXmlAttr("points", node, "30"));
+	float radius = atof(FindXmlAttr("radius", node, "128.0"));
+	int points = atoi(FindXmlAttr("points", node, "16"));
 
 	parseAppTsunamiColor(FindXmlAttr("centerColor", node, FindXmlAttr("color", node, NULL)), &center_color, &center_color);
 	parseAppTsunamiColor(FindXmlAttr("edgeColor", node, NULL), &edge_color, &center_color);
@@ -654,11 +654,12 @@ static int parseAppTsunamiWaveElement(App_t *app, mxml_node_t *node, SDL_Rect *p
 	Wave *wave;
 	char *name = FindXmlAttr("name", node, node->value.element.name);
 	int w, h;
-	float freq = atof(FindXmlAttr("freq", node, "1.0"));
-	float amp = atof(FindXmlAttr("amp", node, "10.0"));
-	float speed = atof(FindXmlAttr("speed", node, "1.0"));
-	char *color1_str = FindXmlAttr("color", node, FindXmlAttr("color1", node, NULL));
-	char *color2_str = FindXmlAttr("color2", node, NULL);
+	float freq = atof(FindXmlAttr("freq", node, "0.8"));
+	float amp = atof(FindXmlAttr("amp", node, "13.0"));
+	float speed = atof(FindXmlAttr("speed", node, "0.02"));
+	int segs = atoi(FindXmlAttr("segs", node, "32"));
+	char *color1_str = FindXmlAttr("color", node, FindXmlAttr("color1", node, "#FF0000E5"));
+	char *color2_str = FindXmlAttr("color2", node, "#70C9DB66");
 
 	wave = TSU_WaveCreate(parseAppTsunamiList(node, PVR_LIST_OP_POLY));
 
@@ -668,13 +669,15 @@ static int parseAppTsunamiWaveElement(App_t *app, mxml_node_t *node, SDL_Rect *p
 
 	parseNodeSize(node, parent, &w, &h);
 	TSU_WaveSetSize(wave, (float)w, (float)h);
-	TSU_WaveSetParams(wave, freq, amp, speed);
+	TSU_WaveSetParams(wave, freq, amp, speed, segs);
+
+	parseAppTsunamiDrawableAttrs(node, (Drawable *)wave, parent);
 
 	if(color1_str != NULL && color2_str != NULL) {
 		Color c1 = {APP_TSU_DEFAULT_ALPHA, 1.0f, 1.0f, 1.0f};
 		Color c2 = {APP_TSU_DEFAULT_ALPHA, 1.0f, 1.0f, 1.0f};
-		uint32 duration = atoi(FindXmlAttr("duration", node, "1000"));
-		uint32 hold_duration = atoi(FindXmlAttr("hold", node, FindXmlAttr("holdDuration", node, "0")));
+		uint32 duration = atoi(FindXmlAttr("duration", node, "10000"));
+		uint32 hold_duration = atoi(FindXmlAttr("hold", node, "5000"));
 
 		parseAppTsunamiColor(color1_str, &c1, &c1);
 		parseAppTsunamiColor(color2_str, &c2, &c2);
@@ -685,8 +688,6 @@ static int parseAppTsunamiWaveElement(App_t *app, mxml_node_t *node, SDL_Rect *p
 		parseAppTsunamiColor(color1_str, &c1, &c1);
 		TSU_WaveSetColor(wave, c1.r, c1.g, c1.b, c1.a);
 	}
-
-	parseAppTsunamiDrawableAttrs(node, (Drawable *)wave, parent);
 
 	return addAppTsunamiElement(app, name, (void *)wave, APP_TSU_DRAWABLE_WAVE);
 }
