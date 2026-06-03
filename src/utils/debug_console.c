@@ -1,7 +1,7 @@
 /* KallistiOS ##version##
 
    util/dsd_console.c
-   Copyright (C) 2011-2014 SWAT
+   Copyright (C) 2011-2014, 2026 SWAT
 
 */
 
@@ -36,7 +36,7 @@ static int dsd_sd_init() {
 }
 
 static int dsd_sd_shutdown() {
-	if(log > 0) {
+	if(flog > 0) {
 		fs_close(flog);
 	}
 	return 0;
@@ -44,27 +44,21 @@ static int dsd_sd_shutdown() {
 
 
 static int dsd_set_irq_usage(int mode) {
+	(void)mode;
+
 	return 0;
-}
-
-static int dsd_read() {
-	errno = EAGAIN;
-	return -1;
-}
-
-static int dsd_write(int c) {
-	//ds_printf("%c", c);
-	return 1;
 }
 
 static int dsd_flush() {
 	return 0;
 }
 
-static int dsd_write_buffer(const uint8 *data, int len, int xlat) {
+static int dsd_write_buffer(const uint8_t *data, int len, int xlat) {
 
 	ConsoleInformation *DSConsole = GetConsole();
 	char *ptemp, *b;
+
+	(void)xlat;
 
 	if(DSConsole != NULL && DSConsole->ConsoleLines) {
 
@@ -91,48 +85,47 @@ static int dsd_write_buffer(const uint8 *data, int len, int xlat) {
 }
 
 
-static int dsd_sd_write_buffer(const uint8 *data, int len, int xlat) {
-	
+static int dsd_sd_write_buffer(const uint8_t *data, int len, int xlat) {
+
 	if(flog == 0) {
 		dsd_sd_init();
 	}
-	
+
 	if(flog < 0) {
 		return dsd_write_buffer(data, len, xlat);
 	}
-	
+
 	return fs_write(flog, data, len);
 }
 
-static int dsd_read_buffer(uint8 * data, int len) {
+static int dsd_read_buffer(uint8_t *data, int len) {
+	(void)data;
+	(void)len;
+
 	errno = EAGAIN;
 	return -1;
 }
 
 dbgio_handler_t dbgio_ds = {
-	"ds",
-	dsd_detected,
-	dsd_init,
-	dsd_shutdown,
-	dsd_set_irq_usage,
-	dsd_read,
-	dsd_write,
-	dsd_flush,
-	dsd_write_buffer,
-	dsd_read_buffer
+	.name = "ds",
+	.detected = dsd_detected,
+	.init = dsd_init,
+	.shutdown = dsd_shutdown,
+	.set_irq_usage = dsd_set_irq_usage,
+	.flush = dsd_flush,
+	.write_buffer = dsd_write_buffer,
+	.read_buffer = dsd_read_buffer
 };
 
 dbgio_handler_t dbgio_sd = {
-	"sd",
-	dsd_detected,
-	dsd_sd_init,
-	dsd_sd_shutdown,
-	dsd_set_irq_usage,
-	dsd_read,
-	dsd_write,
-	dsd_flush,
-	dsd_sd_write_buffer,
-	dsd_read_buffer
+	.name = "sd",
+	.detected = dsd_detected,
+	.init = dsd_sd_init,
+	.shutdown = dsd_sd_shutdown,
+	.set_irq_usage = dsd_set_irq_usage,
+	.flush = dsd_flush,
+	.write_buffer = dsd_sd_write_buffer,
+	.read_buffer = dsd_read_buffer
 };
 
 
