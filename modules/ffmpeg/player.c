@@ -61,12 +61,13 @@ typedef struct video_txr {
     int width, height;
     pvr_ptr_t addr;
     plx_texture_t *plx_txr;
+    int filter;
 } video_txr_t;
 
 static struct {
     kthread_t *thread;
-    AVFrame *frame[2];
-    volatile int decode_frame_idx;
+    AVFrame *frame;
+    PacketBuffer_t vpacket;
 
     AVCodecContext *codec;
     AVCodecContext *audio_codec;
@@ -94,8 +95,6 @@ static struct {
     float disp_w, disp_h;
     float disp_x, disp_y;
 
-    PacketBuffer_t vpackets[2];
-    volatile int vpacket_idx;
 
     video_txr_t txr[2];
     volatile int txr_idx;
@@ -339,17 +338,19 @@ static int audio_init(AVCodecContext *codec) {
     switch(codec->codec_id) {
         case CODEC_ID_ADPCM_YAMAHA:
             aud->type = AICA_SM_ADPCM_LS;
+            aud->buffer_size = (32 << 10) - AUDIO_MIN_CHUNK_SIZE;
             break;
         case CODEC_ID_PCM_U8:
         case CODEC_ID_PCM_S8:
             aud->type = AICA_SM_8BIT;
+            aud->buffer_size = SND_STREAM_BUFFER_MAX_PCM8;
             break;
         default:
             aud->type = AICA_SM_16BIT;
+            aud->buffer_size = SND_STREAM_BUFFER_MAX_PCM16;
             break;
     }
 
-    aud->buffer_size = aud->type == AICA_SM_ADPCM_LS ? 32 << 10 : 128 << 10;
     aud->buffer_size_samples = bytes_to_samples(aud->bitsize, aud->buffer_size);
     aud->spu_ram_sch[0] = snd_mem_malloc(aud->buffer_size * aud->channels);
 
@@ -423,7 +424,7 @@ static void audio_start() {
     chan->length = bytes_to_samples(aud->bitsize, aud->buffer_size);
     chan->loop = 1;
     chan->loopstart = 0;
-    chan->loopend = chan->length - 1;
+    chan->loopend = chan->length;
     chan->freq = aud->frequency;
     chan->vol = aud->vol;
     chan->pan = aud->channels == 2 ? 0 : 128;
@@ -503,6 +504,16 @@ static void update_display_geometry() {
             vid->disp_x = vid->frame_x;
             vid->disp_y = vid->frame_y;
         }
+    }
+
+    int filter = (vid->disp_w == (float)vid->txr[0].width && vid->disp_h == (float)vid->txr[0].height) ?
+        PLX_FILTER_NONE : PLX_FILTER_BILINEAR;
+
+    if(vid->txr[0].filter != filter) {
+        plx_txr_setfilter(vid->txr[0].plx_txr, filter);
+        plx_txr_setfilter(vid->txr[1].plx_txr, filter);
+        vid->txr[0].filter = filter;
+        vid->txr[1].filter = filter;
     }
 }
 
@@ -660,7 +671,9 @@ static inline void render_stats() {
     plx_fcxt_setsize(vid->stat_font_cxt, vid->stat_font_base_size);
 }
 
-static inline int decode_video_frame(AVPacket *pkt, video_txr_t *txr, AVFrame *frame) {
+static inline int decode_video_frame(video_txr_t *txr) {
+    AVPacket *pkt = &vid->vpacket.pkt;
+    AVFrame *frame = vid->frame;
     int frameFinished = 0;
     int rs;
     char errbuf[256];
@@ -669,7 +682,7 @@ static inline int decode_video_frame(AVPacket *pkt, video_txr_t *txr, AVFrame *f
     vid->codec->reordered_opaque = pkt->pts;
     rs = avcodec_decode_video2(vid->codec, frame, &frameFinished, pkt);
 
-    if(rs < 0) {
+    if(rs < 0 || !frameFinished) {
         av_strerror(rs, errbuf, sizeof(errbuf));
         if(vid->params.verbose) {
             ds_printf("DS_ERROR: %s\n", errbuf);
@@ -677,78 +690,76 @@ static inline int decode_video_frame(AVPacket *pkt, video_txr_t *txr, AVFrame *f
         vid->skip_to_keyframe = 1;
         return -1;
     }
-    if(frameFinished) {
 
-        if(vid->params.show_stat) {
-            if(vid->fps_start_time == 0) {
-                vid->fps_start_time = timer_ms_gettime64();
+    if(vid->params.show_stat) {
+        if(vid->fps_start_time == 0) {
+            vid->fps_start_time = timer_ms_gettime64();
+        }
+        vid->frame_count_for_fps++;
+        uint64_t now = timer_ms_gettime64();
+        uint64_t diff = now - vid->fps_start_time;
+        if(diff >= 100) {
+            vid->current_fps = (float)vid->frame_count_for_fps * 1000.0f / (float)diff;
+
+            if(vid->display_fps == 0.0f) {
+                vid->display_fps = vid->current_fps;
             }
-            vid->frame_count_for_fps++;
-            uint64_t now = timer_ms_gettime64();
-            uint64_t diff = now - vid->fps_start_time;
-            if(diff >= 100) {
-                vid->current_fps = (float)vid->frame_count_for_fps * 1000.0f / (float)diff;
-
-                if(vid->display_fps == 0.0f) {
-                    vid->display_fps = vid->current_fps;
-                }
-                else {
-                    vid->display_fps = vid->display_fps * 0.9f + vid->current_fps * 0.1f;
-                }
-                vid->fps_start_time = now;
-                vid->frame_count_for_fps = 0;
+            else {
+                vid->display_fps = vid->display_fps * 0.9f + vid->current_fps * 0.1f;
             }
-        }
-
-        int64_t pts_int = AV_NOPTS_VALUE;
-
-        if(frame->pts != AV_NOPTS_VALUE) {
-            pts_int = frame->pts;
-        }
-        else if(frame->reordered_opaque != AV_NOPTS_VALUE) {
-            pts_int = frame->reordered_opaque;
-        }
-        else if(pkt->dts != AV_NOPTS_VALUE) {
-            pts_int = pkt->dts;
-        }
-
-        if(pts_int != AV_NOPTS_VALUE) {
-            pts = av_rescale_q(pts_int, vid->format_ctx->streams[vid->video_stream]->time_base, (AVRational){1, 1000});
-            if(vid->video_started == 0 && vid->audio_stream >= 0) {
-                if(frame->key_frame) {
-                    aud->clock_correction += ((pts - get_master_clock()) - (vid->frame_last_delay * 2));
-                }
-            }
-            vid->video_current_pts = pts;
-            vid->video_current_pts_time = timer_ms_gettime64();
+            vid->fps_start_time = now;
+            vid->frame_count_for_fps = 0;
         }
     }
 
-    if(frameFinished) {
-        switch(vid->codec->pix_fmt) {
-            case PIX_FMT_YUVJ420P:
-            case PIX_FMT_YUVJ422P:
-            case PIX_FMT_YUV420P:
-                yuv420p_to_yuv422_dma(frame, txr);
-                break;
-            case PIX_FMT_UYVY422:
-            default:
-                dcache_purge_range((uintptr_t)frame->data[0], txr->tw * vid->codec->height * 2);
-                pvr_txr_load_dma(frame->data[0], txr->addr, txr->tw * vid->codec->height * 2, 0, yuv_dma_callback, NULL);
-                break;
-        }
-        /* TODO: Better wait not here? */
-        sem_wait(&vid->yuv_dma_done);
+    int64_t pts_int = AV_NOPTS_VALUE;
 
-        if(vid->video_started < 2) {
-            if(vid->video_started == 0) {
-                if(frame->key_frame) {
-                    vid->video_started++;
-                }
+    if(frame->pts != AV_NOPTS_VALUE) {
+        pts_int = frame->pts;
+    }
+    else if(frame->reordered_opaque != AV_NOPTS_VALUE) {
+        pts_int = frame->reordered_opaque;
+    }
+    else if(pkt->dts != AV_NOPTS_VALUE) {
+        pts_int = pkt->dts;
+    }
+
+    if(pts_int != AV_NOPTS_VALUE) {
+        pts = av_rescale_q(pts_int, vid->format_ctx->streams[vid->video_stream]->time_base, (AVRational){1, 1000});
+        if(vid->video_started == 0 && vid->audio_stream >= 0) {
+            if(frame->key_frame) {
+                aud->clock_correction += ((pts - get_master_clock()) - (vid->frame_last_delay * 2));
             }
-            else {
+        }
+        vid->video_current_pts = pts;
+        vid->video_current_pts_time = timer_ms_gettime64();
+    }
+
+    switch(vid->codec->pix_fmt) {
+        case PIX_FMT_YUVJ420P:
+        case PIX_FMT_YUVJ422P:
+        case PIX_FMT_YUV420P:
+            yuv420p_to_yuv422_dma(frame, txr);
+            break;
+        case PIX_FMT_UYVY422:
+        default:
+            dcache_purge_range((uintptr_t)frame->data[0], txr->tw * vid->codec->height * 2);
+            pvr_txr_load_dma(frame->data[0], txr->addr, txr->tw * vid->codec->height * 2, 0, yuv_dma_callback, NULL);
+            break;
+    }
+    sem_signal(&vid->video_packet_free);
+
+    /* By some reason need to wait YUV DMA done before any rendering... */
+    sem_wait(&vid->yuv_dma_done);
+
+    if(vid->video_started < 2) {
+        if(vid->video_started == 0) {
+            if(frame->key_frame) {
                 vid->video_started++;
             }
+        }
+        else {
+            vid->video_started++;
         }
     }
     return 0;
@@ -759,29 +770,22 @@ static void PlayerDrawHandler(void *ds_event, void *param, int action) {
     (void)param;
 
     if(vid->playing) {
-        /* Really needed only after seeking */
-        if(vid->audio_stream >= 0 && !vid->pause && !aud->playing) {
-            if((vid->is_fullscreen && action == EVENT_ACTION_RENDER) ||
-                (!vid->is_fullscreen && action == EVENT_ACTION_RENDER_POST)) {
-                thd_sleep(vid->frame_last_delay * 2);
-            }
-        }
+        int is_active = (vid->is_fullscreen || !vid->sdl_gui_managed) ?
+                        (action == EVENT_ACTION_RENDER) :
+                        (action == EVENT_ACTION_RENDER_POST);
 
-        if(!vid->pause) {
+        if(is_active && !vid->pause) {
             if(sem_trywait(&vid->video_packet_ready) == 0) {
-                const int vpacket_idx = (vid->vpacket_idx + 1) & 1;
-                const int decode_txr_idx = (vid->txr_idx + 1) & 1;
-                AVPacket *pkt = &vid->vpackets[vpacket_idx].pkt;
-
-                decode_video_frame(pkt, &vid->txr[decode_txr_idx], vid->frame[vid->decode_frame_idx]);
-                vid->decode_frame_idx = (vid->decode_frame_idx + 1) & 1;
-                sem_signal(&vid->video_packet_free);
+                decode_video_frame(&vid->txr[vid->txr_idx ^ 1]);
             }
         }
+
         if(vid->video_started > 1) {
             float alpha = 1.0f;
-            if(!vid->fade_in_done && !vid->is_fullscreen && vid->params.fade_in > 0) {
+
+            if(is_active && !vid->fade_in_done && !vid->is_fullscreen && vid->params.fade_in > 0) {
                 uint64_t elapsed = timer_ms_gettime64() - vid->start_time;
+
                 if(elapsed < vid->params.fade_in) {
                     alpha = (float)elapsed / (float)vid->params.fade_in;
                 }
@@ -953,7 +957,7 @@ static void free_video_texture(video_txr_t *txr) {
     }
 }
 
-static void create_video_texture(video_txr_t *txr, int width, int height, int format, int filler) {
+static void create_video_texture(video_txr_t *txr, int width, int height, int format) {
     int tw, th;
     for(tw = 8; tw < width ; tw <<= 1);
     for(th = 8; th < height; th <<= 1);
@@ -979,7 +983,8 @@ static void create_video_texture(video_txr_t *txr, int width, int height, int fo
     txr->plx_txr->h = th;
     txr->plx_txr->fmt = format | PVR_TXRFMT_NONTWIDDLED;
     plx_fill_contexts(txr->plx_txr);
-    plx_txr_setfilter(txr->plx_txr, filler);
+    plx_txr_setfilter(txr->plx_txr, PLX_FILTER_BILINEAR);
+    txr->filter = PLX_FILTER_BILINEAR;
 }
 
 static int dup_packet(PacketBuffer_t *dst_buf, AVPacket *src_pkt) {
@@ -997,13 +1002,15 @@ static int dup_packet(PacketBuffer_t *dst_buf, AVPacket *src_pkt) {
     }
 
     av_free_packet(&dst_buf->pkt);
+
     dst_buf->pkt = *src_pkt;
     dst_buf->pkt.data = dst_buf->buffer;
+    dst_buf->pkt.destruct = NULL;
+    dst_buf->pkt.priv = NULL;
 
     memcpy_sh4(dst_buf->pkt.data, src_pkt->data, src_pkt->size);
     memset_sh4(dst_buf->pkt.data + src_pkt->size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
 
-    dst_buf->pkt.destruct = NULL;
     return 0;
 }
 
@@ -1042,6 +1049,8 @@ static int ffplay_do_seek(int64_t pos_ms, int flags) {
         aud->last_clock_update_time = 0;
     }
 
+    LockVideo();
+
     vid->video_current_pts = pos_ms;
     vid->video_current_pts_time = timer_ms_gettime64();
     vid->start_time = timer_ms_gettime64();
@@ -1051,12 +1060,16 @@ static int ffplay_do_seek(int64_t pos_ms, int flags) {
     vid->fade_in_done = 1;
 
     vid->txr_idx = 0;
-    vid->decode_frame_idx = 0;
-    vid->vpacket_idx = 0;
+
+    sem_destroy(&vid->video_packet_free);
+    sem_destroy(&vid->video_packet_ready);
+    sem_destroy(&vid->yuv_dma_done);
 
     sem_init(&vid->video_packet_free, 1);
     sem_init(&vid->video_packet_ready, 0);
     sem_init(&vid->yuv_dma_done, 0);
+
+    UnlockVideo();
 
     return 0;
 }
@@ -1302,14 +1315,13 @@ static void *player_thread(void *p) {
                 av_free_packet(&packet);
                 break;
             }
-            if(dup_packet(&vid->vpackets[vid->vpacket_idx], &packet) < 0) {
+            if(dup_packet(&vid->vpacket, &packet) < 0) {
                 vid->done = 2;
                 av_free_packet(&packet);
                 break;
             }
             av_free_packet(&packet);
 
-            vid->vpacket_idx = (vid->vpacket_idx + 1) & 1;
             sem_signal(&vid->video_packet_ready);
         }
         else if(packet.stream_index == vid->audio_stream) {
@@ -1606,16 +1618,15 @@ int ffplay(const char *filename, ffplay_params_t *params) {
         vid->done = 0;
         return -1;
     }
-    vid->frame[0] = avcodec_alloc_frame();
-    vid->frame[1] = avcodec_alloc_frame();
+    vid->frame = avcodec_alloc_frame();
 
-    if(!vid->frame[0] || !vid->frame[1]) {
+    if(!vid->frame) {
         ds_printf("DS_ERROR: avcodec_alloc_frame() failed\n");
         ffplay_close_file();
         vid->done = 0;
         return -1;
     }
-    vid->decode_frame_idx = 0;
+    vid->txr_idx = 0;
     sem_init(&vid->video_packet_free, 1);
     sem_init(&vid->video_packet_ready, 0);
     sem_init(&vid->yuv_dma_done, 0);
@@ -1670,8 +1681,8 @@ int ffplay(const char *filename, ffplay_params_t *params) {
                 format = PVR_TXRFMT_RGB565;
                 break;
         }
-        create_video_texture(&vid->txr[0], vid->codec->width, vid->codec->height, format | PVR_TXRFMT_NONTWIDDLED, PVR_FILTER_BILINEAR);
-        create_video_texture(&vid->txr[1], vid->codec->width, vid->codec->height, format | PVR_TXRFMT_NONTWIDDLED, PVR_FILTER_BILINEAR);
+        create_video_texture(&vid->txr[0], vid->codec->width, vid->codec->height, format | PVR_TXRFMT_NONTWIDDLED);
+        create_video_texture(&vid->txr[1], vid->codec->width, vid->codec->height, format | PVR_TXRFMT_NONTWIDDLED);
         update_display_geometry();
 
         if(format & PVR_TXRFMT_YUV422) {
@@ -1725,27 +1736,24 @@ static void load_stat_font() {
 }
 
 static void ffplay_free() {
+    if(vid->input_event) {
+        RemoveEvent(vid->input_event);
+    }
+    if(vid->video_event) {
+        RemoveEvent(vid->video_event);
+    }
+    if(vid->vpacket.buffer) {
+        av_free(vid->vpacket.buffer);
+        av_free_packet(&vid->vpacket.pkt);
+    }
     if(vid->stat_font_cxt) {
         plx_fcxt_destroy(vid->stat_font_cxt);
     }
     if(vid->stat_font) {
         plx_font_destroy(vid->stat_font);
     }
-    if(vid->video_event) {
-        RemoveEvent(vid->video_event);
-    }
-    if(vid->input_event) {
-        RemoveEvent(vid->input_event);
-    }
-    if(vid->vpackets[0].buffer) {
-        av_free(vid->vpackets[0].buffer);
-    }
-    av_free_packet(&vid->vpackets[0].pkt);
-    if(vid->vpackets[1].buffer) {
-        av_free(vid->vpackets[1].buffer);
-    }
-    av_free_packet(&vid->vpackets[1].pkt);
     ffplay_close_file();
+
     free_video_texture(&vid->txr[0]);
     free_video_texture(&vid->txr[1]);
 
@@ -1756,11 +1764,8 @@ static void ffplay_free() {
     if(vid->yuv_dma_buffer) {
         free(vid->yuv_dma_buffer);
     }
-    if(vid->frame[0]) {
-        av_free(vid->frame[0]);
-    }
-    if(vid->frame[1]) {
-        av_free(vid->frame[1]);
+    if(vid->frame) {
+        av_free(vid->frame);
     }
     vid->playing = 0;
     vid->done = 0;
