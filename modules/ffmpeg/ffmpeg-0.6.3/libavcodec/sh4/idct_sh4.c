@@ -32,14 +32,14 @@
 #define c6      0.54119610014619712324  /* sqrt(2)*cos(6*pi/16) */
 #define c7      0.27589937928294311353  /* sqrt(2)*cos(7*pi/16) */
 
-static const float even_table[] __attribute__ ((aligned(8))) = {
+static const float even_table[] __attribute__ ((aligned(32))) = {
         c4, c4, c4, c4,
         c2, c6,-c6,-c2,
         c4,-c4,-c4, c4,
         c6,-c2, c2,-c6
 };
 
-static const float odd_table[] __attribute__ ((aligned(8))) = {
+static const float odd_table[] __attribute__ ((aligned(32))) = {
         c1, c3, c5, c7,
         c3,-c7,-c1,-c5,
         c5,-c1, c7, c3,

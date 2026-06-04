@@ -49,6 +49,10 @@
 #define BYTE_SIZE_FOR_16x16_BLOCK_420 384
 #define AUDIO_MIN_CHUNK_SIZE 1024
 #define AUDIO_DECODE_BUFFER_GUARD (64 << 10)
+#define AV_SYNC_THRESHOLD_MS 10
+#define AV_NOSYNC_THRESHOLD_MS 10000
+#define AV_FRAME_DELAY_MAX_MS 1000
+#define AV_FRAME_DELAY_MIN_MS 1
 
 typedef struct PacketBuffer {
     AVPacket pkt;
@@ -111,6 +115,8 @@ static struct {
     uint64_t start_time;
     uint64_t frame_timer;
     int64_t  frame_last_delay;
+    int64_t frame_last_pts;
+    int64_t synth_pts;
     int64_t video_current_pts;
     uint64_t video_current_pts_time;
 
@@ -220,6 +226,21 @@ static int64_t get_video_clock() {
     }
 }
 
+static int64_t packet_pts_ms(const AVPacket *pkt) {
+    int64_t pts_int = AV_NOPTS_VALUE;
+
+    if(pkt->pts != AV_NOPTS_VALUE) {
+        pts_int = pkt->pts;
+    }
+    else if(pkt->dts != AV_NOPTS_VALUE) {
+        pts_int = pkt->dts;
+    }
+    if(pts_int == AV_NOPTS_VALUE) {
+        return AV_NOPTS_VALUE;
+    }
+    return av_rescale_q(pts_int, vid->format_ctx->streams[vid->video_stream]->time_base, (AVRational){1, 1000});
+}
+
 static int64_t get_master_clock() {
     if(!vid->playing) {
         return -1;
@@ -245,6 +266,46 @@ static int64_t get_master_clock() {
         return get_video_clock();
     }
     return 0;
+}
+
+static int64_t compute_frame_delay(const AVPacket *pkt, int ignore_diff, int64_t *diff_out) {
+    int64_t delay = vid->frame_last_delay;
+    int64_t diff = 0;
+    int64_t pts_ms = packet_pts_ms(pkt);
+
+    if(pts_ms != AV_NOPTS_VALUE) {
+        if(vid->frame_last_pts != AV_NOPTS_VALUE) {
+            int64_t pts_delay = pts_ms - vid->frame_last_pts;
+
+            if(pts_delay > 0 && pts_delay < AV_FRAME_DELAY_MAX_MS) {
+                delay = pts_delay;
+                vid->frame_last_delay = pts_delay;
+            }
+        }
+        vid->frame_last_pts = pts_ms;
+    }
+
+    if(vid->audio_stream >= 0 && !ignore_diff) {
+        int64_t sync_threshold = AV_SYNC_THRESHOLD_MS;
+
+        diff = get_video_clock() - get_master_clock();
+
+        if(diff < -AV_NOSYNC_THRESHOLD_MS || diff > AV_NOSYNC_THRESHOLD_MS) {
+            *diff_out = diff;
+            return delay;
+        }
+
+        if(diff < -sync_threshold || diff > sync_threshold) {
+            delay += diff;
+
+            if(delay < AV_FRAME_DELAY_MIN_MS) {
+                delay = AV_FRAME_DELAY_MIN_MS;
+            }
+        }
+    }
+
+    *diff_out = diff;
+    return delay;
 }
 
 static int audio_dma_transfer(void *data, size_t size, int block) {
@@ -714,21 +775,21 @@ static inline int decode_video_frame(video_txr_t *txr) {
 
     int64_t pts_int = AV_NOPTS_VALUE;
 
-    if(frame->pts != AV_NOPTS_VALUE) {
-        pts_int = frame->pts;
-    }
-    else if(frame->reordered_opaque != AV_NOPTS_VALUE) {
+    if(frame->reordered_opaque != AV_NOPTS_VALUE) {
         pts_int = frame->reordered_opaque;
     }
     else if(pkt->dts != AV_NOPTS_VALUE) {
         pts_int = pkt->dts;
+    }
+    else if(frame->pts != AV_NOPTS_VALUE) {
+        pts_int = frame->pts;
     }
 
     if(pts_int != AV_NOPTS_VALUE) {
         pts = av_rescale_q(pts_int, vid->format_ctx->streams[vid->video_stream]->time_base, (AVRational){1, 1000});
         if(vid->video_started == 0 && vid->audio_stream >= 0) {
             if(frame->key_frame) {
-                aud->clock_correction += ((pts - get_master_clock()) - (vid->frame_last_delay * 2));
+                aud->clock_correction += ((pts - get_master_clock()) - (vid->frame_last_delay * 4));
             }
         }
         vid->video_current_pts = pts;
@@ -1055,6 +1116,9 @@ static int ffplay_do_seek(int64_t pos_ms, int flags) {
     vid->video_current_pts_time = timer_ms_gettime64();
     vid->start_time = timer_ms_gettime64();
     vid->frame_timer = vid->start_time;
+    vid->frame_last_pts = AV_NOPTS_VALUE;
+    vid->synth_pts = av_rescale_q(pos_ms, (AVRational){1, 1000},
+                                  vid->format_ctx->streams[vid->video_stream]->time_base);
     vid->skip_to_keyframe = 1;
     vid->video_started = 0;
     vid->fade_in_done = 1;
@@ -1169,6 +1233,8 @@ static void *player_thread(void *p) {
     }
     vid->frame_timer = vid->start_time;
     vid->frame_last_delay = 40;
+    vid->frame_last_pts = AV_NOPTS_VALUE;
+    vid->synth_pts = 0;
 
     if(vid->codec && vid->format_ctx->streams[vid->video_stream]->avg_frame_rate.den > 0) {
         AVRational frame_rate = vid->format_ctx->streams[vid->video_stream]->avg_frame_rate;
@@ -1237,6 +1303,17 @@ static void *player_thread(void *p) {
         }
         if(packet.stream_index == vid->video_stream) {
 
+            if(packet.pts == AV_NOPTS_VALUE && packet.dts == AV_NOPTS_VALUE) {
+                int64_t step = av_rescale_q(vid->frame_last_delay, (AVRational){1, 1000},
+                                            vid->format_ctx->streams[vid->video_stream]->time_base);
+                if(step < 1) {
+                    step = 1;
+                }
+                packet.pts = vid->synth_pts;
+                packet.dts = vid->synth_pts;
+                vid->synth_pts += step;
+            }
+
             if(vid->audio_stream >= 0 && !aud->playing && vid->skip_to_keyframe) {
                 av_free_packet(&packet);
                 continue;
@@ -1254,26 +1331,27 @@ static void *player_thread(void *p) {
                     continue;
                 }
             }
-            int64_t delay = vid->frame_last_delay;
+            sem_wait(&vid->video_packet_free);
+
+            if(vid->done) {
+                av_free_packet(&packet);
+                break;
+            }
+
+            if(dup_packet(&vid->vpacket, &packet) < 0) {
+                vid->done = 2;
+                av_free_packet(&packet);
+                break;
+            }
+
             int64_t diff = 0;
+            int64_t delay = compute_frame_delay(&packet, ignore_diff, &diff);
 
-            if(vid->audio_stream >= 0 && !ignore_diff) {
-                diff = get_video_clock() - get_master_clock();
+            av_free_packet(&packet);
 
-                if(diff < -1000) {
-                    ffplay_seek_internal(get_master_clock() + 500, AVSEEK_FLAG_BACKWARD);
-                    av_free_packet(&packet);
-                    continue;
-                }
-
-                int64_t sync_threshold = 10;
-
-                if(diff < -sync_threshold) {
-                    delay = 0;
-                }
-                else if(diff > sync_threshold) {
-                    delay += diff / 2;
-                }
+            if(vid->audio_stream >= 0 && !ignore_diff && diff < -1000) {
+                ffplay_seek_internal(get_master_clock() + 500, AVSEEK_FLAG_BACKWARD);
+                continue;
             }
 
             if(vid->params.show_stat) {
@@ -1302,25 +1380,18 @@ static void *player_thread(void *p) {
             }
 
             while(time_to_wait > 1) {
-                thd_sleep(time_to_wait > 5 ? 5 : time_to_wait);
                 if(aud->temp_buf_wpos - aud->temp_buf_rpos >= AUDIO_MIN_CHUNK_SIZE) {
                     send_audio_data();
                 }
+                if(time_to_wait > 8) {
+                    thd_sleep(5);
+                }
+                else {
+                    thd_sleep((unsigned int)(time_to_wait - 1));
+                    break;
+                }
                 time_to_wait = vid->frame_timer - timer_ms_gettime64();
             }
-
-            sem_wait(&vid->video_packet_free);
-
-            if(vid->done) {
-                av_free_packet(&packet);
-                break;
-            }
-            if(dup_packet(&vid->vpacket, &packet) < 0) {
-                vid->done = 2;
-                av_free_packet(&packet);
-                break;
-            }
-            av_free_packet(&packet);
 
             sem_signal(&vid->video_packet_ready);
         }
