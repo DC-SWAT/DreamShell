@@ -338,6 +338,13 @@ ShutdownLua
 GetLuaState
 SetLuaState
 NewLuaThread
+ReleaseLuaThread
+LuaOpenConfigFile
+LuaCloseConfigFile
+LuaConfigGetInt
+LuaConfigGetFloat
+LuaConfigGetString
+LuaConfigGetStringArray
 LuaOpenlibs
 RegisterLuaFunctions
 LuaPushArgs

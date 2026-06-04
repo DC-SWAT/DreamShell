@@ -6,6 +6,8 @@
  ****************************/     
  
  
+#include <string.h>
+
 #include "lua.h"
 #include "list.h"
 #include "module.h"
@@ -231,26 +233,159 @@ void LuaAddArgs(lua_State *L, char *argv[]) {
 }
 
 
+int LuaOpenConfigFile(const char *path, LuaConfig_t *cfg) {
+	int status;
+	lua_State *L;
+
+	if (!path || !cfg) {
+		return -1;
+	}
+
+	cfg->L = NULL;
+	cfg->idx = 0;
+
+	L = NewLuaThread();
+	if (!L) {
+		return -1;
+	}
+
+	status = luaL_loadfile(L, path);
+	if (status != 0) {
+		lua_report(L, status);
+		ReleaseLuaThread(L);
+		return -1;
+	}
+
+	status = lua_docall(L, 0, 0);
+	if (status != 0) {
+		lua_report(L, status);
+		ReleaseLuaThread(L);
+		return -1;
+	}
+
+	if (!lua_istable(L, -1)) {
+		lua_pop(L, 1);
+		lua_pushstring(L, "config file must return a table");
+		lua_report(L, LUA_ERRRUN);
+		ReleaseLuaThread(L);
+		return -1;
+	}
+
+	cfg->L = L;
+	cfg->idx = lua_gettop(L);
+	return 0;
+}
+
+
+void LuaCloseConfigFile(LuaConfig_t *cfg) {
+	if (!cfg || !cfg->L) {
+		return;
+	}
+	if (lua_gettop(cfg->L) > 0) {
+		lua_pop(cfg->L, 1);
+	}
+	ReleaseLuaThread(cfg->L);
+	cfg->L = NULL;
+	cfg->idx = 0;
+}
+
+
+int LuaConfigGetInt(const LuaConfig_t *cfg, const char *key, int current) {
+	if (!cfg || !cfg->L) {
+		return current;
+	}
+	lua_getfield(cfg->L, cfg->idx, key);
+	if (lua_isnumber(cfg->L, -1)) {
+		current = (int)lua_tointeger(cfg->L, -1);
+	}
+	lua_pop(cfg->L, 1);
+	return current;
+}
+
+
+float LuaConfigGetFloat(const LuaConfig_t *cfg, const char *key, float current) {
+	if (!cfg || !cfg->L) {
+		return current;
+	}
+	lua_getfield(cfg->L, cfg->idx, key);
+	if (lua_isnumber(cfg->L, -1)) {
+		current = (float)lua_tonumber(cfg->L, -1);
+	}
+	lua_pop(cfg->L, 1);
+	return current;
+}
+
+
+int LuaConfigGetString(const LuaConfig_t *cfg, const char *key, char *dst, size_t size) {
+	if (!cfg || !cfg->L || !dst || size == 0) {
+		return 0;
+	}
+	lua_getfield(cfg->L, cfg->idx, key);
+	if (lua_isstring(cfg->L, -1)) {
+		const char *value = lua_tostring(cfg->L, -1);
+		if (value) {
+			strncpy(dst, value, size - 1);
+			dst[size - 1] = '\0';
+			lua_pop(cfg->L, 1);
+			return 1;
+		}
+	}
+	lua_pop(cfg->L, 1);
+	return 0;
+}
+
+
+int LuaConfigGetStringArray(const LuaConfig_t *cfg, const char *key,
+		char *buf, size_t elem_size, int max_count) {
+	if (!cfg || !cfg->L || !buf || elem_size == 0 || max_count <= 0) {
+		return 0;
+	}
+	lua_getfield(cfg->L, cfg->idx, key);
+	if (!lua_istable(cfg->L, -1)) {
+		lua_pop(cfg->L, 1);
+		return 0;
+	}
+
+	int n = 0;
+	int len = (int)lua_objlen(cfg->L, -1);
+
+	for (int i = 1; i <= len && n < max_count; i++) {
+		lua_rawgeti(cfg->L, -1, i);
+		if (lua_isstring(cfg->L, -1)) {
+			const char *value = lua_tostring(cfg->L, -1);
+			if (value && value[0]) {
+				char *dst = buf + (size_t)n * elem_size;
+				strncpy(dst, value, elem_size - 1);
+				dst[elem_size - 1] = '\0';
+				n++;
+			}
+		}
+		lua_pop(cfg->L, 1);
+	}
+
+	lua_pop(cfg->L, 1);
+	return n;
+}
+
+
 int RunLuaScript(char *fn, char *argv[]) {
-    
-    lua_State *L = NewLuaThread(); 
-    
+
+    lua_State *L = NewLuaThread();
+
     if(L == NULL) {
         ds_printf("DS_ERROR: LUA: Invalid state.. giving up\n");
         return 0; 
     }
-    
+
     if(argv != NULL) {
         LuaPushArgs(L, argv);
         lua_setglobal(L, "argv");
     }
-    
-    
+
     LuaDo(LUA_DO_FILE, fn, L);
-    lua_close(L); 
+    ReleaseLuaThread(L);
     return 1;
 }
-
 
 
 lua_State *GetLuaState() {
@@ -262,8 +397,15 @@ void SetLuaState(lua_State *l) {
 }
 
 lua_State *NewLuaThread()  {
-      return lua_newthread(DSLua);
-	  //lua_State *L = lua_open(); 
-	  //LuaOpenlibs(L);
-	  //return L;
+	return lua_newthread(DSLua);
+}
+
+void ReleaseLuaThread(lua_State *L) {
+	if (!L) {
+		return;
+	}
+	lua_settop(L, 0);
+	if (DSLua) {
+		lua_pop(DSLua, 1);
+	}
 }

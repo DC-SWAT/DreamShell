@@ -79,9 +79,10 @@ static GUI_Font *getElementFont(App_t *app, mxml_node_t *node, char *name);
 
 static void SetupAppLua(App_t *app) {
 	if(app->lua == NULL) {
-		//if(!GetCurApp())
-		//ResetLua();
 		app->lua = NewLuaThread();
+		if(app->lua == NULL) {
+			return;
+		}
 		lua_pushnumber(app->lua, app->id);
 		lua_setglobal(app->lua, "THIS_APP_ID");
 	}
@@ -354,7 +355,7 @@ int UnLoadApp(App_t *app) {
 #endif
 
 	if(app->lua != NULL) {
-		//lua_close(app->lua);
+		ReleaseLuaThread(app->lua);
 		app->lua = NULL;
 	}
 
