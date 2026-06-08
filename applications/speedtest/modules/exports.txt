@@ -3,3 +3,4 @@ include app_module.h
 
 Speedtest_Init
 Speedtest_Run
+Speedtest_DialogConfirm
