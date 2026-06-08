@@ -1445,9 +1445,6 @@ void isoLoader_Run(GUI_Widget *widget) {
 		if(GUI_WidgetGetState(self.alt_boot)) {
 			isoldr_set_boot_file(self.isoldr, filepath, ALT_BOOT_FILE);
 		}
-		if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
-			self.isoldr->firmware = 1;
-		}
 	}
 
 	if(GUI_WidgetGetState(self.use_gpio)) {

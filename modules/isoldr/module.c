@@ -9,7 +9,6 @@
 #include "isoldr.h"
 #include "fs.h"
 #include "naomi/cart.h"
-#include <arch/arch.h>
 
 #define KOS_HDR_OFFSET 1
 static uint8 kos_hdr[5] = {0xD0, 0x02, 0x01, 0x12, 0x20};
@@ -771,18 +770,19 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		return CMD_NO_ARG;
 	}
 
-	uint32 p_addr[2]  = {0, 0};
-	uint32 p_value[2] = {0, 0};
-	uintptr_t addr = 0;
-	uint32_t use_dma = 0, lex = 0, heap = HEAP_MODE_AUTO;
+	uint32 p_addr[2]  = {(uint32)-1, (uint32)-1};
+	int p_value[2] = {0, 0};
+	uint32 exec_addr = (uint32)-1;
+	uintptr_t loader_addr = 0;
+	uint32 lex = (uint32)-1, heap = (uint32)-1;
 	char *file = NULL, *bin_file = NULL, *device = NULL, *fstype = NULL;
 	char *preset_file = NULL;
-	uint32 emu_async = 0, emu_cdda = 0, boot_mode = BOOT_MODE_DIRECT;
-	uint32 bin_type = BIN_TYPE_AUTO, fast_boot = 0, verbose = 0;
-	uint32 cdda_mode = CDDA_MODE_DISABLED, use_irq = 0, emu_vmu = 0;
-	uint32 low_level = 0, scr_hotkey = 0, bleem = 0, alt_read = 0;
-	uint32 use_gpio = 0, region = 0, test_mode = 0;
-	int fspart = -1;
+	int verbose = -1, use_dma = -1, emu_cdda = -1, fast_boot = -1;
+	int use_irq = -1, low_level = -1, alt_read = -1, use_gpio = -1;
+	int test_mode = -1, fspart = -1;
+	int emu_async = -1, boot_mode = -1, bin_type = -1;
+	int cdda_mode = -1, emu_vmu = -1, region = -1;
+	int scr_hotkey = -1, bleem = -1;
 	isoldr_info_t *info;
 
 	struct cfg_option options[] = {
@@ -792,29 +792,29 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		{"fspart",    'p', NULL, CFG_INT,   (void *) &fspart,      0},
 		{"fstype",    't', NULL, CFG_STR,   (void *) &fstype,      0},
 		{"memory",    'x', NULL, CFG_ULONG, (void *) &lex,         0},
-		{"addr",      'r', NULL, CFG_ULONG, (void *) &addr,        0},
+		{"addr",      'r', NULL, CFG_ULONG, (void *) &exec_addr,   0},
 		{"file",      'f', NULL, CFG_STR,   (void *) &file,        0},
-		{"async",     'e', NULL, CFG_ULONG, (void *) &emu_async,   0},
+		{"async",     'e', NULL, CFG_INT,   (void *) &emu_async,   0},
 		{"cdda",      'c', NULL, CFG_BOOL,  (void *) &emu_cdda,    0},
-		{"cddamode",  'g', NULL, CFG_ULONG, (void *) &cdda_mode,   0},
+		{"cddamode",  'g', NULL, CFG_INT,   (void *) &cdda_mode,   0},
 		{"heap",      'h', NULL, CFG_ULONG, (void *) &heap,        0},
-		{"jmp",       'j', NULL, CFG_ULONG, (void *) &boot_mode,   0},
-		{"os",        'o', NULL, CFG_ULONG, (void *) &bin_type,    0},
+		{"jmp",       'j', NULL, CFG_INT,   (void *) &boot_mode,   0},
+		{"os",        'o', NULL, CFG_INT,   (void *) &bin_type,    0},
 		{"boot",      'b', NULL, CFG_STR,   (void *) &bin_file,    0},
 		{"fast",      's', NULL, CFG_BOOL,  (void *) &fast_boot,   0},
 		{"irq",       'q', NULL, CFG_BOOL,  (void *) &use_irq,     0},
-		{"vmu",       'v', NULL, CFG_ULONG, (void *) &emu_vmu,     0},
+		{"vmu",       'v', NULL, CFG_INT,   (void *) &emu_vmu,     0},
 		{"low",       'l', NULL, CFG_BOOL,  (void *) &low_level,   0},
-		{"scrhotkey", 'k', NULL, CFG_ULONG, (void *) &scr_hotkey,  0},
-		{"bleem",     'u', NULL, CFG_ULONG, (void *) &bleem,       0},
+		{"scrhotkey", 'k', NULL, CFG_INT,   (void *) &scr_hotkey,  0},
+		{"bleem",     'u', NULL, CFG_INT,   (void *) &bleem,       0},
 		{"altread",   'y', NULL, CFG_BOOL,  (void *) &alt_read,    0},
 		{"gpio",     '\0', NULL, CFG_BOOL,  (void *) &use_gpio,    0},
-		{"region",   '\0', NULL, CFG_ULONG, (void *) &region,      0},
+		{"region",   '\0', NULL, CFG_INT,   (void *) &region,      0},
 		{"test",     '\0', NULL, CFG_BOOL,  (void *) &test_mode,   0},
 		{"pa1",      '\0', NULL, CFG_ULONG, (void *) &p_addr[0],   0},
 		{"pa2",      '\0', NULL, CFG_ULONG, (void *) &p_addr[1],   0},
-		{"pv1",      '\0', NULL, CFG_ULONG, (void *) &p_value[0],  0},
-		{"pv2",      '\0', NULL, CFG_ULONG, (void *) &p_value[1],  0},
+		{"pv1",      '\0', NULL, CFG_INT,   (void *) &p_value[0],  0},
+		{"pv2",      '\0', NULL, CFG_INT,   (void *) &p_value[1],  0},
 		{"preset",    'P', NULL, CFG_STR,   (void *) &preset_file, 0},
 		CFG_END_OF_LIST
 	};
@@ -826,18 +826,15 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		return CMD_ERROR;
 	}
 
-	info = isoldr_get_info(file, test_mode);
+	info = isoldr_get_info(file, test_mode > -1 ? test_mode : 0);
 
 	if(info == NULL) {
 		return CMD_ERROR;
 	}
-	addr = isoldr_apply_preset(info, preset_file);
+	loader_addr = isoldr_apply_preset(info, preset_file);
 
-	if(preset_file) {
-		if(addr == (uintptr_t)-1) {
-			return CMD_ERROR;
-		}
-		goto exec_loader;
+	if(loader_addr == (uintptr_t)-1) {
+		return CMD_ERROR;
 	}
 
 	if(device != NULL && strncasecmp(device, "auto", 4)) {
@@ -845,11 +842,10 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		strcpy(info->fs_dev, device);
 		info->fs_dev[strlen(info->fs_dev)] = '\0';
 
-	} else {
-		if(!strncasecmp(file, "/pc/", 4) && lex < 0x8c010000) {
-			lex = ISOLDR_DEFAULT_ADDR_HIGH;
-			ds_printf("DS_WARNING: Using dc-load as file system, forced loader address: 0x%08lx\n", lex);
-		}
+	}
+	else if(lex == (uint32)-1 && !strncasecmp(file, "/pc/", 4)) {
+		lex = ISOLDR_DEFAULT_ADDR_HIGH;
+		ds_printf("DS_WARNING: Using dc-load as file system, forced loader address: 0x%08lx\n", lex);
 	}
 
 	if(fstype != NULL && strncasecmp(fstype, "auto", 4)) {
@@ -865,45 +861,74 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		isoldr_set_boot_file(info, file, bin_file);
 	}
 
-	if(bin_type) {
+	if(bin_type > -1) {
 		info->exec.type = bin_type;
 	}
 
-	if(addr) {
-		info->exec.addr = addr;
+	if(exec_addr != (uint32)-1) {
+		info->exec.addr = exec_addr;
 	}
 
-	info->boot_mode = boot_mode;
-	info->emu_async = emu_async;
-	info->use_dma = use_dma;
-	info->fast_boot = fast_boot;
-	info->heap = heap;
-	info->use_irq = use_irq;
-	info->emu_vmu = emu_vmu;
-	info->syscalls = low_level;
-	info->scr_hotkey = scr_hotkey;
-	info->bleem = bleem;
-	info->alt_read = alt_read;
-	info->use_gpio = use_gpio;
-	info->region = region;
+	if(boot_mode > -1) {
+		info->boot_mode = boot_mode;
+	}
+	if(emu_async > -1) {
+		info->emu_async = emu_async;
+	}
+	if(use_dma > -1) {
+		info->use_dma = use_dma;
+	}
+	if(fast_boot > -1) {
+		info->fast_boot = fast_boot;
+	}
+	if(heap != (uint32)-1) {
+		info->heap = heap;
+	}
+	if(use_irq > -1) {
+		info->use_irq = use_irq;
+	}
+	if(emu_vmu > -1) {
+		info->emu_vmu = emu_vmu;
+	}
+	if(low_level > -1) {
+		info->syscalls = low_level;
+	}
+	if(scr_hotkey > -1) {
+		info->scr_hotkey = scr_hotkey;
+	}
+	if(bleem > -1) {
+		info->bleem = bleem;
+	}
+	if(alt_read > -1) {
+		info->alt_read = alt_read;
+	}
+	if(use_gpio > -1) {
+		info->use_gpio = use_gpio;
+	}
+	if(region > -1) {
+		info->region = region;
+	}
 
-	if (cdda_mode > CDDA_MODE_DISABLED) {
-		info->emu_cdda  = cdda_mode;
-	} else if(emu_cdda) {
+	if(cdda_mode > -1) {
+		info->emu_cdda = cdda_mode;
+	}
+	else if(emu_cdda > -1) {
 		info->emu_cdda  = (CDDA_MODE_EXTENDED | CDDA_MODE_SRC_DMA |
 			CDDA_MODE_DST_DMA | CDDA_MODE_POS_TMU2 | CDDA_MODE_CH_FIXED);
-	} else {
-		info->emu_cdda  = CDDA_MODE_DISABLED;
 	}
 
-	info->patch_addr[0]  = p_addr[0];
-	info->patch_addr[1]  = p_addr[1];
-	info->patch_value[0] = p_value[0];
-	info->patch_value[1] = p_value[1];
+	for(int i = 0; i < 2; i++) {
+		if(p_addr[i] != (uint32)-1) {
+			info->patch_addr[i] = p_addr[i];
+			info->patch_value[i] = p_value[i];
+		}
+	}
 
-exec_loader:
+	if(lex == (uint32)-1) {
+		lex = loader_addr;
+	}
 
-	if(verbose) {
+	if(verbose > -1) {
 
 		ds_printf("Params size: %d\n", sizeof(isoldr_info_t));
 

@@ -389,6 +389,7 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 		/* Non-retail (NAOMI arcade) hardware with non-ROM non-WinCE image */
 		exec_addr = 0x8dfe0000;
 		isoldr->boot_mode = BOOT_MODE_IPBIN;
+		isoldr->firmware = 1;
 	}
 
 	if(strlen(device) > 0 && strncmp(device, "auto", 4) != 0) {
