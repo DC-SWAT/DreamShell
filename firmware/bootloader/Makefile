@@ -1,6 +1,6 @@
 #
 # DreamShell boot loader
-# (c)2011-2025 SWAT
+# (c)2011-2026 SWAT
 #
 
 TARGET = bootloader
@@ -24,6 +24,34 @@ rm-elf:
 	-rm -rf $(KOS_ROMDISK_DIR)/.* 2> /dev/null || true
 
 include ../../sdk/Makefile.cfg
+
+BIOS_SRC_DIR = $(DS_RES)/firmware/bios/ds
+BIOS_PATCH_DIR = $(BIOS_SRC_DIR)/patches
+FW_DIR = $(DS_BUILD)/firmware/bios/ds
+BOOTLOADER_ROM_OFFSET = 65536
+NOGDROM_PATCH_1_OFFSET = 4328
+NOGDROM_PATCH_2_OFFSET = 4334
+NOGDROM_PATCH_3_OFFSET = 4342
+MB32_PATCH_1_OFFSET = 2093440
+MB32_PATCH_2_OFFSET = 2093444
+WIDESCREEN_PATCH_OFFSET = 970112
+BIOS_INSTALL_SPECS = \
+	"devkit bootloader_devkit.bios 0 0 0" \
+	"devkit_widescreen bootloader_devkit.bios 0 0 1" \
+	"devkit_nogdrom bootloader_devkit.bios 1 0 0" \
+	"devkit_nogdrom_widescreen bootloader_devkit.bios 1 0 1" \
+	"devkit_32mb bootloader_devkit.bios 0 1 0" \
+	"devkit_32mb_widescreen bootloader_devkit.bios 0 1 1" \
+	"devkit_nogdrom_32mb bootloader_devkit.bios 1 1 0" \
+	"devkit_nogdrom_32mb_widescreen bootloader_devkit.bios 1 1 1" \
+	"retail bootloader_retail.bios 0 0 0" \
+	"retail_widescreen bootloader_retail.bios 0 0 1" \
+	"retail_nogdrom bootloader_retail.bios 1 0 0" \
+	"retail_nogdrom_widescreen bootloader_retail.bios 1 0 1" \
+	"retail_32mb bootloader_retail.bios 0 1 0" \
+	"retail_32mb_widescreen bootloader_retail.bios 0 1 1" \
+	"retail_nogdrom_32mb bootloader_retail.bios 1 1 0" \
+	"retail_nogdrom_32mb_widescreen bootloader_retail.bios 1 1 1"
 
 UTILS = $(DS_BASE)/src/utils
 
@@ -67,14 +95,27 @@ release: all cdi install
 	@mv $(TARGET).cdi $(TARGET_NAME).cdi
 
 install: $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit_nogdrom.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_nogdrom.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit_nogdrom_32mb.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_devkit_32mb.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_nogdrom_32mb.bios $(TARGET).bin
-	@$(DS_SDK)/bin/mkbios $(DS_BUILD)/firmware/bios/ds/boot_loader_retail_32mb.bios $(TARGET).bin
+	@mkdir -p $(FW_DIR)
+	@set -e; \
+	for spec in $(BIOS_INSTALL_SPECS); do \
+		set -- $$spec; \
+		out=$(FW_DIR)/$(TARGET)_$$1.bios; \
+		cp $(BIOS_SRC_DIR)/$$2 $$out; \
+		if [ $$3 = 1 ]; then \
+			dd if=$(BIOS_PATCH_DIR)/nogdrom_1.bin of=$$out bs=1 seek=$(NOGDROM_PATCH_1_OFFSET) conv=notrunc status=none; \
+			dd if=$(BIOS_PATCH_DIR)/nogdrom_2.bin of=$$out bs=1 seek=$(NOGDROM_PATCH_2_OFFSET) conv=notrunc status=none; \
+			dd if=$(BIOS_PATCH_DIR)/nogdrom_3.bin of=$$out bs=1 seek=$(NOGDROM_PATCH_3_OFFSET) conv=notrunc status=none; \
+		fi; \
+		if [ $$4 = 1 ]; then \
+			dd if=$(BIOS_PATCH_DIR)/32mb.bin of=$$out bs=1 seek=$(MB32_PATCH_1_OFFSET) conv=notrunc status=none; \
+			dd if=$(BIOS_PATCH_DIR)/32mb.bin of=$$out bs=1 seek=$(MB32_PATCH_2_OFFSET) conv=notrunc status=none; \
+		fi; \
+		if [ $$5 = 1 ]; then \
+			dd if=$(BIOS_PATCH_DIR)/widescreen.bin of=$$out bs=1 seek=$(WIDESCREEN_PATCH_OFFSET) conv=notrunc status=none; \
+		fi; \
+		dd if=$(TARGET).bin of=$$out bs=$(BOOTLOADER_ROM_OFFSET) seek=1 conv=notrunc status=none; \
+		echo "Installed $$1"; \
+	done
 
 nulldc: all cdi
 	@echo Running...
