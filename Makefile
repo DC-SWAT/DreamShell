@@ -180,8 +180,6 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua $(SFX_TARGETS)
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
 	@cp -R $(DS_RES)/gui $(DS_BUILD)
 	@cp -R $(DS_RES)/lua $(DS_BUILD)
-	@mkdir -p $(DS_BUILD)/firmware/aica
-	@cp ../kernel/arch/dreamcast/sound/arm/stream.drv $(DS_BUILD)/firmware/aica/kos_stream.drv
 
 libs: $(LIB_DIR)/libSDL_$(SDL_VER).a
 
@@ -195,7 +193,6 @@ build: $(TARGET)
 	cd $(DS_BASE)/applications && make
 	cd $(DS_BASE)/firmware/isoldr && make -j8 && make install
 	cd $(DS_BASE)/firmware/bootloader && make && make install
-#   cd $(DS_BASE)/firmware/aica && make && make install
 
 clean-all: clean
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
