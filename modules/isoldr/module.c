@@ -47,7 +47,8 @@ static void get_ipbin_info(isoldr_info_t *info, file_t fd, uint8 *sec, char *pse
 
 		if(sec[0x60] != 0 && sec[0x60] != 0x20) {
 
-			strncpy(info->exec.file, psec + 0x60, sizeof(info->exec.file));
+			strncpy(info->exec.file, psec + 0x60, sizeof(info->exec.file) - 1);
+			info->exec.file[sizeof(info->exec.file) - 1] = '\0';
 
 			for(len = 0; len < sizeof(info->exec.file); len++) {
 				if(info->exec.file[len] == 0x20) {
@@ -426,8 +427,8 @@ int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *
 
 	info->exec.lba += 150;
 	info->exec.size = fs_total(fd);
-	strncpy(info->exec.file, boot_file, 12);
-	info->exec.file[12] = '\0';
+	strncpy(info->exec.file, boot_file, sizeof(info->exec.file) - 1);
+	info->exec.file[sizeof(info->exec.file) - 1] = '\0';
 
 	fs_close(fd);
 	fs_iso_unmount(mount);
@@ -523,19 +524,20 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 	size_t buf_size = len < 0x20000 ? 0x25000 : len + 0x5000;
 	uint8_t *loader = (uint8_t *) memalign(32, buf_size);
 
-	ds_printf("DS_PROCESS: Loading %s %d bytes to %08lx\n",
-		fn, len - ISOLDR_PARAMS_SIZE, (uintptr_t)(loader + ISOLDR_PARAMS_SIZE));
-
 	if(loader == NULL) {
 		fs_close(fd);
 		ds_printf("DS_ERROR: No free memory, needed %d bytes\n", len);
 		return;
 	}
 
+	ds_printf("DS_PROCESS: Loading %s %d bytes to %08lx\n",
+		fn, len - ISOLDR_PARAMS_SIZE, (uintptr_t)(loader + ISOLDR_PARAMS_SIZE));
+
 	memset(loader, 0, buf_size);
 
 	if(fs_read(fd, loader + ISOLDR_PARAMS_SIZE, len) != (len - ISOLDR_PARAMS_SIZE)) {
 		fs_close(fd);
+		free(loader);
 		ds_printf("DS_ERROR: Can't load %s\n", fn);
 		return;
 	}
@@ -654,12 +656,15 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 
 		if(fd == FILEHND_INVALID) {
 			ds_printf("DS_ERROR: Can't open file: %s\n", fn);
+			free(loader);
 			return;
 		}
 		size_t hlen = fs_total(fd);
 		uint8_t *buff = (uint8_t *) memalign(32, 0x10000);
 
 		if(buff == NULL) {
+			fs_close(fd);
+			free(loader);
 			ds_printf("DS_ERROR: No memory for naomi irq table\n");
 			return;
 		}
@@ -667,6 +672,9 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 			fn, hlen, (uintptr_t)buff);
 
 		if(fs_read(fd, buff, hlen) != hlen) {
+			fs_close(fd);
+			free(buff);
+			free(loader);
 			ds_printf("DS_ERROR: Can't load %s\n", fn);
 			return;
 		}
@@ -676,6 +684,8 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		fd = fs_open(fn, O_RDONLY);
 
 		if(fd == FILEHND_INVALID) {
+			free(buff);
+			free(loader);
 			ds_printf("DS_ERROR: Can't open file: %s\n", fn);
 			return;
 		}
@@ -685,6 +695,9 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 			fn, vlen, (uintptr_t)(buff + hlen));
 
 		if(fs_read(fd, buff + hlen, vlen) != vlen) {
+			fs_close(fd);
+			free(buff);
+			free(loader);
 			ds_printf("DS_ERROR: Can't load %s\n", fn);
 			return;
 		}
@@ -701,7 +714,7 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 	memcpy(loader, info, sizeof(*info));
 
 	ds_printf("DS_PROCESS: Executing at 0x%08lx (0x%08lx)...\n",
-		addr, addr + ISOLDR_PARAMS_SIZE, len);
+		addr, addr + ISOLDR_PARAMS_SIZE);
 	ShutdownDS();
 
 	isoldr_exec_at(loader, len, addr, ISOLDR_PARAMS_SIZE);
@@ -714,8 +727,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf("\n  ## ISO Loader v%d.%d.%d build %d ##\n\n"
 		          "Usage: %s options args\n"
 		          "Options: \n", VER_MAJOR, VER_MINOR, VER_MICRO, VER_BUILD, argv[0]);
-		ds_printf(" -s, --fast       -Don't show loader text on screen\n",
-		          " -i, --verbose    -Show additional info\n",
+		ds_printf(" -s, --fast       -Don't show loader text on screen\n"
+		          " -i, --verbose    -Show additional info\n"
 		          " -a, --dma        -Use DMA transfer if available\n"
 		          " -q, --irq        -Use IRQ hooking\n"
 		          " -c, --cdda       -Emulate CDDA audio (cddamode=1 by default)\n"
@@ -965,7 +978,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		          "Address: 0x%08lx\n"
 		          "DMA: %d\n"
 		          "IRQ: %d\n"
-		          "Heap: 0x%08lx\n",
+		          "Heap: 0x%08lx\n"
 				  "Bypass pre-read: %d\n",
 		          info->fs_dev,
 		          info->fs_dev[0] != '\0' ? info->fs_type : "normal",
@@ -979,8 +992,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		ds_printf("Emu async: %d\n"
 		          "Emu CDDA: 0x%08lx\n"
 		          "Emu VMU: %d\n"
-		          "Syscalls: 0x%08lx\n",
-		          "Bleem: 0x%08lx\n",
+		          "Syscalls: 0x%08lx\n"
+		          "Bleem: 0x%08lx\n"
 				  "GPIO: %d\n\n",
 		          info->emu_async,
 		          info->emu_cdda,

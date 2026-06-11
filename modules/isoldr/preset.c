@@ -359,7 +359,9 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	isoldr->emu_async = emu_async;
 	isoldr->region = region;
 	isoldr->boot_mode = boot_mode;
-	isoldr->exec.type = bin_type;
+	if(bin_type != BIN_TYPE_AUTO) {
+		isoldr->exec.type = bin_type;
+	}
 	isoldr->fast_boot = fastboot;
 	isoldr->use_gpio = use_gpio;
 	isoldr->scr_hotkey = scr_hotkey;
