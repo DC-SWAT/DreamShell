@@ -61,6 +61,7 @@ typedef struct Cmd {
 		if (cfg_parse(con) != CFG_OK) {							\
 			ds_printf("DS_ERROR: Parsing command line: %s\n",	\
 						cfg_get_error_str(con));					\
+			cfg_free_context(con);								\
 			return CMD_ERROR;										\
 		}															\
 																	\

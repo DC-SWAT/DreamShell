@@ -1,6 +1,6 @@
 #
 # ffmpeg module for DreamShell
-# Copyright (C)2011-2025 SWAT
+# Copyright (C)2011-2026 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -18,7 +18,7 @@ VER_MAJOR = 2
 VER_MINOR = 0
 VER_MICRO = 0
 
-KOS_CFLAGS += -I./include -O3
+KOS_CFLAGS += -I./include -O2
 KOS_LIB_PATHS += -L./lib
 
 all: rm-elf $(FFMPEG_PATH)/config.h include/libavcodec/avcodec.h

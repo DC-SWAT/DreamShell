@@ -11,7 +11,7 @@
 #ifndef __TSUNAMI_VECTOR_H
 #define __TSUNAMI_VECTOR_H
 
-#include <kos/vector.h>
+#include <dc/vector.h>
 #include <assert.h>
 
 // We can only do the hardware transforms if this is a DC.

@@ -96,9 +96,7 @@ int InitNet(uint32 ipl) {
 
 	if(net_inited < 0) {
 		/* Trying initialize Ethernet devices */
-		la_init();
-		bba_init();
-		w5500_adapter_init(NULL, true);
+		eth_init();
 	}
 
 	/* Trying initialize network stack */
@@ -193,8 +191,13 @@ int InitDS() {
 			setenv("ARCH", "Set5.xx", 1);
 			break;
 		case HW_TYPE_NAOMI:
-			// TODO: Add NAOMI 2 detection
-			setenv("ARCH", "NAOMI", 1);
+			// Check Elan magic value
+			if(*(volatile uint32_t *)0xA8800000 == 0xE1AD0000) {
+				setenv("ARCH", "NAOMI 2", 1);
+			}
+			else {
+				setenv("ARCH", "NAOMI", 1);
+			}
 			break;
 		case HW_TYPE_RETAIL:
 			setenv("ARCH", "Dreamcast", 1);

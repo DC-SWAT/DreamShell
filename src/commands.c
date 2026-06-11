@@ -2100,13 +2100,13 @@ static int builtin_rtc(int argc, char *argv[]) {
 	if(set_rtc_value) {
 		if(input_value > 0) {
 			unix_time = (time_t)input_value;
-			rtc_set_unix_secs(unix_time);
+			arch_rtc_set_unix_secs(unix_time);
 		}
 		return CMD_OK;
 	}
 
 	if(get_rtc_value) {
-		unix_time = rtc_unix_secs();
+		unix_time = arch_rtc_unix_secs();
 		time = gmtime(&unix_time);
 
 		if(unix_time < 0 || time == NULL) {

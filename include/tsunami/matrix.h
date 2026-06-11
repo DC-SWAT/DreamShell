@@ -10,7 +10,7 @@
 #ifndef __TSUNAMI_MATRIX_H
 #define __TSUNAMI_MATRIX_H
 
-#include <kos/vector.h>
+#include <dc/vector.h>
 
 #include "vector.h"
 

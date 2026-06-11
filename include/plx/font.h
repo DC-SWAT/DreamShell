@@ -18,7 +18,7 @@ __BEGIN_DECLS
   fntTxf routines, but are written entirely in C.
  */
 
-#include <kos/vector.h>
+#include <dc/vector.h>
 #include "texture.h"
 
 /**

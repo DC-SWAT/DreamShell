@@ -317,6 +317,10 @@ void ScreenTranslate(float x, float y, float z) {
 }
 
 void InitVideoThread() {
+
+	if(video_inited) {
+		return;
+	}
 	video_inited = 1;
 	video_thd = thd_create(0, VideoThread, NULL);
 	strncpy(video_thd->label, "[video]\0", 8);
@@ -329,7 +333,8 @@ void ShutdownVideoThread() {
 	video_inited = 0;
 
 	if(video_thd) {
-		thd_join(video_thd, NULL); 
+		thd_join(video_thd, NULL);
+		video_thd = NULL;
 	}
 
 	if(VideoIsLocked()) UnlockVideo();
@@ -414,7 +419,7 @@ int InitVideo(int w, int h, int bpp) {
 		dbglog(DBG_ERROR, "Change SDL video mode failed: %s\n", SDL_GetError());
 		return 0;
     }
-	
+
 	//SDL_DC_EmulateMouse(SDL_TRUE);
 	SDL_JoystickOpen(0);
 	SDL_JoystickEventState(SDL_ENABLE);
