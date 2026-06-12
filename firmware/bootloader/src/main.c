@@ -1,32 +1,13 @@
 /**
- * DreamShell boot loader
+ * DreamShell bootloader
  * Main
- * (c)2011-2024 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #include "main.h"
 #include "fs.h"
 
-//#define EMU
-//#define BIOS_MODE
-
-#ifdef BIOS_MODE
-extern uint8 romdisk[];
-KOS_INIT_FLAGS(INIT_IRQ | INIT_THD_PREEMPT);
-#else
-# ifndef __NAOMI__
-static void early_init(void) {
-	/*
-		Older KallistiOS doesn't get back the Master after working with G1 ATA.
-		But some users can use old bootloader with this KOS version.
-		So need select the Master before cdrom_init() is called.
-	*/
-	g1_ata_select_device(G1_ATA_MASTER);
-}
-KOS_INIT_EARLY(early_init);
-# endif
-KOS_INIT_FLAGS(INIT_DEFAULT);
-#endif
+KOS_INIT_FLAGS(INIT_IRQ | INIT_FS_ROMDISK | INIT_FS_PTY | INIT_CONTROLLER | INIT_CDROM);
 
 pvr_init_params_t params = {
 	/* Enable opaque and translucent with size 16 and polygons with size 32 */
@@ -44,10 +25,13 @@ pvr_init_params_t params = {
 	0,
 
 	/* Extra OPBs */
-	3
+	3,
+
+	/* Vertex buffer double-buffering enabled */
+	0
 };
 
-const char	title[28] = "DreamShell boot loader v"VERSION;
+const char title[28] = "DreamShell bootloader v"VERSION;
 
 
 int FileExists(const char *fn) {
@@ -76,20 +60,16 @@ int DirExists(const char *dir) {
     return 1;
 }
 
-
 int flashrom_get_region_only() {
-	
+
 	int start, size;
 	uint8 region[6] = { 0 };
 	region[2] = *(uint8 *)0xa021a002;
 
 	/* Find the partition */
 	if(flashrom_info(FLASHROM_PT_SYSTEM, &start, &size) < 0) {
-		
 		dbglog(DBG_ERROR, "%s: can't find partition %d\n", __func__, FLASHROM_PT_SYSTEM);
-		
 	} else {
-
 		/* Read the first 5 characters of that partition */
 		if(flashrom_read(start, region, 5) < 0) {
 			dbglog(DBG_ERROR, "%s: can't read partition %d\n", __func__, FLASHROM_PT_SYSTEM);
@@ -112,72 +92,6 @@ int flashrom_get_region_only() {
 	}
 }
 
-
-int is_hacked_bios() {
-	return (*(uint16 *)0xa0000000) == 0xe6ff;
-}
-
-int is_custom_bios() {
-	return (*(uint16 *)0xa0000004) == 0x4318;
-}
-
-int is_no_syscalls() {
-	return (*(uint16 *)0xac000100) != 0x2f06;
-}
-
-#ifdef BIOS_MODE
-//int is_no_syscalls() {
-//	return (*(uint16 *)0x8c000100) != 0x2f06;
-//}
-
-
-static int setup_syscalls() {
-
-	file_t fd;
-	size_t fd_size;
-	int (*sc)(int, int, int, int);
-
-	dbglog(DBG_INFO, "Loading and setup syscalls...\n");
-
-	fd = fs_open(RES_PATH"/syscalls.bin", O_RDONLY);
-
-	if(fd != FILEHND_INVALID) {
-
-		fd_size = fs_total(fd);
-		dbgio_dev_select("null");
-
-		if(fs_read(fd, (uint8*)0x8c000000, fd_size) < 0) {
-			
-			fs_close(fd);
-			dbgio_dev_select("fb");
-			dbglog(DBG_ERROR, "Error at loading syscalls\n");
-			return -1;
-			
-		} else {
-
-			fs_close(fd);
-			icache_flush_range(0x8c000000, fd_size);
-
-			dbgio_dev_select("fb");
-			*((uint32 *)&sc) = *((uint32 *)0x8c0000b0);
-
-			if(sc(0, 0, 0, 0)) {
-				dbglog(DBG_ERROR, "Error in sysinfo syscall\n");
-				return -1;
-			}
-
-			dbglog(DBG_INFO, "Syscalls successfully installed\n");
-			return 0;
-		}
-	} else {
-		dbglog(DBG_ERROR, "Can't open file with syscalls\n");
-	}
-
-	return -1;
-}
-#endif
-
-
 int start_pressed = 0;
 
 static void start_callback(void) {
@@ -194,9 +108,10 @@ static void show_boot_message(void) {
 
 
 int main(int argc, char **argv) {
-	
+
+	dbglog_set_level(DBG_KDEBUG);
 	cont_btn_callback(0, CONT_START, (cont_btn_callback_t)start_callback);
-	
+
 	if(vid_check_cable() == CT_VGA) {
 		vid_set_mode(DM_640x480_VGA, PM_RGB565);
 	}
@@ -209,54 +124,23 @@ int main(int argc, char **argv) {
 	}
 #endif
 
-#ifndef EMU
-
-#ifdef BIOS_MODE
-
-	if(!fs_romdisk_mount(RES_PATH, (const uint8 *)romdisk, 0)) {
-		
-		dbgio_dev_select("fb");
-		show_boot_message();
-		
-		if(is_custom_bios()/* && is_no_syscalls()*/) {
-			setup_syscalls();
-//			cdrom_init();
-//			fs_iso9660_init();
-		}
-		
-	} else {
-		dbgio_dev_select("fb");
-		show_boot_message();
-	}
-
-	InitIDE();
-	InitSDCard();
-
-#else
-
 	int ird = 1;
 	dbgio_dev_select("fb");
 	show_boot_message();
-	
+
 	if(!InitIDE()) {
 		ird = 0;
 	}
-	
+
 	if(!InitSDCard()) {
 		ird = 0;
 	}
-	
-	if(ird && is_custom_bios()) {
+
+	if(ird) {
 		InitRomdisk();
 	}
-#endif
 
 	dbgio_disable();
-	
-#else
-	dbgio_dev_select("scif");
-	show_boot_message();
-#endif
 
 	if(!start_pressed) {
 		menu_init();
@@ -264,19 +148,14 @@ int main(int argc, char **argv) {
 	}
 
 	pvr_init(&params);
+	pvr_set_bg_color(192.0/255.0, 192.0/255.0, 192.0/255.0);
 	spiral_init();
-
-#ifdef BIOS_MODE	
-	fs_romdisk_unmount(RES_PATH);
-#endif
 
 	if(!start_pressed) 
 		init_menu_txr();
 	else
 		menu_init();
-		
-	pvr_set_bg_color(192.0/255.0, 192.0/255.0, 192.0/255.0);
-	
+
 	while(1) {
 		pvr_wait_ready();
 		pvr_scene_begin();

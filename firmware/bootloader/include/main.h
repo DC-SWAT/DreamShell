@@ -5,6 +5,7 @@
 #include <kos.h>
 #include <math.h>
 #include <assert.h>
+#include <stdlib.h>
 #include <kmg/kmg.h>
 #include <zlib/zlib.h>
 

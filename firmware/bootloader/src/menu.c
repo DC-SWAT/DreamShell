@@ -1,7 +1,7 @@
 /**
- * DreamShell boot loader
+ * DreamShell bootloader
  * Menu
- * (c)2011-2023 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2026 SWAT <http://www.dc-swat.ru>
  */
 
 
@@ -33,9 +33,6 @@ static menu_item_t *items;
 static int items_cnt = 0;
 static int selected = 0;
 static char message[NAME_MAX];
-
-//static char cur_path[NAME_MAX];
-//static void clear_menu();
 
 static int must_lock_video() {
 	kthread_t *ct = thd_get_current();
@@ -225,7 +222,7 @@ static int search_root() {
 		return -1;
 	}
 
-	while ((ent = fs_readdir(hnd)) != NULL) {
+	while ((ent = (dirent_t *)fs_readdir(hnd)) != NULL) {
 
 		if(!RootDeviceIsSupported(ent->name)) {
 			continue;
@@ -284,67 +281,24 @@ static int search_root() {
 }
 
 
-/*
-static int read_directory() {
-	
-	dirent_t *ent;
-	file_t hnd;
-	menu_item_t *item;
-	int i;
-	
-	hnd = fs_open(cur_path, O_RDONLY | O_DIR);
-	
-	if(hnd == FILEHND_INVALID) {
-		dbglog(DBG_ERROR, "Can't open root directory!\n");
-		return -1;
-	}
-	
-	while ((ent = fs_readdir(hnd)) != NULL) {
-		
-		if(!strcasecmp(ent->name, ".")) {
-			continue;
-		}
-		
-		item = calloc(1, sizeof(menu_item_t));
-		
-		if(item) {
-
-			item->next = items;
-			items = item;
-			
-			if(ent->attr == O_DIR) {
-				strncpy(item->name, ent->name, NAME_MAX);
-				item->mode = 0;
-			} else {
-				snprintf(item->name, NAME_MAX, "%s %dKB", ent->name, ent->size);
-				item->mode = 1;
-			}
-			
-			item->name[strlen(item->name)] = '\0';
-			snprintf(item->path, NAME_MAX, "%s/%s", cur_path, ent->name);
-			item->path[strlen(item->path)] = '\0';
-			items_cnt++;
-			
-		} else {
-			break;
-		}
-	}
-	
-	fs_close(hnd);
-	return 0;
-}
-*/
-
 static void update_progress(float per) {
+	int pct;
+
+	if(per < 0.0f)
+		per = 0.0f;
+	else if(per > 100.0f)
+		per = 100.0f;
+
+	pct = (int)(per + 0.5f);
 
 	lock_video();
-	progress_w = (465.0f / 100.0f) * per;
-	
+	progress_w = ((640.0f - 180.0f) / 100.0f) * per;
+
 	if(old_per != per) {
 		old_per = per;
-		show_message("Loading %02d%c", (int)per, '%');
+		show_message("Loading %02d%c", pct, '%');
 	}
-	
+
 	unlock_video();
 }
 
@@ -374,7 +328,6 @@ static uint32 gzip_get_file_size(char *filename) {
 	
 	return size;
 }
-
 
 
 void *loading_thd(void *param) {
@@ -436,7 +389,7 @@ void *loading_thd(void *param) {
 	}
 	
 	update_progress(0);
-	binary_buff = (uint8 *)memalign(32, binary_size);
+	binary_buff = (uint8 *)aligned_alloc(32, binary_size);
 	
 	if(binary_buff != NULL) {
 		
@@ -463,9 +416,9 @@ void *loading_thd(void *param) {
 			} else {
 			
 				while((i = gzread(fdz, pbuff, 16384)) > 0) {
-					update_progress((float)count / ((float)binary_size / 100.0f));
 					pbuff += i;
 					count += i;
+					update_progress((float)count * 100.0f / (float)binary_size);
 				}
 			}
 			
@@ -491,12 +444,9 @@ void *loading_thd(void *param) {
 			} else {
 		
 				while((i = fs_read(fd, pbuff, 32768)) > 0) {
-					
-					update_progress((float)count / ((float)binary_size / 100.0f));
-//					dbglog(DBG_INFO, "Loaded %d to %p\n", i, pbuff);
-//					thd_sleep(10);
 					pbuff += i;
 					count += i;
+					update_progress((float)count * 100.0f / (float)binary_size);
 				}
 			}
 			
@@ -509,26 +459,30 @@ void *loading_thd(void *param) {
 			show_message("Descrambling...");
 			unlock_video();
 
-			uint8 *tmp_buf = (uint8 *)malloc(binary_size);
+			uint8 *tmp_buf = (uint8 *)aligned_alloc(32, binary_size);
 			descramble(binary_buff, tmp_buf, binary_size);
 			free(binary_buff);
 			binary_buff = tmp_buf;
 		}
-		
+
+		if(load_in_thread)
+			update_progress(100.0f);
+
 		lock_video();
 		show_message("Executing...");
 		unlock_video();
-		
+
 		if(load_in_thread) {
 			thd_sleep(100);
 			binary_ready = 1;
 		} else {
 			dbglog(DBG_INFO, "Executing...\n");
+			thd_sleep(100);
 			arch_exec(binary_buff, binary_size);
 		}
-		
+
 	} else {
-		
+
 		lock_video();
 		show_message("Not enough memory: %d Kb", binary_size / 1024);
 		binary_size = 0;
@@ -550,18 +504,6 @@ static menu_item_t *get_selected() {
 		
 	return item;
 }
-/*
-static void clear_menu() {
-	
-	menu_item_t *item = NULL;
-	int i = 0;
-	
-	for (item = items, i = 0; i < items_cnt; i++, item = item->next) {
-		if(item)
-			free(item);
-	}
-}
-*/
 
 void loading_core(int no_thd) {
 	

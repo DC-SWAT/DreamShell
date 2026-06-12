@@ -1,5 +1,5 @@
 #
-# DreamShell boot loader
+# DreamShell bootloader
 # (c)2011-2026 SWAT
 #
 

@@ -1,5 +1,5 @@
 /**
- * DreamShell boot loader
+ * DreamShell bootloader
  * Descramble binary
  * (c)2011-2016 SWAT <http://www.dc-swat.ru>
  */

@@ -1,7 +1,7 @@
 /**
- * DreamShell boot loader
+ * DreamShell bootloader
  * Spiral
- * (c)2011-2016 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2016, 2026 SWAT <http://www.dc-swat.ru>
  */
 
 #include "main.h"
@@ -11,10 +11,17 @@ static float phase;
 static int frame;
 uint32 spiral_color = 0x44ed1800;
 
+#define SPIRAL_CENTER_Y  189.0f
+#define LOGO_START_Y     235.0f
+#define LOGO_END_Y       53.5f
+
+static alignas(32) pvr_poly_hdr_t spiral_hdr;
+static alignas(32) pvr_poly_hdr_t logo_hdr;
+
 
 static int gzip_kmg_to_img(const char * fn, kos_img_t * rv) {
 	gzFile f;
-	kmg_header_t	hdr;
+	kmg_header_t hdr;
 
 	/* Open the file */
 	f = gzopen(fn, "r");
@@ -130,7 +137,7 @@ static void load_txr(const char *fn, pvr_ptr_t *txr) {
 }
 
 static void draw_one_dot(float x, float y, float z) {
-	pvr_vertex_t	v;
+	alignas(32) pvr_vertex_t v;
 
 	v.flags = PVR_CMD_VERTEX;
 	v.x = x-32.0/2;
@@ -158,18 +165,17 @@ static void draw_one_dot(float x, float y, float z) {
 }
 
 static void draw_spiral(float phase) {
-	pvr_poly_hdr_t	hdr;
 	pvr_poly_cxt_t	cxt;
-	float		x, y, t, r, z, scale;
+	float x, y, t, r, z, scale;
 
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY,
 		PVR_TXRFMT_ARGB4444, 32, 32, txr_dot, PVR_FILTER_BILINEAR);
-	pvr_poly_compile(&hdr, &cxt);
-	pvr_prim(&hdr, sizeof(hdr));
+	pvr_poly_compile(&spiral_hdr, &cxt);
+	pvr_prim(&spiral_hdr, sizeof(spiral_hdr));
 
 	for (z=1.0f, r=15.0, t=M_PI/2 - M_PI/4 + phase; t<(6*M_PI+phase); ) {
-		x = r*fcos(t); y = r*fsin(t);
-		draw_one_dot(320 + x, 189 + y, z);
+		x = r*cosf(t); y = r*sinf(t);
+		draw_one_dot(320 + x, SPIRAL_CENTER_Y + y, z);
 
 		scale = 12.0f - 11.0f * ((t-phase) / (6*M_PI));
 		t+=scale*2*M_PI/360.0;
@@ -178,18 +184,17 @@ static void draw_spiral(float phase) {
 	}
 }
 
-static float _y = 235.0f;
+static float _y = LOGO_START_Y;
 
 static void draw_logo() {
-	pvr_poly_hdr_t	hdr;
-	pvr_poly_cxt_t	cxt;
-	pvr_vertex_t	v;
-	float		x, y;
+	pvr_poly_cxt_t cxt;
+	alignas(32) pvr_vertex_t v;
+	float x, y;
 
 	pvr_poly_cxt_txr(&cxt, PVR_LIST_TR_POLY,
 		PVR_TXRFMT_ARGB4444, 1024, 512, txr_logo, PVR_FILTER_BILINEAR);
-	pvr_poly_compile(&hdr, &cxt);
-	pvr_prim(&hdr, sizeof(hdr));
+	pvr_poly_compile(&logo_hdr, &cxt);
+	pvr_prim(&logo_hdr, sizeof(logo_hdr));
 
 	x = 810.0f;
 	y = _y;
@@ -216,11 +221,6 @@ static void draw_logo() {
 	v.y = y;
 	v.v = 0.0f;
 	pvr_prim(&v, sizeof(v));
-	
-	if(_y > 53.5f) {
-		_y -= M_PI * fcos(frame * M_PI / 180.0f);
-		//printf("Y = %f\n", _y);
-	}
 }
 
 int spiral_init() {
@@ -229,17 +229,30 @@ int spiral_init() {
 
 	phase = 0.0f;
 	frame = 0;
+	_y = LOGO_START_Y;
 
 	return 0;
 }
 
-/* Call during trans poly */
-void spiral_frame() {
-	draw_spiral(phase);
-	draw_logo();
+static void spiral_advance(void) {
+	float a;
+
+	if(_y > LOGO_END_Y) {
+		a = (float)frame * M_PI / 180.0f;
+		_y -= M_PI * cosf(a);
+	}
+
+	a = (float)frame * 2.0f * M_PI / 360.0f;
+	phase = 2.0f * M_PI * sinf(a);
 
 	frame++;
-	if(frame > 360) frame = 0;
-	phase = 2*M_PI * fsin(frame * 2*M_PI / 360.0f);
+	if(frame > 360)
+		frame = 0;
 }
 
+/* Call during trans poly */
+void spiral_frame() {
+	spiral_advance();
+	draw_spiral(phase);
+	draw_logo();
+}
