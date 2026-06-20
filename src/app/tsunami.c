@@ -14,6 +14,7 @@
 #define APP_TSU_DEFAULT_ALPHA 1.0f
 #define APP_TSU_DEFAULT_LABEL_SIZE 16
 #define APP_TSU_DEFAULT_Z "1.0"
+#define APP_TSU_DEFAULT_CARDSTACK_FADE "0.12"
 
 enum {
 	APP_TSU_DRAWABLE_LABEL = 1,
@@ -25,10 +26,14 @@ enum {
 	APP_TSU_DRAWABLE_CIRCLE,
 	APP_TSU_DRAWABLE_WAVE,
 	APP_TSU_DRAWABLE_BOX,
-	APP_TSU_DRAWABLE_TRIANGLE
+	APP_TSU_DRAWABLE_TRIANGLE,
+	APP_TSU_DRAWABLE_CARDSTACK
 };
 
+static Scene *appTsunamiParseScene = NULL;
+
 static int parseAppTsunamiElement(App_t *app, mxml_node_t *node, SDL_Rect *parent);
+static int parseAppTsunamiPanelElement(App_t *app, mxml_node_t *node, SDL_Rect *parent);
 
 static int parseAppTsunamiBool(mxml_node_t *node, char *name, int defValue) {
 
@@ -311,12 +316,21 @@ static void parseAppTsunamiDrawableAttrs(mxml_node_t *node, Drawable *drawable, 
 
 static int addAppTsunamiElement(App_t *app, char *name, void *object, int type) {
 
+	Scene *target_scene;
+
 	if(object == NULL) {
 		return 0;
 	}
 
 	if(listAddItem(app->elements, LIST_ITEM_TSU_DRAWABLE, name, object, type) == NULL) {
 		return 0;
+	}
+
+	target_scene = appTsunamiParseScene;
+
+	if(target_scene != NULL) {
+		TSU_DrawableSubAdd((Drawable *)target_scene, (Drawable *)object);
+		return 1;
 	}
 
 	switch(type) {
@@ -344,6 +358,7 @@ static int addAppTsunamiElement(App_t *app, char *name, void *object, int type) 
 		case APP_TSU_DRAWABLE_CHECKBOX:
 		case APP_TSU_DRAWABLE_TEXTBOX:
 		case APP_TSU_DRAWABLE_TRIANGLE:
+		case APP_TSU_DRAWABLE_CARDSTACK:
 			TSU_DrawableSubAdd((Drawable *)TSU_AppGetScene(app->tsunami), (Drawable *)object);
 			break;
 		default:
@@ -778,6 +793,106 @@ static int parseAppTsunamiTriangleElement(App_t *app, mxml_node_t *node, SDL_Rec
 	return addAppTsunamiElement(app, name, (void *)triangle, APP_TSU_DRAWABLE_TRIANGLE);
 }
 
+static int parseAppTsunamiCardStackElement(App_t *app, mxml_node_t *node, SDL_Rect *parent) {
+
+	CardStack *stack;
+	mxml_node_t *n;
+	SDL_Rect area;
+	int x, y, w, h;
+	int index;
+	char *name = FindXmlAttr("name", node, node->value.element.name);
+	char *back = FindXmlAttr("background", node, NULL);
+
+	parseNodeSize(node, parent, &w, &h);
+	parseNodePosition(node, parent, &x, &y);
+	area.x = parent->x + x;
+	area.y = parent->y + y;
+	area.w = w;
+	area.h = h;
+
+	stack = TSU_CardStackCreate((float)w, (float)h);
+
+	if(stack == NULL) {
+		return 0;
+	}
+
+	parseAppTsunamiDrawableAttrs(node, (Drawable *)stack, parent);
+	TSU_CardStackSetFadeStep(stack, atof(FindXmlAttr("fade", node,
+		FindXmlAttr("transition", node, APP_TSU_DEFAULT_CARDSTACK_FADE))));
+
+	if(back != NULL && *back == '#') {
+		Color color = {APP_TSU_DEFAULT_ALPHA, 0.0f, 0.0f, 0.0f};
+		float z = atof(FindXmlAttr("z", node, APP_TSU_DEFAULT_Z));
+
+		parseAppTsunamiColor(back, &color, &color);
+		TSU_CardStackSetBackgroundColor(stack, &color, parseAppTsunamiList(node, PVR_LIST_OP_POLY), z);
+	}
+	else if(back != NULL) {
+		Texture *texture = getAppTsunamiTexture(app, node, back);
+		Banner *banner;
+		Vector pos;
+		float z;
+
+		if(texture == NULL) {
+			ds_printf("DS_ERROR: Can't find TSU image '%s'\n", back);
+			TSU_CardStackDestroy(&stack);
+			return 0;
+		}
+
+		z = atof(FindXmlAttr("z", node, APP_TSU_DEFAULT_Z));
+		banner = TSU_BannerCreate(parseAppTsunamiList(node, PVR_LIST_TR_POLY), texture);
+
+		if(banner == NULL) {
+			TSU_CardStackDestroy(&stack);
+			return 0;
+		}
+
+		TSU_BannerSetSize(banner, (float)w, (float)h);
+		pos.x = (float)area.x + ((float)w / 2.0f);
+		pos.y = (float)area.y + ((float)h / 2.0f);
+		pos.z = z;
+		pos.w = 1.0f;
+		TSU_DrawableSetTranslate((Drawable *)banner, &pos);
+		TSU_CardStackSetBackground(stack, banner);
+	}
+
+	if(node->child && node->child->next) {
+		n = node->child->next;
+
+		while(n) {
+			if(n->type == MXML_ELEMENT && n->value.element.name[0] != '!') {
+				Scene *card = TSU_SceneCreate();
+				char *card_name = FindXmlAttr("name", n, n->value.element.name);
+				int parsed = 0;
+
+				if(card == NULL) {
+					TSU_CardStackDestroy(&stack);
+					return 0;
+				}
+
+				appTsunamiParseScene = card;
+				parsed = parseAppTsunamiElement(app, n, &area);
+				appTsunamiParseScene = NULL;
+
+				if(!parsed) {
+					TSU_SceneDestroy(&card);
+					TSU_CardStackDestroy(&stack);
+					return 0;
+				}
+
+				TSU_CardStackAddCard(stack, card, card_name);
+			}
+
+			n = n->next;
+		}
+	}
+
+	index = atoi(FindXmlAttr("index", node, "0"));
+	TSU_CardStackSetIndex(stack, index);
+
+	return addAppTsunamiElement(app, name, (void *)stack, APP_TSU_DRAWABLE_CARDSTACK);
+}
+
 static int parseAppTsunamiPanelElement(App_t *app, mxml_node_t *node, SDL_Rect *parent) {
 
 	mxml_node_t *n;
@@ -837,6 +952,9 @@ static int parseAppTsunamiElement(App_t *app, mxml_node_t *node, SDL_Rect *paren
 	}
 	else if(!strncmp(node->value.element.name, "panel", 5)) {
 		return parseAppTsunamiPanelElement(app, node, parent);
+	}
+	else if(!strncmp(node->value.element.name, "cardstack", 9)) {
+		return parseAppTsunamiCardStackElement(app, node, parent);
 	}
 	else if(!strncmp(node->value.element.name, "circle", 6)) {
 		return parseAppTsunamiCircleElement(app, node, parent);
@@ -949,6 +1067,7 @@ void appTsunamiDestroyElement(App_t *app, void *object, int type) {
 			case APP_TSU_DRAWABLE_CHECKBOX:
 			case APP_TSU_DRAWABLE_TEXTBOX:
 			case APP_TSU_DRAWABLE_TRIANGLE:
+			case APP_TSU_DRAWABLE_CARDSTACK:
 				TSU_DrawableSubRemove((Drawable *)TSU_AppGetScene(app->tsunami), (Drawable *)object);
 				break;
 			default:
@@ -1005,6 +1124,11 @@ void appTsunamiDestroyElement(App_t *app, void *object, int type) {
 		case APP_TSU_DRAWABLE_TRIANGLE: {
 			Triangle *triangle = (Triangle *)object;
 			TSU_TriangleDestroy(&triangle);
+			break;
+		}
+		case APP_TSU_DRAWABLE_CARDSTACK: {
+			CardStack *stack = (CardStack *)object;
+			TSU_CardStackDestroy(&stack);
 			break;
 		}
 		default:
