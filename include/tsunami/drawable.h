@@ -39,7 +39,8 @@ enum ObjectTypeEnum
 	TRIANGLE_TYPE = 1<<13,
 	CIRCLE_TYPE = 1<<14,
 	GRADIENT_TYPE = 1<<15,
-	WAVE_TYPE = 1<<16
+	WAVE_TYPE = 1<<16,
+	CARDSTACK_TYPE = 1<<17
 };
 
 #ifdef __cplusplus

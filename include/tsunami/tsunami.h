@@ -50,6 +50,7 @@
 #include "drawables/combobox.h"
 #include "drawables/scene.h"
 #include "drawables/form.h"
+#include "drawables/cardstack.h"
 #include "triggers/birth.h"
 #include "triggers/chainanim.h"
 #include "triggers/death.h"
