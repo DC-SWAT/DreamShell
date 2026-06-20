@@ -34,10 +34,12 @@ static char *sys_sfx_name[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
 	"chpage",
 	"slide",
 	"error",
-	"success"
+	"success",
+	"coin"
 };
 
 static sfxhnd_t sys_sfx_hnd[DS_SFX_LAST - DS_SFX_LAST_STREAM] = {
+	SFXHND_INVALID,
 	SFXHND_INVALID,
 	SFXHND_INVALID,
 	SFXHND_INVALID,
@@ -163,6 +165,8 @@ int ds_sfx_is_enabled(ds_sfx_t sfx) {
 			return settings->audio.sfx_enabled && settings->audio.click_enabled;
 		case DS_SFX_CLICK2:
 			return settings->audio.sfx_enabled && settings->audio.hover_enabled;
+		case DS_SFX_COIN:
+			return settings->audio.sfx_enabled && settings->audio.click_enabled;
 		default:
 			return settings->audio.sfx_enabled;
 	}

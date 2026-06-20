@@ -20,6 +20,7 @@ typedef enum {
 	DS_SFX_SLIDE,
 	DS_SFX_ERROR,
 	DS_SFX_SUCCESS,
+	DS_SFX_COIN,
 	DS_SFX_LAST
 } ds_sfx_t;
 
