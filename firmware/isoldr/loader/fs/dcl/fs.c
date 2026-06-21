@@ -33,7 +33,8 @@
 
 static int dma_mode = 0;
 
-int fs_init() {
+int fs_init(int disk_part) {
+	(void)disk_part;
 	return dcload_init();
 }
 

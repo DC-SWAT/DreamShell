@@ -90,8 +90,10 @@ static int sc_close_common(int fd, const char * tag) {
 }
 
 
-int fs_init() {
-	
+int fs_init(int disk_part) {
+
+	(void)disk_part;
+
 	if(net_init() < 0) {
 		printf("No network devices detected!");
 		return 0;

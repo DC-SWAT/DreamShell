@@ -130,7 +130,7 @@ int InitReader() {
 		_iso_fd[i] = FILEHND_INVALID;
 	}
 
-	if(fs_init() < 0) {
+	if(fs_init(IsoInfo->fs_part) < 0) {
 		return 0;
 	}
 

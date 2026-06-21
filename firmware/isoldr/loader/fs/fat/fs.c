@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * FAT file system
- * (c)2011-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -30,7 +30,7 @@ typedef struct {
 
 } FILE;
 
-static FATFS *_fat_fs = NULL;
+static FATFS *_fat_fs[_VOLUMES];
 static FILE *_files = NULL;
 
 #ifdef DEV_TYPE_IDE
@@ -63,53 +63,121 @@ static int fs_get_fd() {
 }
 
 
-int fs_init() {
+static int fs_mount_volume(int vol, BYTE pdrv, int disk_part) {
 
-	char path[3] = "0:";
-	path[2] = '\0';
+	char path[4] = "0:";
 
-	VolToPart[0].pd = 0;
-	VolToPart[0].pt = IsoInfo->fs_part + 1;
+	path[0] = '0' + vol;
 
-	_fat_fs = (FATFS *) malloc(sizeof(FATFS) + 32);
+	VolToPart[vol].pd = pdrv;
+	VolToPart[vol].pt = disk_part + 1;
+
+	if(disk_initialize(pdrv) != 0) {
+		return -1;
+	}
+
+	LOGF("Mounting FAT filesystem...\n");
+
+	if(f_mount(_fat_fs[vol], path, 1) == FR_OK) {
+		return 0;
+	}
+
+	return -1;
+}
+
+
+#ifdef DEV_TYPE_SD
+static int fs_mount_sd(int vol, int disk_part) {
+
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if(fs_mount_volume(vol, DISK_DRV_SD, disk_part) == 0) {
+		return 0;
+	}
+
+	OpenLog();
+
+	return fs_mount_volume(vol, DISK_DRV_SD_SCI, disk_part);
+
+#else
+
+	if(fs_mount_volume(vol, DISK_DRV_SD_SCIF, disk_part) == 0) {
+		return 0;
+	}
+
+	OpenLog();
+
+	return fs_mount_volume(vol, DISK_DRV_SD_SCI, disk_part);
+
+#endif
+}
+#endif
+
+
+int fs_init(int disk_part) {
+
 	_files = (FILE *) malloc(sizeof(FILE) * MAX_OPEN_FILES);
 
-	if (!_fat_fs || !_files) {
+	if (!_files) {
 		LOGFF("Memory failed");
 		return -1;
 	}
 
-	_fat_fs = (FATFS *)ALIGN32_ADDR((uint32)_fat_fs);
-
-	LOGF("FATFS: 0x%08lx, secbuf: 0x%08lx, FILEs: 0x%08lx\n",
-		(uint32)_fat_fs, (uint32)_fat_fs->win, (uint32)_files);
-
-	memset(_fat_fs, 0, sizeof(FATFS));
 	memset(_files, 0, sizeof(FILE) * MAX_OPEN_FILES);
 
-	if(disk_initialize(0) == 0) {
+	for(int vol = 0; vol < _VOLUMES; vol++) {
 
-		LOGF("Mounting FAT filesystem...\n");
+		_fat_fs[vol] = (FATFS *) aligned_alloc(32, sizeof(FATFS));
 
-		if(f_mount(_fat_fs, path, 1) == FR_OK) {
-			return 0;
+		if (!_fat_fs[vol]) {
+			LOGFF("Memory failed");
+			return -1;
 		}
+
+		memset(_fat_fs[vol], 0, sizeof(FATFS));
+
+		LOGF("FATFS[%d]: 0x%08lx, secbuf: 0x%08lx, FILEs: 0x%08lx\n",
+			vol, (uint32)_fat_fs[vol], (uint32)_fat_fs[vol]->win, (uint32)_files);
 	}
 
-#ifdef DEV_TYPE_SD
-	OpenLog();
-	/* Try SCI-SPI interface */
-	if(disk_initialize(1) == 0) {
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
 
-		LOGF("Mounting FAT filesystem...\n");
+	int mounted = 0;
 
-		if(f_mount(_fat_fs, path, 1) == FR_OK) {
-			return 0;
-		}
+	if(fs_mount_volume(0, DISK_DRV_IDE, disk_part) == 0) {
+		mounted++;
 	}
+
+	if(fs_mount_sd(1, 0) == 0) {
+		mounted++;
+	}
+
+	if(mounted) {
+		return 0;
+	}
+
+	printf("Error, can't init IDE/SD storage.\n");
+
+#else
+
+#if defined(DEV_TYPE_IDE)
+
+	if(fs_mount_volume(0, DISK_DRV_IDE, disk_part) == 0) {
+		return 0;
+	}
+
+#elif defined(DEV_TYPE_SD)
+
+	if(fs_mount_sd(0, disk_part) == 0) {
+		return 0;
+	}
+
 #endif
 
 	printf("Error, can't init "DEV_NAME".\n");
+
+#endif
+
 	return -1;
 }
 
@@ -228,10 +296,14 @@ int open(const char *path, int flags) {
 }
 
 static void abort_current_async(int fd) {
+#if _FS_ASYNC
 	LOGF("FS: aborting async, fd=%d\n", fd);
 	abort_async(fd);
 	do {} while (pre_read_xfer_busy());
 	pre_read_xfer_end();
+#else
+	(void)fd;
+#endif
 }
 
 int close(int fd) {
@@ -288,6 +360,8 @@ int read(int fd, void *ptr, unsigned int size) {
 
 	return br;
 }
+
+#if _FS_ASYNC
 
 int pre_read(int fd, unsigned int size) {
 
@@ -422,6 +496,8 @@ void poll_all(int err) {
 		}
 	}
 }
+
+#endif
 
 #if _FS_READONLY == 0
 

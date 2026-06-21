@@ -565,7 +565,9 @@ int ioctl(int fd, int cmd, void *data) {
 
 /* Init function */
 
-int fs_init() {
+int fs_init(int disk_part) {
+
+	(void)disk_part;
 
 	memset(&fh, 0, sizeof(fh));
 	cd_sector_buffer = malloc(2048 + 32);

@@ -18,7 +18,8 @@
 #if defined(DEV_TYPE_SD)
 #include <sd/spi.h>
 #include <sd/sd.h>
-#elif defined(DEV_TYPE_IDE)
+#endif
+#if defined(DEV_TYPE_IDE)
 #include <ide/ide.h>
 #endif
 
@@ -87,7 +88,7 @@ enum FS_IOCTL_CMD {
 	FS_IOCTL_SYNC = 1
 };
 
-int fs_init();
+int fs_init(int disk_part);
 void fs_shutdown();
 
 void fs_enable_dma(int state);

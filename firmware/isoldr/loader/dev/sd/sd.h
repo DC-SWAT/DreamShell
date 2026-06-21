@@ -42,12 +42,11 @@
 #define __DC_SD_H
 
 #include <sys/cdefs.h>
-#include <sys/types.h>
 __BEGIN_DECLS
 
 #include <arch/types.h>
-#include <kos/blockdev.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 /** \defgroup vfs_sd    SD Card
     \brief              VFS driver for accessing SD cards over the SCIF or SCI port
