@@ -9,6 +9,22 @@
 
 #include "integer.h"
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+enum {
+	DISK_DRV_IDE = 0,
+	DISK_DRV_SD  = 1,
+	DISK_DRV_SD_SCI = 2
+};
+#elif defined(DEV_TYPE_IDE)
+enum {
+	DISK_DRV_IDE = 0
+};
+#elif defined(DEV_TYPE_SD)
+enum {
+	DISK_DRV_SD_SCIF = 0,
+	DISK_DRV_SD_SCI  = 1
+};
+#endif
 
 /* Status of Disk Functions */
 typedef BYTE	DSTATUS;

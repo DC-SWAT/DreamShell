@@ -102,20 +102,40 @@ DSTATUS disk_initialize (
 )
 {
 
-#ifdef DEV_TYPE_SD
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		return g1_bus_init() ? STA_NOINIT : 0;
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		sd_init_params_t params = {
+			.interface = (drv == DISK_DRV_SD ? SD_IF_SCIF : SD_IF_SCI),
+			.check_crc = false
+		};
+		return sd_init_ex(&params) ? STA_NOINIT : 0;
+	}
+
+	return STA_NOINIT;
+
+#elif defined(DEV_TYPE_SD)
+
 	sd_init_params_t params = {
-		.interface = (drv == 0 ? SD_IF_SCIF : SD_IF_SCI),
+		.interface = (drv == DISK_DRV_SD_SCIF ? SD_IF_SCIF : SD_IF_SCI),
 		.check_crc = false
 	};
 	return sd_init_ex(&params) ? STA_NOINIT : 0;
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
 	(void)drv;
 	return g1_bus_init() ? STA_NOINIT : 0;
-#endif
 
+#else
+
+	(void)drv;
 	return STA_NOINIT;
+
+#endif
 }
 
 
@@ -128,16 +148,25 @@ DSTATUS disk_status (
 )
 {
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE || drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return 0;
+	}
+
+	return STA_NOINIT;
+
+#elif defined(DEV_TYPE_SD) || defined(DEV_TYPE_IDE)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
 	return 0;
-#endif
 
-#ifdef DEV_TYPE_IDE
-	return 0;
-#endif
+#else
 
+	(void)drv;
+	return STA_NOINIT;
+
+#endif
 }
 
 
@@ -151,14 +180,36 @@ DRESULT disk_read (
 	DWORD count		/* Number of sectors to read */
 )
 {
+
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		return g1_ata_read_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return sd_read_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
+	}
+
+	return RES_PARERR;
+
+#elif defined(DEV_TYPE_SD)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
 	return sd_read_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
+	(void)drv;
 	return g1_ata_read_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
+
+#else
+
+	(void)drv;
+	(void)buff;
+	(void)sector;
+	(void)count;
+	return RES_PARERR;
+
 #endif
 }
 
@@ -170,18 +221,40 @@ DRESULT disk_read_async (
 	DWORD count		/* Number of sectors to read */
 )
 {
+
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		return g1_ata_read_blocks(sector, count, buff, 0) ? RES_ERROR : RES_OK;
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return sd_read_blocks(sector, count, buff, 0) ? RES_ERROR : RES_OK;
+	}
+
+	return RES_PARERR;
+
+#elif defined(DEV_TYPE_SD)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
 	return sd_read_blocks(sector, count, buff, 0) ? RES_ERROR : RES_OK;
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
+	(void)drv;
 	return g1_ata_read_blocks(sector, count, buff, 0) ? RES_ERROR : RES_OK;
+
+#else
+
+	(void)drv;
+	(void)buff;
+	(void)sector;
+	(void)count;
+	return RES_PARERR;
+
 #endif
 }
 
-#ifdef DEV_TYPE_IDE
+#if defined(DEV_TYPE_IDE)
 DRESULT disk_read_part (
 	BYTE drv,		/* Physical drive nmuber (0..) */
 	BYTE *buff,		/* Data buffer to store read data */
@@ -189,6 +262,13 @@ DRESULT disk_read_part (
 	DWORD bytes		/* Bytes to read */
 )
 {
+
+#if defined(DEV_TYPE_SD)
+	if (drv != DISK_DRV_IDE) {
+		return RES_PARERR;
+	}
+#endif
+
 	(void)drv;
 	return g1_ata_read_lba_dma_part((uint64_t)sector, bytes, buff) ? RES_ERROR : RES_OK;
 }
@@ -200,15 +280,35 @@ DRESULT disk_pre_read (
 	DWORD count		/* Number of sectors to read */
 )
 {
+
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		return g1_ata_pre_read_lba(sector, count) ? RES_ERROR : RES_OK;
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return sd_pre_read(sector, count) ? RES_ERROR : RES_OK;
+	}
+
+	return RES_PARERR;
+
+#elif defined(DEV_TYPE_SD)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
-	/* Start async read for SD card */
 	return sd_pre_read(sector, count) ? RES_ERROR : RES_OK;
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
+	(void)drv;
 	return g1_ata_pre_read_lba(sector, count) ? RES_ERROR : RES_OK;
+
+#else
+
+	(void)drv;
+	(void)sector;
+	(void)count;
+	return RES_PARERR;
+
 #endif
 }
 
@@ -226,14 +326,35 @@ DRESULT disk_write (
 )
 {
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		return g1_ata_write_blocks(sector, count, buff, fs_dma_enabled()) ? RES_ERROR : RES_OK;
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return sd_write_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
+	}
+
+	return RES_PARERR;
+
+#elif defined(DEV_TYPE_SD)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
 	return sd_write_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
+	(void)drv;
 	return g1_ata_write_blocks(sector, count, buff, fs_dma_enabled()) ? RES_ERROR : RES_OK;
+
+#else
+
+	(void)drv;
+	(void)buff;
+	(void)sector;
+	(void)count;
+	return RES_PARERR;
+
 #endif
 
 }
@@ -252,20 +373,40 @@ DRESULT disk_ioctl (
 )
 {
 
-	(void)drv;
-
 	switch (ctrl) {
 		
 #if _USE_MKFS && !_FS_READONLY
 
 		case GET_SECTOR_COUNT :	/* Get number of sectors on the disk (ulong) */
-		
-#ifdef DEV_TYPE_SD
-			*(ulong*)buff = (ulong)(sd_get_size() / 512);
-#endif
 
-#ifdef DEV_TYPE_IDE
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+			if (drv == DISK_DRV_IDE) {
+				*(ulong*)buff = (ulong)g1_ata_max_lba();
+			}
+			else
+			if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+				*(ulong*)buff = (ulong)(sd_get_size() / 512);
+			}
+			else {
+				return RES_PARERR;
+			}
+
+#elif defined(DEV_TYPE_SD)
+
+			(void)drv;
+			*(ulong*)buff = (ulong)(sd_get_size() / 512);
+
+#elif defined(DEV_TYPE_IDE)
+
+			(void)drv;
 			*(ulong*)buff = (ulong)g1_ata_max_lba();
+
+#else
+
+			(void)drv;
+			return RES_PARERR;
+
 #endif
 			return RES_OK;
 #endif /* _USE_MKFS && !_FS_READONLY */
@@ -277,13 +418,34 @@ DRESULT disk_ioctl (
 
 #if _FS_READONLY == 0
 		case CTRL_SYNC :	/* Make sure that data has been written */
-#ifdef DEV_TYPE_IDE
+
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+			if (drv == DISK_DRV_IDE) {
+				return g1_ata_flush() ? RES_ERROR : RES_OK;
+			}
+			else
+			if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+				return RES_OK;
+			}
+
+			return RES_PARERR;
+
+#elif defined(DEV_TYPE_IDE)
+
+			(void)drv;
 			return g1_ata_flush() ? RES_ERROR : RES_OK;
+
 #else
+
+			(void)drv;
 			return RES_OK;
+
 #endif
 #endif
 		default:
+			(void)drv;
+			(void)buff;
 			return RES_PARERR;
 	}
 }
@@ -297,14 +459,32 @@ int disk_poll (
 )
 {
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		return g1_ata_poll();
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return sd_poll(fs_dma_enabled());
+	}
+
+	return -1;
+
+#elif defined(DEV_TYPE_SD)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
 	return sd_poll(fs_dma_enabled());
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
+	(void)drv;
 	return g1_ata_poll();
+
+#else
+
+	(void)drv;
+	return -1;
+
 #endif
 
 }
@@ -317,14 +497,33 @@ DRESULT disk_abort (
 )
 {
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+
+	if (drv == DISK_DRV_IDE) {
+		g1_ata_abort();
+		return 0;
+	}
+	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+		return sd_abort();
+	}
+
+	return RES_PARERR;
+
+#elif defined(DEV_TYPE_SD)
+
 	(void)drv;
-
-#ifdef DEV_TYPE_SD
 	return sd_abort();
-#endif
 
-#ifdef DEV_TYPE_IDE
+#elif defined(DEV_TYPE_IDE)
+
+	(void)drv;
 	g1_ata_abort();
 	return 0;
+
+#else
+
+	(void)drv;
+	return RES_PARERR;
+
 #endif
 }

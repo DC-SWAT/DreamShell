@@ -134,7 +134,11 @@
 / Drive/Volume Configurations
 /---------------------------------------------------------------------------*/
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+#define _VOLUMES	2
+#else
 #define _VOLUMES	1
+#endif
 /* Number of volumes (logical drives) to be used. */
 
 
