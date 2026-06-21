@@ -2754,7 +2754,7 @@ FRESULT f_read (
 	LEAVE_FF(fp->fs, FR_OK);
 }
 
-
+#if _FS_ASYNC
 /*-----------------------------------------------------------------------*/
 /* Read File Async                                                       */
 /*-----------------------------------------------------------------------*/
@@ -3005,6 +3005,8 @@ FRESULT f_pre_read (
 #endif
 	LEAVE_FF(fp->fs, res);
 }
+
+#endif
 
 
 #if !_FS_READONLY

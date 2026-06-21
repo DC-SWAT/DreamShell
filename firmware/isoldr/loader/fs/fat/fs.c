@@ -20,7 +20,7 @@ enum FILE_STATE {
 typedef struct {
 
 	FIL fp;
-	uint32 state;
+	volatile uint32 state;
 	fs_callback_f *poll_cb;
 	int dma_mode;
 

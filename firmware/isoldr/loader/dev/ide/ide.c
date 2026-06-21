@@ -156,23 +156,23 @@ typedef struct ide_req {
 static struct ide_device ide_devices[MAX_DEVICE_COUNT];
 static u32 device_count = 0;
 
-static u32 g1_dma_part_avail = 0;
-static u32 g1_dma_irq_inited = 0;
-static u32 g1_dma_irq_visible = 1;
-static u32 g1_dma_irq_code_game = 0;
-static u32 g1_dma_irq_code_internal = 0;
+static volatile u32 g1_dma_part_avail = 0;
+static volatile u32 g1_dma_irq_inited = 0;
+static volatile u32 g1_dma_irq_visible = 1;
+static volatile u32 g1_dma_irq_code_game = 0;
+static volatile u32 g1_dma_irq_code_internal = 0;
 
-static u32 g1_ata_aborted = 0;
-static u32 g1_ata_requested = 0;
+static volatile u32 g1_ata_aborted = 0;
+static volatile u32 g1_ata_requested = 0;
 
 static u32 g1_pio_total = 0;
 static u32 g1_pio_avail = 0;
 static u32 g1_pio_trans = 0;
 
 #if defined(DEV_TYPE_IDE)
-static u64 g1_lba28_sector = 0;
-static u32 g1_lba28_count = 0;
-static u8 g1_lba28_cmd = 0;
+static volatile u64 g1_lba28_sector = 0;
+static volatile u32 g1_lba28_count = 0;
+static volatile u8 g1_lba28_cmd = 0;
 
 static void g1_ata_set_sector_and_count(u64 sector, u32 count, u8 drive, int lba28);
 static void g1_lba28_chain_next(void);
@@ -714,7 +714,7 @@ static void g1_lba28_chain_next(void) {
 
 	OUT8(G1_ATA_COMMAND_REG, g1_lba28_cmd);
 
-	if (nb_sectors <= 256) {
+	if (g1_lba28_count <= 256) {
 		g1_dma_set_irq_mask(1);
 	}
 
@@ -2242,6 +2242,7 @@ s32 cdrom_read_sectors(void *buffer, u32 sector, u32 cnt, u8 drive)
 	
 	req.buff = buffer;
 	req.count = cnt;
+	req.bytes = 0;
 	req.dev = &ide_devices[drive & 1];
 	req.cmd = G1_READ_DMA;
 	req.lba = sector;
