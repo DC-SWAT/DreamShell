@@ -2901,7 +2901,7 @@ _continue:
 FRESULT f_abort(FIL* fp) {
 	disk_abort(fp->fs->drv);
 	fp->rbuff = NULL;
-	fp->cur = fp->btr = fp->fptr = 0;
+	fp->cur = fp->btr = fp->fptr = fp->rcnt = 0;
 	fp->clust = fp->sclust;
 	ABORT(fp->fs, FR_OK);
 }
@@ -2931,6 +2931,7 @@ FRESULT f_read_async (
 	fp->btr = btr > remain ? remain : btr; /* Truncate btr by remaining bytes */
 	fp->rbuff = (BYTE*)buff;
 	fp->cur = 0;
+	fp->rcnt = 0;
 	
 	/* Start the transfer */
 	res = f_poll(fp, &bp);

@@ -107,9 +107,9 @@ DSTATUS disk_initialize (
 	if (drv == DISK_DRV_IDE) {
 		return g1_bus_init() ? STA_NOINIT : 0;
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		sd_init_params_t params = {
-			.interface = (drv == DISK_DRV_SD ? SD_IF_SCIF : SD_IF_SCI),
+			.interface = (drv == DISK_DRV_SD_SCIF ? SD_IF_SCIF : SD_IF_SCI),
 			.check_crc = false
 		};
 		return sd_init_ex(&params) ? STA_NOINIT : 0;
@@ -147,25 +147,12 @@ DSTATUS disk_status (
 	BYTE drv		/* Physical drive nmuber (0..) */
 )
 {
-
-#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
-
-	if (drv == DISK_DRV_IDE || drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
-		return 0;
-	}
-
-	return STA_NOINIT;
-
-#elif defined(DEV_TYPE_SD) || defined(DEV_TYPE_IDE)
-
 	(void)drv;
+
+#if defined(DEV_TYPE_SD) || defined(DEV_TYPE_IDE)
 	return 0;
-
 #else
-
-	(void)drv;
 	return STA_NOINIT;
-
 #endif
 }
 
@@ -186,7 +173,7 @@ DRESULT disk_read (
 	if (drv == DISK_DRV_IDE) {
 		return g1_ata_read_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		return sd_read_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
 	}
 
@@ -227,7 +214,7 @@ DRESULT disk_read_async (
 	if (drv == DISK_DRV_IDE) {
 		return g1_ata_read_blocks(sector, count, buff, 0) ? RES_ERROR : RES_OK;
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		return sd_read_blocks(sector, count, buff, 0) ? RES_ERROR : RES_OK;
 	}
 
@@ -286,7 +273,7 @@ DRESULT disk_pre_read (
 	if (drv == DISK_DRV_IDE) {
 		return g1_ata_pre_read_lba(sector, count) ? RES_ERROR : RES_OK;
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		return sd_pre_read(sector, count) ? RES_ERROR : RES_OK;
 	}
 
@@ -331,7 +318,7 @@ DRESULT disk_write (
 	if (drv == DISK_DRV_IDE) {
 		return g1_ata_write_blocks(sector, count, buff, fs_dma_enabled()) ? RES_ERROR : RES_OK;
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		return sd_write_blocks(sector, count, buff, 1) ? RES_ERROR : RES_OK;
 	}
 
@@ -385,7 +372,7 @@ DRESULT disk_ioctl (
 				*(ulong*)buff = (ulong)g1_ata_max_lba();
 			}
 			else
-			if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+			if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 				*(ulong*)buff = (ulong)(sd_get_size() / 512);
 			}
 			else {
@@ -425,7 +412,7 @@ DRESULT disk_ioctl (
 				return g1_ata_flush() ? RES_ERROR : RES_OK;
 			}
 			else
-			if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+			if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 				return RES_OK;
 			}
 
@@ -464,7 +451,7 @@ int disk_poll (
 	if (drv == DISK_DRV_IDE) {
 		return g1_ata_poll();
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		return sd_poll(fs_dma_enabled());
 	}
 
@@ -503,7 +490,7 @@ DRESULT disk_abort (
 		g1_ata_abort();
 		return 0;
 	}
-	else if (drv == DISK_DRV_SD || drv == DISK_DRV_SD_SCI) {
+	else if (drv == DISK_DRV_SD_SCIF || drv == DISK_DRV_SD_SCI) {
 		return sd_abort();
 	}
 

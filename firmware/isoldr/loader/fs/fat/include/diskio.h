@@ -12,7 +12,7 @@
 #if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
 enum {
 	DISK_DRV_IDE = 0,
-	DISK_DRV_SD  = 1,
+	DISK_DRV_SD_SCIF = 1,
 	DISK_DRV_SD_SCI = 2
 };
 #elif defined(DEV_TYPE_IDE)

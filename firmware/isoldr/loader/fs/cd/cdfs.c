@@ -424,6 +424,16 @@ void poll_all(int err) {
 }
 
 
+int fs_async_active(int fd) {
+
+	if(fd < 0 || fd >= MAX_OPEN_FILES || fh[fd].sec0 == 0) {
+		return 0;
+	}
+
+	return fh[fd].async > 0 || fh[fd].poll_cb != NULL;
+}
+
+
 int abort_async(int fd) {
 
 	if(fd < 0 || fd >= MAX_OPEN_FILES)

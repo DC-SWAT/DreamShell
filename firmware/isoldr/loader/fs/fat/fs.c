@@ -39,7 +39,14 @@ static int dma_mode = FS_DMA_SHARED;
 static int dma_mode = 0;
 #endif
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+PARTITION VolToPart[_VOLUMES] = {
+	{DISK_DRV_IDE, 0},
+	{DISK_DRV_SD_SCIF, 0}
+};
+#else
 PARTITION VolToPart[_VOLUMES] = {{0, 0}};
+#endif
 
 #ifdef LOG
 #	define CHECK_FD() \
@@ -70,7 +77,7 @@ static int fs_mount_volume(int vol, BYTE pdrv, int disk_part) {
 	path[0] = '0' + vol;
 
 	VolToPart[vol].pd = pdrv;
-	VolToPart[vol].pt = disk_part + 1;
+	VolToPart[vol].pt = disk_part;
 
 	if(disk_initialize(pdrv) != 0) {
 		return -1;
@@ -89,18 +96,6 @@ static int fs_mount_volume(int vol, BYTE pdrv, int disk_part) {
 #ifdef DEV_TYPE_SD
 static int fs_mount_sd(int vol, int disk_part) {
 
-#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
-
-	if(fs_mount_volume(vol, DISK_DRV_SD, disk_part) == 0) {
-		return 0;
-	}
-
-	OpenLog();
-
-	return fs_mount_volume(vol, DISK_DRV_SD_SCI, disk_part);
-
-#else
-
 	if(fs_mount_volume(vol, DISK_DRV_SD_SCIF, disk_part) == 0) {
 		return 0;
 	}
@@ -108,8 +103,6 @@ static int fs_mount_sd(int vol, int disk_part) {
 	OpenLog();
 
 	return fs_mount_volume(vol, DISK_DRV_SD_SCI, disk_part);
-
-#endif
 }
 #endif
 
@@ -144,19 +137,19 @@ int fs_init(int disk_part) {
 
 	int mounted = 0;
 
+	VolToPart[1].pd = DISK_DRV_SD_SCIF;
+
 	if(fs_mount_volume(0, DISK_DRV_IDE, disk_part) == 0) {
 		mounted++;
 	}
 
-	if(fs_mount_sd(1, 0) == 0) {
+	if(fs_mount_sd(1, disk_part) == 0) {
 		mounted++;
 	}
 
 	if(mounted) {
 		return 0;
 	}
-
-	printf("Error, can't init IDE/SD storage.\n");
 
 #else
 
@@ -179,6 +172,16 @@ int fs_init(int disk_part) {
 #endif
 
 	return -1;
+}
+
+
+int fs_volume_mounted(int vol) {
+
+	if(vol < 0 || vol >= _VOLUMES || !_fat_fs[vol]) {
+		return 0;
+	}
+
+	return _fat_fs[vol]->fs_type != 0;
 }
 
 
@@ -370,7 +373,6 @@ int pre_read(int fd, unsigned int size) {
 #ifdef DEV_TYPE_SD
 	if(file->state == FILE_STATE_ASYNC) {
 		abort_current_async(fd);
-		file->state = FILE_STATE_USED;
 	}
 	file->state = FILE_STATE_ASYNC;
 #endif
@@ -390,7 +392,7 @@ int read_async(int fd, void *ptr, unsigned int size, fs_callback_f *cb) {
 	CHECK_FD();
 
 	if(file->state == FILE_STATE_ASYNC) {
-		abort_current_async(fd);
+		// abort_current_async(fd);
 		file->state = FILE_STATE_USED;
 	}
 
@@ -424,6 +426,14 @@ int abort_async(int fd) {
 	f_abort(&file->fp);
 
 	return 0;
+}
+
+
+int fs_async_active(int fd) {
+
+	CHECK_FD();
+
+	return file->state == FILE_STATE_ASYNC || file->poll_cb != NULL;
 }
 
 

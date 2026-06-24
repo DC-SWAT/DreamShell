@@ -23,6 +23,7 @@
 #define READ_RETRIES    50000
 #define WRITE_RETRIES   150000
 #define MAX_RETRY       2
+#define SD_INIT_RETRIES 50000
 
 
 /* MMC/SD command (in SPI) */
@@ -421,9 +422,9 @@ int sd_init_ex(const sd_init_params_t *params) {
 						
 					++i;
 					
-				} while (i < 300000);
+				} while (i < SD_INIT_RETRIES);
 				
-				if (i < 300000 && send_slow_cmd(CMD58, 0) == 0) { /* Check CCS bit */
+				if (i < SD_INIT_RETRIES && send_slow_cmd(CMD58, 0) == 0) { /* Check CCS bit */
 				
 					for (n = 0; n < 4; n++) 
 						ocr[n] = f_spi_slow_sr_byte(0xff);
@@ -453,9 +454,9 @@ int sd_init_ex(const sd_init_params_t *params) {
 				
 				++i;
 				
-			} while (i < 300000);
+			} while (i < SD_INIT_RETRIES);
 			
-			if (!(i < 300000) || send_slow_cmd(CMD16, 512) != 0)	/* Select R/W block length */
+			if (!(i < SD_INIT_RETRIES) || send_slow_cmd(CMD16, 512) != 0)	/* Select R/W block length */
 				ty = 0;
 		}
 	}

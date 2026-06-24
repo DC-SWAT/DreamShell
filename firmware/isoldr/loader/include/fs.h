@@ -88,7 +88,17 @@ enum FS_IOCTL_CMD {
 	FS_IOCTL_SYNC = 1
 };
 
+#if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
+# define FS_VOL_IDE  0
+# define FS_VOL_SD   1
+#elif defined(DEV_TYPE_IDE)
+# define FS_VOL_IDE  0
+#elif defined(DEV_TYPE_SD)
+# define FS_VOL_SD   0
+#endif
+
 int fs_init(int disk_part);
+int fs_volume_mounted(int vol);
 void fs_shutdown();
 
 void fs_enable_dma(int state);
@@ -110,6 +120,7 @@ int ioctl(int fd, int cmd, void *data);
  */
 int read_async(int fd, void *buf, unsigned int nbyte, fs_callback_f *cb);
 int abort_async(int fd);
+int fs_async_active(int fd);
 int poll(int fd);
 void poll_all(int err);
 
