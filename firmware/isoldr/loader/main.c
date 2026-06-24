@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -13,6 +13,7 @@
 #include <maple.h>
 
 isoldr_info_t *IsoInfo;
+uint32 loader_addr = 0;
 uint32 loader_end;
 
 int main(int argc, char *argv[]) {
@@ -24,8 +25,9 @@ int main(int argc, char *argv[]) {
 		bfont_saved_addr = 0xa0001000;
 	}
 
+	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
+	loader_addr = (uint32)IsoInfo;
 	loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
-	IsoInfo = (isoldr_info_t *)(loader_addr - ISOLDR_PARAMS_SIZE);
 
 	OpenLog();
 	printf(NULL);
@@ -192,7 +194,7 @@ int main(int argc, char *argv[]) {
 			LOGF("Patch GPIO register: %d\n", argc);
 
 			if(IsoInfo->firmware) {
-				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - ISOLDR_PARAMS_SIZE - 0x20000);
+				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - 0x20000);
 				memcpy((void *)new_addr, (void *)IsoInfo->firmware, 0x20000);
 				IsoInfo->firmware = new_addr;
 				LOGF("Loading flashROM dump to %08lx\n", new_addr);

@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C) 2009-2016, 2025 SWAT <http://www.dc-swat.ru>
+!   Copyright (C) 2009-2016, 2025-2026 SWAT <http://www.dc-swat.ru>
 !   Based on Sylverant PSO Patcher code by Lawrence Sebald
 !
 !   This program is free software: you can redistribute it and/or modify
@@ -25,6 +25,8 @@
     .globl      _boot_stack
     .globl      _boot_sr
     .globl      _boot_vbr
+    .globl      _irq_disable
+    .globl      _irq_restore
 
     .text
 start:
@@ -85,14 +87,34 @@ p2_mask:
     .long       0xa0000000
 stack_ptr:
     .long       0x8d000000
-_loader_addr:
-    .long       start
 _loader_size:
     .long       _end - start
-_boot_stub_len:
-    .long       _boot_stub_len - _boot_stub
 
     .align 2
+    ! Disable interrupts, but leave exceptions enabled.
+    ! Returns the old interrupt status.
+_irq_disable:
+    mov.l   _irqd_and,r1
+    mov.l   _irqd_or,r2
+    stc sr,r0
+    and r0,r1
+    or  r2,r1
+    ldc r1,sr
+    rts
+    nop
+
+    .align 2
+_irqd_and:
+    .long   0xefffff0f
+_irqd_or:
+    .long   0x000000f0
+
+    ! Restore interrupts to the state returned by irq_disable().
+_irq_restore:
+    ldc r4,sr
+    rts
+    nop
+
 bios_patch_null:
     nop
     rts
@@ -179,3 +201,5 @@ startaddr:
     .long       start
 p2mask:
     .long       0xa0000000
+_boot_stub_len:
+    .long       _boot_stub_len - _boot_stub

@@ -321,9 +321,7 @@ static inline irq_mask_t irq_get_sr(void) {
 
     \sa irq_disable()
 */
-static inline void irq_restore(irq_mask_t old) {
-    __asm__ volatile("ldc %0, sr" : : "r" (old));
-}
+void irq_restore(irq_mask_t old);
 
 /** Disable interrupts.
 
@@ -336,11 +334,7 @@ static inline void irq_restore(irq_mask_t old) {
 
     \sa irq_restore(), irq_enable()
 */
-static inline irq_mask_t irq_disable(void) {
-    uint32_t mask = (uint32_t)irq_get_sr();
-    irq_restore((mask & 0xefffff0f) | 0x000000f0);
-    return mask;
-}
+irq_mask_t irq_disable(void);
 
 /** Enable all interrupts.
 

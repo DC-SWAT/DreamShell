@@ -2,7 +2,7 @@
  * DreamShell ISO Loader
  * Link script for loader binary
  * Script for -z combreloc: combine and sort reloc sections
- * (c)2009-2017, 2025 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2017, 2025-2026 SWAT <http://www.dc-swat.ru>
  */
 
 OUTPUT_FORMAT("elf32-shl", "elf32-shl",
@@ -12,6 +12,7 @@ ENTRY(start)
 SECTIONS
 {
   /* Read-only sections, merged into text segment: */
+  PROVIDE (__executable_start = 0x8ce00400); . = 0x8ce00400;
   .text           :
   {
     *(.text .stub .text.* .gnu.linkonce.t.*)
