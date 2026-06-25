@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Utils
- * (c)2011-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2011-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -14,6 +14,7 @@
 #include <syscalls.h>
 #include <exception.h>
 #include <naomi/cart.h>
+#include <gpio.h>
 
 #ifndef HAVE_EXPT
 // Just for decreasing ifdef's with HAVE_EXPT
@@ -469,6 +470,24 @@ int patch_memory(const uint32 key, const uint32 val, const uint32 range) {
 			}
 		}
 	}
+
+	return count;
+}
+
+int patch_cable_detection(uint32_t cable_type) {
+
+	static volatile uint32_t pctra;
+	static volatile uint16_t pdtra;
+	uint32_t fake_pctra = (uint32_t)NONCACHED_ADDR((uintptr_t)&pctra);
+	uint32_t fake_pdtra = (uint32_t)NONCACHED_ADDR((uintptr_t)&pdtra);
+	int count = 0;
+
+	pctra = 0;
+	pdtra = (uint16_t)(cable_type << 8);
+	gpio_force_cable_type(cable_type);
+
+	count += patch_memory(PCTRA_ADDR, fake_pctra, 0);
+	count += patch_memory(PDTRA_ADDR, fake_pdtra, 0);
 
 	return count;
 }

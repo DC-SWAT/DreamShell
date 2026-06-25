@@ -11,6 +11,7 @@
 #include <exception.h>
 #include <ubc.h>
 #include <maple.h>
+#include <gpio.h>
 
 isoldr_info_t *IsoInfo;
 uint32 loader_addr = 0;
@@ -188,10 +189,8 @@ int main(int argc, char *argv[]) {
 		}
 
 		if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
-			/* Patch GPIO register to prevent cable detection */
-			argc = patch_memory(0xff800030,
-				(uintptr_t)&IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 0);
-			LOGF("Patch GPIO register: %d\n", argc);
+			argc = patch_cable_detection(GPIO_CABLE_VGA);
+			LOGF("Patch GPIO cable detection: %d\n", argc);
 
 			if(IsoInfo->firmware) {
 				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - 0x20000);

@@ -754,9 +754,7 @@ static int init_cmd() {
 #endif
 
 	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
-		/* Patch GPIO register to prevent cable detection */
-		patch_memory(0xff800030,
-			(uintptr_t)&IsoInfo->cdda_offset[(sizeof(IsoInfo->cdda_offset) / 4) - 1], 5 << 20);
+		patch_cable_detection(GPIO_CABLE_VGA);
 	}
 	return CMD_STAT_COMPLETED;
 }
