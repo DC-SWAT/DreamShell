@@ -34,6 +34,9 @@
 #define GPIO_CABLE_RGB             2
 #define GPIO_CABLE_COMPOSITE       3
 
+/* Reset button pin */
+#define GPIO_PIN_RESET_BUTTON 0
+
 static inline void gpio_set_as_input(int pin) {
     PCTRA = (PCTRA & ~GPIO_PIN_MASK(pin)) | GPIO_PIN_CFG_IN;
 }

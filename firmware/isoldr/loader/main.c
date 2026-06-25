@@ -22,10 +22,6 @@ int main(int argc, char *argv[]) {
 	(void)argc;
 	(void)argv;
 
-	if(is_custom_bios() && is_no_syscalls()) {
-		bfont_saved_addr = 0xa0001000;
-	}
-
 	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
 	loader_addr = (uint32)IsoInfo;
 	loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
@@ -49,8 +45,7 @@ int main(int argc, char *argv[]) {
 
 	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI || IsoInfo->syscalls == 0) {
 		if(loader_addr < ISOLDR_DEFAULT_ADDR_LOW
-			|| (malloc_heap_pos() < ISOLDR_DEFAULT_ADDR_LOW)
-			|| (is_custom_bios() && is_no_syscalls())) {
+			|| (malloc_heap_pos() < ISOLDR_DEFAULT_ADDR_LOW)) {
 			emu_all_sc = 1;
 		}
 		enable_syscalls(emu_all_sc);

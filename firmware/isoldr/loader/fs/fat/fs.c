@@ -137,13 +137,11 @@ int fs_init(int disk_part) {
 
 	int mounted = 0;
 
-	VolToPart[1].pd = DISK_DRV_SD_SCIF;
-
-	if(fs_mount_volume(0, DISK_DRV_IDE, disk_part) == 0) {
+	if(fs_mount_sd(0, disk_part) == 0) {
 		mounted++;
 	}
 
-	if(fs_mount_sd(1, disk_part) == 0) {
+	if(fs_mount_volume(1, DISK_DRV_IDE, disk_part) == 0) {
 		mounted++;
 	}
 

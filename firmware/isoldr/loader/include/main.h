@@ -66,15 +66,12 @@
 
 #define SH4_OPCODE_NOP 0x0009
 
-#define is_custom_bios() (*(uint16 *)NONCACHED_ADDR(BIOS_ROM_ADDR + 0x100018) != 0x4e46)
-#define is_no_syscalls() (*(uint16 *)NONCACHED_ADDR(RAM_START_ADDR + 0x00100) != 0x2f06)
-
 #define HOLLY_REV_VA1 0x10
 #define HOLLY_REV_VA0 0x0b
 #define holly_revision() (*(vuint32 *)NONCACHED_ADDR(0x005f689c))
 #define is_dreamcast() (*(vuint32 *)NONCACHED_ADDR(0x005f74b0) == 0)
-
-#define GPIO_PIN_RESET_BUTTON 0
+#define is_naomi_2()   (*(vuint32 *)NONCACHED_ADDR(0xA8800000) == 0xE1AD0000)
+#define is_naomi_1()   (!is_dreamcast() && !is_naomi_2())
 
 extern isoldr_info_t *IsoInfo;
 extern uint32 loader_size;
