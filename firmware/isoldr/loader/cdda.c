@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback emulation
- * (c)2014-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #include <main.h>
@@ -40,6 +40,23 @@
 #define AICA_MEMORY_8MB_END 0x01000000
 #define AICA_MEMORY_END_ARM 0x00200000
 #define AICA_MEMORY_8MB_END_ARM 0x00800000
+
+/* SH4 timer counter for PCM/ADPCM buffer polling at 44100 Hz */
+#define CDDA_BUFFER_TM_SCALE   1000000
+#define CDDA_BUFFER_TM_ROUND   (CDDA_BUFFER_TM_SCALE / 2)
+#define CDDA_BUFFER_TM_OFFSET  5
+
+/* Dreamcast VA0 motherboard */
+#define CDDA_BUFFER_TM_DC_VA0  4428940
+
+/* Dreamcast VA1 motherboard */
+#define CDDA_BUFFER_TM_DC_VA1  4417847
+
+/* NAOMI motherboard */
+#define CDDA_BUFFER_TM_NAOMI   4428818
+
+/* NAOMI 2 motherboard */
+#define CDDA_BUFFER_TM_NAOMI_2 4429154
 
 #define aica_dma_in_progress() AICA_DMA_ADST
 #define aica_dma_disable() AICA_DMA_ADEN = 0
@@ -199,36 +216,38 @@ static void aica_transfer(uint8 *data, uint32 dest, uint32 size) {
 #endif
 }
 
+static uint32 cdda_buffer_ticks_per_sample(void) {
+	if(is_naomi_2()) {
+		return CDDA_BUFFER_TM_NAOMI_2;
+	}
+	if(is_naomi_1()) {
+		return CDDA_BUFFER_TM_NAOMI;
+	}
+	if(holly_revision() <= HOLLY_REV_VA0) {
+		return CDDA_BUFFER_TM_DC_VA0;
+	}
+	return CDDA_BUFFER_TM_DC_VA1;
+}
+
+static uint32 cdda_channel_samples(uint32 size) {
+	if(cdda->aica_format == AICA_SM_ADPCM_LS) {
+		return size;
+	}
+	return (size >> 1) / (cdda->bitsize >> 3);
+}
+
+static uint32 cdda_buffer_tm(uint32 size) {
+	const uint32 ticks_per_sample = cdda_buffer_ticks_per_sample();
+	const uint32 samples = cdda_channel_samples(size);
+	uint32 count = (uint32)(((uint64)samples * ticks_per_sample +
+		CDDA_BUFFER_TM_ROUND) / CDDA_BUFFER_TM_SCALE);
+
+	return count - CDDA_BUFFER_TM_OFFSET;
+}
+
 static void setup_pcm_buffer(void) {
-	/* 
-	 * SH4 timer counter value for polling playback position.
-	 *
-	 * Measured values for PCM 16-bit 44100 Hz:
-	 * 
-	 * VA1 motherboard:
-	 * 32KB - 36185  (small cumulative error)
-	 * 16KB - 18090  (no error)
-	 * 8KB  - 9043   (small error)
-	 * 
-	 * VA0 motherboard:
-	 * 32KB - 36277  (no error)
-	 * 16KB - 18136  (small error)
-	 * 8KB  - 9065   (small error)
-	 *
-	 * Measured values for ADPCM 4-bit 44100 Hz:
-	 * 
-	 * VA1 motherboard:
-	 * 32KB - 144758 (no error)
-	 * 16KB - 72376  (no error)
-	 * 8KB  - 36185  (small error)
-	 * 
-	 * VA0 motherboard:
-	 * 32KB - 145123 (no error)
-	 * 16KB - 72559  (no error)
-	 * 8KB  - 36277  (small error)
-	 */
-	int is_va0 = (holly_revision() <= HOLLY_REV_VA0 ? 1 : 0);
-	cdda->end_tm = is_va0 ? 36277 : 36185;
+	const int naomi = !is_dreamcast();
+
 	cdda->size = 0x8000;
 
 	uint32 shift = 0;
@@ -242,45 +261,49 @@ static void setup_pcm_buffer(void) {
 	switch(cdda->bitsize) {
 #ifdef HAVE_CDDA_ADPCM
 		case 4:
-			/**
-			 * ADPCM 4-bit decoded to 16-bit in AICA.
-			 * So we can easy save 16KB without IRQ.
-			 */
-			ram_usage >>= 1;
-			cdda->size >>= 1;
-			cdda->end_tm = is_va0 ? 72559 : 72376;
-
-			if(avail_mem < ram_usage) {
+			if(!naomi) {
+				/**
+				 * ADPCM 4-bit decoded to 16-bit in AICA.
+				 * So we can easy save 16KB without IRQ.
+				 */
 				ram_usage >>= 1;
 				cdda->size >>= 1;
-				cdda->end_tm = is_va0 ? 36277 : 36185;
+
+				if(avail_mem < ram_usage) {
+					ram_usage >>= 1;
+					cdda->size >>= 1;
+				}
 			}
 			break;
 #endif
 		case 16:
 		default:
-			if(exception_inited()) {
-				/**
-				 * Can polling faster, save 16KB or 24KB.
-				 */
-				ram_usage >>= 1;
-				cdda->size >>= 1;
-				cdda->end_tm = is_va0 ? 18136 : 18090;
+			if(naomi && avail_mem > (cdda->size << 2)) {
+				cdda->size <<= 2;
+				ram_usage <<= 2;
 			}
-			if(avail_mem < ram_usage) {
-				shift = (exception_inited() ? 1 : 2);
-				ram_usage >>= shift;
-				cdda->size >>= shift;
-				cdda->end_tm = is_va0 ? 9065 : 9043;
+			else {
+				if(exception_inited()) {
+					/**
+					 * Can polling faster, save 16KB or 24KB.
+					 */
+					ram_usage >>= 1;
+					cdda->size >>= 1;
+				}
+				if(avail_mem < ram_usage) {
+					shift = (exception_inited() ? 1 : 2);
+					ram_usage >>= shift;
+					cdda->size >>= shift;
+				}
 			}
 			break;
 	}
 
-	if(cdda->alloc_buff == NULL) {
-		cdda->alloc_buff = malloc(ram_usage + 32);
-	}
+	cdda->end_tm = cdda_buffer_tm(cdda->size);
 
-	cdda->buff[PCM_TMP_BUFF] = (uint8 *)ALIGN32_ADDR((uint32)cdda->alloc_buff);
+	if(cdda->buff[PCM_TMP_BUFF] == NULL) {
+		cdda->buff[PCM_TMP_BUFF] = aligned_alloc(32, ram_usage);
+	}
 	if(cdda->trans_method < PCM_TRANS_SQ_SPLIT) {
 		cdda->buff[PCM_DMA_BUFF] = cdda->buff[PCM_TMP_BUFF] + (ram_usage >> 1);
 	} else {
@@ -288,8 +311,8 @@ static void setup_pcm_buffer(void) {
 	}
 
 	/* Setup buffer at end of sound memory */
-	const uint32 aica_memory_end = malloc_heap_pos() > RAM_END_ADDR ?
-		AICA_MEMORY_8MB_END : AICA_MEMORY_END;
+	const uint32 aica_memory_end = is_dreamcast() ?
+		AICA_MEMORY_END : AICA_MEMORY_8MB_END;
 	cdda->aica_left[0] = aica_memory_end - cdda->size;
 	cdda->aica_left[1] = cdda->aica_left[0] + (cdda->size >> 2);
 
@@ -374,8 +397,8 @@ static void aica_stop_clean_cdda() {
 static void aica_setup_cdda(int clean) {
 
 	uint32 val;
-	const uint32 aica_memory_end = malloc_heap_pos() > RAM_END_ADDR ?
-		AICA_MEMORY_8MB_END_ARM : AICA_MEMORY_END_ARM;
+	const uint32 aica_memory_end = is_dreamcast() ?
+		AICA_MEMORY_END_ARM : AICA_MEMORY_8MB_END_ARM;
 	const uint32 smp_ptr = aica_memory_end - cdda->size;
 	const int smp_size = cdda->size >> 1;
 
@@ -422,8 +445,8 @@ static void aica_setup_cdda(int clean) {
 	CHNREG32(cdda->right_channel, 16) = 0x1f;
 	CHNREG32(cdda->right_channel, 4)  = (smp_ptr + smp_size) & 0xffff;
 
-	/* Channels check value (for both the same) */
-	cdda->check_status = 0x4000 | (cdda->aica_format << 7) | 0x200 | (smp_ptr >> 16);
+	cdda->left_check_status = 0x4000 | (cdda->aica_format << 7) | 0x200 | (smp_ptr >> 16);
+	cdda->right_check_status = 0x4000 | (cdda->aica_format << 7) | 0x200 | ((smp_ptr + smp_size) >> 16);
 
 	/* start play | format | use loop */
 	val = 0xc000 | (cdda->aica_format << 7) | 0x200;
@@ -480,14 +503,14 @@ static int aica_check_cdda(void) {
 	g2_lock();
 
 	val = CHNREG32(cdda->left_channel, 0) & 0xffff;
-	if (val != cdda->check_status) {
+	if (val != cdda->left_check_status) {
 		invalid_level |= 0x81;
-		// LOGF("CDDA: L CON %04lx != %04lx\n", val, cdda->check_status);
+		// LOGF("CDDA: L CON %04lx != %04lx\n", val, cdda->left_check_status);
 	}
 	val = CHNREG32(cdda->right_channel, 0) & 0xffff;
-	if (val != cdda->check_status) {
+	if (val != cdda->right_check_status) {
 		invalid_level |= 0x82;
-		// LOGF("CDDA: R CON %04lx != %04lx\n", val, cdda->check_status);
+		// LOGF("CDDA: R CON %04lx != %04lx\n", val, cdda->right_check_status);
 	}
 
 	if (invalid_level) {
@@ -615,6 +638,7 @@ uint32 aica_get_pos(void) {
 }
 
 static void aica_init(void) {
+	const uint32 ram_mode = is_dreamcast() ? 0 : (1 << 9);
 
 	g2_lock();
 
@@ -630,7 +654,7 @@ static void aica_init(void) {
 	}
 
 	g2_fifo_wait();
-	SNDREG32(0x2800) = 0x000f;
+	SNDREG32(0x2800) = 0x000f | ram_mode;
 	*(vuint32 *)NONCACHED_ADDR(AICA_MEMORY_START) = 0xeafffff8;
 
 	g2_fifo_wait();
@@ -639,26 +663,14 @@ static void aica_init(void) {
 	g2_unlock();
 }
 
-static void aica_dma_init(void) {
-
-	uint32 main_addr = PHYS_ADDR((uint32)cdda->buff[0]);
-	uint32 sound_addr = AICA_MEMORY_END - cdda->size;
-
-	AICA_DMA_G2APRO = 0x4659007F;    // Protection code
-	AICA_DMA_ADEN   = 0;             // Disable wave DMA
-	AICA_DMA_ADDIR  = 0;             // To wave memory
-	AICA_DMA_ADTRG  = 0;             // Initiate by CPU
-	AICA_DMA_ADSTAR = main_addr;     // System memory address
-	AICA_DMA_ADSTAG = sound_addr;    // Wave memory address
-	AICA_DMA_ADLEN  = cdda->size;    // Data size
-	AICA_DMA_ADEN   = 1;             // Enable wave DMA
-}
-
 #endif
 
 static inline uint32 aica_get_pseudo_pos() {
+	const uint32 ticks_per_sample = cdda_buffer_ticks_per_sample();
 	const uint32 tm = cdda->end_tm - timer_count(cdda->timer);
-	return ((tm * 10000) / 44165);
+
+	return (uint32)(((uint64)(tm + CDDA_BUFFER_TM_OFFSET) * CDDA_BUFFER_TM_SCALE) /
+		ticks_per_sample);
 }
 
 static inline int aica_suitable_pos() {
@@ -952,7 +964,6 @@ int CDDA_Init() {
 
 #ifdef HAVE_CDDA_TEST
 	aica_init();
-	aica_dma_init();
 #endif
 
 #if defined(HAVE_EXPT)
@@ -1123,7 +1134,6 @@ static void play_track(uint32 track) {
 		}
 	}
 
-	cdda->stat = CDDA_STAT_FILL;
 	cdda->restore_count = 0;
 
 	gd_state_t *GDS = get_GDS();
@@ -1237,6 +1247,7 @@ int CDDA_PlaySectors(uint32 first_lba, uint32 last_lba, uint32 loop) {
 
 		uint32 offset = cdda->offset + ((first_lba - cdda->lba) * RAW_SECTOR_SIZE);
 		lseek(cdda->fd, sector_align(offset), SEEK_SET);
+		cdda->stat = CDDA_STAT_FILL;
 	}
 	return COMPLETED;
 }
@@ -1250,8 +1261,8 @@ int CDDA_Seek(uint32 offset) {
 		aica_stop_clean_cdda();
 		uint32 value = cdda->offset + ((offset - cdda->lba) * RAW_SECTOR_SIZE);
 		lseek(cdda->fd, sector_align(value), SEEK_SET);
-		cdda->stat = CDDA_STAT_FILL;
 		aica_setup_cdda(1);
+		cdda->stat = CDDA_STAT_FILL;
 	}
 	GDS->lba = offset;
 	return COMPLETED;
@@ -1280,7 +1291,6 @@ int CDDA_Release() {
 	if(IsoInfo->emu_cdda && cdda->fd > FILEHND_INVALID) {
 		
 		lseek(cdda->fd, cdda->cur_offset + cdda->offset, SEEK_SET);
-		cdda->stat = CDDA_STAT_FILL;
 		aica_setup_cdda(1);
 #ifdef _FS_ASYNC
 #	ifdef DEV_TYPE_SD
@@ -1292,6 +1302,7 @@ int CDDA_Release() {
 		fs_enable_dma(FS_DMA_HIDDEN);
 #	endif
 #endif /* _FS_ASYNC */
+		cdda->stat = CDDA_STAT_FILL;
 	}
 
 	GDS->drv_stat = CD_STATUS_PLAYING;
@@ -1316,9 +1327,9 @@ int CDDA_Stop(void) {
 		cdda->fd = FILEHND_INVALID;
 	}
 
-	if(cdda->alloc_buff) {
-		free(cdda->alloc_buff);
-		cdda->alloc_buff = NULL;
+	if(cdda->buff[PCM_TMP_BUFF]) {
+		free(cdda->buff[PCM_TMP_BUFF]);
+		cdda->buff[PCM_TMP_BUFF] = NULL;
 	}
 
 	GDS->cdda_track = 0;
@@ -1356,6 +1367,7 @@ static void play_next_track() {
 			GDS->lba = TOC_LBA(IsoInfo->toc.entry[next_track - 1]);
 			uint32 offset = cdda->offset;
 			lseek(cdda->fd, sector_align(offset), SEEK_SET);
+			cdda->stat = CDDA_STAT_FILL;
 		}
 	}
 	else if(cdda->loop != 0) {
@@ -1581,7 +1593,7 @@ void CDDA_Test(void) {
 
 		while(cdda->stat != CDDA_STAT_IDLE) {
 			CDDA_MainLoop();
-			// aica_test_pos();
+			aica_test_pos();
 			timer_spin_sleep_bios(10);
 		}
 	}

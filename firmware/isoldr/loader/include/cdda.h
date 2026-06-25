@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * CDDA audio playback
- * (c)2014-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _CDDA_H
@@ -43,7 +43,6 @@ typedef struct cdda_ctx {
 	uint32 track_size;     /* Track size */
 	uint32 lba;            /* Track LBA */
 
-	uint8 *alloc_buff;     /* Dynamic PCM buffer from malloc */
 	uint8 *buff[2];        /* PCM buffer in main RAM */
 	uint32 aica_left[2];   /* First/second buffer for channel in sound RAM */
 	uint32 aica_right[2];  /* First/second buffer for channel in sound RAM */
@@ -62,7 +61,8 @@ typedef struct cdda_ctx {
 	uint32 end_tm;
 
 	/* Check status value for normalize playback */
-	uint32 check_status;
+	uint32 left_check_status;
+	uint32 right_check_status;
 	uint32 restore_count;
 	uint32 restore;
 
