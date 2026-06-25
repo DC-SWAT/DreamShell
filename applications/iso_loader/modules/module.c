@@ -1833,7 +1833,7 @@ void isoLoader_DefaultPreset() {
 			GUI_WidgetSetState(self.memory_chk[mi], 1);
 			isoLoader_toggleMemory(self.memory_chk[mi]);
 			if(mlen < 8) {
-				GUI_TextEntrySetText(self.memory_text, &mem_str[4]);
+				GUI_TextEntrySetText(self.memory_text, &mem_str[3]);
 			}
 			break;
 		}
@@ -1890,6 +1890,7 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 	char *filename = isoldr_make_preset_filename(filepath, self.md5);
 
 	memset(&info, 0, sizeof(info));
+	info.image_type = self.image_type;
 	memset(title, 0, sizeof(title));
 
 	for(int i = 1; i < sizeof(self.async) >> 2; i++) {
@@ -2112,7 +2113,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 				GUI_WidgetSetState(self.heap[i], 1);
 				isoLoader_toggleHeap(self.heap[i]);
 				if (hlen < 8) {
-					GUI_TextEntrySetText(self.heap_memory_text, &heap_str[4]);
+					GUI_TextEntrySetText(self.heap_memory_text, &heap_str[1]);
 				}
 				break;
 			}
@@ -2145,7 +2146,7 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 			GUI_WidgetSetState(self.memory_chk[mi], 1);
 			isoLoader_toggleMemory(self.memory_chk[mi]);
 			if (mlen < 8) {
-				GUI_TextEntrySetText(self.memory_text, &memory_str[4]);
+				GUI_TextEntrySetText(self.memory_text, &memory_str[3]);
 			}
 			break;
 		}
