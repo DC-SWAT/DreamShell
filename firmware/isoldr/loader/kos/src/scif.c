@@ -22,7 +22,7 @@ kernel or for debugging it.
 /* SCIF registers */
 #define SCIFREG08(x) *((volatile uint8 *)(x))
 #define SCIFREG16(x) *((volatile uint16 *)(x))
-#define SCSMR2	SCIFREG16(0xffeb0000)
+#define SCSMR2	SCIFREG16(0xffe80000)
 #define SCBRR2	SCIFREG08(0xffe80004)
 #define SCSCR2	SCIFREG16(0xffe80008)
 #define SCFTDR2	SCIFREG08(0xffe8000C)
@@ -75,19 +75,16 @@ int scif_init() {
 		SCBRR2 = (uint8)(50000000 / (32 * 115200)) - 1;
 
 	/* Wait a bit for it to stabilize */
-	for (i=0; i<10000; i++)
+	for (i=0; i<800000; i++)
 		__asm__("nop");
 
-#ifdef DEV_TYPE_SD
 	/* Unreset, disable hardware flow control, triggers on 8 bytes */
 	SCFCR2 = 0x40;
+
+#ifdef DEV_TYPE_SD
 	/* RTS can be used as CS for SCI-SPI SD card on NAOMI */
 	SCSPTR2 = (RTSIO | RTSDT);
 #else
-	/* Unreset, enable hardware flow control, triggers on 8 bytes */
-	SCFCR2 = 0x48;
-
-	/* Disable manual pin control */
 	SCSPTR2 = 0;
 #endif
 
@@ -101,7 +98,7 @@ int scif_init() {
 	SCSCR2 = 0x30;
 
 	/* Wait a bit for it to stabilize */
-	for (i=0; i<10000; i++)
+	for (i=0; i<800000; i++)
 		__asm__("nop");
 
 	return 0;
@@ -125,7 +122,7 @@ int scif_read() {
 
 /* Write one char to the serial port (call serial_flush()!) */
 int scif_write(int c) {
-	int timeout = 100000;
+	int timeout = 800000;
 
 	/* Wait until the transmit buffer has space. Too long of a failure
 	   is indicative of no serial cable. */
@@ -145,7 +142,7 @@ int scif_write(int c) {
 
 /* Flush all FIFO'd bytes out of the serial port buffer */
 int scif_flush() {
-	int timeout = 100000;
+	int timeout = 800000;
 
 	SCFSR2 &= 0xbf;
 
