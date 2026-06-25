@@ -282,6 +282,7 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	int fastboot = 0, low = 0, emu_vmu = 0, scr_hotkey = 0, region = -1;
 	int boot_mode = BOOT_MODE_DIRECT;
 	int bin_type = BIN_TYPE_AUTO;
+	int naomi_set = 0;
 	uint32_t heap = HEAP_MODE_AUTO, emu_cdda = 0;
 	char title[32] = "";
 	char device[8] = "";
@@ -314,6 +315,7 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 			{ "title",    CONF_STR,   (void *) title       },
 			{ "device",   CONF_STR,   (void *) device      },
 			{ "fastboot", CONF_INT,   (void *) &fastboot   },
+			{ "naomi",    CONF_INT,   (void *) &naomi_set  },
 			{ "pa1",      CONF_STR,   (void *) patch_a[0]  },
 			{ "pv1",      CONF_STR,   (void *) patch_v[0]  },
 			{ "pa2",      CONF_STR,   (void *) patch_a[1]  },
@@ -382,15 +384,20 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	}
 
 	/* Platform-specific address overrides (applied even when preset is loaded) */
-	if(actual_type == BIN_TYPE_WINCE) {
-		/* WinCE: use minimum address on all hardware and all images */
+	if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL
+	        && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI
+	        && !naomi_set) {
+		/* Non-retail (NAOMI arcade) hardware with Dreamcast disc image */
+		exec_addr = 0x8dfc0000;
+		isoldr->boot_mode = BOOT_MODE_IPBIN;
+	}
+	else if(actual_type == BIN_TYPE_WINCE) {
+		/* WinCE: use minimum address on retail hardware */
 		exec_addr = ISOLDR_DEFAULT_ADDR_MIN;
 	}
-	else if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL
+
+	if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL
 	        && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI) {
-		/* Non-retail (NAOMI arcade) hardware with non-ROM non-WinCE image */
-		exec_addr = 0x8dfe0000;
-		isoldr->boot_mode = BOOT_MODE_IPBIN;
 		isoldr->firmware = 1;
 	}
 
@@ -487,6 +494,11 @@ int isoldr_save_preset(isoldr_info_t *info, const char *filename,
 		strncat(result, "file = ", sizeof(result) - strlen(result) - 1);
 		strncat(result, alt_file, sizeof(result) - strlen(result) - 1);
 		strncat(result, "\n", sizeof(result) - strlen(result) - 1);
+	}
+
+	if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL
+	        && info->image_type != IMAGE_TYPE_ROM_NAOMI) {
+		strncat(result, "naomi = 1\n", sizeof(result) - strlen(result) - 1);
 	}
 
 	result_len = strlen(result);

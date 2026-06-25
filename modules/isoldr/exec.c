@@ -43,7 +43,7 @@ void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 par
     irq_disable();
 
     /* Flush the data cache for the source area */
-    dcache_flush_range((uint32)image, length);
+    dcache_wback_range((uint32)image, length);
 
     /* Copy over the trampoline */
     for(i = 0; i < tcount; i++)
@@ -58,7 +58,7 @@ void isoldr_exec_at(const void *image, uint32 length, uint32 address, uint32 par
     values[4] = params_len;         /* Params size */
 
     /* Flush both caches for the trampoline area */
-    icache_flush_range((uint32)buffer, tcount * 4);
+    icache_sync_range((uint32)buffer, tcount * 4);
 
     /* Shut us down */
     arch_shutdown();

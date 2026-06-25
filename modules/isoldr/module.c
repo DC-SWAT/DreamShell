@@ -573,7 +573,7 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 				else {
 					addr = ISOLDR_DEFAULT_ADDR;
 
-					dcache_flush_range((uintptr_t)buff, sc_len);
+					dcache_wback_range((uintptr_t)buff, sc_len);
 					info->syscalls = (uintptr_t)buff;
 					info->heap = HEAP_MODE_BEHIND;
 					info->emu_cdda = 0;
@@ -610,42 +610,13 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 					info->bleem = 0;
 				}
 				else {
-					dcache_flush_range((uintptr_t)buff, blen);
+					dcache_wback_range((uintptr_t)buff, blen);
 					addr = ISOLDR_DEFAULT_ADDR_HIGH - 8000;
 					info->bleem = (uintptr_t)buff;
 					info->heap = HEAP_MODE_BEHIND;
 				}
 				fs_close(fd);
 			}
-		}
-	}
-
-	if(info->firmware == 1) {
-
-		snprintf(fn, NAME_MAX, "%s/firmware/flash/dcus_ntsc.bin", getenv("PATH"));
-		fd = fs_open(fn, O_RDONLY);
-
-		if(fd != FILEHND_INVALID) {
-			size_t flen = fs_total(fd);
-			uint8_t *buff = (uint8_t *) memalign(32, flen);
-
-			if(buff != NULL) {
-				if(fs_read(fd, buff, flen) == flen) {
-					dcache_flush_range((uintptr_t)buff, flen);
-					info->firmware = (uintptr_t)buff;
-				}
-				else {
-					ds_printf("DS_ERROR: Can't read flashrom dump file: %s\n", fn);
-					free(buff);
-				}
-			}
-			else {
-				ds_printf("DS_ERROR: No memory for flashrom\n");
-			}
-			fs_close(fd);
-		}
-		else {
-			ds_printf("DS_ERROR: Can't open flashrom dump file: %s\n", fn);
 		}
 	}
 
@@ -703,8 +674,36 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		}
 		fs_close(fd);
 
-		dcache_flush_range((uintptr_t)buff, hlen + vlen);
+		dcache_wback_range((uintptr_t)buff, hlen + vlen);
 		info->firmware = (uintptr_t)buff;
+	}
+	else if(info->firmware == 1) {
+
+		snprintf(fn, NAME_MAX, "%s/firmware/flash/dcus_ntsc.bin", getenv("PATH"));
+		fd = fs_open(fn, O_RDONLY);
+
+		if(fd != FILEHND_INVALID) {
+			size_t flen = fs_total(fd);
+			uint8_t *buff = (uint8_t *) memalign(32, flen);
+
+			if(buff != NULL) {
+				if(fs_read(fd, buff, flen) == flen) {
+					dcache_wback_range((uintptr_t)buff, flen);
+					info->firmware = (uintptr_t)buff;
+				}
+				else {
+					ds_printf("DS_ERROR: Can't read flashrom dump file: %s\n", fn);
+					free(buff);
+				}
+			}
+			else {
+				ds_printf("DS_ERROR: No memory for flashrom\n");
+			}
+			fs_close(fd);
+		}
+		else {
+			ds_printf("DS_ERROR: Can't open flashrom dump file: %s\n", fn);
+		}
 	}
 
 	if(addr != ISOLDR_DEFAULT_ADDR) {
