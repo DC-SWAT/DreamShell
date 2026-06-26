@@ -23,7 +23,8 @@
 #define READ_RETRIES    50000
 #define WRITE_RETRIES   150000
 #define MAX_RETRY       2
-#define SD_INIT_RETRIES 50000
+#define SD_READY_RETRIES 4000
+#define SD_INIT_RETRIES 5000
 
 
 /* MMC/SD command (in SPI) */
@@ -293,7 +294,7 @@ static uint8 send_slow_cmd (
 		res = f_spi_slow_sr_byte(0xff);
 		i++;
 		
-	} while ((res != 0xFF) && i < 100000);
+	} while ((res != 0xFF) && i < SD_READY_RETRIES);
 	
 	if (res != 0xff) {
 #ifdef SD_DEBUG
@@ -415,9 +416,13 @@ int sd_init_ex(const sd_init_params_t *params) {
 			if (ocr[2] == 0x01 && ocr[3] == 0xAA) { /* The card can work at vdd range of 2.7-3.6V */
 			
 				do {
+					uint8 rc;
 					
 					/* ACMD41 with HCS bit */
-					if (send_slow_cmd(CMD55, 0) <= 1 && send_slow_cmd(CMD41, 1UL << 30) == 0) 
+					rc = send_slow_cmd(CMD55, 0);
+					if (rc == 0xff)
+						break;
+					if (rc <= 1 && send_slow_cmd(CMD41, 1UL << 30) == 0)
 						break;
 						
 					++i;
@@ -438,15 +443,22 @@ int sd_init_ex(const sd_init_params_t *params) {
 			ty = (send_slow_cmd(CMD55, 0) <= 1 && send_slow_cmd(CMD41, 0) <= 1) ? 2 : 1; /* SDC : MMC */
 			
 			do {
+				uint8 rc;
 				
 				if (ty == 2) {
 					
-					if (send_slow_cmd(CMD55, 0) <= 1 && send_slow_cmd(CMD41, 0) == 0) /* ACMD41 */
+					rc = send_slow_cmd(CMD55, 0);
+					if (rc == 0xff)
+						break;
+					if (rc <= 1 && send_slow_cmd(CMD41, 0) == 0) /* ACMD41 */
 						break;
 						
 				} else {
 					
-					if (send_slow_cmd(CMD1, 0) == 0) { /* CMD1 */
+					rc = send_slow_cmd(CMD1, 0);
+					if (rc == 0xff)
+						break;
+					if (rc == 0) { /* CMD1 */
 						is_mmc = 1;
 						break;
 					}								
@@ -459,9 +471,10 @@ int sd_init_ex(const sd_init_params_t *params) {
 			if (!(i < SD_INIT_RETRIES) || send_slow_cmd(CMD16, 512) != 0)	/* Select R/W block length */
 				ty = 0;
 		}
+
+		if (ty)
+			send_slow_cmd(CMD59, 1);
 	}
-	
-	send_slow_cmd(CMD59, 1);		// crc check
 	
 #ifdef SD_DEBUG
 	LOGFF("card type = 0x%02x\n", ty & 0xff);
