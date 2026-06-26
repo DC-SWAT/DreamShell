@@ -751,6 +751,7 @@ static int init_cmd() {
 	else {
 		spi_init();
 	}
+	IsoInfo->alt_read = 1;
 #endif
 
 	if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
@@ -1263,7 +1264,7 @@ int gdcReqDmaTrans(int gd_chn, int *dmabuf) {
 	GDS->requested -= dmabuf[1];
 
 	if(fs_dma_enabled() == FS_DMA_STREAM) {
-#if defined(_FS_ASYNC) && !defined(DEV_TYPE_SD)
+#if defined(_FS_ASYNC)
 		if(read_async(iso_fd, (uint8 *)dmabuf[0], dmabuf[1], data_transfer_cb) < 0) {
 			return -1;
 		}
@@ -1299,7 +1300,7 @@ int gdcCheckDmaTrans(int gd_chn, int *size) {
 		LOGF("ERROR: status = %s\n", stat_name[GDS->status + 1]);
 		return -1;
 	}
-#if defined(_FS_ASYNC) && !defined(DEV_TYPE_SD)
+#if defined(_FS_ASYNC)
 	if(fs_dma_enabled() == FS_DMA_STREAM) {
 		do {} while(poll(iso_fd) > 1);
 	}
