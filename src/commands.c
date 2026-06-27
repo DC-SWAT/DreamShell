@@ -1189,7 +1189,7 @@ static int builtin_addr(int argc, char *argv[]) {
 
 		ds_printf("DS_PROCESS: Loading %s (%i bytes) at 0x%x\n", argv[3], len, (uint32)ad);
 
-		icache_flush_range((uint32)ad, len);
+		icache_sync_range((uint32)ad, len);
 
 		ds_printf("DS_OK: Complete.\n");
 		return CMD_ERROR;

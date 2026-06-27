@@ -37,7 +37,10 @@ int InitApps() {
 
 
 void ShutdownApps() {
-	listDestroy(apps, (listFreeItemFunc *) FreeApp);
+	if(apps != NULL) {
+		listDestroy(apps, (listFreeItemFunc *) FreeApp);
+		apps = NULL;
+	}
 	curOpenedApp = 0;
 }
 
@@ -144,6 +147,10 @@ int IsFileSupportedByApp(App_t *app, const char *filename) {
 void UnLoadOldApps() {
 	App_t *a;
 	Item_t *i;
+
+	if(apps == NULL) {
+		return;
+	}
 
 	SLIST_FOREACH(i, apps, list) {
 

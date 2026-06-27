@@ -341,8 +341,8 @@ cmd_elf_prog_t *cmd_elf_load(const char * fn) {
 	free(img);
 	DBG(("elf_load final ELF stats: memory image at %p, size %08lx\n\tentry pt %p\n", out->data, out->size, out->start));
 	
-	/* Flush the icache for that zone */
-	icache_flush_range((uint32)out->data, out->size);
+	/* Sync the icache for that zone */
+	icache_sync_range((uint32)out->data, out->size);
 
 	return out;
 

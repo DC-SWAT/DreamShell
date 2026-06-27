@@ -599,7 +599,7 @@ static void *VideoThread(void *ptr) {
 
 			if(screen_changed) {
 				if(video_dma) {
-					dcache_flush_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
+					dcache_wback_range((uintptr_t)sdl_dc_buftex, sdl_dc_wtex * sdl_dc_htex * 2);
 					do {
 						int rs = pvr_txr_load_dma(sdl_dc_buftex, sdl_dc_memtex,
 							sdl_dc_wtex * sdl_dc_htex * 2, 1, NULL, 0);
