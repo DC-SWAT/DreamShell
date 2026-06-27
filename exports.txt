@@ -293,6 +293,8 @@ InitGUI
 ShutdownGUI
 GUI_Disable
 GUI_Enable
+GUI_EnableTsunamiInput
+GUI_DisableTsunamiInput
 #GUI_Object2Trash
 #GUI_ClearTrash
 #
@@ -1243,6 +1245,7 @@ TSU_SendMessage
 TSU_AppCreate
 TSU_AppBegin
 TSU_AppDoControl
+TSU_AppDoMouse
 TSU_AppDoFrame
 TSU_AppSetDrawOpaquePolyEvent
 TSU_AppSetDrawTransparentPolyEvent
@@ -1519,6 +1522,7 @@ TSU_ChainAnimationDestroy
 TSU_DrawableSetBorderColor
 TSU_DrawableEventSetClick
 TSU_DrawableEventSetOnMouseOver
+TSU_DrawableDispatchMouseOver
 TSU_DrawableIsMouseInside
 TSU_DrawableGetSize
 TSU_DrawableSetSize
@@ -1563,6 +1567,8 @@ TSU_TriggerRemoveAll
 TSU_TriggerDestroy
 TSU_InputEventStateGetGlobalWindowState
 TSU_InputEventStateSetGlobalWindowState
+TSU_InputEventStateSetMousePosition
+TSU_InputEventStateGetMousePosition
 #
 #
 # mxml

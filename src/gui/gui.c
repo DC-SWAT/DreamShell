@@ -29,6 +29,7 @@ static TrashItem_list_t *trash_list;
 static Event_t *gui_input_event;
 static Event_t *gui_video_event;
 static Event_t *gui_tsunami_video_event;
+static Event_t *gui_tsunami_input_event;
 static int gui_first_open = 1;
 static int gui_prev_width = 0;
 static int gui_prev_height = 0;
@@ -57,6 +58,21 @@ static void GUI_TsunamiDrawHandler(void *ds_event, void *param, int action) {
 	}
 }
 
+static void GUI_TsunamiInputHandler(void *ds_event, void *param, int action) {
+
+	Event_t *event = (Event_t *) ds_event;
+	SDL_Event *sdl_event = (SDL_Event *) param;
+	DSApp *tsunami = (DSApp *) event->param;
+
+	if(action != EVENT_ACTION_UPDATE || tsunami == NULL || sdl_event == NULL) {
+		return;
+	}
+
+	if(sdl_event->type == SDL_MOUSEMOTION) {
+		TSU_AppDoMouse(tsunami, sdl_event->motion.x, sdl_event->motion.y);
+	}
+}
+
 static int GUI_EnableTsunami(DSApp *tsunami) {
 
 	DisableScreen();
@@ -73,21 +89,37 @@ static int GUI_EnableTsunami(DSApp *tsunami) {
 		SetEventActive(gui_tsunami_video_event, 1);
 	}
 
+	if(gui_tsunami_input_event == NULL) {
+		gui_tsunami_input_event = AddEvent("GUI_Tsunami_Input", EVENT_TYPE_INPUT, EVENT_PRIO_DEFAULT, GUI_TsunamiInputHandler, NULL);
+
+		if(gui_tsunami_input_event == NULL) {
+			return 0;
+		}
+
+		SetEventActive(gui_tsunami_input_event, 0);
+	}
+	else {
+		SetEventActive(gui_tsunami_input_event, 0);
+	}
+
 	return 1;
 }
 
 static void GUI_DisableTsunami(DSApp *tsunami) {
 
-	if(gui_tsunami_video_event == NULL) {
-		return;
+	if(gui_tsunami_video_event != NULL) {
+		if(tsunami == NULL || gui_tsunami_video_event->param == tsunami) {
+			gui_tsunami_video_event->param = NULL;
+			SetEventActive(gui_tsunami_video_event, 0);
+		}
 	}
 
-	if(tsunami != NULL && gui_tsunami_video_event->param != tsunami) {
-		return;
+	if(gui_tsunami_input_event != NULL) {
+		if(tsunami == NULL || gui_tsunami_input_event->param == tsunami) {
+			gui_tsunami_input_event->param = NULL;
+			SetEventActive(gui_tsunami_input_event, 0);
+		}
 	}
-
-	gui_tsunami_video_event->param = NULL;
-	SetEventActive(gui_tsunami_video_event, 0);
 }
 
 static uint8_t scr_joy_state = 0;
@@ -269,6 +301,11 @@ void ShutdownGUI() {
 		gui_tsunami_video_event = NULL;
 	}
 
+	if(gui_tsunami_input_event != NULL) {
+		RemoveEvent(gui_tsunami_input_event);
+		gui_tsunami_input_event = NULL;
+	}
+
 	if(gui_input_event != NULL) {
 		RemoveEvent(gui_input_event);
 		gui_input_event = NULL;
@@ -314,6 +351,20 @@ int GUI_IsFirstOpen() {
 	return gui_first_open;
 }
 
+void GUI_EnableTsunamiInput(void) {
+
+	if(gui_tsunami_input_event != NULL) {
+		SetEventActive(gui_tsunami_input_event, 1);
+	}
+}
+
+void GUI_DisableTsunamiInput(void) {
+
+	if(gui_tsunami_input_event != NULL) {
+		SetEventActive(gui_tsunami_input_event, 0);
+	}
+}
+
 int GUI_OpenApp(App_t *app) {
 
 	if(app == NULL) {
@@ -338,6 +389,7 @@ int GUI_OpenApp(App_t *app) {
 		}
 
 		gui_tsunami_video_event->param = app->tsunami;
+		gui_tsunami_input_event->param = app->tsunami;
 		return 1;
 	}
 

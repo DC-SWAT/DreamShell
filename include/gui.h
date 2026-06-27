@@ -49,6 +49,8 @@ void GUI_Enable();
 int GUI_IsFirstOpen();
 int GUI_OpenApp(struct App *app);
 int GUI_CloseApp(struct App *app);
+void GUI_EnableTsunamiInput(void);
+void GUI_DisableTsunamiInput(void);
 
 int GUI_Object2Trash(GUI_Object *object);
 void GUI_ClearTrash();
