@@ -44,6 +44,7 @@ public:
     virtual void doMenu();
     virtual void doAppFrame();
     virtual void doAppControl();
+    virtual void doAppMouse(int mx, int my);
     virtual bool endApp();
     virtual void visualPerFrame();
     virtual void setBg(float r, float g, float b);
@@ -87,6 +88,7 @@ extern "C"
 DSApp* TSU_AppCreate(InputEventPtr *input_event_callback);
 void TSU_AppBegin(DSApp *dsApp);
 void TSU_AppDoControl(DSApp *dsApp);
+void TSU_AppDoMouse(DSApp *dsApp, int mx, int my);
 void TSU_AppDoFrame(DSApp *dsApp);
 void TSU_AppSetDrawOpaquePolyEvent(DSApp *dsApp, DrawOpaquePolyEventPtr *event_callback);
 void TSU_AppSetDrawTransparentPolyEvent(DSApp *dsApp, DrawTransparentPolyEventPtr *event_callback);

@@ -97,7 +97,9 @@ public:
 	/// Move to the next frame of animation
 	virtual void nextFrame();
 
-	virtual void onMouseOver();	
+	virtual void onMouseOver();
+	virtual void dispatchMouseOver(int mx, int my);
+	void subDispatchMouseOver(int mx, int my);
 
 	/// Modify the drawn position of this drawable
 	void setTranslate(const Vector & v) { m_trans = v; }
@@ -229,6 +231,7 @@ extern "C"
 
 	void TSU_DrawableEventSetClick(Drawable *drawable_ptr, ClickEventFunctionPtr click_function);
 	void TSU_DrawableEventSetOnMouseOver(Drawable *drawable_ptr, OnMouseOverEventFunctionPtr mouse_over_function);
+	void TSU_DrawableDispatchMouseOver(Drawable *drawable_ptr, int mx, int my);
 	bool TSU_DrawableIsMouseInside(Drawable *drawable_ptr, int mx, int my);
 	void TSU_DrawableAnimAdd(Drawable *drawable_ptr, Animation *anim_ptr);
 	void TSU_DrawableAnimRemove(Drawable *drawable_ptr, Animation *anim_ptr);

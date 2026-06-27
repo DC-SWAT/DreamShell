@@ -11,6 +11,8 @@
 #include <algorithm>
 
 int InputEventState::m_global_window_state = WindowStateEnum::WSE_DEFAULT;
+int InputEventState::m_mouse_x = 0;
+int InputEventState::m_mouse_y = 0;
 
 InputEventState::InputEventState() {
 	m_window_state = InputEventState::getGlobalWindowState();
@@ -63,5 +65,13 @@ extern "C"
 	}
 	void TSU_InputEventStateSetGlobalWindowState(int window_state) {
 		InputEventState::setGlobalWindowState(window_state);
+	}
+
+	void TSU_InputEventStateSetMousePosition(int mx, int my) {
+		InputEventState::setMousePosition(mx, my);
+	}
+
+	void TSU_InputEventStateGetMousePosition(int *mx, int *my) {
+		InputEventState::getMousePosition(mx, my);
 	}
 }

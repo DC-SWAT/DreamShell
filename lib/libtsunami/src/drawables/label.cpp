@@ -13,10 +13,6 @@
 #include "tsunamiutils.h"
 #include <cstring>
 
-extern "C" {
-	uint8 SDL_GetMouseState (int *x, int *y);
-}
-
 Label::Label(Font *fh, const std::string &text,
 	     int size, bool centered, bool smear, bool fix_width) {
 	setObjectType(ObjectTypeEnum::LABEL_TYPE);
@@ -67,21 +63,26 @@ std::string Label::fixTextWidth(const std::string &text) {
 }
 
 void Label::onMouseOver() {
+	int x, y;
+
+	InputEventState::getMousePosition(&x, &y);
+	dispatchMouseOver(x, y);
+}
+
+void Label::dispatchMouseOver(int mx, int my) {
 	if (m_mouse_over_function != nullptr && getWindowState() == InputEventState::getGlobalWindowState()
 		&& !isReadOnly() && m_height > 0 && m_width > 0) {
-		int x, y;
-		SDL_GetMouseState(&x, &y);
 		Vector pos = getPosition();
 
 		float drawable_width = 0, drawable_height = 0;
 		getFont()->getTextSize(getText(), &drawable_width, &drawable_height);
-		
+
 		if (isCentered()) {
 			pos.x -= drawable_width / 2;
 			pos.y += drawable_height / 2;
 		}
 
-		if ((x >= pos.x) && (x < pos.x + drawable_width) && (y <= pos.y) && (y > pos.y - drawable_height)) {
+		if ((mx >= pos.x) && (mx < pos.x + drawable_width) && (my <= pos.y) && (my > pos.y - drawable_height)) {
 			m_mouse_over_function(this, getObjectType(), getId());
 		}
 	}
@@ -97,7 +98,6 @@ void Label::draw(pvr_list_type_t list) {
 	m_fh->setSize(m_size);
 	m_fh->setAlpha(t.a);
 	m_fh->setColor(t.r, t.g, t.b);
-	onMouseOver();
 
 	if (m_centered) {
 		if (m_smear)

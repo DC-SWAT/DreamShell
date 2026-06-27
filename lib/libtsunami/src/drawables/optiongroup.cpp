@@ -14,10 +14,6 @@
 #include <cstring>
 #include <string>
 
-extern "C" {
-	uint8 SDL_GetMouseState (int *x, int *y);
-}
-
 OptionGroup::OptionGroup(Font *display_font, uint text_size, float width, float height, const Color &body_color) {
 	setObjectType(ObjectTypeEnum::OPTIONGROUP_TYPE);
 
@@ -259,7 +255,8 @@ void OptionGroup::inputEvent(int event_type, int key) {
 			m_right_rectangle->getSize(&rwidth, &rheight);
 
 			int x, y;
-			SDL_GetMouseState(&x, &y);
+
+			InputEventState::getMousePosition(&x, &y);
 			
 			if ((x >= lpos.x) && (x < lpos.x + lwidth) && (y <= lpos.y) && (y > lpos.y - lheight)) {
 				option = previousOption();

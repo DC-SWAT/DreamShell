@@ -9,6 +9,7 @@
 */
 
 #include "dsapp.h"
+#include "inputeventstate.h"
 #include <kos.h>
 #include "tsunamiutils.h"
 
@@ -55,6 +56,13 @@ void DSApp::beginApp()
 void DSApp::doAppControl()
 {
 	controlPerFrame();
+}
+
+void DSApp::doAppMouse(int mx, int my)
+{
+	if (m_scene != nullptr) {
+		m_scene->subDispatchMouseOver(mx, my);
+	}
 }
 
 void DSApp::doAppFrame()
@@ -230,6 +238,14 @@ extern "C"
 	{
 		if (dsApp != nullptr) {          
 			dsApp->doAppControl();
+		}
+	}
+
+	void TSU_AppDoMouse(DSApp *dsApp, int mx, int my)
+	{
+		if (dsApp != nullptr) {
+			InputEventState::setMousePosition(mx, my);
+			dsApp->doAppMouse(mx, my);
 		}
 	}
 

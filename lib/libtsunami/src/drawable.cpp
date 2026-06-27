@@ -18,7 +18,6 @@ extern "C" {
 	void LockVideo();
 	void UnlockVideo();
 	int VideoMustLock();
-	uint8 SDL_GetMouseState (int *x, int *y);
 }
 
 // Constructor / Destructor
@@ -213,19 +212,32 @@ bool Drawable::isMouseInside(Drawable *drawable, int mx, int my) {
 }
 
 void Drawable::onMouseOver() {
+	int x, y;
+
+	InputEventState::getMousePosition(&x, &y);
+	dispatchMouseOver(x, y);
+}
+
+void Drawable::dispatchMouseOver(int mx, int my) {
 	if (m_mouse_over_function != nullptr && getWindowState() == InputEventState::getGlobalWindowState()
 		&& !isReadOnly() && m_height > 0 && m_width > 0) {
-		int x, y;
-		SDL_GetMouseState(&x, &y);
-
-		if (isMouseInside(this, x, y)) {
+		if (isMouseInside(this, mx, my)) {
 			m_mouse_over_function(this, getObjectType(), getId());
 		}
 	}
 }
 
+void Drawable::subDispatchMouseOver(int mx, int my) {
+	dispatchMouseOver(mx, my);
+
+	for (auto it: m_subs) {
+		if (!it->isFinished()) {
+			it->subDispatchMouseOver(mx, my);
+		}
+	}
+}
+
 void Drawable::draw(pvr_list_type_t list) {
-	onMouseOver();
 	subDraw(list);
 }
 
@@ -512,6 +524,13 @@ extern "C"
 	void TSU_DrawableEventSetOnMouseOver(Drawable *drawable_ptr, OnMouseOverEventFunctionPtr mouse_over_function) {
 		if (drawable_ptr != NULL) {
 			drawable_ptr->setOnMouseOverEvent(mouse_over_function);
+		}
+	}
+
+	void TSU_DrawableDispatchMouseOver(Drawable *drawable_ptr, int mx, int my) {
+		if (drawable_ptr != NULL) {
+			InputEventState::setMousePosition(mx, my);
+			drawable_ptr->subDispatchMouseOver(mx, my);
 		}
 	}
 

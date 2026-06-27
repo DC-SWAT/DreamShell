@@ -39,7 +39,8 @@ public:
 	
 private:
 	void refreshSize();
-	void onMouseOver();
+	virtual void onMouseOver();
+	virtual void dispatchMouseOver(int mx, int my);
 
 	Font 	*m_fh;
 	std::string	m_text;

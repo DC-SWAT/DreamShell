@@ -22,6 +22,8 @@ class InputEventState {
 private:
     int m_window_state, m_control_state, m_previous_state;
     static int m_global_window_state;
+    static int m_mouse_x;
+    static int m_mouse_y;
 
 public:
 	/// Constructor / Destructor
@@ -46,6 +48,20 @@ public:
     static int getGlobalWindowState() {
         return m_global_window_state;
     }
+
+    static void setMousePosition(int mx, int my) {
+        m_mouse_x = mx;
+        m_mouse_y = my;
+    }
+
+    static void getMousePosition(int *mx, int *my) {
+        if (mx != nullptr) {
+            *mx = m_mouse_x;
+        }
+        if (my != nullptr) {
+            *my = m_mouse_y;
+        }
+    }
 };
 
 #else
@@ -65,6 +81,8 @@ extern "C"
 
     int TSU_InputEventStateGetGlobalWindowState();
 	void TSU_InputEventStateSetGlobalWindowState(int window_state);
+	void TSU_InputEventStateSetMousePosition(int mx, int my);
+	void TSU_InputEventStateGetMousePosition(int *mx, int *my);
 
 #ifdef __cplusplus
 };
