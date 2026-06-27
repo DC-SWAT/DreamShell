@@ -20,6 +20,7 @@
 #include "app_definition.h"
 
 void PresetMenuResetMouseOver();
+void PresetMenuClearMouseOver();
 void CreatePresetMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font);
 void DestroyPresetMenu();
 void PresetMenuRemoveAll();

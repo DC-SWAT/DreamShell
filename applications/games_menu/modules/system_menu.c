@@ -88,6 +88,12 @@ void SystemMenuResetMouseOver()
 	self.last_over_drawable_ptr = NULL;
 }
 
+void SystemMenuClearMouseOver()
+{
+	self.over_drawable_ptr = NULL;
+	self.over_object_type = 0;
+}
+
 void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font, void (*RefreshMainView)(), void (*ReloadPage)())
 {
 	self.dsapp_ptr = dsapp_ptr;

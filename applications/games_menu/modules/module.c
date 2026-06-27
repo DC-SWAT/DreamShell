@@ -48,7 +48,6 @@ static mutex_t change_page_mutex = MUTEX_INITIALIZER;
 static struct
 {
 	App_t *app;
-	DSApp *dsapp_ptr;
 	Scene *scene_ptr;
 	Drawable *over_drawable_ptr;
 	Drawable *last_over_drawable_ptr;
@@ -154,7 +153,7 @@ static void* ShowCoverThread(void *params)
 			TSU_FadeOutDestroy(&self.fadeout_cover_animation);
 
 			TSU_DrawableSetFinished((Drawable *)self.img_cover_game);
-			TSU_AppSubRemoveBanner(self.dsapp_ptr, self.img_cover_game);
+			TSU_AppSubRemoveBanner(self.app->tsunami, self.img_cover_game);
 
 			thd_pass();
 			TSU_BannerDestroy(&self.img_cover_game);
@@ -205,7 +204,7 @@ static void* ShowCoverThread(void *params)
 			vector_position.y = 0.0f;			
 			TSU_DrawableSetScale((Drawable *)self.img_cover_game, &vector_position);
 			
-			TSU_AppSubAddBanner(self.dsapp_ptr, self.img_cover_game);
+			TSU_AppSubAddBanner(self.app->tsunami, self.img_cover_game);
 			self.animation_cover_game = TSU_FadeToCreate(0.0f, 1.0f, 7.5f);
 			TSU_DrawableAnimAdd((Drawable *)self.img_cover_game, (Animation *)self.animation_cover_game);
 			
@@ -320,7 +319,7 @@ static void SetTitle(int game_index, const char *text, bool limit_length)
 
 		self.title = TSU_LabelCreate(self.menu_font, titleText, font_size, false, true, false);
 		TSU_LabelSetTint(self.title, &color);
-		TSU_AppSubAddLabel(self.dsapp_ptr, self.title);
+		TSU_AppSubAddLabel(self.app->tsunami, self.title);
 	}
 
 	if (self.title_animation != NULL)
@@ -389,7 +388,7 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 			static Color color = {1, 1.0f, 1.0f, 1.0f};
 			self.title_type = TSU_LabelCreate(self.menu_font, title_text, font_size, false, true, false);
 			TSU_LabelSetTint(self.title_type, &color);
-			TSU_AppSubAddLabel(self.dsapp_ptr, self.title_type);
+			TSU_AppSubAddLabel(self.app->tsunami, self.title_type);
 		}
 
 		if (self.title_type_animation != NULL)
@@ -419,7 +418,7 @@ static void SetCursor()
 
 	if (self.item_selector != NULL)
 	{
-		TSU_AppSubRemoveRectangle(self.dsapp_ptr, self.item_selector);
+		TSU_AppSubRemoveRectangle(self.app->tsunami, self.item_selector);
 		TSU_RectangleDestroy(&self.item_selector);
 	}
 
@@ -463,7 +462,7 @@ static void SetCursor()
 			TSU_DrawableSetTranslate((Drawable *)self.item_selector, &selector_translate);
 		}
 
-		TSU_AppSubAddRectangle(self.dsapp_ptr, self.item_selector);
+		TSU_AppSubAddRectangle(self.app->tsunami, self.item_selector);
 	}
 
 	static int init_position_x;
@@ -736,7 +735,7 @@ static void AddInfoButtons()
 	{
 		if (self.item_button[i] != NULL)
 		{
-			TSU_AppSubAddItemMenu(self.dsapp_ptr, self.item_button[i]);
+			TSU_AppSubAddItemMenu(self.app->tsunami, self.item_button[i]);
 		}
 	}
 }
@@ -756,7 +755,7 @@ static void CreateViewTextPlane()
 	{
 		self.menu_options_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 361, 457, 254, 142, &menu_data.body_color, ML_ITEM, 3, &menu_data.border_color, DEFAULT_RADIUS);
 
-		TSU_AppSubAddRectangle(self.dsapp_ptr, self.menu_options_rectangle);		
+		TSU_AppSubAddRectangle(self.app->tsunami, self.menu_options_rectangle);		
 	}
 
 	if (self.game_list_rectangle != NULL)
@@ -787,20 +786,20 @@ static void CreateViewTextPlane()
 	}
 	
 	self.game_list_rectangle = TSU_RectangleCreateWithBorder(PVR_LIST_OP_POLY, 15, 436, 335, 384, &menu_data.body_color, ML_ITEM, 3, &menu_data.border_color, DEFAULT_RADIUS);
-	TSU_AppSubAddRectangle(self.dsapp_ptr, self.game_list_rectangle);
+	TSU_AppSubAddRectangle(self.app->tsunami, self.game_list_rectangle);
 
 	const int font_size = 18;
 	Color font_color = { 1.0f, 1.0f, 1.0f, 0.35f };	
 	self.page_label = TSU_LabelCreate(self.menu_font, "", font_size, false, true, false);
 	TSU_LabelSetTint(self.page_label, &font_color);
-	TSU_AppSubAddLabel(self.dsapp_ptr, self.page_label);
+	TSU_AppSubAddLabel(self.app->tsunami, self.page_label);
 
 	Vector page_vector = { 18, 459, ML_ITEM + 1, 1 };
 	TSU_LabelSetTranslate(self.page_label, &page_vector);
 
 	self.total_label = TSU_LabelCreate(self.menu_font, "", font_size, false, true, false);
 	TSU_LabelSetTint(self.total_label, &font_color);
-	TSU_AppSubAddLabel(self.dsapp_ptr, self.total_label);
+	TSU_AppSubAddLabel(self.app->tsunami, self.total_label);
 
 	Vector total_vector = { 36 + 335 / 2, 459, ML_ITEM + 1, 1 };
 	TSU_LabelSetTranslate(self.total_label, &total_vector);
@@ -818,11 +817,11 @@ static void CreateViewTextPlane()
 			Vector vector_position = {490, 180, ML_ITEM + 3, 1};
 			TSU_DrawableTranslate((Drawable *)self.img_cover_game_background, &vector_position);
 			TSU_BannerSetSize(self.img_cover_game_background, 256, 256);
-			TSU_AppSubAddBanner(self.dsapp_ptr, self.img_cover_game_background);
+			TSU_AppSubAddBanner(self.app->tsunami, self.img_cover_game_background);
 
 			Color background_color = {1, 0.88f, 0.88f, 0.88f};
 			self.img_cover_game_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, vector_position.x - 130, vector_position.y + 128, 256, 256, &background_color, ML_ITEM + 1, 0);
-			TSU_AppSubAddRectangle(self.dsapp_ptr, self.img_cover_game_rectangle);
+			TSU_AppSubAddRectangle(self.app->tsunami, self.img_cover_game_rectangle);
 		}
 
 		free(game_cover_path);
@@ -924,7 +923,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 				else
 				{
 					self.game_list_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 10, 480 - 18, 640 - 28, 415, &menu_data.body_color, ML_BACKGROUND + 1, DEFAULT_RADIUS);
-					TSU_AppSubAddRectangle(self.dsapp_ptr, self.game_list_rectangle);
+					TSU_AppSubAddRectangle(self.app->tsunami, self.game_list_rectangle);
 				}
 			}
 
@@ -1083,7 +1082,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 					}
 				}
 				
-				TSU_AppSubAddItemMenu(self.dsapp_ptr, item_menu);
+				TSU_AppSubAddItemMenu(self.app->tsunami, item_menu);
 			}
 
 			if (self.first_menu_load)
@@ -1182,8 +1181,8 @@ static void InitMenu()
 {
 	TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
 
-	self.scene_ptr = TSU_AppGetScene(self.dsapp_ptr);
-	
+	self.scene_ptr = TSU_AppGetScene(self.app->tsunami);
+
 	char font_path[NAME_MAX];
 	memset(font_path, 0, sizeof(font_path));
 	snprintf(font_path, sizeof(font_path), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/fonts/default.txf");
@@ -1196,7 +1195,8 @@ static void InitMenu()
 	self.game_index_selected = -1;
 
 	Vector vector = {0, 0, 10, 1};
-	TSU_AppSetTranslate(self.dsapp_ptr, &vector);
+	TSU_AppSetTranslate(self.app->tsunami, &vector);
+	TSU_AppSetBg(self.app->tsunami, menu_data.background_color.r, menu_data.background_color.g, menu_data.background_color.b);
 
 	if (LoadScannedCover())
 	{
@@ -1275,6 +1275,28 @@ static void RemoveAll()
 	thd_pass();
 }
 
+static bool ExitAnimationsFinished(void)
+{
+	bool has_items = false;
+
+	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
+	{
+		if (self.item_game[i] == NULL)
+		{
+			continue;
+		}
+
+		has_items = true;
+
+		if (!TSU_DrawableIsFinished((Drawable *)self.item_game[i]))
+		{
+			return false;
+		}
+	}
+
+	return has_items || self.game_count == 0;
+}
+
 static void StartExit()
 {
 	StopCDDA();
@@ -1284,6 +1306,7 @@ static void StartExit()
 
 	float y = 1.0f;
 	self.game_index_selected = -1;
+	menu_data.finished_menu = false;
 
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
@@ -1324,7 +1347,7 @@ static void StartExit()
 				TSU_DrawableAnimAdd((Drawable *)self.item_game[i], (Animation *)self.run_animation);
 			}
 			else
-			{				
+			{
 				self.exit_animation_list[i] = TSU_ExpXYMoverCreate(0, y + .10, 0, 500);
 				self.exit_trigger_list[i] = TSU_DeathCreate(NULL);
 
@@ -1333,14 +1356,19 @@ static void StartExit()
 			}
 		}
 	}
-	TSU_AppStartExit(self.dsapp_ptr);
 
 	self.wait_to_exit_app = true;
-	while (!menu_data.finished_menu) { thd_pass(); }
+	while (!menu_data.finished_menu)
+	{
+		thd_pass();
+	}
+	self.wait_to_exit_app = false;
 
 	RemoveEvent(do_menu_video_event);
+	do_menu_video_event = NULL;
 	RemoveEvent(do_menu_control_event);
-	
+	do_menu_control_event = NULL;
+
 	MenuExitHelper(NULL);
 }
 
@@ -1723,7 +1751,9 @@ static void GamesApp_InputEvent(int type, int key)
 		{
 			self.exit_app = true;
 			skip_cursor = true;
+			mutex_unlock(&change_page_mutex);
 			StartExit();
+			return;
 		}
 		break;
 
@@ -1923,11 +1953,12 @@ static void GamesApp_InputEvent(int type, int key)
 			break;
 
 		case KeySelect:
-			{
-				StartExit();
-				skip_cursor = true;
-			}
-			break;
+		{
+			mutex_unlock(&change_page_mutex);
+			StartExit();
+			return;
+		}
+		break;
 
 		default:
 			{
@@ -2220,7 +2251,6 @@ static void FreeAppData()
 	DestroyPresetMenu();
 
 	TSU_FontDestroy(&self.menu_font);
-	TSU_AppDestroy(&self.dsapp_ptr);
 	self.scene_ptr = NULL;
 
 	DestroyMenuData();
@@ -2302,6 +2332,143 @@ static void ResetMouseOver()
 	self.last_over_drawable_ptr = NULL;
 }
 
+static void ClearMouseOverDispatch(void)
+{
+	switch(TSU_InputEventStateGetGlobalWindowState())
+	{
+		case SA_GAMES_MENU:
+			self.over_drawable_ptr = NULL;
+			self.over_object_type = 0;
+			break;
+
+		case SA_PRESET_MENU:
+			PresetMenuClearMouseOver();
+			break;
+
+		case SA_SYSTEM_MENU:
+			SystemMenuClearMouseOver();
+			break;
+
+		default:
+			break;
+	}
+}
+
+static bool IsActionButton(Drawable *drawable)
+{
+	bool itemButtonOptionSelected = false;
+	for (int i = 0; i < MAX_BUTTONS; i++)
+	{
+		if (drawable == (Drawable *)self.item_button[i])
+		{
+			itemButtonOptionSelected = true;
+			break;
+		}
+	}
+
+	return (itemButtonOptionSelected
+		|| drawable == (Drawable *)self.action_left_button
+		|| drawable == (Drawable *)self.action_right_button
+		|| drawable == (Drawable *)self.action_view_button);
+}
+
+static void DoMenuMouseMotionHandler(SDL_Event *event)
+{
+	switch(TSU_InputEventStateGetGlobalWindowState())
+	{
+		case SA_GAMES_MENU:
+		{
+			if (self.last_over_drawable_ptr == self.over_drawable_ptr)
+			{
+				if (IsActionButton(self.last_over_drawable_ptr))
+				{
+					if (TSU_DrawableIsMouseInside(self.last_over_drawable_ptr, event->motion.x, event->motion.y))
+					{
+						break;
+					}
+					else
+					{
+						DeselectAllActionButtons();
+						ResetMouseOver();
+					}
+				}
+				else
+				{
+					break;
+				}
+			}
+
+			self.last_over_drawable_ptr = self.over_drawable_ptr;
+
+			mutex_lock(&change_page_mutex);
+			if (self.last_over_drawable_ptr)
+			{
+				switch(self.over_object_type)
+				{
+					case ITEMMENU_TYPE:
+					{
+						DeselectAllActionButtons();
+
+						ItemMenu *itemMenu = (ItemMenu *)self.last_over_drawable_ptr;
+						if (itemMenu != self.item_game[self.menu_cursel])
+						{
+							if (IsActionButton(self.last_over_drawable_ptr))
+							{
+								TSU_ItemMenuSetSelected(itemMenu, true, true);
+							}
+							else
+							{
+								self.game_changed = true;
+								StopCDDA();
+
+								TSU_ItemMenuSetSelected(self.item_game[self.menu_cursel], false, false);
+								TSU_ItemMenuSetSelected(itemMenu, true, true);
+
+								for (int i = 0; i < self.game_count; i++)
+								{
+									if (self.item_game[i] != NULL && self.item_game[i] == itemMenu)
+									{
+										self.menu_cursel = i;
+										TSU_ItemMenuSetSelected(self.item_game[i], true, true);
+										SetTitle(TSU_ItemMenuGetItemIndex(self.item_game[i]), TSU_ItemMenuGetItemValue(self.item_game[i]), true);
+
+										SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.item_game[i]))
+											, CheckGdiOptimized(TSU_ItemMenuGetItemIndex(self.item_game[i])));
+
+										SetCursor();
+
+										ShowCover(TSU_ItemMenuGetItemIndex(self.item_game[i]));
+
+										PlayCDDA(TSU_ItemMenuGetItemIndex(self.item_game[i]));
+									}
+								}
+							}
+						}
+
+						break;
+					}
+
+					default:
+						break;
+				}
+			}
+			mutex_unlock(&change_page_mutex);
+			break;
+		}
+
+		case SA_PRESET_MENU:
+			PresetMenuOnMouseOver();
+			break;
+
+		case SA_SYSTEM_MENU:
+			SystemMenuOnMouseOver();
+			break;
+
+		default:
+			break;
+	}
+}
+
 static void StateAppInpuEvent(int state_app, int type, int key)
 {
 	switch (state_app)
@@ -2358,7 +2525,7 @@ static void StateAppInpuEvent(int state_app, int type, int key)
 
 			break;
 		}
-		
+
 		case SA_SYSTEM_MENU:
 			GamesApp_SystemMenuInputEvent(type, key);
 			break;
@@ -2376,141 +2543,30 @@ static void StateAppInpuEvent(int state_app, int type, int key)
 			break;
 
 		default:
-			if (state_app >= SA_CONTROL) {				
+			if (state_app >= SA_CONTROL) {
 				GamesApp_ControlInputEvent(type, key, state_app);
 			}
 			break;
 	}
 }
 
-static bool IsActionButton(Drawable *drawable)
-{
-	bool itemButtonOptionSelected = false;
-	for (int i = 0; i < MAX_BUTTONS; i++)
-	{
-		if (drawable == (Drawable *)self.item_button[i])
-		{
-			itemButtonOptionSelected = true;
-			break;
-		}
-	}
-
-	return (itemButtonOptionSelected
-		|| drawable == (Drawable *)self.action_left_button
-		|| drawable == (Drawable *)self.action_right_button
-		|| drawable == (Drawable *)self.action_view_button);
-}
-
 static void DoMenuControlHandler(void *ds_event, void *param, int action)
 {
-	if (self.show_cover_game) thd_pass();
-
 	SDL_Event *event = (SDL_Event *) param;
-	
+
+	(void)ds_event;
+
+	if(action != EVENT_ACTION_UPDATE) {
+		return;
+	}
+
 	switch(event->type) {
-		
-		case SDL_MOUSEMOTION: 
-		{
-			switch(TSU_InputEventStateGetGlobalWindowState())
-			{
-				case SA_GAMES_MENU:
-				{
-					if (self.last_over_drawable_ptr == self.over_drawable_ptr)
-					{
-						if (IsActionButton(self.last_over_drawable_ptr))
-						{	
-							if (TSU_DrawableIsMouseInside(self.last_over_drawable_ptr, event->motion.x, event->motion.y))
-							{
-								break;
-							}
-							else
-							{
-								DeselectAllActionButtons();
-								ResetMouseOver();
-							}
-						}
-						else
-						{
-							break;
-						}
-					}
-					
-					self.last_over_drawable_ptr = self.over_drawable_ptr;
 
-					mutex_lock(&change_page_mutex);
-					if (self.last_over_drawable_ptr)
-					{
-						switch(self.over_object_type)
-						{
-							case ITEMMENU_TYPE:
-							{	
-								DeselectAllActionButtons();
-								
-								ItemMenu *itemMenu = (ItemMenu *)self.last_over_drawable_ptr;
-								if (itemMenu != self.item_game[self.menu_cursel])
-								{
-									if (IsActionButton(self.last_over_drawable_ptr))
-									{
-										TSU_ItemMenuSetSelected(itemMenu, true, true);
-									}
-									else
-									{
-										self.game_changed = true;
-										StopCDDA();
-									
-										TSU_ItemMenuSetSelected(self.item_game[self.menu_cursel], false, false);
-										TSU_ItemMenuSetSelected(itemMenu, true, true);
-
-										for (int i = 0; i < self.game_count; i++)
-										{
-											if (self.item_game[i] != NULL && self.item_game[i] == itemMenu)
-											{
-												self.menu_cursel = i;
-												TSU_ItemMenuSetSelected(self.item_game[i], true, true);
-												SetTitle(TSU_ItemMenuGetItemIndex(self.item_game[i]), TSU_ItemMenuGetItemValue(self.item_game[i]), true);
-
-												SetTitleType(GetFullGamePathByIndex(TSU_ItemMenuGetItemIndex(self.item_game[i]))
-													, CheckGdiOptimized(TSU_ItemMenuGetItemIndex(self.item_game[i])));
-
-												SetCursor();
-
-												ShowCover(TSU_ItemMenuGetItemIndex(self.item_game[i]));
-
-												PlayCDDA(TSU_ItemMenuGetItemIndex(self.item_game[i]));
-											}
-										}
-									}
-								}
-
-								break;
-							}
-
-							default:
-								break;
-						}
-					}
-					mutex_unlock(&change_page_mutex);
-					break;
-				}
-
-				case SA_PRESET_MENU:
-				{
-					PresetMenuOnMouseOver();
-					break;
-				}
-
-				case SA_SYSTEM_MENU:
-				{
-					SystemMenuOnMouseOver();
-					break;
-				}
-				
-				default:
-					break;
-			}
-
+		case SDL_MOUSEMOTION:
+			ClearMouseOverDispatch();
+			TSU_AppDoMouse(self.app->tsunami, event->motion.x, event->motion.y);
+			DoMenuMouseMotionHandler(event);
 			break;
-		}
 
 		case SDL_JOYBUTTONDOWN: {
 			switch(event->jbutton.button) {
@@ -2661,52 +2717,48 @@ static void GamesApp_DrawTransparentPolyEvent()
 	
 }
 
+static void GamesApp_ExitToMain(void)
+{
+	App_t *app = GetAppByName("Main");
+
+	if (app)
+	{
+		OpenApp(app, NULL);
+	}
+}
+
 static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 {
-	if (!self.wait_to_exit_app)
-		if (self.show_cover_game) thd_pass();
-
-	if (menu_data.menu_type != MT_PLANE_TEXT 
-		&& menu_data.ffplay && menu_data.ffplay_is_playing())
+	if (action != EVENT_ACTION_RENDER)
 	{
 		return;
 	}
 
-	switch(action)
+	if (!self.wait_to_exit_app)
 	{
-		case EVENT_ACTION_RENDER:
-			{
-				if (!self.wait_to_exit_app)
-				{
-					TSU_AppDoFrame(self.dsapp_ptr);
-				}
-				else
-				{
-					if (!menu_data.finished_menu && TSU_AppEnd(self.dsapp_ptr))
-					{
-						menu_data.finished_menu = true;
-					}
-				}
-			}
-			break;
-		case EVENT_ACTION_RENDER_POST:
-			break;
-		case EVENT_ACTION_UPDATE:
-			break;
-		default:
-			break;
+		if (menu_data.menu_type != MT_PLANE_TEXT
+			&& menu_data.ffplay && menu_data.ffplay_is_playing())
+		{
+			return;
+		}
+
+		return;
+	}
+
+	if (!menu_data.finished_menu && ExitAnimationsFinished())
+	{
+		menu_data.finished_menu = true;
 	}
 }
 
 static void* MenuExitHelper(void *params)
 {
-	if (self.dsapp_ptr != NULL)
+	if (self.app != NULL && self.app->tsunami != NULL)
 	{
 		if (!self.exit_app)
 		{
 			if (PlayGame())
 			{
-				SDL_DC_EmulateMouse(SDL_TRUE);
 				EnableScreen();
 				GUI_Enable();
 				ShutdownDS();
@@ -2714,21 +2766,13 @@ static void* MenuExitHelper(void *params)
 			else
 			{
 				FreeAppData();
-				SDL_DC_EmulateMouse(SDL_TRUE);
-				EnableScreen();
-				GUI_Enable();
-
-				GamesApp_Exit(NULL);
+				GamesApp_ExitToMain();
 			}
 		}
 		else
 		{
 			FreeAppData();
-			SDL_DC_EmulateMouse(SDL_TRUE);
-			EnableScreen();
-			GUI_Enable();
-
-			GamesApp_Exit(NULL);
+			GamesApp_ExitToMain();
 		}
 	}
 
@@ -2799,20 +2843,20 @@ static void CreateMainView()
 	self.action_right_button = CreateActionButton("right_arrow.png", 27, 9, 20, 20);
 	self.action_view_button = CreateActionButton("view.png", 588, 9, 24, 24);
 
-	TSU_AppSubAddBox(self.dsapp_ptr, self.main_box);
-	TSU_AppSubAddRectangle(self.dsapp_ptr, self.area_rectangle);
-	TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_rectangle);
-	TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_background_rectangle);
-	TSU_AppSubAddRectangle(self.dsapp_ptr, self.title_type_rectangle);
+	TSU_AppSubAddBox(self.app->tsunami, self.main_box);
+	TSU_AppSubAddRectangle(self.app->tsunami, self.area_rectangle);
+	TSU_AppSubAddRectangle(self.app->tsunami, self.title_rectangle);
+	TSU_AppSubAddRectangle(self.app->tsunami, self.title_background_rectangle);
+	TSU_AppSubAddRectangle(self.app->tsunami, self.title_type_rectangle);
 
 	if (self.action_left_button != NULL)
-		TSU_AppSubAddItemMenu(self.dsapp_ptr, self.action_left_button);
+		TSU_AppSubAddItemMenu(self.app->tsunami, self.action_left_button);
 
 	if (self.action_right_button != NULL)
-		TSU_AppSubAddItemMenu(self.dsapp_ptr, self.action_right_button);
+		TSU_AppSubAddItemMenu(self.app->tsunami, self.action_right_button);
 
 	if (self.action_view_button != NULL)
-		TSU_AppSubAddItemMenu(self.dsapp_ptr, self.action_view_button);
+		TSU_AppSubAddItemMenu(self.app->tsunami, self.action_view_button);
 }
 
 static void RefreshMainView()
@@ -2837,7 +2881,7 @@ static void RefreshMainView()
 			TSU_RectangleDestroy(&self.game_list_rectangle);
 		
 		self.game_list_rectangle = TSU_RectangleCreate(PVR_LIST_OP_POLY, 10, 480 - 18, 640 - 28, 415, &menu_data.body_color, ML_BACKGROUND + 1, DEFAULT_RADIUS);
-		TSU_AppSubAddRectangle(self.dsapp_ptr, self.game_list_rectangle);
+		TSU_AppSubAddRectangle(self.app->tsunami, self.game_list_rectangle);
 	}
 }
 
@@ -2856,12 +2900,12 @@ void GamesApp_Init(App_t *app)
 	{
 		self.have_args = false;
 	}
-	
+
 	self.app = app;
 	self.app->thd = NULL;
 	self.sector_size = 2048;
 	self.pages = -1;
-	self.first_menu_load = true;	
+	self.first_menu_load = true;
 
 	memset(self.item_value_selected, 0, sizeof(self.item_value_selected));
 
@@ -2869,7 +2913,7 @@ void GamesApp_Init(App_t *app)
 	{
 		self.item_button[i] = NULL;
 	}
-	
+
 	self.run_animation = NULL;
 	for (int i = 0; i < MAX_SIZE_ITEMS; i++)
 	{
@@ -2879,21 +2923,23 @@ void GamesApp_Init(App_t *app)
 		self.exit_trigger_list[i] = NULL;
 	}
 
-	if ((self.dsapp_ptr = TSU_AppCreate(GamesApp_InputEvent)) != NULL)
+	if (app->tsunami != NULL)
 	{
 		TSU_InputEventStateSetGlobalWindowState(SA_GAMES_MENU);
-		
-		TSU_AppSetDrawOpaquePolyEvent(self.dsapp_ptr, GamesApp_DrawOpaquePolyEvent);
-		TSU_AppSetDrawTransparentPolyEvent(self.dsapp_ptr, GamesApp_DrawTransparentPolyEvent);
+
+		TSU_AppSetDrawOpaquePolyEvent(app->tsunami, GamesApp_DrawOpaquePolyEvent);
+		TSU_AppSetDrawTransparentPolyEvent(app->tsunami, GamesApp_DrawTransparentPolyEvent);
+
+		self.scene_ptr = TSU_AppGetScene(app->tsunami);
 
 		CreateMenuData(&SetMessageScan, &SetMessageOptimizer, &PostLoadPVRCover, &PostOptimizer);
-		
+
 		CreateMainView();
-		
+
 		InitMenu();
 
-		CreateSystemMenu(self.dsapp_ptr, self.scene_ptr, self.menu_font, self.menu_font, &RefreshMainView, &ReloadPage);
-		CreatePresetMenu(self.dsapp_ptr, self.scene_ptr, self.menu_font, self.menu_font);
+		CreateSystemMenu(app->tsunami, self.scene_ptr, self.menu_font, self.menu_font, &RefreshMainView, &ReloadPage);
+		CreatePresetMenu(app->tsunami, self.scene_ptr, self.menu_font, self.menu_font);
 	}
 }
 
@@ -2901,49 +2947,51 @@ void GamesApp_Open(App_t *app)
 {
 	(void)app;
 
-	if (self.dsapp_ptr != NULL)
+	if (self.app == NULL || self.app->tsunami == NULL)
 	{
-		DisableScreen();
-		GUI_Disable();
-
-		SetScreenOpacity(1.0f);
-		SDL_DC_EmulateMouse(SDL_TRUE);
-
-		TSU_AppBegin(self.dsapp_ptr);
-
-		do_menu_control_event = AddEvent
-		(
-			"GamesControl_Event",
-			EVENT_TYPE_INPUT,
-			EVENT_PRIO_DEFAULT,
-			DoMenuControlHandler,
-			NULL
-		);
-
-		do_menu_video_event = AddEvent
-		(
-			"GamesVideo_Event",
-			EVENT_TYPE_VIDEO,
-			EVENT_PRIO_DEFAULT,
-			DoMenuVideoHandler,
-			NULL
-		);
+		return;
 	}
+
+	SDL_DC_EmulateMouse(SDL_TRUE);
+
+	do_menu_control_event = AddEvent
+	(
+		"GamesControl_Event",
+		EVENT_TYPE_INPUT,
+		EVENT_PRIO_DEFAULT,
+		DoMenuControlHandler,
+		NULL
+	);
+
+	do_menu_video_event = AddEvent
+	(
+		"GamesVideo_Event",
+		EVENT_TYPE_VIDEO,
+		EVENT_PRIO_DEFAULT,
+		DoMenuVideoHandler,
+		NULL
+	);
 }
 
 void GamesApp_Shutdown(App_t *app)
 {
 	(void)app;
 
+	if (do_menu_control_event != NULL)
+	{
+		RemoveEvent(do_menu_control_event);
+		do_menu_control_event = NULL;
+	}
+
+	if (do_menu_video_event != NULL)
+	{
+		RemoveEvent(do_menu_video_event);
+		do_menu_video_event = NULL;
+	}
+
 	if (self.isoldr)
 	{
 		free(self.isoldr);
+		self.isoldr = NULL;
 	}
-}
-
-void GamesApp_Exit(GUI_Widget *widget)
-{
-	(void)widget;
-	App_t *app = GetAppByName("Main");
-	OpenApp(app, NULL);
 }

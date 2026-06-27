@@ -12,5 +12,3 @@ void GamesApp_Init(App_t *app);
 void GamesApp_Shutdown(App_t *app);
 
 void GamesApp_Open(App_t *app);
-
-void GamesApp_Exit(GUI_Widget *widget);

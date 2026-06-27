@@ -134,6 +134,12 @@ void PresetMenuResetMouseOver()
 	self.last_over_drawable_ptr = NULL;
 }
 
+void PresetMenuClearMouseOver()
+{
+	self.over_drawable_ptr = NULL;
+	self.over_object_type = 0;
+}
+
 void CreatePresetMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font)
 {
 	self.dsapp_ptr = dsapp_ptr;

@@ -23,6 +23,7 @@ void StyleTabClick(Drawable *drawable);
 void CacheTabClick(Drawable *drawable);
 
 void SystemMenuResetMouseOver();
+void SystemMenuClearMouseOver();
 void SaveSystemMenuConfig();
 void CreateSystemMenu(DSApp *dsapp_ptr, Scene *scene_ptr, Font *menu_font, Font *message_font, void (*RefreshMainView)(), void (*ReloadPage)());
 void CreateSystemMenuView(Form *form_ptr);
