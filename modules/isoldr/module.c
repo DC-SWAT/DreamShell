@@ -443,10 +443,10 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 
 	EXPT_GUARD_BEGIN;
 
-	for(i = 3; i < size - 1; i++) {
+	for(i = 0; i < size - 3; i += 4) {
 
-		if(loader[i] == 0xE0 && loader[i + 1] == 0x8C/* && loader[i - 1] < 0x10*/) {
-			memcpy(&a, loader + i - 2, sizeof(uint32));
+		if(loader[i + 2] == 0xE0 && loader[i + 3] == 0x8C/* && loader[i - 1] < 0x10*/) {
+			memcpy(&a, loader + i, sizeof(uint32));
 //				printf("0x%08lx -> ", a);
 			a -= ISOLDR_DEFAULT_ADDR;
 
@@ -458,7 +458,7 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 //				printf("0x%04lx -> ", a);
 			a += addr;
 //				printf("0x%08lx at offset %ld\n", a, i);
-			memcpy(loader + i - 2, &a, sizeof(uint32));
+			memcpy(loader + i, &a, sizeof(uint32));
 		}
 	}
 

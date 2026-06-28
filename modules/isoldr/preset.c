@@ -496,8 +496,7 @@ int isoldr_save_preset(isoldr_info_t *info, const char *filename,
 		strncat(result, "\n", sizeof(result) - strlen(result) - 1);
 	}
 
-	if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL
-	        && info->image_type != IMAGE_TYPE_ROM_NAOMI) {
+	if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
 		strncat(result, "naomi = 1\n", sizeof(result) - strlen(result) - 1);
 	}
 
