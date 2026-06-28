@@ -92,9 +92,22 @@ static int get_blockdev_size(kos_blockdev_t *bdev, uint64_t *size) {
 	return 0;
 }
 
+static int device_ui_ready(const device_ui_t *dev) {
+
+	return dev != NULL
+		&& dev->size_label != NULL
+		&& dev->lba_label != NULL
+		&& dev->iface_label != NULL
+		&& dev->test_btn != NULL;
+}
+
 static void set_device_labels(device_ui_t *dev, const char *size, const char *lba, const char *iface) {
 
 	char buf[128];
+
+	if(!device_ui_ready(dev)) {
+		return;
+	}
 
 	snprintf(buf, sizeof(buf), "Size: %s", size);
 	GUI_LabelSetText(dev->size_label, buf);
@@ -185,10 +198,18 @@ static void update_cd_info(void) {
 
 static void show_dialog(GUI_DialogMode mode, const char *title, const char *body) {
 
+	if(self.dialog == NULL) {
+		return;
+	}
+
 	GUI_DialogShow(self.dialog, mode, title, body);
 }
 
 static void hide_dialog(void) {
+
+	if(self.dialog == NULL) {
+		return;
+	}
 
 	GUI_DialogHide(self.dialog);
 }
@@ -198,7 +219,7 @@ static void show_progress(const char *step) {
 	char body[256];
 
 	snprintf(body, sizeof(body),
-		"[size=20][b]%s[/b][/size][/align]", step);
+		"[align=center][size=20][b]%s[/b][/size][/align]", step);
 	show_dialog(DIALOG_MODE_INFO, "Speed Test", body);
 }
 
@@ -273,6 +294,10 @@ static void append_result(const char *name, uint32_t tm, double speed, int size_
 }
 
 static void update_test_btn(device_ui_t *dev, int hide, int enabled) {
+
+	if(dev == NULL || dev->test_btn == NULL) {
+		return;
+	}
 
 	if(hide) {
 		GUI_WidgetSetEnabled(dev->test_btn, 0);
@@ -602,7 +627,7 @@ void Speedtest_DialogConfirm(GUI_Widget *widget) {
 	set_testing(0);
 }
 
-static void load_device_ui(device_ui_t *dev, const char *prefix) {
+static int load_device_ui(device_ui_t *dev, const char *prefix) {
 
 	char name[32];
 
@@ -620,28 +645,49 @@ static void load_device_ui(device_ui_t *dev, const char *prefix) {
 
 	snprintf(name, sizeof(name), "/%s", prefix);
 	dev->test_btn = APP_GET_WIDGET(name);
+
+	if(!device_ui_ready(dev)) {
+		ds_printf("DS_ERROR: Speedtest: Missing UI widgets for '%s'\n", prefix);
+		return 0;
+	}
+
+	return 1;
+}
+
+static void refresh_devices(void) {
+
+	update_sd_info();
+	update_ide_info();
+	update_cd_info();
 }
 
 void Speedtest_Init(App_t *app) {
 
 	memset(&self, 0, sizeof(self));
 
-	if(app != NULL) {
-
-		self.app = app;
-		self.dialog = APP_GET_WIDGET("results-dialog");
-
-		load_device_ui(&self.sd, "sd");
-		load_device_ui(&self.ide, "ide");
-		load_device_ui(&self.cd, "cd");
-
-		update_sd_info();
-		update_ide_info();
-		update_cd_info();
-
-	}
-	else {
+	if(app == NULL) {
 		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n",
 					lib_get_name(), __func__);
+		return;
 	}
+
+	self.app = app;
+	self.dialog = APP_GET_WIDGET("results-dialog");
+
+	if(self.dialog == NULL) {
+		ds_printf("DS_ERROR: Speedtest: Missing dialog widget 'results-dialog'\n");
+	}
+
+	load_device_ui(&self.sd, "sd");
+	load_device_ui(&self.ide, "ide");
+	load_device_ui(&self.cd, "cd");
+}
+
+void Speedtest_Open(App_t *app) {
+
+	if(app != NULL) {
+		self.app = app;
+	}
+
+	refresh_devices();
 }

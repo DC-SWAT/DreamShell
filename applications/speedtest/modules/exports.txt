@@ -2,5 +2,6 @@ include kos/exports.h
 include app_module.h
 
 Speedtest_Init
+Speedtest_Open
 Speedtest_Run
 Speedtest_DialogConfirm

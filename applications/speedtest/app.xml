@@ -24,7 +24,9 @@
         <image src="../../gui/icons/highlight/button_cancel.png" name="iExitHigh" />
     </resources>
 
-    <body width="100%" height="100%" background="back" onload="export:Speedtest_Init()">
+    <body width="100%" height="100%" background="back"
+        onload="export:Speedtest_Init()"
+        onopen="export:Speedtest_Open()">
 
         <panel height="45" background="header-bg" name="header-panel">
             <label font="comic-22" color="#666666" text="Speedtest" />
