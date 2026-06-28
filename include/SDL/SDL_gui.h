@@ -210,6 +210,8 @@ class GUI_TrueTypeFont : public GUI_Font
 		GUI_TrueTypeFont(const char *fn, int size);
 		virtual ~GUI_TrueTypeFont(void);
 
+		TTF_Font *GetTTF(void) const { return ttf; }
+
 		virtual GUI_Surface *RenderFast(const char *s, SDL_Color fg);
 		virtual GUI_Surface *RenderQuality(const char *s, SDL_Color fg);
 		virtual SDL_Rect GetTextSize(const char *s);

@@ -5,13 +5,12 @@
 #include "SDL_gui.h"
 
 GUI_TrueTypeFont::GUI_TrueTypeFont(const char *fn, int size)
-: GUI_Font(fn)
+: GUI_Font(fn), ttf(NULL)
 {
-	/* FIXME include the size in the name for caching */
-
 	ttf = TTF_OpenFont(fn, size);
-	if (ttf == NULL)
-		/*throw*/ GUI_Exception("TTF_OpenFont failed name='%s' size=%d", fn, size);
+	if (ttf == NULL) {
+		GUI_Exception("TTF_OpenFont failed name='%s' size=%d", fn, size);
+	}
 }
 
 GUI_TrueTypeFont::~GUI_TrueTypeFont(void)
@@ -22,20 +21,36 @@ GUI_TrueTypeFont::~GUI_TrueTypeFont(void)
 
 GUI_Surface *GUI_TrueTypeFont::RenderFast(const char *s, SDL_Color fg)
 {
-	assert(s != NULL);
-	if (strlen(s) == 0)
-		return NULL;
+	SDL_Surface *text;
 
-	return new GUI_Surface("text", TTF_RenderText_Solid(ttf, s, fg));
+	assert(s != NULL);
+	if (ttf == NULL || strlen(s) == 0) {
+		return NULL;
+	}
+
+	text = TTF_RenderText_Solid(ttf, s, fg);
+	if (text == NULL) {
+		return NULL;
+	}
+
+	return new GUI_Surface("text", text);
 }
 
 GUI_Surface *GUI_TrueTypeFont::RenderQuality(const char *s, SDL_Color fg)
 {
-	assert(s != NULL);
-	if (strlen(s) == 0)
-		return NULL;
+	SDL_Surface *text;
 
-	return new GUI_Surface("text", TTF_RenderText_Blended(ttf, s, fg));
+	assert(s != NULL);
+	if (ttf == NULL || strlen(s) == 0) {
+		return NULL;
+	}
+
+	text = TTF_RenderText_Blended(ttf, s, fg);
+	if (text == NULL) {
+		return NULL;
+	}
+
+	return new GUI_Surface("text", text);
 }
 
 SDL_Rect GUI_TrueTypeFont::GetTextSize(const char *s)
@@ -44,19 +59,26 @@ SDL_Rect GUI_TrueTypeFont::GetTextSize(const char *s)
 	int w, h;
 			
 	assert(s != NULL);
-	if (strlen(s) != 0)
+	if (ttf == NULL || strlen(s) == 0)
 	{
-		if (TTF_SizeText(ttf, s, &w, &h) == 0)
-		{
-			r.w = w;
-			r.h = h;
-		}
+		return r;
+	}
+	if (TTF_SizeText(ttf, s, &w, &h) == 0)
+	{
+		r.w = w;
+		r.h = h;
 	}
 	return r;	
 }
 
 extern "C" GUI_Font *GUI_FontLoadTrueType(char *fn, int size)
 {
-	return new GUI_TrueTypeFont(fn, size);
-}
+	GUI_TrueTypeFont *font = new GUI_TrueTypeFont(fn, size);
 
+	if(font == NULL || font->GetTTF() == NULL) {
+		delete font;
+		return NULL;
+	}
+
+	return font;
+}

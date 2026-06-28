@@ -20,9 +20,7 @@ GUI_Surface::~GUI_Surface(void)
 GUI_Surface::GUI_Surface(const char *aname, SDL_Surface *image)
 : GUI_Object(aname)
 {
-	//assert(image != NULL);
-	if(image)
-		surface = image;
+	surface = image;
 }
 
 GUI_Surface::GUI_Surface(const char *fn)
@@ -222,11 +220,17 @@ void GUI_Surface::Bezier(const Sint16 * vx, const Sint16 * vy, int n, int s, Uin
 
 int GUI_Surface::GetWidth(void)
 {
+	if(surface == NULL) {
+		return 0;
+	}
 	return surface->w;
 }
 
 int GUI_Surface::GetHeight(void)
 {
+	if(surface == NULL) {
+		return 0;
+	}
 	return surface->h;
 }
 

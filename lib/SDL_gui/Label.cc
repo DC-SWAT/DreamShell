@@ -19,14 +19,18 @@ GUI_Label::GUI_Label(const char *aname, int x, int y, int w, int h, GUI_Font *af
 	textcolor.b = 0;
 	text = 0;
 	SetText(s);
-	font->IncRef();
+
+	if (font) {
+		font->IncRef();
+	}
+
 	wtype = WIDGET_TYPE_OTHER;
 }
 
 GUI_Label::~GUI_Label()
 {
 	if (text) delete [] text;
-	font->DecRef();
+	if (font) font->DecRef();
 }
 
 void GUI_Label::SetFont(GUI_Font *afont)
@@ -71,6 +75,11 @@ void GUI_Label::DrawWidget(const SDL_Rect *clip)
 	if (text && font)
 	{
 		GUI_Surface *image = font->RenderQuality(text, textcolor);
+
+		if (image == NULL) {
+			return;
+		}
+
 		SDL_Rect dr;
 		SDL_Rect sr;
 			
