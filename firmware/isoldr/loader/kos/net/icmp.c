@@ -24,6 +24,14 @@ int net_icmp_input(netif_t *src, uint8 *pkt, int pktsize) {
 	eth = (eth_hdr_t*)(pkt + 0);
 	ip = (ip_hdr_t*)(pkt + sizeof(eth_hdr_t));
 	icmp = (icmp_hdr_t*)(pkt + sizeof(eth_hdr_t) + 4*(ip->version_ihl & 0x0f));
+
+	/* Validate ip->length against buffer bounds before use */
+	{
+		uint16 ip_len = ntohs(ip->length);
+		int ihl = 4 * (ip->version_ihl & 0x0f);
+		if (ip_len <= ihl || ip_len > 1514)
+			return -1;
+	}
 	
 	/* Check icmp checksum */
 	memset(net_txbuf, 0, ntohs(ip->length) + (ntohs(ip->length) % 2)
