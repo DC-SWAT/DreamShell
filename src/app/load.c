@@ -327,7 +327,16 @@ int UnLoadApp(App_t *app) {
 #endif
 
 	if(app->body != NULL) {
+		GUI_Screen *screen = GUI_GetScreen();
+
+		LockVideo();
+
+		if(screen != NULL && GUI_ScreenGetContents(screen) == app->body) {
+			GUI_ScreenSetContents(screen, NULL);
+		}
+
 		GUI_ObjectDecRef((GUI_Object *) app->body);
+		UnlockVideo();
 		app->body = NULL;
 	}
 
