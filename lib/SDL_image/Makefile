@@ -16,7 +16,8 @@ KOS_CFLAGS += $(FMT_INCS) $(FMTS) $(KOS_CSTD) -I./ -I../../include/SDL -I../../i
 #KOS_CFLAGS += -DDEBUG_IMGLIB=1
 KOS_CFLAGS += -Wno-unused-but-set-variable \
 			-Wno-unused-variable \
-			-Wno-incompatible-pointer-types
+			-Wno-incompatible-pointer-types \
+			-Wno-format
 
 TARGET = ../libSDL_image_1.2.12.a
 

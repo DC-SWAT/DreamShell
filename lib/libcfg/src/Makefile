@@ -9,7 +9,10 @@
 KOS_CFLAGS += -I./platon/str -I. \
 	-DHAVE_LIMITS_H -DHAVE_FLOAT_H \
 	-DHAVE_STRING_H -DHAVE_CTYPE_H \
-	-DHAVE_MATH_H -DHAVE_STDLIB_H
+	-DHAVE_MATH_H -DHAVE_STDLIB_H \
+	-Wno-old-style-definition \
+	-Wno-unused-but-set-variable \
+	-Wno-char-subscripts
 
 TARGET = ../../libcfg.a
 OBJS = cfg+.o parse.o props.o cmdline.o cfgfile.o shared.o \

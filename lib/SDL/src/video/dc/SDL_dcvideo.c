@@ -798,7 +798,7 @@ static int DC_FlipHWSurface(_THIS, SDL_Surface *surface)
 			vid_waitvbl();
 		if (sdl_dc_video_driver!=SDL_DC_DIRECT_VIDEO)
 		{
-			dcache_flush_range((uintptr_t)sdl_dc_dblmem,sdl_dc_dblsize);
+			dcache_wback_range((uintptr_t)sdl_dc_dblmem,sdl_dc_dblsize);
 			while (!pvr_dma_ready());
 			pvr_dma_transfer(sdl_dc_dblmem, (uintptr_t)vram_l, sdl_dc_dblsize,PVR_DMA_VRAM32,-1,NULL,NULL);
 		}

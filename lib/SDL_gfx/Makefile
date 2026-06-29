@@ -12,7 +12,9 @@ SRCS =	\
 	SDL_rotozoom.c \
 	SDL_gfxBlitFunc.c
 
-KOS_CFLAGS += -I../../include -I../../include/SDL
+KOS_CFLAGS += -I../../include -I../../include/SDL \
+	-Wno-unused-but-set-variable \
+	-Wno-maybe-uninitialized
 
 OBJS = $(SRCS:.c=.o)
 
