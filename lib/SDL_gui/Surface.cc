@@ -310,12 +310,26 @@ void GUI_SurfaceSavePNG(GUI_Surface *src, const char *filename)
 
 GUI_Surface *GUI_SurfaceLoad(const char *fn)
 {
-	return new GUI_Surface(fn);
+	GUI_Surface *s = new GUI_Surface(fn);
+
+	if(GUI_SurfaceGet(s) == NULL) {
+		GUI_ObjectDecRef((GUI_Object *)s);
+		return NULL;
+	}
+
+	return s;
 }
 
 GUI_Surface *GUI_SurfaceLoad_Rect(const char *fn, SDL_Rect *selection)
 {
-	return new GUI_Surface(fn, selection);
+	GUI_Surface *s = new GUI_Surface(fn, selection);
+
+	if(GUI_SurfaceGet(s) == NULL) {
+		GUI_ObjectDecRef((GUI_Object *)s);
+		return NULL;
+	}
+
+	return s;
 }
 
 

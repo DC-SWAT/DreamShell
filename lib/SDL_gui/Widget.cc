@@ -232,7 +232,10 @@ int GUI_WidgetGetFlags(GUI_Widget *widget)
 
 GUI_Widget *GUI_WidgetGetParent(GUI_Widget *widget)
 {
-	return (GUI_Widget *)((GUI_Drawable*)widget)->GetParent();
+	if (widget == NULL)
+		return NULL;
+
+	return (GUI_Widget *)widget->GetParent();
 }
 
 }

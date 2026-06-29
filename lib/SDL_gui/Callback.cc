@@ -78,7 +78,8 @@ GUI_Callback *GUI_CallbackCreate(GUI_CallbackFunction *function, GUI_CallbackFun
 
 void GUI_CallbackCall(GUI_Callback *callback)
 {
-	callback->Call(0);
+	if (callback)
+		callback->Call(0);
 }
 
 

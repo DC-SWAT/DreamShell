@@ -149,6 +149,10 @@ int GUI_Drawable::Event(const SDL_Event *event, int xoffset, int yoffset)
 	}
 	
 	GUI_Screen *screen = GUI_GetScreen();
+
+	if (screen == NULL)
+		return 0;
+
 	GUI_Drawable *focus = screen->GetFocusWidget();
 
 	switch (event->type)

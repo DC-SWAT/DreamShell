@@ -347,7 +347,7 @@ class GUI_Widget : public GUI_Drawable
 		virtual void DrawWidget(const SDL_Rect *dr);
 
 		void SetParent(GUI_Drawable *aparent);
-		GUI_Drawable *GetParent(void);
+		virtual GUI_Drawable *GetParent(void);
 };
 
 class GUI_TextEntry : public GUI_Widget

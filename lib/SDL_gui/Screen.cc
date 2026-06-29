@@ -197,6 +197,9 @@ void GUI_Screen::calc_parent_offset(GUI_Widget *widget, Uint16 *x, Uint16 *y) {
 	SDL_Rect warea;
 	int type = 0, p = 0;
 
+	if (widget == NULL)
+		return;
+
 	warea = widget->GetArea();
 	type = ((GUI_Drawable *)widget)->GetWType();
 	
