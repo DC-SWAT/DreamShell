@@ -57,8 +57,6 @@ GenericMenu::GenericMenu() {
 
 	m_autoRep = 0;
 	m_postDelay = 0;
-
-	kbd_set_queue(0);
 }
 
 GenericMenu::~GenericMenu() {
@@ -256,33 +254,32 @@ void GenericMenu::scanKeyboard(int p, bool initial) {
 	// Get the status of the keyboard
 	maple_device_t * dev = maple_enum_dev(p, 0);
 	kbd_state_t * state = (kbd_state_t *)maple_dev_status(dev);
-	uint8 * kb = state->matrix;
 
 	// Convert the buttons to key bits
 	uint32 keys = 0;
-	if (kb[KBD_KEY_LEFT])
+	if (state->key_states[KBD_KEY_LEFT].is_down)
 		keys |= 1 << Event::KeyLeft;
-	if (kb[KBD_KEY_UP])
+	if (state->key_states[KBD_KEY_UP].is_down)
 		keys |= 1 << Event::KeyUp;
-	if (kb[KBD_KEY_RIGHT])
+	if (state->key_states[KBD_KEY_RIGHT].is_down)
 		keys |= 1 << Event::KeyRight;
-	if (kb[KBD_KEY_DOWN])
+	if (state->key_states[KBD_KEY_DOWN].is_down)
 		keys |= 1 << Event::KeyDown;
-	if (kb[KBD_KEY_ENTER])
+	if (state->key_states[KBD_KEY_ENTER].is_down)
 		keys |= 1 << Event::KeySelect;
-	if (kb[KBD_KEY_ESCAPE])
+	if (state->key_states[KBD_KEY_ESCAPE].is_down)
 		keys |= 1 << Event::KeyCancel;
-	if (kb[KBD_KEY_PGUP])
+	if (state->key_states[KBD_KEY_PGUP].is_down)
 		keys |= 1 << Event::KeyPgup;
-	if (kb[KBD_KEY_PGDOWN])
+	if (state->key_states[KBD_KEY_PGDOWN].is_down)
 		keys |= 1 << Event::KeyPgdn;
-	if (kb[KBD_KEY_SPACE])
+	if (state->key_states[KBD_KEY_SPACE].is_down)
 		keys |= 1 << Event::KeyStart;
 
 	// Heheh
-	if ( kb[KBD_KEY_DEL] &&
-		(state->shift_keys & (KBD_MOD_LCTRL | KBD_MOD_RCTRL)) &&
-		(state->shift_keys & (KBD_MOD_LALT | KBD_MOD_RALT)) )
+	if ( state->key_states[KBD_KEY_DEL].is_down &&
+		(state->last_modifiers.raw & KBD_MOD_CTRL) &&
+		(state->last_modifiers.raw & KBD_MOD_ALT) )
 	{
 		keys |= 1 << Event::KeyReset;
 	}
