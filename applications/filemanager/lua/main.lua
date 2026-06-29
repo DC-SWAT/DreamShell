@@ -638,6 +638,26 @@ function FileManager:openApp(name, args, unload_fm)
 end
 
 
+function FileManager:openFc1307Firmware(path, file)
+
+	if self.modal.mode == nil then
+		return self:ShowDialog("Flash FC1307 firmware to IDE->SD adapter?", GUI.DIALOG_MODE_CONFIRM, "exec", path);
+	end
+
+	self:ShowDialog("Flashing FC1307 firmware", GUI.DIALOG_MODE_INFO, nil, "Please wait, flashing...");
+
+	if os.execute("fc1307 -w -f " .. file) ~= DS.CMD_OK then
+		self:ShowDialog("Flashing FC1307 firmware", GUI.DIALOG_MODE_ALERT, nil,
+			"[color=red]Flash failed.[/color]");
+		self:showConsole();
+		return;
+	end
+
+	self:ShowDialog("Flashing FC1307 firmware", GUI.DIALOG_MODE_ALERT, nil,
+		"[color=green]Firmware flashed successfully.[/color]");
+end
+
+
 function FileManager:openFile()
 
 	local f = self:getFile();
@@ -652,17 +672,19 @@ function FileManager:openFile()
 
 	if ext == ".bin" or ext == ".elf" then
 
+		local flag = "-b";
+
+		if ext == ".elf" then
+			flag = "-e";
+		elseif string.find(string.lower(name), "fc1307", 1, true) then
+			return self:openFc1307Firmware(f.file, file);
+		end
+
 		if self.modal.mode == nil then
 			return self:ShowDialog("Execute file?", GUI.DIALOG_MODE_CONFIRM, "exec", f.file);
 		else
 			self:ShowDialog("Executing file", GUI.DIALOG_MODE_INFO, nil, "Please wait, loading...");
 		end
-
-		local flag = "-b";
-
-  		if ext == ".elf" then
-  		   flag = "-e";
-  		end
 
 		os.execute("exec "..flag.." -f " .. file);
 		self:HideDialog();
