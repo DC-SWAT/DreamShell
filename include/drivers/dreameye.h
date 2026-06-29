@@ -1,7 +1,7 @@
 /** 
  * \file    dreameye.h
  * \brief   Dreameye driver extension
- * \date    2015, 2023, 2024, 2025
+ * \date    2015, 2023-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -84,6 +84,9 @@ typedef struct dreameye_state_ext {
 
     /** \brief  Last frame request time in NS */
     uint64_t last_request;
+
+    /** \brief  Next frame part must be requested from thread context. */
+    int             need_next_part;
 
 } dreameye_state_ext_t;
 

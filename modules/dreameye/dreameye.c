@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    dreameye.c - dreameye driver addons
-   Copyright (C) 2015, 2023, 2024, 2025 SWAT
+   Copyright (C) 2015, 2023-2026 SWAT
 
 */
 
@@ -339,7 +339,7 @@ static void dreameye_get_video_frame_cb(maple_state_t *st, maple_frame_t *frame)
     }
 
     if(--first_state->img_transferring == 1) {
-        dreameye_get_video_frame_part(frame->dev);
+        first_state->need_next_part = 1;
     }
 }
 
@@ -351,7 +351,7 @@ static int dreameye_send_get_video_frame(maple_device_t *dev, dreameye_state_ext
     }
 
     /* Lock the frame */
-    if(maple_frame_lock(&dev->frame) < 0)
+    if(maple_frame_trylock(&dev->frame) < 0)
         return MAPLE_EAGAIN;
 
     --first_state->transfer_count;
@@ -408,6 +408,7 @@ int dreameye_req_video_frame(maple_device_t *dev) {
 fail:
     first_state = NULL;
     de->img_transferring = 0;
+    de->need_next_part = 0;
     de->img_buf = NULL;
     de->img_size = 0;
     de->transfer_count = 0;
@@ -425,6 +426,10 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t **data, int *img_sz) {
     }
 
     while(de->img_transferring > 0) {
+        if(de->need_next_part) {
+            de->need_next_part = 0;
+            dreameye_get_video_frame_part(dev);
+        }
         thd_pass();
     }
 
@@ -449,6 +454,7 @@ int dreameye_get_video_frame(maple_device_t *dev, uint8_t **data, int *img_sz) {
     *img_sz = 0;
     first_state = NULL;
     de->img_transferring = 0;
+    de->need_next_part = 0;
     de->img_buf = NULL;
     de->img_size = 0;
     de->transfer_count = 0;
@@ -846,6 +852,7 @@ int dreameye_stop_capturing(maple_device_t *dev) {
 
     de->is_capturing = 0;
     de->img_transferring = 0;
+    de->need_next_part = 0;
     de->transfer_count = 0;
     de->callback = NULL;
 
@@ -859,12 +866,17 @@ int dreameye_stop_capturing(maple_device_t *dev) {
 
 int dreameye_poll(maple_device_t *dev) {
     dreameye_state_ext_t *de = first_state;
+    int start_part = 0;
 
     if(!de || !de->is_capturing || !de->callback) {
         return 0;
     }
 
-    if(de->img_transferring == 0) {
+    if(de->need_next_part) {
+        de->need_next_part = 0;
+        start_part = 1;
+    }
+    else if(de->img_transferring == 0) {
         /* Send out complete frame */
         convert_frame(de);
         de->callback(dev, de->img_buf, de->img_size);
@@ -877,6 +889,7 @@ int dreameye_poll(maple_device_t *dev) {
         de->img_transferring = 1;
         de->img_size = 0;
         de->img_number ^= 1;
+        start_part = 1;
     }
     else if(de->img_transferring == -1) {
         /* Retry the same frame */
@@ -886,9 +899,10 @@ int dreameye_poll(maple_device_t *dev) {
             de->transfer_count = de->frame_size / JANGGU_FRAME_DATA_SIZE;
         }
         de->img_transferring = 1;
+        start_part = 1;
     }
 
-    if(de->transfer_count > 0) {
+    if(start_part && de->transfer_count > 0) {
         dreameye_get_video_frame_part(dev);
     }
 
