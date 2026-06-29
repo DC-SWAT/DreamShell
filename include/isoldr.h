@@ -42,6 +42,10 @@
 #define ISOLDR_DEFAULT_ADDR_MIN          0x8c000100
 /* Minimum possible address if the GINSU are used */
 #define ISOLDR_DEFAULT_ADDR_MIN_GINSU    0x8c001100
+/* Default address for NAOMI (original games) */
+#define ISOLDR_DEFAULT_ADDR_NAOMI        0x8c005000
+/* Default address for NAOMI (dreamcast games) */
+#define ISOLDR_DEFAULT_ADDR_NAOMI_DC     0x8dfc0000
 
 
 /**
