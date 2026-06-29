@@ -1,12 +1,12 @@
 #
 # DreamShell commands Makefile
-# Copyright (C) 2009-2024 SWAT
+# Copyright (C) 2009-2026 SWAT
 # http://www.dc-swat.ru
 #
 
 _SUBDIRS = bin2iso flashrom netstat ping scramble \
 			untgz vmu vmode mke2fs gdiopt ciso sip \
-			ntp
+			ntp fc1307
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
