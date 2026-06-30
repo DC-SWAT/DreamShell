@@ -187,22 +187,19 @@ static int fc1307_cmd_dump(const char *outfile) {
 
     for(addr = 0; addr < FC1307_ROM_SIZE; addr += FC1307_DUMP_STRIDE) {
         if(fc1307_read_block(addr, block) < 0) {
-            ds_printf("\nDS_ERROR: FC1307 read failed at 0x%05lx\n",
+            ds_printf("DS_ERROR: FC1307 read failed at 0x%05lx\n",
                       (unsigned long)addr);
             rv = CMD_ERROR;
             break;
         }
 
         if(fs_write(ff, block, FC1307_BLOCK_SIZE) != (ssize_t)FC1307_BLOCK_SIZE) {
-            ds_printf("\nDS_ERROR: Can't write %s\n", outfile);
+            ds_printf("DS_ERROR: Can't write %s\n", outfile);
             rv = CMD_ERROR;
             break;
         }
-
-        ds_printf(".");
     }
 
-    ds_printf("\n");
     fs_close(ff);
     fc1307_ata_end();
 
@@ -266,16 +263,13 @@ static int fc1307_cmd_write(const char *infile) {
 
     for(addr = 0; addr < FC1307_ROM_SIZE; addr += FC1307_BLOCK_SIZE) {
         if(fc1307_write_block(addr, rom + addr) < 0) {
-            ds_printf("\nDS_ERROR: FC1307 write failed at 0x%05lx\n",
+            ds_printf("DS_ERROR: FC1307 write failed at 0x%05lx\n",
                       (unsigned long)addr);
             rv = CMD_ERROR;
             break;
         }
-
-        ds_printf(".");
     }
 
-    ds_printf("\n");
     free(rom);
     fc1307_ata_end();
 
