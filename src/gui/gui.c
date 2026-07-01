@@ -46,6 +46,7 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 		default:
 			break;
 	}
+	GUI_ClearTrash();
 }
 
 static void GUI_TsunamiDrawHandler(void *ds_event, void *param, int action) {

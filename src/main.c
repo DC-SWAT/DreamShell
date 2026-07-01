@@ -13,7 +13,6 @@
 #include "network/net.h"
 #include "sfx.h"
 #include <dc/syscalls.h>
-#include <dc/net/w5500_adapter.h>
 
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT);
 
@@ -160,6 +159,10 @@ int InitDS() {
 	dbglog_set_level(DBG_KDEBUG);
 #endif
 
+	setenv("HOST", "DreamShell", 1);
+	setenv("OS", getenv("HOST"), 1);
+	setenv("USER", getenv("HOST"), 1);
+
 	if(!emu) {
 		InitIDE();
 		InitSDCard();
@@ -181,9 +184,6 @@ int InitDS() {
 			setenv("TEMP", "/ram", 1);
 		}
 	}
-	setenv("HOST", "DreamShell", 1);
-	setenv("OS", getenv("HOST"), 1);
-	setenv("USER", getenv("HOST"), 1);
 
 	tmpi = hardware_sys_mode(NULL);
 	switch(tmpi) {
@@ -207,13 +207,10 @@ int InitDS() {
 			break;
 	}
 
-	if(tmpi != HW_TYPE_RETAIL) {
-		// FIXME: Get some real ID for NAOMI.
-		tmpb = (uint8_t *)0xa021a056;
-	}
-	else {
-		tmpd = syscall_sysinfo_id();
-		tmpb = (uint8_t *)&tmpd;
+	tmpd = syscall_sysinfo_id();
+	tmpb = (uint8_t *)&tmpd;
+
+	if(tmpi == HW_TYPE_RETAIL) {
 		if(strncmp(getenv("PATH"), "/cd", 3)) {
 			/* Relax GD drive =) */
 			cdrom_spin_down();
@@ -461,7 +458,6 @@ int main(int argc, char **argv) {
 			kbd_changed = 0;
 		}
 		UnLoadOldApps();
-		GUI_ClearTrash();
 
 		if(event.type == SDL_QUIT) {
 			ds_printf("DS_INFO: SDL_QUIT called\n");
