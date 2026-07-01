@@ -33,6 +33,7 @@
 // https://en.wikipedia.org/wiki/List_of_FTP_commands
 
 #define FILE_BUFFER_SIZE ((64 * 1024) - 512)
+#define W5500_TCP_RCVBUF 8192
 
 typedef struct {
 	char *command;
@@ -58,6 +59,30 @@ static int cmd_stor(lftpd_client_t* client, const char* arg);
 static int cmd_syst(lftpd_client_t* client, const char* arg);
 static int cmd_type(lftpd_client_t* client, const char* arg);
 static int cmd_user(lftpd_client_t* client, const char* arg);
+
+static bool lftpd_is_w5500(void) {
+	return net_default_dev != NULL &&
+		strcmp(net_default_dev->name, "w5500") == 0;
+}
+
+static void lftpd_inet_tune_listener(int socket) {
+	uint32_t rcv_buf_sz;
+
+	if(!lftpd_is_w5500())
+		return;
+
+	rcv_buf_sz = W5500_TCP_RCVBUF;
+	setsockopt(socket, SOL_SOCKET, SO_RCVBUF, &rcv_buf_sz, sizeof(rcv_buf_sz));
+}
+
+static void lftpd_inet_tune_data_socket(int socket) {
+	uint32_t buf_sz = FILE_BUFFER_SIZE;
+
+	setsockopt(socket, SOL_SOCKET, SO_SNDBUF, &buf_sz, sizeof(buf_sz));
+
+	if(!lftpd_is_w5500())
+		setsockopt(socket, SOL_SOCKET, SO_RCVBUF, &buf_sz, sizeof(buf_sz));
+}
 
 static command_t commands[] = {
 	{ "CWD",  cmd_cwd },
@@ -130,7 +155,7 @@ static int send_list(int socket, const char* path) {
 	static const char* directory_format = "drw-rw-rw- 1 dream shell %lu Nov 27 1998 %s";
 	static const char* file_format = "-rw-rw-rw- 1 dream shell %lu Nov 27 1998 %s";
 
-	dirent_t *entry;
+	const dirent_t *entry;
 	file_t fd = fs_open(path, O_RDONLY | O_DIR);
 
 	if (fd < 0) {
@@ -158,7 +183,7 @@ static int send_nlst(int socket, const char* path) {
 		return -1;
 	}
 
-	dirent_t *entry;
+	const dirent_t *entry;
 	while ((entry = fs_readdir(fd))) {
 		send_multiline_response_line(socket, entry->name);
 	}
@@ -348,6 +373,8 @@ static int cmd_epsv(lftpd_client_t* client, const char* arg) {
 	// format the response
 	send_simple_response(client->socket, 229, STATUS_229, port);
 
+	lftpd_inet_tune_listener(listener_socket);
+
 	// wait for the connection to the data port
 	lftpd_log_debug("waiting for data port connection on port %d...", port);
 	int client_socket = accept(listener_socket, NULL, NULL);
@@ -361,9 +388,7 @@ static int cmd_epsv(lftpd_client_t* client, const char* arg) {
 	// close the listener
 	close(listener_socket);
 
-	uint32_t new_buf_sz = FILE_BUFFER_SIZE;
-	setsockopt(client_socket, SOL_SOCKET, SO_SNDBUF, &new_buf_sz, sizeof(new_buf_sz));
-	setsockopt(client_socket, SOL_SOCKET, SO_RCVBUF, &new_buf_sz, sizeof(new_buf_sz));
+	lftpd_inet_tune_data_socket(client_socket);
 
 	client->data_socket = client_socket;
 
@@ -466,6 +491,8 @@ static int cmd_pasv(lftpd_client_t* client, const char* arg) {
 		(port >> 8) & 0xff,
 		(port & 0xff));
 
+	lftpd_inet_tune_listener(listener_socket);
+
 	// wait for the connection to the data port
 	lftpd_log_debug("waiting for data port connection on port %d...", port);
 	int client_socket = accept(listener_socket, NULL, NULL);
@@ -479,9 +506,7 @@ static int cmd_pasv(lftpd_client_t* client, const char* arg) {
 	// close the listener
 	close(listener_socket);
 
-	uint32_t new_buf_sz = FILE_BUFFER_SIZE;
-	setsockopt(client_socket, SOL_SOCKET, SO_SNDBUF, &new_buf_sz, sizeof(new_buf_sz));
-	setsockopt(client_socket, SOL_SOCKET, SO_RCVBUF, &new_buf_sz, sizeof(new_buf_sz));
+	lftpd_inet_tune_data_socket(client_socket);
 
 	client->data_socket = client_socket;
 
@@ -690,6 +715,8 @@ int lftpd_start(const char* directory, int port, lftpd_t* lftpd) {
 		net_default_dev->ip_addr[3],
 		port
 	);
+
+	lftpd_inet_tune_listener(lftpd->server_socket);
 
 	while (true) {
 		lftpd_log_info("waiting for connection...");
