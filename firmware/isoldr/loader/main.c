@@ -177,6 +177,10 @@ int main(int argc, char *argv[]) {
 			if(!Load_IPBin(IsoInfo->boot_mode == BOOT_MODE_DIRECT ? 1 : 0)) {
 				goto error;
 			}
+
+			if(IsoInfo->exec.type == BIN_TYPE_KATANA) {
+				*(volatile uint8 *)NONCACHED_ADDR(SYD_DDS_FLAG_ADDR) &= (uint8)~SYD_DDS_FLAG_CLEAR;
+			}
 		}
 		if(IsoInfo->exec.type != BIN_TYPE_KOS) {
 			/* Patch GDC driver entry */
@@ -189,6 +193,9 @@ int main(int argc, char *argv[]) {
 
 			if(IsoInfo->firmware) {
 				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - 0x20000);
+				if(loader_addr < APP_BIN_ADDR) {
+					new_addr = NONCACHED_ADDR(ISOLDR_DEFAULT_ADDR_NAOMI_DC);
+				}
 				memcpy((void *)new_addr, (void *)IsoInfo->firmware, 0x20000);
 				IsoInfo->firmware = new_addr;
 				LOGF("Loading flashROM dump to %08lx\n", new_addr);
