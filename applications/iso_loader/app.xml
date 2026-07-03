@@ -386,6 +386,9 @@
 								<input height="22" name="0x8c001100" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8c001100" x="19%" />
 								</input>
+								<input height="22" name="0x8c001200" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
+									<label align="left" color="#000000" font="arial" height="20" text="0x8c001200" x="19%" />
+								</input>
 								<input height="22" name="0x8c004000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8c004000" x="19%" />
 								</input>
@@ -397,9 +400,6 @@
 								</input>
 								<input height="22" name="0x8c008000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8c008000" x="19%" />
-								</input>
-								<input height="22" name="0x8cf80000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
-									<label align="left" color="#000000" font="arial" height="20" text="0x8cf80000" x="19%" />
 								</input>
 								<input height="22" name="0x8cfc0000" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="46%">
 									<label align="left" color="#000000" font="arial" height="20" text="0x8cfc0000" x="19%" />

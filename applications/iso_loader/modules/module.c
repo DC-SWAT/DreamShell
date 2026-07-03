@@ -933,7 +933,7 @@ void isoLoader_toggleDMA(GUI_Widget *widget) {
 }
 
 void isoLoader_toggleIRQ(GUI_Widget *widget) {
-	if (GUI_WidgetGetState(widget) && GUI_WidgetGetState(self.memory_chk[2])) {
+	if (GUI_WidgetGetState(widget) && GUI_WidgetGetState(self.memory_chk[3])) {
 		GUI_WidgetSetState(self.memory_chk[1], 1);
 		isoLoader_toggleMemory(self.memory_chk[1]);
 	}
@@ -954,7 +954,7 @@ void isoLoader_toggleCDDA(GUI_Widget *widget) {
 	isoLoader_toggleCDDA_Pos(self.cdda_mode_pos[1]);
 	isoLoader_toggleCDDA_Chan(self.cdda_mode_ch[1]);
 
-	if (GUI_WidgetGetState(self.memory_chk[2])) {
+	if (GUI_WidgetGetState(self.memory_chk[3])) {
 		GUI_WidgetSetState(self.memory_chk[1], 1);
 		isoLoader_toggleMemory(self.memory_chk[1]);
 	}
@@ -1159,13 +1159,13 @@ void isoLoader_toggleMemory(GUI_Widget *widget) {
 		GUI_WidgetSetState(self.memory_chk[i-1], 1);
 	}
 	
-	if(GUI_WidgetGetState(self.memory_chk[2]) && 
+	if(GUI_WidgetGetState(self.memory_chk[3]) && 
 		GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN])) {
 		
 		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN], 0);
 		GUI_WidgetSetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC], 1);
 		
-	} else if(GUI_WidgetGetState(self.memory_chk[3]) && 
+	} else if(GUI_WidgetGetState(self.memory_chk[4]) && 
 		(GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN]) || 
 		GUI_WidgetGetState(self.boot_mode_chk[BOOT_MODE_IPBIN_TRUNC]))) {
 		
@@ -1187,7 +1187,7 @@ void isoLoader_toggleBootMode(GUI_Widget *widget) {
 void isoLoader_toggleExtension(GUI_Widget *widget) {
 	if (GUI_WidgetGetState(widget)) {
 		GUI_WidgetSetState(self.irq, 1);
-		if (GUI_WidgetGetState(self.memory_chk[2])) {
+		if (GUI_WidgetGetState(self.memory_chk[3])) {
 			GUI_WidgetSetState(self.memory_chk[0], 1);
 			isoLoader_toggleMemory(self.memory_chk[0]);
 		}
