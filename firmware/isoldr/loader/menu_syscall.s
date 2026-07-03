@@ -1,5 +1,5 @@
 !   This file is part of DreamShell ISO Loader
-!   Copyright (C)2010-2023 SWAT
+!   Copyright (C)2010-2026 SWAT
 !
 !   This program is free software: you can redistribute it and/or modify
 !   it under the terms of the GNU General Public License version 3 as
@@ -73,17 +73,17 @@ menu_chk_disk:
 	nop
 
 menu_reboot:
-	mov		r15, r5
 	mov.l   reg_sr_val, r0
 	ldc     r0, sr
 	mov.l   reg_gbr_val, r4
 	ldc     r4, gbr
+	mov.l   reg_vbr_val, r0
+	ldc     r0, vbr
 	mov.l   new_stack, r15
-	ldc     r4, vbr
 	sts.l	pr, @-r15
 	mov.l	menu_exit, r0
 	jmp		@r0
-	mov.l	@r15+, r4
+	nop
 
 .align 4
 menu_check_disc:
@@ -94,5 +94,7 @@ reg_sr_val:
 	.long 0x700000f0
 reg_gbr_val:
 	.long 0x8c000000
+reg_vbr_val:
+	.long 0x8c00f400
 new_stack:
 	.long 0x8d000000

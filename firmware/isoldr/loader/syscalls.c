@@ -55,6 +55,13 @@ static void reset_GDS(gd_state_t *GDS) {
 	GDS->gdc.mode = 2048;
 	GDS->gdc.flags = 8192;
 
+#ifndef HAVE_LIMIT
+	GDS->mode.cd_speed = 0;
+	GDS->mode.standby_time = 0xb4;
+	GDS->mode.read_flags = 0x19;
+	GDS->mode.read_retry = 0x08;
+#endif
+
 	if(GDS->true_async == 0
 #if defined(DEV_TYPE_IDE) || defined(DEV_TYPE_GD)
 		&& IsoInfo->use_dma && !IsoInfo->emu_async
@@ -328,6 +335,37 @@ static void get_scd() {
 		GDS->err = CMD_ERR_UNITATTENTION;
 	}
 #endif
+}
+
+static void gdc_mode_cmd(void) {
+	gd_state_t *GDS = get_GDS();
+
+#ifndef HAVE_LIMIT
+	if(GDS->cmd == CMD_SET_MODE) {
+		GDS->mode.cd_speed = GDS->param[0];
+		GDS->mode.standby_time = GDS->param[1];
+		GDS->mode.read_flags = GDS->param[2];
+		GDS->mode.read_retry = GDS->param[3];
+		LOGFF("SET speed=%08lx standby=%08lx flags=%08lx retry=%08lx\n",
+			GDS->mode.cd_speed, GDS->mode.standby_time,
+			GDS->mode.read_flags, GDS->mode.read_retry);
+	}
+	else {
+		uint32_t *dst = (uint32_t *)GDS->param[0];
+
+		if(dst) {
+			dst[0] = GDS->mode.cd_speed;
+			dst[1] = GDS->mode.standby_time;
+			dst[2] = GDS->mode.read_flags;
+			dst[3] = GDS->mode.read_retry;
+		}
+		LOGFF("REQ dst=%08lx speed=%08lx standby=%08lx flags=%08lx retry=%08lx\n",
+			(uint32_t)dst, GDS->mode.cd_speed, GDS->mode.standby_time,
+			GDS->mode.read_flags, GDS->mode.read_retry);
+	}
+#endif
+	GDS->transfered = 0xa;
+	GDS->status = CMD_STAT_COMPLETED;
 }
 
 /**
@@ -964,8 +1002,7 @@ void gdcMainLoop(void) {
 #endif
 					case CMD_REQ_MODE:
 					case CMD_SET_MODE:
-						// TODO param[0]
-						GDS->status = CMD_STAT_COMPLETED;
+						gdc_mode_cmd();
 						break;
 					case CMD_REQ_STAT:
 						get_stat();
@@ -1474,15 +1511,24 @@ void gdcDummy(int gd_chn, int *arg2) {
 void menu_exit(void) {
 	LOGFF(NULL);
 
+	irq_disable();
 	do {} while(pre_read_xfer_busy());
-	fs_enable_dma(FS_DMA_DISABLED);
-	shutdown_machine();
+	fs_enable_dma(FS_DMA_SHARED);
 
-	if (Load_DS() > 0) {
-		launch(APP_BIN_ADDR);
-	} else {
-		launch(BIOS_ROM_ADDR);
+#ifdef HAVE_CDDA
+	if(IsoInfo->emu_cdda) {
+		CDDA_Stop();
 	}
+#endif
+	int loaded = Load_DS();
+	setup_machine();
+	boot_stack = 0x8d000000;
+
+	if (loaded > 0) {
+		launch(APP_BIN_ADDR);
+	}
+
+	launch(BIOS_ROM_ADDR);
 }
 
 int menu_check_disc(void) {

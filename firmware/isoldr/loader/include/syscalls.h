@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _SYSCALLS_H
@@ -137,6 +137,13 @@ typedef struct disk_format {
 	
 } disk_format_t;
 
+typedef struct gdc_mode {
+	uint32_t cd_speed;
+	uint32_t standby_time;
+	uint32_t read_flags;
+	uint32_t read_retry;
+} gdc_mode_t;
+
 typedef struct gd_state {
 
 	int req_count;
@@ -164,11 +171,16 @@ typedef struct gd_state {
 	int drv_stat;
 	int drv_media;
 
+#ifndef HAVE_LIMIT
+	gdc_mode_t mode;
+#endif
+
 #ifdef HAVE_MULTI_DISC
 	int disc_change;
 	int disc_num;
 	int need_reinit;
 #endif
+
 	disk_format_t gdc;
 
 } gd_state_t;

@@ -1,6 +1,6 @@
 /**
  * DreamShell ISO Loader
- * (c)2009-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2026 SWAT <http://www.dc-swat.ru>
  */
 
 #ifndef _ISO_LOADER_H
@@ -61,7 +61,7 @@
 /* CPU cache and all DMA's is 32-byte aligned */
 #define ALIGN32_ADDR(addr) (((addr) + 0x1f) & ~0x1f)
 
-#define SYD_DDS_FLAG_ADDR NONCACHED_ADDR(IP_BIN_ADDR + 0xfc))
+#define SYD_DDS_FLAG_ADDR  (IP_BIN_ADDR + 0xfc)
 #define SYD_DDS_FLAG_CLEAR 0x20
 
 #define SH4_OPCODE_NOP 0x0009
