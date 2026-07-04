@@ -1136,7 +1136,6 @@ DWORD clmt_clust (	/* <2:Error, >=2:Cluster number */
 {
 	DWORD cl, ncl, *tbl;
 
-
 	tbl = fp->cltbl + 1;	/* Top of CLMT */
 	cl = ofs / SS(fp->fs) / fp->fs->csize;	/* Cluster order from top of the file */
 	for (;;) {
@@ -1153,7 +1152,7 @@ DWORD contiguous_sect(
 	FIL* fp		/* Pointer to the file object */
 )
 {
-	DWORD csect, ncl = 0, *tbl;
+	DWORD csect, ncl, tcl, *tbl;
 	csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));
 
 	if (!fp->cltbl) {
@@ -1166,14 +1165,19 @@ DWORD contiguous_sect(
 		return *tbl * fp->fs->csize;
 	}
 
-	for (DWORD i = 0; i < fp->cltbl[0]; ++i) {
-		ncl = *tbl++;			/* Number of cluters in the fragment */
-		if (!ncl) return 0;		/* End of table? (error) */
-		if (fp->clust <= *tbl + ncl) break;
+	for (;;) {
+		ncl = *tbl++;		/* Number of clusters in the fragment */
+		if (!ncl) {
+			return 0;		/* End of table? (error) */
+		}
+		tcl = *tbl;
+		if (fp->clust < tcl + ncl) {
+			break;
+		}
 		tbl++;
 	}
 
-	return ((ncl - (fp->clust - *tbl)) * fp->fs->csize) - csect;
+	return ((ncl - (fp->clust - tcl)) * fp->fs->csize) - csect;
 }
 
 #endif	/* _USE_FASTSEEK */
@@ -2686,8 +2690,17 @@ FRESULT f_read (
 							cc = cs;
 						}
 					}
+					else {
+						cc = fp->fs->csize - csect;
+					}
 					if (csect + cc > fp->fs->csize) {
-						fp->clust = clmt_clust(fp, fp->fptr + (SS(fp->fs) * cc));
+						DWORD next = fp->fptr + ((DWORD)SS(fp->fs) * cc);
+						DWORD cl;
+						if (next < fp->fsize) {
+							cl = clmt_clust(fp, next);
+							if (cl >= 2)
+								fp->clust = cl;
+						}
 					}
 #else
 					/* Clip at cluster boundary */
@@ -2819,8 +2832,17 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 							cc = cs;
 						}
 					}
+					else {
+						cc = fp->fs->csize - csect;
+					}
 					if (csect + cc > fp->fs->csize) {
-						fp->clust = clmt_clust(fp, fp->fptr + (SS(fp->fs) * cc));
+						DWORD next = fp->fptr + ((DWORD)SS(fp->fs) * cc);
+						DWORD cl;
+						if (next < fp->fsize) {
+							cl = clmt_clust(fp, next);
+							if (cl >= 2)
+								fp->clust = cl;
+						}
 					}
 #else
 					/* Clip at cluster boundary */

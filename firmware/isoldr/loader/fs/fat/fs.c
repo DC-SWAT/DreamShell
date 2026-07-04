@@ -319,7 +319,7 @@ int close(int fd) {
 
 	rc = f_close(&file->fp);
 
-	if (file->fp.cltbl && file->fp.cltbl[0] > SZ_TBL) {
+	if (file->fp.cltbl && file->fp.cltbl != file->cltbl) {
 		free(file->fp.cltbl);
 	}
 
