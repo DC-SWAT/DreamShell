@@ -4,6 +4,11 @@
 
 #include "SDL_gui.h"
 
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+}
+
 //
 // A label which favors memory consumption over speed.
 //
@@ -49,6 +54,7 @@ void GUI_Label::SetTextColor(int r, int g, int b)
 
 void GUI_Label::SetText(const char *s)
 {
+	LockVideo();
 	if (text)
 	{
 		delete [] text;
@@ -59,6 +65,7 @@ void GUI_Label::SetText(const char *s)
 		text = new char[strlen(s) + 1];
 		strcpy(text, s);
 	}
+	UnlockVideo();
 	MarkChanged();
 }
 
@@ -69,56 +76,57 @@ char *GUI_Label::GetText()
 
 void GUI_Label::DrawWidget(const SDL_Rect *clip)
 {
+	GUI_Surface *image = NULL;
+
 	if (parent == 0)
 		return;
-	
+
+	LockVideo();
 	if (text && font)
+		image = font->RenderQuality(text, textcolor);
+	UnlockVideo();
+
+	if (image == NULL)
+		return;
+
+	SDL_Rect dr;
+	SDL_Rect sr;
+		
+	sr.w = dr.w = image->GetWidth();
+	sr.h = dr.h = image->GetHeight();
+	sr.x = sr.y = 0;
+
+	switch (flags & WIDGET_HORIZ_MASK)
 	{
-		GUI_Surface *image = font->RenderQuality(text, textcolor);
-
-		if (image == NULL) {
-			return;
-		}
-
-		SDL_Rect dr;
-		SDL_Rect sr;
-			
-		sr.w = dr.w = image->GetWidth();
-		sr.h = dr.h = image->GetHeight();
-		sr.x = sr.y = 0;
-
-		switch (flags & WIDGET_HORIZ_MASK)
-		{
-			case WIDGET_HORIZ_LEFT:
-				dr.x = area.x;
-				break;
-			case WIDGET_HORIZ_RIGHT:
-				dr.x = area.x + area.w - dr.w;
-				break;
-			case WIDGET_HORIZ_CENTER:
-			default:
-				dr.x = area.x + (area.w - dr.w) / 2;
-				break;
-		}
-		switch (flags & WIDGET_VERT_MASK)
-		{
-			case WIDGET_VERT_TOP:
-				dr.y = area.y;
-				break;
-			case WIDGET_VERT_BOTTOM:
-				dr.y = area.y + area.h - dr.h;
-				break;
-			case WIDGET_VERT_CENTER:
-			default:
-				dr.y = area.y + (area.h - dr.h) / 2;
-				break;
-		}
-		if (GUI_ClipRect(&sr, &dr, clip)) {
-			parent->Erase(&area);
-			parent->Draw(image, &sr, &dr);
-		}
-		image->DecRef();
+		case WIDGET_HORIZ_LEFT:
+			dr.x = area.x;
+			break;
+		case WIDGET_HORIZ_RIGHT:
+			dr.x = area.x + area.w - dr.w;
+			break;
+		case WIDGET_HORIZ_CENTER:
+		default:
+			dr.x = area.x + (area.w - dr.w) / 2;
+			break;
 	}
+	switch (flags & WIDGET_VERT_MASK)
+	{
+		case WIDGET_VERT_TOP:
+			dr.y = area.y;
+			break;
+		case WIDGET_VERT_BOTTOM:
+			dr.y = area.y + area.h - dr.h;
+			break;
+		case WIDGET_VERT_CENTER:
+		default:
+			dr.y = area.y + (area.h - dr.h) / 2;
+			break;
+	}
+	if (GUI_ClipRect(&sr, &dr, clip)) {
+		parent->Erase(&area);
+		parent->Draw(image, &sr, &dr);
+	}
+	image->DecRef();
 }
 
 extern "C"

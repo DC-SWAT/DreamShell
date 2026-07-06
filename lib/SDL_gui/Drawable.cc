@@ -321,6 +321,7 @@ int GUI_Drawable::GetWType(void) {
 
 void GUI_Drawable::DoUpdate(int force)
 {
+	LockVideo();
 	if (flags & WIDGET_CHANGED) {
 		force = 1;
 	}
@@ -328,6 +329,7 @@ void GUI_Drawable::DoUpdate(int force)
 	if(flags & WIDGET_CHANGED) {
 		flags &= ~WIDGET_CHANGED;
 	}
+	UnlockVideo();
 }
 
 /* mark as changed so it will be drawn in the next update */
@@ -431,6 +433,7 @@ void GUI_Drawable::Keep(GUI_Widget **target, GUI_Widget *source)
 {
 	if (*target != source)
 	{
+		LockVideo();
 		if (source)
 			source->IncRef();
 		if (*target)
@@ -440,9 +443,10 @@ void GUI_Drawable::Keep(GUI_Widget **target, GUI_Widget *source)
 		}
 		if (source)
 			source->SetParent(this);
-			
 		(*target) = source;
-		MarkChanged();
+
+		flags |= WIDGET_CHANGED;
+		UnlockVideo();
 	}
 }
 

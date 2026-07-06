@@ -26,6 +26,7 @@ typedef struct export_callback_data {
 
 	uint32 addr;
 	GUI_Widget *widget;
+	App_t *app;
 
 } export_callback_data_t;
 
@@ -326,17 +327,10 @@ int UnLoadApp(App_t *app) {
 	ds_printf("DS_DEBUG: Free app body...\n");
 #endif
 
+	LockVideo();
+
 	if(app->body != NULL) {
-		GUI_Screen *screen = GUI_GetScreen();
-
-		LockVideo();
-
-		if(screen != NULL && GUI_ScreenGetContents(screen) == app->body) {
-			GUI_ScreenSetContents(screen, NULL);
-		}
-
 		GUI_ObjectDecRef((GUI_Object *) app->body);
-		UnlockVideo();
 		app->body = NULL;
 	}
 
@@ -357,6 +351,8 @@ int UnLoadApp(App_t *app) {
 		UnloadAppResources(app, app->resources);
 		app->resources = NULL;
 	}
+
+	UnlockVideo();
 
 
 #ifdef APP_LOAD_DEBUG
@@ -1602,9 +1598,29 @@ static void lua_callback_function(void *data) {
 	LuaDo(LUA_DO_STRING, d->script, (lua_State *) d->state);
 }
 
+static int export_callback_active(App_t *app) {
+	App_t *cur;
+
+	if(app == NULL) {
+		return 0;
+	}
+	if(app->state & (APP_STATE_PROCESS | APP_STATE_WAIT_UNLOAD)) {
+		return 0;
+	}
+	if((app->state & (APP_STATE_LOADED | APP_STATE_OPENED)) != (APP_STATE_LOADED | APP_STATE_OPENED)) {
+		return 0;
+	}
+	cur = GetCurApp();
+	return cur == NULL || app == cur;
+}
+
 static void export_callback_function(void *data) {
 
 	export_callback_data_t *d = (export_callback_data_t *) data;
+
+	if(!export_callback_active(d->app)) {
+		return;
+	}
 
 	EXPT_GUARD_BEGIN;
 	void (*func)(GUI_Widget *widget) = (void (*)(GUI_Widget *widget))d->addr;
@@ -1630,6 +1646,7 @@ static GUI_Callback *CreateAppElementCallback(App_t *app, const char *event, GUI
 
 			de->addr = GetAppExportFuncAddr(event);
 			de->widget = widget;
+			de->app = app;
 
 			if(de->addr > 0 && de->addr != 0xffffffff) {
 				cb = GUI_CallbackCreate(export_callback_function, free, (void*)de);

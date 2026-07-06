@@ -755,6 +755,8 @@ class GUI_FileManager : public GUI_Container
 {
 	protected:
 		int rescan;
+		dirent_t *scan_entries;
+		int scan_entries_count;
 		char cur_path[NAME_MAX];
 		GUI_Rect item_area;
 		GUI_Surface *item_normal;
@@ -797,6 +799,10 @@ class GUI_FileManager : public GUI_Container
 		void ClearSelection();
 		void EnsureItemVisible(int index);
 
+		void LoadScanEntries();
+		void SetPendingScan(dirent_t *entries, int count);
+		dirent_t *TakePendingScan(int *count);
+		void ScanApply(dirent_t *entries, int count);
 		void Scan();
 		void ReScan();
 		void Resize(int w, int h);

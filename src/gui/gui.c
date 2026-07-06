@@ -426,6 +426,15 @@ int GUI_CloseApp(App_t *app) {
 		EnableScreen();
 		GUI_Enable();
 	}
+	else if(app->body != NULL) {
+		GUI_Screen *screen = GUI_GetScreen();
+
+		LockVideo();
+		if(screen != NULL && GUI_ScreenGetContents(screen) == app->body) {
+			GUI_ScreenSetContents(screen, NULL);
+		}
+		UnlockVideo();
+	}
 
 	if(gui_prev_width && (gui_prev_width != GetScreenWidth() || gui_prev_height != GetScreenHeight())) {
 		SetScreenMode(gui_prev_width, gui_prev_height, 0.0f, 0.0f, 1.0f);
@@ -445,7 +454,9 @@ int GUI_Object2Trash(GUI_Object *object) {
 	i->object = object;
 	ds_printf("DS_WARNING: Added GUI object to trash: %s at %p\n", GUI_ObjectGetName(object), object);
 
+	LockVideo();
 	SLIST_INSERT_HEAD(trash_list, i, list); 
+	UnlockVideo();
 	return 1; 
 }
 

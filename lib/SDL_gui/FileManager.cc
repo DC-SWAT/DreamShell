@@ -16,6 +16,8 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 : GUI_Container(aname, x, y, w, h) {
 
 	strncpy(cur_path, path != NULL ? path : "/", NAME_MAX);
+	scan_entries = NULL;
+	scan_entries_count = 0;
 	rescan = 1;
 
 	scrollbar = new GUI_ScrollBar("scrollbar", 0, 20, 20, area.h - 40);
@@ -104,9 +106,14 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 		cb->DecRef();
 		AddWidget(button_down);
 	}
+
+	LoadScanEntries();
 }
 
 GUI_FileManager::~GUI_FileManager() {
+	if(scan_entries)
+		free(scan_entries);
+
 	item_normal->DecRef();
 	item_highlight->DecRef();
 	item_pressed->DecRef();
@@ -141,6 +148,7 @@ GUI_FileManager::~GUI_FileManager() {
 
 void GUI_FileManager::Resize(int w, int h)
 {
+	LockVideo();
 	area.w = w;
 	area.h = h;
 	item_area.w = w - scrollbar->GetWidth();
@@ -158,6 +166,7 @@ void GUI_FileManager::Resize(int w, int h)
 		scrollbar->SetPosition(item_area.w, button_up->GetHeight());
 		scrollbar->SetHeight(area.h - (button_up->GetHeight() + button_down->GetHeight()));
 	}
+	UnlockVideo();
 
 	ReScan();
 }
@@ -259,7 +268,7 @@ void GUI_FileManager::ChangeDir(const char *name, int size) {
 				snprintf(path, NAME_MAX, "%s%s", cur_path, name);
 			}
 
-			s = strlen(cur_path) + strlen(name) + 1;
+			s = strlen(path);
 			path[s > NAME_MAX-1 ? NAME_MAX-1 : s] = '\0';
 
 			fd = fs_open(path, O_RDONLY | O_DIR);
@@ -290,46 +299,36 @@ static int alpha_sort(dirent_t *a, dirent_t *b)
 	return toupper(*(unsigned const char *)s1) - toupper(*(unsigned const char *)(s2));
 }
 
-void GUI_FileManager::Scan() 
+static dirent_t *ReadDirEntries(const char *path, int *count)
 {
 	file_t f;
 	const dirent_t *ent;
 	dirent_t *sorts = NULL;
 	int n = 0;
 
-	f = fs_open(cur_path, O_RDONLY | O_DIR);
-	
-	if(f == FILEHND_INVALID) 
+	*count = 0;
+
+	f = fs_open(path, O_RDONLY | O_DIR);
+
+	if(f == FILEHND_INVALID)
 	{
-		printf("GUI_FileManager: Can't open dir: %s\n", cur_path);
-		return;
+		printf("GUI_FileManager: Can't open dir: %s\n", path);
+		return NULL;
 	}
 
-	LockVideo();
-	panel->RemoveAllWidgets();
-	panel->SetYOffset(0);
-	scrollbar->SetVerticalPosition(0);
-	UpdateScrollbarButtons();
-	selected_item = -1;
-
-	if(strlen(cur_path) > 1) 
-	{
-		AddItem("..", -2, 0, O_DIR);
-	}
-
-	while ((ent = fs_readdir(f)) != NULL) 
+	while ((ent = fs_readdir(f)) != NULL)
 	{
 		if(ent->name[0] != '.' &&
 			strncasecmp(ent->name, "RECYCLER", NAME_MAX) &&
 			strncasecmp(ent->name, "$RECYCLE.BIN", NAME_MAX) &&
 			strncasecmp(ent->name, "System Volume Information", NAME_MAX)
 		) {
-			dirent_t *tmp = (dirent_t *) realloc(sorts, (sizeof(dirent_t)*(n+1)));
+			dirent_t *tmp = (dirent_t *) realloc(sorts, (sizeof(dirent_t) * (n + 1)));
 
 			if(tmp == NULL) {
 				if(sorts) free(sorts);
 				fs_close(f);
-				return;
+				return NULL;
 			}
 
 			sorts = tmp;
@@ -338,34 +337,105 @@ void GUI_FileManager::Scan()
 		}
 	}
 
+	fs_close(f);
+
 	if(n > 0) {
 		qsort((void *) sorts, n, sizeof(dirent_t), (int (*)(const void*, const void*)) alpha_sort);
 	}
 
-	for (int i = 0; i < n; i++)
-	{
-		if (sorts[i].attr)
-		{
-			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
-		}
-	}
+	*count = n;
+	return sorts;
+}
 
-	for (int i = 0; i < n; i++)
-	{
-		if (!sorts[i].attr)
-		{
-			AddItem(sorts[i].name, sorts[i].size, sorts[i].time, sorts[i].attr);
-		}
-	}
-	rescan = 0;
+void GUI_FileManager::SetPendingScan(dirent_t *entries, int count)
+{
+	LockVideo();
+	if(scan_entries)
+		free(scan_entries);
+	scan_entries = entries;
+	scan_entries_count = count;
+	UnlockVideo();
+}
 
-	if(sorts) free(sorts);
+dirent_t *GUI_FileManager::TakePendingScan(int *count)
+{
+	dirent_t *entries;
+
+	LockVideo();
+	entries = scan_entries;
+	*count = scan_entries_count;
+	scan_entries = NULL;
+	scan_entries_count = 0;
 	UnlockVideo();
 
-	fs_close(f);
+	return entries;
+}
+
+void GUI_FileManager::LoadScanEntries()
+{
+	char path[NAME_MAX];
+	int count = 0;
+
+	strncpy(path, cur_path, NAME_MAX);
+	SetPendingScan(ReadDirEntries(path, &count), count);
+}
+
+void GUI_FileManager::ScanApply(dirent_t *entries, int count)
+{
+	int i;
+
+	if(item_select_callbacks) {
+		for(i = 0; i < panel->GetWidgetCount(); i++) {
+			if(item_select_callbacks[i])
+				item_select_callbacks[i]->DecRef();
+		}
+		free(item_select_callbacks);
+		item_select_callbacks = NULL;
+	}
+
+	panel->RemoveAllWidgets();
+	panel->SetYOffset(0);
+	scrollbar->SetVerticalPosition(0);
+	UpdateScrollbarButtons();
+	selected_item = -1;
+
+	if(strlen(cur_path) > 1)
+	{
+		AddItem("..", -2, 0, O_DIR);
+	}
+
+	for (i = 0; i < count; i++)
+	{
+		if (entries[i].attr)
+		{
+			AddItem(entries[i].name, entries[i].size, entries[i].time, entries[i].attr);
+		}
+	}
+
+	for (i = 0; i < count; i++)
+	{
+		if (!entries[i].attr)
+		{
+			AddItem(entries[i].name, entries[i].size, entries[i].time, entries[i].attr);
+		}
+	}
+}
+
+void GUI_FileManager::Scan()
+{
+	int count = 0;
+	dirent_t *entries = TakePendingScan(&count);
+
+	ScanApply(entries, count);
+
+	if(entries)
+		free(entries);
+
+	rescan = 0;
 }
 
 void GUI_FileManager::ReScan() {
+	LoadScanEntries();
 	ClearSelection();
 	rescan = 1;
 	MarkChanged();
@@ -628,28 +698,11 @@ void GUI_FileManager::Update(int force) {
 	}
 
 	if(rescan)  {
-		if(item_select_callbacks) {
-			for(int i=0; i < panel->GetWidgetCount(); i++) {
-				if(item_select_callbacks[i])
-					item_select_callbacks[i]->DecRef();
-			}
-			free(item_select_callbacks);
-			item_select_callbacks = NULL;
-		}
-
-		panel->RemoveAllWidgets();
-		panel->SetYOffset(0);
-
-		for (i = 0; i < n_widgets; i++) {
-			widgets[i]->DoUpdate(force);
-		}
-
 		Scan();
+	}
 
-	} else {
-		for (i = 0; i < n_widgets; i++) {
-			widgets[i]->DoUpdate(force);
-		}
+	for (i = 0; i < n_widgets; i++) {
+		widgets[i]->DoUpdate(force);
 	}
 }
 
@@ -829,19 +882,26 @@ void GUI_FileManager::HandleJoyHatMotion(const SDL_Event *event) {
 
 		GUI_Button *item = GetItem(new_selection);
 		if (item) {
-
 			SDL_Event evt;
 			Uint16 abs_x, abs_y;
-			GetWidgetAbsolutePosition(item, &abs_x, &abs_y);
 
-			evt.type = SDL_MOUSEMOTION;
-			evt.motion.x = abs_x;
-			evt.motion.y = abs_y;
-			SDL_PushEvent(&evt);
-			SDL_WarpMouse(evt.motion.x, evt.motion.y);
+			LockVideo();
+			if(panel->ContainsWidget(item)) {
+				GetWidgetAbsolutePosition(item, &abs_x, &abs_y);
+				evt.type = SDL_MOUSEMOTION;
+				evt.motion.x = abs_x;
+				evt.motion.y = abs_y;
+				UnlockVideo();
 
-			if (item_select && item_select_callbacks && new_selection >= 0) {
-				item_select_callbacks[new_selection]->Call(item);
+				SDL_PushEvent(&evt);
+				SDL_WarpMouse(evt.motion.x, evt.motion.y);
+
+				if (item_select && item_select_callbacks && new_selection >= 0) {
+					item_select_callbacks[new_selection]->Call(item);
+				}
+			}
+			else {
+				UnlockVideo();
 			}
 		}
 	}
@@ -852,7 +912,7 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 
 	rv = GUI_Drawable::Event(event, xoffset, yoffset);
 
-	if ((flags & WIDGET_DISABLED) || !(flags & WIDGET_INSIDE)) {
+	if (rescan || (flags & WIDGET_DISABLED) || !(flags & WIDGET_INSIDE)) {
 		return rv;
 	}
 
@@ -1064,7 +1124,9 @@ void GUI_FileManagerScan(GUI_Widget *widget) {
 }
 
 void GUI_FileManagerAddItem(GUI_Widget *widget, const char *name, int size, int time, int attr) {
+	LockVideo();
 	((GUI_FileManager *) widget)->AddItem(name, size, time, attr);
+	UnlockVideo();
 }
 
 GUI_Widget *GUI_FileManagerGetItem(GUI_Widget *widget, int index) {

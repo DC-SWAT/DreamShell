@@ -20,7 +20,7 @@ static int sdl_dc_default_60hz = 0;
 #define SCREEN_FADE_STEP 0.075f
 
 static SDL_Surface *DScreen = NULL; 
-static mutex_t video_mutex = MUTEX_INITIALIZER;
+static mutex_t video_mutex = RECURSIVE_MUTEX_INITIALIZER;
 static kthread_t *video_thd;
 static int video_inited = 0;
 static int video_mode = -1;

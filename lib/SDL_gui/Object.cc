@@ -7,6 +7,8 @@
 extern "C" 
 {
 	int GUI_Object2Trash(GUI_Object *object);
+	void LockVideo();
+	void UnlockVideo();
 }
 
 GUI_Object::GUI_Object(const char *aname)
@@ -121,9 +123,11 @@ int GUI_ObjectKeep(GUI_Object **target, GUI_Object *source)
 {
 	if (source != *target)
 	{
+		LockVideo();
 		GUI_ObjectIncRef(source);
 		GUI_ObjectDecRef(*target);
 		(*target) = source;
+		UnlockVideo();
 		return 1;
 	}
 	return 0;
