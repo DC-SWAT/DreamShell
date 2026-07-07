@@ -22,6 +22,8 @@
 
 #define EXPT_SYM_MAX_OFFSET 0x800
 
+#define EXPT_REBOOT_DELAY_MS   5000
+
 #define EXPT_FB_MARGIN_X    32
 #define EXPT_FB_MARGIN_Y    32
 #define EXPT_FB_LINE_H      BFONT_HEIGHT
@@ -213,8 +215,10 @@ static void expt_log_context(void) {
 			label ? label : "?", thd_current->tid);
 	}
 
-	if(GetCurApp()) {
-		dbglog(DBG_INFO, "     APP = %s\n", GetCurApp()->name);
+	const char *app_name = GetCurAppName();
+
+	if(app_name) {
+		dbglog(DBG_INFO, "     APP = %s\n", app_name);
 	}
 }
 
@@ -225,7 +229,7 @@ static void expt_log_addr2line_hint(irq_context_t *irq_ctx) {
 	if(!valid_pc && !valid_pr)
 		return;
 
-	dbglog(DBG_INFO, "ADDR2LINE: $KOS_ADDR2LINE -f -C -i -e ds.elf");
+	dbglog(DBG_INFO, "ADDR2LINE: $KOS_ADDR2LINE -f -C -i -e DS-DBG.elf");
 
 	if(valid_pc)
 		dbglog(DBG_INFO, " %08lx", irq_ctx->pc);
@@ -275,12 +279,16 @@ static struct {
 } exceptions_code[] = {
 	{EXC_DATA_ADDRESS_READ, "EXC_DATA_ADDRESS_READ"},   // 0x00e0	/* Data address (read) */
 	{EXC_DATA_ADDRESS_WRITE,"EXC_DATA_ADDRESS_WRITE"},  // 0x0100	/* Data address (write) */
-	{EXC_USER_BREAK_PRE,    "EXC_USER_BREAK_PRE"},      // 0x01e0	/* User break before instruction */
+	/* EXC_USER_BREAK_PRE reserved for UBC hardware watchpoints */
 	{EXC_ILLEGAL_INSTR,     "EXC_ILLEGAL_INSTR"},       // 0x0180	/* Illegal instruction */
 	{EXC_GENERAL_FPU,       "EXC_GENERAL_FPU"},         // 0x0800	/* General FPU exception */
 	{EXC_SLOT_FPU,          "EXC_SLOT_FPU"},            // 0x0820	/* Slot FPU exception */
 	{0, NULL}
 };
+
+#define EXPT_EXCEPTION_COUNT ((sizeof(exceptions_code) / sizeof(exceptions_code[0])) - 1)
+
+static irq_cb_t expt_saved_handlers[EXPT_EXCEPTION_COUNT];
 
 static void expt_fb_collect_dump(irq_context_t *irq_ctx, irq_t source) {
 	uint32_t *stk = (uint32_t *)(uintptr_t)irq_ctx->r[15];
@@ -316,18 +324,20 @@ static void expt_fb_collect_dump(irq_context_t *irq_ctx, irq_t source) {
 	expt_fb_collect("      %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32,
 		regs[12], regs[13], regs[14], regs[15]);
 
+	const char *app_name = GetCurAppName();
+
 	if(thd_current) {
 		const char *label = thd_get_label(thd_current);
 
-		if(GetCurApp()) {
-			expt_fb_collect("THD=%s APP=%s", label ? label : "?", GetCurApp()->name);
+		if(app_name) {
+			expt_fb_collect("THD=%s APP=%s", label ? label : "?", app_name);
 		}
 		else {
 			expt_fb_collect("THD=%s", label ? label : "?");
 		}
 	}
-	else if(GetCurApp()) {
-		expt_fb_collect("APP=%s", GetCurApp()->name);
+	else if(app_name) {
+		expt_fb_collect("APP=%s", app_name);
 	}
 
 	for (i = 0; exceptions_code[i].code; i++) {
@@ -346,6 +356,22 @@ static void expt_fb_show(void) {
 	for(i = 0; i < expt_fb_line_count; i++) {
 		expt_fb_print_line(expt_fb_lines[i]);
 	}
+}
+
+/* timer_spin_sleep() in KOS is deprecated and we can't use thd_poll(), so... */
+static void expt_timer_spin_sleep(int ms) {
+	timer_stop(TMU1);
+	timer_prime(TMU1, 1000, 0);
+	timer_clear(TMU1);
+	timer_start(TMU1);
+
+	while (ms > 0) {
+		while (!timer_clear(TMU1))
+			;
+		ms--;
+	}
+
+	timer_stop(TMU1);
 }
 
 static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) {
@@ -372,7 +398,8 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 
 	if(!guarded) {
 		expt_fb_collect_dump(irq_ctx, source);
-		expt_fb_collect("Unhandled Exception. Reboot after 3 seconds.");
+		expt_fb_collect("Unhandled Exception. Reboot after %d seconds.",
+			EXPT_REBOOT_DELAY_MS / 1000);
 		expt_fb_show();
 	}
 
@@ -425,23 +452,17 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 	expt_log_addr2line_hint(irq_ctx);
 
 	if(guarded) {
-
 		// Simulate a call to longjmp by directly changing stored 
 		// context of the exception
 		irq_ctx->pc = (uint32_t)(uintptr_t)longjmp;
 		irq_ctx->r[4] = (uint32_t)(uintptr_t)s->jump[s->pos];
 		irq_ctx->r[5] = (uint32_t)-1;
-
 	}
 	else {
-
-		dbglog(DBG_ERROR, "Unhandled Exception. Reboot after 3 seconds.");
-
-		uint64_t timeout = timer_ms_gettime64() + 3000;
-		while(timer_ms_gettime64() < timeout);
-
+		dbglog(DBG_ERROR, "Unhandled Exception. Reboot after %d seconds.\n",
+			EXPT_REBOOT_DELAY_MS / 1000);
+		expt_timer_spin_sleep(EXPT_REBOOT_DELAY_MS);
 		arch_reboot();
-//		asic_sys_reset();
 	}
 }
 
@@ -459,7 +480,7 @@ static expt_quard_stack_t *expt_get_free_stack() {
 	int i;
 	
 	for(i = 0; i < EXPT_GUARD_STACK_COUNT; i++) {
-		if(expt_stack[i].type == 0) {
+		if(expt_stack[i].type == EXPT_GUARD_ST_STATIC_FREE) {
 			expt_stack[i].type = i + 1;
 			return &expt_stack[i];
 		}
@@ -470,23 +491,21 @@ static expt_quard_stack_t *expt_get_free_stack() {
 
 
 expt_quard_stack_t *expt_get_stack() {
-	
 	expt_quard_stack_t *s = NULL;
 	s = (expt_quard_stack_t *) kthread_getspecific(expt_key);
 	
 	if(s == NULL) {
-		
 		s = expt_get_free_stack();
-		
+
 		if(s == NULL) {
 			s = (expt_quard_stack_t *) malloc(sizeof(expt_quard_stack_t));
-			
+
 			if(s == NULL) {
 				EXPT_GUARD_THROW;
 			}
-			
+
 			memset_sh4(s, 0, sizeof(expt_quard_stack_t));
-			s->type = -1;
+			s->type = EXPT_GUARD_ST_DYNAMIC;
 		}
 
 		s->pos = -1;
@@ -496,15 +515,30 @@ expt_quard_stack_t *expt_get_stack() {
 	return s;
 }
 
+static bool expt_stack_is_static(const expt_quard_stack_t *s) {
+	uintptr_t addr = (uintptr_t)s;
+	uintptr_t base = (uintptr_t)expt_stack;
+	uintptr_t end = base + sizeof(expt_stack);
+
+	if(addr < base || addr >= end)
+		return false;
+
+	return ((addr - base) % sizeof(expt_quard_stack_t)) == 0;
+}
 
 static void expt_key_free(void *p) {
-	
 	expt_quard_stack_t *s = (expt_quard_stack_t *)p;
-	
-	if(s->type < 0) {
-		free(p); // TODO check thread magic correct
-	} else {
+
+	if(s == NULL)
+		return;
+
+	if(expt_stack_is_static(s)) {
 		memset_sh4(s, 0, sizeof(expt_quard_stack_t));
+		return;
+	}
+
+	if(s->type == EXPT_GUARD_ST_DYNAMIC) {
+		free(p);
 	}
 }
 
@@ -522,9 +556,10 @@ int expt_init() {
 		memset_sh4(&expt_stack[i], 0, sizeof(expt_quard_stack_t));
 	}
 
-	// TODO : save old values
-	for (i = 0; exceptions_code[i].code; i++)
+	for (i = 0; exceptions_code[i].code; i++) {
+		expt_saved_handlers[i] = irq_get_handler(exceptions_code[i].code);
 		irq_set_handler(exceptions_code[i].code, guard_irq_handler, NULL);
+	}
 
 	expt_inited = 1;
 	return 0;
@@ -535,15 +570,13 @@ void expt_shutdown() {
 	if(!expt_inited) {
 		return;
 	}
-	
+
 	int i;
-	
-//	for(i = 0; i < EXPT_GUARD_STACK_COUNT; i++) {
-//		memset_sh4(&expt_stack[i], 0, sizeof(expt_quard_stack_t));
-//	}
 
 	for (i = 0; exceptions_code[i].code; i++)
-		irq_set_handler(exceptions_code[i].code, NULL, NULL);
-	
+		irq_set_handler(exceptions_code[i].code,
+			expt_saved_handlers[i].hdl, expt_saved_handlers[i].data);
+
 	kthread_key_delete(expt_key);
+	expt_inited = 0;
 }
