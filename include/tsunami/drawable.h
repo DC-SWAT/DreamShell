@@ -40,7 +40,8 @@ enum ObjectTypeEnum
 	CIRCLE_TYPE = 1<<14,
 	GRADIENT_TYPE = 1<<15,
 	WAVE_TYPE = 1<<16,
-	CARDSTACK_TYPE = 1<<17
+	CARDSTACK_TYPE = 1<<17,
+	DIALOG_TYPE = 1<<18
 };
 
 #ifdef __cplusplus

@@ -1253,6 +1253,7 @@ TSU_AppGetScene
 TSU_AppStartExit
 TSU_AppSubAddLabel
 TSU_AppSubAddItemMenu
+TSU_AppSubAddDialog
 TSU_AppSubAddBanner
 TSU_AppSubAddCircle
 TSU_AppSubAddRectangle
@@ -1263,6 +1264,7 @@ TSU_AppSubRemoveCircle
 TSU_AppSubRemoveRectangle
 TSU_AppSubRemoveBox
 TSU_AppSubRemoveLabel
+TSU_AppSubRemoveDialog
 TSU_AppSetTranslate
 TSU_AppSubAddWave
 TSU_AppSubRemoveWave
@@ -1377,6 +1379,20 @@ TSU_CheckBoxSetOn
 TSU_CheckBoxSetOff
 TSU_CheckBoxGetWindowState
 TSU_CheckBoxSetWindowState
+TSU_DialogCreate
+TSU_DialogCreateEx
+TSU_DialogDestroy
+TSU_DialogSetConfirmText
+TSU_DialogSetCancelText
+TSU_DialogSetConfirmCallback
+TSU_DialogSetCancelCallback
+TSU_DialogShow
+TSU_DialogHide
+TSU_DialogIsVisible
+TSU_DialogSetFocus
+TSU_DialogMoveFocus
+TSU_DialogActivateFocused
+TSU_DialogHandleClick
 TSU_TextBoxCreate
 TSU_TextBoxDestroy
 TSU_TextBoxSetStates
@@ -1489,6 +1505,7 @@ TSU_LabelSetText
 TSU_LabelSetFont
 TSU_LabelGetFont
 TSU_LabelGetText
+TSU_LabelSetCenter
 TSU_LabelSetSmear
 TSU_LabelSetFixWidth
 TSU_LabelSetTranslate

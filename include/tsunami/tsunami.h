@@ -47,6 +47,7 @@
 #include "drawables/textbox.h"
 #include "drawables/optiongroup.h"
 #include "drawables/checkbox.h"
+#include "drawables/dialog.h"
 #include "drawables/combobox.h"
 #include "drawables/scene.h"
 #include "drawables/form.h"

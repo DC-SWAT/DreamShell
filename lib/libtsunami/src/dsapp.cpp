@@ -174,6 +174,11 @@ void DSApp::addBox(Box *box)
     m_scene->subAdd(box);
 }
 
+void DSApp::addDialog(Dialog *dialog)
+{
+    m_scene->subAdd(dialog);
+}
+
 void DSApp::removeItemMenu(ItemMenu *item_menu)
 {
     m_scene->subRemove(item_menu);
@@ -212,6 +217,11 @@ void DSApp::removeGradient(Gradient *gradient)
 void DSApp::removeBox(Box *box)
 {
     m_scene->subRemove(box);
+}
+
+void DSApp::removeDialog(Dialog *dialog)
+{
+    m_scene->subRemove(dialog);
 }
 
 void DSApp::StartExitApp()
@@ -367,6 +377,13 @@ extern "C"
 		}
 	}
 
+	void TSU_AppSubAddDialog(DSApp *dsApp, Dialog *dialog_ptr)
+	{
+		if (dsApp != NULL && dialog_ptr != NULL) {
+			dsApp->addDialog(dialog_ptr);
+		}
+	}
+
 	void TSU_AppSubRemoveBanner(DSApp *dsApp, Banner *banner_ptr)
 	{
 		if (dsApp != NULL && banner_ptr != NULL) {
@@ -413,6 +430,13 @@ extern "C"
 	{
 		if (dsApp != NULL && label_ptr != NULL) {
 			dsApp->removeLabel(label_ptr);
+		}
+	}
+
+	void TSU_AppSubRemoveDialog(DSApp *dsApp, Dialog *dialog_ptr)
+	{
+		if (dsApp != NULL && dialog_ptr != NULL) {
+			dsApp->removeDialog(dialog_ptr);
 		}
 	}
 
