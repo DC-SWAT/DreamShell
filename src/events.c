@@ -154,78 +154,38 @@ void ProcessInputEvents(SDL_Event *event) {
 }
 
 
-void ProcessVideoEventsRender() {
-
+static void process_video_events(int action, int prio) {
 	Event_t *e;
-	Item_t *i;
+	Item_t *c, *n;
 
-	SLIST_FOREACH(i, events, list) {
+	c = listGetItemFirst(events);
 
-		e = (Event_t *) i->data;
+	while(c != NULL) {
+		n = listGetItemNext(c);
+		e = (Event_t *)c->data;
 
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
-			e->event(e, e->param, EVENT_ACTION_RENDER);
+		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == prio) {
+			e->event(e, e->param, action);
 		}
+
+		c = n;
 	}
+}
 
-	SLIST_FOREACH(i, events, list) {
-
-		e = (Event_t *) i->data;
-
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
-			e->event(e, e->param, EVENT_ACTION_RENDER);
-		}
-	}
+void ProcessVideoEventsRender() {
+	process_video_events(EVENT_ACTION_RENDER, EVENT_PRIO_DEFAULT);
+	process_video_events(EVENT_ACTION_RENDER, EVENT_PRIO_OVERLAY);
 }
 
 void ProcessVideoEventsRenderPost() {
-
-	Event_t *e;
-	Item_t *i;
-
-	SLIST_FOREACH(i, events, list) {
-
-		e = (Event_t *) i->data;
-
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
-			e->event(e, e->param, EVENT_ACTION_RENDER_POST);
-		}
-	}
-
-	SLIST_FOREACH(i, events, list) {
-
-		e = (Event_t *) i->data;
-
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
-			e->event(e, e->param, EVENT_ACTION_RENDER_POST);
-		}
-	}
+	process_video_events(EVENT_ACTION_RENDER_POST, EVENT_PRIO_DEFAULT);
+	process_video_events(EVENT_ACTION_RENDER_POST, EVENT_PRIO_OVERLAY);
 }
 
 void ProcessVideoEventsUpdate(VideoEventUpdate_t *area) {
-
-	Event_t *e;
-	Item_t *i;
-
+	(void)area;
 	LockVideo();
-
-	SLIST_FOREACH(i, events, list) {
-
-		e = (Event_t *) i->data;
-
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_DEFAULT) {
-			e->event(e, e->param, EVENT_ACTION_UPDATE);
-		}
-	}
-
-	SLIST_FOREACH(i, events, list) {
-
-		e = (Event_t *) i->data;
-
-		if(e->type == EVENT_TYPE_VIDEO && e->active && e->prio == EVENT_PRIO_OVERLAY) {
-			e->event(e, e->param, EVENT_ACTION_UPDATE);
-		}
-	}
-
+	process_video_events(EVENT_ACTION_UPDATE, EVENT_PRIO_DEFAULT);
+	process_video_events(EVENT_ACTION_UPDATE, EVENT_PRIO_OVERLAY);
 	UnlockVideo();
 }

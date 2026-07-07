@@ -181,7 +181,7 @@ int DirExists(const char *dir) {
 
 int CopyFile(const char *src_fn, const char *dest_fn, int verbose) {
 	
-	size_t cnt, size, cur = 0, buf_size;
+	size_t cnt, size, buf_size;
 	file_t src_fd, dest_fd;
 	uint8 *buff;
 	
@@ -224,9 +224,7 @@ int CopyFile(const char *src_fn, const char *dest_fn, int verbose) {
 	}
 
 	while ((cnt = fs_read(src_fd, buff, buf_size)) > 0) {
-		
-		cur += cnt;
-		
+
 		if(fs_write(dest_fd, buff, cnt) < 0) {
 			break;
 		}
