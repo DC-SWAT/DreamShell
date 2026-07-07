@@ -12,6 +12,13 @@
 
 static Item_list_t *apps;
 static int curOpenedApp;
+static char curAppName[NAME_MAX];
+static int app_gui_callback_depth;
+static App_t *pending_open_app;
+static char pending_open_args[NAME_MAX];
+static int pending_open_has_args;
+
+static int OpenAppFinish(App_t *app, const char *args);
 
 
 static void FreeApp(void *app) {
@@ -132,6 +139,14 @@ App_t *GetCurApp() {
 }
 
 
+const char *GetCurAppName(void) {
+	if(curOpenedApp == 0) {
+		return NULL;
+	}
+	return curAppName[0] ? curAppName : NULL;
+}
+
+
 int IsFileSupportedByApp(App_t *app, const char *filename) {
 	char *ext = strrchr(filename, '.');
 	if(!ext) return 0;
@@ -146,18 +161,51 @@ int IsFileSupportedByApp(App_t *app, const char *filename) {
 
 void UnLoadOldApps() {
 	App_t *a;
-	Item_t *i;
+	Item_t *i, *n;
 
 	if(apps == NULL) {
 		return;
 	}
 
-	SLIST_FOREACH(i, apps, list) {
-
+	for(i = SLIST_FIRST(apps); i != NULL; i = n) {
+		n = SLIST_NEXT(i, list);
 		a = (App_t *) i->data;
 		if(a && a->state & APP_STATE_WAIT_UNLOAD) {
 			UnLoadApp(a);
 		}
+	}
+}
+
+
+void AppGuiCallbackEnter(void) {
+	app_gui_callback_depth++;
+}
+
+
+void AppGuiCallbackLeave(void) {
+	if(app_gui_callback_depth > 0) {
+		app_gui_callback_depth--;
+	}
+}
+
+
+void ProcessPendingAppOps(void) {
+	App_t *app;
+	const char *args;
+
+	if(app_gui_callback_depth > 0) {
+		return;
+	}
+
+	if(pending_open_app != NULL) {
+		app = pending_open_app;
+		pending_open_app = NULL;
+		args = pending_open_has_args ? pending_open_args : NULL;
+		pending_open_has_args = 0;
+		OpenAppFinish(app, args);
+	}
+	else {
+		UnLoadOldApps();
 	}
 }
 
@@ -276,36 +324,23 @@ int RemoveApp(App_t *app) {
 
 int OpenApp(App_t *app, const char *args) {
 
-	ds_printf("DS_PROCESS: Opening app %s\n", app->name);
-	int onopen_called = 0;
-
 	if(app == NULL) {
 		ds_printf("DS_ERROR: %s: Bad app pointer - %p\n", __func__, app);
 		return 0;
 	}
-
-//	ds_printf("State: %d %d %d %d",
-//				app->state & APP_STATE_OPENED,
-//				app->state & APP_STATE_LOADED,
-//				app->state & APP_STATE_READY,
-//				app->state & APP_STATE_SLEEP);
 
 	if(app->state & APP_STATE_OPENED) {
 		ds_printf("DS_WARNING: App %s already opened\n", app->name);
 		return 1;
 	}
 
+	ds_printf("DS_PROCESS: Opening app %s\n", app->name);
+
 	if(!ScreenIsHidden() && !ConsoleIsVisible() && !GUI_IsFirstOpen()) {
 		const char *str = "Loading...";
 		vmu_draw_string(str);
 		ScreenFadeOutEx(str, 1);
 	}
-
-	if(args != NULL) {
-		app->args = args;
-	}
-
-	// ds_printf("DS_DEBUG: Cur opened app: %d\n", curOpenedApp);
 
 	if(curOpenedApp) {
 
@@ -317,6 +352,33 @@ int OpenApp(App_t *app, const char *args) {
 
 		curOpenedApp = 0;
 	}
+
+	if(app_gui_callback_depth > 0) {
+		pending_open_app = app;
+		if(args != NULL) {
+			strncpy(pending_open_args, args, sizeof(pending_open_args) - 1);
+			pending_open_args[sizeof(pending_open_args) - 1] = '\0';
+			pending_open_has_args = 1;
+		}
+		else {
+			pending_open_has_args = 0;
+		}
+		return 1;
+	}
+
+	return OpenAppFinish(app, args);
+}
+
+
+static int OpenAppFinish(App_t *app, const char *args) {
+
+	int onopen_called = 0;
+
+	if(args != NULL) {
+		app->args = args;
+	}
+
+	UnLoadOldApps();
 
 	if(app->state & APP_STATE_LOADED && app->state & APP_STATE_READY) {
 		CallAppBodyEvent(app, "onopen");
@@ -357,6 +419,8 @@ int OpenApp(App_t *app, const char *args) {
 		}
 		app->state |= APP_STATE_OPENED;
 		curOpenedApp = app->id;
+		strncpy(curAppName, app->name, sizeof(curAppName) - 1);
+		curAppName[sizeof(curAppName) - 1] = '\0';
 
 		if(!onopen_called) {
 			CallAppBodyEvent(app, "onopen");
@@ -396,8 +460,6 @@ int CloseApp(App_t *app, int unload) {
 		return 0;
 	}
 
-	// ds_printf("DS_PROCESS: Closing app %s", app->name);
-
 	if(!(app->state & APP_STATE_OPENED)) {
 		return 1;
 	}
@@ -419,9 +481,7 @@ int CloseApp(App_t *app, int unload) {
 		curOpenedApp = 0;
 	}
 
-	app->state &= ~APP_STATE_OPENED;
-
-	ds_printf("DS_OK: App %s closed%s\n", app->name, (unload ? " and unloaded." : "."));
+	ds_printf("DS_OK: App %s closed.\n", app->name);
 	return 1;
 }
 

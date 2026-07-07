@@ -70,8 +70,6 @@ void GUI_ObjectIncRef(GUI_Object *object);
 int GUI_ObjectDecRef(GUI_Object *object);
 int GUI_ObjectGetRef(GUI_Object *object);
 int GUI_ObjectKeep(GUI_Object **target, GUI_Object *source);
-//int GUI_ObjectTrash(GUI_Object *object);
-//void GUI_ClearTrash();
 
 /* Surface API */
 void GUI_SurfaceSaveBMP(GUI_Surface *src, const char *filename);

@@ -295,8 +295,6 @@ GUI_Disable
 GUI_Enable
 GUI_EnableTsunamiInput
 GUI_DisableTsunamiInput
-#GUI_Object2Trash
-#GUI_ClearTrash
 #
 #colorHexToRGB
 #Uint32ToColor
@@ -924,7 +922,6 @@ GUI_ObjectSetName
 GUI_ObjectIncRef
 GUI_ObjectDecRef
 GUI_ObjectGetRef
-GUI_ObjectTrash
 GUI_ObjectKeep
 #
 #Surface API

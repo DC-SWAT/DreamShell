@@ -457,12 +457,13 @@ int main(int argc, char **argv) {
 			}
 			kbd_changed = 0;
 		}
-		UnLoadOldApps();
 
 		if(event.type == SDL_QUIT) {
 			ds_printf("DS_INFO: SDL_QUIT called\n");
 			break;
 		}
+
+		ProcessPendingAppOps();
 		thd_sleep(10);
 	}
 

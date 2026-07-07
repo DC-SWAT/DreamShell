@@ -74,6 +74,12 @@ App_t *GetAppsByExtension(const char *ext, App_t **app_list, size_t count);
 App_t *GetCurApp();
 
 /**
+ * Get cached current app name without walking the app list.
+ * Safe to call from exception handlers. Returns NULL if none.
+ */
+const char *GetCurAppName(void);
+
+/**
  * Parse app XML file and add to list
  * 
  * return NULL on error
@@ -161,6 +167,9 @@ char *FindXmlAttr(char *name, mxml_node_t *node, char *defValue);
 void parseNodeSize(mxml_node_t *node, SDL_Rect *parent, int *w, int *h);
 void parseNodePosition(mxml_node_t *node, SDL_Rect *parent, int *x, int *y);
 void UnLoadOldApps();
+void ProcessPendingAppOps(void);
+void AppGuiCallbackEnter(void);
+void AppGuiCallbackLeave(void);
 void UnloadAppResources(App_t *app, Item_list_t *lst);
 
 /* Resource helpers */

@@ -52,9 +52,6 @@ int GUI_CloseApp(struct App *app);
 void GUI_EnableTsunamiInput(void);
 void GUI_DisableTsunamiInput(void);
 
-int GUI_Object2Trash(GUI_Object *object);
-void GUI_ClearTrash();
-
 /* GUI utils */
 Uint32 colorHexToRGB(char *color, SDL_Color *clr);
 SDL_Color Uint32ToColor(Uint32 c);

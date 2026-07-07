@@ -323,9 +323,10 @@ int UnLoadApp(App_t *app) {
 
 	app->state |= APP_STATE_PROCESS;
 
-#ifdef APP_LOAD_DEBUG
-	ds_printf("DS_DEBUG: Free app body...\n");
-#endif
+	if(app->thd != NULL) {
+		thd_join(app->thd, NULL);
+		app->thd = NULL;
+	}
 
 	LockVideo();
 
@@ -366,16 +367,9 @@ int UnLoadApp(App_t *app) {
 
 
 #ifdef APP_LOAD_DEBUG
-	ds_printf("DS_DEBUG: Destroy app thread...\n");
-#endif
-	if(app->thd != NULL) {
-		thd_join(app->thd, NULL);
-		app->thd = NULL;
-	}
-
-#ifdef APP_LOAD_DEBUG
 	ds_printf("DS_DEBUG: Deleting XML node tree...\n");
 #endif
+
 	if(app->xml) {
 		mxmlDelete(app->xml);
 		app->xml = NULL;

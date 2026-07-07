@@ -30,6 +30,8 @@ GUI_Drawable::GUI_Drawable(const char *aname, int x, int y, int w, int h)
 
 GUI_Drawable::~GUI_Drawable(void)
 {
+	if (status_callback)
+		status_callback->DecRef();
 }
 
 int GUI_Drawable::GetWidth(void)

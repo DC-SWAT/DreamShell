@@ -10,22 +10,6 @@
 #include "console.h"
 #include "sfx.h"
 
-typedef struct TrashItem {
-
-	/* Точка входа SLIST, только для внутреннего использования. */
-	SLIST_ENTRY(TrashItem) list; 
-	
-	/* Ссылка на объект */
-	GUI_Object *object;
-   
-} TrashItem_t;
-
-/*
- * Определение типа для списка, используется SLIST из библиотеки newlib
- */
-typedef SLIST_HEAD(TrashItemList, TrashItem) TrashItem_list_t;
-
-static TrashItem_list_t *trash_list;
 static Event_t *gui_input_event;
 static Event_t *gui_video_event;
 static Event_t *gui_tsunami_video_event;
@@ -46,7 +30,6 @@ static void GUI_DrawHandler(void *ds_event, void *param, int action) {
 		default:
 			break;
 	}
-	GUI_ClearTrash();
 }
 
 static void GUI_TsunamiDrawHandler(void *ds_event, void *param, int action) {
@@ -236,14 +219,6 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 
 int InitGUI() {
 
-	trash_list = (TrashItem_list_t *) calloc(1, sizeof(TrashItem_list_t)); 
-
-	if(trash_list == NULL) {
-		return 0;
-	}
-
-	SLIST_INIT(trash_list);
-
 	GUI_Screen *gui = GUI_RealScreenCreate("screen", GetScreen());
 
 	if(gui == NULL) {
@@ -272,30 +247,7 @@ int InitGUI() {
 }
 
 
-void GUI_ClearTrash() {
-	
-	TrashItem_t *c, *n;
-	
-	c = SLIST_FIRST(trash_list); 
-	
-	while(c) {
-		n = SLIST_NEXT(c, list); 
-		EXPT_GUARD_BEGIN;
-			GUI_ObjectDecRef(c->object);
-		EXPT_GUARD_CATCH;
-			ds_printf("DS_ERROR: Can't delete object %p from trash\n", c->object);
-		EXPT_GUARD_END;
-		free(c);
-		c = n; 
-	}
-			  
-	SLIST_INIT(trash_list);
-}
-
 void ShutdownGUI() {
-
-	GUI_ClearTrash();
-	free(trash_list);
 
 	if(gui_tsunami_video_event != NULL) {
 		RemoveEvent(gui_tsunami_video_event);
@@ -441,23 +393,6 @@ int GUI_CloseApp(App_t *app) {
 	}
 
 	return 1;
-}
-
-
-int GUI_Object2Trash(GUI_Object *object) {
-
-	TrashItem_t *i = (TrashItem_t *) calloc(1, sizeof(TrashItem_t)); 
-
-	if(i == NULL) 
-		return 0;
-	
-	i->object = object;
-	ds_printf("DS_WARNING: Added GUI object to trash: %s at %p\n", GUI_ObjectGetName(object), object);
-
-	LockVideo();
-	SLIST_INSERT_HEAD(trash_list, i, list); 
-	UnlockVideo();
-	return 1; 
 }
 
 

@@ -64,7 +64,6 @@ class GUI_Object
 		void IncRef(void);
 		int DecRef(void);
 		int GetRef(void);
-		int Trash(void);
 };
 
 class GUI_Callback : public GUI_Object
@@ -1015,7 +1014,6 @@ void GUI_ObjectSetName(GUI_Object *object, const char *s);
 void GUI_ObjectIncRef(GUI_Object *object);
 int GUI_ObjectDecRef(GUI_Object *object);
 int GUI_ObjectGetRef(GUI_Object *object);
-int GUI_ObjectTrash(GUI_Object *object);
 int GUI_ObjectKeep(GUI_Object **target, GUI_Object *source);
 
 /* Surface API */

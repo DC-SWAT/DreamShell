@@ -6,7 +6,6 @@
 
 extern "C" 
 {
-	int GUI_Object2Trash(GUI_Object *object);
 	void LockVideo();
 	void UnlockVideo();
 }
@@ -47,12 +46,6 @@ int GUI_Object::DecRef(void)
 int GUI_Object::GetRef(void)
 {
 	return refcount;
-}
-
-
-int GUI_Object::Trash(void)
-{
-	return GUI_Object2Trash(this);
 }
 
 
@@ -110,12 +103,6 @@ int GUI_ObjectGetRef(GUI_Object *object)
 {
 	if (object)
 		return object->GetRef();
-	return 0;
-}
-
-int GUI_ObjectTrash(GUI_Object *object) {
-	if (object)
-		return object->Trash();
 	return 0;
 }
 

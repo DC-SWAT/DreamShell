@@ -6,33 +6,18 @@
 
 extern "C"
 {
-int ds_printf(const char *fmt, ...); 
+void AppGuiCallbackEnter(void);
+void AppGuiCallbackLeave(void);
 }
 
 GUI_Callback::GUI_Callback(const char *aname)
 : GUI_Object(aname)
 {
-	//data = NULL;
-	//freefunc = NULL;
 }
-/*
-GUI_Callback::GUI_Callback(const char *aname, GUI_CallbackFunction *ffunc, void *data)
-: GUI_Object(aname)
-{
-	data = data;
-	freefunc = ffunc;
-}*/
 
 GUI_Callback::~GUI_Callback()
 {
-	/*
-	if(freefunc != NULL && data != NULL) {
-		ds_printf("FREE: %p\n", data);
-		freefunc(data);
-		data = NULL;
-	}*/
 }
-
 
 GUI_Callback_C::GUI_Callback_C(GUI_CallbackFunction *func, GUI_CallbackFunction *ffunc, void *p)
 : GUI_Callback(NULL)
@@ -42,31 +27,25 @@ GUI_Callback_C::GUI_Callback_C(GUI_CallbackFunction *func, GUI_CallbackFunction 
 	data = p;
 }
 
-
 GUI_Callback_C::~GUI_Callback_C()
 {
 	if(freefunc != NULL && data != NULL) {
-		//ds_printf("FREE_C: %p\n", data);
 		freefunc(data);
 		data = NULL;
 	}
 }
 
-
 void GUI_Callback_C::Call(GUI_Object *object)
 {
+	(void)object;
 	if (function) {
 		IncRef();
-//		ds_printf("GUI_Callback_C::Call: %p %p\n", function, data);
+		AppGuiCallbackEnter();
 		function(data);
-		if(GetRef() == 1) {
-			Trash();
-		} else {
-			DecRef();
-		}
+		AppGuiCallbackLeave();
+		DecRef();
 	}
 }
-
 
 extern "C"
 {
@@ -81,6 +60,5 @@ void GUI_CallbackCall(GUI_Callback *callback)
 	if (callback)
 		callback->Call(0);
 }
-
 
 }
