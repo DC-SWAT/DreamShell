@@ -1463,6 +1463,8 @@ TSU_TextureCreateFromFile
 TSU_TextureCreateEmpty
 TSU_TextureDestroy
 TSU_TextureLoadFromFile
+TSU_TextureGetW
+TSU_TextureGetH
 TSU_WaveCreate
 TSU_WaveDestroy
 TSU_WaveSetColor

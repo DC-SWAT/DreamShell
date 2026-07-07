@@ -76,6 +76,8 @@ Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, boo
 Texture* TSU_TextureCreateEmpty();
 void TSU_TextureDestroy(Texture **texture_ptr);
 bool TSU_TextureLoadFromFile(Texture *texture_ptr, const char *texture_path, bool use_alpha, bool yflip, unsigned int flags);
+int TSU_TextureGetW(Texture *texture_ptr);
+int TSU_TextureGetH(Texture *texture_ptr);
 
 #ifdef __cplusplus
 };

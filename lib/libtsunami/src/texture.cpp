@@ -101,4 +101,22 @@ extern "C"
 		}
 	}
 
+	int TSU_TextureGetW(Texture *texture_ptr)
+	{
+		if (texture_ptr != NULL) {
+			return texture_ptr->getW();
+		}
+
+		return 0;
+	}
+
+	int TSU_TextureGetH(Texture *texture_ptr)
+	{
+		if (texture_ptr != NULL) {
+			return texture_ptr->getH();
+		}
+
+		return 0;
+	}
+
 }
