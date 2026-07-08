@@ -27,10 +27,31 @@ enum {
 	APP_TSU_DRAWABLE_WAVE,
 	APP_TSU_DRAWABLE_BOX,
 	APP_TSU_DRAWABLE_TRIANGLE,
-	APP_TSU_DRAWABLE_CARDSTACK
+	APP_TSU_DRAWABLE_CARDSTACK,
+	APP_TSU_DRAWABLE_DIALOG
 };
 
 static Scene *appTsunamiParseScene = NULL;
+
+typedef enum {
+	TSU_CLICK_CB_EXPORT = 1,
+	TSU_CLICK_CB_CONSOLE,
+	TSU_CLICK_CB_LUA
+} tsu_click_cb_type_t;
+
+typedef struct tsu_click_cb_data {
+
+	struct tsu_click_cb_data *next;
+	App_t *app;
+	int id;
+	tsu_click_cb_type_t type;
+	uint32 export_addr;
+	char *payload;
+
+} tsu_click_cb_data_t;
+
+static tsu_click_cb_data_t *tsu_click_cb_list = NULL;
+static int tsu_click_cb_next_id = 1;
 
 static int parseAppTsunamiElement(App_t *app, mxml_node_t *node, SDL_Rect *parent);
 static int parseAppTsunamiPanelElement(App_t *app, mxml_node_t *node, SDL_Rect *parent);
@@ -314,6 +335,165 @@ static void parseAppTsunamiDrawableAttrs(mxml_node_t *node, Drawable *drawable, 
 	}
 }
 
+static int tsuClickCallbackActive(App_t *app) {
+
+	App_t *cur;
+
+	if(app == NULL) {
+		return 0;
+	}
+
+	if(app->state & (APP_STATE_PROCESS | APP_STATE_WAIT_UNLOAD)) {
+		return 0;
+	}
+
+	if((app->state & (APP_STATE_LOADED | APP_STATE_OPENED)) != (APP_STATE_LOADED | APP_STATE_OPENED)) {
+		return 0;
+	}
+
+	cur = GetCurApp();
+	return cur == NULL || app == cur;
+}
+
+static tsu_click_cb_data_t *tsuClickCallbackFind(int id) {
+
+	tsu_click_cb_data_t *cb;
+
+	for(cb = tsu_click_cb_list; cb != NULL; cb = cb->next) {
+
+		if(cb->id == id) {
+			return cb;
+		}
+	}
+
+	return NULL;
+}
+
+static int tsuRegisterClickCallback(App_t *app, const char *event) {
+
+	tsu_click_cb_data_t *cb;
+	char evt[128];
+
+	if(app == NULL || event == NULL) {
+		return 0;
+	}
+
+	cb = (tsu_click_cb_data_t *)calloc(1, sizeof(tsu_click_cb_data_t));
+
+	if(cb == NULL) {
+		return 0;
+	}
+
+	cb->app = app;
+	cb->id = tsu_click_cb_next_id++;
+
+	if(!strncmp(event, "export:", 7)) {
+
+		cb->type = TSU_CLICK_CB_EXPORT;
+
+		if(sscanf(event, "export:%[0-9a-zA-Z_]", evt)) {
+			cb->export_addr = GET_EXPORT_ADDR(evt);
+		}
+
+		if(cb->export_addr == 0 || cb->export_addr == 0xffffffff) {
+			free(cb);
+			return 0;
+		}
+	}
+	else if(!strncmp(event, "console:", 8)) {
+
+		cb->type = TSU_CLICK_CB_CONSOLE;
+		cb->payload = strdup(event + 8);
+
+		if(cb->payload == NULL) {
+			free(cb);
+			return 0;
+		}
+	}
+	else if(app->lua != NULL) {
+
+		cb->type = TSU_CLICK_CB_LUA;
+		cb->payload = strdup(event);
+
+		if(cb->payload == NULL) {
+			free(cb);
+			return 0;
+		}
+	}
+	else {
+		free(cb);
+		return 0;
+	}
+
+	cb->next = tsu_click_cb_list;
+	tsu_click_cb_list = cb;
+
+	return cb->id;
+}
+
+static void tsuDrawableClickCallback(Drawable *drawable) {
+
+	tsu_click_cb_data_t *cb;
+	int id;
+
+	if(drawable == NULL) {
+		return;
+	}
+
+	id = TSU_DrawableGetId(drawable);
+	cb = tsuClickCallbackFind(id);
+
+	if(cb == NULL) {
+		return;
+	}
+
+	switch(cb->type) {
+		case TSU_CLICK_CB_EXPORT:
+			if(!tsuClickCallbackActive(cb->app)) {
+				return;
+			}
+
+			EXPT_GUARD_BEGIN;
+			((void (*)(Drawable *))cb->export_addr)(drawable);
+			EXPT_GUARD_CATCH;
+			EXPT_GUARD_END;
+			break;
+
+		case TSU_CLICK_CB_CONSOLE:
+			if(cb->payload != NULL) {
+				dsystem_buff(cb->payload);
+			}
+			break;
+
+		case TSU_CLICK_CB_LUA:
+			if(cb->payload != NULL && cb->app->lua != NULL) {
+				LuaDo(LUA_DO_STRING, cb->payload, cb->app->lua);
+			}
+			break;
+
+		default:
+			break;
+	}
+}
+
+static void tsuFreeClickCallbacks(App_t *app) {
+
+	tsu_click_cb_data_t **p = &tsu_click_cb_list;
+
+	while(*p != NULL) {
+
+		if((*p)->app == app) {
+			tsu_click_cb_data_t *cb = *p;
+			*p = cb->next;
+			free(cb->payload);
+			free(cb);
+		}
+		else {
+			p = &(*p)->next;
+		}
+	}
+}
+
 static int addAppTsunamiElement(App_t *app, char *name, void *object, int type) {
 
 	Scene *target_scene;
@@ -354,6 +534,9 @@ static int addAppTsunamiElement(App_t *app, char *name, void *object, int type) 
 			break;
 		case APP_TSU_DRAWABLE_BOX:
 			TSU_AppSubAddBox(app->tsunami, (Box *)object);
+			break;
+		case APP_TSU_DRAWABLE_DIALOG:
+			TSU_AppSubAddDialog(app->tsunami, (Dialog *)object);
 			break;
 		case APP_TSU_DRAWABLE_CHECKBOX:
 		case APP_TSU_DRAWABLE_TEXTBOX:
@@ -590,6 +773,84 @@ static int parseAppTsunamiCheckBoxElement(App_t *app, mxml_node_t *node, SDL_Rec
 	parseAppTsunamiDrawableAttrs(node, (Drawable *)checkbox, parent);
 
 	return addAppTsunamiElement(app, name, (void *)checkbox, APP_TSU_DRAWABLE_CHECKBOX);
+}
+
+static int parseAppTsunamiDialogElement(App_t *app, mxml_node_t *node, SDL_Rect *parent) {
+
+	Font *font;
+	Dialog *dialog;
+	Color bg_color = {0.65f, 0.0f, 0.0f, 0.0f};
+	Color text_color = {1.0f, 1.0f, 1.0f, 1.0f};
+	Color btn_color = {1.0f, 0.831f, 0.945f, 0.082f};
+	char *name = FindXmlAttr("name", node, node->value.element.name);
+	char *font_name = FindXmlAttr("font", node, NULL);
+	int font_size = atoi(FindXmlAttr("fontsize", node, FindXmlAttr("size", node, "14")));
+	int x, y, w, h;
+	char *onconfirm = FindXmlAttr("onconfirm", node, NULL);
+	char *oncancel = FindXmlAttr("oncancel", node, NULL);
+	char *confirm_text = FindXmlAttr("confirmText", node, "Yes");
+	char *cancel_text = FindXmlAttr("cancelText", node, "No");
+	char *visibility = FindXmlAttr("visibility", node, NULL);
+	int confirm_id;
+	int cancel_id;
+	Vector pos;
+	Color panel_color = {0.95f, 0.16f, 0.16f, 0.35f};
+	int screen_w;
+	int screen_h;
+
+	font = getAppTsunamiFont(app, node, font_name);
+
+	if(font == NULL) {
+		ds_printf("DS_ERROR: Can't find TSU font '%s'\n", font_name);
+		return 0;
+	}
+
+	if(font_size <= 0) {
+		font_size = 14;
+	}
+
+	parseNodeSize(node, parent, &w, &h);
+	parseNodePosition(node, parent, &x, &y);
+	screen_w = parent->w;
+	screen_h = parent->h;
+	parseAppTsunamiColor(FindXmlAttr("color", node, FindXmlAttr("backgroundColor", node, FindXmlAttr("background", node, "#000000A6"))), &bg_color, &bg_color);
+	parseAppTsunamiColor(FindXmlAttr("panelColor", node, "#552E7AE6"), &panel_color, &panel_color);
+	parseAppTsunamiColor(FindXmlAttr("textColor", node, FindXmlAttr("fontcolor", node, "#FFFFFFFF")), &text_color, &text_color);
+	parseAppTsunamiColor(FindXmlAttr("buttonColor", node, "#D4D41414"), &btn_color, &btn_color);
+
+	dialog = TSU_DialogCreateEx(font, (float)screen_w, (float)screen_h, (float)w, (float)h, &bg_color, &panel_color, &text_color, &btn_color, confirm_text, cancel_text, font_size);
+
+	if(dialog == NULL) {
+		return 0;
+	}
+
+	pos.x = (float)(parent->x + x);
+	pos.y = (float)(parent->y + y);
+	pos.z = 0.0f;
+	pos.w = 1.0f;
+	TSU_DrawableSetTranslate((Drawable *)dialog, &pos);
+
+	if(visibility != NULL && (!strncmp(visibility, "false", 5) || !strncmp(visibility, "hidden", 6))) {
+		TSU_DialogHide(dialog);
+	}
+
+	if(onconfirm != NULL) {
+		confirm_id = tsuRegisterClickCallback(app, onconfirm);
+
+		if(confirm_id > 0) {
+			TSU_DialogSetConfirmCallback(dialog, tsuDrawableClickCallback, confirm_id);
+		}
+	}
+
+	if(oncancel != NULL) {
+		cancel_id = tsuRegisterClickCallback(app, oncancel);
+
+		if(cancel_id > 0) {
+			TSU_DialogSetCancelCallback(dialog, tsuDrawableClickCallback, cancel_id);
+		}
+	}
+
+	return addAppTsunamiElement(app, name, (void *)dialog, APP_TSU_DRAWABLE_DIALOG);
 }
 
 static int parseAppTsunamiTextBoxElement(App_t *app, mxml_node_t *node, SDL_Rect *parent) {
@@ -965,6 +1226,9 @@ static int parseAppTsunamiElement(App_t *app, mxml_node_t *node, SDL_Rect *paren
 	else if(!strncmp(node->value.element.name, "box", 3)) {
 		return parseAppTsunamiBoxElement(app, node, parent);
 	}
+	else if(!strncmp(node->value.element.name, "dialog", 6)) {
+		return parseAppTsunamiDialogElement(app, node, parent);
+	}
 	else if(!strncmp(node->value.element.name, "triangle", 8)) {
 		return parseAppTsunamiTriangleElement(app, node, parent);
 	}
@@ -1064,6 +1328,9 @@ void appTsunamiDestroyElement(App_t *app, void *object, int type) {
 			case APP_TSU_DRAWABLE_BOX:
 				TSU_AppSubRemoveBox(app->tsunami, (Box *)object);
 				break;
+			case APP_TSU_DRAWABLE_DIALOG:
+				TSU_AppSubRemoveDialog(app->tsunami, (Dialog *)object);
+				break;
 			case APP_TSU_DRAWABLE_CHECKBOX:
 			case APP_TSU_DRAWABLE_TEXTBOX:
 			case APP_TSU_DRAWABLE_TRIANGLE:
@@ -1131,6 +1398,11 @@ void appTsunamiDestroyElement(App_t *app, void *object, int type) {
 			TSU_CardStackDestroy(&stack);
 			break;
 		}
+		case APP_TSU_DRAWABLE_DIALOG: {
+			Dialog *dialog = (Dialog *)object;
+			TSU_DialogDestroy(&dialog);
+			break;
+		}
 		default:
 			break;
 	}
@@ -1144,6 +1416,7 @@ void appTsunamiDestroyApp(App_t *app) {
 		return;
 	}
 
+	tsuFreeClickCallbacks(app);
 	GUI_CloseApp(app);
 
 	dsapp = app->tsunami;
