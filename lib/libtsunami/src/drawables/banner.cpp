@@ -10,6 +10,8 @@
 */
 
 #include "drawables/banner.h"
+#include <sh4zam/shz_trig.h>
+#include <sh4zam/shz_vector.h>
 
 extern "C" {
 	void LockVideo();
@@ -65,6 +67,20 @@ void Banner::setSize(float w, float h) {
 	m_h = h;
 }
 
+static shz_vec2_t banner_world_pos(float cx, float cy, shz_vec2_t local, shz_sincos_t sc, int rotated) {
+	shz_vec2_t world;
+
+	if(rotated) {
+		world = shz_vec2_init(local.x * sc.cos - local.y * sc.sin,
+			local.x * sc.sin + local.y * sc.cos);
+	}
+	else {
+		world = local;
+	}
+
+	return shz_vec2_init(cx + world.x, cy + world.y);
+}
+
 void Banner::draw(pvr_list_type_t list) {
 	if (list != m_list || !m_texture)
 		return;
@@ -101,28 +117,47 @@ void Banner::draw(pvr_list_type_t list) {
 	float tv_z = tv.z;
 	float w_half = w / 2.0f;
 	float h_half = h / 2.0f;
+	float angle = getRotate().w;
+	shz_sincos_t sc = {0.0f, 1.0f};
+	int rotated = 0;
+	shz_vec2_t p1;
+	shz_vec2_t p2;
+	shz_vec2_t p3;
+	shz_vec2_t p4;
+
+	if(angle != 0.0f) {
+		sc = shz_sincosf_deg(angle);
+		rotated = 1;
+	}
+
+	p1 = banner_world_pos(tv_x, tv_y, shz_vec2_init(-w_half, h_half), sc, rotated);
+	p2 = banner_world_pos(tv_x, tv_y, shz_vec2_init(-w_half, -h_half), sc, rotated);
+	p3 = banner_world_pos(tv_x, tv_y, shz_vec2_init(w_half, h_half), sc, rotated);
+	p4 = banner_world_pos(tv_x, tv_y, shz_vec2_init(w_half, -h_half), sc, rotated);
 
 	vert.flags = PLX_VERT;
-	vert.x = tv_x - w_half;
-	vert.y = tv_y + h_half;
+	vert.x = p1.x;
+	vert.y = p1.y;
 	vert.z = tv_z;
 	vert.u = m_u1;
 	vert.v = m_v1;
 	plx_prim(&vert, sizeof(vert));
 
-	vert.y = tv_y - h_half;
+	vert.x = p2.x;
+	vert.y = p2.y;
 	vert.u = m_u2;
 	vert.v = m_v2;
 	plx_prim(&vert, sizeof(vert));
 
-	vert.x = tv_x + w_half;
-	vert.y = tv_y + h_half;
+	vert.x = p3.x;
+	vert.y = p3.y;
 	vert.u = m_u3;
 	vert.v = m_v3;
 	plx_prim(&vert, sizeof(vert));
 
 	vert.flags = PLX_VERT_EOS;
-	vert.y = tv_y - h_half;
+	vert.x = p4.x;
+	vert.y = p4.y;
 	vert.u = m_u4;
 	vert.v = m_v4;
 	plx_prim(&vert, sizeof(vert));
