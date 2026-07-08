@@ -23,6 +23,8 @@
 
     Sam Lantinga
     slouken@libsdl.org
+
+	Updated by SWAT
 */
 
 #ifdef SAVE_RCSID
@@ -47,14 +49,17 @@ static char rcsid =
 
 #include <dc/maple.h>
 #include <dc/maple/controller.h>
+#include <dc/maple/mie.h>
 
 #define MIN_FRAME_UPDATE 16
 extern unsigned __sdl_dc_mouse_shift;
 
 #define MAX_JOYSTICKS	4	/* only 2 are supported in the multimedia API */
 #define MAX_AXES	6	/* each joystick can have up to 6 axes */
-#define MAX_BUTTONS	8	/* and 8 buttons                      */
-#define	MAX_HATS	2
+#define MAX_BUTTONS	10
+#define MAX_HATS	2
+
+#define SDL_MAPLE_WHEEL_DEADZONE 16
 
 #define	JOYNAMELEN	8
 
@@ -63,6 +68,7 @@ extern unsigned __sdl_dc_mouse_shift;
 
 /* The private structure used to keep track of a joystick */
 struct joystick_hwdata {
+	maple_device_t *dev;
 	int prev_buttons;
 	int ltrig;
 	int rtrig;
@@ -71,6 +77,196 @@ struct joystick_hwdata {
 	int joy2x;
 	int joy2y;
 };
+
+static maple_device_t *sdl_maple_mie_dev(void) {
+	if(mie_port0_mode() == MIE_PORT0_MAPLE) {
+		return NULL;
+	}
+	return maple_enum_type(0, MAPLE_FUNC_MIE);
+}
+
+static void sdl_maple_merge_axis(int *dst, int src) {
+	if(abs(src) > abs(*dst)) {
+		*dst = src;
+	}
+}
+
+static void sdl_maple_merge_state(cont_state_t *out, const cont_state_t *in) {
+	if(!in) {
+		return;
+	}
+	out->buttons |= in->buttons;
+	sdl_maple_merge_axis(&out->joyx, in->joyx);
+	sdl_maple_merge_axis(&out->joyy, in->joyy);
+	if(in->ltrig > out->ltrig) {
+		out->ltrig = in->ltrig;
+	}
+	if(in->rtrig > out->rtrig) {
+		out->rtrig = in->rtrig;
+	}
+}
+
+static void sdl_maple_merge_state_mie(cont_state_t *out, const cont_state_t *in) {
+	if(!in) {
+		return;
+	}
+	out->buttons |= in->buttons;
+	if(abs(out->joyx) <= SDL_MAPLE_WHEEL_DEADZONE) {
+		sdl_maple_merge_axis(&out->joyx, in->joyx);
+	}
+	sdl_maple_merge_axis(&out->joyy, in->joyy);
+	if(in->ltrig > out->ltrig) {
+		out->ltrig = in->ltrig;
+	}
+	if(in->rtrig > out->rtrig) {
+		out->rtrig = in->rtrig;
+	}
+}
+
+static maple_device_t *sdl_maple_find_controller(int index) {
+	maple_device_t *dev;
+	int n;
+	size_t p, u;
+
+	n = index;
+	for(p = 0; p < MAPLE_PORT_COUNT; p++) {
+		for(u = 0; u < MAPLE_UNIT_COUNT; u++) {
+			dev = maple_enum_dev(p, u);
+			if(!dev || !(dev->info.functions & MAPLE_FUNC_CONTROLLER)) {
+				continue;
+			}
+			if(!n) {
+				return dev;
+			}
+			n--;
+		}
+	}
+
+	return NULL;
+}
+
+static cont_state_t *sdl_maple_joystick_state(maple_device_t *dev) {
+	mie_state_t *mie;
+
+	if(!dev) {
+		return NULL;
+	}
+
+	if(dev->info.functions & MAPLE_FUNC_MIE) {
+		mie = (mie_state_t *)maple_dev_status(dev);
+		if(!mie) {
+			return NULL;
+		}
+		return &mie->cont;
+	}
+
+	return (cont_state_t *)maple_dev_status(dev);
+}
+
+static void sdl_maple_merge_controllers(cont_state_t *out,
+		maple_device_t **dev_out) {
+	maple_device_t *dev;
+	cont_state_t *st;
+	size_t p, u;
+
+	for(p = 0; p < MAPLE_PORT_COUNT; p++) {
+		for(u = 0; u < MAPLE_UNIT_COUNT; u++) {
+			dev = maple_enum_dev(p, u);
+			if(!dev || !(dev->info.functions & MAPLE_FUNC_CONTROLLER)) {
+				continue;
+			}
+			st = (cont_state_t *)maple_dev_status(dev);
+			sdl_maple_merge_state(out, st);
+			if(!*dev_out) {
+				*dev_out = dev;
+			}
+		}
+	}
+}
+
+static void sdl_maple_merge_controllers_mie(cont_state_t *out,
+		maple_device_t **dev_out) {
+	maple_device_t *dev;
+	cont_state_t *st;
+	size_t p, u;
+
+	for(p = 0; p < MAPLE_PORT_COUNT; p++) {
+		for(u = 0; u < MAPLE_UNIT_COUNT; u++) {
+			dev = maple_enum_dev(p, u);
+			if(!dev || !(dev->info.functions & MAPLE_FUNC_CONTROLLER)) {
+				continue;
+			}
+			st = (cont_state_t *)maple_dev_status(dev);
+			sdl_maple_merge_state_mie(out, st);
+			if(!*dev_out) {
+				*dev_out = dev;
+			}
+		}
+	}
+}
+
+static void sdl_maple_build_input(int index, cont_state_t *out,
+		maple_device_t **dev_out) {
+	maple_device_t *dev, *mie;
+	cont_state_t *st;
+
+	memset(out, 0, sizeof(*out));
+	*dev_out = NULL;
+
+	if(index) {
+		dev = sdl_maple_find_controller(index);
+		if(dev) {
+			st = sdl_maple_joystick_state(dev);
+			if(st) {
+				*out = *st;
+			}
+			*dev_out = dev;
+		}
+		return;
+	}
+
+	mie = sdl_maple_mie_dev();
+	if(mie) {
+		st = sdl_maple_joystick_state(mie);
+		if(st) {
+			*out = *st;
+		}
+		*dev_out = mie;
+		sdl_maple_merge_controllers_mie(out, dev_out);
+		return;
+	}
+
+	sdl_maple_merge_controllers(out, dev_out);
+}
+
+static maple_device_t *sdl_maple_joystick_dev(int index) {
+	cont_state_t st;
+	maple_device_t *dev;
+
+	sdl_maple_build_input(index, &st, &dev);
+	return dev;
+}
+
+static void sdl_maple_joystick_reset(SDL_Joystick *joystick) {
+	int i;
+
+	for(i = 0; i < MAX_BUTTONS; i++) {
+		SDL_PrivateJoystickButton(joystick, i, SDL_RELEASED);
+	}
+	SDL_PrivateJoystickHat(joystick, 0, SDL_HAT_CENTERED);
+	SDL_PrivateJoystickHat(joystick, 1, SDL_HAT_CENTERED);
+	for(i = 0; i < MAX_AXES; i++) {
+		SDL_PrivateJoystickAxis(joystick, i, 0);
+	}
+
+	joystick->hwdata->prev_buttons = 0;
+	joystick->hwdata->ltrig = 0;
+	joystick->hwdata->rtrig = 0;
+	joystick->hwdata->joyx = 0;
+	joystick->hwdata->joyy = 0;
+	joystick->hwdata->joy2x = 0;
+	joystick->hwdata->joy2y = 0;
+}
 
 /* Function to scan the system for joysticks.
  * This function should set SDL_numjoysticks to the number of available
@@ -91,9 +287,9 @@ int SDL_SYS_JoystickInit(void) {
 
 /* Function to get the device-dependent name of a joystick */
 const char *SDL_SYS_JoystickName(int index) {
-	maple_device_t *dev = maple_enum_type(index, MAPLE_FUNC_CONTROLLER);
+	maple_device_t *dev = sdl_maple_joystick_dev(index);
 	
-	if (dev && dev->info.functions & MAPLE_FUNC_CONTROLLER) {
+	if(dev) {
 		return dev->info.product_name;
 	}
 	
@@ -150,20 +346,29 @@ static void joyUpdate(SDL_Joystick *joystick) {
 		CONT_RTRIG
 	};
 
+	cont_state_t cond_buf;
 	cont_state_t *cond;
-	maple_device_t * dev;
+	maple_device_t *dev;
 	int i, changed, buttons;
 	int prev_ltrig, prev_rtrig, prev_joyx, prev_joyy, prev_joy2x, prev_joy2y;
-	
-	//Get buttons of the Controller
-	if(!(dev = maple_enum_type(joystick->index, MAPLE_FUNC_CONTROLLER))) {
+
+	sdl_maple_build_input(joystick->index, &cond_buf, &dev);
+	if(!dev) {
+		if(joystick->hwdata->dev) {
+			sdl_maple_joystick_reset(joystick);
+			joystick->hwdata->dev = NULL;
+		}
 		return;
 	}
-	
-	
-	if (!(cond = (cont_state_t *)maple_dev_status(dev))) {
-		return;
+
+	if(dev != joystick->hwdata->dev) {
+		if(joystick->hwdata->dev) {
+			sdl_maple_joystick_reset(joystick);
+		}
+		joystick->hwdata->dev = dev;
 	}
+
+	cond = &cond_buf;
 
 	//Check changes on cont_state_t->buttons
 	buttons = cond->buttons;
@@ -202,7 +407,7 @@ static void joyUpdate(SDL_Joystick *joystick) {
 	
 	//Check buttons
 	//"buttons" is zero based: so invert the PRESSED/RELEASED way.
-	for(i = 0; i < sizeof(sdl_buttons) / sizeof(sdl_buttons[0]); i++) {
+	for(i = 0; i < MAX_BUTTONS; i++) {
 		if (changed & sdl_buttons[i]) {
 			int act = (buttons & sdl_buttons[i]);
 			SDL_PrivateJoystickButton(joystick, i, act ? SDL_PRESSED : SDL_RELEASED);
