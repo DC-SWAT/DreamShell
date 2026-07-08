@@ -26,6 +26,8 @@ include arch/arch.h
 include dc/sound/sound.h
 
 include ds.h
+include naomi/bsram.h
+include naomi/coins.h
 include fs.h
 include fatfs.h
 include uthash.h
@@ -320,6 +322,15 @@ ResetSettings
 LoadSettings
 SaveSettings
 GetVolumeFromSettings
+#
+naomi_bsram_read_credits
+naomi_bsram_read
+naomi_bsram_write
+naomi_bsram_update_bookkeeping_crc
+naomi_coins_count
+naomi_coin_on_meter
+naomi_coin_service
+naomi_coin_set_callback
 #
 splitline
 hex_to_int

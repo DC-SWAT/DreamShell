@@ -12,9 +12,12 @@
 #include "profiler.h"
 #include "network/net.h"
 #include "sfx.h"
+#include <naomi/coins.h>
 #include <dc/syscalls.h>
+#include <dc/maple.h>
+#include <dc/maple/mie.h>
 
-KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT);
+KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT | INIT_MIE);
 
 static uint32 ver_int = 0;
 static const char *build_str[4] = {"Alpha", "Beta", "RC", "Release"};
@@ -135,6 +138,26 @@ void ShutdownNet() {
 	setenv("NET_IPV4", "0.0.0.0", 1);
 }
 
+static void *mie_fw_init_thread(void *param) {
+	mie_init_fw((const char *)param);
+	free(param);
+	return NULL;
+}
+
+static void mie_fw_init_start(const char *fw_path) {
+	char *path;
+
+	if(!fw_path || !fw_path[0])
+		return;
+
+	path = strdup(fw_path);
+	if(!path)
+		return;
+
+	if(!thd_create(1, mie_fw_init_thread, path))
+		free(path);
+}
+
 int InitDS() {
 
 	char fn[NAME_MAX], bf[32];
@@ -210,7 +233,15 @@ int InitDS() {
 	tmpd = syscall_sysinfo_id();
 	tmpb = (uint8_t *)&tmpd;
 
-	if(tmpi == HW_TYPE_RETAIL) {
+	if(tmpi != HW_TYPE_RETAIL) {
+		snprintf(fn, sizeof(fn), "%s/firmware/mie_z80.bin", getenv("PATH"));
+
+		if(mie_port0_mode() != MIE_PORT0_MAPLE) {
+			mie_fw_init_start(fn);
+		}
+		mie_analog_calib_set(&settings->analog);
+	}
+	else {
 		if(strncmp(getenv("PATH"), "/cd", 3)) {
 			/* Relax GD drive =) */
 			cdrom_spin_down();
@@ -421,14 +452,34 @@ static void open_vkb_module(void) {
 	}
 }
 
-static void keyboard_attach_cb(maple_device_t *dev) {
-	(void) dev;
+static void keyboard_attach_cb(maple_device_t *dev, void *data) {
+	(void)dev;
+	(void)data;
 	kbd_changed |= KBD_ATTACHED;
 }
 
-static void keyboard_detach_cb(maple_device_t *dev) {
-	(void) dev;
+static void keyboard_detach_cb(maple_device_t *dev, void *data) {
+	(void)dev;
+	(void)data;
 	kbd_changed |= KBD_DETACHED;
+}
+
+static void mie_coin_cb(mie_jvs_input_t input, uint32_t mask) {
+	uint8_t slot = 0;
+
+	(void)mask;
+
+	if(input == MIE_JVS_IN_COIN2) {
+		slot = 1;
+	}
+
+	naomi_coin_on_meter(slot);
+}
+
+static void mie_service_cb(mie_jvs_input_t input, uint32_t mask) {
+	(void)input;
+	(void)mask;
+	naomi_coin_service(0);
 }
 
 int main(int argc, char **argv) {
@@ -438,8 +489,15 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 
-	maple_attach_callback(MAPLE_FUNC_KEYBOARD, keyboard_attach_cb);
-	maple_detach_callback(MAPLE_FUNC_KEYBOARD, keyboard_detach_cb);
+	maple_attach_callback(MAPLE_FUNC_KEYBOARD, keyboard_attach_cb, NULL);
+	maple_detach_callback(MAPLE_FUNC_KEYBOARD, keyboard_detach_cb, NULL);
+
+	mie_jvs_callback(MIE_JVS_IN_COIN1, MIE_JVS_COIN_INSERT_BIT, mie_coin_cb);
+	mie_jvs_callback(MIE_JVS_IN_COIN2, MIE_JVS_COIN_INSERT_BIT, mie_coin_cb);
+	mie_jvs_callback(MIE_JVS_IN_PANEL_PSW, MIE_JVS_PANEL_SERVICE_BIT, mie_service_cb);
+	mie_jvs_callback(MIE_JVS_IN_P1, MIE_JVS_SERVICE_BIT, mie_service_cb);
+	mie_jvs_callback(MIE_JVS_IN_P2, MIE_JVS_SERVICE_BIT, mie_service_cb);
+
 	memset(&event, 0, sizeof(event));
 
 	while(1) {

@@ -35,7 +35,7 @@ TRAGET_VERSION = -DVER_MAJOR=$(VER_MAJOR) \
 all: rm-elf $(TARGET)
 
 KOS_ROMDISK_DIR = romdisk
-SFX_FILES = click click2 screenshot move chpage slide error success
+SFX_FILES = click click2 screenshot move chpage slide error success coin
 SFX_TARGETS = $(addprefix $(DS_BUILD)/sfx/,$(addsuffix .wav,$(SFX_FILES)))
 
 include sdk/Makefile.cfg
@@ -122,6 +122,7 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/cmd_elf.o $(SRC_DIR)/vmu/vmu.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \
 		$(SRC_DIR)/settings.o $(SRC_DIR)/sfx.o \
+		$(SRC_DIR)/naomi/bsram.o $(SRC_DIR)/naomi/coins.o \
 		$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
 		$(UTILS_OBJ) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o

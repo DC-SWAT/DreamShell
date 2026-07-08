@@ -1,7 +1,7 @@
 /** 
  * \file    settings.h
  * \brief   DreamShell settings
- * \date    2016, 2025
+ * \date    2016, 2025-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -9,9 +9,10 @@
 #define _DS_SETTINGS_H
 
 #include <kos.h>
+#include <dc/maple/mie.h>
 
 /* need increment when settings structure changed */
-#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '1')
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '2')
 
 typedef struct VideoSettings {
 
@@ -92,6 +93,9 @@ typedef struct Settings {
 
 	/* Network */
 	NetworkSettings_t network;
+
+	/* NAOMI JVS wheel and pedal calibration */
+	mie_analog_calib_t analog;
 
 }  Settings_t;
 
