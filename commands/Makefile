@@ -6,7 +6,7 @@
 
 _SUBDIRS = bin2iso flashrom netstat ping scramble \
 			untgz vmu vmode mke2fs gdiopt ciso sip \
-			ntp fc1307
+			ntp fc1307 mie
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
