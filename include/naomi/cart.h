@@ -4,7 +4,7 @@
 
     This file is part of DreamShell.
 
-    Copyright (C) 2025 SWAT
+    Copyright (C) 2025-2026 SWAT
 */
 
 #ifndef __NAOMI_CART_H
@@ -26,6 +26,9 @@ typedef struct naomi_load_entry {
     void    *dst_buf;
     uint32_t size;
 } naomi_load_entry_t;
+
+#define NAOMI_EEPROM_GAME_ID_OFFSET  0x134
+#define NAOMI_EEPROM_INIT_OFFSET     0x1e0
 
 /** \brief   NAOMI cartridge header. */
 typedef struct naomi_cart_header {

@@ -22,6 +22,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]);
 
 DEFAULT_MODULE_HEADER(isoldr);
 
+void isoldr_naomi_eeprom_prepare(isoldr_info_t *info);
+
 int lib_open(klibrary_t *lib) {
 	AddCmd(lib_get_name(), "ISO Loader command line", (CmdHandler *)builtin_isoldr_cmd);
 	return nmmgr_handler_add(&ds_isoldr_hnd.nmmgr);
@@ -711,6 +713,10 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 	}
 
 	memcpy(loader, info, sizeof(*info));
+
+	if(info->image_type == IMAGE_TYPE_ROM_NAOMI) {
+		isoldr_naomi_eeprom_prepare(info);
+	}
 
 	ds_printf("DS_PROCESS: Executing at 0x%08lx (0x%08lx)...\n",
 		addr, addr + ISOLDR_PARAMS_SIZE);

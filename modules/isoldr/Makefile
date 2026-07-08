@@ -4,7 +4,7 @@
 #
 
 TARGET_NAME = isoldr
-OBJS = module.o exec.o execasm.o vm2.o preset.o
+OBJS = module.o exec.o execasm.o vm2.o preset.o eeprom.o
 DBG_LIBS = -lds -lisofs
 EXPORTS_FILE = exports.txt
 
