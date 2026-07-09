@@ -70,12 +70,20 @@ extern "C"
 
 	Texture* TSU_TextureCreateFromFile(const char *texture_path, bool use_alpha, bool yflip, uint flags)
 	{
-		if (texture_path != NULL) {
-			return new Texture(texture_path, use_alpha, yflip, flags);
-		}
-		else {
+		Texture *tex;
+
+		if (texture_path == NULL) {
 			return NULL;
 		}
+
+		tex = new Texture();
+
+		if (!tex->loadFromFile(texture_path, use_alpha, yflip, flags)) {
+			delete tex;
+			return NULL;
+		}
+
+		return tex;
 	}
 
 	Texture* TSU_TextureCreateEmpty()
