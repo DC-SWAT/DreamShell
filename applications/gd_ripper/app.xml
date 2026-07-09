@@ -142,7 +142,7 @@
 					pressed="iExit"
 					disabled="iExit"
 					x="505" y="410" width="128" height="64"
-					onclick="console:app -o -n Main" />
+					onclick="console:app -o" />
 			</panel>
 
 			<panel name="file-browser-page" background="browser-bg">

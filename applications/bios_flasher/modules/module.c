@@ -581,10 +581,11 @@ void BiosFlasher_OnExitPressed(GUI_Widget *widget) {
 	}
 	
 	if(!app) {
-		app = GetAppByName("Main");
+		OpenMainApp();
 	}
-	
-	OpenApp(app, NULL);
+	else {
+		OpenApp(app, NULL);
+	}
 }
 
 void BiosFlasher_OnOperationProgress(OperationState_t state, float progress)

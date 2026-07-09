@@ -852,10 +852,11 @@ void VMU_Manager_Exit(GUI_Widget *widget) {
 	}
 	
 	if(!app) {
-		app = GetAppByName("Main");
+		OpenMainApp();
 	}
-
-	OpenApp(app, NULL);
+	else {
+		OpenApp(app, NULL);
+	}
 }
 
 static void copy_save(const char *src_fn, const char *dest_fn) {

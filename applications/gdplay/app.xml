@@ -108,7 +108,7 @@
 				<label align="left" color="#0000FF" font="Digitalt" height="20" y="5" text=" " name="title5-txt"/>
 			</panel>
 			
-			<input disabled="iExitNorm" highlight="iExitHigh" normal="iExitNorm" onclick="console:app -o -n Main" pressed="iExitNorm" type="button" width="96%"  height="48" x="70%" y="410"/>
+			<input disabled="iExitNorm" highlight="iExitHigh" normal="iExitNorm" onclick="console:app -o" pressed="iExitNorm" type="button" width="96%"  height="48" x="70%" y="410"/>
 			
 		</panel>
 	

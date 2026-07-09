@@ -138,7 +138,7 @@
                 highlight="iExitHigh"
                 pressed="iExitNorm"
                 disabled="iExitNorm"
-                onclick="console:app -o -n Main"
+                onclick="console:app -o"
                 x="584" y="424" width="48" height="48" />
 
         <dialog name="results-dialog" font="comic-22"

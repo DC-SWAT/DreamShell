@@ -153,7 +153,7 @@
 				</panel>
 				<panel height="65" width="50%">
 					<input type="button" width="280" height="60"
-						onclick="console:app -o -n Main" align="center">
+						onclick="console:app -o" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Exit" />
 					</input>
 				</panel>

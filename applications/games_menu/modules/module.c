@@ -2717,16 +2717,6 @@ static void GamesApp_DrawTransparentPolyEvent()
 	
 }
 
-static void GamesApp_ExitToMain(void)
-{
-	App_t *app = GetAppByName("Main");
-
-	if (app)
-	{
-		OpenApp(app, NULL);
-	}
-}
-
 static void DoMenuVideoHandler(void *ds_event, void *param, int action)
 {
 	if (action != EVENT_ACTION_RENDER)
@@ -2766,13 +2756,13 @@ static void* MenuExitHelper(void *params)
 			else
 			{
 				FreeAppData();
-				GamesApp_ExitToMain();
+				OpenMainApp();
 			}
 		}
 		else
 		{
 			FreeAppData();
-			GamesApp_ExitToMain();
+			OpenMainApp();
 		}
 	}
 

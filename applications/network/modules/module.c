@@ -327,7 +327,7 @@ void NetworkApp_Exit(GUI_Widget *widget) {
         GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Saving settings", "Do you want to save changed settings?");
     }
     else {
-        dsystem("app -o -n Main");
+        dsystem("app -o");
     }
 }
 
@@ -342,7 +342,7 @@ void NetworkApp_DialogConfirm(GUI_Widget *widget) {
 
 void NetworkApp_DialogCancel(GUI_Widget *widget) {
     GUI_DialogHide(widget);
-    dsystem("app -o -n Main");
+    dsystem("app -o");
 }
 
 void NetworkApp_Open(App_t *app) {

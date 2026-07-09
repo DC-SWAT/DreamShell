@@ -58,7 +58,7 @@
 					<input type="button" onclick="RegionChanger:ShowPage(4)" theme="bBut" y="150" height="40">
 						<label font="comic-18" color="#EEEEEE" text="About" />
 					</input>
-					<input type="button" onclick="console:app -o -n Main" theme="bBut" y="200" height="40">
+					<input type="button" onclick="console:app -o" theme="bBut" y="200" height="40">
 						<label font="comic-18" color="#EEEEEE" text="Exit" />
 					</input>
 				</panel>

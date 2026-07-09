@@ -109,7 +109,7 @@
 					pressed="icon-config" 
 					x="211" y="0" width="22" height="22" />
 			<input type="button" 
-					onclick="console:app -o -n Main" 
+					onclick="console:app -o" 
 					onmouseover="FileManager:tooltip('Exit from file manager')" 
 					onmouseout="FileManager:tooltip(nil)" 
 					normal="icon-exit" 

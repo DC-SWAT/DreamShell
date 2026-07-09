@@ -2554,8 +2554,9 @@ void isoLoader_Exit(GUI_Widget *widget) {
 		}
 	}
 	if(!app) {
-		app = GetAppByName("Main");
+		OpenMainApp();
 	}
-
-	OpenApp(app, NULL);
+	else {
+		OpenApp(app, NULL);
+	}
 }
