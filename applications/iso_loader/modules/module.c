@@ -2,7 +2,7 @@
 
    module.c - ISO Loader app module
    Copyright (C) 2011 Superdefault
-   Copyright (C) 2011-2025 SWAT
+   Copyright (C) 2011-2026 SWAT
 
 */
 
@@ -188,6 +188,36 @@ static char *relativeFilename(char *filename) {
 	return filepath;
 }
 
+static int ffplayIsActive(void) {
+	if(!self.ffplay_shutdown) {
+		return 0;
+	}
+	if(self.ffplay_is_playing && self.ffplay_is_playing()) {
+		return 1;
+	}
+	if(self.ffplay_is_paused && self.ffplay_is_paused()) {
+		return 1;
+	}
+	return 0;
+}
+
+static void stopFFplayPlayback(void) {
+	if(!ffplayIsActive()) {
+		return;
+	}
+	self.ffplay_shutdown();
+	thd_sleep(50);
+}
+
+static void clearFFplayExports(void) {
+	self.ffplay = NULL;
+	self.ffplay_shutdown = NULL;
+	self.ffplay_toggle_pause = NULL;
+	self.ffplay_is_playing = NULL;
+	self.ffplay_is_paused = NULL;
+	self.ffplay_set_volume = NULL;
+}
+
 void isoLoader_Rotate_Image(GUI_Widget *widget) {
 	(void)widget;
 	setIcon(getCurrentIconSize());
@@ -195,7 +225,7 @@ void isoLoader_Rotate_Image(GUI_Widget *widget) {
 }
 
 void FFplayTogglePlayback(GUI_Widget *widget) {
-	if(!self.ffplay || !self.ffplay_is_playing()) {
+	if(!ffplayIsActive()) {
 		return;
 	}
 	else if(widget != self.games && !self.ffplay_is_paused()) {
@@ -257,7 +287,7 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 	isoLoader_ShowPage(widget);
 	ScreenFadeIn();
 
-	if(self.ffplay && self.ffplay_is_playing()) {
+	if(self.ffplay && ffplayIsActive()) {
 		thd_sleep(250);
 		FFplayTogglePlayback(widget);
 	}
@@ -285,7 +315,7 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 	ScreenFadeOutEx("Shortcut", 1);
 
 	GUI_WidgetSetState(self.rotate180, 0);
-	GUI_WidgetSetState(self.btn_hidetext, 1);
+	GUI_WidgetSetState(self.btn_hidetext, strcasecmp(GetMainAppName(), DS_DEFAULT_APP_NAME) ? 0 : 1);
 
 	const char *title1 = GUI_LabelGetText(self.title);
 	const char *title2 = GUI_LabelGetText(self.title2);
@@ -749,9 +779,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	int i;
 
 	StopCDDATrack();
-	if(self.ffplay) {
-		self.ffplay_shutdown();
-	}
+	stopFFplayPlayback();
 	GetMainAppSubdir(subdir, sizeof(subdir), "scripts");
 	snprintf(save_file, NAME_MAX, "%s/%s.dsc", subdir, GUI_TextEntryGetText(self.linktext));
 
@@ -1449,10 +1477,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 				self.filename);
 
 	StopCDDATrack();
-	if(self.ffplay && self.ffplay_is_playing()) {
-		self.ffplay_shutdown();
-		thd_sleep(50);
-	}
+	stopFFplayPlayback();
 	if(!GUI_WidgetGetState(self.fastboot)) {
 		ScreenFadeOutEx("Starting...", 1);
 	}
@@ -1648,31 +1673,36 @@ void isoLoader_Run(GUI_Widget *widget) {
 	self.isoldr = NULL;
 }
 
-static void unloadFFmpegModules() {
-    if(self.ffmpeg_modules_loaded) {
-        for(int i = 0; i < FFMPEG_MODULES_COUNT; i++) {
-            if(self.ffmpeg_modules[i]) {
-                CloseModule(self.ffmpeg_modules[i]);
-            }
-        }
-    }
+static void unloadFFmpegModules(void) {
+	if(!self.ffmpeg_modules_loaded) {
+		return;
+	}
+	stopFFplayPlayback();
+	for(int i = 0; i < FFMPEG_MODULES_COUNT; i++) {
+		if(self.ffmpeg_modules[i]) {
+			CloseModule(self.ffmpeg_modules[i]);
+			self.ffmpeg_modules[i] = NULL;
+		}
+	}
+	self.ffmpeg_modules_loaded = false;
+	clearFFplayExports();
 }
 
-static void loadFFmpegModules() {
-    if(!self.ffmpeg_modules_loaded) {
-        for(int i = 0; i < FFMPEG_MODULES_COUNT; i++) {
-            char fn[NAME_MAX];
-            snprintf(fn, NAME_MAX, "%s/modules/%s.klf", getenv("PATH"), ffmpeg_module_names[i]);
-            self.ffmpeg_modules[i] = OpenModule(fn);
-        }
-        self.ffmpeg_modules_loaded = true;
-        self.ffplay = (int (*)(const char *, ffplay_params_t *))GET_EXPORT_ADDR("ffplay");
-        self.ffplay_shutdown = (void (*)(void))GET_EXPORT_ADDR("ffplay_shutdown");
-        self.ffplay_toggle_pause = (void (*)(void))GET_EXPORT_ADDR("ffplay_toggle_pause");
-        self.ffplay_is_playing = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_playing");
-        self.ffplay_is_paused = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_paused");
-        self.ffplay_set_volume = (void (*)(int))GET_EXPORT_ADDR("ffplay_set_volume");
-    }
+static void loadFFmpegModules(void) {
+	if(!self.ffmpeg_modules_loaded) {
+		for(int i = 0; i < FFMPEG_MODULES_COUNT; i++) {
+			char fn[NAME_MAX];
+			snprintf(fn, NAME_MAX, "%s/modules/%s.klf", getenv("PATH"), ffmpeg_module_names[i]);
+			self.ffmpeg_modules[i] = OpenModule(fn);
+		}
+		self.ffmpeg_modules_loaded = true;
+		self.ffplay = (int (*)(const char *, ffplay_params_t *))GET_EXPORT_ADDR("ffplay");
+		self.ffplay_shutdown = (void (*)(void))GET_EXPORT_ADDR("ffplay_shutdown");
+		self.ffplay_toggle_pause = (void (*)(void))GET_EXPORT_ADDR("ffplay_toggle_pause");
+		self.ffplay_is_playing = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_playing");
+		self.ffplay_is_paused = (int (*)(void))GET_EXPORT_ADDR("ffplay_is_paused");
+		self.ffplay_set_volume = (void (*)(int))GET_EXPORT_ADDR("ffplay_set_volume");
+	}
 }
 
 static void *selectFile_worker(void *p) {
@@ -1701,21 +1731,19 @@ static void *selectFile_worker(void *p) {
 
 		mutex_unlock(&self.select_mutex);
 
-		if(IsCDDATrackPlaying() || (self.ffplay && self.ffplay_is_playing())) {
+		if(IsCDDATrackPlaying() || ffplayIsActive()) {
 			int vol = GetVolumeFromSettings();
 			if(vol < 0) vol = 240;
 
 			for(int i = AUDIO_FADE_STEPS - 1; i >= 0; i--) {
 				int new_vol = vol * i / AUDIO_FADE_STEPS;
 				if(IsCDDATrackPlaying()) SetCDDAVolume(new_vol);
-				if(self.ffplay && self.ffplay_is_playing()) self.ffplay_set_volume(new_vol);
+				if(ffplayIsActive()) self.ffplay_set_volume(new_vol);
 				thd_sleep(AUDIO_FADE_STEP_MS);
 			}
 		}
 		StopCDDATrack();
-		if(self.ffplay && self.ffplay_is_playing()) {
-			self.ffplay_shutdown();
-		}
+		stopFFplayPlayback();
 
 		setTitle("Loading...");
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
@@ -2690,6 +2718,7 @@ void isoLoader_Init(App_t *app) {
 
 static void release_resources(void) {
 	StopCDDATrack();
+	stopFFplayPlayback();
 
 	if(self.select_thd) {
 		mutex_lock(&self.select_mutex);
@@ -2702,13 +2731,10 @@ static void release_resources(void) {
 
 	if(self.ffmpeg_thd) {
 		thd_join(self.ffmpeg_thd, NULL);
+		self.ffmpeg_thd = NULL;
 	}
 
-	if(self.ffplay) {
-		self.ffplay_shutdown();
-		unloadFFmpegModules();
-		self.ffplay = NULL;
-	}
+	unloadFFmpegModules();
 }
 
 void isoLoader_Shutdown(App_t *app) {
