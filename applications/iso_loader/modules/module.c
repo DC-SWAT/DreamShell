@@ -254,8 +254,10 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 
 static void check_link_file(void) {
 	char save_file[NAME_MAX];
-	snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc",
-		getenv("PATH"), GUI_TextEntryGetText(self.linktext));
+	char scripts_dir[NAME_MAX];
+
+	GetMainAppSubdir(scripts_dir, sizeof(scripts_dir), "scripts");
+	snprintf(save_file, NAME_MAX, "%s/%s.dsc", scripts_dir, GUI_TextEntryGetText(self.linktext));
 
 	if(FileExists(save_file)) {
 		GUI_LabelSetText(self.save_link_txt, "rewrite shortcut");
@@ -557,6 +559,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	FILE *fd;
 	char *env = getenv("PATH");
 	char save_file[NAME_MAX];
+	char subdir[NAME_MAX];
 	char cmd[NAME_MAX * 2];
 	const char *tmpval;
 	int i;
@@ -565,7 +568,8 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	if(self.ffplay) {
 		self.ffplay_shutdown();
 	}
-	snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", env, GUI_TextEntryGetText(self.linktext));
+	GetMainAppSubdir(subdir, sizeof(subdir), "scripts");
+	snprintf(save_file, NAME_MAX, "%s/%s.dsc", subdir, GUI_TextEntryGetText(self.linktext));
 
 	fd = fopen(save_file, "w");
 
@@ -733,7 +737,8 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	fprintf(fd, "console --show\n");
 	fclose(fd);
 
-	snprintf(save_file, NAME_MAX, "%s/apps/main/images/%s.png", env, GUI_TextEntryGetText(self.linktext));
+	GetMainAppSubdir(subdir, sizeof(subdir), "images");
+	snprintf(save_file, NAME_MAX, "%s/%s.png", subdir, GUI_TextEntryGetText(self.linktext));
 	if(FileExists(save_file)) {
 		fs_unlink(save_file);
 	}
