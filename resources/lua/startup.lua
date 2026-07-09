@@ -117,7 +117,7 @@ local DreamShell = {
 
 		self:InstallingApps(path .. "/apps");
 		self.initialized = true;
-		OpenApp(os.getenv("APP"));
+		OpenApp(os.getenv("STARTUP_APP"));
 
 		local startup_cmd = os.getenv("STARTUP_CMD");
 		if startup_cmd ~= nil and startup_cmd ~= "" then

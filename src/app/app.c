@@ -370,6 +370,18 @@ int OpenApp(App_t *app, const char *args) {
 }
 
 
+int OpenMainApp(void) {
+	App_t *app = GetAppByName(GetMainAppName());
+
+	if(app == NULL) {
+		ds_printf("DS_ERROR: %s: Can't find app %s\n", __func__, GetMainAppName());
+		return 0;
+	}
+
+	return OpenApp(app, NULL);
+}
+
+
 static int OpenAppFinish(App_t *app, const char *args) {
 
 	int onopen_called = 0;
@@ -411,7 +423,7 @@ static int OpenAppFinish(App_t *app, const char *args) {
 			goto error;
 		}
 
-		if(!strncasecmp(app->name, "Main", sizeof(app->name))) {
+		if(!strncasecmp(app->name, DS_DEFAULT_APP_NAME, sizeof(app->name))) {
 			vmu_draw_string(getenv("TITLE"));
 		}
 		else {

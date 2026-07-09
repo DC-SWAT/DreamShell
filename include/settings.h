@@ -79,8 +79,11 @@ typedef struct Settings {
 	/* Default startup lua script path (without root) or console/lua script content */
 	char startup[NAME_MAX / 2];
 
-	/* Default app name */
-	char app[64];
+	/* Default startup app name */
+	char startup_app[64];
+
+	/* Default main app name for exit from other apps */
+	char main_app[64];
 
 	/* Time zone in minutes */
 	int time_zone;
@@ -108,5 +111,9 @@ int LoadSettings();
 int SaveSettings();
 
 int GetVolumeFromSettings();
+
+const char *GetStartupAppName();
+
+const char *GetMainAppName();
 
 #endif /* _DS_SETTINGS_H */

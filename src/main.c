@@ -280,7 +280,8 @@ int InitDS() {
 	setenv("LUA_PATH", getenv("PATH"), 1);
 	setenv("LUA_CPATH", getenv("PATH"), 1);
 	setenv("PWD", fs_getwd(), 1);
-	setenv("APP", (settings->app[0] != 0 ? settings->app : "Main"), 1);
+	setenv("STARTUP_APP", GetStartupAppName(), 1);
+	setenv("MAIN_APP", GetMainAppName(), 1);
 
 	IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 	InitEvents();

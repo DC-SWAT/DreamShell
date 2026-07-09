@@ -125,6 +125,7 @@ GetCurApp
 AddApp
 RemoveApp
 OpenApp
+OpenMainApp
 CloseApp
 SetAppSleep
 LoadApp
@@ -322,6 +323,8 @@ ResetSettings
 LoadSettings
 SaveSettings
 GetVolumeFromSettings
+GetStartupAppName
+GetMainAppName
 #
 naomi_bsram_read_credits
 naomi_bsram_read

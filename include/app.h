@@ -26,6 +26,9 @@
 #define APP_STATE_SLEEP         0x00000020
 #define APP_STATE_WAIT_UNLOAD   0x00000040
 
+/* Default main app name for settings */
+#define DS_DEFAULT_APP_NAME	"Main"
+
 /**
  * App info structure
  */
@@ -98,6 +101,13 @@ int RemoveApp(App_t *app);
  * return 0 on error and 1 on success
  */
 int OpenApp(App_t *app, const char *args);
+
+/**
+ * Open main app from settings
+ *
+ * return 0 on error and 1 on success
+ */
+int OpenMainApp(void);
 
 /**
  * Close app and unload (if unload > 0)

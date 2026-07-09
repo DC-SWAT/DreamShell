@@ -180,16 +180,12 @@ static void GUI_EventHandler(void *ds_event, void *param, int action) {
 					break;
 				
 				case SDLK_F4:
-					if (  event->key.keysym.mod & KMOD_ALT &&
+					if (event->key.keysym.mod & KMOD_ALT &&
 						!(event->key.keysym.mod & (KMOD_CTRL | KMOD_SHIFT))) {
 						App_t *app = GetCurApp();
-						
-						if (app && strcmp(app->name, "Main") && strcmp(app->name, "Games Menu")) {
-							CloseApp(app, 1);
-							
-							if ((app = GetAppByName("Main"))) {
-								OpenApp(app, NULL);
-							}
+
+						if (app && strcmp(app->name, GetMainAppName())) {
+							OpenMainApp();
 						}
 					}
 					break;

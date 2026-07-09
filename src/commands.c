@@ -1463,7 +1463,7 @@ static int builtin_app(int argc, char *argv[]) {
 		          "Options: \n"
 		          " -a, --add          -Add app\n"
 		          " -r, --remove       -Remove app\n"
-		          " -o, --open         -Open app\n"
+		          " -o, --open         -Open app (main app if no name)\n"
 		          " -c, --close        -Close app\n"
 		          " -s, --sleep        -Sleep app\n"
 		          " -u, --unload       -Unload old apps\n"
@@ -1474,6 +1474,8 @@ static int builtin_app(int argc, char *argv[]) {
 		          " -i, --id           -App ID\n"
 		          " -g, --args         -App args\n"
 		          "Examples: app -a -f /cd/apps/test/app.xml\n"
+		          "          app -o\n"
+		          "          app -o -n AppName\n"
 		          "          app --remove --id 1\n");
 		return CMD_OK;
 	}
@@ -1499,7 +1501,7 @@ static int builtin_app(int argc, char *argv[]) {
 
 	CMD_DEFAULT_ARGS_PARSER(options);
 
-	if(remove || open || close) {
+	if(remove || close) {
 
 		if(name == NULL && id == 0) {
 			ds_printf("DS_ERROR: Too few arguments. (app ID/Name) \n");
@@ -1545,6 +1547,14 @@ static int builtin_app(int argc, char *argv[]) {
 	if(unload) {
 		UnLoadOldApps();
 		ds_printf("DS_OK: Old apps unloaded.\n");
+		return CMD_OK;
+	}
+
+	if(open && name == NULL && id == 0) {
+		if(!OpenMainApp()) {
+			ds_printf("DS_ERROR: Can't open main app '%s'\n", GetMainAppName());
+			return CMD_ERROR;
+		}
 		return CMD_OK;
 	}
 
