@@ -130,9 +130,11 @@ static struct {
 	GUI_Widget *options_panel;
 
 	GUI_Widget *icosizebtn[5];
+	GUI_Widget *icoformatbtn[2];
 	GUI_Widget *wlnkico;
 	GUI_Surface *slnkico;
 	GUI_Surface *stdico;
+	char cover_src_path[NAME_MAX];
 
 	GUI_Widget *linktext;
 	GUI_Widget *btn_hidetext;
@@ -171,6 +173,14 @@ void isoLoader_RemovePreset(GUI_Widget *widget);
 int isoLoader_LoadPreset(GUI_Widget *widget);
 int isoLoader_SavePreset(GUI_Widget *widget);
 static void setIcon(int size);
+static int getIconSizeFromWidget(GUI_Widget *widget);
+static int getCurrentIconSize(void);
+static int isCoverPvrSource(void);
+static int getCoverSourceWidth(void);
+static int canUsePvrFormat(void);
+static void updateIconFormatState(void);
+static int copyCoverPvr(const char *dest);
+static void saveShortcutIcon(const char *name, const char *subdir);
 
 static char *relativeFilename(char *filename) {
 	static char filepath[NAME_MAX];
@@ -180,7 +190,8 @@ static char *relativeFilename(char *filename) {
 
 void isoLoader_Rotate_Image(GUI_Widget *widget) {
 	(void)widget;
-	setIcon(GUI_SurfaceGetWidth(self.slnkico));
+	setIcon(getCurrentIconSize());
+	updateIconFormatState();
 }
 
 void FFplayTogglePlayback(GUI_Widget *widget) {
@@ -292,7 +303,9 @@ void isoLoader_ShowLink(GUI_Widget *widget) {
 	check_link_file();
 
 	isoLoader_ShowPage(widget);
-	isoLoader_toggleIconSize(self.icosizebtn[3]);
+	isoLoader_toggleIconSize(self.icosizebtn[2]);
+	isoLoader_toggleIconFormat(self.icoformatbtn[0]);
+	updateIconFormatState();
 	isoLoader_toggleHideName(self.btn_hidetext);
 	ScreenFadeIn();
 }
@@ -473,6 +486,7 @@ static void showCover() {
 			setTitle("None");
 			GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 			self.current_cover = self.default_cover;
+			self.cover_src_path[0] = '\0';
 			return;
 		}
 	}
@@ -512,6 +526,12 @@ static void showCover() {
 			if(FileExists(path)) {
 				use_cover = 1;
 			}
+			else {
+				strcpy(c+1, "cover.pvr");
+				if(FileExists(path)) {
+					use_cover = 1;
+				}
+			}
 		}
 	}
 	else {
@@ -523,6 +543,12 @@ static void showCover() {
 			snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.jpg", getenv("PATH"), noext);
 			if(FileExists(path)) {
 				use_cover = 1;
+			}
+			else {
+				snprintf(path, NAME_MAX, "%s/apps/iso_loader/covers/%s.pvr", getenv("PATH"), noext);
+				if(FileExists(path)) {
+					use_cover = 1;
+				}
 			}
 		}
 	}
@@ -536,7 +562,12 @@ static void showCover() {
 	}
 
 	if (use_cover) {
+		strncpy(self.cover_src_path, path, sizeof(self.cover_src_path));
+		self.cover_src_path[sizeof(self.cover_src_path) - 1] = '\0';
 		s = GUI_SurfaceLoad(path);
+	}
+	else {
+		self.cover_src_path[0] = '\0';
 	}
 
 	if(!is_dni) {
@@ -551,7 +582,160 @@ static void showCover() {
 	else if(self.current_cover != self.default_cover) {
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
+		self.cover_src_path[0] = '\0';
 	}
+}
+
+static int getIconSizeFromWidget(GUI_Widget *widget) {
+	const char *name = GUI_ObjectGetName((GUI_Object *)widget);
+
+	if(!name) {
+		return 128;
+	}
+	if(!strncmp(name, "32x32", 5)) {
+		return 32;
+	}
+	if(!strncmp(name, "64x64", 5)) {
+		return 64;
+	}
+	if(!strncmp(name, "128x128", 7)) {
+		return 128;
+	}
+	if(!strncmp(name, "256x256", 7)) {
+		return 256;
+	}
+	if(!strncmp(name, "512x512", 7)) {
+		return 512;
+	}
+
+	return 128;
+}
+
+static int isCoverPvrSource(void) {
+	const char *ext;
+
+	if(self.current_cover == self.default_cover || self.cover_src_path[0] == '\0') {
+		return 0;
+	}
+
+	ext = strrchr(self.cover_src_path, '.');
+
+	if(!ext || strcasecmp(ext, ".pvr")) {
+		return 0;
+	}
+
+	return 1;
+}
+
+static int getCoverSourceWidth(void) {
+	if(self.current_cover == self.default_cover) {
+		return 0;
+	}
+
+	return GUI_SurfaceGetWidth(self.current_cover);
+}
+
+static int getCurrentIconSize(void) {
+	int i;
+
+	for(i = 0; i < 5; i++) {
+		if(GUI_WidgetGetState(self.icosizebtn[i])) {
+			return getIconSizeFromWidget(self.icosizebtn[i]);
+		}
+	}
+
+	return 128;
+}
+
+static int canUsePvrFormat(void) {
+	int source_w;
+
+	if(!isCoverPvrSource() || GUI_WidgetGetState(self.rotate180)) {
+		return 0;
+	}
+
+	source_w = getCoverSourceWidth();
+	if(source_w < 1) {
+		return 0;
+	}
+
+	return getCurrentIconSize() == source_w;
+}
+
+static void updateIconFormatState(void) {
+	int can_pvr = canUsePvrFormat();
+
+	if(self.icoformatbtn[1] == NULL) {
+		return;
+	}
+
+	GUI_WidgetSetEnabled(self.icoformatbtn[1], can_pvr ? 1 : 0);
+
+	if(!can_pvr && GUI_WidgetGetState(self.icoformatbtn[1])) {
+		GUI_WidgetSetState(self.icoformatbtn[1], 0);
+		GUI_WidgetSetState(self.icoformatbtn[0], 1);
+	}
+
+	GUI_WidgetMarkChanged(self.pages);
+}
+
+static int copyCoverPvr(const char *dest) {
+	char iso_path[NAME_MAX];
+	int mounted = 0;
+
+	if(!strncasecmp(self.cover_src_path, "/isocover/", 10)) {
+		snprintf(iso_path, NAME_MAX, "%s/%s",
+			GUI_FileManagerGetPath(self.filebrowser), self.filename);
+		if(fs_iso_mount("/isocover", iso_path)) {
+			return 0;
+		}
+		mounted = 1;
+	}
+
+	if(!FileExists(self.cover_src_path)) {
+		if(mounted) {
+			fs_iso_unmount("/isocover");
+		}
+		return 0;
+	}
+
+	if(!CopyFile(self.cover_src_path, dest, 0)) {
+		if(mounted) {
+			fs_iso_unmount("/isocover");
+		}
+		return 0;
+	}
+
+	if(mounted) {
+		fs_iso_unmount("/isocover");
+	}
+
+	return 1;
+}
+
+static void saveShortcutIcon(const char *name, const char *subdir) {
+	char png_file[NAME_MAX];
+	char pvr_file[NAME_MAX];
+	int use_pvr = GUI_WidgetGetState(self.icoformatbtn[1]);
+
+	snprintf(png_file, NAME_MAX, "%s/%s.png", subdir, name);
+	snprintf(pvr_file, NAME_MAX, "%s/%s.pvr", subdir, name);
+
+	if(FileExists(png_file)) {
+		fs_unlink(png_file);
+	}
+	if(FileExists(pvr_file)) {
+		fs_unlink(pvr_file);
+	}
+
+	if(use_pvr && canUsePvrFormat()) {
+		if(copyCoverPvr(pvr_file)) {
+			return;
+		}
+		ds_printf("DS_ERROR: Can't save shortcut icon as PVR\n");
+	}
+
+	GUI_SurfaceSavePNG(self.slnkico, png_file);
 }
 
 void isoLoader_MakeShortcut(GUI_Widget *widget) {
@@ -738,12 +922,7 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	fclose(fd);
 
 	GetMainAppSubdir(subdir, sizeof(subdir), "images");
-	snprintf(save_file, NAME_MAX, "%s/%s.png", subdir, GUI_TextEntryGetText(self.linktext));
-	if(FileExists(save_file)) {
-		fs_unlink(save_file);
-	}
-
-	GUI_SurfaceSavePNG(self.slnkico, save_file);
+	saveShortcutIcon(GUI_TextEntryGetText(self.linktext), subdir);
 	isoLoader_ShowGames(self.settings);
 }
 
@@ -782,36 +961,33 @@ static void setIcon(int size) {
 	}
 	GUI_WidgetMarkChanged(self.pages);
 	GUI_WidgetMarkChanged(self.run_pane);
+	updateIconFormatState();
 }
 
 void isoLoader_toggleIconSize(GUI_Widget *widget) {
-	int i, size;
+	int i;
 
 	for(i = 0; i < 5; ++i) {
 		GUI_WidgetSetState(self.icosizebtn[i], 0);
 	}
 
 	GUI_WidgetSetState(widget, 1);
-	char *name = (char *)GUI_ObjectGetName((GUI_Object *)widget);
+	setIcon(getIconSizeFromWidget(widget));
+	updateIconFormatState();
+}
 
-	switch(name[1]) {
-		case '2':
-			size = 128;
-			break;
-		case '4':
-			size = 64;
-			break;
-		case '5':
-			size = 256;
-			break;
-		case '6':
-			size = 96;
-			break;
-		case '8':
-		default:
-			size = 48;
+void isoLoader_toggleIconFormat(GUI_Widget *widget) {
+	int i;
+
+	if(widget == self.icoformatbtn[1] && !canUsePvrFormat()) {
+		return;
 	}
-	setIcon(size);
+
+	for(i = 0; i < 2; ++i) {
+		GUI_WidgetSetState(self.icoformatbtn[i], 0);
+	}
+
+	GUI_WidgetSetState(widget, 1);
 }
 
 void isoLoader_toggleLinkName(GUI_Widget *widget) {
@@ -1544,6 +1720,7 @@ static void *selectFile_worker(void *p) {
 		setTitle("Loading...");
 		GUI_PanelSetBackground(self.cover_widget, self.default_cover);
 		self.current_cover = self.default_cover;
+		self.cover_src_path[0] = '\0';
 
 		strncpy(self.filename, filename, NAME_MAX);
 		trailer_path = relativeFilename("trailer.avi");
@@ -2329,11 +2506,13 @@ void isoLoader_Init(App_t *app) {
 		self.wpv[0]	          = APP_GET_WIDGET("pv1-text");
 		self.wpv[1]	          = APP_GET_WIDGET("pv2-text");
 
-		self.icosizebtn[0]	  = APP_GET_WIDGET("48x48");
+		self.icosizebtn[0]	  = APP_GET_WIDGET("32x32");
 		self.icosizebtn[1]	  = APP_GET_WIDGET("64x64");
-		self.icosizebtn[2]	  = APP_GET_WIDGET("96x96");
-		self.icosizebtn[3]	  = APP_GET_WIDGET("128x128");
-		self.icosizebtn[4]	  = APP_GET_WIDGET("256x256");
+		self.icosizebtn[2]	  = APP_GET_WIDGET("128x128");
+		self.icosizebtn[3]	  = APP_GET_WIDGET("256x256");
+		self.icosizebtn[4]	  = APP_GET_WIDGET("512x512");
+		self.icoformatbtn[0]  = APP_GET_WIDGET("icon-format-png");
+		self.icoformatbtn[1]  = APP_GET_WIDGET("icon-format-pvr");
 		self.rotate180	      = APP_GET_WIDGET("rotate-link");
 		self.linktext	      = APP_GET_WIDGET("link-text");
 		self.btn_hidetext     = APP_GET_WIDGET("hide-name");

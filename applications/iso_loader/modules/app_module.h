@@ -23,6 +23,8 @@ void isoLoader_toggleBootMode(GUI_Widget *widget);
 
 void isoLoader_toggleIconSize(GUI_Widget *widget);
 
+void isoLoader_toggleIconFormat(GUI_Widget *widget);
+
 void isoLoader_Rotate_Image(GUI_Widget *widget);
 
 void isoLoader_ShowPage(GUI_Widget *widget);

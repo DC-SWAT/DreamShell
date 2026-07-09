@@ -682,52 +682,71 @@
 				</panel>
 
 				<panel height="370" width="282" x="358" y="10">
-					<panel height="340" width="80%" y="15">
 
-						<label y="0" align="left" color="#31799F" font="arial" height="25" text="Icon size:" width="100%" />
+					<label align="left" color="#31799F" font="arial" height="20" text="Icon size:" width="100%" y="0" />
 
-						<input height="22" name="48x48" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="48x48" x="9%" />
-						</input>
-						<input height="22" name="64x64" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="64x64 (as apps)" x="9%" />
-						</input>
-						<input height="22" name="96x96" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="96x96" x="9%" />
-						</input>
-						<input height="22" name="128x128" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="128x128 (default)" x="9%" checked="true" />
-						</input>
-						<input height="22" name="256x256" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="256x256" x="9%" />
-						</input>
-
-						<panel width="100%" height="4"/>
-						<input height="22" name="rotate-link" onclick="export:isoLoader_Rotate_Image()" type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20" text="Rotate image 180" x="9%" />
-						</input>
-
-						<panel width="100%" height="4"/>
-						<panel width="100%" height="25">
-							<label align="left" color="#31799F" font="arial" height="25" text="Icon name:" width="100%" />
-						</panel>
-						<input font="arial" fontcolor="#000000" height="22" name="link-text"
-							onblur="export:isoLoader_toggleLinkName()" size="30" type="text" value="Game name" width="59%" />
-						<panel width="100%" height="6"/>
-						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()"
-							type="checkbox" width="100%">
-							<label align="left" color="#000000" font="arial" height="20"
-								text="Don't show name" x="9%" checked="true" />
-						</input>
-
-						<panel width="100%" height="8"/>
-						<input name="save-link-btn" disabled="iGamesDis" height="36" width="250"
-							highlight="iGamesHigh" normal="iGamesNorm" onclick="export:isoLoader_MakeShortcut()"
-							pressed="iGamesNorm" type="button" >
-							<label align="left" color="#31799F" font="m23" height="36"
-								name="save-link-txt" text="Create shortcut" x="45" />
+					<panel height="22" width="48%" y="22">
+						<input height="22" name="32x32" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="32x32" x="22" />
 						</input>
 					</panel>
+					<panel height="22" width="48%" x="52%" y="22">
+						<input height="22" name="256x256" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="256x256" x="22" />
+						</input>
+					</panel>
+					<panel height="22" width="48%" y="44">
+						<input height="22" name="64x64" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="64x64" x="22" />
+						</input>
+					</panel>
+					<panel height="22" width="48%" x="52%" y="44">
+						<input height="22" name="512x512" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="512x512" x="22" />
+						</input>
+					</panel>
+					<panel height="22" width="48%" y="66">
+						<input height="22" name="128x128" onclick="export:isoLoader_toggleIconSize()" type="checkbox" width="100%" checked="true">
+							<label align="left" color="#000000" font="arial" height="20" text="128x128" x="22" />
+						</input>
+					</panel>
+
+					<label align="left" color="#31799F" font="arial" height="20" text="Icon format:" width="100%" y="96" />
+
+					<panel height="22" width="48%" y="118">
+						<input height="22" name="icon-format-png" onclick="export:isoLoader_toggleIconFormat()" type="checkbox" width="100%" checked="true">
+							<label align="left" color="#000000" font="arial" height="20" text="PNG" x="22" />
+						</input>
+					</panel>
+					<panel height="22" width="48%" x="52%" y="118">
+						<input height="22" name="icon-format-pvr" onclick="export:isoLoader_toggleIconFormat()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="PVR" x="22" />
+						</input>
+					</panel>
+
+					<panel height="22" width="100%" y="146">
+						<input height="22" name="rotate-link" onclick="export:isoLoader_Rotate_Image()" type="checkbox" width="100%">
+							<label align="left" color="#000000" font="arial" height="20" text="Rotate image 180" x="22" />
+						</input>
+					</panel>
+
+					<label align="left" color="#31799F" font="arial" height="20" text="Icon name:" width="100%" y="174" />
+
+					<input font="arial" fontcolor="#000000" height="22" name="link-text" y="196"
+						onblur="export:isoLoader_toggleLinkName()" size="30" type="text" value="Game name" width="90%" x="0" />
+
+					<panel height="22" width="100%" y="224">
+						<input height="22" name="hide-name" onclick="export:isoLoader_toggleHideName()" type="checkbox" width="100%" checked="true">
+							<label align="left" color="#000000" font="arial" height="20" text="Don't show name" x="22" />
+						</input>
+					</panel>
+
+					<input name="save-link-btn" disabled="iGamesDis" height="36" width="250" y="254"
+						highlight="iGamesHigh" normal="iGamesNorm" onclick="export:isoLoader_MakeShortcut()"
+						pressed="iGamesNorm" type="button" >
+						<label align="left" color="#31799F" font="m23" height="36"
+							name="save-link-txt" text="Create shortcut" x="45" />
+					</input>
 				</panel>
 
 			</panel>

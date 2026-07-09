@@ -32,6 +32,7 @@ isoLoader_toggleHeap
 isoLoader_togglePatchAddr
 isoLoader_ShowLink
 isoLoader_toggleIconSize
+isoLoader_toggleIconFormat
 isoLoader_toggleHideName
 isoLoader_MakeShortcut
 isoLoader_toggleLinkName
