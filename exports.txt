@@ -119,6 +119,7 @@ GetAppList
 GetAppById
 GetAppByFileName
 GetAppByName
+GetAppPath
 GetAppByExtension
 GetAppsByExtension
 GetCurApp
@@ -325,6 +326,7 @@ SaveSettings
 GetVolumeFromSettings
 GetStartupAppName
 GetMainAppName
+GetMainAppSubdir
 #
 naomi_bsram_read_credits
 naomi_bsram_read

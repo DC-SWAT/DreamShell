@@ -382,6 +382,44 @@ int OpenMainApp(void) {
 }
 
 
+void GetAppPath(char *buffer, size_t size, const char *fn) {
+	char *p;
+
+	if(!fn) {
+		strncpy(buffer, ".", size);
+		buffer[size - 1] = '\0';
+		return;
+	}
+
+	strncpy(buffer, fn, size);
+	buffer[size - 1] = '\0';
+
+	p = strrchr(buffer, '/');
+
+	if(p) {
+		*p = '\0';
+	}
+	else {
+		strncpy(buffer, ".", size);
+		buffer[size - 1] = '\0';
+	}
+}
+
+
+void GetMainAppSubdir(char *buffer, size_t size, const char *subdir) {
+	App_t *app = GetAppByName(GetMainAppName());
+	char path[NAME_MAX];
+
+	if(!app || !app->fn[0]) {
+		buffer[0] = '\0';
+		return;
+	}
+
+	GetAppPath(path, sizeof(path), app->fn);
+	snprintf(buffer, size, "%s/%s", path, subdir);
+}
+
+
 static int OpenAppFinish(App_t *app, const char *args) {
 
 	int onopen_called = 0;
