@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Main app module
-   Copyright (C)2011-2025 SWAT 
+   Copyright (C)2011-2026 SWAT 
 
 */
 
@@ -21,6 +21,12 @@ typedef struct script_item {
 	char file[NAME_MAX];
 
 } script_item_t;
+
+typedef enum {
+	MAIN_DELETE_NONE = 0,
+	MAIN_DELETE_SCRIPT = 1,
+	MAIN_DELETE_APP = 2
+} main_delete_type_t;
 
 static struct {
 
@@ -45,10 +51,14 @@ static struct {
 
 	Event_t *input_event;
 	script_item_t pending_shortcut;
+	main_delete_type_t pending_delete_type;
+	int pending_app_id;
+	char pending_app_name[64];
 } self;
 
 static void Slide_EventHandler(void *ds_event, void *param, int action);
 static void ShortcutContextCB(void *param);
+static void AppContextCB(void *param);
 
 static GUI_Surface *CreateHighlight(GUI_Surface *src, int w, int h) {
 
@@ -193,7 +203,7 @@ static void AddToList(const char *name, const char *icon,
 static void BuildAppList() {
 
 	file_t fd;
-	dirent_t *ent;
+	const dirent_t *ent;
 	char path[NAME_MAX];
 	int plen, elen, type;
 	App_t *app;
@@ -208,7 +218,7 @@ static void BuildAppList() {
 			app = (App_t*)item->data;
 
 			if(strncasecmp(app->name, app_name, sizeof(app->name))) {
-				AddToList(app->name, app->icon, (GUI_CallbackFunction *)OpenAppCB, NULL, (void*)app->id, NULL, NULL);
+				AddToList(app->name, app->icon, (GUI_CallbackFunction *)OpenAppCB, NULL, (void*)app->id, AppContextCB, (void*)app->id);
 			}
 			item = listGetItemNext(item);
 		}
@@ -342,6 +352,48 @@ static int DeleteShortcutFiles(const char *file, const char *name) {
 	return 1;
 }
 
+static void ClearPendingDelete(void) {
+	self.pending_delete_type = MAIN_DELETE_NONE;
+	self.pending_app_id = 0;
+	self.pending_app_name[0] = '\0';
+	memset(&self.pending_shortcut, 0, sizeof(self.pending_shortcut));
+}
+
+static int DeleteAppItem(App_t *app) {
+	char app_dir[NAME_MAX];
+	char *slash;
+
+	if(app == NULL || !app->fn[0]) {
+		return 0;
+	}
+
+	if(self.app != NULL && app->id == self.app->id) {
+		return 0;
+	}
+
+	strncpy(app_dir, app->fn, sizeof(app_dir) - 1);
+	app_dir[sizeof(app_dir) - 1] = '\0';
+
+	slash = strrchr(app_dir, '/');
+
+	if(slash == NULL) {
+		return 0;
+	}
+
+	*slash = '\0';
+
+	if(!RemoveApp(app)) {
+		return 0;
+	}
+
+	if(!RemoveDirectory(app_dir, 0)) {
+		ds_printf("DS_ERROR: Main app: can't remove app directory '%s'\n", app_dir);
+		return 0;
+	}
+
+	return 1;
+}
+
 static void ShortcutContextCB(void *param) {
 	script_item_t *si = (script_item_t *)param;
 	char body[256];
@@ -349,25 +401,66 @@ static void ShortcutContextCB(void *param) {
 	if(!si || !self.dialog) {
 		return;
 	}
+
+	self.pending_delete_type = MAIN_DELETE_SCRIPT;
+	self.pending_app_id = 0;
+	self.pending_app_name[0] = '\0';
 	memcpy(&self.pending_shortcut, si, sizeof(self.pending_shortcut));
 	snprintf(body, sizeof(body), "Do you want to delete shortcut <b>%s</b>?", self.pending_shortcut.name);
 	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Delete shortcut?", body);
 }
 
-void MainApp_ShortcutDeleteConfirm(GUI_Widget *widget) {
-	GUI_DialogHide(widget);
+static void AppContextCB(void *param) {
+	App_t *app = GetAppById((int)param);
+	char body[256];
 
-	if(!self.pending_shortcut.file[0]) {
+	if(!app || !self.dialog) {
 		return;
 	}
-	if(DeleteShortcutFiles(self.pending_shortcut.file, self.pending_shortcut.name)) {
-		RebuildAppList();
+
+	if(self.app != NULL && app->id == self.app->id) {
+		return;
 	}
+
+	self.pending_delete_type = MAIN_DELETE_APP;
+	self.pending_app_id = app->id;
 	memset(&self.pending_shortcut, 0, sizeof(self.pending_shortcut));
+	strncpy(self.pending_app_name, app->name, sizeof(self.pending_app_name) - 1);
+	self.pending_app_name[sizeof(self.pending_app_name) - 1] = '\0';
+	snprintf(body, sizeof(body), "Do you want to delete app <b>%s</b>?", self.pending_app_name);
+	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Delete app?", body);
+}
+
+void MainApp_ShortcutDeleteConfirm(GUI_Widget *widget) {
+	App_t *app;
+
+	GUI_DialogHide(widget);
+
+	if(self.pending_delete_type == MAIN_DELETE_SCRIPT) {
+
+		if(!self.pending_shortcut.file[0]) {
+			ClearPendingDelete();
+			return;
+		}
+
+		if(DeleteShortcutFiles(self.pending_shortcut.file, self.pending_shortcut.name)) {
+			RebuildAppList();
+		}
+	}
+	else if(self.pending_delete_type == MAIN_DELETE_APP) {
+
+		app = GetAppById(self.pending_app_id);
+
+		if(app != NULL && DeleteAppItem(app)) {
+			RebuildAppList();
+		}
+	}
+
+	ClearPendingDelete();
 }
 
 void MainApp_ShortcutDeleteCancel(GUI_Widget *widget) {
-	memset(&self.pending_shortcut, 0, sizeof(self.pending_shortcut));
+	ClearPendingDelete();
 	GUI_DialogHide(widget);
 }
 

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Main" version="0.6.1" icon="images/icon.png">
+<app name="Main" version="0.7.0" icon="images/icon.png">
 	<resources>
 		<module src="modules/app_main.klf" />
 		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="comic" />
@@ -27,10 +27,10 @@
 					<panel width="22%">
 						<label name="date" text="00.00.0000" color="#33295A" align="left" valign="center" font="comic" />
 					</panel>
-					<panel width="63%">
+					<panel width="62%">
 						<label name="version" text="DreamShell" color="#33295A" align="center" valign="center" font="comic" />
 					</panel>
-					<panel width="15%">
+					<panel width="16%">
 						<panel width="30%">
 							<image name="net_icon" src="net-off" />
 						</panel>
