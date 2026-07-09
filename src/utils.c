@@ -304,6 +304,79 @@ int CopyDirectory(const char *src_path, const char *dest_path, int verbose) {
 	return 0;
 }
 
+int RemoveDirectory(const char *path, int verbose) {
+
+	file_t fd;
+	char path_buf[NAME_MAX];
+	char *end_ptr;
+	const dirent_t *e;
+	size_t base_len;
+
+	if(path == NULL || !path[0]) {
+		return 0;
+	}
+
+	fd = fs_open(path, O_RDONLY | O_DIR);
+
+	if(fd == FILEHND_INVALID) {
+		ds_printf("DS_ERROR: Can't open directory %s\n", path);
+		return 0;
+	}
+
+	strcpy(path_buf, path);
+	base_len = strlen(path_buf);
+
+	if(base_len > 0 && path_buf[base_len - 1] != '/') {
+		path_buf[base_len] = '/';
+		base_len++;
+	}
+
+	path_buf[base_len] = '\0';
+	end_ptr = path_buf + base_len;
+
+	while((e = fs_readdir(fd)) != NULL) {
+
+		if(!strcmp(e->name, ".") || !strcmp(e->name, "..")) {
+			continue;
+		}
+
+		strcpy(end_ptr, e->name);
+
+		if(e->attr == O_DIR) {
+
+			if(!RemoveDirectory(path_buf, verbose)) {
+				fs_close(fd);
+				return 0;
+			}
+		}
+		else {
+
+			if(verbose) {
+				ds_printf("DS_PROCESS: Removing file: %s\n", path_buf);
+			}
+
+			if(fs_unlink(path_buf) < 0) {
+				ds_printf("DS_ERROR: Can't remove file %s\n", path_buf);
+				fs_close(fd);
+				return 0;
+			}
+		}
+	}
+
+	fs_close(fd);
+
+	if(verbose) {
+		ds_printf("DS_PROCESS: Removing directory: %s\n", path);
+	}
+
+	if(fs_rmdir(path) < 0) {
+		ds_printf("DS_ERROR: Can't remove directory %s\n", path);
+		return 0;
+	}
+
+	return 1;
+}
+
 
 int PeriphExists(const char *name) {
 	int p, u;

@@ -91,6 +91,7 @@ is_no_syscalls
 gzip_get_file_size
 CopyFile
 CopyDirectory
+RemoveDirectory
 #
 listMake
 listDestroy

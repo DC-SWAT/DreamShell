@@ -1,7 +1,7 @@
 /** 
  * \file    utils.h
  * \brief   DreamShell utils
- * \date    2004-2024
+ * \date    2004-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -45,6 +45,7 @@ int DirExists(const char *dir);
 int PeriphExists(const char *name);
 int CopyFile(const char *src_fn, const char *dest_fn, int verbose);
 int CopyDirectory(const char *src_path, const char *dest_path, int verbose);
+int RemoveDirectory(const char *path, int verbose);
 
 void arch_shutdown();
 
