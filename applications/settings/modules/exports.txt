@@ -14,7 +14,8 @@ SettingsApp_ToggleNativeMode
 SettingsApp_ToggleScreenMode
 SettingsApp_ToggleScreenFilter
 # Boot
-SettingsApp_ToggleApp
+SettingsApp_ToggleStartupApp
+SettingsApp_ToggleMainApp
 SettingsApp_ToggleRoot
 SettingsApp_ToggleStartup
 # Date

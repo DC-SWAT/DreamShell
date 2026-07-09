@@ -63,7 +63,7 @@
 					</input>
 				</panel>
 				<panel height="70" width="50%">
-					<input type="button" width="280" height="60" onclick="console:app -o -n Main" align="center">
+					<input type="button" width="280" height="60" onclick="console:app -o" align="center">
 						<label font="comic-22" color="#EEEEEE" text="Exit" />
 					</input>
 				</panel>
@@ -99,8 +99,13 @@
 							<label x="25" height="20" font="arial" color="#333333" text="/lua/custom.lua" align="left" />
 						</input>
 					</panel>
-					<panel height="210" name="boot-app">
-						<label height="40" font="comic-22" color="#31799F" text="Application" align="left" />
+					<panel height="210">
+						<panel width="50%" name="boot-startup-app">
+							<label height="40" font="comic-22" color="#31799F" text="Startup application" align="left" />
+						</panel>
+						<panel width="50%" name="boot-main-app">
+							<label height="40" font="comic-22" color="#31799F" text="Main application" align="left" />
+						</panel>
 					</panel>
 				</panel>
 				<panel height="60">

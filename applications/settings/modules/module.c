@@ -66,8 +66,9 @@ static void SetupVideoSettings();
 static void SetupBootSettings();
 static void SetupAudioSettings();
 static void SetupTimezoneSettings();
+static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*toggle_fn)(GUI_Widget *));
 
-static int UncheckBesides(GUI_Widget *widget, char *label) {
+static int UncheckBesides(GUI_Widget *widget, const char *label) {
 
 	int index = 0;
 	GUI_Widget *panel, *child;
@@ -381,9 +382,15 @@ static void SetupVideoSettings() {
 
 
 
-void SettingsApp_ToggleApp(GUI_Widget *widget) {
+void SettingsApp_ToggleStartupApp(GUI_Widget *widget) {
 	UncheckBesides(widget, NULL);
-	strncpy(self.settings->app, GUI_ObjectGetName((GUI_Object *)widget), sizeof(self.settings->app));
+	strncpy(self.settings->startup_app, GUI_ObjectGetName((GUI_Object *)widget), sizeof(self.settings->startup_app));
+}
+
+
+void SettingsApp_ToggleMainApp(GUI_Widget *widget) {
+	UncheckBesides(widget, NULL);
+	strncpy(self.settings->main_app, GUI_ObjectGetName((GUI_Object *)widget), sizeof(self.settings->main_app));
 }
 
 
@@ -414,64 +421,76 @@ void SettingsApp_ToggleStartupSound(GUI_Widget *widget) {
 }
 
 
+static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*toggle_fn)(GUI_Widget *)) {
+
+	Item_list_t *applist = GetAppList();
+	GUI_Font *font = APP_GET_FONT("arial");
+
+	if(!applist || !panel) {
+		return;
+	}
+
+	if(GUI_ContainerGetCount(panel) > 1) {
+		UncheckBesides(panel, selected);
+		return;
+	}
+
+	Item_t *item = listGetItemFirst(applist);
+
+	while(item != NULL) {
+
+		App_t *app = (App_t *)item->data;
+		item = listGetItemNext(item);
+
+		SDL_Rect ts = GUI_FontGetTextSize(font, app->name);
+
+		int h = ts.h + 8;
+		int w = ts.w + h + 12;
+
+		GUI_Widget *b = GUI_ToggleButtonCreate(app->name, 0, 0, w, h);
+
+		GUI_Callback *c = GUI_CallbackCreate((GUI_CallbackFunction *)toggle_fn, NULL, b);
+		GUI_ToggleButtonSetClick(b, c);
+		GUI_ObjectDecRef((GUI_Object *) c);
+
+		if(!strncasecmp(app->name, selected, sizeof(app->name))) {
+			GUI_WidgetSetState(b, 1);
+		}
+		else {
+			GUI_WidgetSetState(b, 0);
+		}
+
+		GUI_Widget *l = GUI_LabelCreate(app->name, 22, 0, w, h - 5, font, app->name);
+		GUI_LabelSetTextColor(l, 51, 51, 51);
+		GUI_WidgetSetAlign(l, WIDGET_HORIZ_LEFT | WIDGET_VERT_CENTER);
+		GUI_ButtonSetCaption(b, l);
+		GUI_ObjectDecRef((GUI_Object *) l);
+
+		GUI_ContainerAdd(panel, b);
+		GUI_ObjectDecRef((GUI_Object *) b);
+	}
+}
+
+
 static void SetupBootSettings() {
 
-	Item_list_t *applist      = GetAppList();
 	GUI_Widget  *panel        = APP_GET_WIDGET("boot-root");
-	GUI_Font    *font         = APP_GET_FONT("arial");
-	
+
 	if(self.settings->root[0] == 0) {
 		UncheckBesides(GUI_ContainerGetChild(panel, WIDGET_VALUE_OFFSET), NULL);
-	} else {
+	}
+	else {
 		UncheckBesides(panel, self.settings->root);
 	}
 
 	panel = APP_GET_WIDGET("boot-startup");
 	UncheckBesides(panel, self.settings->startup);
-	
-	panel = APP_GET_WIDGET("boot-app");
-	
-	if(applist && panel) {
-		
-		if(GUI_ContainerGetCount(panel) > 1) {
-			UncheckBesides(panel, self.settings->app);
-			return;
-		}
-	
-		Item_t *item = listGetItemFirst(applist);
 
-		while(item != NULL) {
-			
-			App_t *app = (App_t *)item->data;
-			item = listGetItemNext(item);
+	panel = APP_GET_WIDGET("boot-startup-app");
+	SetupAppListPanel(panel, self.settings->startup_app, SettingsApp_ToggleStartupApp);
 
-			SDL_Rect ts = GUI_FontGetTextSize(font, app->name);
-
-			int h = ts.h + 8;
-			int w = ts.w + h + 12;
-
-			GUI_Widget *b = GUI_ToggleButtonCreate(app->name, 0, 0, w, h);
-			
-			GUI_Callback *c = GUI_CallbackCreate((GUI_CallbackFunction *)SettingsApp_ToggleApp, NULL, b);
-			GUI_ToggleButtonSetClick(b, c);
-			GUI_ObjectDecRef((GUI_Object *) c);
-
-			if(!strncasecmp(app->name, self.settings->app, sizeof(app->name))) {
-				GUI_WidgetSetState(b, 1);
-			} else {
-				GUI_WidgetSetState(b, 0);
-			}
-
-			GUI_Widget *l = GUI_LabelCreate(app->name, 22, 0, w, h - 5, font, app->name);
-			GUI_LabelSetTextColor(l, 51, 51, 51);
-			GUI_WidgetSetAlign(l, WIDGET_HORIZ_LEFT | WIDGET_VERT_CENTER);
-			GUI_ButtonSetCaption(b, l);
-			GUI_ObjectDecRef((GUI_Object *) l);
-
-			GUI_ContainerAdd(panel, b);
-			GUI_ObjectDecRef((GUI_Object *) b);
-		}
-	}
+	panel = APP_GET_WIDGET("boot-main-app");
+	SetupAppListPanel(panel, self.settings->main_app, SettingsApp_ToggleMainApp);
 }
 
 static void update_rtc_ui() {

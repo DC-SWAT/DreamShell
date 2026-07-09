@@ -26,7 +26,9 @@ void SettingsApp_ToggleScreenMode(GUI_Widget *widget);
 
 void SettingsApp_ToggleScreenFilter(GUI_Widget *widget);
 
-void SettingsApp_ToggleApp(GUI_Widget *widget);
+void SettingsApp_ToggleStartupApp(GUI_Widget *widget);
+
+void SettingsApp_ToggleMainApp(GUI_Widget *widget);
 
 void SettingsApp_ToggleRoot(GUI_Widget *widget);
 
