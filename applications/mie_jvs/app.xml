@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="MIE JVS" icon="images/icon.png" version="1.0.0">
+    <resources>
+        <module src="modules/app_mie_jvs.klf" />
+        <font src="../../fonts/txf/m23_full.txf" name="ui_font" />
+    </resources>
+    <body type="tsunami" width="100%" height="100%" backgroundColor="#080810"
+        onload="export:MieJvsApp_Init()"
+        onopen="export:MieJvsApp_Open()"
+        onunload="export:MieJvsApp_Shutdown()">
+
+        <gradient x="0" y="0" width="100%" height="100%" z="1.0"
+            topLeft="#1A2A3A" topRight="#1A2A3A" bottomLeft="#050508" bottomRight="#050508" />
+
+        <cardstack name="pages" x="0" y="0" width="100%" height="100%" z="10.0" fade="0.12">
+
+            <panel name="monitor">
+                <label name="p1_title" font="ui_font" fontsize="14" x="24" y="150" z="80.0"
+                    text="Player 1" smear="true" color="#70C9DBFF" />
+                <label name="p1_label" font="ui_font" fontsize="12" x="24" y="134" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="p1_svc" font="ui_font" fontsize="12" x="24" y="118" z="80.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+                <label name="p1_detail" font="ui_font" fontsize="12" x="24" y="102" z="80.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+
+                <label name="p2_title" font="ui_font" fontsize="14" x="24" y="244" z="80.0"
+                    text="Player 2" smear="true" color="#70C9DBFF" />
+                <label name="p2_label" font="ui_font" fontsize="12" x="24" y="228" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="p2_svc" font="ui_font" fontsize="12" x="24" y="212" z="80.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+                <label name="p2_detail" font="ui_font" fontsize="12" x="24" y="196" z="80.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+
+                <label name="sys_title" font="ui_font" fontsize="14" x="288" y="150" z="80.0"
+                    text="System" smear="true" color="#70C9DBFF" />
+                <label name="sys_label" font="ui_font" fontsize="12" x="288" y="134" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="panel_label" font="ui_font" fontsize="12" x="288" y="118" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="coin_label" font="ui_font" fontsize="12" x="288" y="102" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="out_label" font="ui_font" fontsize="12" x="288" y="86" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+
+                <label name="cont_title" font="ui_font" fontsize="14" x="288" y="244" z="80.0"
+                    text="Mapped DC" smear="true" color="#70C9DBFF" />
+                <label name="cont_label" font="ui_font" fontsize="12" x="288" y="228" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="joy_label" font="ui_font" fontsize="12" x="288" y="212" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="joy2_label" font="ui_font" fontsize="12" x="288" y="196" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+
+                <label name="analog_title" font="ui_font" fontsize="14" x="24" y="338" z="80.0"
+                    text="Analog" smear="true" color="#70C9DBFF" />
+                <label name="analog_wheel" font="ui_font" fontsize="12" x="24" y="322" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="analog_accel" font="ui_font" fontsize="12" x="24" y="306" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="analog_brake" font="ui_font" fontsize="12" x="24" y="290" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+
+                <label name="monitor_calib_title" font="ui_font" fontsize="14" x="288" y="338" z="80.0"
+                    text="Calibration" smear="true" color="#70C9DBFF" />
+                <label name="monitor_calib" font="ui_font" fontsize="12" x="288" y="322" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="monitor_calib2" font="ui_font" fontsize="12" x="288" y="306" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+            </panel>
+
+            <panel name="calib">
+                <label name="calib_title" font="ui_font" fontsize="16" x="24" y="88" z="85.0"
+                    text="Calibration" smear="true" color="#D4F129FF" />
+                <label name="calib_step" font="ui_font" fontsize="14" x="24" y="110" z="85.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <label name="calib_raw" font="ui_font" fontsize="12" x="24" y="128" z="85.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+                <label name="calib_data" font="ui_font" fontsize="12" x="24" y="146" z="85.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+
+                <label name="calib_analog_title" font="ui_font" fontsize="14" x="120" y="176" z="80.0"
+                    text="Analog Inputs" smear="true" color="#70C9DBFF" />
+
+                <label name="calib_brake_title" font="ui_font" fontsize="14" x="380" y="176" z="80.0"
+                    text="Brake" smear="true" color="#70C9DBFF" />
+                <label name="calib_brake_val" font="ui_font" fontsize="12" x="380" y="344" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <rectangle name="calib_brake_bar_bg" x="380" y="192" width="40" height="128" z="70.0"
+                    color="#333344FF" transparent="false" />
+                <rectangle name="calib_brake_bar_fill" x="380" y="319" width="40" height="1" z="71.0"
+                    color="#FF4444FF" transparent="false" />
+
+                <label name="calib_accel_title" font="ui_font" fontsize="14" x="500" y="176" z="80.0"
+                    text="Accel" smear="true" color="#70C9DBFF" />
+                <label name="calib_accel_val" font="ui_font" fontsize="12" x="500" y="344" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <rectangle name="calib_accel_bar_bg" x="500" y="192" width="40" height="128" z="70.0"
+                    color="#333344FF" transparent="false" />
+                <rectangle name="calib_accel_bar_fill" x="500" y="319" width="40" height="1" z="71.0"
+                    color="#FFAA44FF" transparent="false" />
+
+                <label name="calib_wheel_title" font="ui_font" fontsize="14" x="120" y="286" z="80.0"
+                    text="Steering" smear="true" color="#70C9DBFF" />
+                <label name="calib_wheel_val" font="ui_font" fontsize="12" x="120" y="344" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <rectangle name="calib_wheel_bar_bg" x="120" y="300" width="220" height="14" z="70.0"
+                    color="#333344FF" transparent="false" />
+                <rectangle name="calib_wheel_bar_fill" x="120" y="300" width="1" height="14" z="71.0"
+                    color="#44DD88FF" transparent="false" />
+                <rectangle name="calib_wheel_bar_center" x="229" y="296" width="2" height="22" z="72.0"
+                    color="#FFFFFF88" transparent="false" />
+            </panel>
+
+            <panel name="outputs">
+                <label name="outputs_title" font="ui_font" fontsize="18" x="228" y="136" z="80.0"
+                    text="JVS Outputs" smear="true" color="#70C9DBFF" />
+                <label name="outputs_label" font="ui_font" fontsize="14" x="228" y="112" z="80.0"
+                    text="" smear="true" color="#FFFFFFFF" />
+                <panel x="52" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_0" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_0" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="0" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="124" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_1" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_1" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="1" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="196" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_2" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_2" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="2" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="268" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_3" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_3" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="3" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="340" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_4" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_4" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="4" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="412" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_5" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_5" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="5" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="484" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_6" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_6" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="6" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="556" y="172" width="34" height="34">
+                    <rectangle name="outputs_led_7" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_7" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="7" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="52" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_8" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_8" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="8" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="124" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_9" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_9" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="9" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="196" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_10" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_10" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="10" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="268" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_11" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_11" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="11" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="340" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_12" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_12" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="12" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="412" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_13" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_13" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="13" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="484" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_14" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_14" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="14" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="556" y="248" width="34" height="34">
+                    <rectangle name="outputs_led_15" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_15" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="15" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="52" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_16" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_16" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="16" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="124" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_17" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_17" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="17" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="196" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_18" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_18" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="18" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="268" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_19" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_19" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="19" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="340" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_20" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_20" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="20" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="412" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_21" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_21" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="21" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="484" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_22" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_22" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="22" smear="true" color="#AAAAAAFF" />
+                </panel>
+                <panel x="556" y="324" width="34" height="34">
+                    <rectangle name="outputs_led_23" x="0" y="0" width="34" height="34" z="75.0"
+                        color="#333333FF" transparent="false" />
+                    <label name="outputs_num_23" font="ui_font" fontsize="12" x="50%" y="50%" z="80.0" centered="true" text="23" smear="true" color="#AAAAAAFF" />
+                </panel>
+            </panel>
+
+        </cardstack>
+
+        <label name="title_label" font="ui_font" fontsize="20" x="16" y="448" z="90.0"
+            text="DreamShell MIE JVS" smear="true" color="#70C9DBFF" />
+        <label name="page_label" font="ui_font" fontsize="14" x="520" y="448" z="90.0"
+            text="Monitor" smear="true" color="#AAAAAAFF" />
+        <label name="status_label" font="ui_font" fontsize="14" x="16" y="424" z="90.0"
+            text="" smear="true" color="#CCCCCCFF" />
+        <label name="hint_label" font="ui_font" fontsize="12" x="16" y="24" z="90.0"
+            text="" smear="true" color="#888888FF" />
+        <label name="exit_label" font="ui_font" fontsize="12" x="500" y="24" z="90.0"
+            text="Exit: A + B" smear="true" color="#D4F129FF" />
+
+    </body>
+</app>
