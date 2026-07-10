@@ -467,7 +467,7 @@ int InitVideo(int w, int h, int bpp) {
 	sprintf(fn, "%s/gui/cursors/default.png", getenv("PATH"));
 	plx_cursor_txr = plx_txr_load(fn, 1, PVR_TXRLOAD_16BPP | PVR_TXRLOAD_SQ);
 
-	sprintf(fn, "%s/fonts/txf/axaxax.txf", getenv("PATH"));
+	sprintf(fn, "%s/fonts/txf/dreamshell.txf", getenv("PATH"));
 	plx_fnt = plx_font_load(fn);
 
 	if(plx_fnt) {
@@ -537,6 +537,7 @@ static void DrawFadeText(float z) {
 		w.y = 230.0f;
 		w.z = z;
 
+		plx_fcxt_setsize(plx_cxt, 14.0f);
 		plx_fcxt_begin(plx_cxt);
 		plx_fcxt_setpos_pnt(plx_cxt, &w);
 		plx_fcxt_setcolor4f(plx_cxt, scr_fade_text_opacity, 0.9f, 0.9f, 0.9f);
