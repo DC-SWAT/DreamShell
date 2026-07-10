@@ -319,9 +319,10 @@ int UnLoadApp(App_t *app) {
 		return 1;
 	}
 
-	CallAppBodyEvent(app, "onunload");
-
 	app->state |= APP_STATE_PROCESS;
+	app->state &= ~APP_STATE_OPENED;
+
+	CallAppBodyEvent(app, "onunload");
 
 	if(app->thd != NULL) {
 		thd_join(app->thd, NULL);
@@ -330,17 +331,17 @@ int UnLoadApp(App_t *app) {
 
 	LockVideo();
 
-	if(app->body != NULL) {
-		GUI_ObjectDecRef((GUI_Object *) app->body);
-		app->body = NULL;
-	}
-
 #ifdef APP_LOAD_DEBUG
 	ds_printf("DS_DEBUG: Unloading app elements...\n");
 #endif
 	if(app->elements) {
 		UnloadAppResources(app, app->elements);
 		app->elements = NULL;
+	}
+
+	if(app->body != NULL) {
+		GUI_ObjectDecRef((GUI_Object *) app->body);
+		app->body = NULL;
 	}
 
 	appTsunamiDestroyApp(app);

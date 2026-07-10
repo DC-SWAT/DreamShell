@@ -447,10 +447,12 @@ static void tsuDrawableClickCallback(Drawable *drawable) {
 		return;
 	}
 
+	AppGuiCallbackEnter();
+
 	switch(cb->type) {
 		case TSU_CLICK_CB_EXPORT:
 			if(!tsuClickCallbackActive(cb->app)) {
-				return;
+				break;
 			}
 
 			EXPT_GUARD_BEGIN;
@@ -474,6 +476,8 @@ static void tsuDrawableClickCallback(Drawable *drawable) {
 		default:
 			break;
 	}
+
+	AppGuiCallbackLeave();
 }
 
 static void tsuFreeClickCallbacks(App_t *app) {

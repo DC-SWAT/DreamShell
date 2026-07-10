@@ -103,11 +103,11 @@ void ResetSettings() {
 	net->startup_connect_ppp = 0;
 	net->startup_ntp = 0;
 
-	strncpy(cur->startup_app, DS_DEFAULT_APP_NAME, 4);
-	cur->startup_app[4] = '\0';
+	strncpy(cur->startup_app, DS_DEFAULT_APP_NAME, sizeof(cur->startup_app) - 1);
+	cur->startup_app[sizeof(cur->startup_app) - 1] = '\0';
 
-	strncpy(cur->main_app, DS_DEFAULT_APP_NAME, 4);
-	cur->main_app[4] = '\0';
+	strncpy(cur->main_app, DS_DEFAULT_APP_NAME, sizeof(cur->main_app) - 1);
+	cur->main_app[sizeof(cur->main_app) - 1] = '\0';
 
 	strncpy(cur->startup, "/lua/startup.lua", 16);
 	cur->startup[16] = '\0';

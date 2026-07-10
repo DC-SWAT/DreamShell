@@ -342,18 +342,7 @@ int OpenApp(App_t *app, const char *args) {
 		ScreenFadeOutEx(str, 1);
 	}
 
-	if(curOpenedApp) {
-
-		App_t *cur = GetCurApp();
-
-		if(cur != NULL && cur->state & APP_STATE_OPENED) {
-			CloseApp(cur, (cur->state & APP_STATE_LOADED) ? 1 : 0);
-		}
-
-		curOpenedApp = 0;
-	}
-
-	if(app_gui_callback_depth > 0) {
+	if(app_gui_callback_depth > 0 || curOpenedApp) {
 		pending_open_app = app;
 		if(args != NULL) {
 			strncpy(pending_open_args, args, sizeof(pending_open_args) - 1);
@@ -428,6 +417,17 @@ static int OpenAppFinish(App_t *app, const char *args) {
 		app->args = args;
 	}
 
+	if(curOpenedApp) {
+
+		App_t *cur = GetCurApp();
+
+		if(cur != NULL && cur != app && (cur->state & APP_STATE_OPENED)) {
+			CloseApp(cur, (cur->state & APP_STATE_LOADED) ? 1 : 0);
+		}
+
+		curOpenedApp = 0;
+	}
+
 	UnLoadOldApps();
 
 	if(app->state & APP_STATE_LOADED && app->state & APP_STATE_READY) {
@@ -461,7 +461,7 @@ static int OpenAppFinish(App_t *app, const char *args) {
 			goto error;
 		}
 
-		if(!strncasecmp(app->name, DS_DEFAULT_APP_NAME, sizeof(app->name))) {
+		if(!strncasecmp(app->name, GetMainAppName(), sizeof(app->name))) {
 			vmu_draw_string(getenv("TITLE"));
 		}
 		else {
@@ -518,13 +518,17 @@ int CloseApp(App_t *app, int unload) {
 	app->state &= ~APP_STATE_OPENED;
 	WaitApp(app);
 
-	if(unload && (app->state & APP_STATE_LOADED)) {
-		app->state |= APP_STATE_WAIT_UNLOAD;
-	}
+	if(app->state & APP_STATE_LOADED) {
 
-	if(!unload && (app->state & APP_STATE_LOADED)) {
+		if(unload) {
+			app->state |= APP_STATE_WAIT_UNLOAD;
+		}
+
 		CallAppBodyEvent(app, "onclose");
-		SetAppSleep(app, 1);
+
+		if(!unload) {
+			SetAppSleep(app, 1);
+		}
 	}
 
 	if(app->id == curOpenedApp) {
