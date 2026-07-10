@@ -27,6 +27,7 @@ public:
     float getRadius() const;
 
     void setColors(const Color &center, const Color &edge);
+    void getColors(Color *center, Color *edge) const;
 
 private:
     pvr_list_type_t m_list;
@@ -57,6 +58,7 @@ extern "C"
     void TSU_CircleDestroy(Circle **circle_ptr);
     void TSU_CircleSetRadius(Circle *circle_ptr, float radius);
     void TSU_CircleSetColors(Circle *circle_ptr, const Color *centerColor, const Color *edgeColor);
+    void TSU_CircleGetColors(Circle *circle_ptr, Color *centerColor, Color *edgeColor);
 
 #ifdef __cplusplus
 };

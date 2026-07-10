@@ -26,6 +26,8 @@ public:
 
 	void setText(const std::string &text);
 	void setFont(Font *f);
+	void setFontSize(int size);
+	int getFontSize();
 	Font* getFont();
 	std::string fixTextWidth(const std::string &text);
 
@@ -75,6 +77,8 @@ void TSU_LabelSetTint(Label *label_ptr, const Color *tint);
 void TSU_LabelIsCentered(Label *label_ptr);
 void TSU_LabelGetSize(Label *label_ptr, float *x, float *y);
 void TSU_LabelSetSize(Label *label_ptr, float x, float y);
+void TSU_LabelSetFontSize(Label *label_ptr, int size);
+int TSU_LabelGetFontSize(Label *label_ptr);
 void TSU_LabelSetWindowState(Label *label_ptr, int window_state);
 int TSU_LabelGetWindowState(Label *label_ptr);
 

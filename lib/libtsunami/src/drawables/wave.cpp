@@ -88,6 +88,18 @@ void Wave::setColorAnimation(float r1, float g1, float b1, float a1,
     setTint(m_anim_c1);
 }
 
+void Wave::getColors(Color *c1, Color *c2) const {
+    if (m_anim_enabled) {
+        *c1 = m_anim_c1;
+        *c2 = m_anim_c2;
+    }
+    else {
+        Color c = getColor();
+        *c1 = c;
+        *c2 = c;
+    }
+}
+
 void Wave::nextFrame() {
     Drawable::nextFrame();
     m_phase += m_speed;
@@ -271,6 +283,13 @@ extern "C"
     {
         if (wave_ptr != NULL) {
             wave_ptr->setColorAnimation(r1, g1, b1, a1, r2, g2, b2, a2, duration, hold_duration);
+        }
+    }
+
+    void TSU_WaveGetColors(Wave *wave_ptr, Color *c1, Color *c2)
+    {
+        if (wave_ptr != NULL && c1 != NULL && c2 != NULL) {
+            wave_ptr->getColors(c1, c2);
         }
     }
 }

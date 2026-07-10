@@ -65,6 +65,7 @@ void Banner::setUV(float u1, float v1, float u2, float v2, float u3, float v3, f
 void Banner::setSize(float w, float h) {
 	m_w = w;
 	m_h = h;
+	Drawable::setSize(w, h);
 }
 
 static shz_vec2_t banner_world_pos(float cx, float cy, shz_vec2_t local, shz_sincos_t sc, int rotated) {

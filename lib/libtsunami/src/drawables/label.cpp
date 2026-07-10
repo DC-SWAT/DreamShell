@@ -30,10 +30,21 @@ Label::~Label() {
 
 void Label::setText(const std::string &text) {
 	m_text = text;
+	refreshSize();
 }
 
 void Label::setFont(Font *f) {
 	m_fh = f;
+	refreshSize();
+}
+
+void Label::setFontSize(int size) {
+	m_size = size;
+	refreshSize();
+}
+
+int Label::getFontSize() {
+	return m_size;
 }
 
 Font* Label::getFont() {
@@ -258,6 +269,22 @@ extern "C"
 		if (label_ptr != NULL) {
 			return label_ptr->setSize(x, y);
 		}
+	}
+
+	void TSU_LabelSetFontSize(Label *label_ptr, int size)
+	{
+		if (label_ptr != NULL) {
+			label_ptr->setFontSize(size);
+		}
+	}
+
+	int TSU_LabelGetFontSize(Label *label_ptr)
+	{
+		if (label_ptr != NULL) {
+			return label_ptr->getFontSize();
+		}
+
+		return 0;
 	}
 
 	void TSU_LabelSetWindowState(Label *label_ptr, int window_state)

@@ -1504,6 +1504,7 @@ TSU_WaveSetColor
 TSU_WaveSetParams
 TSU_WaveSetSize
 TSU_WaveSetColorAnimation
+TSU_WaveGetColors
 TSU_GradientCreate
 TSU_GradientDestroy
 TSU_GradientSetColors
@@ -1530,6 +1531,8 @@ TSU_LabelSetTint
 TSU_LabelIsCentered
 TSU_LabelGetSize
 TSU_LabelSetSize
+TSU_LabelSetFontSize
+TSU_LabelGetFontSize
 TSU_LabelGetWindowState
 TSU_LabelSetWindowState
 TSU_BoxCreate
@@ -1546,6 +1549,7 @@ TSU_CircleCreate
 TSU_CircleDestroy
 TSU_CircleSetRadius
 TSU_CircleSetColors
+TSU_CircleGetColors
 TSU_BirthCreate
 TSU_BirthDestroy
 TSU_DeathCreate

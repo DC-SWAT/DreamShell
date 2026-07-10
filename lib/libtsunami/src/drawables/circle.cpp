@@ -55,6 +55,16 @@ void Circle::setColors(const Color &center, const Color &edge) {
     m_edgeColor = edge;
 }
 
+void Circle::getColors(Color *center, Color *edge) const {
+    if(center != NULL) {
+        *center = m_centerColor;
+    }
+
+    if(edge != NULL) {
+        *edge = m_edgeColor;
+    }
+}
+
 void Circle::draw(pvr_list_type_t list) {
     if (list != m_list)
         return;
@@ -116,5 +126,11 @@ extern "C" {
     
     void TSU_CircleSetColors(Circle *circle_ptr, const Color *centerColor, const Color *edgeColor) {
         if (circle_ptr) circle_ptr->setColors(*centerColor, *edgeColor);
+    }
+
+    void TSU_CircleGetColors(Circle *circle_ptr, Color *centerColor, Color *edgeColor) {
+        if (circle_ptr) {
+            circle_ptr->getColors(centerColor, edgeColor);
+        }
     }
 }

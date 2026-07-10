@@ -29,6 +29,7 @@ public:
     void setColorAnimation(float r1, float g1, float b1, float a1,
                            float r2, float g2, float b2, float a2,
                            uint32_t duration, uint32_t hold_duration);
+    void getColors(Color *c1, Color *c2) const;
 
     virtual void draw(pvr_list_type_t list);
     virtual void nextFrame();
@@ -80,6 +81,7 @@ extern "C"
     void TSU_WaveSetColorAnimation(Wave *wave_ptr, float r1, float g1, float b1, float a1,
                                    float r2, float g2, float b2, float a2,
                                    uint32_t duration, uint32_t hold_duration);
+    void TSU_WaveGetColors(Wave *wave_ptr, Color *c1, Color *c2);
 
 #ifdef __cplusplus
 };
