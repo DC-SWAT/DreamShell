@@ -71,7 +71,6 @@ static struct self
 	GUI_Surface *play;
 	
 	void *bios_patch;
-	int kill_gdrom_thd;
 } self;
 
 void gdplay_run_game(void *param);
@@ -135,9 +134,9 @@ static void set_info(int disc_type)
 	
 	if(disc_type == CD_CDROM_XA)
 	{
-		CDROM_TOC toc;
-		
-		if(cdrom_read_toc(&toc, 0) != CMD_OK) 
+		cd_toc_t toc;
+
+		if(cdrom_read_toc(&toc, false) != CMD_OK)
 		{ 
 			set_img(self.gdtex[SURF_CDROM], 0);
 			ds_printf("DS_ERROR: Toc read error\n"); 
@@ -278,13 +277,16 @@ getstatus:
 static void *check_gdrom(void *arg)
 {
 	int status, disc_type, cd_status;
-	self.kill_gdrom_thd = 0;
 	(void)arg;
 
-	while(self.kill_gdrom_thd == 0)
+	while(self.app != NULL && (self.app->state & APP_STATE_OPENED))
 	{
 		cd_status = cdrom_get_status(&status, &disc_type);
-		
+
+		if(self.app == NULL || !(self.app->state & APP_STATE_OPENED)) {
+			break;
+		}
+
 		switch(cd_status)
 		{
 			case ERR_DISC_CHG:
@@ -309,16 +311,13 @@ static void *check_gdrom(void *arg)
 		}
 		thd_sleep(100);
 	}
-	
+
 	return NULL;
 }
 
 void gdplay_play(GUI_Widget *widget)
 {
 	(void) widget;
-
-	self.kill_gdrom_thd = 1;
-	thd_join(self.app->thd, NULL);
 
 	ShutdownDS();
     arch_shutdown();
@@ -375,20 +374,32 @@ void gdplay_Init(App_t *app)
 		fs_close(fd);
 
 		check_cd();
-		self.app->thd = thd_create(0, check_gdrom, NULL);
-	} 
-	else 
+	}
+	else
 	{
-		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n", 
+		ds_printf("DS_ERROR: %s: Attempting to call %s is not by the app initiate.\n",
 					lib_get_name(), __func__);
 	}
 }
 
-void gdplay_Shutdown() 
+void gdplay_Open(App_t *app)
 {
-	self.kill_gdrom_thd = 1;
-	if(self.bios_patch)
-	{
-		free(self.bios_patch);
+	(void)app;
+
+	if(self.app == NULL || self.app->thd != NULL) {
+		return;
 	}
+
+	self.app->thd = thd_create(0, check_gdrom, NULL);
+}
+
+void gdplay_Shutdown(App_t *app) {
+	(void)app;
+
+	if(self.bios_patch != NULL) {
+		free(self.bios_patch);
+		self.bios_patch = NULL;
+	}
+
+	self.app = NULL;
 }

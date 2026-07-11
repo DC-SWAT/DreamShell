@@ -2,5 +2,6 @@ include kos/exports.h
 include app_module.h
 
 gdplay_Init
+gdplay_Open
 gdplay_Shutdown
 gdplay_play
