@@ -51,6 +51,12 @@ void Texture::sendHdr(pvr_list_type_t list) {
 
 bool Texture::loadFromFile(const std::filesystem::path &fn, bool use_alpha, bool yflip, uint flags) {
 	flags |= yflip ? PVR_TXRLOAD_INVERT_Y : flags;
+
+	if (m_txr != nullptr) {
+		plx_txr_destroy(m_txr);
+		m_txr = nullptr;
+	}
+
 	m_txr = plx_txr_load(fn.c_str(), use_alpha, flags);
 
 	if (m_txr == nullptr) {
