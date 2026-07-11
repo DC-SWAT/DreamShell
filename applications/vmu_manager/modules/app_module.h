@@ -15,6 +15,8 @@ void VMU_Manager_addfileman(GUI_Widget *widget);
 
 void Vmu_Manager_Init(App_t* app);
 
+void VMU_Manager_Open(App_t *app);
+
 void VMU_Manager_EnableMainPage();
 
 void VMU_Manager_vmu(GUI_Widget *widget);

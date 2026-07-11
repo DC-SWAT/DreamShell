@@ -117,7 +117,7 @@
 			<fill color="#313031" />
 		</surface>
 	</resources>
-	<body width="100%" height="100%" onload="export:Vmu_Manager_Init()">
+	<body width="100%" height="100%" onload="export:Vmu_Manager_Init()" onopen="export:VMU_Manager_Open()">
 
 		<panel background="iBarTop" width="100%" height="40">
 			<label width="100%" height="37" font="m23" color="#FFFFFF" text="VMU Manager" align="center" />

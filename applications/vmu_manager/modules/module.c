@@ -122,8 +122,6 @@ static struct {
 	GUI_Widget *confirm_text;
 	GUI_Widget *drection;
 
-	kthread_t *thd;
-	int thread_kill;
 	bool have_args;
 
 	int vmu_freeblock;
@@ -557,24 +555,31 @@ static void show_port(int port, maple_device_t *dev) {
 static void *maple_scan(void *arg)
 {
 	(void)arg;
-	self.thread_kill = 0;
 	int port;
 	maple_device_t *dev;
 
-	while(self.thread_kill == 0) {
-		for(port = 0; port < 4; ++port) {
+	while(self.m_App != NULL && (self.m_App->state & APP_STATE_OPENED)) {
 
-			dev = maple_enum_dev(port, 0);
-			show_port(port, dev);
+		if(GUI_CardStackGetIndex(self.pages) == 0) {
+			for(port = 0; port < 4; ++port) {
+				dev = maple_enum_dev(port, 0);
+				show_port(port, dev);
+			}
 		}
-		
-		if(GUI_CardStackGetIndex(self.pages) != 0) {
-			break;
-		}
-		
+
 		thd_sleep(500);
 	}
 	return NULL;
+}
+
+void VMU_Manager_Open(App_t *app) {
+	(void)app;
+
+	if(self.m_App == NULL || self.m_App->thd != NULL) {
+		return;
+	}
+
+	self.m_App->thd = thd_create(0, maple_scan, NULL);
 }
 
 static void* GetElement(const char *name, ListItemType type, int from)
@@ -721,7 +726,6 @@ void Vmu_Manager_Init(App_t* app)
 	self.m_SelectedFile = NULL;
 	self.m_SelectedPath = NULL;
 	self.home_path = NULL;
-	self.thd = thd_create(1, maple_scan, NULL);
 	fs_vmd_init();
 
 	if (app->args != 0)
@@ -752,9 +756,6 @@ static void reset_selected() {
 void VMU_Manager_EnableMainPage() {
 	int x, y;
 
-	self.thread_kill = 1;
-	thd_join(self.thd, NULL);
-
 	for(x = 0; x < 4; ++x)
 	{
 		for(y = 0; y < 2; ++y)
@@ -775,7 +776,6 @@ void VMU_Manager_EnableMainPage() {
 	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 0);
 	ScreenFadeIn();
-	self.thd = thd_create(1, maple_scan, NULL);
 }
 
 void VMU_Manager_vmu(GUI_Widget *widget) {
@@ -839,8 +839,6 @@ void VMU_Manager_Exit(GUI_Widget *widget) {
 	(void)widget;
 	App_t *app = NULL;
 
-	self.thread_kill = 1;
-	thd_join(self.thd, NULL);
 	fs_vmd_shutdown();
 
 	if(self.have_args == true) {
@@ -860,7 +858,7 @@ void VMU_Manager_Exit(GUI_Widget *widget) {
 }
 
 static void copy_save(const char *src_fn, const char *dest_fn) {
-	size_t cnt, size, cur = 0, buf_size;
+	size_t cnt, size, buf_size;
 	file_t src_fd, dest_fd;
 	uint8_t *buff;
 	int src_flag = O_RDONLY, dst_flag = O_WRONLY | O_CREAT | O_TRUNC;
@@ -908,9 +906,6 @@ static void copy_save(const char *src_fn, const char *dest_fn) {
 	}
 
 	while ((cnt = fs_read(src_fd, buff, buf_size)) > 0) {
-		
-		cur += cnt;
-		
 		if(fs_write(dest_fd, buff, cnt) < 0) {
 			break;
 		}
@@ -1777,9 +1772,6 @@ void VMU_Manager_sel_dst_vmu(GUI_Widget *widget) {
 	ScreenFadeOutEx(NULL, 1);
 	GUI_CardStackShowIndex(self.pages, 0);
 	ScreenFadeIn();
-	self.thread_kill = 1;
-	thd_join(self.thd, NULL);
-	self.thd = thd_create(1, maple_scan, NULL);
 }
 
 void VMU_Manager_make_folder(GUI_Widget *widget) {
