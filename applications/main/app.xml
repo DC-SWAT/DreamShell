@@ -15,7 +15,7 @@
 		<image src="images/online.png" name="net-on" />
 		<image src="images/offline.png" name="net-off" />
 	</resources>
-	<body width="100%" height="100%" onload="export:MainApp_Init()" onunload="export:MainApp_Shutdown()" background="main-bg">
+	<body width="100%" height="100%" onload="export:MainApp_Init()" onopen="export:MainApp_Open()" onunload="export:MainApp_Shutdown()" background="main-bg">
 		<panel width="100%" height="443" name="app-list" />
 		<panel width="100%" height="30">
 			<panel width="13%">

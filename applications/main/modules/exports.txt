@@ -2,6 +2,7 @@ include kos/exports.h
 include app_module.h
 
 MainApp_Init
+MainApp_Open
 MainApp_SlideLeft
 MainApp_SlideRight
 MainApp_ShortcutDeleteConfirm

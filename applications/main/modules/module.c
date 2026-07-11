@@ -587,7 +587,6 @@ void MainApp_Init(App_t *app) {
 		if(self.dateWidget && self.timeWidget) {
 			ShowDateTime(1);
 			ShowNetStatus(1);
-			self.app->thd = thd_create(0, ClockThread, NULL);
 		}
 
 		self.input_event = AddEvent(
@@ -636,6 +635,20 @@ static void Slide_EventHandler(void *ds_event, void *param, int action) {
 		default:
 			break;
 	}
+}
+
+void MainApp_Open(App_t *app) {
+	(void)app;
+
+	if(self.app == NULL || self.app->thd != NULL) {
+		return;
+	}
+
+	if(!self.dateWidget || !self.timeWidget) {
+		return;
+	}
+
+	self.app->thd = thd_create(0, ClockThread, NULL);
 }
 
 void MainApp_Shutdown(App_t *app) {
