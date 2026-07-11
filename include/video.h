@@ -62,6 +62,7 @@ void ScreenRotate(float x, float y, float z);
 void ScreenTranslate(float x, float y, float z);
 
 void ScreenFadeIn();
+void ScreenFadeInEx(int wait);
 void ScreenFadeOut();
 void ScreenFadeOutEx(const char *text, int wait);
 void ScreenFadeStop();

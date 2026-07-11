@@ -239,6 +239,29 @@ void ScreenFadeIn() {
 	UnlockVideo();
 }
 
+void ScreenFadeStop() {
+	LockVideo();
+	screen_opacity = scr_fade_act == 1 ? 1.0f : 0.0f;
+	scr_fade_act = 0;
+	scr_fade_text = NULL;
+	UnlockVideo();
+}
+
+void ScreenFadeInEx(int wait) {
+	ScreenFadeIn();
+
+	if(wait) {
+		if(VideoMustLock()) {
+			do {
+				thd_pass();
+			} while(scr_fade_act != 0);
+		}
+		else {
+			ScreenFadeStop();
+		}
+	}
+}
+
 void ScreenFadeOut() {
 	LockVideo();
 	scr_fade_text = "Loading...";
@@ -253,18 +276,15 @@ void ScreenFadeOutEx(const char *text, int wait) {
 	UnlockVideo();
 
 	if(wait) {
-		do {
-			thd_pass();
-		} while(scr_fade_act != 0);
+		if(video_inited) {
+			do {
+				thd_pass();
+			} while(scr_fade_act != 0);
+		}
+		else {
+			ScreenFadeStop();
+		}
 	}
-}
-
-void ScreenFadeStop() {
-	LockVideo();
-	screen_opacity = scr_fade_act == 1 ? 1.0f : 0.0f;
-	scr_fade_act = 0;
-	scr_fade_text = NULL;
-	UnlockVideo();
 }
 
 int ScreenIsHidden() {
@@ -564,7 +584,7 @@ void SDL_DS_Blit_Textured() {
 }
 
 void SDL_DS_Blit_Cursor() {
-	if (!ConsoleIsVisible() && plx_cursor_txr) {
+	if (!ConsoleIsVisible() && plx_cursor_txr && screen_opacity > 0.0f) {
 		int mouse_cursor_x = 0;
 		int mouse_cursor_y = 0;
 		uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);

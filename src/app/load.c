@@ -19,6 +19,7 @@ typedef struct lua_callback_data {
 
 	lua_State *state;
 	const char *script;
+	App_t *app;
 
 } lua_callback_data_t;
 
@@ -1590,30 +1591,20 @@ static GUI_Widget *parseAppRTFElement(App_t *app, mxml_node_t *node, char *name,
 static void lua_callback_function(void *data) {
 
 	lua_callback_data_t *d = (lua_callback_data_t *) data;
+
+	if(!AppCallbackAllowed(d->app)) {
+		return;
+	}
+
 	LuaDo(LUA_DO_STRING, d->script, (lua_State *) d->state);
 }
 
-static int export_callback_active(App_t *app) {
-	App_t *cur;
-
-	if(app == NULL) {
-		return 0;
-	}
-	if(app->state & (APP_STATE_PROCESS | APP_STATE_WAIT_UNLOAD)) {
-		return 0;
-	}
-	if((app->state & (APP_STATE_LOADED | APP_STATE_OPENED)) != (APP_STATE_LOADED | APP_STATE_OPENED)) {
-		return 0;
-	}
-	cur = GetCurApp();
-	return cur == NULL || app == cur;
-}
 
 static void export_callback_function(void *data) {
 
 	export_callback_data_t *d = (export_callback_data_t *) data;
 
-	if(!export_callback_active(d->app)) {
+	if(!AppCallbackAllowed(d->app)) {
 		return;
 	}
 
@@ -1662,6 +1653,7 @@ static GUI_Callback *CreateAppElementCallback(App_t *app, const char *event, GUI
 		if(d != NULL) {
 			d->script = event;
 			d->state = app->lua;
+			d->app = app;
 
 			cb = GUI_CallbackCreate(lua_callback_function, free, (void *) d);
 
@@ -2282,6 +2274,10 @@ static GUI_Widget *parseAppCardStackElement(App_t *app, mxml_node_t *node, char 
 static void filemanager_call_lua_func(dirent_fm_t *ent, int index) {
 	Item_t *item;
 	App_t *app = GetCurApp();
+
+	if(!AppCallbackAllowed(app)) {
+		return;
+	}
 
 	if(app) {
 

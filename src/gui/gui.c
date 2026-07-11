@@ -284,6 +284,22 @@ void GUI_Disable() {
 	}
 }
 
+void GUI_DisableInput(void) {
+	SDL_DC_EmulateMouse(SDL_FALSE);
+
+	if(gui_input_event != NULL) {
+		SetEventActive(gui_input_event, 0);
+	}
+}
+
+void GUI_EnableInput(void) {
+	if(gui_input_event != NULL) {
+		SetEventActive(gui_input_event, 1);
+	}
+
+	SDL_DC_EmulateMouse(SDL_TRUE);
+}
+
 void GUI_Enable() {
 	if(gui_video_event != NULL) {
 		SetEventActive(gui_video_event, 1);
@@ -346,7 +362,13 @@ int GUI_OpenApp(App_t *app) {
 		SDL_Rect rect = GUI_WidgetGetArea(app->body);
 
 		GUI_DisableTsunami(NULL);
-		GUI_Enable();
+		EnableScreen();
+
+		if(gui_video_event != NULL) {
+			SetEventActive(gui_video_event, 1);
+		}
+
+		GUI_DisableInput();
 
 		if(rect.w != GetScreenWidth() || rect.h != GetScreenHeight()) {
 			gui_prev_width = GetScreenWidth();

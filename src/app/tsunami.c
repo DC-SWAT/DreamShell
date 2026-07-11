@@ -335,26 +335,6 @@ static void parseAppTsunamiDrawableAttrs(mxml_node_t *node, Drawable *drawable, 
 	}
 }
 
-static int tsuClickCallbackActive(App_t *app) {
-
-	App_t *cur;
-
-	if(app == NULL) {
-		return 0;
-	}
-
-	if(app->state & (APP_STATE_PROCESS | APP_STATE_WAIT_UNLOAD)) {
-		return 0;
-	}
-
-	if((app->state & (APP_STATE_LOADED | APP_STATE_OPENED)) != (APP_STATE_LOADED | APP_STATE_OPENED)) {
-		return 0;
-	}
-
-	cur = GetCurApp();
-	return cur == NULL || app == cur;
-}
-
 static tsu_click_cb_data_t *tsuClickCallbackFind(int id) {
 
 	tsu_click_cb_data_t *cb;
@@ -451,7 +431,7 @@ static void tsuDrawableClickCallback(Drawable *drawable) {
 
 	switch(cb->type) {
 		case TSU_CLICK_CB_EXPORT:
-			if(!tsuClickCallbackActive(cb->app)) {
+			if(!AppCallbackAllowed(cb->app)) {
 				break;
 			}
 
@@ -1424,6 +1404,8 @@ void appTsunamiDestroyApp(App_t *app) {
 	GUI_CloseApp(app);
 
 	dsapp = app->tsunami;
+	TSU_AppSetDrawOpaquePolyEvent(dsapp, NULL);
+	TSU_AppSetDrawTransparentPolyEvent(dsapp, NULL);
 	TSU_AppDestroy(&dsapp);
 	app->tsunami = NULL;
 }

@@ -46,6 +46,8 @@ void ShutdownGUI();
 
 void GUI_Disable();
 void GUI_Enable();
+void GUI_DisableInput(void);
+void GUI_EnableInput(void);
 int GUI_IsFirstOpen();
 int GUI_OpenApp(struct App *app);
 int GUI_CloseApp(struct App *app);

@@ -190,6 +190,7 @@ void UnLoadOldApps();
 void ProcessPendingAppOps(void);
 void AppGuiCallbackEnter(void);
 void AppGuiCallbackLeave(void);
+int AppCallbackAllowed(App_t *app);
 void UnloadAppResources(App_t *app, Item_list_t *lst);
 
 /* Resource helpers */

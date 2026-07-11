@@ -189,6 +189,23 @@ void AppGuiCallbackLeave(void) {
 }
 
 
+int AppCallbackAllowed(App_t *app) {
+	App_t *cur;
+
+	if(app == NULL) {
+		return 0;
+	}
+	if(app->state & (APP_STATE_PROCESS | APP_STATE_WAIT_UNLOAD)) {
+		return 0;
+	}
+	if((app->state & (APP_STATE_LOADED | APP_STATE_OPENED)) != (APP_STATE_LOADED | APP_STATE_OPENED)) {
+		return 0;
+	}
+	cur = GetCurApp();
+	return cur != NULL && app == cur;
+}
+
+
 void ProcessPendingAppOps(void) {
 	App_t *app;
 	const char *args;
@@ -336,12 +353,6 @@ int OpenApp(App_t *app, const char *args) {
 
 	ds_printf("DS_PROCESS: Opening app %s\n", app->name);
 
-	if(!ScreenIsHidden() && !ConsoleIsVisible() && !GUI_IsFirstOpen()) {
-		const char *str = "Loading...";
-		vmu_draw_string(str);
-		ScreenFadeOutEx(str, 1);
-	}
-
 	if(app_gui_callback_depth > 0 || curOpenedApp) {
 		pending_open_app = app;
 		if(args != NULL) {
@@ -411,29 +422,35 @@ void GetMainAppSubdir(char *buffer, size_t size, const char *subdir) {
 
 static int OpenAppFinish(App_t *app, const char *args) {
 
-	int onopen_called = 0;
+	App_t *cur = NULL;
 
 	if(args != NULL) {
 		app->args = args;
 	}
 
+	GUI_DisableInput();
+
 	if(curOpenedApp) {
+		cur = GetCurApp();
+	}
 
-		App_t *cur = GetCurApp();
-
-		if(cur != NULL && cur != app && (cur->state & APP_STATE_OPENED)) {
-			CloseApp(cur, (cur->state & APP_STATE_LOADED) ? 1 : 0);
+	if(cur != NULL && cur != app && (cur->state & APP_STATE_OPENED)) {
+		if(!ScreenIsHidden() && !ConsoleIsVisible() && !GUI_IsFirstOpen()) {
+			const char *str = "Loading...";
+			vmu_draw_string(str);
+			ScreenFadeOutEx(str, 1);
 		}
 
+		CloseApp(cur, (cur->state & APP_STATE_LOADED) ? 1 : 0);
 		curOpenedApp = 0;
+	}
+	else if(!ScreenIsHidden() && !ConsoleIsVisible() && !GUI_IsFirstOpen()) {
+		const char *str = "Loading...";
+		vmu_draw_string(str);
+		ScreenFadeOutEx(str, 1);
 	}
 
 	UnLoadOldApps();
-
-	if(app->state & APP_STATE_LOADED && app->state & APP_STATE_READY) {
-		CallAppBodyEvent(app, "onopen");
-		onopen_called = 1;
-	}
 
 	if(!(app->state & APP_STATE_LOADED)) {
 		if(!LoadApp(app, 1)) {
@@ -472,22 +489,27 @@ static int OpenAppFinish(App_t *app, const char *args) {
 		strncpy(curAppName, app->name, sizeof(curAppName) - 1);
 		curAppName[sizeof(curAppName) - 1] = '\0';
 
-		if(!onopen_called) {
-			CallAppBodyEvent(app, "onopen");
-		}
-
-	} else {
+		CallAppBodyEvent(app, "onopen");
+	}
+	else {
 		ShowConsole();
 	}
 
 	if(args != NULL) {
 		app->args = NULL;
 	}
+	ScreenFadeInEx(1);
+
+	if(app->state & APP_STATE_READY) {
+		if(app->tsunami == NULL) {
+			GUI_EnableInput();
+		}
+	}
+	else {
+		GUI_EnableInput();
+	}
 
 	ds_printf("DS_OK: App %s opened\n", app->name);
-
-	thd_sleep(50);
-	ScreenFadeIn();
 	return 1;
 
 error:
@@ -495,8 +517,9 @@ error:
 		app->args = NULL;
 	}
 	if(ScreenIsHidden()) {
-		ScreenFadeIn();
+		ScreenFadeInEx(1);
 	}
+	GUI_EnableInput();
 	vmu_draw_string("Error");
 	ShowConsole();
 	return 0;
@@ -514,10 +537,6 @@ int CloseApp(App_t *app, int unload) {
 		return 1;
 	}
 
-	GUI_CloseApp(app);
-	app->state &= ~APP_STATE_OPENED;
-	WaitApp(app);
-
 	if(app->state & APP_STATE_LOADED) {
 
 		if(unload) {
@@ -525,10 +544,20 @@ int CloseApp(App_t *app, int unload) {
 		}
 
 		CallAppBodyEvent(app, "onclose");
+	}
 
-		if(!unload) {
-			SetAppSleep(app, 1);
-		}
+	app->state &= ~APP_STATE_OPENED;
+
+	if(unload && app->thd != NULL) {
+		thd_join(app->thd, NULL);
+		app->thd = NULL;
+	}
+
+	GUI_CloseApp(app);
+	WaitApp(app);
+
+	if(app->state & APP_STATE_LOADED && !unload) {
+		SetAppSleep(app, 1);
 	}
 
 	if(app->id == curOpenedApp) {

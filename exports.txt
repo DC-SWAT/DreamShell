@@ -138,6 +138,7 @@ RemoveFromAppBody
 CallAppBodyEvent
 CallAppExportFunc
 WaitApp
+AppCallbackAllowed
 IsFileSupportedByApp
 UnLoadOldApps
 UnloadAppResources
@@ -253,6 +254,7 @@ SetScreenVertex
 ScreenRotate
 ScreenTranslate
 ScreenFadeIn
+ScreenFadeInEx
 ScreenFadeOut
 ScreenFadeOutEx
 ScreenFadeStop
@@ -298,6 +300,8 @@ InitGUI
 ShutdownGUI
 GUI_Disable
 GUI_Enable
+GUI_DisableInput
+GUI_EnableInput
 GUI_EnableTsunamiInput
 GUI_DisableTsunamiInput
 #
