@@ -8,7 +8,7 @@
 */
 
 #include "drawables/circle.h"
-#include <dc/fmath.h>
+#include <sh4zam/shz_trig.h>
 #include "../plx/prim.h"
 #include "../plx/context.h"
 
@@ -34,11 +34,11 @@ Circle::~Circle() {
 
 void Circle::precomputePoints() {
     m_precomputed.resize(m_points + 1);
-    float angle_step = (2.0f * F_PI) / m_points;
+    float angle_step = (2.0f * SHZ_F_PI) / m_points;
     for (int i = 0; i <= m_points; i++) {
-        float angle = i * angle_step;
-        m_precomputed[i].cos_val = fcos(angle);
-        m_precomputed[i].sin_val = fsin(angle);
+        shz_sincos_t sc = shz_sincosf(i * angle_step);
+        m_precomputed[i].cos_val = sc.cos;
+        m_precomputed[i].sin_val = sc.sin;
     }
 }
 
@@ -89,20 +89,15 @@ void Circle::draw(pvr_list_type_t list) {
     float tv_y = tv.y;
     float tv_z = tv.z;
 
-    for (int i = 0; i <= m_points; i++) {
-        float ca = m_precomputed[i].cos_val;
-        float sa = m_precomputed[i].sin_val;
+    for (int i = 0; i < m_points; i++) {
+        float ca0 = m_precomputed[i].cos_val;
+        float sa0 = m_precomputed[i].sin_val;
+        float ca1 = m_precomputed[i + 1].cos_val;
+        float sa1 = m_precomputed[i + 1].sin_val;
 
-        // Rim vertex
-        plx_vert_inp(PLX_VERT, tv_x + ca * rx, tv_y + sa * ry, tv_z, c_edge);
-
-        // Center vertex
-        if (i == m_points) {
-            plx_vert_inp(PLX_VERT_EOS, tv_x, tv_y, tv_z, c_center);
-        }
-        else {
-            plx_vert_inp(PLX_VERT, tv_x, tv_y, tv_z, c_center);
-        }
+        plx_vert_inp(PLX_VERT, tv_x, tv_y, tv_z, c_center);
+        plx_vert_inp(PLX_VERT, tv_x + ca0 * rx, tv_y + sa0 * ry, tv_z, c_edge);
+        plx_vert_inp(PLX_VERT_EOS, tv_x + ca1 * rx, tv_y + sa1 * ry, tv_z, c_edge);
     }
 
     Drawable::draw(list);
