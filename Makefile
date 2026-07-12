@@ -128,8 +128,11 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		romdisk.o
 
 ifdef TARGET_PROF
-	OBJS += $(SRC_DIR)/profiler.o
-	KOS_CFLAGS += -DDS_PROF=$(TARGET_PROF)
+	KOS_CFLAGS += -DDS_PROF=$(TARGET_PROF) -pg -fno-omit-frame-pointer
+	KOS_LDFLAGS += -pg
+	GPROF_LIBS = -Wl,--whole-archive -lgprof -Wl,--no-whole-archive
+else
+	GPROF_LIBS =
 endif
 
 %.op: %.S
@@ -178,6 +181,7 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua $(SFX_TARGETS)
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
 	@cp LICENSE NOTICE $(DS_BUILD)/doc
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
+	@mkdir -p $(DS_BUILD)/firmware/eeprom
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
 	@cp -R $(DS_RES)/gui $(DS_BUILD)
 	@cp -R $(DS_RES)/lua $(DS_BUILD)
@@ -262,7 +266,7 @@ $(TARGET): libs $(TARGET_BIN) make-build
 
 $(TARGET).elf: $(OBJS)
 	$(KOS_CC) $(KOS_CFLAGS) $(KOS_LDFLAGS) -o $(TARGET).elf \
-		$(OBJS) $(OBJEXTRA) $(CORE_LIBS) $(KOS_LIBS)
+		$(OBJS) $(OBJEXTRA) $(CORE_LIBS) $(GPROF_LIBS) $(KOS_LIBS)
 
 $(TARGET_BIN): $(TARGET).elf
 	@echo Copy elf for debug...
@@ -339,12 +343,10 @@ flycast: $(TARGET).cdi
 	Flycast -config config:Debug.SerialConsoleEnabled=yes ./$(TARGET).cdi
 
 gprof:
-	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/kernel_gmon.out > gprof.out
-	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET)-kernel.png
-	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/video_gmon.out > gprof.out
-	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET)-video.png
-	@-rm -rf gprof.out
-	@echo "\033[42m Profiling data saved to $(TARGET)-*.png \033[0m"
+	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/gmon.out > gprof.out
+	@cat gprof.out | gprof2dot | dot -Tpng -o $(TARGET)-gprof.png
+	@-rm -f gprof.out
+	@echo "\033[42m Profiling data saved to $(TARGET)-gprof.png \033[0m"
 
 core: $(TARGET_BIN)
 	cp $(DS_BASE)/$(TARGET_BIN) $(DS_BUILD)

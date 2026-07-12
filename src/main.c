@@ -9,7 +9,9 @@
 #include "ds.h"
 #include "fs.h"
 #include "vmu.h"
-#include "profiler.h"
+#ifdef DS_PROF
+#include <gprof/gmon.h>
+#endif
 #include "network/net.h"
 #include "sfx.h"
 #include <naomi/coins.h>
@@ -377,20 +379,29 @@ int InitDS() {
 	HideLogo();
 
 #ifdef DS_PROF
-	if(dcload_type == DCLOAD_TYPE_IP) {
-		profiler_init("/pc");
-	} else {
-		profiler_init(getenv("PATH"));
+	{
+		extern char gprof_text_start __asm__("__executable_start");
+		extern char gprof_text_end __asm__("__etext");
+		char gmon_path[256];
+
+		moncontrol(false);
+		_mcleanup();
+
+		if(dcload_type != DCLOAD_TYPE_IP) {
+			snprintf(gmon_path, sizeof(gmon_path), "%s/gmon", getenv("PATH"));
+			setenv(GMON_OUT_PREFIX, gmon_path, 1);
+		}
+
+		monstartup((uintptr_t)&gprof_text_start, (uintptr_t)&gprof_text_end);
+		moncontrol(true);
 	}
-	profiler_start();
 #endif
 	return 0;
 }
 
 void ShutdownDS() {
 #ifdef DS_PROF
-	profiler_stop();
-	profiler_clean_up();
+	_mcleanup();
 #endif
 	dbglog(DBG_INFO, "Shutting down DreamShell Core...\n");
 
