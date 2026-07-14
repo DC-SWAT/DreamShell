@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+
+  <g id="cabinet" transform="translate(5,2)">
+
+    <g id="body">
+      <rect x="4" y="11" width="46" height="28" fill="#2C3846"/>
+      <rect x="4" y="39" width="46" height="19" fill="#364454"/>
+      <rect x="4" y="58" width="4" height="2" fill="#364454"/>
+      <rect x="4" y="58" width="1" height="2" fill="#3E4A58"/>
+      <rect x="7" y="59" width="1" height="1" fill="#2E3844"/>
+      <rect x="46" y="58" width="4" height="2" fill="#364454"/>
+      <rect x="46" y="58" width="1" height="2" fill="#3E4A58"/>
+      <rect x="49" y="58" width="1" height="2" fill="#222C38"/>
+      <rect x="4" y="11" width="1" height="47" fill="#384656"/>
+      <rect x="49" y="11" width="1" height="47" fill="#222C38"/>
+      <rect x="5" y="39" width="44" height="1" fill="#2E3844"/>
+      <rect x="4" y="11" width="2" height="1" fill="#3A4654"/>
+      <rect x="48" y="11" width="2" height="1" fill="#242E3A"/>
+    </g>
+
+    <g id="marquee">
+      <polygon points="1,0 53,0 52,12 2,12" fill="#C62828"/>
+      <polygon points="1,0 53,0 52,1 2,1" fill="#D03840"/>
+      <polygon points="1,0 2,1 2,12 1,12" fill="#D03840"/>
+      <polygon points="53,0 52,1 52,12 53,12" fill="#9E2026"/>
+      <polygon points="4,2 50,2 50,12 4,12" fill="#F2F2F2"/>
+      <rect x="4" y="2" width="46" height="1" fill="#FAFAFA"/>
+      <rect x="2" y="2" width="2" height="11" fill="#C62828"/>
+      <rect x="2" y="2" width="1" height="11" fill="#D03840"/>
+      <rect x="50" y="2" width="2" height="11" fill="#C62828"/>
+      <rect x="51" y="2" width="1" height="11" fill="#9E2026"/>
+      <clipPath id="marquee_logo_clip">
+        <rect x="4" y="2" width="46" height="11"/>
+      </clipPath>
+      <g id="marquee_logo" clip-path="url(#marquee_logo_clip)">
+        <svg x="5" y="3" width="44" height="8" viewBox="7 77.5 169 37" preserveAspectRatio="xMidYMid meet" overflow="visible">
+          <path fill="#000000" d="M38.546 111.961V78.353H32.96l.092 21.612L7.228 78.628l.091 33.7h4.854V90.533l26.373 21.428zM42.118 112.51l4.304-7.326h-3.938v-5.127h6.502l11.813-21.429 18.865 33.882h-6.685l-3.846-7.326H52.375l-4.029 7.326h-6.228zm12.546-12.545h12.088l-6.044-11.081-6.044 11.081zM127.467 112.51h-5.494V78.719l18.681 21.703 18.864-22.16v34.248h-5.862l-.09-18.406-13.004 15.66-13.095-15.569v18.315zM170.141 112.51l.091-34.615h5.586l-.091 34.615h-5.586z"/>
+          <path fill="#cc2229" d="M79.481 95.936c0-10.165 8.242-18.407 18.408-18.407 10.164 0 18.406 8.242 18.406 18.407 0 10.164-8.242 18.406-18.406 18.406-10.166 0-18.408-8.242-18.408-18.406zm18.408 12.912c7.143 0 12.91-5.77 12.91-12.912 0-7.051-5.768-12.821-12.91-12.821-7.052 0-12.822 5.77-12.822 12.821 0 7.142 5.769 12.912 12.822 12.912z"/>
+          <path fill="#000000" d="M180.947 83.573v-4.854h-1.556v-.916h4.304v.916h-1.65v4.854h-1.098zM183.969 83.481v-5.678h1.556l1.649 3.572 1.556-3.572h1.192v5.77h-1.1v-3.755l-1.556 3.755-2.198-3.755v3.755l-1.099-.092z"/>
+        </svg>
+      </g>
+    </g>
+
+    <g id="screen">
+      <rect x="9" y="13" width="36" height="24" fill="#586674"/>
+      <rect x="9" y="13" width="36" height="1" fill="#6A7684"/>
+      <rect x="9" y="13" width="1" height="24" fill="#6A7684"/>
+      <rect x="44" y="13" width="1" height="24" fill="#404A58"/>
+      <rect x="9" y="36" width="36" height="1" fill="#404A58"/>
+      <rect x="10" y="14" width="34" height="22" fill="#3A4654"/>
+      <rect x="11" y="15" width="32" height="20" fill="#101820"/>
+      <clipPath id="screen_logo_clip">
+        <rect x="11" y="15" width="32" height="20"/>
+      </clipPath>
+      <g id="screen_logo" clip-path="url(#screen_logo_clip)">
+        <svg x="11" y="15" width="32" height="20" viewBox="0 0 32 20" preserveAspectRatio="xMidYMid meet" overflow="hidden">
+          <path fill="none" stroke="#701818" stroke-width="0.9" stroke-linecap="round"
+            d="M-1 5.5 C5 3.5 9 7.5 15 5.5 C21 3.5 25 7.5 33 5.5"/>
+          <path fill="none" stroke="#901818" stroke-width="1.0" stroke-linecap="round"
+            d="M-1 8 C6 5.5 11 10.5 17 8 C23 5.5 27 10.5 33 8"/>
+          <path fill="none" stroke="#CC2229" stroke-width="1.2" stroke-linecap="round"
+            d="M-1 10 C7 7 12 13 18 10 C24 7 28 13 33 10"/>
+          <path fill="none" stroke="#E83838" stroke-width="1.4" stroke-linecap="round"
+            d="M-1 10.5 C6.5 8.5 12.5 11.5 18 10 C23.5 8.5 28.5 11.5 33 10"/>
+          <path fill="none" stroke="#FF5050" stroke-width="0.8" stroke-linecap="round"
+            d="M-1 10.2 C8 8.5 14 11 18 10 C22 9 28 11.5 33 10"/>
+          <path fill="none" stroke="#901818" stroke-width="1.0" stroke-linecap="round"
+            d="M-1 12.5 C5 15 10 10.5 16 12.5 C22 15 27 10.5 33 12.5"/>
+          <path fill="none" stroke="#701818" stroke-width="0.9" stroke-linecap="round"
+            d="M-1 14.5 C6 16.5 11 12 17 14.5 C23 16.5 28 12 33 14.5"/>
+        </svg>
+      </g>
+    </g>
+
+    <g id="speakers">
+      <rect x="11" y="37" width="8" height="1" fill="#1A2230"/>
+      <rect x="12" y="37" width="1" height="1" fill="#283340"/>
+      <rect x="14" y="37" width="1" height="1" fill="#283340"/>
+      <rect x="16" y="37" width="1" height="1" fill="#283340"/>
+      <rect x="35" y="37" width="8" height="1" fill="#1A2230"/>
+      <rect x="36" y="37" width="1" height="1" fill="#283340"/>
+      <rect x="38" y="37" width="1" height="1" fill="#283340"/>
+      <rect x="40" y="37" width="1" height="1" fill="#283340"/>
+    </g>
+
+    <g id="controls">
+      <rect x="4" y="40" width="46" height="5" fill="#BDBDBD"/>
+      <rect x="4" y="40" width="46" height="1" fill="#D5D5D5"/>
+      <rect x="4" y="44" width="46" height="1" fill="#757575"/>
+      <rect x="4" y="46" width="46" height="1" fill="#283340"/>
+      <rect x="2" y="40" width="2" height="4" fill="#BDBDBD"/>
+      <rect x="2" y="40" width="1" height="4" fill="#D5D5D5"/>
+      <rect x="2" y="44" width="2" height="1" fill="#757575"/>
+      <rect x="2" y="45" width="2" height="1" fill="#9E9E9E"/>
+      <rect x="2" y="46" width="2" height="1" fill="#283340"/>
+      <rect x="2" y="46" width="1" height="1" fill="#2A3440"/>
+      <rect x="50" y="40" width="2" height="4" fill="#BDBDBD"/>
+      <rect x="51" y="40" width="1" height="4" fill="#757575"/>
+      <rect x="50" y="44" width="2" height="1" fill="#616161"/>
+      <rect x="50" y="45" width="2" height="1" fill="#757575"/>
+      <rect x="50" y="46" width="2" height="1" fill="#283340"/>
+      <rect x="51" y="46" width="1" height="1" fill="#222C38"/>
+      <rect x="13.5" y="41" width="2" height="4" fill="#424242"/>
+      <circle id="joystick" cx="14.5" cy="40.5" r="2.5" fill="#E53935"/>
+      <circle id="button_green" cx="33" cy="42.5" r="2" fill="#4CAF50"/>
+      <circle id="button_blue" cx="38" cy="42.5" r="2" fill="#2196F3"/>
+      <circle id="button_pink" cx="43" cy="42.5" r="2" fill="#EC407A"/>
+    </g>
+
+    <g id="leg_columns">
+      <rect x="4" y="47" width="2" height="11" fill="#364454"/>
+      <rect x="4" y="47" width="1" height="11" fill="#3E4A58"/>
+      <rect x="5" y="47" width="1" height="11" fill="#2E3844"/>
+      <rect x="48" y="47" width="2" height="11" fill="#364454"/>
+      <rect x="48" y="47" width="1" height="11" fill="#3E4A58"/>
+      <rect x="49" y="47" width="1" height="11" fill="#222C38"/>
+    </g>
+
+    <g id="service_doors">
+      <rect x="8" y="47" width="38" height="9" fill="#283340"/>
+      <rect x="8" y="47" width="38" height="1" fill="#1E2834"/>
+      <rect x="8" y="55" width="38" height="1" fill="#1A2230"/>
+      <rect x="10" y="48" width="21" height="7" fill="#455468"/>
+      <rect x="10" y="48" width="21" height="1" fill="#526074"/>
+      <rect x="10" y="54" width="21" height="1" fill="#35404E"/>
+      <rect x="10" y="48" width="1" height="7" fill="#526074"/>
+      <rect x="30" y="48" width="1" height="7" fill="#35404E"/>
+      <rect x="32" y="48" width="12" height="7" fill="#455468"/>
+      <rect x="32" y="48" width="12" height="1" fill="#526074"/>
+      <rect x="32" y="54" width="12" height="1" fill="#35404E"/>
+      <rect x="43" y="48" width="1" height="7" fill="#35404E"/>
+      <rect x="31" y="48" width="1" height="7" fill="#1E2834"/>
+      <rect x="20" y="49" width="1" height="1" fill="#9E9E9E"/>
+      <rect x="35" y="51" width="1" height="1" fill="#9E9E9E"/>
+    </g>
+
+  </g>
+</svg>
