@@ -112,6 +112,7 @@ cd ${KOS_BASE}/ds/applications && make
 ```console
 cd ${KOS_BASE}/ds/firmware/bootloader && make && make release
 cd ${KOS_BASE}/ds/firmware/isoldr && make -j8 && make install
+cd ${KOS_BASE}/ds/firmware/hollysh && make && make install
 ```
 
 ### Running

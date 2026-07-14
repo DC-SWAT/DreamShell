@@ -198,6 +198,9 @@ build: $(TARGET)
 	cd $(DS_BASE)/applications && make
 	cd $(DS_BASE)/firmware/isoldr && make -j8 && make install
 	cd $(DS_BASE)/firmware/bootloader && make && make install
+	cd $(DS_BASE)/firmware/hollysh && make && make install
+	@echo 
+	@echo "\033[42m DreamShell build completed \033[0m"
 
 clean-all: clean
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
@@ -210,6 +213,7 @@ clean-all: clean
 	cd $(DS_BASE)/applications && make clean
 	cd $(DS_BASE)/firmware/isoldr && make clean
 	cd $(DS_BASE)/firmware/bootloader && make clean
+	cd $(DS_BASE)/firmware/hollysh && make clean
 
 release: build cdi
 	@echo Creating a full release...
@@ -224,7 +228,7 @@ release: build cdi
 	@echo Compressing...
 	@cd $(DS_BASE)/release && zip -q -r $(TARGET_NAME).zip * 2> /dev/null
 	@echo 
-	@echo "\033[42m Complete $(DS_BASE)/release \033[0m"
+	@echo "\033[42m DreamShell release created in $(DS_BASE)/release \033[0m"
 
 update:
 	@echo Fetching DreamShell from GitHub...

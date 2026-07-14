@@ -1,7 +1,7 @@
 /** 
  * \file      fs.c
  * \brief     Filesystem
- * \date      2013-2025
+ * \date      2013-2026
  * \author    SWAT
  * \copyright	http://www.dc-swat.ru
  */
@@ -11,6 +11,7 @@
 #include <kos/fs.h>
 #include <fcntl.h>
 #include <malloc.h>
+#include <drivers/hollysh.h>
 #include "ds.h"
 
 typedef struct romdisk_hdr {
@@ -34,52 +35,42 @@ int InitIDE() {
 }
 
 int InitRomdisk() {
-	
-	int cnt = -1;
-	uint32 size, addr;
-	char path[32];
-	uint8 *tmpb = (uint8 *)0x00100000;
-	
-	dbglog(DBG_INFO, "Checking for romdisk in the bios...\n");
-	
-	for(addr = 0x00100000; addr < 0x00200000; addr++) {
 
-		if(tmpb[0] == 0x2d && tmpb[1] == 0x72 && tmpb[2] == 0x6f) {
-			
-			romdisk_hdr_t *romfs = (romdisk_hdr_t *)tmpb;
+	uint32 size;
+	uint8 *tmpb = (uint8 *)HOLLYSH_BIOS_ROMDISK_ROM_OFFSET;
+	romdisk_hdr_t *romfs;
 
-			if(strncmp(romfs->magic, "-rom1fs-", 8) || strncmp(romfs->volume_name, getenv("HOST"), 10)) {
-				continue;
-			}
-
-			size = ntohl_32((const void *)&romfs->full_size);
-
-			if(!size || size > 0x1F8000) {
-				continue;
-			}
-
-			dbglog(DBG_INFO, "Detected romdisk at 0x%08lx, mounting...\n", (uint32)tmpb);
-
-			if(cnt) {
-				snprintf(path, sizeof(path), "/brd%d", cnt+1);
-			} else {
-				strncpy(path, "/brd", sizeof(path));
-			}
-
-			if(fs_romdisk_mount(path, (const uint8 *)tmpb, 0) < 0) {
-				dbglog(DBG_INFO, "Error mounting romdisk at 0x%08lx\n", (uint32)tmpb);
-			} else {
-				dbglog(DBG_INFO, "Romdisk mounted as %s\n", path);
-			}
-
-			cnt++;
-			tmpb += sizeof(romdisk_hdr_t) + size;
-		}
-
-		tmpb++;
+	if(!hollysh_bios_detect()) {
+		return -1;
 	}
 
-	return (cnt > -1 ? 0 : -1);
+	dbglog(DBG_INFO, "Checking for romdisk in the HollySH BIOS...\n");
+
+	if(tmpb + sizeof(romdisk_hdr_t) >= (uint8 *)HOLLYSH_BIOS_ROM_FONT_OFFSET) {
+		return -1;
+	}
+
+	romfs = (romdisk_hdr_t *)tmpb;
+
+	if(strncmp(romfs->magic, "-rom1fs-", 8) || strncmp(romfs->volume_name, getenv("HOST"), 10)) {
+		return -1;
+	}
+
+	size = ntohl_32((const void *)&romfs->full_size);
+
+	if(!size || (uint32)tmpb + sizeof(romdisk_hdr_t) + size > HOLLYSH_BIOS_ROM_FONT_OFFSET) {
+		return -1;
+	}
+
+	dbglog(DBG_INFO, "Detected romdisk at 0x%08lx, mounting...\n", (uint32)tmpb);
+
+	if(fs_romdisk_mount("/brd", (const uint8 *)tmpb, 0) < 0) {
+		dbglog(DBG_INFO, "Error mounting romdisk at 0x%08lx\n", (uint32)tmpb);
+		return -1;
+	}
+
+	dbglog(DBG_INFO, "Romdisk mounted as /brd\n");
+	return 0;
 }
 
 

@@ -5,6 +5,7 @@
  */
 
 #include <main.h>
+#include <drivers/hollysh.h>
 #include <limits.h>
 #include <arch/cache.h>
 #include <dc/sq.h>
@@ -269,7 +270,18 @@ int Load_DS() {
 	uint16 *bios_app = (uint16 *)NONCACHED_ADDR(BIOS_ROM_APP_BIN_ADDR);
 
 	/* Check for bootloader in BIOS ROM */
-	if (is_dreamcast() && *bios_app != SH4_OPCODE_NOP) {
+	if (hollysh_bios_detect()) {
+		if (loader_addr < HOLLYSH_LOADER_BIN_END && loader_end > HOLLYSH_LOADER_BIN_ADDR) {
+			sz = HOLLYSH_BOOTLOADER_ROM_SIZE;
+			rom_memcpy(dst, (void *)NONCACHED_ADDR(HOLLYSH_BOOTLOADER_ROM_OFFSET), sz);
+		}
+		else {
+			sz = HOLLYSH_LOADER_ROM_SIZE;
+			rom_memcpy(dst, (void *)NONCACHED_ADDR(HOLLYSH_LOADER_ROM_OFFSET), sz);
+		}
+		LOGFF("from BIOS\n");
+	}
+	else if (is_dreamcast() && *bios_app != SH4_OPCODE_NOP) {
 		sz = (BIOS_ROM_FONT_ADDR - BIOS_ROM_APP_BIN_ADDR);
 		rom_memcpy(dst, bios_app, sz);
 		LOGFF("from BIOS\n");

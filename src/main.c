@@ -196,6 +196,7 @@ int InitDS() {
 		setenv("EMU", "Unknown", 1);
 	}
 
+	InitRomdisk();
 	SearchRoot();
 	settings = GetSettings();
 
