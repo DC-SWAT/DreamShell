@@ -250,15 +250,10 @@ void ScreenFadeStop() {
 void ScreenFadeInEx(int wait) {
 	ScreenFadeIn();
 
-	if(wait) {
-		if(VideoMustLock()) {
-			do {
-				thd_pass();
-			} while(scr_fade_act != 0);
-		}
-		else {
-			ScreenFadeStop();
-		}
+	if(wait && VideoMustLock()) {
+		do {
+			thd_pass();
+		} while(scr_fade_act != 0);
 	}
 }
 
@@ -855,6 +850,7 @@ void HideLogo() {
 	pvr_vertex_t vert;
 
 	if(!logo_txr) {
+		screen_opacity = 0.0f;
 		scr_fade_act = 1;
 		if(!video_inited) {
 			InitVideoThread();
@@ -910,6 +906,7 @@ void HideLogo() {
 	}
 
 	pvr_mem_free(logo_txr);
+	screen_opacity = 0.0f;
 	scr_fade_act = 1;
 
 	if(!video_inited) {
