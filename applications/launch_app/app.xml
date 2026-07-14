@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="Launch App" icon="images/icon.png" version="1.0.0">
+	<resources>
+		<module src="../../modules/wave.klf" />
+		<module src="modules/app_launch_app.klf" />
+		<font src="../../fonts/txf/dreamshell.txf" name="caption_font" />
+		<image src="images/online.png" name="net-on" />
+		<image src="images/offline.png" name="net-off" />
+	</resources>
+	<body type="tsunami" width="100%" height="100%" backgroundColor="#000000"
+		onload="export:LaunchApp_Init()"
+		onopen="export:LaunchApp_Open()"
+		onclose="export:LaunchApp_Close()"
+		onunload="export:LaunchApp_Shutdown()">
+
+		<gradient x="0" y="0" width="100%" height="100%" z="1.0"
+			topLeft="#222222" topRight="#222222" bottomLeft="#000000" bottomRight="#000000" />
+
+		<image src="images/bg.png" x="64" y="112" width="512" height="256" z="64.99" transparent="true" />
+
+		<wave name="wave" x="320" y="240" width="100%" height="140" z="65.0"
+			freq="0.8" amp="13.0" speed="0.02" segs="32" duration="9000" hold="5000"
+			color1="#FF0000E5" color2="#70C9DB66" transparent="true" />
+
+		<circle name="fog_circle_0" radius="512.0" points="16" centerColor="#70C9DB66" edgeColor="#00000000" transparent="true" z="20.0" />
+		<circle name="fog_circle_1" radius="512.0" points="16" centerColor="#70C9DB66" edgeColor="#00000000" transparent="true" z="30.0" />
+		<circle name="fog_circle_2" radius="512.0" points="16" centerColor="#70C9DB66" edgeColor="#00000000" transparent="true" z="40.0" />
+		<circle name="fog_circle_3" radius="512.0" points="16" centerColor="#70C9DB66" edgeColor="#00000000" transparent="true" z="50.0" />
+
+		<circle name="focus_glow" radius="64" points="48" centerColor="#FFE8A0FF" edgeColor="#FFE8A000" transparent="true" z="71.0" visibility="hidden" />
+
+		<rectangle name="icon_grid" x="0" y="0" width="100%" height="100%" z="0.0"
+			color="#00000000" visibility="hidden" />
+
+		<panel name="toolbar" x="0" y="448" width="100%" height="32">
+			<rectangle name="toolbar_bg" width="100%" height="100%" z="120.0"
+				radius="0" color="#1A3340AA" transparent="true" />
+
+			<label name="date" font="caption_font" fontsize="11" text="00.00.0000" smear="true" color="#FFFFFFFF" x="12" valign="center" z="121.0" />
+			<label name="version" font="caption_font" fontsize="11" text="DreamShell" smear="true" color="#FFFFFFFF" align="center" valign="center" centered="true" z="121.0" />
+			<label name="time" font="caption_font" fontsize="11" text="00:00" smear="true" color="#FFFFFFFF" valign="center" z="121.0" />
+			<image name="net_icon" src="net-off" width="16" height="16" valign="center" z="121.5" transparent="true" />
+		</panel>
+
+		<dialog name="delete_dialog" font="caption_font" fontsize="11" x="0" y="0" width="480" height="160" align="center" valign="center" z="200.0"
+			visibility="hidden" color="#000000A6" panelColor="#1A3340E6" textColor="#FFFFFFFF" buttonColor="#FFE8A0FF"
+			confirmText="Yes" cancelText="No"
+			onconfirm="export:LaunchAppDeleteConfirm" oncancel="export:LaunchAppDeleteCancel" />
+	</body>
+</app>

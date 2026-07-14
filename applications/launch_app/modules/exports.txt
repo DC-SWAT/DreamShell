@@ -1,0 +1,9 @@
+include kos/exports.h
+include app_module.h
+
+LaunchApp_Init
+LaunchApp_Open
+LaunchApp_Close
+LaunchApp_Shutdown
+LaunchAppDeleteConfirm
+LaunchAppDeleteCancel

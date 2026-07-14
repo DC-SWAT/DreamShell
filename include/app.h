@@ -27,7 +27,7 @@
 #define APP_STATE_WAIT_UNLOAD   0x00000040
 
 /* Default main app name for settings */
-#define DS_DEFAULT_APP_NAME	"Main"
+#define DS_DEFAULT_APP_NAME	"Launch App"
 
 /**
  * App info structure
