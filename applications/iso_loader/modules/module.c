@@ -2756,9 +2756,13 @@ void isoLoader_Exit(GUI_Widget *widget) {
 	release_resources();
 
 	if(self.have_args == true) {
-		
+
 		app = GetAppByName("File Manager");
-		
+
+		if(!app || !(app->state & APP_STATE_LOADED)) {
+			app = GetAppByName("Arcade");
+		}
+
 		if(!app || !(app->state & APP_STATE_LOADED)) {
 			app = NULL;
 		}
