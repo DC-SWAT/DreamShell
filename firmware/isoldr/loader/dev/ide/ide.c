@@ -914,6 +914,13 @@ static s32 g1_ata_access(struct ide_req *req) {
 
 			g1_ata_wait_bsydrq();
 
+#if _FS_READONLY == 0
+			if (is_write) {
+				OUT8(G1_ATA_COMMAND_REG, is_lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
+				g1_ata_wait_bsydrq();
+			}
+#endif
+
 			buff += len * sector_size;
 		}
 
@@ -1204,7 +1211,14 @@ u64 g1_ata_max_lba(void) {
 #endif
 
 s32 g1_ata_flush(void) {
-	// TODO
+	const u8 drive = 1;
+	struct ide_device *dev = &ide_devices[drive & 1];
+
+	g1_ata_wait_bsydrq();
+	OUT8(G1_ATA_DEVICE_SELECT, (0xE0 | (dev->drive << 4)));
+	OUT8(G1_ATA_COMMAND_REG, dev->lba48 ? ATA_CMD_CACHE_FLUSH_EXT : ATA_CMD_CACHE_FLUSH);
+	g1_ata_wait_bsydrq();
+
 	return 0;
 }
 

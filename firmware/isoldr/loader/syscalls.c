@@ -146,24 +146,6 @@ static void GetTOC() {
 	GDS->status = CMD_STAT_COMPLETED;
 
 	memcpy(toc, &IsoInfo->toc, sizeof(CDROM_TOC));
-#ifdef LOG
-	uint32 tcount = 0;
-	for(int i = 0; i < 99; i++) {
-		if (toc->entry[i] != (uint32)-1) {
-			if (tcount == 0) {
-				LOGF("Tracks:");
-			}
-			LOGF(" %2d:%08lx", i + 1, toc->entry[i]);
-			tcount++;
-			if ((tcount & 3) == 0) {
-				LOGF("\n");
-			}
-		}
-	}
-	if (tcount & 3) LOGF("\n");
-	LOGF("First: %08lx, Last: %08lx, Leadout: %08lx\n", 
-		toc->first, toc->last, toc->leadout_sector);
-#endif
 
 	/* Check if this is an original GD disc */
 	if(IsoInfo->track_lba[0] == 45150 && IsoInfo->exec.type != BIN_TYPE_KOS) {
@@ -193,6 +175,25 @@ static void GetTOC() {
 		LOGF("Requested CD TOC for high density area\n");
 		GDS->status = CMD_STAT_FAILED;
 	}
+
+#ifdef LOG
+	uint32 tcount = 0;
+	for(int i = 0; i < 99; i++) {
+		if (toc->entry[i] != (uint32)-1) {
+			if (tcount == 0) {
+				LOGF("Tracks:");
+			}
+			LOGF(" %2d:%08lx", i + 1, toc->entry[i]);
+			tcount++;
+			if ((tcount & 3) == 0) {
+				LOGF("\n");
+			}
+		}
+	}
+	if (tcount & 3) LOGF("\n");
+	LOGF("First: %08lx, Last: %08lx, Leadout: %08lx\n",
+		toc->first, toc->last, toc->leadout_sector);
+#endif
 }
 
 

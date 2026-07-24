@@ -23,6 +23,7 @@ typedef struct {
 	volatile uint32 state;
 	fs_callback_f *poll_cb;
 	int dma_mode;
+	int oflags;
 
 #if _USE_FASTSEEK
 	DWORD cltbl[SZ_TBL];
@@ -213,7 +214,7 @@ int open(const char *path, int flags) {
 	FRESULT r;
 	BYTE fat_flags = 0;
 	FILE *file = &_files[fd];
-	int mode = (flags & O_MODE_MASK);
+	int mode = (flags & (O_RDONLY | O_WRONLY | O_RDWR));
 
 	switch(mode) {
 		case O_RDONLY:
@@ -248,7 +249,7 @@ int open(const char *path, int flags) {
 	}
 
 	if((flags & O_APPEND) && file->fp.fsize > 0) {
-		f_lseek(&file->fp, file->fp.fsize - 1);
+		f_lseek(&file->fp, file->fp.fsize);
 	}
 
 #if _USE_FASTSEEK
@@ -292,6 +293,7 @@ int open(const char *path, int flags) {
 		file->dma_mode = -1;
 	}
 
+	file->oflags = flags;
 	file->state = FILE_STATE_USED;
 	return fd;
 }
@@ -517,6 +519,13 @@ int write(int fd, void *ptr, unsigned int size) {
 
 	if(file->dma_mode > -1) {
 		fs_enable_dma(file->dma_mode);
+	}
+
+	if(file->oflags & O_APPEND) {
+		if(f_lseek(&file->fp, file->fp.fsize) != FR_OK) {
+			fs_enable_dma(old_dma_mode);
+			return FS_ERR_SYSERR;
+		}
 	}
 
 	uint bw;
