@@ -4,6 +4,11 @@
 
 #include "SDL_gui.h"
 
+extern "C" {
+	void LockVideo();
+	void UnlockVideo();
+}
+
 #define WIDGET_LIST_SIZE 16
 #define WIDGET_LIST_INCR 16
 
@@ -59,8 +64,15 @@ int GUI_Container::IsVisibleWidget(GUI_Widget *widget)
 
 void GUI_Container::AddWidget(GUI_Widget *widget)
 {
-	if (!widget || ContainsWidget(widget))
+	if (!widget)
 		return;
+
+	LockVideo();
+
+	if (ContainsWidget(widget)) {
+		UnlockVideo();
+		return;
+	}
 
 	// IncRef early, to prevent reparenting from freeing the child
 	widget->IncRef();
@@ -153,7 +165,8 @@ void GUI_Container::AddWidget(GUI_Widget *widget)
 	
 	widgets[n_widgets++] = widget;
 	UpdateLayout();
-	MarkChanged();
+	flags |= WIDGET_CHANGED;
+	UnlockVideo();
 }
 
 void GUI_Container::RemoveWidget(GUI_Widget *widget)
@@ -165,6 +178,8 @@ void GUI_Container::RemoveWidget(GUI_Widget *widget)
 	if(widget->GetParent() != this) {
 		return;
 	}
+
+	LockVideo();
 	
 	widget->SetParent(0);
 		
@@ -177,12 +192,15 @@ void GUI_Container::RemoveWidget(GUI_Widget *widget)
 	}
 	n_widgets = j;
 	UpdateLayout();
-	MarkChanged();
+	flags |= WIDGET_CHANGED;
+	UnlockVideo();
 }
 
 void GUI_Container::RemoveAllWidgets()
 {
 	int i;
+
+	LockVideo();
 		
 	for (i = 0; i < n_widgets; i++)
 	{
@@ -192,7 +210,8 @@ void GUI_Container::RemoveAllWidgets()
 	
 	n_widgets = 0;
 	UpdateLayout();
-	MarkChanged();
+	flags |= WIDGET_CHANGED;
+	UnlockVideo();
 }
 
 void GUI_Container::UpdateLayout(void)
@@ -261,7 +280,7 @@ void GUI_Container::Erase(const SDL_Rect *rp)
 		{
 			if (flags & WIDGET_TRANSPARENT)
 				parent->Erase(&dest);
-	
+
 			if (background) {
 				if(!bg_center)
 					parent->TileImage(background, &dest, x_offset, y_offset);

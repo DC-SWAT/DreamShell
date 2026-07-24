@@ -50,6 +50,26 @@ static void on_button_stops_using_defaults(GUI_Button *button) {
 	}
 }
 
+GUI_Button::GUI_Button(const char *aname, int x, int y, int w, int h,
+	GUI_Surface *normal_image, GUI_Surface *highlight_image,
+	GUI_Surface *pressed_image, GUI_Surface *disabled_image)
+: GUI_AbstractButton(aname, x, y, w, h)
+{
+	normal = normal_image;
+	highlight = highlight_image;
+	pressed = pressed_image;
+	disabled = disabled_image;
+
+	if (normal)
+		normal->IncRef();
+	if (highlight)
+		highlight->IncRef();
+	if (pressed)
+		pressed->IncRef();
+	if (disabled)
+		disabled->IncRef();
+}
+
 GUI_Button::GUI_Button(const char *aname, int x, int y, int w, int h)
 : GUI_AbstractButton(aname, x, y, w, h)
 {

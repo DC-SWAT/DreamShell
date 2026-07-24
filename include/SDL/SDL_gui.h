@@ -390,6 +390,7 @@ class GUI_Label : public GUI_Widget
 		char *text;
 		GUI_Font *font;
 		SDL_Color textcolor;
+		GUI_Surface *image;
 	public:
 		GUI_Label(const char *aname, int x, int y, int w, int h, GUI_Font *afont, const char *s);
 		virtual ~GUI_Label(void);
@@ -459,6 +460,7 @@ class GUI_AbstractButton : public GUI_Widget
 		
 		virtual void Erase(const SDL_Rect *dr);
 		virtual void Fill(const SDL_Rect *dr, SDL_Color c);
+		virtual void DrawWidget(const SDL_Rect *clip);
 		virtual void Update(int force);
 		virtual void Notify(int mask);
 		virtual void Clicked(int x, int y);
@@ -467,7 +469,7 @@ class GUI_AbstractButton : public GUI_Widget
 		virtual void unHighlighted(int x, int y);
 };
 
-class GUI_Button : public GUI_AbstractButton
+	class GUI_Button : public GUI_AbstractButton
 {
 	protected:
 		GUI_Surface *normal;
@@ -477,6 +479,9 @@ class GUI_Button : public GUI_AbstractButton
 		virtual GUI_Surface *GetCurrentImage(void);
 	public:
 		GUI_Button(const char *aname, int x, int y, int w, int h);
+		GUI_Button(const char *aname, int x, int y, int w, int h,
+			GUI_Surface *normal_image, GUI_Surface *highlight_image,
+			GUI_Surface *pressed_image, GUI_Surface *disabled_image);
 		virtual ~GUI_Button(void);
 
 		void SetNormalImage(GUI_Surface *surface);
@@ -789,6 +794,7 @@ class GUI_FileManager : public GUI_Container
 		void HandleKeyDown(const SDL_Event *event);
 		void HandleAnalogJoyMotion(const SDL_Event *event);
 		void HandleJoyHatMotion(const SDL_Event *event);
+		void RebuildItemSurfaces(void);
 	public:
 		GUI_FileManager(const char *name, const char *path, int x, int y, int w, int h);
 		virtual ~GUI_FileManager(void);

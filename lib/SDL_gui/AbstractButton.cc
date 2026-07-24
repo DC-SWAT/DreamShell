@@ -39,26 +39,36 @@ GUI_Surface *GUI_AbstractButton::GetCurrentImage()
 
 void GUI_AbstractButton::Update(int force)
 {
+	GUI_Surface *surface;
+	SDL_Rect src;
+
 	if (parent==0)
 		return;
 
 	if (force)
 	{
-		GUI_Surface *surface = GetCurrentImage();
-		SDL_Rect src;
+		surface = GetCurrentImage();
 		src.x = src.y = 0;
 		src.w = area.w;
 		src.h = area.h;
-	
-		if (flags & WIDGET_TRANSPARENT)
+		if (surface) {
+			if (src.w > surface->GetWidth())
+				src.w = surface->GetWidth();
+			if (src.h > surface->GetHeight())
+				src.h = surface->GetHeight();
+
+			SDL_Rect dest = area;
+			dest.w = src.w;
+			dest.h = src.h;
+			parent->Draw(surface, &src, &dest);
+		} else if (flags & WIDGET_TRANSPARENT) {
 			parent->Erase(&area);
-		if (surface)
-			parent->Draw(surface, &src, &area);
+		}
 	}
 
 	if (caption)
 		caption->DoUpdate(force);
-		
+
 	if (caption2)
 		caption2->DoUpdate(force);
 }
@@ -69,16 +79,79 @@ void GUI_AbstractButton::Fill(const SDL_Rect *dr, SDL_Color c)
 
 void GUI_AbstractButton::Erase(const SDL_Rect *dr)
 {
-	/*
-	SDL_Rect d;
-	
-	d.w = dr->w;
-	d.h = dr->h;
-	d.x = area.x + dr->x;
-	d.y = area.x + dr->y;
-	
-	parent->Erase(&d);
-	*/
+	if (parent == 0 || dr == NULL)
+		return;
+
+	SDL_Rect local = *dr;
+	SDL_Rect bounds;
+	SDL_Rect dest;
+	SDL_Rect src;
+	GUI_Surface *surface;
+	int sw, sh;
+
+	bounds.x = 0;
+	bounds.y = 0;
+	bounds.w = area.w;
+	bounds.h = area.h;
+
+	if (!GUI_ClipRect(NULL, &local, &bounds))
+		return;
+
+	dest.x = area.x + local.x;
+	dest.y = area.y + local.y;
+	dest.w = local.w;
+	dest.h = local.h;
+	parent->Erase(&dest);
+
+	surface = GetCurrentImage();
+	if (surface == 0)
+		return;
+
+	sw = surface->GetWidth();
+	sh = surface->GetHeight();
+	if (sw > area.w)
+		sw = area.w;
+	if (sh > area.h)
+		sh = area.h;
+
+	src = local;
+	if (src.x >= sw || src.y >= sh)
+		return;
+	if (src.x + src.w > sw)
+		src.w = sw - src.x;
+	if (src.y + src.h > sh)
+		src.h = sh - src.y;
+	if (src.w <= 0 || src.h <= 0)
+		return;
+
+	dest.x = area.x + src.x;
+	dest.y = area.y + src.y;
+	dest.w = src.w;
+	dest.h = src.h;
+	parent->Draw(surface, &src, &dest);
+}
+
+void GUI_AbstractButton::DrawWidget(const SDL_Rect *clip)
+{
+	GUI_Surface *surface = GetCurrentImage();
+	SDL_Rect src;
+	SDL_Rect dest;
+
+	if (parent == 0 || surface == 0)
+		return;
+
+	src.x = src.y = 0;
+	src.w = surface->GetWidth();
+	src.h = surface->GetHeight();
+	if (src.w > area.w)
+		src.w = area.w;
+	if (src.h > area.h)
+		src.h = area.h;
+
+	dest = area;
+	dest.w = src.w;
+	dest.h = src.h;
+	parent->Draw(surface, &src, &dest);
 }
 
 void GUI_AbstractButton::Notify(int mask)

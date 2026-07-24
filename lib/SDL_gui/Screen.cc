@@ -395,6 +395,7 @@ void GUI_Screen::RemoveWidget(GUI_Widget *widget)
 
 void GUI_Screen::SetContents(GUI_Widget *widget)
 {
+	LockVideo();
 	SetFocusWidget(NULL);
 	SetModalWidget(NULL);
 	Keep(&contents, widget);
@@ -405,6 +406,7 @@ void GUI_Screen::SetContents(GUI_Widget *widget)
 	}
 	joysel_size = 0;
 	joysel_cur = -1;
+	UnlockVideo();
 
 	MarkChanged();
 }
@@ -416,8 +418,11 @@ GUI_Widget *GUI_Screen::GetContents(void)
 
 void GUI_Screen::SetModalWidget(GUI_Widget *widget)
 {
-	if (widget && modal_widget == widget)
+	LockVideo();
+	if (widget && modal_widget == widget) {
+		UnlockVideo();
 		return;
+	}
 
 	for (int i = 0; i < joysel_size; i++)
 	{
@@ -437,6 +442,7 @@ void GUI_Screen::SetModalWidget(GUI_Widget *widget)
 		modal_widget = widget;
 		modal_widget->IncRef();
 	}
+	UnlockVideo();
 }
 
 void GUI_Screen::SetBackground(GUI_Surface *image)
@@ -459,8 +465,11 @@ void GUI_Screen::SetBackgroundColor(SDL_Color c)
 
 void GUI_Screen::SetFocusWidget(GUI_Widget *widget)
 {
-	if (widget && focus_widget == widget)
+	LockVideo();
+	if (widget && focus_widget == widget) {
+		UnlockVideo();
 		return;
+	}
 
 	if (focus_widget)
 	{
@@ -475,6 +484,7 @@ void GUI_Screen::SetFocusWidget(GUI_Widget *widget)
 		focus_widget->IncRef();
 		focus_widget->SetFlags(WIDGET_HAS_FOCUS);
 	}
+	UnlockVideo();
 }
 
 GUI_Widget *GUI_Screen::GetFocusWidget()

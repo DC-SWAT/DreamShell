@@ -107,10 +107,30 @@ void GUI_Drawable::Notify(int mask)
 
 void GUI_Drawable::WriteFlags(int andmask, int ormask)
 {
-	int oldflags = flags;	
-	flags = (flags & andmask) | ormask;
-	if (flags != oldflags)
-		Notify(flags ^ oldflags);
+	int oldflags;
+	int next;
+	int delta;
+	const int draw_state = WIDGET_PRESSED | WIDGET_INSIDE | WIDGET_TURNED_ON;
+
+	oldflags = flags;
+	next = (oldflags & andmask) | ormask;
+	delta = oldflags ^ next;
+
+	if (delta & draw_state) {
+		LockVideo();
+		oldflags = flags;
+		next = (flags & andmask) | ormask;
+		delta = oldflags ^ next;
+		flags = next;
+		if (delta)
+			Notify(delta);
+		UnlockVideo();
+		return;
+	}
+
+	flags = next;
+	if (delta)
+		Notify(delta);
 }
 
 void GUI_Drawable::SetFlags(int mask)
@@ -459,16 +479,20 @@ SDL_Rect GUI_Drawable::GetArea()
 
 void GUI_Drawable::SetPosition(int x, int y)
 {
+	LockVideo();
 	area.x = x;
 	area.y = y;
-	MarkChanged();
+	flags |= WIDGET_CHANGED;
+	UnlockVideo();
 }
 
 void GUI_Drawable::SetSize(int w, int h)
 {
+	LockVideo();
 	area.w = w;
 	area.h = h;
-	MarkChanged();
+	flags |= WIDGET_CHANGED;
+	UnlockVideo();
 }
 
 void GUI_Drawable::SetStatusCallback(GUI_Callback *callback)

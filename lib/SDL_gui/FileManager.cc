@@ -15,7 +15,8 @@ extern "C" {
 GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int y, int w, int h)
 : GUI_Container(aname, x, y, w, h) {
 
-	strncpy(cur_path, path != NULL ? path : "/", NAME_MAX);
+	strncpy(cur_path, path != NULL ? path : "/", NAME_MAX - 1);
+	cur_path[NAME_MAX - 1] = '\0';
 	scan_entries = NULL;
 	scan_entries_count = 0;
 	rescan = 1;
@@ -33,35 +34,15 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	button_up->SetPosition(item_area.w, 0);
 	button_down->SetPosition(item_area.w, area.h - 20);
 
-	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
-
-	item_normal = new GUI_Surface("normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-	item_highlight = new GUI_Surface("highlight", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-	item_disabled = new GUI_Surface("disabled", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-	item_pressed = new GUI_Surface("pressed", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-
-	SDL_Rect rect;
-
-	rect = {0, 0, (Uint16)item_area.w, 1};
-	item_normal->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
-	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
-	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
-	rect = {0, 1, (Uint16)item_area.w, 26};
-	item_normal->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
-	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
-	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
-	rect = {0, 27, (Uint16)item_area.w, 1};
-	item_normal->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
-	item_pressed->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
-	item_disabled->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
-
-	item_highlight->Fill(NULL, SDL_MapRGB(format, 97, 189, 236));
-
-	item_selected_normal = new GUI_Surface("selected_normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
-	item_selected_normal->Fill(NULL, SDL_MapRGB(format, 212, 241, 21));
+	item_normal = NULL;
+	item_highlight = NULL;
+	item_disabled = NULL;
+	item_pressed = NULL;
+	item_selected_normal = NULL;
 	item_selected_highlight = NULL;
 	item_selected_pressed = NULL;
 	item_selected_disabled = NULL;
+	RebuildItemSurfaces();
 
 	item_click = NULL;
 	item_context_click = NULL;
@@ -108,11 +89,28 @@ GUI_FileManager::GUI_FileManager(const char *aname, const char *path, int x, int
 	}
 
 	LoadScanEntries();
+	Scan();
 }
 
 GUI_FileManager::~GUI_FileManager() {
+	int old_count = 0;
+
 	if(scan_entries)
 		free(scan_entries);
+
+	if(panel)
+		old_count = panel->GetWidgetCount();
+	if(panel)
+		panel->RemoveAllWidgets();
+
+	if(item_select_callbacks) {
+		for(int i = 0; i < old_count; i++) {
+			if(item_select_callbacks[i])
+				item_select_callbacks[i]->DecRef();
+		}
+		free(item_select_callbacks);
+		item_select_callbacks = NULL;
+	}
 
 	item_normal->DecRef();
 	item_highlight->DecRef();
@@ -123,14 +121,6 @@ GUI_FileManager::~GUI_FileManager() {
 	if(item_selected_highlight) item_selected_highlight->DecRef();
 	if(item_selected_pressed) item_selected_pressed->DecRef();
 	if(item_selected_disabled) item_selected_disabled->DecRef();
-
-	if(item_select_callbacks) {
-		for(int i=0; i < panel->GetWidgetCount(); i++) {
-			if(item_select_callbacks[i])
-				item_select_callbacks[i]->DecRef();
-		}
-		free(item_select_callbacks);
-	}
 
 	if(item_label_font)
 		item_label_font->DecRef();
@@ -146,12 +136,69 @@ GUI_FileManager::~GUI_FileManager() {
 }
 
 
+void GUI_FileManager::RebuildItemSurfaces(void)
+{
+	SDL_PixelFormat *format = GUI_GetScreen()->GetSurface()->GetSurface()->format;
+	GUI_Surface *normal;
+	GUI_Surface *highlight;
+	GUI_Surface *disabled;
+	GUI_Surface *pressed;
+	GUI_Surface *selected_normal;
+	SDL_Rect rect;
+
+	normal = new GUI_Surface("normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	highlight = new GUI_Surface("highlight", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	disabled = new GUI_Surface("disabled", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	pressed = new GUI_Surface("pressed", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+
+	rect = {0, 0, (Uint16)item_area.w, 1};
+	normal->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	pressed->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	disabled->Fill(&rect, SDL_MapRGB(format, 0xFF, 0xFF, 0xFF));
+	rect = {0, 1, (Uint16)item_area.w, 26};
+	normal->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
+	pressed->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
+	disabled->Fill(&rect, SDL_MapRGB(format, 0xF3, 0xF3, 0xF3));
+	rect = {0, 27, (Uint16)item_area.w, 1};
+	normal->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
+	pressed->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
+	disabled->Fill(&rect, SDL_MapRGB(format, 0xCC, 0xCC, 0xCC));
+
+	highlight->Fill(NULL, SDL_MapRGB(format, 97, 189, 236));
+
+	selected_normal = new GUI_Surface("selected_normal", SDL_HWSURFACE, item_area.w, item_area.h, format->BitsPerPixel, format->Rmask, format->Gmask, format->Bmask, format->Amask);
+	selected_normal->Fill(NULL, SDL_MapRGB(format, 212, 241, 21));
+
+	GUI_ObjectKeep((GUI_Object **) &item_normal, normal);
+	GUI_ObjectKeep((GUI_Object **) &item_highlight, highlight);
+	GUI_ObjectKeep((GUI_Object **) &item_pressed, pressed);
+	GUI_ObjectKeep((GUI_Object **) &item_disabled, disabled);
+	GUI_ObjectKeep((GUI_Object **) &item_selected_normal, selected_normal);
+
+	normal->DecRef();
+	highlight->DecRef();
+	pressed->DecRef();
+	disabled->DecRef();
+	selected_normal->DecRef();
+}
+
+
 void GUI_FileManager::Resize(int w, int h)
 {
+	int item_w;
+
 	LockVideo();
 	area.w = w;
 	area.h = h;
-	item_area.w = w - scrollbar->GetWidth();
+	item_w = w - scrollbar->GetWidth();
+
+	if(item_w != item_area.w) {
+		item_area.w = item_w;
+		RebuildItemSurfaces();
+	}
+	else {
+		item_area.w = item_w;
+	}
 
 	if(panel)
 		panel->SetSize(item_area.w, area.h);
@@ -166,9 +213,11 @@ void GUI_FileManager::Resize(int w, int h)
 		scrollbar->SetPosition(item_area.w, button_up->GetHeight());
 		scrollbar->SetHeight(area.h - (button_up->GetHeight() + button_down->GetHeight()));
 	}
+	rescan = 1;
 	UnlockVideo();
 
 	ReScan();
+	Scan();
 }
 
 
@@ -383,21 +432,23 @@ void GUI_FileManager::LoadScanEntries()
 void GUI_FileManager::ScanApply(dirent_t *entries, int count)
 {
 	int i;
+	int old_count;
+
+	old_count = panel->GetWidgetCount();
+	panel->RemoveAllWidgets();
+	panel->SetYOffset(0);
+	scrollbar->SetVerticalPosition(0);
+	UpdateScrollbarButtons();
+	selected_item = -1;
 
 	if(item_select_callbacks) {
-		for(i = 0; i < panel->GetWidgetCount(); i++) {
+		for(i = 0; i < old_count; i++) {
 			if(item_select_callbacks[i])
 				item_select_callbacks[i]->DecRef();
 		}
 		free(item_select_callbacks);
 		item_select_callbacks = NULL;
 	}
-
-	panel->RemoveAllWidgets();
-	panel->SetYOffset(0);
-	scrollbar->SetVerticalPosition(0);
-	UpdateScrollbarButtons();
-	selected_item = -1;
 
 	if(strlen(cur_path) > 1)
 	{
@@ -424,19 +475,32 @@ void GUI_FileManager::ScanApply(dirent_t *entries, int count)
 void GUI_FileManager::Scan()
 {
 	int count = 0;
-	dirent_t *entries = TakePendingScan(&count);
+	dirent_t *entries;
+
+	LockVideo();
+
+	if (!rescan) {
+		UnlockVideo();
+		return;
+	}
+
+	ClearSelection();
+
+	entries = scan_entries;
+	count = scan_entries_count;
+	scan_entries = NULL;
+	scan_entries_count = 0;
 
 	ScanApply(entries, count);
+	rescan = 0;
+	UnlockVideo();
 
 	if(entries)
 		free(entries);
-
-	rescan = 0;
 }
 
 void GUI_FileManager::ReScan() {
 	LoadScanEntries();
-	ClearSelection();
 	rescan = 1;
 	MarkChanged();
 }
@@ -451,19 +515,16 @@ void GUI_FileManager::AddItem(const char *name, int size, int time, int attr) {
 	int need_free = 1;
 	int cnt = panel->GetWidgetCount();
 
-	bt = new GUI_Button(name, item_area.x, item_area.y + (cnt * item_area.h), item_area.w, item_area.h);
-	
-	bt->SetNormalImage(item_normal);
-	bt->SetHighlightImage(item_highlight);
-	bt->SetPressedImage(item_pressed);
-	bt->SetDisabledImage(item_disabled);
+	bt = new GUI_Button(name, item_area.x, item_area.y + (cnt * item_area.h), item_area.w, item_area.h,
+		item_normal, item_highlight, item_pressed, item_disabled);
 
 	if(item_click || item_context_click || item_mouseover || item_mouseout || item_select) {
 		
 		prm = (dirent_fm_t *) malloc(sizeof(dirent_fm_t));
 		
 		if(prm != NULL) {
-			strncpy(prm->ent.name, name, NAME_MAX);
+			strncpy(prm->ent.name, name, NAME_MAX - 1);
+			prm->ent.name[NAME_MAX - 1] = '\0';
 			prm->ent.size = size;
 			prm->ent.time = time;
 			prm->ent.attr = attr;
@@ -573,6 +634,7 @@ void GUI_FileManager::SetItemLabel(GUI_Font *font, int r, int g, int b)	{
 	item_label_clr.g = g;
 	item_label_clr.b = b;
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled) {
@@ -591,6 +653,7 @@ void GUI_FileManager::SetItemSurfaces(GUI_Surface *normal, GUI_Surface *highligh
 	GUI_ObjectKeep((GUI_Object **) &item_pressed, pressed);
 	GUI_ObjectKeep((GUI_Object **) &item_disabled, disabled);	
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemSelectedSurfaces(GUI_Surface *normal, GUI_Surface *highlight, GUI_Surface *pressed, GUI_Surface *disabled) {
@@ -599,39 +662,52 @@ void GUI_FileManager::SetItemSelectedSurfaces(GUI_Surface *normal, GUI_Surface *
 	GUI_ObjectKeep((GUI_Object **) &item_selected_pressed, pressed);
 	GUI_ObjectKeep((GUI_Object **) &item_selected_disabled, disabled);
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemSize(const SDL_Rect *item_r) {
+	int rebuild = (item_area.w != item_r->w || item_area.h != item_r->h);
+
 	item_area.w = item_r->w;
 	item_area.h = item_r->h;
 	item_area.x = item_r->x;
 	item_area.y = item_r->y;
+
+	if(rebuild)
+		RebuildItemSurfaces();
+
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemClick(GUI_CallbackFunction *func) {
 	item_click = func;
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemContextClick(GUI_CallbackFunction *func) {
 	item_context_click = func;
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemMouseover(GUI_CallbackFunction *func) {
 	item_mouseover = func;
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemMouseout(GUI_CallbackFunction *func) {
 	item_mouseout = func;
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetItemSelect(GUI_CallbackFunction *func) {
 	item_select = func;
 	ReScan();
+	Scan();
 }
 
 void GUI_FileManager::SetScrollbar(GUI_Surface *knob, GUI_Surface *background) {
@@ -695,10 +771,6 @@ void GUI_FileManager::Update(int force) {
 		r.x = x_offset;
 		r.y = y_offset;
 		Erase(&r);
-	}
-
-	if(rescan)  {
-		Scan();
 	}
 
 	for (i = 0; i < n_widgets; i++) {
@@ -910,9 +982,22 @@ void GUI_FileManager::HandleJoyHatMotion(const SDL_Event *event) {
 int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 	int i, rv;
 
+	if (flags & WIDGET_DISABLED) {
+		return 0;
+	}
+
+	if (rescan)
+		Scan();
+
+	if (rescan) {
+		return 0;
+	}
+
 	rv = GUI_Drawable::Event(event, xoffset, yoffset);
 
-	if (rescan || (flags & WIDGET_DISABLED) || !(flags & WIDGET_INSIDE)) {
+	if (!(flags & WIDGET_INSIDE)) {
+		if (rescan)
+			Scan();
 		return rv;
 	}
 
@@ -958,7 +1043,7 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 			break;
 
 		case SDL_JOYAXISMOTION:
-			if (event->jaxis.axis == 1) { // Analog joystick
+			if (event->jaxis.axis == 1) {
 				HandleAnalogJoyMotion(event);
 			}
 			break;
@@ -977,6 +1062,10 @@ int GUI_FileManager::Event(const SDL_Event *event, int xoffset, int yoffset) {
 			break;
 		}
 	}
+
+	if (rescan)
+		Scan();
+
 	return rv;
 }
 
@@ -1121,6 +1210,7 @@ void GUI_FileManagerChangeDir(GUI_Widget *widget, const char *name, int size) {
 
 void GUI_FileManagerScan(GUI_Widget *widget) {
 	((GUI_FileManager *) widget)->ReScan();
+	((GUI_FileManager *) widget)->Scan();
 }
 
 void GUI_FileManagerAddItem(GUI_Widget *widget, const char *name, int size, int time, int attr) {
