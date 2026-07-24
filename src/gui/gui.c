@@ -93,15 +93,15 @@ static void GUI_DisableTsunami(DSApp *tsunami) {
 
 	if(gui_tsunami_video_event != NULL) {
 		if(tsunami == NULL || gui_tsunami_video_event->param == tsunami) {
-			gui_tsunami_video_event->param = NULL;
 			SetEventActive(gui_tsunami_video_event, 0);
+			gui_tsunami_video_event->param = NULL;
 		}
 	}
 
 	if(gui_tsunami_input_event != NULL) {
 		if(tsunami == NULL || gui_tsunami_input_event->param == tsunami) {
-			gui_tsunami_input_event->param = NULL;
 			SetEventActive(gui_tsunami_input_event, 0);
+			gui_tsunami_input_event->param = NULL;
 		}
 	}
 }

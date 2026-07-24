@@ -537,15 +537,11 @@ int CloseApp(App_t *app, int unload) {
 		return 1;
 	}
 
-	if(app->state & APP_STATE_LOADED) {
-
-		if(unload) {
-			app->state |= APP_STATE_WAIT_UNLOAD;
-		}
-
-		CallAppBodyEvent(app, "onclose");
+	if(unload) {
+		app->state |= APP_STATE_WAIT_UNLOAD;
 	}
 
+	GUI_CloseApp(app);
 	app->state &= ~APP_STATE_OPENED;
 
 	if(unload && app->thd != NULL) {
@@ -553,11 +549,14 @@ int CloseApp(App_t *app, int unload) {
 		app->thd = NULL;
 	}
 
-	GUI_CloseApp(app);
 	WaitApp(app);
 
-	if(app->state & APP_STATE_LOADED && !unload) {
-		SetAppSleep(app, 1);
+	if(app->state & APP_STATE_LOADED) {
+		CallAppBodyEvent(app, "onclose");
+
+		if(!unload) {
+			SetAppSleep(app, 1);
+		}
 	}
 
 	if(app->id == curOpenedApp) {

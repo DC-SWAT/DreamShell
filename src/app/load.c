@@ -2274,16 +2274,33 @@ static GUI_Widget *parseAppCardStackElement(App_t *app, mxml_node_t *node, char 
 static void filemanager_call_lua_func(dirent_fm_t *ent, int index) {
 	Item_t *item;
 	App_t *app = GetCurApp();
+	char name_buf[NAME_MAX];
+	char fmwname_buf[64];
+	int size, time, attr, ent_index;
+	const char *fmwname;
 
-	if(!AppCallbackAllowed(app)) {
+	if(!ent || !AppCallbackAllowed(app)) {
 		return;
 	}
 
 	if(app) {
 
 		lua_State *L = app->lua;
-		const char *name = GUI_ObjectGetName(ent->obj);
-		item = listGetItemByNameAndType(app->resources, name, app->id + LIST_ITEM_FM_DATA_OFFSET + index);
+		fmwname = GUI_ObjectGetName(ent->obj);
+		if(!fmwname) {
+			return;
+		}
+
+		strncpy(name_buf, ent->ent.name, NAME_MAX - 1);
+		name_buf[NAME_MAX - 1] = '\0';
+		size = ent->ent.size;
+		time = ent->ent.time;
+		attr = ent->ent.attr;
+		ent_index = ent->index;
+		strncpy(fmwname_buf, fmwname, sizeof(fmwname_buf) - 1);
+		fmwname_buf[sizeof(fmwname_buf) - 1] = '\0';
+
+		item = listGetItemByNameAndType(app->resources, fmwname_buf, app->id + LIST_ITEM_FM_DATA_OFFSET + index);
 
 		if(item == NULL) {
 			ds_printf("item not fount\n");
@@ -2299,22 +2316,22 @@ static void filemanager_call_lua_func(dirent_fm_t *ent, int index) {
 
 		lua_newtable(L);
 		lua_pushstring(L, "name");
-		lua_pushstring(L, ent->ent.name);
+		lua_pushstring(L, name_buf);
 		lua_settable(L, -3);
 		lua_pushstring(L, "size");
-		lua_pushnumber(L, ent->ent.size);
+		lua_pushnumber(L, size);
 		lua_settable(L, -3);
 		lua_pushstring(L, "time");
-		lua_pushnumber(L, ent->ent.time);
+		lua_pushnumber(L, time);
 		lua_settable(L, -3);
 		lua_pushstring(L, "attr");
-		lua_pushnumber(L, ent->ent.attr);
+		lua_pushnumber(L, attr);
 		lua_settable(L, -3);
 		lua_pushstring(L, "index");
-		lua_pushnumber(L, ent->index);
+		lua_pushnumber(L, ent_index);
 		lua_settable(L, -3);
 		lua_pushstring(L, "fmwname");
-		lua_pushstring(L, name);
+		lua_pushstring(L, fmwname_buf);
 		lua_settable(L, -3);
 		lua_report(L, lua_docall(L, 1, 1));
 	}
