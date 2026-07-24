@@ -323,14 +323,14 @@ int UnLoadApp(App_t *app) {
 	app->state |= APP_STATE_PROCESS;
 	app->state &= ~APP_STATE_OPENED;
 
-	CallAppBodyEvent(app, "onunload");
-
 	if(app->thd != NULL) {
 		thd_join(app->thd, NULL);
 		app->thd = NULL;
 	}
 
 	LockVideo();
+
+	CallAppBodyEvent(app, "onunload");
 
 #ifdef APP_LOAD_DEBUG
 	ds_printf("DS_DEBUG: Unloading app elements...\n");
