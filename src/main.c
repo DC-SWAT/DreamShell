@@ -18,6 +18,7 @@
 #include <dc/syscalls.h>
 #include <dc/maple.h>
 #include <dc/maple/mie.h>
+#include <arch/gdb.h>
 
 KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT | INIT_MIE);
 
@@ -25,7 +26,6 @@ static uint32 ver_int = 0;
 static const char *build_str[4] = {"Alpha", "Beta", "RC", "Release"};
 static int net_inited = -1;
 
-void gdb_init();
 uint32 _fs_dclsocket_get_ip(void);
 
 
@@ -82,6 +82,12 @@ int InitNet(uint32 ipl) {
 		ds_printf("DS_OK: Network already initialized.\n");
 		return 0;
 	}
+#if defined(DS_DEBUG) && DS_DEBUG == 2
+	if(dcload_type == DCLOAD_TYPE_IP) {
+		ds_printf("DS_ERROR: Network init disabled while GDB uses dcload-ip\n");
+		return -1;
+	}
+#endif
 	union {
 		uint32 ipl;
 		uint8 ipb[4];
@@ -174,6 +180,7 @@ int InitDS() {
 #endif
 
 #if defined(DS_DEBUG) && DS_DEBUG == 2
+	dbglog(DBG_INFO, "Waiting for GDB...\n");
 	gdb_init();
 #elif defined(USE_DS_EXCEPTIONS)
 	expt_init();
@@ -400,7 +407,7 @@ int InitDS() {
 	return 0;
 }
 
-void ShutdownDS() {
+void ShutdownDS(bool quick) {
 #ifdef DS_PROF
 	_mcleanup();
 #endif
@@ -409,6 +416,18 @@ void ShutdownDS() {
 	char fn[NAME_MAX];
 	snprintf(fn, NAME_MAX, "%s/lua/shutdown.lua", getenv("PATH"));
 	LuaDo(LUA_DO_FILE, fn, GetLuaState());
+
+	if(quick) {
+		EXPT_GUARD_BEGIN;
+			ShutdownVideoThread();
+			ShutdownEvents();
+		EXPT_GUARD_CATCH;
+			dbglog(DBG_ERROR, "DS_ERROR: Quick shutting down failed\n");
+		EXPT_GUARD_END;
+
+		ShutdownFS();
+		return;
+	}
 
 	EXPT_GUARD_BEGIN;
 		ShutdownCmd();
@@ -439,7 +458,7 @@ void ShutdownDS() {
 	EXPT_GUARD_END;
 
 	expt_shutdown();
-	g1_ata_shutdown();
+	ShutdownFS();
 }
 
 #define KBD_ATTACHED		(1 << 0)
@@ -538,6 +557,6 @@ int main(int argc, char **argv) {
 		thd_sleep(10);
 	}
 
-	ShutdownDS();
+	ShutdownDS(false);
 	return 0;
 }

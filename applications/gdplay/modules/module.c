@@ -319,7 +319,7 @@ void gdplay_play(GUI_Widget *widget)
 {
 	(void) widget;
 
-	ShutdownDS();
+	ShutdownDS(true);
     arch_shutdown();
 
 	gdplay_run_game(self.bios_patch);

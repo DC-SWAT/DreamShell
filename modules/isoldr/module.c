@@ -720,7 +720,7 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 
 	ds_printf("DS_PROCESS: Executing at 0x%08lx (0x%08lx)...\n",
 		addr, addr + ISOLDR_PARAMS_SIZE);
-	ShutdownDS();
+	ShutdownDS(true);
 
 	isoldr_exec_at(loader, len, addr, ISOLDR_PARAMS_SIZE);
 }

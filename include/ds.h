@@ -43,6 +43,6 @@ const char *GetVersionBuildTypeString(int type);
  * Initialize and shutdown DreamShell core
  */
 int InitDS();
-void ShutdownDS();
+void ShutdownDS(bool quick);
 
 #endif /* _DS_CORE_H */

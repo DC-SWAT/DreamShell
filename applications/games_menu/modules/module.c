@@ -2751,7 +2751,7 @@ static void* MenuExitHelper(void *params)
 			{
 				EnableScreen();
 				GUI_Enable();
-				ShutdownDS();
+				ShutdownDS(true);
 			}
 			else
 			{

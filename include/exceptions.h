@@ -147,8 +147,11 @@ void expt_print_place(char *file, int line, const char *func);
 
 #define EXPT_GUARD_THROW
 
-#define EXPT_GUARD_BEGIN                                        \
+#define EXPT_GUARD_BEGIN_NEXT                                   \
   if (1) {                                                      \
+
+#define EXPT_GUARD_BEGIN                                        \
+  EXPT_GUARD_BEGIN_NEXT
 
 #define EXPT_GUARD_CATCH                                        \
     } else {                                                    \
