@@ -29,6 +29,11 @@ int InitIDE();
 int InitRomdisk();
 
 /**
+ * Unmount FAT filesystems and shutdown SD/IDE devices
+ */
+void ShutdownFS();
+
+/**
  * Search DreamShell root directory on all usable devices
  */
 int SearchRoot();

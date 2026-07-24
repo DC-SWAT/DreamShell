@@ -78,6 +78,7 @@ void ScreenWaitUpdate();
 void LockVideo();
 void UnlockVideo();
 int VideoIsLocked();
+int IsVideoThread();
 int VideoMustLock();
 
 void InitVideoHardware();

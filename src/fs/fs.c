@@ -34,6 +34,10 @@ int InitIDE() {
 	return fs_fat_mount_ide();
 }
 
+void ShutdownFS() {
+	fs_fat_shutdown();
+}
+
 int InitRomdisk() {
 
 	uint32 size;

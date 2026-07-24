@@ -270,6 +270,7 @@ ShutdownVideoThread
 LockVideo
 UnlockVideo
 VideoIsLocked
+IsVideoThread
 VideoMustLock
 InitVideoHardware
 InitVideo

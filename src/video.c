@@ -359,6 +359,10 @@ int VideoIsLocked() {
 	return mutex_is_locked(&video_mutex);
 }
 
+int IsVideoThread() {
+	return thd_get_current() == video_thd;
+}
+
 int VideoMustLock() {
 	return video_inited;
 }
