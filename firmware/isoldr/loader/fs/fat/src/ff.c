@@ -1162,7 +1162,7 @@ DWORD contiguous_sect(
 	tbl = fp->cltbl + 1;	/* Top of CLMT */
 
 	if (!fp->clust) {
-		return *tbl * fp->fs->csize;
+		return (*tbl * fp->fs->csize) - csect;
 	}
 
 	for (;;) {
@@ -1177,7 +1177,11 @@ DWORD contiguous_sect(
 		tbl++;
 	}
 
-	return ((ncl - (fp->clust - tcl)) * fp->fs->csize) - csect;
+	ncl = ncl - (fp->clust - tcl);
+	if (ncl == 0) {
+		return 0;
+	}
+	return (ncl * fp->fs->csize) - csect;
 }
 
 #endif	/* _USE_FASTSEEK */
@@ -2690,9 +2694,6 @@ FRESULT f_read (
 							cc = cs;
 						}
 					}
-					else {
-						cc = fp->fs->csize - csect;
-					}
 					if (csect + cc > fp->fs->csize) {
 						DWORD next = fp->fptr + ((DWORD)SS(fp->fs) * cc);
 						DWORD cl;
@@ -2831,9 +2832,6 @@ FRESULT f_poll(FIL* fp, UINT *bp) {
 						if (cc > cs) {
 							cc = cs;
 						}
-					}
-					else {
-						cc = fp->fs->csize - csect;
 					}
 					if (csect + cc > fp->fs->csize) {
 						DWORD next = fp->fptr + ((DWORD)SS(fp->fs) * cc);
