@@ -275,34 +275,34 @@
 						<panel height="80" name="async-panel" width="100%">
 							<label align="left" color="#31799F" font="arial" height="22" text="Emulate async read (in sectors):" width="100%" />
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="26%">
-								<label align="left" color="#000000" font="arial" height="20" name="async-label" text="none" width="86%" x="36%" />
+								<label align="left" color="#000000" font="arial" height="20" name="async-label" text="none" width="64%" x="36%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="1+" width="91%" x="53%" />
+								<label align="left" color="#000000" font="arial" height="20" text="1+" width="47%" x="53%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="2" width="78%" x="53%" />
+								<label align="left" color="#000000" font="arial" height="20" text="2" width="47%" x="53%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="3" width="78%" x="53%" />
+								<label align="left" color="#000000" font="arial" height="20" text="3" width="47%" x="53%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="4" width="78%" x="56%" />
+								<label align="left" color="#000000" font="arial" height="20" text="4" width="44%" x="56%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="26%">
-								<label align="left" color="#000000" font="arial" height="20" text="16" width="86%" x="36%" />
+								<label align="left" color="#000000" font="arial" height="20" text="16" width="64%" x="36%" />
 							</input>
 							<input checked="true" height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="8" width="78%" x="56%" />
+								<label align="left" color="#000000" font="arial" height="20" text="8" width="44%" x="56%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="7" width="78%" x="53%" />
+								<label align="left" color="#000000" font="arial" height="20" text="7" width="47%" x="53%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="17%">
-								<label align="left" color="#000000" font="arial" height="20" text="6" width="78%" x="53%" />
+								<label align="left" color="#000000" font="arial" height="20" text="6" width="47%" x="53%" />
 							</input>
 							<input height="25" onclick="export:isoLoader_toggleAsync()" type="checkbox" width="19%">
-								<label align="left" color="#000000" font="arial" height="20" text="5" width="80%" x="50%" />
+								<label align="left" color="#000000" font="arial" height="20" text="5" width="50%" x="50%" />
 							</input>
 						</panel>
 
@@ -358,22 +358,22 @@
 						<panel name="boot-panel">
 							<panel height="25" name="boot-mode-panel" width="100%">
 								<input checked="true" height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
-									<label align="left" color="#000000" font="arial" height="20" text="Direct" width="81%" x="31%" />
+									<label align="left" color="#000000" font="arial" height="20" text="Direct" width="69%" x="31%" />
 								</input>
 								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
-									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN" width="86%" x="31%" />
+									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN" width="69%" x="31%" />
 								</input>
-								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="23%">
-									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN cut" width="113%" x="31%" />
+								<input height="25" onclick="export:isoLoader_toggleBootMode()" type="checkbox" width="31%">
+									<label align="left" color="#000000" font="arial" height="20" text="IP.BIN cut" width="69%" x="23%" />
 								</input>
 							</panel>
 
 							<panel height="25" width="100%">
 								<input name="fastboot-checkbox" type="checkbox" width="33%">
-									<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="100%" x="23%" />
+									<label align="left" color="#000000" font="arial" height="20" text="Fast boot" width="77%" x="23%" />
 								</input>
 								<input name="low-checkbox" type="checkbox" width="33%">
-									<label align="left" color="#000000" font="arial" height="20" text="Low-level" width="100%" x="23%" />
+									<label align="left" color="#000000" font="arial" height="20" text="Low-level" width="77%" x="23%" />
 								</input>
 							</panel>
 
@@ -423,7 +423,7 @@
 									<label align="left" color="#000000" font="arial" height="20" text="0x8dfc0000" x="19%" />
 								</input>
 								<input height="23" name="0x8" onclick="export:isoLoader_toggleMemory()" type="checkbox" width="20%">
-									<label align="left" color="#000000" font="arial" height="22" text="0x8" width="109%" x="45%" />
+									<label align="left" color="#000000" font="arial" height="22" text="0x8" width="55%" x="45%" />
 								</input>
 								<input font="arial" fontcolor="#000000" height="22" name="boot-memory-text" onblur="export:isoLoader_toggleMemory()" size="30" type="text" value="ce00000" width="59%" />
 							</panel>
@@ -481,7 +481,7 @@
 										<label align="left" color="#000000" font="arial" height="20" text="0x8dfc0000" x="19%" />
 									</input>
 									<input height="23" name="0x8" onclick="export:isoLoader_toggleHeap()" type="checkbox" width="20%">
-										<label align="left" color="#000000" font="arial" height="22" text="0x8" width="109%" x="45%" />
+										<label align="left" color="#000000" font="arial" height="22" text="0x8" width="55%" x="45%" />
 									</input>
 									<input font="arial" fontcolor="#000000" height="22" name="heap-memory-text" onblur="export:isoLoader_toggleHeap()" size="30" type="text" value="ce00000" width="59%" />
 								</panel>
