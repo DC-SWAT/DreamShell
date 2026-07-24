@@ -11,7 +11,6 @@
 #define __TSUNAMI_DRAWABLES_CIRCLE_H
 
 #include "../drawable.h"
-#include "../texture.h"
 
 #ifdef __cplusplus
 #include <vector>

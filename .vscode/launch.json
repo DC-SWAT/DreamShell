@@ -9,16 +9,16 @@
         "cwd": ".",
         "MIMode": "gdb",
         "miDebuggerPath": "/opt/toolchains/dc/sh-elf/bin/sh-elf-gdb",
-        "miDebuggerServerAddress":"localhost:2159",
-        "debugServerPath":"${workspaceFolder}/sdk/bin/dc-tool-ip",
-        "debugServerArgs": "-g -t 192.168.1.252 -x ${workspaceFolder}/DS-DBG.elf",
+        "miDebuggerServerAddress": "localhost:2159",
+        "debugServerPath": "/usr/local/dc/kos-tool/build/kos-tool",
+        "debugServerArgs": "-g -m ${workspaceFolder}/build -t 192.168.1.130 -x ${workspaceFolder}/DS.elf",
         "filterStdout": false,
         "logging": {
             "exceptions": true,
             "moduleLoad": true,
             "programOutput": true,
             "engineLogging": false,
-            "trace": false,
+            "trace": true,
             "traceResponse": true
         }
     }

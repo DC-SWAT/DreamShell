@@ -181,6 +181,7 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua $(SFX_TARGETS)
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
 	@cp LICENSE NOTICE $(DS_BUILD)/doc
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
+	@rm -rf $(DS_BUILD)/firmware/bios/ds/patches
 	@mkdir -p $(DS_BUILD)/firmware/eeprom
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
 	@cp -R $(DS_RES)/gui $(DS_BUILD)
@@ -218,6 +219,7 @@ clean-all: clean
 release: build cdi
 	@echo Creating a full release...
 	@-rm -rf $(DS_BUILD)/.* 2> /dev/null || true
+	@-rm -rf $(DS_BUILD)/firmware/bios/ds/patches
 	@-rm -rf $(DS_BASE)/release || true
 	@mkdir -p $(DS_BASE)/release/$(TARGET)
 	@cp -R $(DS_BUILD)/* $(DS_BASE)/release/$(TARGET)
