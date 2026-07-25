@@ -140,6 +140,7 @@ static int ffplay_open_file(const char *filename, ffplay_params_t *params);
 static void ffplay_close_file(void);
 static AVCodecContext *findDecoder(AVFormatContext *format, int type, int *index);
 static void audio_stop_playback(void);
+static void send_audio_data(void);
 static void load_stat_font();
 
 static struct {
@@ -166,6 +167,9 @@ static struct {
     /* For frozen clock detection */
     int64_t last_clock_val;
     uint64_t last_clock_update_time;
+
+    volatile int resume_pending;
+    uint64_t resume_holdoff_until;
 
 } auds = {0}, *aud = &auds;
 
@@ -532,6 +536,52 @@ static void audio_stop_playback(void) {
         snd_sh4_to_aica(tmp, cmd->size);
     }
     snd_sh4_to_aica_start();
+}
+
+static void audio_pause_playback(void) {
+    uint32_t play_pos;
+    uint32_t write_pos;
+    size_t buffered;
+    int64_t aclock;
+
+    if(!aud->playing) {
+        return;
+    }
+
+    play_pos = snd_get_pos(aud->ch[0]);
+    write_pos = aud->write_pos;
+    if(write_pos >= play_pos) {
+        buffered = write_pos - play_pos;
+    }
+    else {
+        buffered = (aud->buffer_size_samples - play_pos) + write_pos;
+    }
+
+    aclock = get_audio_clock();
+    if(buffered > 0) {
+        aclock += (int64_t)((buffered * 1000) / aud->frequency);
+    }
+
+    aud->clock_correction = aclock;
+    audio_stop_playback();
+    aud->write_pos = 0;
+    aud->total_samples_written = 0;
+    spu_memset_sq(aud->spu_ram_sch[0], 0, aud->buffer_size * aud->channels);
+    aud->last_clock_val = 0;
+    aud->last_clock_update_time = 0;
+}
+
+static void audio_resume_playback(void) {
+    aud->resume_pending = 0;
+
+    if(vid->audio_stream < 0 || aud->playing) {
+        return;
+    }
+
+    send_audio_data();
+    if(aud->write_pos > 0) {
+        audio_start();
+    }
 }
 
 static void update_display_geometry() {
@@ -988,7 +1038,9 @@ static void PlayerInputHandler(void *ds_event, void *param, int action) {
                 if(mx >= vid->disp_x && mx <= vid->disp_x + vid->disp_w &&
                     my >= vid->disp_y && my <= vid->disp_y + vid->disp_h) {
                     if(!inside_video_area) {
-                        ds_sfx_play(DS_SFX_CLICK2);
+                        if(!vid->pause) {
+                            ds_sfx_play(DS_SFX_CLICK2);
+                        }
                         inside_video_area = 1;
                     }
                 }
@@ -1108,6 +1160,8 @@ static int ffplay_do_seek(int64_t pos_ms, int flags) {
         aud->temp_buf_wpos = 0;
         aud->last_clock_val = 0;
         aud->last_clock_update_time = 0;
+        aud->resume_pending = 0;
+        aud->resume_holdoff_until = 0;
     }
 
     LockVideo();
@@ -1252,6 +1306,9 @@ static void *player_thread(void *p) {
             thd_sleep(100);
             continue;
         }
+        if(aud->resume_pending) {
+            audio_resume_playback();
+        }
         if(vid->params.update_callback) {
             int64_t current_ts = get_master_clock();
             if(current_ts - vid->last_callback_pts > 250) {
@@ -1349,7 +1406,8 @@ static void *player_thread(void *p) {
 
             av_free_packet(&packet);
 
-            if(vid->audio_stream >= 0 && !ignore_diff && diff < -1000) {
+            if(vid->audio_stream >= 0 && !ignore_diff && diff < -1000 &&
+                timer_ms_gettime64() >= aud->resume_holdoff_until) {
                 ffplay_seek_internal(get_master_clock() + 500, AVSEEK_FLAG_BACKWARD);
                 continue;
             }
@@ -1650,24 +1708,31 @@ void ffplay_toggle_pause() {
     if(!vid->playing) {
         return;
     }
-    vid->pause = !vid->pause;
-    if(aud->playing) {
-        AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-        snd_sh4_to_aica_stop();
 
-        cmd->cmd = AICA_CMD_CHAN;
-        cmd->timestamp = 0;
-        cmd->size = AICA_CMDSTR_CHANNEL_SIZE;
-        cmd->cmd_id = aud->ch[0];
-        chan->cmd = AICA_CH_CMD_UPDATE | AICA_CH_UPDATE_SET_VOL;
-        chan->vol = vid->pause ? 0 : aud->vol;
-        snd_sh4_to_aica(tmp, cmd->size);
+    if(!vid->pause) {
+        int64_t vclock = get_video_clock();
 
-        if(aud->channels == 2) {
-            cmd->cmd_id = aud->ch[1];
-            snd_sh4_to_aica(tmp, cmd->size);
+        vid->pause = 1;
+        vid->video_current_pts = vclock;
+        vid->video_current_pts_time = timer_ms_gettime64();
+
+        if(vid->audio_stream >= 0) {
+            audio_pause_playback();
         }
-        snd_sh4_to_aica_start();
+    }
+    else {
+        uint64_t now = timer_ms_gettime64();
+
+        vid->pause = 0;
+        vid->video_current_pts_time = now;
+        vid->frame_timer = now;
+        aud->last_clock_val = 0;
+        aud->last_clock_update_time = 0;
+
+        if(vid->audio_stream >= 0) {
+            aud->resume_pending = 1;
+            aud->resume_holdoff_until = now + 2000;
+        }
     }
 }
 
