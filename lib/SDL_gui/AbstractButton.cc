@@ -48,10 +48,12 @@ void GUI_AbstractButton::Update(int force)
 	if (force)
 	{
 		surface = GetCurrentImage();
-		src.x = src.y = 0;
-		src.w = area.w;
-		src.h = area.h;
+		if (flags & WIDGET_TRANSPARENT)
+			parent->Erase(&area);
 		if (surface) {
+			src.x = src.y = 0;
+			src.w = area.w;
+			src.h = area.h;
 			if (src.w > surface->GetWidth())
 				src.w = surface->GetWidth();
 			if (src.h > surface->GetHeight())
@@ -61,8 +63,6 @@ void GUI_AbstractButton::Update(int force)
 			dest.w = src.w;
 			dest.h = src.h;
 			parent->Draw(surface, &src, &dest);
-		} else if (flags & WIDGET_TRANSPARENT) {
-			parent->Erase(&area);
 		}
 	}
 
