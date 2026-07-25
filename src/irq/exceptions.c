@@ -9,6 +9,7 @@
 #include <arch/irq.h>
 #include <arch/arch.h>
 #include <arch/stack.h>
+#include <kos/library.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -20,7 +21,10 @@
 #include <dc/pvr/pvr_regs.h>
 #include "setjmp.h"
 
-#define EXPT_SYM_MAX_OFFSET 0x800
+#define EXPT_SYM_TRUST_OFFSET  0x80
+#define EXPT_SYM_NEAR_OFFSET   0x400
+#define EXPT_STACK_WORDS       16
+#define EXPT_ADDR2LINE_MAX     24
 
 #define EXPT_REBOOT_DELAY_MS   5000
 
@@ -174,17 +178,81 @@ static void expt_fb_collect(const char *fmt, ...) {
 }
 
 static intptr_t expt_sym_offset(export_sym_t *symb, uintptr_t addr) {
-	return (intptr_t)(addr - symb->ptr);
+	return (intptr_t)(addr - (uintptr_t)symb->ptr);
 }
 
-static bool expt_sym_valid(export_sym_t *symb, uintptr_t addr) {
+static bool expt_sym_in_range(export_sym_t *symb, uintptr_t addr, uintptr_t max_off) {
 	intptr_t off;
 
 	if(!symb)
 		return false;
 
 	off = expt_sym_offset(symb, addr);
-	return off >= 0 && off < EXPT_SYM_MAX_OFFSET;
+	return off >= 0 && (uintptr_t)off < max_off;
+}
+
+static bool expt_sym_trusted(export_sym_t *symb, uintptr_t addr) {
+	return expt_sym_in_range(symb, addr, EXPT_SYM_TRUST_OFFSET);
+}
+
+static bool expt_sym_near(export_sym_t *symb, uintptr_t addr) {
+	return expt_sym_in_range(symb, addr, EXPT_SYM_NEAR_OFFSET);
+}
+
+static bool expt_is_code_addr(uintptr_t addr) {
+	klibrary_t *lib;
+	uintptr_t base, end;
+
+	if(arch_valid_text_address(addr))
+		return true;
+
+	if(!arch_valid_address(addr))
+		return false;
+
+	LIST_FOREACH(lib, &library_list, list) {
+		if(!lib->image.data || !lib->image.size)
+			continue;
+
+		base = (uintptr_t)lib->image.data;
+		end = base + lib->image.size;
+
+		if(addr >= base && addr < end)
+			return true;
+	}
+
+	return false;
+}
+
+static const char *expt_module_name_for_addr(uintptr_t addr) {
+	klibrary_t *lib;
+	uintptr_t base, end;
+
+	if(arch_valid_text_address(addr))
+		return NULL;
+
+	LIST_FOREACH(lib, &library_list, list) {
+		if(!lib->image.data || !lib->image.size)
+			continue;
+
+		base = (uintptr_t)lib->image.data;
+		end = base + lib->image.size;
+
+		if(addr >= base && addr < end) {
+			if(lib->lib_get_name)
+				return lib->lib_get_name();
+
+			return lib->image.fn;
+		}
+	}
+
+	return NULL;
+}
+
+static export_sym_t *expt_lookup_code_addr(uintptr_t addr) {
+	if(!expt_is_code_addr(addr))
+		return NULL;
+
+	return export_lookup_addr(addr);
 }
 
 static bool expt_is_data_fault(irq_t source) {
@@ -196,11 +264,31 @@ static uint32_t expt_get_fault_addr(void) {
 }
 
 static void expt_log_symbol_addr(const char *label, uintptr_t addr) {
-	export_sym_t *symb = export_lookup_addr(addr);
+	export_sym_t *symb = expt_lookup_code_addr(addr);
+	const char *mod = expt_module_name_for_addr(addr);
 
-	if(expt_sym_valid(symb, addr)) {
-		dbglog(DBG_INFO, " %7s = %s + 0x%08" PRIxPTR " (0x%08" PRIxPTR ")\n",
-			label, symb->name, (uintptr_t)expt_sym_offset(symb, addr), addr);
+	if(expt_sym_trusted(symb, addr)) {
+		if(mod) {
+			dbglog(DBG_INFO, " %7s = %s + 0x%08" PRIxPTR " (0x%08" PRIxPTR ") [%s]\n",
+				label, symb->name, (uintptr_t)expt_sym_offset(symb, addr), addr, mod);
+		}
+		else {
+			dbglog(DBG_INFO, " %7s = %s + 0x%08" PRIxPTR " (0x%08" PRIxPTR ")\n",
+				label, symb->name, (uintptr_t)expt_sym_offset(symb, addr), addr);
+		}
+	}
+	else if(expt_sym_near(symb, addr)) {
+		if(mod) {
+			dbglog(DBG_INFO, " %7s = 0x%08" PRIxPTR " (~%s + 0x%08" PRIxPTR ") [%s]\n",
+				label, addr, symb->name, (uintptr_t)expt_sym_offset(symb, addr), mod);
+		}
+		else {
+			dbglog(DBG_INFO, " %7s = 0x%08" PRIxPTR " (~%s + 0x%08" PRIxPTR ")\n",
+				label, addr, symb->name, (uintptr_t)expt_sym_offset(symb, addr));
+		}
+	}
+	else if(mod) {
+		dbglog(DBG_INFO, " %7s = 0x%08" PRIxPTR " [%s]\n", label, addr, mod);
 	}
 	else {
 		dbglog(DBG_INFO, " %7s = 0x%08" PRIxPTR "\n", label, addr);
@@ -223,29 +311,93 @@ static void expt_log_context(void) {
 }
 
 static void expt_log_addr2line_hint(irq_context_t *irq_ctx) {
-	bool valid_pc = arch_valid_text_address(irq_ctx->pc);
-	bool valid_pr = arch_valid_text_address(irq_ctx->pr);
+	uint32_t *stk = (uint32_t *)(uintptr_t)irq_ctx->r[15];
+	uintptr_t addrs[EXPT_ADDR2LINE_MAX];
+	int n = 0;
+	int i, j;
+	uintptr_t a;
+	const char *mod;
+	bool has_main = false;
 
-	if(!valid_pc && !valid_pr)
+	if(expt_is_code_addr(irq_ctx->pc))
+		addrs[n++] = irq_ctx->pc;
+
+	if(expt_is_code_addr(irq_ctx->pr) && n < EXPT_ADDR2LINE_MAX)
+		addrs[n++] = irq_ctx->pr;
+
+	if(arch_valid_address((uintptr_t)stk)) {
+		for(i = 0; i < EXPT_STACK_WORDS && n < EXPT_ADDR2LINE_MAX; i++) {
+			a = (uintptr_t)stk[i];
+
+			if(!expt_is_code_addr(a))
+				continue;
+
+			for(j = 0; j < n; j++) {
+				if(addrs[j] == a)
+					break;
+			}
+
+			if(j == n)
+				addrs[n++] = a;
+		}
+	}
+
+	if(n == 0)
 		return;
 
-	dbglog(DBG_INFO, "ADDR2LINE: $KOS_ADDR2LINE -f -C -i -e DS-DBG.elf");
+	for(i = 0; i < n; i++) {
+		if(arch_valid_text_address(addrs[i])) {
+			has_main = true;
+			break;
+		}
+	}
 
-	if(valid_pc)
-		dbglog(DBG_INFO, " %08lx", irq_ctx->pc);
+	if(has_main) {
+		dbglog(DBG_INFO, "ADDR2LINE: $KOS_ADDR2LINE -f -C -i -e DS-DBG.elf");
 
-	if(valid_pr)
-		dbglog(DBG_INFO, " %08lx", irq_ctx->pr);
+		for(i = 0; i < n; i++) {
+			if(arch_valid_text_address(addrs[i]))
+				dbglog(DBG_INFO, " %08" PRIxPTR, addrs[i]);
+		}
 
-	dbglog(DBG_INFO, "\n");
+		dbglog(DBG_INFO, "\n");
+	}
+
+	for(i = 0; i < n; i++) {
+		mod = expt_module_name_for_addr(addrs[i]);
+
+		if(!mod)
+			continue;
+
+		dbglog(DBG_INFO, "ADDR2LINE[%s]: $KOS_ADDR2LINE -f -C -i -e %s.elf %08" PRIxPTR "\n",
+			mod, mod, addrs[i]);
+	}
 }
 
 static void expt_fb_collect_symbol_addr(const char *label, uintptr_t addr) {
-	export_sym_t *symb = export_lookup_addr(addr);
+	export_sym_t *symb = expt_lookup_code_addr(addr);
+	const char *mod = expt_module_name_for_addr(addr);
 
-	if(expt_sym_valid(symb, addr)) {
-		expt_fb_collect("%s=%s+0x%" PRIxPTR, label, symb->name,
-			(uintptr_t)expt_sym_offset(symb, addr));
+	if(expt_sym_trusted(symb, addr)) {
+		if(mod) {
+			expt_fb_collect("%s=%s+0x%" PRIxPTR "[%s]", label, symb->name,
+				(uintptr_t)expt_sym_offset(symb, addr), mod);
+		}
+		else {
+			expt_fb_collect("%s=%s+0x%" PRIxPTR, label, symb->name,
+				(uintptr_t)expt_sym_offset(symb, addr));
+		}
+	}
+	else if(expt_sym_near(symb, addr)) {
+		if(mod) {
+			expt_fb_collect("%s=%08" PRIxPTR "~%s[%s]", label, addr, symb->name, mod);
+		}
+		else {
+			expt_fb_collect("%s=%08" PRIxPTR "~%s", label, addr, symb->name);
+		}
+	}
+	else if(mod) {
+		expt_fb_collect("%s=%08" PRIxPTR "[%s]", label, addr, mod);
 	}
 	else {
 		expt_fb_collect("%s=%08" PRIxPTR, label, addr);
@@ -403,20 +555,41 @@ static void guard_irq_handler(irq_t source, irq_context_t *context, void *data) 
 		expt_fb_show();
 	}
 
-	/* Display user friendly informations */
 	export_sym_t *symb;
 	int i;
 	uint32_t *stk = (uint32_t *)(uintptr_t)irq_ctx->r[15];
+	uintptr_t sa;
 
-	for (i = 15; i >= 0; i--) {
-		symb = export_lookup_addr(stk[i]);
+	for (i = EXPT_STACK_WORDS - 1; i >= 0; i--) {
+		sa = (uintptr_t)stk[i];
+		symb = expt_lookup_code_addr(sa);
+		const char *mod = expt_module_name_for_addr(sa);
 
-		if(!arch_valid_address((uintptr_t)stk[i]) || !expt_sym_valid(symb, stk[i])) {
-			dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIx32 "\n", i, stk[i]);
+		if(expt_sym_trusted(symb, sa)) {
+			if(mod) {
+				dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIxPTR " (%s + 0x%08" PRIxPTR ") [%s]\n",
+					i, sa, symb->name, (uintptr_t)expt_sym_offset(symb, sa), mod);
+			}
+			else {
+				dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIxPTR " (%s + 0x%08" PRIxPTR ")\n",
+					i, sa, symb->name, (uintptr_t)expt_sym_offset(symb, sa));
+			}
+		}
+		else if(expt_sym_near(symb, sa)) {
+			if(mod) {
+				dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIxPTR " (~%s + 0x%08" PRIxPTR ") [%s]\n",
+					i, sa, symb->name, (uintptr_t)expt_sym_offset(symb, sa), mod);
+			}
+			else {
+				dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIxPTR " (~%s + 0x%08" PRIxPTR ")\n",
+					i, sa, symb->name, (uintptr_t)expt_sym_offset(symb, sa));
+			}
+		}
+		else if(mod) {
+			dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIxPTR " [%s]\n", i, sa, mod);
 		}
 		else {
-			dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIx32 " (%s + 0x%08" PRIxPTR ")\n",
-				i, stk[i], symb->name, (uintptr_t)expt_sym_offset(symb, stk[i]));
+			dbglog(DBG_INFO, "STACK#%2d = 0x%08" PRIxPTR "\n", i, sa);
 		}
 	}
 
