@@ -224,9 +224,14 @@ release: build cdi
 	@mkdir -p $(DS_BASE)/release/$(TARGET)
 	@cp -R $(DS_BUILD)/* $(DS_BASE)/release/$(TARGET)
 	@cp $(TARGET_BIN) $(DS_BASE)/release/$(TARGET)
+	@mv $(TARGET).cdi $(DS_BASE)/release/$(TARGET_NAME).cdi
+	@make TARGET_DEBUG=1
+	@cp $(TARGET_BIN) $(DS_BASE)/release/$(TARGET)/DEBUG_$(TARGET_BIN)
+	@make TARGET_EMU=1
+	@cp $(TARGET_BIN) $(DS_BASE)/release/$(TARGET)/EMU_$(TARGET_BIN)
+	@make
 	@cd $(DS_BASE)/firmware/bootloader && make && make release
 	@mv $(DS_BASE)/firmware/bootloader/*.cdi $(DS_BASE)/release
-	@mv $(TARGET).cdi $(DS_BASE)/release/$(TARGET_NAME).cdi
 	@echo Compressing...
 	@cd $(DS_BASE)/release && zip -q -r $(TARGET_NAME).zip * 2> /dev/null
 	@echo 
