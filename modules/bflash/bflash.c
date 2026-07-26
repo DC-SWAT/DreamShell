@@ -70,8 +70,6 @@ static void send_cmd(bflash_dev_t *dev, uint16 cmd) {
 
 	if(dev->unlock[0] == ADDR_UNLOCK_1_JEDEC) {
 
-		// int old = irq_disable();
-
 		switch(cmd) {
 			case CMD_MANUFACTURER_UNLOCK_DATA:
 				send_unlock_jedec(dev);
@@ -82,17 +80,17 @@ static void send_cmd(bflash_dev_t *dev, uint16 cmd) {
 				send_unlock_jedec(dev);
 				flashport[dev->unlock[0]] = cmd;
 				jedec_delay(40);
+				break;
 			case CMD_PROGRAM_UNLOCK_DATA:
 				send_unlock(dev);
 				flashport[dev->unlock[0]] = cmd;
+				break;
 			default:
 				send_unlock_jedec(dev);
 				flashport[dev->unlock[0]] = cmd;
 				jedec_delay(10);
 				break;
 		}
-
-		// irq_restore(old);
 
 	} else {
 		send_unlock(dev);

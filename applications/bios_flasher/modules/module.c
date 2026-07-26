@@ -151,6 +151,7 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 		if (readLen <= 0)
 		{
 			ds_printf("DS_ERROR: File wasn't loaded fully to memory\n");
+			free(data);
 			fs_close(pFile);
 			return eFileFail;
 		}
@@ -162,10 +163,12 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 	if (fileSize != totalRead)
 	{
 		ds_printf("DS_ERROR: File wasn't loaded fully to memory\n");
+		free(data);
 		fs_close(pFile);
 		return eFileFail;
 	}
 	fs_close(pFile);
+	pFile = FILEHND_INVALID;
 
 	EXPT_GUARD_BEGIN;
 
@@ -210,7 +213,7 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 		size_t chunkCount = fileSize / CHUNK_SIZE;
 		for (i = 0; i <= chunkCount; ++i)
 		{
-			UPDATE_GUI(eWriting, (float)i / chunkCount, guiClbk);
+			UPDATE_GUI(eWriting, chunkCount ? (float)i / chunkCount : 1.0f, guiClbk);
 
 			size_t dataPos = i * CHUNK_SIZE + offset;
 			size_t dataLen = (dataPos + CHUNK_SIZE > fileSize) ? fileSize - dataPos : CHUNK_SIZE;
@@ -231,14 +234,16 @@ int BiosFlasher_WriteBiosFileToFlash(const char* filename, BiosFlasher_Operation
 	
 		ds_printf("DS_ERROR: Fatal error\n");
 		free(data);
-		fs_close(pFile);
+		if (pFile != FILEHND_INVALID)
+		{
+			fs_close(pFile);
+			pFile = FILEHND_INVALID;
+		}
 		EXPT_GUARD_RETURN eFileFail;
 		
 	EXPT_GUARD_END;
 
 	free(data);
-	fs_close(pFile);
-
 	return 0;
 }
 
