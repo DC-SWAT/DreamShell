@@ -120,6 +120,7 @@ static void set_device_labels(device_ui_t *dev, const char *size, const char *lb
 }
 
 static void update_test_btn(device_ui_t *dev, int hide, int enabled);
+static void refresh_devices(void);
 
 static void set_device_unavailable(device_ui_t *dev) {
 
@@ -324,6 +325,15 @@ static void set_testing(int active) {
 	}
 }
 
+static double calc_speed(int size, uint32_t tm) {
+
+	if(tm == 0) {
+		tm = 1;
+	}
+
+	return size / ((float)tm / 1000);
+}
+
 static int test_ide_io(void) {
 
 	kos_blockdev_t bdev;
@@ -347,21 +357,24 @@ static int test_ide_io(void) {
 	}
 
 	show_progress("IO read test...");
-	LockVideo();
+	thd_sleep(100);
+	ShutdownVideoThread();
 	st = timer_ns_gettime64();
 
 	if(bdev.read_blocks(&bdev, 0, blocks, buf)) {
 		dbglog(DBG_DEBUG, "couldn't read block: %s\n", strerror(errno));
+		bdev.shutdown(&bdev);
 		free(buf);
-		UnlockVideo();
+		InitVideoThread();
 		return -1;
 	}
 
 	et = timer_ns_gettime64();
 	tm = (et - st) / 1000000;
+	bdev.shutdown(&bdev);
 	free(buf);
-	UnlockVideo();
-	speed = buf_size / ((float)tm / 1000);
+	InitVideoThread();
+	speed = calc_speed(buf_size, tm);
 
 	append_result("IO read", tm, speed, buf_size / 1024, 0);
 
@@ -401,21 +414,23 @@ static int test_sd_io(void) {
 	show_progress("SD IO read test...");
 	thd_sleep(100);
 
-	LockVideo();
+	ShutdownVideoThread();
 	st = timer_ns_gettime64();
 
 	if(bdev.read_blocks(&bdev, 0, blocks, buf)) {
 		dbglog(DBG_DEBUG, "couldn't read block: %s\n", strerror(errno));
+		bdev.shutdown(&bdev);
 		free(buf);
-		UnlockVideo();
+		InitVideoThread();
 		return -1;
 	}
 
 	et = timer_ns_gettime64();
 	tm = (et - st) / 1000000;
+	bdev.shutdown(&bdev);
 	free(buf);
-	UnlockVideo();
-	speed = buf_size / ((float)tm / 1000);
+	InitVideoThread();
+	speed = calc_speed(buf_size, tm);
 
 	append_result("SD IO read", tm, speed, buf_size / 1024, 0);
 
@@ -446,6 +461,7 @@ static void run_speed_test(void) {
 	}
 
 	show_progress("File system write test...");
+	thd_sleep(100);
 
 	if(FileExists(self.test_file)) {
 		fs_unlink(self.test_file);
@@ -461,8 +477,7 @@ static void run_speed_test(void) {
 
 	buff = (uint8 *)0x8c400000;
 
-	thd_sleep(100);
-	LockVideo();
+	ShutdownVideoThread();
 	time_before = timer_ns_gettime64();
 
 	while(cnt < size) {
@@ -471,7 +486,7 @@ static void run_speed_test(void) {
 
 		if(rs <= 0) {
 			fs_close(fd);
-			UnlockVideo();
+			InitVideoThread();
 			ds_printf("DS_ERROR: Can't write to file: %d\n", errno);
 			show_error("Can't write to file");
 			return;
@@ -481,10 +496,10 @@ static void run_speed_test(void) {
 	}
 
 	time_after = timer_ns_gettime64();
-	UnlockVideo();
+	InitVideoThread();
 
 	t = (time_after - time_before) / 1000000;
-	speed = size / ((float)t / 1000);
+	speed = calc_speed(size, t);
 	fs_close(fd);
 
 	append_result("File system write", t, speed, size / 1024, buff_size / 1024);
@@ -500,6 +515,7 @@ static void run_speed_test(void) {
 readtest:
 
 	show_progress("File system read test...");
+	thd_sleep(100);
 
 	fd = fs_open(self.test_file, O_RDONLY);
 
@@ -508,19 +524,31 @@ readtest:
 		show_error("Can't open file for read");
 		return;
 	}
-	if(self.test_read_only) {
-		fs_ioctl(fd, 0, NULL);
-		fs_close(fd);
-		fd = fs_open(self.test_file, O_RDONLY);
-	}
 
 	time_before = time_after = t = cnt = 0;
 	speed = 0.0f;
 	size = fs_total(fd);
+
+	if(size <= 0) {
+		fs_close(fd);
+		ds_printf("DS_ERROR: Invalid file size for %s: %d\n", self.test_file, size);
+		show_error("Invalid file size");
+		return;
+	}
+
+	if(size > self.test_size) {
+		size = self.test_size;
+	}
+
 	buff = memalign(32, buff_size);
 
-	thd_sleep(100);
-	LockVideo();
+	if(!buff) {
+		fs_close(fd);
+		show_error("Out of memory");
+		return;
+	}
+
+	ShutdownVideoThread();
 	time_before = timer_ns_gettime64();
 
 	while(cnt < size) {
@@ -530,7 +558,7 @@ readtest:
 		if(rs <= 0) {
 			fs_close(fd);
 			free(buff);
-			UnlockVideo();
+			InitVideoThread();
 			ds_printf("DS_ERROR: Can't read file: %d\n", errno);
 			show_error("Can't read file");
 			return;
@@ -540,7 +568,7 @@ readtest:
 
 	time_after = timer_ns_gettime64();
 	t = (uint32)(time_after - time_before) / 1000000;
-	speed = size / ((float)t / 1000);
+	speed = calc_speed(size, t);
 
 	fs_close(fd);
 
@@ -548,8 +576,8 @@ readtest:
 		fs_unlink(self.test_file);
 	}
 
-	UnlockVideo();
 	free(buff);
+	InitVideoThread();
 
 	append_result("File system read", t, speed, size / 1024, buff_size / 1024);
 
@@ -605,6 +633,8 @@ void Speedtest_Run(GUI_Widget *widget) {
 		strncpy(self.test_device, "GD-ROM", sizeof(self.test_device) - 1);
 
 		if(find_cd_test_file() < 0) {
+			self.test_read_only = 0;
+			self.test_skip_write = 0;
 			show_error("Test file not found on disc");
 			return;
 		}
@@ -624,7 +654,13 @@ void Speedtest_DialogConfirm(GUI_Widget *widget) {
 
 	(void)widget;
 	hide_dialog();
+	self.test_read_only = 0;
+	self.test_is_ide = 0;
+	self.test_is_sd = 0;
+	self.test_skip_write = 0;
+	self.test_file[0] = '\0';
 	set_testing(0);
+	refresh_devices();
 }
 
 static int load_device_ui(device_ui_t *dev, const char *prefix) {
