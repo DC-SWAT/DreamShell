@@ -7,6 +7,14 @@
 #include "main.h"
 #include "fs.h"
 
+static void early_init(void) {
+	/* hardware_sys_mode() is not ready yet at KOS_INIT_EARLY time */
+	if((((*(volatile uint32_t *)0xA05F74B0) >> 4) & 0x0F) == HW_TYPE_RETAIL) {
+		g1_ata_select_device(G1_ATA_MASTER);
+	}
+}
+
+KOS_INIT_EARLY(early_init);
 KOS_INIT_FLAGS(INIT_IRQ | INIT_FS_ROMDISK | INIT_FS_PTY | INIT_CONTROLLER | INIT_CDROM);
 
 pvr_init_params_t params = {
