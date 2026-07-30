@@ -187,16 +187,18 @@ int main(int argc, char *argv[]) {
 			gdc_syscall_patch();
 		}
 
-		if(!is_dreamcast() && IsoInfo->exec.type == BIN_TYPE_KATANA) {
-			argc = patch_cable_detection(GPIO_CABLE_VGA);
-			LOGF("Patch GPIO cable detection: %d\n", argc);
-
+		if(!is_dreamcast()) {
+			if(IsoInfo->exec.type == BIN_TYPE_KATANA) {
+				argc = patch_cable_detection(GPIO_CABLE_VGA);
+				LOGF("Patch GPIO cable detection: %d\n", argc);
+			}
 			if(IsoInfo->firmware) {
-				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - 0x20000);
+				const uint32 dump_size = ISOLDR_FLASHROM_PATH_SIZE + ISOLDR_FLASHROM_SIZE;
+				uintptr_t new_addr = NONCACHED_ADDR(loader_addr - dump_size);
 				if(loader_addr < APP_BIN_ADDR) {
 					new_addr = NONCACHED_ADDR(ISOLDR_DEFAULT_ADDR_NAOMI_DC);
 				}
-				memcpy((void *)new_addr, (void *)IsoInfo->firmware, 0x20000);
+				memcpy((void *)new_addr, (void *)IsoInfo->firmware, dump_size);
 				IsoInfo->firmware = new_addr;
 				LOGF("Loading flashROM dump to %08lx\n", new_addr);
 			}

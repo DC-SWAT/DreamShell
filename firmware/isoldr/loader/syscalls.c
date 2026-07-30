@@ -148,20 +148,22 @@ static void GetTOC() {
 	memcpy(toc, &IsoInfo->toc, sizeof(CDROM_TOC));
 
 	/* Check if this is an original GD disc */
-	if(IsoInfo->track_lba[0] == 45150 && IsoInfo->exec.type != BIN_TYPE_KOS) {
+	if(IsoInfo->track_lba[0] == 45150) {
 
 		LOGF("Get GD TOC for area %d\n", GDS->param[0] + 1);
 
 		if(GDS->param[0] == 0) { /* Low density area */
 
-			toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
-			toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
+			if(IsoInfo->exec.type != BIN_TYPE_KOS) {
+				toc->first = (toc->first & 0xfff0ffff) | (1 << 16);
+				toc->last  = (toc->last & 0xfff0ffff) | (2 << 16);
 
-			for(int i = 2; i < 99; ++i) {
-				toc->entry[i] = (uint32)-1;
+				for(int i = 2; i < 99; ++i) {
+					toc->entry[i] = (uint32)-1;
+				}
+
+				toc->leadout_sector = 0x01001A2C;
 			}
-
-			toc->leadout_sector = 0x01001A2C;
 		}
 		else { /* High density area */
 			toc->entry[0] = (uint32)-1;
@@ -1610,7 +1612,7 @@ int flashrom_read(int offset, void *buffer, int bytes) {
 	}
 
 	if(IsoInfo->firmware) {
-		src = (uint8_t *)(IsoInfo->firmware + offset);
+		src = (uint8_t *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + offset);
 		memcpy(buffer, src, bytes);
 	}
 	else {
@@ -1620,18 +1622,110 @@ int flashrom_read(int offset, void *buffer, int bytes) {
 	return 0;
 }
 
-int flashrom_write(int offset, void * buffer, int bytes) {
-	DBGFF("0x%08lx 0x%08lx %d\n", offset, buffer, bytes);
+#if defined(HAVE_EXT_SYSCALLS) && _FS_READONLY == 0
+static int flashrom_persist(int offset, const void *data, int bytes) {
+	int fd, res;
+	const char *filename = (const char *)IsoInfo->firmware;
+
+	lock_gdsys_wait();
+
+	if(iso_fd >= 0 && pre_read_xfer_busy()) {
+		abort_async(iso_fd);
+		do {} while(pre_read_xfer_busy());
+		pre_read_xfer_end();
+	}
+
+	fd = open(filename, O_RDWR | O_PIO);
+	if(fd < 0) {
+		LOGFF("can't open flashrom dump\n");
+		unlock_gdsys();
+		return -1;
+	}
+
+	lseek(fd, offset, SEEK_SET);
+	res = write(fd, (void *)data, bytes);
+	if(res != bytes) {
+		LOGFF("write failed: %d\n", res);
+	}
+	close(fd);
+	unlock_gdsys();
+	return res == bytes ? 0 : -1;
+}
+#endif
+
+#ifdef HAVE_FLASH_HW
+extern int flashrom_write_hw(int offset, void *buffer, int bytes);
+extern int flashrom_delete_hw(int offset);
+#endif
+
+int flashrom_write(int offset, void *buffer, int bytes) {
+#if defined(HAVE_EXT_SYSCALLS) && _FS_READONLY == 0
+	if(IsoInfo->firmware > 1) {
+		uint8_t *dst = (uint8_t *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + offset);
+		uint8_t *src = (uint8_t *)buffer;
+		int i;
+
+		DBGFF("dump 0x%08lx 0x%08lx %d\n", offset, (uintptr_t)buffer, bytes);
+
+		for(i = 0; i < bytes; i++) {
+			if((dst[i] ^ src[i]) & src[i]) {
+				break;
+			}
+			dst[i] &= src[i];
+		}
+
+		if(i > 0) {
+			flashrom_persist(offset, dst, i);
+		}
+		return i;
+	}
+#endif
+#ifdef HAVE_FLASH_HW
+	DBGFF("hw 0x%08lx 0x%08lx %d\n", offset, (uintptr_t)buffer, bytes);
+	return flashrom_write_hw(offset, buffer, bytes);
+#else
+	DBGFF("none 0x%08lx 0x%08lx %d\n", offset, (uintptr_t)buffer, bytes);
 	(void)offset;
 	(void)buffer;
 	(void)bytes;
 	return 0;
+#endif
 }
 
 int flashrom_delete(int offset) {
-	DBGFF("0x%08lx\n", offset);
+#if defined(HAVE_EXT_SYSCALLS) && _FS_READONLY == 0
+	if(IsoInfo->firmware > 1) {
+		uint32 info[2];
+		int part, start = -1, size = 0;
+		uint8_t *dump = (uint8_t *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE);
+
+		DBGFF("dump 0x%08lx\n", offset);
+
+		for(part = 0; part < 5; part++) {
+			flashrom_info(part, info);
+			if(offset >= (int)info[0] && offset < (int)(info[0] + info[1])) {
+				start = (int)info[0];
+				size = (int)info[1];
+				break;
+			}
+		}
+
+		if(start < 0) {
+			return -1;
+		}
+
+		memset(dump + start, 0xff, size);
+		return flashrom_persist(start, dump + start, size);
+	}
+#endif
+#ifdef HAVE_FLASH_HW
+	DBGFF("hw 0x%08lx\n", offset);
+	return flashrom_delete_hw(offset);
+#else
+	DBGFF("none 0x%08lx\n", offset);
 	(void)offset;
 	return 0;
+#endif
 }
 
 /**
@@ -1641,7 +1735,7 @@ int sys_misc_init(void) {
 	LOGFF(NULL);
 	uint8 *src;
 	if(IsoInfo->firmware) {
-		src = (uint8 *)(IsoInfo->firmware + (FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR));
+		src = (uint8 *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + (FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR));
 		memcpy((uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR), src, 8);
 	}
 	else {
@@ -1661,7 +1755,7 @@ int sys_icon(int icon, uint8 *dest) {
 	LOGFF("%d 0x%08lx\n", icon, dest);
 	uint8_t *src;
 	if(IsoInfo->firmware) {
-		src = (uint8 *)(IsoInfo->firmware + (FLASH_ROM_ICON_ADDR - FLASH_ROM_ADDR) + (icon * 704));
+		src = (uint8 *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + (FLASH_ROM_ICON_ADDR - FLASH_ROM_ADDR) + (icon * 704));
 		memcpy(dest, src, 704);
 	}
 	else {

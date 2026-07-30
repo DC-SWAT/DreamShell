@@ -181,21 +181,29 @@ void setup_region() {
 		{"00110"},
 		{"00211"}
 	};
-	uint8 *src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_REGION_ADDR);
+	uint8 src_buf[5];
+	uint8 *src;
 	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
 	uint8 *reg = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_ADDR + 0x20);
-	uint32 ipbin_reg = NONCACHED_ADDR(IP_BIN_REGION_ADDR);
-	char *ipbin = (char *)ipbin_reg;
+	char *ipbin = (char *)NONCACHED_ADDR(IP_BIN_REGION_ADDR);
+
+	if(IsoInfo->firmware) {
+		src = (uint8 *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + (FLASH_ROM_REGION_ADDR - FLASH_ROM_ADDR));
+	}
+	else {
+		src = src_buf;
+		rom_memcpy(src_buf, (void *)NONCACHED_ADDR(FLASH_ROM_REGION_ADDR), 5);
+	}
 
 	if(IsoInfo->region > 0) {
 		if(IsoInfo->region <= 3) {
 			*reg = IsoInfo->region;
 		}
-		else if(IsoInfo->region == 4) { // Korea
-			*reg = 1; // Japan
+		else if(IsoInfo->region == 4) {
+			*reg = 1;
 		}
-		else { // Australia
-			*reg = 3; // Europe
+		else {
+			*reg = 3;
 		}
 	}
 	else if(ipbin[2] == 'E') {
@@ -208,12 +216,11 @@ void setup_region() {
 		*reg = 1;
 	}
 	else {
-		/* No IP.BIN info, keep flashrom value */
 		*reg = 0;
-		rom_memcpy(dst, src, 5);
+		memcpy(dst, src, 5);
 	}
 
-	if (*reg && src[2] != region_str[*reg - 1][2]) {
+	if(*reg) {
 		memcpy(dst, region_str[*reg - 1], 5);
 	}
 
