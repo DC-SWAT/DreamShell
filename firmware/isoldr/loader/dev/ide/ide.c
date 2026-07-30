@@ -551,43 +551,55 @@ static s32 g1_dev_scan(void)
 
 		st = IN8(G1_ATA_STATUS_REG);
 
+		if(!st || st == 0xFF)
+		{
+			LOGFF("%s device not found\n", dev_bus_name[j]);
+			continue;
+		}
+
 		if(!(st & (ATA_SR_DRDY | ATA_SR_DSC)) && !(st & ATA_SR_ERR))
 		{
 			LOGFF("%s device not found\n", dev_bus_name[j]);
 			continue;
 		}
-		
+
 		while (d++ < 10000)
 		{
 			if (st & ATA_SR_ERR)
 			{
 				err = 1;
 				break;
-			} else if (!(st & ATA_SR_BSY) && (st & ATA_SR_DRQ)) {
-				break; // Everything is right.
 			}
-			
+			else if (!(st & ATA_SR_BSY) && (st & ATA_SR_DRQ)) {
+				break;
+			}
+
 			st = IN8(G1_ATA_STATUS_REG);
 		}
-		
+
 		if (err)
 		{
-			OUT8(G1_ATA_COMMAND_REG, ATAPI_CMD_RESET);
-			g1_ata_wait_nbsy();
-			
 			u8 cl = IN8(G1_ATA_LBA_MID);
 			u8 ch = IN8(G1_ATA_LBA_HIGH);
-			
-			if ((cl == 0x14 && ch == 0xEB) || 
-				(cl == 0x69 && ch == 0x96)) 
+
+			if ((cl == 0x14 && ch == 0xEB) ||
+				(cl == 0x69 && ch == 0x96))
 			{
 				type = IDE_ATAPI;
 			}
-			else 
-				continue; // Unknown Type (And always not be a device).
-			
+			else
+				continue;
+
+			OUT8(G1_ATA_COMMAND_REG, ATAPI_CMD_RESET);
+			d = 0;
+			while ((IN8(G1_ATA_ALTSTATUS) & ATA_SR_BSY) && ++d < 100000)
+				;
+			if (IN8(G1_ATA_ALTSTATUS) & ATA_SR_BSY)
+				continue;
+
 			OUT8(G1_ATA_COMMAND_REG, ATAPI_CMD_IDENTIFY);
-			g1_ata_wait_drq();
+			if (g1_ata_wait_drq())
+				continue;
 		}
 		
 		for(i = 0; i < 256; i++)

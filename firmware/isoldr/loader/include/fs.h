@@ -89,8 +89,8 @@ enum FS_IOCTL_CMD {
 };
 
 #if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
-# define FS_VOL_IDE  0
-# define FS_VOL_SD   1
+# define FS_VOL_SD   0
+# define FS_VOL_IDE  1
 #elif defined(DEV_TYPE_IDE)
 # define FS_VOL_IDE  0
 #elif defined(DEV_TYPE_SD)

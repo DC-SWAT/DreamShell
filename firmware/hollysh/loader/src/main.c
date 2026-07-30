@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
     }
 
     printf("Initializing file system...\n");
-    fs_enable_dma(FS_DMA_SHARED);
+    fs_enable_dma(FS_DMA_DISABLED);
     int part;
 
     for(part = 0; part < 4; part++) {
@@ -151,6 +151,7 @@ int main(int argc, char *argv[]) {
         goto error;
     }
 
+    fs_enable_dma(FS_DMA_SHARED);
     printf("Loading executable...\n");
 
     int fd = open_boot_file();

@@ -42,8 +42,8 @@ static int dma_mode = 0;
 
 #if defined(DEV_TYPE_IDE) && defined(DEV_TYPE_SD)
 PARTITION VolToPart[_VOLUMES] = {
-	{DISK_DRV_IDE, 0},
-	{DISK_DRV_SD_SCIF, 0}
+	{DISK_DRV_SD_SCIF, 0},
+	{DISK_DRV_IDE, 0}
 };
 #else
 PARTITION VolToPart[_VOLUMES] = {{0, 0}};
