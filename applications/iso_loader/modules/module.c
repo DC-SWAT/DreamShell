@@ -1486,15 +1486,20 @@ void isoLoader_Run(GUI_Widget *widget) {
 	}
 	int want_test_mode = GUI_WidgetGetState(self.test_mode);
 
-	if(!self.isoldr || want_test_mode ||
-	   strncmp(self.isoldr->image_file, filepath, sizeof(self.isoldr->image_file) - 1) != 0) {
-		if(self.isoldr) {
-			free(self.isoldr);
-		}
-		self.isoldr = isoldr_get_info(filepath, want_test_mode);
+	if(self.isoldr) {
+		free(self.isoldr);
+		self.isoldr = NULL;
 	}
+	self.isoldr = isoldr_get_info(filepath, want_test_mode);
 
 	if(self.isoldr == NULL) {
+		ShowConsole();
+		ScreenFadeIn();
+		return;
+	}
+
+	char *preset = isoldr_find_preset(filepath, self.md5, 0);
+	if(isoldr_apply_preset(self.isoldr, preset) == (uintptr_t)-1) {
 		ShowConsole();
 		ScreenFadeIn();
 		return;
@@ -1511,14 +1516,13 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 
-	if(GUI_WidgetGetState(self.irq)) {
-		self.isoldr->use_irq = 1;
-	}
-	if(GUI_WidgetGetState(self.low)) {
-		self.isoldr->syscalls = 1;
-	}
+	self.isoldr->use_irq = GUI_WidgetGetState(self.irq);
+	self.isoldr->syscalls = GUI_WidgetGetState(self.low);
 	if(GUI_WidgetGetState(self.cdda)) {
 		self.isoldr->emu_cdda = getModeCDDA();
+	}
+	else {
+		self.isoldr->emu_cdda = CDDA_MODE_DISABLED;
 	}
 
 	for(int i = 0; i < sizeof(self.heap) >> 2; i++) {
@@ -1541,15 +1545,9 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 
-	if(GUI_WidgetGetState(self.dma)) {
-		self.isoldr->use_dma = 1;
-	}
-	if(GUI_WidgetGetState(self.alt_read)) {
-		self.isoldr->alt_read = 1;
-	}
-	if(GUI_WidgetGetState(self.fastboot)) {
-		self.isoldr->fast_boot = 1;
-	}
+	self.isoldr->use_dma = GUI_WidgetGetState(self.dma);
+	self.isoldr->alt_read = GUI_WidgetGetState(self.alt_read);
+	self.isoldr->fast_boot = GUI_WidgetGetState(self.fastboot);
 
 	tmpval = GUI_TextEntryGetText(self.device);
 
@@ -1642,10 +1640,11 @@ void isoLoader_Run(GUI_Widget *widget) {
 			}
 		}
 	}
-
-	if(GUI_WidgetGetState(self.screenshot)) {
-		self.isoldr->scr_hotkey = SCREENSHOT_HOTKEY;
+	else {
+		self.isoldr->emu_vmu = 0;
 	}
+
+	self.isoldr->scr_hotkey = GUI_WidgetGetState(self.screenshot) ? SCREENSHOT_HOTKEY : 0;
 
 	if(self.image_type != IMAGE_TYPE_ROM_NAOMI) {
 		if(GUI_WidgetGetState(self.alt_boot)) {
@@ -1653,9 +1652,7 @@ void isoLoader_Run(GUI_Widget *widget) {
 		}
 	}
 
-	if(GUI_WidgetGetState(self.use_gpio)) {
-		self.isoldr->use_gpio = 1;
-	}
+	self.isoldr->use_gpio = GUI_WidgetGetState(self.use_gpio);
 
 	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.region_chk[i])) {
@@ -2025,9 +2022,11 @@ void isoLoader_DefaultPreset() {
 	GUI_WidgetSetState(self.test_mode, 0);
 
 	int region = (int)info->region;
-	if(region < 0 || region >= (int)(sizeof(self.region_chk) >> 2)) region = 0;
-	GUI_WidgetSetState(self.region_chk[region], 1);
-	isoLoader_toggleRegion(self.region_chk[region]);
+	if(region < 1 || region > (int)(sizeof(self.region_chk) >> 2)) {
+		region = 1;
+	}
+	GUI_WidgetSetState(self.region_chk[region - 1], 1);
+	isoLoader_toggleRegion(self.region_chk[region - 1]);
 
 	GUI_WidgetSetState(self.os_chk[BIN_TYPE_AUTO], 1);
 	isoLoader_toggleOS(self.os_chk[BIN_TYPE_AUTO]);
@@ -2160,7 +2159,7 @@ int isoLoader_SavePreset(GUI_Widget *widget) {
 
 	for(int i = 0; i < sizeof(self.region_chk) >> 2; i++) {
 		if(GUI_WidgetGetState(self.region_chk[i])) {
-			info.region = i;
+			info.region = i + 1;
 			break;
 		}
 	}
@@ -2275,9 +2274,11 @@ int isoLoader_LoadPreset(GUI_Widget *widget) {
 	GUI_WidgetSetState(self.use_gpio, self.isoldr->use_gpio);
 
 	int region = (int)self.isoldr->region;
-	if(region < 0 || region > (int)(sizeof(self.region_chk) >> 2) - 1) region = 0;
-	GUI_WidgetSetState(self.region_chk[region], 1);
-	isoLoader_toggleRegion(self.region_chk[region]);
+	if(region < 1 || region > (int)(sizeof(self.region_chk) >> 2)) {
+		region = 1;
+	}
+	GUI_WidgetSetState(self.region_chk[region - 1], 1);
+	isoLoader_toggleRegion(self.region_chk[region - 1]);
 
 	if (self.isoldr->emu_vmu) {
 		char num[8], fn[32];
