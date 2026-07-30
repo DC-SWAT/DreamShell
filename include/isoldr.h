@@ -68,6 +68,14 @@
 
 
 /**
+ * Flashrom dump buffer layout at isoldr_info_t->firmware:
+ * [0 .. ISOLDR_FLASHROM_PATH_SIZE) path, then dump data.
+ */
+ #define ISOLDR_FLASHROM_PATH_SIZE 256
+ #define ISOLDR_FLASHROM_SIZE      0x20000
+
+
+/**
  * Boot mode
  */
 typedef enum isoldr_boot_mode {
@@ -155,6 +163,17 @@ typedef enum isoldr_image_type {
 
 } isoldr_image_type_t;
 
+/**
+ * Region codes (JP/US/EU match FLASHROM_REGION_*)
+ */
+ typedef enum isoldr_region {
+	ISOLDR_REGION_AUTO = 0,
+	ISOLDR_REGION_JAPAN,
+	ISOLDR_REGION_USA,
+	ISOLDR_REGION_EUROPE,
+	ISOLDR_REGION_KOREA,
+	ISOLDR_REGION_AUSTRALIA
+} isoldr_region_t;
 
 typedef struct isoldr_info {
 
@@ -193,8 +212,8 @@ typedef struct isoldr_info {
 	uint32_t bleem;                       /* Memory address for Bleem! binary or 1 for auto load. */
 	uint32_t alt_read;                    /* Use alternative reading without aborting. */
 	uint32_t use_gpio;                    /* Use GPIO-0 as button for IGR. */
-	uint32_t firmware;                    /* Memory address for flashrom dump or IRQ table. Set 1 for auto load. */
-	uint32_t region;                      /* Hardware region. 1 = Japan, 2 = USA, 3 = Europe, 4 = Korea, 5 = Australia */
+	uint32_t firmware;                    /* Flashrom dump (path+data) or IRQ table. Set 1 for auto load dump. */
+	uint32_t region;                      /* See isoldr_region_t */
 
 	uint32_t cdda_offset[40];             /* CDDA tracks offset, only for CDI images */
 

@@ -336,17 +336,9 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	}
 
 	if(region == -1) {
-		switch(flashrom_get_region_only()) {
-			case FLASHROM_REGION_US:
-				region = NAOMI_REGION_USA;
-				break;
-			case FLASHROM_REGION_EUROPE:
-				region = NAOMI_REGION_EXPORT;
-				break;
-			case FLASHROM_REGION_JAPAN:
-			default:
-				region = NAOMI_REGION_JAPAN;
-				break;
+		region = flashrom_get_region_only();
+		if(region <= 0) {
+			region = ISOLDR_REGION_JAPAN;
 		}
 	}
 

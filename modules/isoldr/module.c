@@ -476,7 +476,7 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 
 static void set_loader_type(isoldr_info_t *info) {
 	if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0 ||
-		info->image_type == IMAGE_TYPE_ROM_NAOMI)
+		info->firmware != 0 || info->image_type == IMAGE_TYPE_ROM_NAOMI)
 	{
 		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
 		info->fs_type[4] = '\0';
@@ -680,31 +680,60 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		info->firmware = (uintptr_t)buff;
 	}
 	else if(info->firmware == 1) {
+		char *p;
+		size_t plen = ISOLDR_FLASHROM_PATH_SIZE;
 
 		snprintf(fn, NAME_MAX, "%s/firmware/flash/dcus_ntsc.bin", getenv("PATH"));
+		p = fn + strlen(fn) - 11;
+
+		switch(info->region) {
+			case ISOLDR_REGION_JAPAN:
+			case ISOLDR_REGION_KOREA:
+				p[0] = 'j';
+				p[1] = 'p';
+				break;
+			case ISOLDR_REGION_EUROPE:
+			case ISOLDR_REGION_AUSTRALIA:
+				memcpy(p, "eu_pal.bin", sizeof("eu_pal.bin"));
+				break;
+		}
+
 		fd = fs_open(fn, O_RDONLY);
 
 		if(fd != FILEHND_INVALID) {
 			size_t flen = fs_total(fd);
-			uint8_t *buff = (uint8_t *) memalign(32, flen);
+			uint8_t *buff = (uint8_t *) memalign(32, plen + flen);
+			char *pfs = strchr(fn + 1, '/');
+
+			if(pfs != NULL) {
+				memmove(fn, pfs, strlen(pfs) + 1);
+			}
 
 			if(buff != NULL) {
-				if(fs_read(fd, buff, flen) == flen) {
-					dcache_wback_range((uintptr_t)buff, flen);
+				memset(buff, 0, plen);
+				snprintf((char *)buff, plen, "%s", fn);
+
+				if(fs_read(fd, buff + plen, flen) == flen) {
+					dcache_wback_range((uintptr_t)buff, plen + flen);
 					info->firmware = (uintptr_t)buff;
+					ds_printf("DS_PROCESS: Loading flashrom dump %s %d bytes to 0x%08lx\n",
+						fn, (int)flen, (uintptr_t)(buff + plen));
 				}
 				else {
 					ds_printf("DS_ERROR: Can't read flashrom dump file: %s\n", fn);
 					free(buff);
+					info->firmware = 0;
 				}
 			}
 			else {
 				ds_printf("DS_ERROR: No memory for flashrom\n");
+				info->firmware = 0;
 			}
 			fs_close(fd);
 		}
 		else {
 			ds_printf("DS_ERROR: Can't open flashrom dump file: %s\n", fn);
+			info->firmware = 0;
 		}
 	}
 
