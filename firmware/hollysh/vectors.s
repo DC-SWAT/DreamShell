@@ -73,8 +73,15 @@ _vectors_init:
     mov     #-1, r0
 
 .vector_menu:
+    mov     r4, r0
+    cmp/eq  #1, r0
+    bt      .vector_menu_reset
     rts
     mov     #0, r0
+.vector_menu_reset:
+    mov.l   RESET_RAM_ADDR, r0
+    jmp     @r0
+    nop
 
 .vector_gdc_bc:
     mov     #-1, r1
@@ -154,3 +161,5 @@ MENU_VECTOR_ADDR:
     .long   0xAC0000E0
 MENU_FUNC_ADDR:
     .long   .vector_menu
+RESET_RAM_ADDR:
+    .long   _hollysh_reset

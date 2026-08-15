@@ -28,20 +28,40 @@
 #define HOLLYSH_LOADER_BIN_ADDR         0x8c004000
 #define HOLLYSH_LOADER_BIN_END          (HOLLYSH_LOADER_BIN_ADDR + HOLLYSH_LOADER_ROM_SIZE)
 
+#define HOLLYSH_BIOS_VER_ROM_OFFSET     0x10
+#define HOLLYSH_RESET_ADDR              (0xA0000000 + HOLLYSH_BIOS_MAGIC_ROM_OFFSET + 0x40)
+#define HOLLYSH_TEST_ADDR               (0xA0000000 + HOLLYSH_BIOS_MAGIC_ROM_OFFSET + 0x60)
+#define HOLLYSH_GAME_ADDR               (0xA0000000 + HOLLYSH_BIOS_MAGIC_ROM_OFFSET + 0x80)
+
 /**
  * Detect if the BIOS is HollySH
  * \return BIOS version or 0 if not HollySH
  */
 static inline uint32_t hollysh_bios_detect(void) {
-	const volatile uint8_t *rom = HOLLYSH_BIOS_MAGIC_ROM_ADDR;
-	uint32_t i;
+    const volatile uint8_t *rom = HOLLYSH_BIOS_MAGIC_ROM_ADDR;
+    uint32_t i;
 
-	for(i = 0; i < HOLLYSH_BIOS_MAGIC_LEN; i++) {
-		if(rom[i] != (uint8_t)HOLLYSH_BIOS_MAGIC[i]) {
-			return 0;
-		}
-	}
-	return *(volatile uint32_t *)(rom + HOLLYSH_BIOS_MAGIC_LEN + 1);
+    for(i = 0; i < HOLLYSH_BIOS_MAGIC_LEN; i++) {
+        if(rom[i] != (uint8_t)HOLLYSH_BIOS_MAGIC[i]) {
+            return 0;
+        }
+    }
+    return *(volatile uint32_t *)(rom + HOLLYSH_BIOS_VER_ROM_OFFSET);
+}
+
+static inline void hollysh_bios_reset(void) {
+    ((void (*)(void))HOLLYSH_RESET_ADDR)();
+    do {} while(1);
+}
+
+static inline void hollysh_bios_test(void) {
+    ((void (*)(void))HOLLYSH_TEST_ADDR)();
+    do {} while(1);
+}
+
+static inline void hollysh_bios_game(void) {
+    ((void (*)(void))HOLLYSH_GAME_ADDR)();
+    do {} while(1);
 }
 
 #endif

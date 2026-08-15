@@ -7,7 +7,10 @@
 !//
 !///////////////////////////////////////////////////////////////////////////////
     .align 4
+    .globl _clxa_tbl
+    .globl _clxa_tbl_end
 .clxa_tbl:
+_clxa_tbl:
     .long 0xA05F6800, 0x10021000
     .long 0xA05F6804, 0x00010040
     .long 0xA05F6808, 0x00000000
@@ -226,3 +229,4 @@
     .long 0xA05F8140, 0x00100203
     .long 0xA05F8164, 0x0055C280
 .clxa_tbl_end:
+_clxa_tbl_end:

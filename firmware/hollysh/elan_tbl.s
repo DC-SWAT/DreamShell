@@ -7,7 +7,10 @@
 !//
 !///////////////////////////////////////////////////////////////////////////////
     .align 4
+    .globl _elan_tbl
+    .globl _elan_tbl_end
 .elan_tbl:
+_elan_tbl:
     .long 0xA8800010, 0x00000000
     .long 0xA8800014, 0x00002029
     .long 0xA8800018, 0x0000001F
@@ -25,3 +28,4 @@
     .long 0xA88000A4, 0x00008088
     .long 0xA88000D0, 0x00000006
 .elan_tbl_end:
+_elan_tbl_end:

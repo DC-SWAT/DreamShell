@@ -7,9 +7,13 @@
 !//
 !///////////////////////////////////////////////////////////////////////////////
     .align 4
+    .globl _clxc_tbl
+    .globl _clxc_tbl_end
 .clxc_tbl:
+_clxc_tbl:
     .long 0xA85F8008, 0x00000001
     .long 0xA85F8008, 0x00000000
     .long 0xA85F6900, 0xFFFFFFFF
     .long 0xA85F6908, 0xFFFFFFFF
 .clxc_tbl_end:
+_clxc_tbl_end:

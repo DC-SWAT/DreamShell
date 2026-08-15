@@ -335,3 +335,36 @@ _sg_bios_start:
 
 .bios_init_addr:
     .long	.start
+
+    .org 0x440
+
+    .globl	_hollysh_reset
+_hollysh_reset:
+    mov.l	.reset_fn, r0
+    jmp		@r0
+    nop
+    nop
+.reset_fn:
+    .long	_bios_reset
+
+    .org 0x460
+
+    .globl	_hollysh_test
+_hollysh_test:
+    mov.l	.test_fn, r0
+    jmp		@r0
+    nop
+    nop
+.test_fn:
+    .long	_bios_test
+
+    .org 0x480
+
+    .globl	_hollysh_game
+_hollysh_game:
+    mov.l	.game_fn, r0
+    jmp		@r0
+    nop
+    nop
+.game_fn:
+    .long	_bios_game

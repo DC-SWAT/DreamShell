@@ -5,7 +5,7 @@
 #
 
 VER_MAJOR = 1
-VER_MINOR = 0
+VER_MINOR = 1
 VER_MICRO = 0
 VER_BUILD = 0x30
 
@@ -58,7 +58,7 @@ ROMDISK_EXTRA = $(if $(strip $(ROMDISK_CONTENT)),$(ROMDISK_IMG))
 
 BIOS_PARTS = $(FONT_SRC_FILE) $(ROMDISK_EXTRA)
 
-BIOS_SRCS = start.s bios.s sh4.s holly.s vectors.s
+BIOS_SRCS = start.s bios.s sh4.s holly.s vectors.s hooks.s
 
 all: bios_clean $(TARGET_BIN)
 
