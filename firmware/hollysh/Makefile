@@ -50,6 +50,16 @@ BIOS_ROMDISK_BIN = $(BUILD)/bios_romdisk.bin
 BIOS_CFG = $(BUILD)/bios_cfg.s
 LOADER_CFG = $(BUILD)/loader_cfg.s
 FONT_BIN = $(BUILD)/font.bin
+BOOT_ROM_SIGN_OFFSET = 2096384
+BOOT_ROM_SIGN_KEY = 0x5A
+BOOT_ROM_SIGN_XOR = \
+	19150a0308131d120e7a721973091f1d \
+	1b7a1f140e1f080a0813091f0976160e \
+	1e745a6b6363627a1b36367a28333d32 \
+	2e297a283f293f282c3f3e7a38237a09 \
+	1f1d1b7a1f140e1f080a0813091f0976 \
+	160e1e745aa5a5a5a5a5a5a5a5a5a5a5 \
+	141b1517137a1815150e7a0815175a5a
 
 ROMDISK_DIR = romdisk
 ROMDISK_IMG = $(BUILD)/romdisk.img
@@ -148,6 +158,12 @@ $(TARGET_BIN): $(BIOS_BEFORE_FONT) $(FONT_BIN) | $(BUILD)
 	truncate -s $(TARGET_FONT_OFFSET) $@
 	cat $(FONT_BIN) >> $@
 	truncate -s 2M $@
+	@hex=$$(printf '%s' '$(BOOT_ROM_SIGN_XOR)' | tr -d '[:space:]'); \
+	key=$$(($(BOOT_ROM_SIGN_KEY))); esc=; \
+	for h in $$(printf '%s' "$$hex" | sed 's/\(..\)/\1 /g'); do \
+		esc=$$esc$$(printf '\\%03o' $$((0x$$h ^ key))); \
+	done; \
+	printf "$$esc" | dd of=$@ bs=1 seek=$(BOOT_ROM_SIGN_OFFSET) conv=notrunc 2>/dev/null
 
 install: $(TARGET_BIN)
 	-mkdir -p $(FW_DIR)

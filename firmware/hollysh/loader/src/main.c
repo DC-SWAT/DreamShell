@@ -83,6 +83,7 @@ int main(int argc, char *argv[]) {
 
     irq_disable();
 
+    loader_addr = CACHED_ADDR(LOADER_BIN_ADDR);
     loader_end = loader_addr + loader_size;
 
     /* Setup BIOS timer */
