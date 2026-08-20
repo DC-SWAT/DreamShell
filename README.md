@@ -122,6 +122,7 @@ cd ${KOS_BASE}/ds/firmware/hollysh && make && make install
 - nulldc emulator: `make nulldc`
 - flycast emulator: `make flycast`
 - make cdi image: `make cdi`
+- make IDE/SD FAT32 image: `make ide`
 
 ## Links
 - Website: http://www.dc-swat.ru/ 

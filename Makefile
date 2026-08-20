@@ -4,18 +4,20 @@
 # http://www.dc-swat.ru
 #
 # This Makefile can build CDI image (type "make cdi"),
+# IDE/CF raw FAT32 disk image (type "make ide"),
 # launch DS on DC through dc-tool-ip (type "make run")
-# or launch DS on emulators nullDC and lxdream 
-# (type "make nulldc" or "make lxdream").
+# or launch DS on emulators nullDC, lxdream and flycast
+# (type "make nulldc", "make lxdream", "make flycast"
+# or "make flycast-ide", "make flycast-ide-naomi").
 # Scroll down to see other options.
 #
 
 TARGET = DS
 VER_MAJOR = 4
 VER_MINOR = 0
-VER_MICRO = 4
+VER_MICRO = 5
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
-VER_BUILD = 0x30
+VER_BUILD = 0x11
 
 BUILD_TYPE_BASE = $(if $(filter 0x3%,$(VER_BUILD)),Release,$(if $(filter 0x2%,$(VER_BUILD)),RC,$(if $(filter 0x1%,$(VER_BUILD)),Beta,$(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
 BUILD_NUM = $(lastword $(subst 0x2,,$(subst 0x1,,$(subst 0x0,,$(subst 0x3,,$(VER_BUILD))))))
@@ -23,6 +25,7 @@ BUILD_TYPE_NAME = $(if $(filter Release,$(BUILD_TYPE_BASE)),$(BUILD_TYPE_BASE),$
 TARGET_NAME = DreamShell_v$(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)_$(BUILD_TYPE_NAME)
 TARGET_BIN = $(TARGET)_CORE.BIN
 TARGET_BIN_CD = 1$(TARGET_BIN)
+IDE_IMG_SIZE ?= 0
 
 TRAGET_VERSION = -DVER_MAJOR=$(VER_MAJOR) \
 				-DVER_MINOR=$(VER_MINOR) \
@@ -313,6 +316,19 @@ $(TARGET).cdi: $(TARGET_BIN_CD) make-build
 # $(DS_SDK)/bin/mkisofs -V DreamShell -G $(DS_RES)/IP.BIN -joliet -rock -l -x .DS_Store -o $(TARGET).iso $(DS_BUILD)
 # @$(DS_SDK)/bin/cdi4dc $(TARGET).iso $(TARGET).cdi -d >/dev/null
 
+ide: $(TARGET).img
+
+$(TARGET).img: $(TARGET_BIN) make-build
+	@echo Creating IDE FAT32 disk image...
+	@-rm -f $(DS_BUILD)/$(TARGET_BIN_CD)
+	@cp $(TARGET_BIN) $(DS_BUILD)/$(TARGET_BIN)
+	@-rm -rf $(DS_BUILD)/.* 2> /dev/null
+	@$(PYTHON) utils/make_ide_img.py -o $(TARGET).img -s $(IDE_IMG_SIZE) $(DS_BUILD)
+	@ln -sf $(TARGET).img g1ata.img
+	@-rm -f $(DS_BUILD)/$(TARGET_BIN)
+	@echo
+	@echo "\033[42m IDE image created: $(TARGET).img \033[0m"
+
 nulldc: $(TARGET).cdi
 	@echo Running DreamShell...
 	@./emu/nullDC.exe -serial "debug.log"
@@ -351,7 +367,13 @@ lxdgdb: $(TARGET).cdi
 	$(KOS_CC_BASE)/bin/$(KOS_CC_PREFIX)-gdb $(TARGET)-DBG.elf --eval-command "target remote localhost:2000"
 
 flycast: $(TARGET).cdi
-	Flycast -config config:Debug.SerialConsoleEnabled=yes ./$(TARGET).cdi
+	$(FLYCAST) -config config:Debug.SerialConsoleEnabled=yes ./$(TARGET).cdi
+
+flycast-ide: $(TARGET).img
+	$(FLYCAST) -config Debug:MCPEnabled=yes -config config:Debug.SerialConsoleEnabled=yes $(abspath $(TARGET).img)
+
+flycast-ide-naomi: $(TARGET).img
+	$(FLYCAST) -config config:ForceNaomi=yes -config Debug:MCPEnabled=yes -config config:Debug.SerialConsoleEnabled=yes $(abspath $(TARGET).img)
 
 gprof:
 	@sh-elf-gprof $(TARGET)-DBG.elf $(DS_BUILD)/gmon.out > gprof.out
@@ -362,7 +384,7 @@ gprof:
 core: $(TARGET_BIN)
 	cp $(DS_BASE)/$(TARGET_BIN) $(DS_BUILD)
 
-TARGET_CLEAN_BIN = 1$(TARGET)_CORE.BIN $(TARGET)_CORE.BIN $(TARGET).elf $(TARGET).cdi
+TARGET_CLEAN_BIN = 1$(TARGET)_CORE.BIN $(TARGET)_CORE.BIN $(TARGET).elf $(TARGET).cdi $(TARGET).img g1ata.img
 
 clean:
 	-rm -f $(TARGET_CLEAN_BIN) $(OBJS) $(SRC_DIR)/exports.c $(SRC_DIR)/exports_gcc.c
