@@ -13,7 +13,6 @@
 #include <arch/cache.h>
 #include <arch/timer.h>
 #include <dc/sq.h>
-#include <dc/fifo.h>
 
 #define AICA_PAN(x) ((x) == 0x80 ? (0) : ((x) < 0x80 ? (0x1f) : (0x0f)))
 
@@ -74,12 +73,6 @@ static cdda_ctx_t *cdda = &_cdda;
 
 cdda_ctx_t *get_CDDA(void) {
 	return &_cdda;
-}
-
-/* When CPU accessing to the SPU RAM or AICA,
-	this is required at least every 8 32-bit */
-static inline void g2_fifo_wait() {
-	do { } while(FIFO_STATUS & (FIFO_G2 | FIFO_AICA));
 }
 
 /* G2 Bus locking */
@@ -360,7 +353,7 @@ static void aica_stop_cdda(void) {
 	val = CHNREG32(cdda->left_channel,  0);
 	var = CHNREG32(cdda->right_channel, 0);
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 
 	CHNREG32(cdda->left_channel, 0) = (val & ~0x4000) | 0x8000;
 	CHNREG32(cdda->right_channel, 0) = (var & ~0x4000) | 0x8000;
@@ -434,7 +427,7 @@ static void aica_setup_cdda(int clean) {
 	CHNREG32(cdda->left_channel, 24) = cdda->aica_freq;
 	CHNREG32(cdda->right_channel, 24) = cdda->aica_freq;
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 
 	CHNREG32(cdda->left_channel, 12) = cdda->end_pos & 0xffff;
 	CHNREG32(cdda->right_channel, 12) = cdda->end_pos & 0xffff;
@@ -454,7 +447,7 @@ static void aica_setup_cdda(int clean) {
 	CHNREG32(cdda->left_channel, 0) = val | (smp_ptr >> 16);
 	CHNREG32(cdda->right_channel, 0) = val | ((smp_ptr + smp_size) >> 16);
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 
 	/* Start SH4 timer */
 	timer_start(cdda->timer);
@@ -482,7 +475,7 @@ static uint32 aica_change_cdda_channel(uint32 channel, uint32 exclude) {
 		}
 		val = CHNREG32(channel, 0);
 		if (try_count % 8) {
-			g2_fifo_wait();
+			aica_fifo_wait();
 		}
 	} while ((val & 0x4000) != 0);
 	g2_unlock();
@@ -558,7 +551,7 @@ static int aica_check_cdda(void) {
 		// LOGF("CDDA: R PAN %04lx != %04lx\n", val, (AICA_PAN(255) | (0xf << 8)));
 	}
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 
 	val = CHNREG32(cdda->left_channel, 40) & 0xffff;
 	if (val != check_vol) {
@@ -627,7 +620,7 @@ uint32 aica_get_pos(void) {
 	SNDREG32(0x280c) = (SNDREG32(0x280c) & 0xffff00ff) | (cdda->left_channel << 8);
 	g2_unlock();
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 
 	/* Update position counters */
 	g2_lock();
@@ -644,20 +637,20 @@ static void aica_init(void) {
 
 	SNDREG32(0x2800) = 0x0000;
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 
 	for(int i = 0; i < 64; ++i) {
-		if(!(i % 4)) g2_fifo_wait();
+		if(!(i % 4)) aica_fifo_wait();
 
 		CHNREG32(i, 0) = 0x8000;
 		CHNREG32(i, 20) = 0x1f;
 	}
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 	SNDREG32(0x2800) = 0x000f | ram_mode;
 	*(vuint32 *)NONCACHED_ADDR(AICA_MEMORY_START) = 0xeafffff8;
 
-	g2_fifo_wait();
+	aica_fifo_wait();
 	SNDREG32(0x2c00) = SNDREG32(0x2c00) & ~1;
 
 	g2_unlock();

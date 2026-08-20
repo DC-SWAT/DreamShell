@@ -27,6 +27,7 @@
     .globl      _boot_vbr
     .globl      _irq_disable
     .globl      _irq_restore
+    .globl      _irq_sr
 
     .text
 start:
@@ -112,6 +113,11 @@ _irqd_or:
     ! Restore interrupts to the state returned by irq_disable().
 _irq_restore:
     ldc r4,sr
+    rts
+    nop
+
+_irq_sr:
+    stc sr,r0
     rts
     nop
 

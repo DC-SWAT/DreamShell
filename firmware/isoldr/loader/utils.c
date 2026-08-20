@@ -16,6 +16,7 @@
 #include <exception.h>
 #include <naomi/cart.h>
 #include <gpio.h>
+#include <drivers/aica.h>
 
 #ifndef HAVE_EXPT
 // Just for decreasing ifdef's with HAVE_EXPT
@@ -26,6 +27,23 @@ int exception_inside_int(void) {
 	return 0;
 }
 #endif
+
+void aica_halt(void) {
+	int i;
+
+	AICA_DMA_ADEN = AICA_DMA_DISABLE;
+	AICA_DMA_ADST = AICA_DMA_DISABLE;
+
+	aica_fifo_wait();
+	SNDREG32(0x2c00) |= 1;
+	aica_fifo_wait();
+	SNDREG32(0x2800) &= ~0x000f;
+
+	for (i = 0; i < 64; i++) {
+		aica_fifo_wait();
+		CHNREG32(i, 0) = 0x8000;
+	}
+}
 
 void setup_machine(void) {
 

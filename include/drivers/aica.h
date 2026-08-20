@@ -1,7 +1,7 @@
 /** 
  * \file    aica.h
  * \brief   Definitions for AICA sound system
- * \date    2013-2014
+ * \date    2013-2014, 2023-2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -10,6 +10,7 @@
 #define _DS_AICA_H
 
 #include <stdint.h>
+#include <dc/fifo.h>
 
 /**
  * Sound memory start address (0x00800000 - 0x009FFFE0) 
@@ -110,6 +111,13 @@
 #define SNDREG32(x)       (*(vuint32 *)SNDREGADDR(x))
 #define CHNREG32(ch, x)   (*(vuint32 *)CHNREGADDR(ch, x))
 
+/**
+ * Wait for AICA/G2 FIFO to drain.
+ * Required at least every 8 32-bit writes to SPU RAM or AICA registers.
+ */
+static inline void aica_fifo_wait(void) {
+	do { } while(FIFO_STATUS & (FIFO_G2 | FIFO_AICA));
+}
 
 /* Initialize AICA with custom firmware */
 int snd_init_firmware(const char *filename);

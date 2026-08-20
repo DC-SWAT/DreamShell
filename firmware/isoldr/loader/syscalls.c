@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * BIOS syscalls emulation
- * (c)2009-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2009-2026 SWAT <http://www.dc-swat.ru>
  * (c)2024 megavolt85
  */
 
@@ -17,6 +17,7 @@
 #include <arch/gdb.h>
 #include <arch/irq.h>
 #include <drivers/aica.h>
+#include <drivers/hollysh.h>
 
 #ifdef DEV_TYPE_SD
 #include <sd/spi.h>
@@ -1523,6 +1524,14 @@ void menu_exit(void) {
 		CDDA_Stop();
 	}
 #endif
+	if (hollysh_bios_detect()) {
+		hollysh_bios_reset();
+	}
+
+	aica_halt();
+	printf(NULL);
+	memset((uint32 *)VIDEO_VRAM_START, 0, 2 * 1024 * 1024);
+
 	int loaded = Load_DS();
 	setup_machine();
 	boot_stack = 0x8d000000;

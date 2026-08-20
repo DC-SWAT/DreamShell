@@ -727,7 +727,7 @@ static void g1_lba28_chain_next(void) {
 	OUT8(G1_ATA_COMMAND_REG, g1_lba28_cmd);
 
 	if (g1_lba28_count <= 256) {
-		g1_dma_set_irq_mask(1);
+		g1_dma_set_irq_mask(fs_dma_enabled() != FS_DMA_HIDDEN);
 	}
 
     OUT8(G1_ATA_DMA_ENABLE, 1);
@@ -832,6 +832,9 @@ static s32 g1_ata_access(struct ide_req *req) {
 
 		/* Setup DMA transfer */
 		if (is_dma) {
+			if (fs_dma_enabled() == FS_DMA_HIDDEN) {
+				g1_dma_set_irq_mask(0);
+			}
 			OUT32(G1_ATA_DMA_PRO, G1_ATA_DMA_PRO_ALLMEM);
 			OUT32(G1_ATA_DMA_ADDRESS, PHYS_ADDR((u32)buff));
 			OUT32(G1_ATA_DMA_LENGTH, req->bytes ? req->bytes : (len * sector_size));
