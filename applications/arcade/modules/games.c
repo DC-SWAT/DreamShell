@@ -84,13 +84,26 @@ static int GetGameFileFromDir(const char *dir, char *result_name, size_t result_
     if (d == FILEHND_INVALID) return 0;
 
     const dirent_t *de;
+    int best = 0;
     int found = 0;
 
     while ((de = fs_readdir(d))) {
-        if (IsGameExtension(de->name)) {
-            if (result_name) snprintf(result_name, result_size, "%s", de->name);
+        int prio;
+
+        if (de->name[0] == '.') {
+            continue;
+        }
+        if (de->attr & O_DIR) {
+            continue;
+        }
+
+        prio = IsGameExtension(de->name);
+        if (prio > best) {
+            best = prio;
+            if (result_name) {
+                snprintf(result_name, result_size, "%s", de->name);
+            }
             found = 1;
-            break;
         }
     }
     fs_close(d);

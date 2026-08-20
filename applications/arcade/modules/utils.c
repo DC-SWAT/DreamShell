@@ -78,13 +78,29 @@ void GetMD5(const char *path, uint8 *md5) {
 
 int IsGameExtension(const char *filename) {
     int len = strlen(filename);
-    if (len > 4) {
-        const char *ext = filename + len - 4;
-        if (!strcasecmp(ext, ".gdi") || !strcasecmp(ext, ".cdi") || 
-            !strcasecmp(ext, ".iso") || !strcasecmp(ext, ".cso") ||
-            !strcasecmp(ext, ".dni") || !strcasecmp(ext, ".bin")) {
-            return 1;
-        }
+    const char *ext;
+
+    if (len <= 4) {
+        return 0;
+    }
+    if (!strncasecmp(filename, "track", 5)) {
+        return 0;
+    }
+
+    ext = filename + len - 4;
+
+    if (!strcasecmp(ext, ".gdi")) {
+        return 4;
+    }
+    if (!strcasecmp(ext, ".dni")) {
+        return 3;
+    }
+    if (!strcasecmp(ext, ".cdi") || !strcasecmp(ext, ".cso") ||
+        !strcasecmp(ext, ".iso")) {
+        return 2;
+    }
+    if (!strcasecmp(ext, ".bin")) {
+        return 1;
     }
     return 0;
 }
