@@ -1152,8 +1152,8 @@ DWORD contiguous_sect(
 	FIL* fp		/* Pointer to the file object */
 )
 {
-	DWORD csect, ncl, tcl, *tbl;
-	csect = (BYTE)(fp->fptr / SS(fp->fs) & (fp->fs->csize - 1));
+	DWORD csect, ncl, cl, *tbl;
+	csect = (fp->fptr / SS(fp->fs)) & (fp->fs->csize - 1);
 
 	if (!fp->cltbl) {
 		return fp->fs->csize - csect;
@@ -1161,23 +1161,20 @@ DWORD contiguous_sect(
 
 	tbl = fp->cltbl + 1;	/* Top of CLMT */
 
-	if (!fp->clust) {
-		return (*tbl * fp->fs->csize) - csect;
-	}
-
+	cl = fp->fptr / SS(fp->fs) / fp->fs->csize;
 	for (;;) {
 		ncl = *tbl++;		/* Number of clusters in the fragment */
 		if (!ncl) {
 			return 0;		/* End of table? (error) */
 		}
-		tcl = *tbl;
-		if (fp->clust < tcl + ncl) {
+		if (cl < ncl) {
 			break;
 		}
+		cl -= ncl;
 		tbl++;
 	}
 
-	ncl = ncl - (fp->clust - tcl);
+	ncl = ncl - cl;
 	if (ncl == 0) {
 		return 0;
 	}
