@@ -130,7 +130,7 @@ int fs_init(int disk_part) {
 
 		memset(_fat_fs[vol], 0, sizeof(FATFS));
 
-		LOGF("FATFS[%d]: 0x%08lx, secbuf: 0x%08lx, FILEs: 0x%08lx\n",
+		DBGF("FATFS[%d]: 0x%08lx, secbuf: 0x%08lx, FILEs: 0x%08lx\n",
 			vol, (uint32)_fat_fs[vol], (uint32)_fat_fs[vol]->win, (uint32)_files);
 	}
 

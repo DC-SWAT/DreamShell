@@ -86,6 +86,7 @@ extern void boot_stub(void *, uint32) __attribute__((noreturn));
 void setup_machine(void);
 void shutdown_machine(void);
 void setup_region(void);
+void aica_halt(void);
 
 #define launch(addr) \
 	void (*fboot)(uint32) __attribute__((noreturn));     \
