@@ -32,7 +32,7 @@ typedef struct naomi_load_entry {
 
 /** \brief   NAOMI cartridge header. */
 typedef struct naomi_cart_header {
-    char system_name[16];           /**< \brief "NAOMI" space padded */
+    char system_name[16];           /**< \brief "NAOMI" or "Naomi2" space padded */
     char publisher[32];             /**< \brief "SEGA ENTERPRISES,LTD." space padded */
     char regional_name[8][32];      /**< \brief Space padded */
 
@@ -124,5 +124,9 @@ typedef struct naomi_cart_header {
     */
     uint8_t encryption;
 } naomi_cart_header_t;
+
+static inline int naomi_cart_valid(const naomi_cart_header_t *hdr) {
+    return hdr->system_name[0] == 'N' && hdr->system_name[15] == ' ';
+}
 
 #endif  /* __NAOMI_CART_H */

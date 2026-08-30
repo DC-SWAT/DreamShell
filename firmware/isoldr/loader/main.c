@@ -6,7 +6,6 @@
 #include <main.h>
 #include <arch/timer.h>
 #include <arch/cache.h>
-#include <naomi/cart.h>
 #include <asic.h>
 #include <exception.h>
 #include <ubc.h>
@@ -16,13 +15,15 @@
 isoldr_info_t *IsoInfo;
 uint32 loader_addr = 0;
 uint32 loader_end;
+extern uint32 loader_size;
+extern void start(void) __asm__("start");
 
 int main(int argc, char *argv[]) {
 
 	(void)argc;
 	(void)argv;
 
-	IsoInfo = (isoldr_info_t *)LOADER_ADDR;
+	IsoInfo = (isoldr_info_t *)((uint32)start - ISOLDR_PARAMS_SIZE);
 	loader_addr = (uint32)IsoInfo;
 	loader_end = loader_addr + loader_size + ISOLDR_PARAMS_SIZE + 32;
 
@@ -31,6 +32,9 @@ int main(int argc, char *argv[]) {
 	printf("DreamShell ISO from "DEV_NAME" loader v"VERSION"\n");
 
 	malloc_init(1);
+#ifdef HAVE_NAOMI
+	naomi_cart_stack_setup();
+#endif
 
 	/* Setup BIOS timer */
 	timer_init();
@@ -103,54 +107,32 @@ int main(int argc, char *argv[]) {
 		fs_enable_dma(FS_DMA_DISABLED);
 	}
 
-#ifdef HAVE_EXT_SYSCALLS
+#ifdef HAVE_NAOMI
 	if(IsoInfo->image_type == IMAGE_TYPE_ROM_NAOMI) {
 		printf("Loading executable...\n");
 
-		if(!Load_NaomiBin()) {
+		if(!naomi_load_bin(0)) {
 			goto error;
 		}
-		/* Clear ROM DMA busy flag */
-		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
-		/* Patch some values */
-		*((uint32_t *)NONCACHED_ADDR(NAOMI_CART_REGION_ADDR)) = IsoInfo->region > 0 ?
-			IsoInfo->region - 1 : 0; // See naomi/cart.h for region values
-		*((uint32_t *)NONCACHED_ADDR(0x0c01f104)) = 1;
-		*((uint32_t *)NONCACHED_ADDR(0x0c01f108)) = 0;
-		*((uint32_t *)NONCACHED_ADDR(0x0c01f10c)) = 1; // 31 KHz
 
-		/* Set VBR address for IRQ vectors */
-		boot_vbr = 0x0c000000;
-		LOGF("Setting VBR address to %08lx\n", boot_vbr);
-
-		/* Set stack pointer */
-		boot_stack = 0x0cc00000;
-		LOGF("Setting stack pointer to %08lx\n", boot_stack);
-
-		/* Set SR value */
-		boot_sr = 0x60000101;
-		LOGF("Setting SR to %08lx\n", boot_sr);
-
-		uint8_t *dst = (uint8_t *) NONCACHED_ADDR(SYSCALLS_FW_ADDR);
-		uint8_t *src = (uint8_t *) IsoInfo->firmware;
-		LOGF("Loading IRQ vectors from %08lx to %08lx %d bytes\n",
-			(uintptr_t)src, (uintptr_t)dst, 0x4f00);
-		memcpy(dst, src, 0x4f00);
-
-		dst = (uint8_t *) NONCACHED_ADDR(0x0c018000);
-		src = (uint8_t *) IsoInfo->firmware + 0x4f00;
-		LOGF("Loading IRQ handlers from %08lx to %08lx %d bytes\n",
-			(uintptr_t)src, (uintptr_t)dst, 0x7000);
-		memcpy(dst, src, 0x7000);
+		if(!get_naomi()->aw) {
+			naomi_hook_boot_services(NONCACHED_ADDR((uint32)naomi_enter_test),
+				NONCACHED_ADDR((uint32)naomi_enter_game));
+		}
 
 # ifdef HAVE_EXPT
 		if(IsoInfo->use_irq) {
-			exception_init(boot_vbr);
-			asic_init();
+			if(!exception_init(RAM_START_ADDR)) {
+				asic_init();
+#  if defined(DEV_TYPE_GD) || defined(DEV_TYPE_IDE)
+				g1_dma_init_irq();
+#  endif
+			}
 		}
 # endif
+		naomi_aw_prepare();
 	}
-	else 
+	else
 #endif
 	{
 #ifdef HAVE_BLEEM

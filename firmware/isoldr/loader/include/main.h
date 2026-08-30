@@ -21,6 +21,9 @@
 #include "reader.h"
 #include "cdda.h"
 #include "malloc.h"
+#ifdef HAVE_NAOMI
+#include "naomi.h"
+#endif
 
 /* Physycal addresses for RAM and ROM's */
 #define BIOS_ROM_ADDR                0x00000000
@@ -49,9 +52,6 @@
 #define IP_BIN_BOOTSTRAP_2_ADDR      (RAM_START_ADDR + 0xe000)
 #define APP_BIN_ADDR                 (RAM_START_ADDR + 0x10000)
 
-/* NAOMI software environment */
-#define NAOMI_CART_DMA_STATUS_ADDR   (RAM_START_ADDR + 0xac)
-#define NAOMI_CART_REGION_ADDR       (RAM_START_ADDR + 0x1f100)
 
 /* Address conversion */
 #define PHYS_ADDR(addr) ((addr) & 0x1fffffff)
@@ -64,7 +64,11 @@
 #define SYD_DDS_FLAG_ADDR  (IP_BIN_ADDR + 0xfc)
 #define SYD_DDS_FLAG_CLEAR 0x20
 
-#define SH4_OPCODE_NOP 0x0009
+#define SH4_OPCODE_NOP               0x0009
+#define SH4_OPCODE_RTS               0x000b
+#define SH4_OPCODE_JMP_R0            0x402b
+#define SH4_OPCODE_MOV_0_R0          0xe000
+#define SH4_OPCODE_MOVL_R0_PC(disp)  (0xd000 | ((disp) >> 2))
 
 #define HOLLY_REV_VA1 0x10
 #define HOLLY_REV_VA0 0x0b
@@ -112,7 +116,6 @@ int printf(const char *fmt, ...);
 #endif
 
 uint Load_BootBin();
-uint Load_NaomiBin();
 uint Load_IPBin(int header_only);
 int Load_DS();
 void Load_Syscalls();

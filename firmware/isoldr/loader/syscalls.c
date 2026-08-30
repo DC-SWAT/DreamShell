@@ -1448,55 +1448,8 @@ void gdGdcChangeDisc(int disc_num) {
 }
 
 void gdGdcCartRead(gdc_cart_read_params_t *params) {
-#ifdef HAVE_EXT_SYSCALLS
-
-	LOGFF("%s %ld %08lx %d\n",
-		params->type ? "DMA" : "PIO",
-		params->offset,
-		(uintptr_t)params->dst_buf,
-		params->size);
-
-# ifdef DEV_TYPE_SD
-	void *dst_buf = params->dst_buf;
-	static uint8_t *stream_buffer = NULL;
-
-	if(params->type) {
-		fs_enable_dma(IsoInfo->emu_async);
-
-		if((uintptr_t)params->dst_buf >> 24 == 0) {
-			if(stream_buffer == NULL) {
-				stream_buffer = aligned_alloc(32, params->size);
-			}
-			dst_buf = stream_buffer;
-		}
-	}
-	else {
-		fs_enable_dma(FS_DMA_DISABLED);
-	}
-	ReadSectors(dst_buf,
-		params->offset / IsoInfo->sector_size,
-		params->size / IsoInfo->sector_size, NULL);
-
-	if(params->type) {
-		dcache_purge_range((uintptr_t)dst_buf, params->size);
-		if(dst_buf != params->dst_buf) {
-			aica_dma_transfer(PHYS_ADDR((uintptr_t)stream_buffer),
-				(uintptr_t)params->dst_buf, params->size);
-		}
-	}
-# else
-	if(params->type) {
-		fs_enable_dma(FS_DMA_SHARED);
-	}
-	else {
-		fs_enable_dma(FS_DMA_DISABLED);
-	}
-	/* TODO: Async DMA support */
-	ReadSectors(params->dst_buf,
-		params->offset / IsoInfo->sector_size,
-		params->size / IsoInfo->sector_size, NULL);
-# endif
-
+#ifdef HAVE_NAOMI
+	naomi_cart_read(params);
 #else
 	(void)params;
 #endif

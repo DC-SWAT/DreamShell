@@ -244,4 +244,6 @@ typedef struct gdc_cart_read_params {
 	uint32_t type;    // reading type: 0 - PIO, 1 - DMA
 } gdc_cart_read_params_t;
 
+void gdGdcCartRead(gdc_cart_read_params_t *params);
+
 #endif
