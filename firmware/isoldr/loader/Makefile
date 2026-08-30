@@ -7,13 +7,14 @@ include Makefile.cfg
 
 DEFS = ENABLE_CISO=1 ENABLE_MULTI_DISC=1
 DEFS_CDDA = ENABLE_CDDA=1 ENABLE_IRQ=1 ENABLE_LIMIT=1
-DEFS_VMU = ENABLE_WRITE=1 ENABLE_MAPLE=1 ENABLE_LIMIT=1 ENABLE_MULTI_DISC=1
-DEFS_FEAT = ENABLE_CDDA=1 ENABLE_MAPLE=1 ENABLE_WRITE=1 ENABLE_MULTI_DISC=1
-DEFS_FULL = $(DEFS_FEAT) ENABLE_ESC=1 ENABLE_NAOMI=1 ENABLE_SCR=1 ENABLE_BLEEM=1
+DEFS_VMU = ENABLE_WRITE=1 ENABLE_IRQ=1 ENABLE_MAPLE=1 ENABLE_LIMIT=1 ENABLE_MULTI_DISC=1
+DEFS_FEAT = ENABLE_CDDA=1 ENABLE_IRQ=1 ENABLE_MAPLE=1 ENABLE_WRITE=1 ENABLE_MULTI_DISC=1
+DEFS_FULL = $(DEFS_FEAT) ENABLE_ESC=1 ENABLE_SCR=1 ENABLE_BLEEM=1
+DEFS_NAOMI = $(DEFS_FEAT) ENABLE_NAOMI=1 ENABLE_SCR=1 ENABLE_BLEEM=1
 
 TARGETS_CD = cd_full cd_feat cd_vmu cd_cdda cd
-TARGETS_SD = sd_full sd_feat sd_vmu sd_cdda sd
-TARGETS_IDE = ide_full ide_feat ide_vmu ide_cdda ide
+TARGETS_SD = sd_full sd_naomi sd_feat sd_vmu sd_cdda sd
+TARGETS_IDE = ide_full ide_naomi ide_feat ide_vmu ide_cdda ide
 # TARGETS_DCL = dcl_full dcl_feat dcl_vmu dcl_cdda dcl
 # TARGETS_NET = net_full net_feat net_vmu net_cdda net
 
@@ -39,6 +40,10 @@ sd_full: $(BUILD)/sd_full.bin
 $(BUILD)/sd_full.bin:
 	make -f Makefile.sd $(DEFS_FULL) NAME=sd_full
 
+sd_naomi: $(BUILD)/sd_naomi.bin
+$(BUILD)/sd_naomi.bin:
+	make -f Makefile.sd $(DEFS_NAOMI) NAME=sd_naomi
+
 ide: $(BUILD)/ide.bin
 $(BUILD)/ide.bin:
 	make -f Makefile.ide $(DEFS) NAME=ide
@@ -58,6 +63,10 @@ $(BUILD)/ide_feat.bin:
 ide_full: $(BUILD)/ide_full.bin
 $(BUILD)/ide_full.bin:
 	make -f Makefile.ide $(DEFS_FULL) NAME=ide_full
+
+ide_naomi: $(BUILD)/ide_naomi.bin
+$(BUILD)/ide_naomi.bin:
+	make -f Makefile.ide $(DEFS_NAOMI) NAME=ide_naomi
 
 cd: $(BUILD)/cd.bin
 $(BUILD)/cd.bin:
@@ -95,24 +104,25 @@ clean:
 
 install: 
 	-mkdir -p $(INSTALL_PATH)
-	cp $(BUILD)/*.bin $(INSTALL_PATH)
+	@-for f in $(BUILD)/*.elf; do rm -f $(INSTALL_PATH)/$$(basename $$f .elf).bin; done
+	-cp $(BUILD)/*.elf $(INSTALL_PATH)
 
 test_cd: clean $(TARGETS_CD)
 	-mkdir -p $(INSTALL_PATH)
-	cp $(BUILD)/cd*.bin $(INSTALL_PATH)
+	-cp $(BUILD)/cd*.elf $(INSTALL_PATH)
 
 test_cd_cdda: clean cd_cdda
 	-mkdir -p $(INSTALL_PATH)
-	cp $(BUILD)/cd*.bin $(INSTALL_PATH)
+	-cp $(BUILD)/cd*.elf $(INSTALL_PATH)
 
 test_ide: clean $(TARGETS_IDE)
 	-mkdir -p $(INSTALL_PATH)
-	cp $(BUILD)/ide*.bin $(INSTALL_PATH)
+	-cp $(BUILD)/ide*.elf $(INSTALL_PATH)
 
 test_ide_cdda: clean ide_cdda
 	-mkdir -p $(INSTALL_PATH)
-	cp $(BUILD)/ide*.bin $(INSTALL_PATH)
+	-cp $(BUILD)/ide*.elf $(INSTALL_PATH)
 
 test_sd: clean $(TARGETS_SD)
 	-mkdir -p $(INSTALL_PATH)
-	cp $(BUILD)/sd*.bin $(INSTALL_PATH)
+	-cp $(BUILD)/sd*.elf $(INSTALL_PATH)
