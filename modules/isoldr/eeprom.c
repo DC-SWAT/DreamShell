@@ -373,7 +373,7 @@ static bool naomi_eeprom_read_cart(const char *rom_file, char *game_id,
 		return false;
 	}
 
-	if(strncmp(cart_hdr.system_name, "NAOMI", 5) != 0) {
+	if(!naomi_cart_valid(&cart_hdr)) {
 		fs_close(fd);
 		ds_printf("DS_ERROR: Invalid NAOMI ROM header\n");
 		return false;

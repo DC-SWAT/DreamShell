@@ -23,6 +23,8 @@ int builtin_isoldr_cmd(int argc, char *argv[]);
 DEFAULT_MODULE_HEADER(isoldr);
 
 void isoldr_naomi_eeprom_prepare(isoldr_info_t *info);
+int isoldr_elf_load(const char *path, uint32_t dest,
+	uint8_t **out_data, size_t *out_size);
 
 int lib_open(klibrary_t *lib) {
 	AddCmd(lib_get_name(), "ISO Loader command line", (CmdHandler *)builtin_isoldr_cmd);
@@ -135,7 +137,7 @@ static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_fi
 		return -1;
 	}
 
-	if(strncmp(cart_hdr.system_name, "NAOMI", 5) != 0) {
+	if(!naomi_cart_valid(&cart_hdr)) {
 		ds_printf("DS_ERROR: Invalid NAOMI ROM header\n");
 		return -1;
 	}
@@ -475,21 +477,28 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 }
 
 static void set_loader_type(isoldr_info_t *info) {
-	if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0 ||
-		info->firmware != 0 || info->image_type == IMAGE_TYPE_ROM_NAOMI)
-	{
+	if (info->image_type == IMAGE_TYPE_ROM_NAOMI || hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
+		strncpy(info->fs_type, ISOLDR_TYPE_NAOMI, 5);
+		info->fs_type[5] = '\0';
+	}
+	else if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0 ||
+		info->firmware != 0) {
 		strncpy(info->fs_type, ISOLDR_TYPE_FULL, 4);
 		info->fs_type[4] = '\0';
-	} else if ((info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0) && info->emu_vmu == 0) {
+	}
+	else if ((info->emu_cdda != CDDA_MODE_DISABLED || info->use_irq != 0) && info->emu_vmu == 0) {
 		strncpy(info->fs_type, ISOLDR_TYPE_CDDA, 4);
 		info->fs_type[4] = '\0';
-	} else if (info->emu_vmu != 0 && info->emu_cdda == CDDA_MODE_DISABLED) {
+	}
+	else if (info->emu_vmu != 0 && info->emu_cdda == CDDA_MODE_DISABLED) {
 		strncpy(info->fs_type, ISOLDR_TYPE_VMU, 3);
 		info->fs_type[3] = '\0';
-	} else if (info->emu_vmu != 0 && info->emu_cdda != CDDA_MODE_DISABLED) {
+	}
+	else if (info->emu_vmu != 0 && info->emu_cdda != CDDA_MODE_DISABLED) {
 		strncpy(info->fs_type, ISOLDR_TYPE_FEAT, 4);
 		info->fs_type[4] = '\0';
-	} else {
+	}
+	else {
 		info->fs_type[0] = '\0';
 	}
 }
@@ -497,6 +506,10 @@ static void set_loader_type(isoldr_info_t *info) {
 void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 
 	char fn[NAME_MAX];
+	uint8_t *loader = NULL;
+	size_t len = 0;
+	size_t buf_size;
+	file_t fd;
 
 	if (strcmp(info->fs_dev, ISOLDR_DEV_DCLOAD) == 0
 		|| strcmp(info->fs_dev, ISOLDR_DEV_GDROM) == 0
@@ -515,36 +528,47 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 			getenv("PATH"), lib_get_name(), info->fs_dev);
 	}
 
-	file_t fd = fs_open(fn, O_RDONLY);
+	fd = fs_open(fn, O_RDONLY);
 
-	if(fd == FILEHND_INVALID) {
-		ds_printf("DS_ERROR: Can't open file: %s\n", fn);
-		return;
-	}
+	if(fd != FILEHND_INVALID) {
+		len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
+		buf_size = len < 0x20000 ? 0x25000 : len + 0x5000;
+		loader = (uint8_t *) memalign(32, buf_size);
 
-	size_t len = fs_total(fd) + ISOLDR_PARAMS_SIZE;
-	size_t buf_size = len < 0x20000 ? 0x25000 : len + 0x5000;
-	uint8_t *loader = (uint8_t *) memalign(32, buf_size);
+		if(loader == NULL) {
+			fs_close(fd);
+			ds_printf("DS_ERROR: No free memory, needed %d bytes\n", len);
+			return;
+		}
 
-	if(loader == NULL) {
+		ds_printf("DS_PROCESS: Loading %s %d bytes to %08lx\n",
+			fn, len - ISOLDR_PARAMS_SIZE, (uintptr_t)(loader + ISOLDR_PARAMS_SIZE));
+
+		memset(loader, 0, buf_size);
+
+		if(fs_read(fd, loader + ISOLDR_PARAMS_SIZE, len) != (len - ISOLDR_PARAMS_SIZE)) {
+			fs_close(fd);
+			free(loader);
+			ds_printf("DS_ERROR: Can't load %s\n", fn);
+			return;
+		}
+
 		fs_close(fd);
-		ds_printf("DS_ERROR: No free memory, needed %d bytes\n", len);
-		return;
+
+		if(addr != ISOLDR_DEFAULT_ADDR) {
+			patch_loader_addr(loader + ISOLDR_PARAMS_SIZE, len - ISOLDR_PARAMS_SIZE, addr);
+		}
 	}
+	else {
+		char *dot = strrchr(fn, '.');
 
-	ds_printf("DS_PROCESS: Loading %s %d bytes to %08lx\n",
-		fn, len - ISOLDR_PARAMS_SIZE, (uintptr_t)(loader + ISOLDR_PARAMS_SIZE));
-
-	memset(loader, 0, buf_size);
-
-	if(fs_read(fd, loader + ISOLDR_PARAMS_SIZE, len) != (len - ISOLDR_PARAMS_SIZE)) {
-		fs_close(fd);
-		free(loader);
-		ds_printf("DS_ERROR: Can't load %s\n", fn);
-		return;
+		if(dot != NULL) {
+			strcpy(dot, ".elf");
+		}
+		if(isoldr_elf_load(fn, addr, &loader, &len) < 0) {
+			return;
+		}
 	}
-
-	fs_close(fd);
 
 	if(info->syscalls == 1) {
 
@@ -737,10 +761,6 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		}
 	}
 
-	if(addr != ISOLDR_DEFAULT_ADDR) {
-		patch_loader_addr(loader + ISOLDR_PARAMS_SIZE, len - ISOLDR_PARAMS_SIZE, addr);
-	}
-
 	memcpy(loader, info, sizeof(*info));
 
 	if(info->image_type == IMAGE_TYPE_ROM_NAOMI) {
@@ -873,7 +893,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]) {
 		return CMD_ERROR;
 	}
 
-	info = isoldr_get_info(file, test_mode > -1 ? test_mode : 0);
+	info = isoldr_get_info(file, test_mode > -1 ? 1 : 0);
 
 	if(info == NULL) {
 		return CMD_ERROR;

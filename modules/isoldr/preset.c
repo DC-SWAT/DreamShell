@@ -349,6 +349,9 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	isoldr->alt_read = alt_read;
 	isoldr->emu_cdda = emu_cdda;
 	isoldr->use_irq = use_irq;
+	if(!preset_file && isoldr->image_type == IMAGE_TYPE_ROM_NAOMI) {
+		isoldr->use_irq = 1;
+	}
 	isoldr->syscalls = low;
 	isoldr->emu_async = emu_async;
 	isoldr->region = region;
@@ -372,7 +375,15 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 		exec_addr = strtoul(memory, NULL, 16);
 	}
 	else if(isoldr->image_type == IMAGE_TYPE_ROM_NAOMI) {
-		exec_addr = ISOLDR_DEFAULT_ADDR_NAOMI;
+		uint32_t phys = isoldr->exec.addr & MEM_AREA_CACHE_MASK;
+
+		if((phys >= 0x0d000000 && phys < 0x0d010000)
+			|| (isoldr->exec.addr & 0x80000000)) {
+			exec_addr = ISOLDR_DEFAULT_ADDR_NAOMI_DC;
+		}
+		else {
+			exec_addr = ISOLDR_DEFAULT_ADDR_NAOMI;
+		}
 	}
 
 	/* Platform-specific address overrides (applied even when preset is loaded) */

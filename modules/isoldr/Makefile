@@ -4,13 +4,13 @@
 #
 
 TARGET_NAME = isoldr
-OBJS = module.o exec.o execasm.o vm2.o preset.o eeprom.o
+OBJS = module.o exec.o execasm.o vm2.o preset.o eeprom.o elf.o
 DBG_LIBS = -lds -lisofs
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 0
 VER_MINOR = 8
-VER_MICRO = 4
+VER_MICRO = 5
 
 all: rm-elf
 
