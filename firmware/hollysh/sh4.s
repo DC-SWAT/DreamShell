@@ -127,12 +127,35 @@ _set_ram_size:
     mov.l R1, @R2
 
 !///////////////////////////////////////////////////////////////////////////////
-!// DMAC Initialization - enable DMA, otherwise Maple won't work
+!// DMAC Initialization
 !///////////////////////////////////////////////////////////////////////////////
 .sh4_dmac_init:
-    mov.l DMAC_DMAOR_DATA, R1            ! DMA operation register: 
-    mov.l DMAC_DMAOR_ADDR, R2            !  enable all channels & 
-    mov.l R1, @R2                        !  priority: CH2 > CH0 > CH1 > CH3
+    mov #0, R1
+    mov.l DMAC_CHCR0_ADDR, R2
+    mov.l R1, @R2
+    mov.l DMAC_CHCR1_ADDR, R2
+    mov.l R1, @R2
+    mov.l DMAC_CHCR3_ADDR, R2
+    mov.l R1, @R2
+
+    mov.l DMAC_SAR2_ADDR, R2
+    mov.l R1, @R2
+    mov.l DMAC_CHCR2_DATA, R1
+    mov.l DMAC_CHCR2_ADDR, R2
+    mov.l R1, @R2
+
+    mov #0, R1
+    mov.l DMAC_DMAOR_ADDR, R2
+    mov.l R1, @R2
+    mov.l DMAC_DMAOR_DATA, R1
+    mov.l R1, @R2
+
+    mov.l INTC_IPRB_DATA, R1
+    mov.l INTC_IPRB_ADDR, R2
+    mov.w R1, @R2
+    mov.l INTC_IPRC_DATA, R1
+    mov.l INTC_IPRC_ADDR, R2
+    mov.w R1, @R2
 
 !///////////////////////////////////////////////////////////////////////////////
 !// end
@@ -235,10 +258,30 @@ PDTRA_PB8DT_PB9DT:
 PDTRA_PAD:
     .word        0x0000
 
+DMAC_CHCR0_ADDR:
+    .long        0xFFA0000C
+DMAC_CHCR1_ADDR:
+    .long        0xFFA0001C
+DMAC_SAR2_ADDR:
+    .long        0xFFA00020
+DMAC_CHCR2_ADDR:
+    .long        0xFFA0002C
+DMAC_CHCR2_DATA:                         ! INC | EXT mem-to-dev | DE
+    .long        0x00001201
+DMAC_CHCR3_ADDR:
+    .long        0xFFA0003C
 DMAC_DMAOR_ADDR:                         ! DMA operation register
     .long        0xFFA00040              !    Initial: 0x00000000
 DMAC_DMAOR_DATA:                         !    Bios:    0x00008201  (kos-naomi: 0x8201)
     .long        0x00008201
+INTC_IPRB_ADDR:
+    .long        0xFFD00008
+INTC_IPRB_DATA:
+    .long        0x00000030
+INTC_IPRC_ADDR:
+    .long        0xFFD0000C
+INTC_IPRC_DATA:
+    .long        0x00000300
 
 STACK_INIT_16MB:
     .long        0x8d000000
