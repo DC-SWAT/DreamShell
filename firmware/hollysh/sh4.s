@@ -91,6 +91,15 @@ _set_ram_size:
     mov.l GPIO_PCTRA_ADDR, R2
     mov.w R1, @R2
 
+    mov.l FLASH_ROM_ADDR, R0
+    mov.l @R0, R1
+    mov.l FLASH_MAGIC, R2
+    cmp/eq R1, R2
+    bt .sh4_n2_bus_init
+    mov.l BSC_PDTRA_ADDR, R2
+    mov #0x20, R1
+    mov.w R1, @R2
+
 !    mov.w SCIF_SCSPTR2_DATA, R1          !(H'00c0)
 !    mov.l SCIF_SCSPTR2_ADDR, R2          !(H'ffe80020) SCSPTR2    
 !    mov.w R1, @R2
