@@ -5,8 +5,6 @@
    
 */
 
-#include <kos/md5.h>
-#include <naomi/cart.h>
 #include <isoldr.h>
 #include <stdlib.h>
 
@@ -167,6 +165,25 @@ static bool ScanGamesInDir(const char *dir) {
                     fs_close(d);
                     return false;
                 }
+            }
+        }
+        else if (IsGameExtension(de->name)) {
+            char file_name[NAME_MAX];
+            char display_name[64];
+            char *dot;
+
+            strncpy(file_name, de->name, sizeof(file_name) - 1);
+            file_name[sizeof(file_name) - 1] = '\0';
+
+            snprintf(display_name, sizeof(display_name), "%s", file_name);
+            dot = strrchr(display_name, '.');
+            if (dot) {
+                *dot = '\0';
+            }
+
+            if (!AddGameEntry(dir, display_name, file_name)) {
+                fs_close(d);
+                return false;
             }
         }
     }
@@ -411,22 +428,9 @@ static int FindGameFile(GameEntry *g, char *full_path, size_t size) {
     const char *ext = g->game_file + len - 4;
 
     if (!strcasecmp(ext, ".dni")) {
-        if (IsNaomiRom(full_path)) {
-            naomi_cart_header_t hdr;
-            file_t f = fs_open(full_path, O_RDONLY);
-            if (f != FILEHND_INVALID) {
-                fs_read(f, &hdr, sizeof(hdr));
-                fs_close(f);
-                kos_md5((uint8 *)&hdr, sizeof(hdr), g->md5);
-                return 1;
-            }
-        }
+        return IsNaomiRom(full_path);
     }
-    else {
-        GetMD5(full_path, g->md5);
-        return 1;
-    }
-    return 0;
+    return 1;
 }
 
 void RunGame(int index, int test_mode) {
@@ -445,7 +449,7 @@ void RunGame(int index, int test_mode) {
         return;
     }
 
-    char *preset_file = isoldr_find_preset(game_path, g->md5, 0);
+    char *preset_file = isoldr_find_preset(game_path, NULL, 0);
     uintptr_t exec_addr = isoldr_apply_preset(isoldr, preset_file);
 
     if (exec_addr == (uintptr_t)-1) {

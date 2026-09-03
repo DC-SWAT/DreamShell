@@ -6,7 +6,6 @@
 */
 
 #include <ds.h>
-#include <kos/md5.h>
 #include <isoldr.h>
 #include <naomi/cart.h>
 #include "app_internal.h"
@@ -57,23 +56,6 @@ int IsNaomiRom(const char *path) {
     fs_close(f);
 
     return (strncmp(hdr.system_name, "NAOMI", 5) == 0);
-}
-
-void GetMD5(const char *path, uint8 *md5) {
-    file_t fd = fs_open(path, O_RDONLY);
-    if (fd != FILEHND_INVALID) {
-        uint8_t boot_sector[2048];
-        if (fs_read(fd, boot_sector, sizeof(boot_sector)) == sizeof(boot_sector)) {
-            kos_md5(boot_sector, sizeof(boot_sector), md5);
-        }
-        else {
-            memset(md5, 0, 16);
-        }
-        fs_close(fd);
-    }
-    else {
-        memset(md5, 0, 16);
-    }
 }
 
 int IsGameExtension(const char *filename) {

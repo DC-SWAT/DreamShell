@@ -224,8 +224,6 @@ void getFirstPathComponent(const char *path, char *result);
 void makeGameRelativePath(char *dst, size_t dst_size, const char *base_path, const char *game_path, const char *filename);
 int IsGameExtension(const char *filename);
 int IsNaomiRom(const char *path);
-void GetMD5(const char *path, uint8 *md5);
-
 void ScanGames(void);
 void FreeGamesList(void);
 void UnloadGameVisual(int index);
