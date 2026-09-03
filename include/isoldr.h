@@ -247,6 +247,7 @@ int isoldr_can_use_dma(const isoldr_info_t *info);
 /**
  * Find preset file for the given image file path: checks user presets first,
  * then bundled romdisk. Pass default_only=1 to skip user presets.
+ * If md5 is NULL, it is computed from the image.
  * Returns path to the preset file, or NULL if not found.
 */
 char *isoldr_find_preset(const char *image_file, uint8_t *md5, int default_only);

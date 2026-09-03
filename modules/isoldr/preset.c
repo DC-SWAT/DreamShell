@@ -10,6 +10,7 @@
 #include "ds.h"
 #include "isoldr.h"
 #include "naomi/cart.h"
+#include <kos/md5.h>
 
 static char *trim_spaces(char *txt) {
 	int32_t i;
@@ -138,6 +139,37 @@ static void format_preset_filename(const char *base_path, const char *dir, uint8
 
 static char preset_filename_buf[NAME_MAX];
 
+#define PRESET_ISO_HASH_LEN 2048
+#define PRESET_MD5_LEN 16
+
+static void hash_image_md5(const char *image_file, uint8_t *md5) {
+	file_t fd;
+	const char *ext;
+	uint8_t buf[PRESET_ISO_HASH_LEN];
+	size_t n = PRESET_ISO_HASH_LEN;
+	ssize_t rd;
+
+	memset(md5, 0, PRESET_MD5_LEN);
+	fd = fs_open(image_file, O_RDONLY);
+	if(fd == FILEHND_INVALID) {
+		return;
+	}
+
+	ext = strrchr(image_file, '.');
+	if(ext && !strcasecmp(ext, ".dni")) {
+		n = sizeof(naomi_cart_header_t);
+		if(n > sizeof(buf)) {
+			n = sizeof(buf);
+		}
+	}
+
+	rd = fs_read(fd, buf, n);
+	fs_close(fd);
+	if(rd == (ssize_t)n) {
+		kos_md5(buf, n, md5);
+	}
+}
+
 char *isoldr_make_preset_filename(const char *image_file, uint8_t *md5) {
 	char base_path[NAME_MAX];
 
@@ -189,7 +221,13 @@ void isoldr_unmount_all_presets_romdisks(void) {
 }
 
 char *isoldr_find_preset(const char *image_file, uint8_t *md5, int default_only) {
+	uint8_t local_md5[PRESET_MD5_LEN];
 	int device_idx;
+
+	if(!md5) {
+		hash_image_md5(image_file, local_md5);
+		md5 = local_md5;
+	}
 
 	if(!default_only) {
 		char *preset_file = isoldr_make_preset_filename(image_file, md5);
