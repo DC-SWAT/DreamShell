@@ -648,14 +648,19 @@ void video_screenshot() {
 	}
 
 	set_file_number(filename, ++num);
-	file_t fd = open(filename, O_WRONLY | O_PIO);
+#ifdef HAVE_NAOMI
+	int flags = O_WRONLY;
+#else
+	int flags = O_WRONLY | O_PIO;
+#endif
+	file_t fd = open(filename, flags);
 
 	while (fd < 0) {
 		if (--try_cnt == 0) {
 			break;
 		} else if(fd == FS_ERR_NO_PATH) {
 
-			fd = open(filename + 3, O_WRONLY | O_PIO);
+			fd = open(filename + 3, flags);
 
 			if(fd == FS_ERR_NO_PATH) {
 				break;
@@ -664,7 +669,7 @@ void video_screenshot() {
 
 			num += 10;
 			set_file_number(filename, num);
-			fd = open(filename, O_WRONLY | O_PIO);
+			fd = open(filename, flags);
 		}
 	}
 	if (fd < 0) {

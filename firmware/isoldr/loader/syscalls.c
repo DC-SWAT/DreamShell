@@ -1584,7 +1584,7 @@ int flashrom_read(int offset, void *buffer, int bytes) {
 	return 0;
 }
 
-#if defined(HAVE_EXT_SYSCALLS) && _FS_READONLY == 0
+#if defined(HAVE_NAOMI) && _FS_READONLY == 0
 static int flashrom_persist(int offset, const void *data, int bytes) {
 	int fd, res;
 	const char *filename = (const char *)IsoInfo->firmware;
@@ -1621,7 +1621,7 @@ extern int flashrom_delete_hw(int offset);
 #endif
 
 int flashrom_write(int offset, void *buffer, int bytes) {
-#if defined(HAVE_EXT_SYSCALLS) && _FS_READONLY == 0
+#if defined(HAVE_NAOMI) && _FS_READONLY == 0
 	if(IsoInfo->firmware > 1) {
 		uint8_t *dst = (uint8_t *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + offset);
 		uint8_t *src = (uint8_t *)buffer;
@@ -1655,7 +1655,7 @@ int flashrom_write(int offset, void *buffer, int bytes) {
 }
 
 int flashrom_delete(int offset) {
-#if defined(HAVE_EXT_SYSCALLS) && _FS_READONLY == 0
+#if defined(HAVE_NAOMI) && _FS_READONLY == 0
 	if(IsoInfo->firmware > 1) {
 		uint32 info[2];
 		int part, start = -1, size = 0;
