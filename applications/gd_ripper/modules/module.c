@@ -21,7 +21,7 @@ static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, c
 static void* gd_ripper_thread(void *arg);
 static int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type);
 static int get_disc_status_and_type(int *status, int *disc_type);
-static int safe_cdrom_read_toc(CDROM_TOC *toc, bool high_density);
+static int safe_cdrom_read_toc(cd_toc_t *toc, bool high_density);
 static int prepare_destination_paths(char *dst_folder, char *dst_file, char *text);
 static int cleanup_failed_rip(char *dst_folder, char *dst_file);
 static int process_areas_and_tracks(char *dst_folder, char *dst_file, int area_count, int disc_type);
@@ -120,7 +120,7 @@ void gd_ripper_Gamename()
 
 void gd_ripper_ipbin_name()
 {
-	CDROM_TOC toc;
+	cd_toc_t toc;
 	int status = 0, disc_type = 0;
 	uint8_t *pbuff;
 	char text[NAME_MAX];
@@ -158,7 +158,7 @@ void gd_ripper_ipbin_name()
 
 	ds_printf("DS_PROCESS: Reading IP.BIN from LBA: %d\n", lba);
 
-	if (cdrom_read_sectors_ex(pbuff, lba, 1, CDROM_READ_DMA)) {
+	if (cdrom_read_sectors_ex(pbuff, lba, 1, true)) {
 		ds_printf("DS_ERROR: GD read error\n"); 
 		free(pbuff);
 		return;
@@ -330,7 +330,7 @@ getstatus:
 	return CMD_OK;
 }
 
-static int safe_cdrom_read_toc(CDROM_TOC *toc, bool high_density)
+static int safe_cdrom_read_toc(cd_toc_t *toc, bool high_density)
 {
 	int terr = 0;
 
@@ -383,7 +383,7 @@ static int cleanup_failed_rip(char *dst_folder, char *dst_file) {
 		return CMD_ERROR;
 	}
 
-	dirent_t *dir;
+	const dirent_t *dir;
 	while ((dir = fs_readdir(fd))) {
 		if (!strcmp(dir->name, ".") || !strcmp(dir->name, "..")) {
 			continue;
@@ -417,7 +417,7 @@ static const char *get_sector_info(uint32_t track_type, uint32_t *sector_size) {
 }
 
 static int get_track_info(int area, int disc_type, track_info_t *tracks, uint32_t *track_count) {
-	CDROM_TOC toc;
+	cd_toc_t toc;
 
 	if (safe_cdrom_read_toc(&toc, area == 1) != CMD_OK) {
 		return CMD_ERROR;
@@ -521,7 +521,7 @@ static void* gd_ripper_thread(void *arg) {
 	char dst_file[NAME_MAX];
 	char text[NAME_MAX];
 	int area_count;
-	CDROM_TOC toc;
+	cd_toc_t toc;
 
 	ds_printf("DS_PROCESS: Starting disc ripping process\n");
 	self.start_time = timer_ms_gettime64();
@@ -636,12 +636,12 @@ static void update_ui_display(double progress_percent, uint32_t current_sector_s
 static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, char *dst_file) {
 	double percent;
 	file_t hnd;
-	uint32_t secbyte, count_old = count, bad = 0, cdstat, readi;
-	uint32_t secmode;
+	uint32_t secbyte, count_old = count, cdstat, readi;
+	bool dma;
 	uint8_t *buffer;
 
 	get_sector_info(type, &secbyte);
-	secmode = secbyte == 2048 ? CDROM_READ_DMA : CDROM_READ_PIO;
+	dma = secbyte == 2048;
 	buffer = (uint8_t *)memalign(32, SEC_BUF_SIZE * secbyte);
 
 	if(!buffer) {
@@ -669,7 +669,7 @@ static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, c
 		int nsects = count > SEC_BUF_SIZE ? SEC_BUF_SIZE : count;
 		count -= nsects;
 
-		cdstat = cdrom_read_sectors_ex(buffer, first, nsects, secmode);
+		cdstat = cdrom_read_sectors_ex(buffer, first, nsects, dma);
 
 		while(cdstat != ERR_OK) {
 			if(!self.rip_active || !(self.app->state & APP_STATE_OPENED)) {
@@ -691,14 +691,13 @@ static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, c
 			}
 
 			thd_sleep(100);
-			cdstat = cdrom_read_sectors_ex(buffer, first, nsects, secmode);
+			cdstat = cdrom_read_sectors_ex(buffer, first, nsects, dma);
 		}
 
 		readi = 0;
 
 		if (cdstat != ERR_OK) {
 			memset(buffer, 0, nsects * secbyte);
-			bad++;
 			ds_printf("DS_ERROR: Can't read sector %ld\n", first);
 		}
 
@@ -724,7 +723,7 @@ static int rip_sec(uint32_t tn, uint32_t first, uint32_t count, uint32_t type, c
 
 int create_gdi_file(char *dst_folder, char *dst_file, char *text, int disc_type) {
 	FILE *fp;
-	CDROM_TOC gdtoc, cdtoc;
+	cd_toc_t gdtoc, cdtoc;
 	uint32_t track, lba, track_type;
 	uint32_t last_track;
 	uint32_t sector_size;
