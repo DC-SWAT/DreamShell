@@ -358,6 +358,7 @@ static void LayoutCenter512Icons(float avail_h) {
 static void ComputeAdaptiveColWidths(int page, int cols, float *col_w) {
     int i;
     int c;
+    float max_w;
 
     for(c = 0; c < cols; c++) {
         col_w[c] = 0.0f;
@@ -389,10 +390,20 @@ static void ComputeAdaptiveColWidths(int page, int cols, float *col_w) {
         }
     }
 
+    max_w = 0.0f;
+
     for(c = 0; c < cols; c++) {
-        if(col_w[c] < 1.0f) {
-            col_w[c] = 1.0f;
+        if(col_w[c] > max_w) {
+            max_w = col_w[c];
         }
+    }
+
+    if(max_w < 1.0f) {
+        max_w = 1.0f;
+    }
+
+    for(c = 0; c < cols; c++) {
+        col_w[c] = max_w;
     }
 }
 
