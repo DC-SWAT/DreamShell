@@ -144,16 +144,11 @@ _set_ram_size:
     mov.l R1, @R2
     mov.l DMAC_CHCR1_ADDR, R2
     mov.l R1, @R2
+    mov.l DMAC_CHCR2_ADDR, R2
+    mov.l R1, @R2
     mov.l DMAC_CHCR3_ADDR, R2
     mov.l R1, @R2
 
-    mov.l DMAC_SAR2_ADDR, R2
-    mov.l R1, @R2
-    mov.l DMAC_CHCR2_DATA, R1
-    mov.l DMAC_CHCR2_ADDR, R2
-    mov.l R1, @R2
-
-    mov #0, R1
     mov.l DMAC_DMAOR_ADDR, R2
     mov.l R1, @R2
     mov.l DMAC_DMAOR_DATA, R1
@@ -271,12 +266,8 @@ DMAC_CHCR0_ADDR:
     .long        0xFFA0000C
 DMAC_CHCR1_ADDR:
     .long        0xFFA0001C
-DMAC_SAR2_ADDR:
-    .long        0xFFA00020
 DMAC_CHCR2_ADDR:
     .long        0xFFA0002C
-DMAC_CHCR2_DATA:                         ! INC | EXT mem-to-dev | DE
-    .long        0x00001201
 DMAC_CHCR3_ADDR:
     .long        0xFFA0003C
 DMAC_DMAOR_ADDR:                         ! DMA operation register
