@@ -46,16 +46,14 @@ void getFirstPathComponent(const char *path, char *result) {
 
 int IsNaomiRom(const char *path) {
     file_t f = fs_open(path, O_RDONLY);
+    naomi_cart_header_t hdr;
+    int ok;
+
     if (f == FILEHND_INVALID) return 0;
 
-    naomi_cart_header_t hdr;
-    if (fs_read(f, &hdr, sizeof(hdr)) != sizeof(hdr)) {
-        fs_close(f);
-        return 0;
-    }
+    ok = isoldr_naomi_read_header(f, &hdr) == 0;
     fs_close(f);
-
-    return (strncmp(hdr.system_name, "NAOMI", 5) == 0);
+    return ok;
 }
 
 int IsGameExtension(const char *filename) {

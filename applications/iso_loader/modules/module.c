@@ -431,17 +431,12 @@ static void showROMInfo(const char *path) {
 		return;
 	}
 
-	if(fs_read(fd, &cart_hdr, sizeof(cart_hdr)) != sizeof(cart_hdr)) {
+	if(isoldr_naomi_read_header(fd, &cart_hdr) < 0) {
 		fs_close(fd);
-		setTitle("Read error");
-		return;
-	}
-	fs_close(fd);
-
-	if(strncmp(cart_hdr.system_name, "NAOMI", 5) != 0) {
 		setTitle("Invalid ROM format");
 		return;
 	}
+	fs_close(fd);
 
 	memset(title, 0, sizeof(title));
 	memset(noext, 0, sizeof(noext));

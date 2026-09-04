@@ -146,6 +146,7 @@ static void hash_image_md5(const char *image_file, uint8_t *md5) {
 	file_t fd;
 	const char *ext;
 	uint8_t buf[PRESET_ISO_HASH_LEN];
+	naomi_cart_header_t cart_hdr;
 	size_t n = PRESET_ISO_HASH_LEN;
 	ssize_t rd;
 
@@ -157,10 +158,13 @@ static void hash_image_md5(const char *image_file, uint8_t *md5) {
 
 	ext = strrchr(image_file, '.');
 	if(ext && !strcasecmp(ext, ".dni")) {
-		n = sizeof(naomi_cart_header_t);
-		if(n > sizeof(buf)) {
-			n = sizeof(buf);
+		if(isoldr_naomi_read_header(fd, &cart_hdr) < 0) {
+			fs_close(fd);
+			return;
 		}
+		kos_md5((uint8_t *)&cart_hdr, sizeof(cart_hdr), md5);
+		fs_close(fd);
+		return;
 	}
 
 	rd = fs_read(fd, buf, n);

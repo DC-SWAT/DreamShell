@@ -126,18 +126,42 @@ static int get_executable_info(isoldr_info_t *info, file_t fd) {
 	return 0;
 }
 
+int isoldr_naomi_read_header(file_t fd, naomi_cart_header_t *hdr) {
+	uint32_t addr;
+	uint8_t peek[16];
+
+	if(!hdr || fd == FILEHND_INVALID) {
+		return -1;
+	}
+
+	for(addr = 0; addr < NAOMI_CART_HDR_SCAN_MAX; addr += NAOMI_CART_PROBE_STEP) {
+		if(fs_seek64(fd, addr, SEEK_SET) < 0) {
+			return -1;
+		}
+		if(fs_read(fd, peek, sizeof(peek)) != (ssize_t)sizeof(peek)) {
+			return -1;
+		}
+		if((peek[0] != 'N' && peek[0] != 'S') || peek[15] != ' ') {
+			continue;
+		}
+		if(fs_seek64(fd, addr, SEEK_SET) < 0) {
+			return -1;
+		}
+		if(fs_read(fd, hdr, sizeof(*hdr)) != (ssize_t)sizeof(*hdr)) {
+			return -1;
+		}
+		if(naomi_cart_valid(hdr)) {
+			return 0;
+		}
+	}
+	return -1;
+}
+
 static int get_naomi_rom_info(isoldr_info_t *info, file_t fd, const char *rom_file, int test_mode) {
 	naomi_cart_header_t cart_hdr;
 	char *pbuf = NULL;
 
-	fs_seek(fd, 0, SEEK_SET);
-
-	if(fs_read(fd, &cart_hdr, sizeof(cart_hdr)) != sizeof(cart_hdr)) {
-		ds_printf("DS_ERROR: Can't read NAOMI ROM header\n");
-		return -1;
-	}
-
-	if(!naomi_cart_valid(&cart_hdr)) {
+	if(isoldr_naomi_read_header(fd, &cart_hdr) < 0) {
 		ds_printf("DS_ERROR: Invalid NAOMI ROM header\n");
 		return -1;
 	}

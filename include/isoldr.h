@@ -13,6 +13,9 @@
 #include <dc/cdrom.h>
 #include "isofs/isofs.h"
 #include "isofs/ciso.h"
+#ifndef _ISO_LOADER_H
+#include <naomi/cart.h>
+#endif
 
 
 /**
@@ -225,6 +228,13 @@ typedef struct isoldr_info {
  * Get some info from CD image or NAOMI ROM dump and fill info structure
  */
 isoldr_info_t *isoldr_get_info(const char *file, int test_mode);
+
+#ifndef _ISO_LOADER_H
+/**
+ * Read NAOMI ROM dump header from an open file (header may not be at offset 0).
+ */
+int isoldr_naomi_read_header(file_t fd, naomi_cart_header_t *hdr);
+#endif
 
 /**
  * Set alternative boot file
