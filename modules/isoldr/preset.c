@@ -463,8 +463,12 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 		char image_path[NAME_MAX];
 		build_image_full_path(isoldr, image_path, sizeof(image_path));
 		if(cdda_exists(image_path)) {
-			isoldr->emu_cdda = CDDA_MODE_DMA_TMU2;
+			isoldr->emu_cdda = CDDA_MODE_EXTENDED | CDDA_MODE_SRC_DMA |
+				CDDA_MODE_DST_DMA | CDDA_MODE_POS_TMU2 | CDDA_MODE_CH_ADAPT;
 			isoldr->use_irq = 1;
+			if(exec_addr == ISOLDR_DEFAULT_ADDR_LOW) {
+				exec_addr = ISOLDR_DEFAULT_ADDR_MIN_GINSU;
+			}
 		}
 	}
 
