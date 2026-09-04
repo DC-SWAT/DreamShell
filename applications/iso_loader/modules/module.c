@@ -1280,7 +1280,7 @@ void setModeCDDA(uint32 mode) {
 	}
 
 	/* Backward compatibility for v0.8 beta and some 0.6.x */
-	if (!(mode & CDDA_MODE_EXTENDED)) {
+	if (mode < CDDA_MODE_EXTENDED) {
 		switch (mode) {
 			case CDDA_MODE_DMA_TMU2:
 				isoLoader_toggleCDDA_Source(self.cdda_mode_src[1]);
