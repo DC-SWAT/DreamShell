@@ -1,5 +1,5 @@
 /** \file    naomi/cart.h
-    \brief   NAOMI cartridge information.
+    \brief   NAOMI cartridge and DIMM-slot ROM access.
     \ingroup naomi
 
     This file is part of DreamShell.
@@ -10,7 +10,44 @@
 #ifndef __NAOMI_CART_H
 #define __NAOMI_CART_H
 
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
+#include <kos/regfield.h>
+
+#define NAOMI_G1_BASE                    0xA05F7000
+
+#define NAOMI_CART_ROM_OFFSETH           0xA05F7000
+#define NAOMI_CART_ROM_OFFSETL           0xA05F7004
+#define NAOMI_CART_ROM_DATA              0xA05F7008
+#define NAOMI_CART_DMA_OFFSETH           0xA05F700C
+#define NAOMI_CART_DMA_OFFSETL           0xA05F7010
+#define NAOMI_CART_DMA_COUNT             0xA05F7014
+#define NAOMI_CART_M4_ID                 0xA05F7034
+#define NAOMI_CART_DIMM_COMMAND          0xA05F703C
+#define NAOMI_CART_DIMM_OFFSETL          0xA05F7040
+#define NAOMI_CART_DIMM_PARAMETERL       0xA05F7044
+#define NAOMI_CART_DIMM_PARAMETERH       0xA05F7048
+#define NAOMI_CART_DIMM_STATUS           0xA05F704C
+#define NAOMI_CART_LED                   0xA05F7068
+#define NAOMI_CART_BOARDID_WRITE         0xA05F7078
+#define NAOMI_CART_BOARDID_READ          0xA05F707C
+
+#define NAOMI_COMM_CTRL                  0xA05F7018
+#define NAOMI_COMM_OFFSET                0xA05F701C
+#define NAOMI_COMM_DATA                  0xA05F7020
+#define NAOMI_COMM_STATUS1               0xA05F7024
+#define NAOMI_COMM_STATUS2               0xA05F7028
+
+#define NAOMI_MBOARD_OFFSET              0xA05F7050
+#define NAOMI_MBOARD_DATA                0xA05F7054
+#define NAOMI_MBOARD_DMA_OFFSET          0xA05F7058
+#define NAOMI_MBOARD_STATUS              0xA05F705C
+#define NAOMI_MBOARD_BOARD_ID            0xA05F706C
+#define NAOMI_MBOARD_UART_IDX            0xA05F7070
+#define NAOMI_MBOARD_UART_DATA           0xA05F7074
+#define NAOMI_MBOARD_CONFIG_SLOT         0xA05F70C4
 
 typedef enum naomi_region {
     NAOMI_REGION_JAPAN = 0,
@@ -19,6 +56,14 @@ typedef enum naomi_region {
     NAOMI_REGION_KOREA = 3,
     NAOMI_REGION_AUSTRALIA = 4,
 } naomi_region_t;
+
+typedef enum naomi_cart_type {
+    NAOMI_CART_NONE = 0,
+    NAOMI_CART_M1,
+    NAOMI_CART_M2,
+    NAOMI_CART_M4,
+    NAOMI_CART_DIMM,
+} naomi_cart_type_t;
 
 /** \brief   NAOMI ROM load entry. */
 typedef struct naomi_load_entry {
@@ -29,6 +74,50 @@ typedef struct naomi_load_entry {
 
 #define NAOMI_EEPROM_GAME_ID_OFFSET  0x134
 #define NAOMI_EEPROM_INIT_OFFSET     0x1e0
+#define NAOMI_CART_HEADER_SIZE       0x500
+#define NAOMI_CART_SIZE_MAX          0x20000000
+#define NAOMI_CART_DMA_UNIT          0x20
+#define NAOMI_CART_PROBE_STEP        0x200000
+#define NAOMI_CART_HDR_SCAN_MAX      0x04000000
+
+/** \brief  Bits in ROM_OFFSET / DMA_OFFSET.
+
+    These are not a separate register: the cart address is 32-bit and the top
+    bits select access mode.
+
+    - AUTO: increment address after each PIO/DMA beat
+    - CRYPT: M4 decrypt / M2 crypto device (ROM_OFFSET). Same bit on DMA_OFFSET
+      holds the DMA engine so PIO can run
+    - 8MB: linear 8MB ROM mapping (needed for a raw dump; M1 DMA decrypts if clear)
+    - SLAVE: stacked slave ROM board
+*/
+#define NAOMI_CART_ADDR_AUTO         BIT(31)
+#define NAOMI_CART_ADDR_CRYPT        BIT(30)
+#define NAOMI_CART_ADDR_8MB          BIT(29)
+#define NAOMI_CART_ADDR_SLAVE        BIT(28)
+#define NAOMI_CART_ADDR_MASK         GENMASK(27, 0)
+
+#define NAOMI_CART_READ_DEFAULT      (NAOMI_CART_ADDR_AUTO | NAOMI_CART_ADDR_8MB)
+
+static inline uint32_t naomi_cart_dump_flags(naomi_cart_type_t type) {
+    uint32_t flags = NAOMI_CART_READ_DEFAULT;
+
+    if(type == NAOMI_CART_M4) {
+        flags |= NAOMI_CART_ADDR_CRYPT;
+    }
+    if(type == NAOMI_CART_DIMM) {
+        flags = NAOMI_CART_ADDR_AUTO;
+    }
+    return flags;
+}
+
+typedef struct naomi_cart_cfi {
+    uint16_t m4_id;
+    uint8_t  size_exp;
+    uint8_t  chips;
+    size_t   chip_size;
+    size_t   total_size;
+} naomi_cart_cfi_t;
 
 /** \brief   NAOMI cartridge header. */
 typedef struct naomi_cart_header {
@@ -115,7 +204,7 @@ typedef struct naomi_cart_header {
     uint8_t service_type;
 
     uint8_t ROM_checksums2[144];    /**< \brief 144 bytes of M1-type ROM checksums */
-    uint8_t padding[71];            /**< \brief Padding */
+    uint8_t padding[65];            /**< \brief Padding */
 
     /** \brief  Encryption flag.
 
@@ -125,8 +214,34 @@ typedef struct naomi_cart_header {
     uint8_t encryption;
 } naomi_cart_header_t;
 
-static inline int naomi_cart_valid(const naomi_cart_header_t *hdr) {
-    return hdr->system_name[0] == 'N' && hdr->system_name[15] == ' ';
+_Static_assert(sizeof(naomi_cart_header_t) == NAOMI_CART_HEADER_SIZE,
+    "naomi_cart_header_t must be 0x500 bytes");
+
+static inline bool naomi_cart_valid(const naomi_cart_header_t *hdr) {
+    return (hdr->system_name[0] == 'N' || hdr->system_name[0] == 'S')
+        && hdr->system_name[15] == ' ';
 }
+
+static inline bool naomi_cart_header_encrypted(const naomi_cart_header_t *hdr) {
+    return hdr->encryption != 0xFF;
+}
+
+#ifndef _ISO_LOADER_H
+size_t naomi_cart_pio_read(uint32_t offset, void *dst, size_t len, uint32_t flags);
+size_t naomi_cart_dma_read(uint32_t offset, void *dst, size_t len, uint32_t flags);
+size_t naomi_cart_read_ex(uint32_t offset, void *dst, size_t len, uint32_t flags);
+size_t naomi_cart_read(uint32_t offset, void *dst, size_t len);
+
+bool naomi_cart_read_header(naomi_cart_header_t *hdr);
+bool naomi_cart_dimm_present(void);
+uint16_t naomi_cart_m4_id(void);
+uint16_t naomi_cart_m1_id(void);
+naomi_cart_type_t naomi_cart_type(void);
+
+size_t naomi_cart_probe_size(void);
+void naomi_cart_apply_g1_timing(const naomi_cart_header_t *hdr);
+
+bool naomi_cart_cfi_query(naomi_cart_cfi_t *out);
+#endif
 
 #endif  /* __NAOMI_CART_H */

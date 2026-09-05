@@ -28,6 +28,7 @@ include dc/sound/sound.h
 include ds.h
 include naomi/bsram.h
 include naomi/coins.h
+include naomi/cart.h
 include fs.h
 include fatfs.h
 include uthash.h
@@ -342,6 +343,18 @@ naomi_coins_count
 naomi_coin_on_meter
 naomi_coin_service
 naomi_coin_set_callback
+naomi_cart_pio_read
+naomi_cart_dma_read
+naomi_cart_read_ex
+naomi_cart_read
+naomi_cart_read_header
+naomi_cart_dimm_present
+naomi_cart_m4_id
+naomi_cart_m1_id
+naomi_cart_type
+naomi_cart_probe_size
+naomi_cart_apply_g1_timing
+naomi_cart_cfi_query
 #
 splitline
 hex_to_int
