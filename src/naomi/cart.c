@@ -10,10 +10,12 @@
 #include <stdalign.h>
 #include <string.h>
 #include <arch/cache.h>
+#include <dc/asic.h>
 #include <dc/g1ata.h>
 #include <dc/memory.h>
 #include <kos/irq.h>
-#include <kos/timer.h>
+#include <kos/sem.h>
+#include <kos/thread.h>
 
 #include <naomi/cart.h>
 
@@ -52,7 +54,6 @@
 #define CART_ROM_IDLE_WORD   0xFFFF
 #define CART_ROM_ZERO_WORD   0x0000
 #define CART_DMA_TIMEOUT_MS  2000
-#define CART_DMA_DEAD_MS     50
 #define CART_DMA_HOLD        (NAOMI_CART_ADDR_AUTO | NAOMI_CART_ADDR_CRYPT)
 #define CART_M4_ID_MAGIC     0x5500
 #define CART_M4_PIC_BIT      0x2000
@@ -90,6 +91,13 @@ static uint32_t cart_wait_cwc = CART_G1_WAIT_PIO;
 static uint32_t cart_wait_gdrc = CART_G1_WAIT_DMA;
 static uint32_t cart_wait_gdwc = CART_G1_WAIT_DMA;
 static bool cart_m4_pio;
+static volatile int cart_dma_in_progress;
+static volatile int cart_dma_err;
+static int cart_dma_irq_hooked;
+static semaphore_t cart_dma_done = SEM_INITIALIZER(0);
+static asic_evt_handler_entry_t cart_old_dma_irq;
+static asic_evt_handler_entry_t cart_old_dma_over;
+static asic_evt_handler_entry_t cart_old_dma_ill;
 
 static void cart_g1_ata_mode(void);
 static void cart_pio_begin(void);
@@ -116,21 +124,70 @@ static void cart_g1_stop_dma(void) {
     CART_OUT32(G1_ATA_DMA_ENABLE, 0);
 }
 
-static void cart_g1_wait_idle(void) {
-    uint64_t t0;
-    uint32_t gdst;
+static void cart_dma_irq_fwd(const asic_evt_handler_entry_t *old, uint32_t code) {
+    if(old->hdl) {
+        old->hdl(code, old->data);
+    }
+}
 
-    t0 = timer_ms_gettime64();
-    while((gdst = CART_IN32(G1_ATA_DMA_STATUS)) & 1) {
-        if(timer_ms_gettime64() - t0 > CART_DMA_TIMEOUT_MS) {
+static void cart_dma_irq_hnd(uint32_t code, void *data) {
+    (void)data;
+
+    if(cart_dma_in_progress) {
+        cart_dma_err = (code != ASIC_EVT_GD_DMA);
+        cart_dma_in_progress = 0;
+        sem_signal(&cart_dma_done);
+        thd_schedule(true);
+        return;
+    }
+    if(code == ASIC_EVT_GD_DMA) {
+        cart_dma_irq_fwd(&cart_old_dma_irq, code);
+    }
+    else if(code == ASIC_EVT_GD_DMA_OVERRUN) {
+        cart_dma_irq_fwd(&cart_old_dma_over, code);
+    }
+    else {
+        cart_dma_irq_fwd(&cart_old_dma_ill, code);
+    }
+}
+
+static void cart_dma_irq_hook(void) {
+    if(cart_dma_irq_hooked) {
+        return;
+    }
+    cart_old_dma_irq = asic_evt_set_handler(ASIC_EVT_GD_DMA, cart_dma_irq_hnd, NULL);
+    cart_old_dma_over = asic_evt_set_handler(ASIC_EVT_GD_DMA_OVERRUN, cart_dma_irq_hnd, NULL);
+    cart_old_dma_ill = asic_evt_set_handler(ASIC_EVT_GD_DMA_ILLADDR, cart_dma_irq_hnd, NULL);
+    if(cart_old_dma_irq.hdl == NULL) {
+        asic_evt_enable(ASIC_EVT_GD_DMA, ASIC_IRQB);
+        asic_evt_enable(ASIC_EVT_GD_DMA_OVERRUN, ASIC_IRQB);
+        asic_evt_enable(ASIC_EVT_GD_DMA_ILLADDR, ASIC_IRQB);
+    }
+    cart_dma_irq_hooked = 1;
+}
+
+static bool cart_dma_abort(void) {
+    int done;
+
+    {
+        irq_disable_scoped();
+        done = !cart_dma_in_progress;
+        if(!done) {
+            cart_dma_in_progress = 0;
             cart_g1_stop_dma();
-            break;
-        }
-        if(timer_ms_gettime64() - t0 > CART_DMA_DEAD_MS && gdst == 0xFFFFFFFF) {
-            cart_g1_stop_dma();
-            break;
         }
     }
+    if(done) {
+        return sem_wait(&cart_dma_done) == 0 && !cart_dma_err;
+    }
+    return false;
+}
+
+static bool cart_dma_wait(void) {
+    if(sem_wait_timed(&cart_dma_done, CART_DMA_TIMEOUT_MS) == 0) {
+        return !cart_dma_err;
+    }
+    return cart_dma_abort();
 }
 
 static void cart_g1_apply_waits(void) {
@@ -278,8 +335,6 @@ static size_t cart_pio_read_locked(uint32_t offset, uint8_t *dst, size_t len,
 
 static bool cart_dma_start(void *dst, size_t len) {
     uint32_t addr;
-    uint64_t t0;
-    irq_mask_t irq;
 
     if(!len || (len & (NAOMI_CART_DMA_UNIT - 1))) {
         return false;
@@ -287,28 +342,21 @@ static bool cart_dma_start(void *dst, size_t len) {
 
     addr = (uint32_t)dst & MEM_AREA_CACHE_MASK & ~(NAOMI_CART_DMA_UNIT - 1);
 
-    irq = irq_disable();
-    CART_OUT32(G1_ATA_DMA_ADDRESS, addr);
-    CART_OUT32(G1_ATA_DMA_LENGTH, (uint32_t)len);
-    CART_OUT32(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
-    CART_OUT32(G1_ATA_DMA_ENABLE, 1);
-    CART_OUT32(G1_ATA_DMA_STATUS, 1);
-    irq_restore(irq);
+    cart_dma_irq_hook();
+    cart_dma_err = 0;
 
-    t0 = timer_ms_gettime64();
-    while(CART_IN32(G1_ATA_DMA_STATUS) & 1) {
-        if(timer_ms_gettime64() - t0 > CART_DMA_TIMEOUT_MS) {
-            CART_OUT32(G1_ATA_DMA_STATUS, 0);
-            CART_OUT32(G1_ATA_DMA_ENABLE, 0);
-            return false;
-        }
-        if(timer_ms_gettime64() - t0 > CART_DMA_DEAD_MS &&
-                CART_IN32(G1_ATA_DMA_LENGTH_STAT) == 0 &&
-                CART_IN32(G1_ATA_DMA_STATUS) == 0xFFFFFFFF) {
-            CART_OUT32(G1_ATA_DMA_STATUS, 0);
-            CART_OUT32(G1_ATA_DMA_ENABLE, 0);
-            return false;
-        }
+    {
+        irq_disable_scoped();
+        cart_dma_in_progress = 1;
+        CART_OUT32(G1_ATA_DMA_ADDRESS, addr);
+        CART_OUT32(G1_ATA_DMA_LENGTH, (uint32_t)len);
+        CART_OUT32(G1_ATA_DMA_DIRECTION, G1_DMA_TO_MEMORY);
+        CART_OUT32(G1_ATA_DMA_ENABLE, 1);
+        CART_OUT32(G1_ATA_DMA_STATUS, 1);
+    }
+
+    if(!cart_dma_wait()) {
+        return false;
     }
 
     CART_OUT32(G1_ATA_DMA_ENABLE, 0);
@@ -564,7 +612,6 @@ uint16_t naomi_cart_m1_id(void) {
         return 0;
     }
 
-    cart_g1_wait_idle();
     id = cart_reg_in(NAOMI_CART_DMA_COUNT);
     cart_unlock();
 
