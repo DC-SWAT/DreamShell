@@ -232,8 +232,7 @@ int InitDS() {
 			setenv("ARCH", "Set5.xx", 1);
 			break;
 		case HW_TYPE_NAOMI:
-			// Check Elan magic value
-			if(*(volatile uint32_t *)0xA8800000 == 0xE1AD0000) {
+			if(is_naomi_2()) {
 				setenv("ARCH", "NAOMI 2", 1);
 			}
 			else {

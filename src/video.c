@@ -126,6 +126,7 @@ void SetVideoMode(int mode) {
 			switch(region) {
 				case FLASHROM_REGION_US:
 				case FLASHROM_REGION_JAPAN:
+				case FLASHROM_REGION_KOREA:
 					video_mode = DM_640x480_NTSC_IL;
 					break;
 				case FLASHROM_REGION_EUROPE:

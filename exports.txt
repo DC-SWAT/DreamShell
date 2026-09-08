@@ -89,6 +89,9 @@ flashrom_get_region_only
 is_hacked_bios
 is_custom_bios
 is_no_syscalls
+is_dreamcast
+is_naomi
+is_naomi_2
 gzip_get_file_size
 CopyFile
 CopyDirectory
@@ -2272,6 +2275,7 @@ _arch_old_stack
 _arch_old_sr
 _arch_old_vbr
 _arch_old_fpscr
+_arch_mem_top
 #
 # RTC
 #

@@ -9,6 +9,7 @@
 #include "ds.h"
 #include "video.h"
 #include <dc/sound/sound.h>
+#include <dc/maple/mie.h>
 #include "drivers/aica_cmd_iface.h"
 #include <sys/time.h>
 
@@ -48,7 +49,29 @@ int snd_init_firmware(const char *filename) {
 int flashrom_get_region_only() {
 	int hw_region = 0;
 
-	if(hardware_sys_mode(&hw_region) != HW_TYPE_RETAIL) {
+	if(!is_dreamcast()) {
+		maple_device_t *dev = maple_enum_type(0, MAPLE_FUNC_MIE);
+
+		if(dev) {
+			mie_state_t *st = (mie_state_t *)maple_dev_status(dev);
+
+			if(st) {
+				uint8_t dip = st->jvs.panel.dip.raw &
+					(MIE_JVS_PANEL_DIP2_BIT | MIE_JVS_PANEL_DIP3_BIT);
+
+				switch(dip) {
+					case MIE_JVS_PANEL_DIP2_BIT:
+						return FLASHROM_REGION_US;
+					case MIE_JVS_PANEL_DIP3_BIT:
+						return FLASHROM_REGION_EUROPE;
+					case MIE_JVS_PANEL_DIP2_BIT | MIE_JVS_PANEL_DIP3_BIT:
+						return FLASHROM_REGION_KOREA;
+					default:
+						return FLASHROM_REGION_JAPAN;
+				}
+			}
+		}
+
 		switch(hw_region) {
 			case HW_REGION_ASIA:
 				return FLASHROM_REGION_JAPAN;
@@ -102,6 +125,21 @@ int is_custom_bios() {
 
 int is_no_syscalls() {
 	return (*(uint16 *)0xac000100) != 0x2f06;
+}
+
+int is_dreamcast() {
+	return hardware_sys_mode(NULL) == HW_TYPE_RETAIL;
+}
+
+int is_naomi() {
+	return hardware_sys_mode(NULL) == HW_TYPE_NAOMI;
+}
+
+int is_naomi_2() {
+	if(!is_naomi()) {
+		return 0;
+	}
+	return *(volatile uint32 *)0xa8800000 == 0xe1ad0000;
 }
 
 

@@ -49,10 +49,14 @@ int RemoveDirectory(const char *path, int verbose);
 
 void arch_shutdown();
 
+#define FLASHROM_REGION_KOREA 4
 int flashrom_get_region_only();
 int is_hacked_bios();
 int is_custom_bios();
 int is_no_syscalls();
+int is_dreamcast();
+int is_naomi();
+int is_naomi_2();
 
 uint32_t gzip_get_file_size(const char *filename);
 
