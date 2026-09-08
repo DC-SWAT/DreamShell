@@ -216,21 +216,34 @@ int open(const char *path, int flags) {
 	FILE *file = &_files[fd];
 	int mode = (flags & (O_RDONLY | O_WRONLY | O_RDWR));
 
-	switch(mode) {
-		case O_RDONLY:
-			fat_flags = (FA_OPEN_EXISTING | FA_READ);
-			break;
-#if _FS_READONLY == 0
-		case O_WRONLY:
-			fat_flags = FA_WRITE | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_CREATE_NEW);
-			break;
-		case O_RDWR:
-			fat_flags = (FA_WRITE | FA_READ) | (flags & O_TRUNC ? FA_CREATE_ALWAYS : FA_OPEN_ALWAYS);
-			break;
-#endif
-		default:
-			return FS_ERR_PARAM;
+	if(mode == O_RDONLY) {
+		fat_flags = FA_READ;
 	}
+#if _FS_READONLY == 0
+	else if(mode == O_RDWR) {
+		fat_flags = FA_READ | FA_WRITE;
+	}
+	else if(mode == O_WRONLY) {
+		fat_flags = FA_WRITE;
+	}
+#endif
+	else {
+		return FS_ERR_PARAM;
+	}
+
+#if _FS_READONLY == 0
+	if(flags & O_TRUNC) {
+		fat_flags |= FA_CREATE_ALWAYS;
+	}
+	else if(flags & O_CREAT) {
+		fat_flags |= FA_OPEN_ALWAYS;
+	}
+	else {
+		fat_flags |= FA_OPEN_EXISTING;
+	}
+#else
+	fat_flags |= FA_OPEN_EXISTING;
+#endif
 
 	int old_dma_mode = fs_dma_enabled();
 	fs_enable_dma(FS_DMA_DISABLED);
