@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="Cart Ripper" version="1.0.0" icon="images/icon.png">
+	<resources>
+		<module src="../../modules/minilzo.klf" />
+		<module src="../../modules/isofs.klf" />
+		<module src="../../modules/isoldr.klf" />
+		<module src="modules/app_cart_ripper.klf" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="22" name="label-22" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="label-16" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="14" name="label-14" />
+		<surface height="45" name="header-bg">
+			<fill color="#163A45" />
+			<fill color="#1E4A58" height="22" />
+			<fill color="#0C252C" height="1" y="43" />
+			<fill color="#2A6574" height="1" y="44" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#31799F" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#61BDEC" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#D4F129" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-disabled">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#CCCCCC" />
+		</surface>
+		<surface width="100" height="40" name="but-small-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#31799F" />
+		</surface>
+		<surface width="100" height="40" name="but-small-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#61BDEC" />
+		</surface>
+		<surface width="100" height="40" name="but-small-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#D4F129" />
+		</surface>
+		<surface width="100" height="40" name="but-small-disabled">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="96" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="94" height="34" color="#CCCCCC" />
+		</surface>
+		<surface width="600" height="210" name="info-back">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="596" height="206" color="#BBBBBB" />
+			<fill x="3" y="3" width="594" height="204" color="#F4F8FA" />
+		</surface>
+		<surface height="30" name="item-normal" width="100%">
+			<fill color="#C9DADE" />
+			<fill color="#EEEEEE" height="2" y="28" />
+		</surface>
+		<surface height="30" name="item-focus" width="100%">
+			<fill color="#61BDEC" />
+			<fill color="#EEEEEE" height="2" y="28" />
+		</surface>
+		<surface height="30" name="item-selected" width="100%">
+			<fill color="#D4F129" />
+			<fill color="#EEEEEE" height="2" y="28" />
+		</surface>
+		<surface width="18" height="20" name="sbb-normal">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#31799F" />
+		</surface>
+		<surface width="18" height="20" name="sbb-focus">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#61BDEC" />
+		</surface>
+		<surface width="18" height="20" name="sbb-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#D4F129" />
+		</surface>
+		<surface width="18" height="20" name="sbb-disabled">
+			<fill color="#EEEEEE" />
+			<fill x="1" width="17" color="#CCE4F0" />
+		</surface>
+		<surface width="18" height="40" name="sb-knob">
+			<fill color="#EEEEEE" />
+			<fill x="1" y="1" width="17" height="38" color="#31799F" />
+		</surface>
+		<surface width="18" height="260" name="sb-back">
+			<fill color="#EEEEEE" />
+			<fill width="1" color="#CCE4F0" />
+		</surface>
+		<surface width="22" height="22" name="chk-off-normal">
+			<fill color="#BBBBBB" />
+			<fill x="1" y="1" width="20" height="20" color="#FFFFFF" />
+		</surface>
+		<surface width="22" height="22" name="chk-off-hl">
+			<fill color="#61BDEC" />
+			<fill x="2" y="2" width="18" height="18" color="#D4F129" />
+		</surface>
+		<surface width="22" height="22" name="chk-on-normal">
+			<fill color="#61BDEC" />
+			<fill x="1" y="1" width="20" height="20" color="#FFFFFF" />
+			<fill x="6" y="6" width="10" height="10" color="#31799F" />
+		</surface>
+		<surface width="22" height="22" name="chk-on-hl">
+			<fill color="#61BDEC" />
+			<fill x="2" y="2" width="18" height="18" color="#D4F129" />
+			<fill x="6" y="6" width="10" height="10" color="#31799F" />
+		</surface>
+		<theme>
+			<input type="button" normal="but-medium-normal" highlight="but-medium-hl"
+				pressed="but-medium-pressed" disabled="but-medium-disabled" />
+		</theme>
+	</resources>
+	<body width="100%" height="100%" background="#DDDDDD"
+		onload="export:CartRipperApp_Init()"
+		onopen="export:CartRipperApp_Open()"
+		onunload="export:CartRipperApp_Shutdown()">
+		<panel height="45" background="header-bg" name="header-panel">
+			<label name="sys-label" font="label-16" color="#E8F4F6" text="NAOMI Cart Ripper"
+				align="center" valign="center" width="100%" height="45" />
+		</panel>
+		<cardstack name="pages">
+			<panel name="main-page" y="8">
+				<panel width="600" height="210" x="20" y="6" backgroundCenter="info-back">
+					<panel x="12" y="8" width="280" height="194">
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Title:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-title" text="-" />
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Publisher:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-publisher" text="-" />
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Serial / Date:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-serial" text="-" />
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="System / Type:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-type" text="-" />
+					</panel>
+					<panel x="300" y="8" width="286" height="194">
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Size:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-size" text="-" />
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Region / Players:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-region" text="-" />
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Video / Orientation:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-video" text="-" />
+						<label align="left" color="#31799F" font="label-16" height="22" width="100%" text="Board / Encrypt:" />
+						<label align="left" color="#333333" font="label-14" height="22" width="100%" name="info-board" text="-" />
+					</panel>
+				</panel>
+
+				<panel x="20" y="220" width="600" height="26">
+					<label align="left" valign="center" color="#31799F" font="label-16" height="26" width="140" text="Game name:" />
+					<input type="text"
+						onblur="export:CartRipperApp_Gamename()"
+						font="label-14"
+						fontcolor="#333333"
+						value="naomi_cart"
+						size="30"
+						x="140"
+						y="2"
+						height="22"
+						width="300"
+						name="gname-text" />
+					<input type="checkbox" name="decrypt-checkbox" x="450" y="2" height="22" width="150"
+						onnormal="chk-on-normal" onhighlight="chk-on-hl"
+						offnormal="chk-off-normal" offhighlight="chk-off-hl">
+						<label align="left" valign="center" color="#333333" font="label-14" height="22" x="24" width="126" text="Decrypt M2" />
+					</input>
+				</panel>
+				<panel x="20" y="252" width="600" height="40">
+					<label align="left" valign="center" color="#31799F" font="label-16" height="40" width="140" text="Destination:" />
+					<label align="left" valign="center" color="#333333" font="label-14" height="40" width="350" x="140"
+						name="destination-path" text="/sd" />
+					<input type="button" width="100" height="40" x="500"
+						onclick="export:CartRipperApp_ShowFileBrowser()"
+						normal="but-small-normal" highlight="but-small-hl" pressed="but-small-pressed"
+						disabled="but-small-disabled"
+						name="browse_btn">
+						<label font="label-16" color="#EEEEEE" text="Browse" align="center" />
+					</input>
+				</panel>
+
+				<panel x="20" y="300" width="600" height="70">
+					<progressbar width="600" height="24" name="progress-bar" pos="0.0" />
+					<panel y="28" width="600" height="20">
+						<label align="left" color="#333333" font="label-14" height="20" width="200" name="speed-label" text="Speed: --" />
+						<label align="left" color="#333333" font="label-14" height="20" width="200" x="200" name="time-label" text="Time left: --" />
+						<label align="left" color="#333333" font="label-14" height="20" width="200" x="400" name="bytes-label" text="Done: --" />
+					</panel>
+					<label align="left" color="#31799F" font="label-14" height="20" width="100%" y="48" name="status-label" text="Ready" />
+				</panel>
+
+				<panel x="10" y="378" width="620" height="50">
+					<input type="button" width="120" height="40" x="0"
+						onclick="export:CartRipperApp_StartRip()" name="start_btn">
+						<label font="label-16" color="#EEEEEE" text="Start" align="center" />
+					</input>
+					<input type="button" width="120" height="40" x="125"
+						onclick="export:CartRipperApp_CancelRip()" name="cancel_btn">
+						<label font="label-16" color="#EEEEEE" text="Stop" align="center" />
+					</input>
+					<input type="button" width="120" height="40" x="250"
+						onclick="export:CartRipperApp_Refresh()" name="refresh_btn">
+						<label font="label-16" color="#EEEEEE" text="Refresh" align="center" />
+					</input>
+					<input type="button" width="120" height="40" x="375"
+						onclick="export:CartRipperApp_Launch()" name="launch_btn">
+						<label font="label-16" color="#EEEEEE" text="Launch" align="center" />
+					</input>
+					<input type="button" width="120" height="40" x="500"
+						onclick="console:app -o">
+						<label font="label-16" color="#EEEEEE" text="Exit" align="center" />
+					</input>
+				</panel>
+			</panel>
+
+			<panel name="file-browser-page" y="10">
+				<panel width="100%" height="25">
+					<label align="center" color="#31799F" font="label-22" height="25"
+						text="Choose destination folder" />
+				</panel>
+				<panel width="90%" height="315" x="5%" y="30">
+					<filemanager width="100%" height="300"
+						item_disabled="item-selected"
+						item_font="label-16"
+						item_font_color="#333333"
+						item_highlight="item-focus"
+						item_normal="item-normal"
+						item_pressed="item-focus"
+						sb_knob="sb-knob"
+						sb_back="sb-back"
+						sbbup_normal="sbb-normal"
+						sbbup_highlight="sbb-focus"
+						sbbup_pressed="sbb-pressed"
+						sbbup_disabled="sbb-disabled"
+						sbbdown_normal="sbb-normal"
+						sbbdown_highlight="sbb-focus"
+						sbbdown_pressed="sbb-pressed"
+						sbbdown_disabled="sbb-disabled"
+						name="file-browser"
+						onclick="export:CartRipperApp_FileBrowserItemClick()"
+						path="/ram" />
+				</panel>
+				<panel height="50" width="50%">
+					<input type="button" width="120" height="40"
+						onclick="export:CartRipperApp_ShowMainPage()" align="center">
+						<label font="label-16" color="#EEEEEE" text="Cancel" />
+					</input>
+				</panel>
+				<panel height="50" width="50%">
+					<input type="button" width="120" height="40"
+						onclick="export:CartRipperApp_FileBrowserConfirm()" align="center">
+						<label font="label-16" color="#EEEEEE" text="Confirm" />
+					</input>
+				</panel>
+			</panel>
+		</cardstack>
+	</body>
+</app>

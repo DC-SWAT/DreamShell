@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+
+  <g id="cart">
+    <rect x="2" y="1" width="60" height="35" fill="#2C3846"/>
+    <rect x="2" y="1" width="1" height="35" fill="#455468"/>
+    <rect x="61" y="1" width="1" height="35" fill="#1E2834"/>
+    <rect x="2" y="1" width="60" height="1" fill="#455468"/>
+    <rect x="3" y="2" width="58" height="33" fill="#364454"/>
+
+    <rect x="4" y="3" width="56" height="18" fill="#F2F2F2"/>
+    <rect x="4" y="3" width="56" height="1" fill="#FAFAFA"/>
+    <rect x="4" y="3" width="1" height="18" fill="#FAFAFA"/>
+    <rect x="59" y="3" width="1" height="18" fill="#C8C8C8"/>
+    <rect x="4" y="20" width="56" height="1" fill="#C8C8C8"/>
+    <clipPath id="label_clip">
+      <rect x="5" y="4" width="54" height="16"/>
+    </clipPath>
+    <g clip-path="url(#label_clip)" shape-rendering="geometricPrecision">
+      <svg x="5" y="5" width="54" height="14" viewBox="7 77.5 169 37" preserveAspectRatio="xMidYMid meet" overflow="hidden">
+        <path fill="#000000" d="M38.546 111.961V78.353H32.96l.092 21.612L7.228 78.628l.091 33.7h4.854V90.533l26.373 21.428zM42.118 112.51l4.304-7.326h-3.938v-5.127h6.502l11.813-21.429 18.865 33.882h-6.685l-3.846-7.326H52.375l-4.029 7.326h-6.228zm12.546-12.545h12.088l-6.044-11.081-6.044 11.081zM127.467 112.51h-5.494V78.719l18.681 21.703 18.864-22.16v34.248h-5.862l-.09-18.406-13.004 15.66-13.095-15.569v18.315zM170.141 112.51l.091-34.615h5.586l-.091 34.615h-5.586z"/>
+        <path fill="#cc2229" d="M79.481 95.936c0-10.165 8.242-18.407 18.408-18.407 10.164 0 18.406 8.242 18.406 18.407 0 10.164-8.242 18.406-18.406 18.406-10.166 0-18.408-8.242-18.408-18.406zm18.408 12.912c7.143 0 12.91-5.77 12.91-12.912 0-7.051-5.768-12.821-12.91-12.821-7.052 0-12.822 5.77-12.822 12.821 0 7.142 5.769 12.912 12.822 12.912z"/>
+      </svg>
+    </g>
+
+    <rect x="8" y="24" width="18" height="3" fill="#2C3846"/>
+    <rect x="8" y="29" width="28" height="3" fill="#2C3846"/>
+
+    <rect x="2" y="36" width="60" height="8" fill="#C9A227"/>
+    <rect x="2" y="36" width="60" height="1" fill="#E0BC4A"/>
+    <rect x="2" y="43" width="60" height="1" fill="#8A7018"/>
+    <rect x="3" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="8" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="14" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="20" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="26" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="32" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="38" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="44" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="50" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="56" y="37" width="3" height="6" fill="#8A7018"/>
+    <rect x="59" y="37" width="3" height="6" fill="#8A7018"/>
+  </g>
+
+  <g id="arrow">
+    <rect x="28" y="44" width="8" height="3" fill="#D4F129"/>
+    <rect x="22" y="47" width="20" height="2" fill="#D4F129"/>
+    <rect x="25" y="49" width="14" height="2" fill="#D4F129"/>
+    <rect x="28" y="51" width="8" height="2" fill="#D4F129"/>
+  </g>
+
+  <g id="storage">
+    <rect x="2" y="53" width="60" height="11" fill="#31799F"/>
+    <rect x="2" y="53" width="60" height="1" fill="#61BDEC"/>
+    <rect x="2" y="53" width="1" height="11" fill="#61BDEC"/>
+    <rect x="61" y="53" width="1" height="11" fill="#1E5A78"/>
+    <rect x="2" y="63" width="60" height="1" fill="#1E5A78"/>
+    <rect x="2" y="55" width="8" height="7" fill="#1E5A78"/>
+    <rect x="12" y="56" width="36" height="2" fill="#C9DADE"/>
+    <rect x="12" y="59" width="22" height="2" fill="#C9DADE"/>
+  </g>
+
+</svg>

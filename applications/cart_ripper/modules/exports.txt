@@ -1,0 +1,15 @@
+include kos/exports.h
+include app_module.h
+
+CartRipperApp_Init
+CartRipperApp_Shutdown
+CartRipperApp_Open
+CartRipperApp_StartRip
+CartRipperApp_CancelRip
+CartRipperApp_Refresh
+CartRipperApp_Launch
+CartRipperApp_Gamename
+CartRipperApp_ShowFileBrowser
+CartRipperApp_ShowMainPage
+CartRipperApp_FileBrowserItemClick
+CartRipperApp_FileBrowserConfirm
