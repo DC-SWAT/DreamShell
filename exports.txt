@@ -355,6 +355,7 @@ naomi_cart_dimm_present
 naomi_cart_m4_id
 naomi_cart_m1_id
 naomi_cart_type
+naomi_cart_detect_flags
 naomi_cart_probe_size
 naomi_cart_apply_g1_timing
 naomi_cart_cfi_query

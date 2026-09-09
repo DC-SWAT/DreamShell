@@ -426,24 +426,29 @@ static bool cart_scan_header(uint32_t flags, uint32_t *off, uint8_t *peek) {
     return false;
 }
 
-static bool cart_rom_alive(void) {
+static bool cart_rom_alive_flags(uint32_t flags) {
     uint32_t addr;
     uint16_t data;
 
-    cart_pio_set_offset(NAOMI_CART_READ_DEFAULT);
+    cart_pio_set_offset(flags);
     data = cart_pio_read16();
     if(cart_data_present(data)) {
         return true;
     }
 
     for(addr = CART_PROBE_STEP; addr < CART_HDR_SCAN_MAX; addr += CART_PROBE_STEP) {
-        cart_pio_set_offset(cart_addr_flags(addr, NAOMI_CART_READ_DEFAULT));
+        cart_pio_set_offset(cart_addr_flags(addr, flags));
         data = cart_pio_read16();
         if(cart_data_present(data)) {
             return true;
         }
     }
     return false;
+}
+
+static bool cart_rom_alive(void) {
+    return cart_rom_alive_flags(NAOMI_CART_READ_DEFAULT)
+        || cart_rom_alive_flags(NAOMI_CART_ADDR_AUTO);
 }
 
 size_t naomi_cart_pio_read(uint32_t offset, void *dst, size_t len, uint32_t flags) {
@@ -556,8 +561,15 @@ bool naomi_cart_read_header(naomi_cart_header_t *hdr) {
     }
 
     if(!cart_scan_header(flags, &addr, peek)) {
-        cart_unlock();
-        return false;
+        if(cart_m4_id_ok(m4) || !(flags & NAOMI_CART_ADDR_8MB)) {
+            cart_unlock();
+            return false;
+        }
+        flags = NAOMI_CART_ADDR_AUTO;
+        if(!cart_scan_header(flags, &addr, peek)) {
+            cart_unlock();
+            return false;
+        }
     }
 
     if(cart_pio_read_locked(addr, (uint8_t *)hdr, sizeof(*hdr), flags) != sizeof(*hdr) ||
@@ -648,6 +660,38 @@ naomi_cart_type_t naomi_cart_type(void) {
     return NAOMI_CART_NONE;
 }
 
+uint32_t naomi_cart_detect_flags(naomi_cart_type_t type) {
+    uint32_t flags = naomi_cart_dump_flags(type);
+    uint32_t addr;
+    alignas(32) uint8_t peek[NAOMI_CART_DMA_UNIT];
+
+    if(type == NAOMI_CART_M4 || type == NAOMI_CART_DIMM) {
+        return flags;
+    }
+
+    if(!cart_lock()) {
+        return flags;
+    }
+
+    cart_pio_begin();
+    if(cart_scan_header(flags, &addr, peek)) {
+        cart_unlock();
+        return flags;
+    }
+
+    if(flags & NAOMI_CART_ADDR_8MB) {
+        flags = NAOMI_CART_ADDR_AUTO;
+        if(cart_scan_header(flags, &addr, peek)) {
+            cart_unlock();
+            return flags;
+        }
+        flags = naomi_cart_dump_flags(type);
+    }
+
+    cart_unlock();
+    return flags;
+}
+
 static bool cart_probe_fetch(uint32_t addr, uint8_t *buf, uint32_t flags) {
     return cart_pio_read_locked(addr, buf, NAOMI_CART_DMA_UNIT, flags) ==
         NAOMI_CART_DMA_UNIT;
@@ -675,7 +719,7 @@ size_t naomi_cart_probe_size(void) {
     size_t last;
     uint32_t limit = NAOMI_CART_ADDR_MASK + 1;
 
-    flags = naomi_cart_dump_flags(naomi_cart_type());
+    flags = naomi_cart_detect_flags(naomi_cart_type());
 
     if(!cart_lock()) {
         return 0;

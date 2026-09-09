@@ -237,6 +237,7 @@ bool naomi_cart_dimm_present(void);
 uint16_t naomi_cart_m4_id(void);
 uint16_t naomi_cart_m1_id(void);
 naomi_cart_type_t naomi_cart_type(void);
+uint32_t naomi_cart_detect_flags(naomi_cart_type_t type);
 
 size_t naomi_cart_probe_size(void);
 void naomi_cart_apply_g1_timing(const naomi_cart_header_t *hdr);
