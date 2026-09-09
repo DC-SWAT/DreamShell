@@ -168,47 +168,45 @@ void UpdateFocusLabels(void) {
 }
 
 static void UpdateToolbarLayout(void) {
-    float w;
-    float h;
+    float date_w = 0.0f;
+    float date_h = 0.0f;
+    float time_w = 0.0f;
+    float time_h = 0.0f;
+    float ver_w = 0.0f;
+    float ver_h = 0.0f;
     Vector pos;
     static Color label_color = {1.0f, 1.0f, 1.0f, 1.0f};
+    const float left_pad = 12.0f;
     const float right_pad = 12.0f;
     const float icon_size = 16.0f;
     const float icon_gap = 8.0f;
+    const float label_gap = 8.0f;
     const float toolbar_center_y = (float)self.toolbar_top + (float)self.toolbar_height * 0.5f;
     const float toolbar_label_y = toolbar_center_y - 4.0f;
+    float slot_left;
+    float slot_right;
+    float slot_w;
+    float ver_x;
 
     if(self.date_label) {
         TSU_LabelSetCenter(self.date_label, false);
-        TSU_LabelGetSize(self.date_label, &w, &h);
+        TSU_LabelGetSize(self.date_label, &date_w, &date_h);
         TSU_LabelSetTint(self.date_label, &label_color);
         TSU_DrawableSetAlpha((Drawable *)self.date_label, 1.0f);
-        pos.x = right_pad;
-        pos.y = toolbar_label_y + h * 0.5f;
+        pos.x = left_pad;
+        pos.y = toolbar_label_y + date_h * 0.5f;
         pos.z = self.toolbar_z;
         pos.w = 1.0f;
         TSU_DrawableSetTranslate((Drawable *)self.date_label, &pos);
     }
 
-    if(self.version_label) {
-        TSU_LabelSetCenter(self.version_label, true);
-        TSU_LabelGetSize(self.version_label, &w, &h);
-        TSU_LabelSetTint(self.version_label, &label_color);
-        TSU_DrawableSetAlpha((Drawable *)self.version_label, 1.0f);
-        pos.x = (float)self.screen_w * 0.5f;
-        pos.y = toolbar_label_y;
-        pos.z = self.toolbar_z;
-        pos.w = 1.0f;
-        TSU_DrawableSetTranslate((Drawable *)self.version_label, &pos);
-    }
-
     if(self.time_label) {
         TSU_LabelSetCenter(self.time_label, false);
-        TSU_LabelGetSize(self.time_label, &w, &h);
+        TSU_LabelGetSize(self.time_label, &time_w, &time_h);
         TSU_LabelSetTint(self.time_label, &label_color);
         TSU_DrawableSetAlpha((Drawable *)self.time_label, 1.0f);
-        pos.x = (float)self.screen_w - right_pad - icon_size - icon_gap - w;
-        pos.y = toolbar_label_y + h * 0.5f;
+        pos.x = (float)self.screen_w - right_pad - icon_size - icon_gap - time_w;
+        pos.y = toolbar_label_y + time_h * 0.5f;
         pos.z = self.toolbar_z;
         pos.w = 1.0f;
         TSU_DrawableSetTranslate((Drawable *)self.time_label, &pos);
@@ -221,6 +219,34 @@ static void UpdateToolbarLayout(void) {
         pos.z = self.toolbar_z + 0.5f;
         pos.w = 1.0f;
         TSU_DrawableSetTranslate((Drawable *)self.net_banner, &pos);
+    }
+
+    if(self.version_label) {
+        TSU_LabelSetCenter(self.version_label, false);
+        TSU_LabelGetSize(self.version_label, &ver_w, &ver_h);
+        TSU_LabelSetTint(self.version_label, &label_color);
+        TSU_DrawableSetAlpha((Drawable *)self.version_label, 1.0f);
+
+        slot_left = left_pad + date_w + label_gap;
+        slot_right = (float)self.screen_w - right_pad - icon_size - icon_gap - time_w - label_gap;
+        slot_w = slot_right - slot_left;
+
+        if(slot_w < 0.0f) {
+            slot_w = 0.0f;
+        }
+
+        if(ver_w <= slot_w) {
+            ver_x = slot_left + (slot_w - ver_w) * 0.5f;
+        }
+        else {
+            ver_x = slot_left;
+        }
+
+        pos.x = ver_x;
+        pos.y = toolbar_label_y + ver_h * 0.5f;
+        pos.z = self.toolbar_z;
+        pos.w = 1.0f;
+        TSU_DrawableSetTranslate((Drawable *)self.version_label, &pos);
     }
 }
 
@@ -294,6 +320,7 @@ static void ShowDateTime(int force) {
     if(self.date_label && (force || datetime->tm_mday != self.datetime.tm_mday)) {
         switch(flashrom_get_region_only()) {
             case FLASHROM_REGION_JAPAN:
+            case FLASHROM_REGION_KOREA:
                 snprintf(str, sizeof(str), "%04d-%02d-%02d", datetime->tm_year + 1900, datetime->tm_mon + 1, datetime->tm_mday);
                 break;
             case FLASHROM_REGION_US:

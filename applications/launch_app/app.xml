@@ -37,7 +37,7 @@
 				radius="0" color="#1A3340AA" transparent="true" />
 
 			<label name="date" font="caption_font" fontsize="11" text="00.00.0000" smear="true" color="#FFFFFFFF" x="12" valign="center" z="121.0" />
-			<label name="version" font="caption_font" fontsize="11" text="DreamShell" smear="true" color="#FFFFFFFF" align="center" valign="center" centered="true" z="121.0" />
+			<label name="version" font="caption_font" fontsize="11" text="DreamShell" smear="true" color="#FFFFFFFF" valign="center" z="121.0" />
 			<label name="time" font="caption_font" fontsize="11" text="00:00" smear="true" color="#FFFFFFFF" valign="center" z="121.0" />
 			<image name="net_icon" src="net-off" width="16" height="16" valign="center" z="121.5" transparent="true" />
 		</panel>
