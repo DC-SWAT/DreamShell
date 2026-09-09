@@ -469,7 +469,7 @@ static void ShowVersion(GUI_Widget *widget) {
 	if(!widget) {
 		return;
 	}
-	char vers[32];	
+	char vers[64];	
 	snprintf(vers, sizeof(vers), "%s %s", getenv("OS"), getenv("VERSION"));
 	GUI_LabelSetText(widget, vers);
 }
@@ -499,6 +499,7 @@ static void ShowDateTime(int force) {
 		
 		switch(flashrom_get_region_only()) {
 			case FLASHROM_REGION_JAPAN:
+			case FLASHROM_REGION_KOREA:
 				snprintf(str, sizeof(str), "%04d-%02d-%02d", datetime->tm_year + 1900, datetime->tm_mon + 1, datetime->tm_mday);
 				break;
 			case FLASHROM_REGION_US:
