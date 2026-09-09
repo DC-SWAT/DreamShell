@@ -27,7 +27,9 @@
 #define BIOS_ROM_ADDR           0x00000000
 #define BIOS_ROM_FONT_ADDR      (BIOS_ROM_ADDR + 0x100020)
 #define APP_BIN_ADDR            0x8c010000
+#define RAM_START_ADDR          0x0c000000
 #define RAM_END_ADDR            0x0e000000
+#define RAM_END_32MB_ADDR       0x0e000000
 
 #define PHYS_ADDR(addr)         ((addr) & 0x1fffffff)
 #define CACHED_ADDR(addr)       (PHYS_ADDR(addr) | 0x80000000)

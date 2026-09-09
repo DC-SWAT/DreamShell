@@ -2257,7 +2257,7 @@ fs_fat_unmount
 fs_fat_is_mounted
 #
 # Shutdown
-fs_dclsocket_shutdown
+dcload_syscall_net_shutdown
 timer_shutdown
 la_shutdown
 bba_shutdown

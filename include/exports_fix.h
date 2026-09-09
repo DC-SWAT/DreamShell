@@ -10,6 +10,7 @@
 #include <signal.h>
 #include <kos.h>
 #include <kos/net.h>
+#include <dc/dcload.h>
 
 extern uint32 _arch_old_sr, _arch_old_vbr, _arch_old_stack, _arch_old_fpscr, start;
 extern volatile uint32 jiffies;

@@ -7,7 +7,7 @@
 TARGET = ../libparallax_2.0.0.a
 OBJS := $(patsubst %.c,%.o,$(wildcard src/*.c))
 
-KOS_CFLAGS += -I../../include -I../../include/plx
+KOS_CFLAGS += -I../../include -I../../include/plx -include arch/types.h
 
 # Grab the shared Makefile pieces
 include ../../sdk/Makefile.library

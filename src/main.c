@@ -16,6 +16,7 @@
 #include "sfx.h"
 #include <naomi/coins.h>
 #include <dc/syscalls.h>
+#include <dc/dcload.h>
 #include <dc/maple.h>
 #include <dc/maple/mie.h>
 #include <arch/gdb.h>
@@ -33,9 +34,6 @@ KOS_INIT_FLAGS(INIT_DEFAULT | INIT_EXPORT | INIT_MIE);
 static uint32 ver_int = 0;
 static const char *build_str[4] = {"Alpha", "Beta", "RC", "Release"};
 static int net_inited = -1;
-
-uint32 _fs_dclsocket_get_ip(void);
-
 
 uint32 GetVersion() {
 	return ver_int;
@@ -105,8 +103,10 @@ int InitNet(uint32 ipl) {
 	/* Check if the dcload-ip console is up, and if so, disable it,
 		otherwise we'll crash when we attempt to bring up the BBA */
 	if(ipl == 0 && dcload_type == DCLOAD_TYPE_IP) {
+		uint32_t tool_ip, tool_port;
+
 		/* Grab the IP address from dcload before we disable dbgio... */
-		ip.ipl = _fs_dclsocket_get_ip();
+		ip.ipl = dcload_gethostinfo(&tool_ip, &tool_port);
 		dbglog(DBG_INFO, "dc-load says our IP is %d.%d.%d.%d\n", ip.ipb[3],
 				ip.ipb[2], ip.ipb[1], ip.ipb[0]);
 		dbgio_dev_select("scif");
@@ -125,11 +125,9 @@ int InitNet(uint32 ipl) {
 		return -1;
 	}
 	if(dcload_type == DCLOAD_TYPE_IP) {
-
-		if(!fs_dclsocket_init()) {
-			dbglog(DBG_INFO, "fs_dclsocket console support enabled\n");
-			fs_dclsocket_init_console();
-			dbgio_dev_select("fs_dclsocket");
+		if(!dcload_syscall_net_init()) {
+			dbglog(DBG_INFO, "dcload_syscalls_net backend enabled\n");
+			dbgio_dev_select("fs_dcload");
 		}
 	}
 	if(net_default_dev != NULL) {
@@ -148,6 +146,7 @@ int InitNet(uint32 ipl) {
 void ShutdownNet() {
 	if(dcload_type == DCLOAD_TYPE_IP) {
 		dbgio_set_dev_ds();
+		dcload_syscall_net_shutdown();
 	}
 	net_shutdown();
 	net_inited = 0;

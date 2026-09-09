@@ -9,7 +9,7 @@ TARGET     		=  ../libtsunami_2.1.0.a
 
 KOS_CPPFLAGS 	+= -fno-operator-names -fno-rtti -fno-exceptions -Iinclude -std=gnu++17
 
-KOS_CFLAGS 		+= -I../../include/tsunami
+KOS_CFLAGS 		+= -I../../include -I../../include/tsunami -include arch/types.h
 
 
 # Main sources
