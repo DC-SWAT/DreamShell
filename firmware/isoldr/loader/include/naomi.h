@@ -24,6 +24,8 @@
 #define NAOMI_ID_BDS0 NAOMI_ID('B', 'D', 'S', '0') /* Virtua Tennis 2 */
 #define NAOMI_ID_BDF0 NAOMI_ID('B', 'D', 'F', '0') /* Monkey Ball */
 #define NAOMI_ID_BCW0 NAOMI_ID('B', 'C', 'W', '0') /* Heavy Metal Geomatrix */
+#define NAOMI_ID_BCQ0 NAOMI_ID('B', 'C', 'Q', '0') /* Alien Front */
+#define NAOMI_M2_OVERLAY_OFF         0x400000
 
 typedef struct naomi_ingame_test {
     uint32_t id;

@@ -11,6 +11,9 @@
 #include <arch/cache.h>
 #include <naomi.h>
 
+#define BAL1_IO_TEST_FRAMES 180
+#define BAL1_TEXT_FRAME_DELAY 1
+
 /* Redirect TEST switch into the running game (two 18 Wheeler binaries). */
 static const naomi_ingame_test_t naomi_ingame_tests[] = {
     { NAOMI_ID_BBK0, 0x0c027e8c, 0x0c02cbf0, 0x0c02249c, 0x0c13c0d8, 0x0c0e5b10 },
@@ -81,6 +84,16 @@ static const uint8_t dma_stub_tmpl[56] = {
     0xbc, 0x00, 0x00, 0xac, 0xac, 0x00, 0x00, 0xac
 };
 
+static const uint8_t dma_stub_bal1[56] = {
+    0x22, 0x4f, 0x76, 0x2f, 0xf0, 0x7f, 0x01, 0xe0,
+    0x42, 0x2f, 0x51, 0x1f, 0x62, 0x1f, 0x03, 0x1f,
+    0xf3, 0x64, 0x07, 0xd0, 0x02, 0x60, 0x0b, 0x40,
+    0x10, 0xe7, 0x10, 0x7f, 0xf6, 0x67, 0x78, 0x27,
+    0x02, 0x8b, 0x04, 0xd0, 0x0b, 0x40, 0x09, 0x00,
+    0x26, 0x4f, 0x0b, 0x00, 0x09, 0x00, 0x09, 0x00,
+    0xbc, 0x00, 0x00, 0xac, 0xac, 0x00, 0x00, 0xac
+};
+
 /* SH-4 32-bit stores need 4-byte alignment; insert nop if the site is at +2. */
 static uint32_t naomi_align4(uint8_t *dst, uint32_t start, uint32_t need, uint32_t size) {
     if(start & 2) {
@@ -99,17 +112,27 @@ static uint32_t naomi_align4(uint8_t *dst, uint32_t start, uint32_t need, uint32
 
 /* Replace a matched cart-DMA site with dma_stub_tmpl (idempotent). */
 static void naomi_dma_stub_apply(uint8_t *dst, uint32_t start) {
-    if(!memcmp(dst + start, dma_stub_tmpl, 8)) {
+    naomi_state_t *naomi = get_naomi();
+
+    if(!memcmp(dst + start, dma_stub_tmpl, 8)
+        || !memcmp(dst + start, dma_stub_bal1, 8)) {
         return;
     }
-    memcpy(dst + start, dma_stub_tmpl, sizeof(dma_stub_tmpl));
+    if(naomi->game_id == NAOMI_ID_BAL1) {
+        memcpy(dst + start, dma_stub_bal1, sizeof(dma_stub_bal1));
+    }
+    else {
+        memcpy(dst + start, dma_stub_tmpl, sizeof(dma_stub_tmpl));
+    }
     *(uint32_t *)(dst + start + 0x34) = naomi_reloc_addr((uint32_t)naomi_cart_wait_dma);
 }
 
 /* Align + idempotence check + apply; returns 1 if the site was patched. */
 static int naomi_dma_stub_patch(uint8_t *dst, uint32_t start, uint32_t size) {
     start = naomi_align4(dst, start, sizeof(dma_stub_tmpl), size);
-    if(start == 0xffffffff || !memcmp(dst + start, dma_stub_tmpl, 8)) {
+    if(start == 0xffffffff
+        || !memcmp(dst + start, dma_stub_tmpl, 8)
+        || !memcmp(dst + start, dma_stub_bal1, 8)) {
         return 0;
     }
     naomi_dma_stub_apply(dst, start);
@@ -664,14 +687,25 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
     }
     dcache_inval_range(caddr, size);
     dst = (uint8_t *)caddr;
-    /* TESTING I/O loop: 0x0708 = 1800 frames (~30s at 60Hz) -> 180 (~3s). */
     if(naomi->game_id == NAOMI_ID_BAL1
         && ((uint32_t)dst & 0x1fffffff) == 0x0c020000
-        && size > 0x97e
-        && *(uint16_t *)(dst + 0x97c) == 0x0708) {
-        *(uint16_t *)(dst + 0x97c) = 180;
-        patched = 1;
-        LOGF("NAOMI BAL1 I/O test 3s\n");
+        && size > 0x97e) {
+        if(*(uint16_t *)(dst + 0x97c) == 0x0708) {
+            *(uint16_t *)(dst + 0x97c) = BAL1_IO_TEST_FRAMES;
+            patched = 1;
+            LOGF("NAOMI BAL1 I/O test %df\n", BAL1_IO_TEST_FRAMES);
+        }
+        if(*(uint16_t *)(dst + 0x3ce) == 0xe303) {
+            *(uint16_t *)(dst + 0x3ce) = 0xe300 | BAL1_TEXT_FRAME_DELAY;
+            *(uint16_t *)(dst + 0x406) = 0xe200 | BAL1_TEXT_FRAME_DELAY;
+            *(uint16_t *)(dst + 0x440) = 0xe300 | BAL1_TEXT_FRAME_DELAY;
+            *(uint16_t *)(dst + 0x498) = 0xe300 | BAL1_TEXT_FRAME_DELAY;
+            *(uint16_t *)(dst + 0x4f2) = 0xe300 | BAL1_TEXT_FRAME_DELAY;
+            *(uint16_t *)(dst + 0x55a) = 0xe200 | BAL1_TEXT_FRAME_DELAY;
+            *(uint16_t *)(dst + 0x7f8) = 0xe300 | BAL1_TEXT_FRAME_DELAY;
+            patched = 1;
+            LOGF("NAOMI BAL1 text speedup (%df/char)\n", BAL1_TEXT_FRAME_DELAY);
+        }
     }
     if(naomi->game_id == NAOMI_ID_ABC0
         && ((uint32_t)dst & 0x1fffffff) == 0x0c021000
@@ -833,12 +867,14 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
             n_dma++;
         }
     }
-    for(i = 0; i + 8 <= size; i += 2) {
-        if(!naomi_g1dma_wait(w, i, size)) {
-            continue;
+    if(naomi->game_id != NAOMI_ID_BAL1) {
+        for(i = 0; i + 8 <= size; i += 2) {
+            if(!naomi_g1dma_wait(w, i, size)) {
+                continue;
+            }
+            w[(i >> 1) + 3] = SH4_OPCODE_NOP;
+            n_dma++;
         }
-        w[(i >> 1) + 3] = SH4_OPCODE_NOP;
-        n_dma++;
     }
     for(i = 0; i + sizeof(dma_stub_tmpl) <= size; i += 2) {
         if(!naomi_g1dma_body(w, i, size)) {
@@ -848,9 +884,11 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
             n_dma++;
         }
     }
-    for(i = 0; i + 12 <= size; i += 2) {
-        if(naomi_g1_poll(w, i, size)) {
-            n_dma++;
+    if(naomi->game_id != NAOMI_ID_BAL1) {
+        for(i = 0; i + 12 <= size; i += 2) {
+            if(naomi_g1_poll(w, i, size)) {
+                n_dma++;
+            }
         }
     }
     for(i = 0; i + 4 <= size; i += 2) {
@@ -888,14 +926,16 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
         if(start == 0xffffffff || !memcmp(dst + start, win_stub, 8)) {
             continue;
         }
-        off = win & 0x1fffffff;
+        off = naomi->win_off ? naomi->win_off : (win & 0x1fffffff);
         memcpy(dst + start, win_stub, sizeof(win_stub));
         fn = naomi_reloc_addr((uint32_t)naomi_cart_win_hook);
         *(uint32_t *)(dst + start + 8) = off;
         *(uint32_t *)(dst + start + 12) = fn;
         n_win++;
         naomi->have_win = true;
-        naomi->win_off = off;
+        if(!naomi->win_off) {
+            naomi->win_off = off;
+        }
         LOGF("NAOMI cart window %08lx -> off %08lx at %p\n", win, off, dst + start);
     }
     n_boot = naomi_skip_cart_boot(dst, w, size);

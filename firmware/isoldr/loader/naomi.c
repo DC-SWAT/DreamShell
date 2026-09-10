@@ -20,6 +20,7 @@
 #endif
 
 #define CART_READ_STACK_SIZE 4096
+#define CART_ATA_SEC_SIZE 512
 
 static uint32_t cart_read_stack_top;
 static uint32_t cart_read_old_sp;
@@ -107,6 +108,7 @@ __asm__(
 static int cart_wait_dma_busy;
 static int cart_aica_async;
 static int cart_stream_kick;
+static int cart_async_kicked;
 
 #define STREAM_TRACK 8
 
@@ -118,6 +120,24 @@ static struct {
 } stream_seen[STREAM_TRACK];
 static int stream_next;
 
+static int naomi_cart_async_game(void) {
+    uint32_t id = naomi->game_id;
+
+    return id == NAOMI_ID_BAU0
+        || id == NAOMI_ID_BAC0
+        || id == NAOMI_ID_BAL1
+        || id == NAOMI_ID_BCV0;
+}
+
+static int naomi_cart_aica_stream_game(void) {
+    uint32_t id = naomi->game_id;
+
+    return id == NAOMI_ID_BDS0
+        || id == NAOMI_ID_BAC0
+        || id == NAOMI_ID_BCV0
+        || id == NAOMI_ID_BDF0;
+}
+
 static int naomi_cart_dst_stream(const void *dst, uint32_t size, uint32_t offset) {
     uint32_t a = (uint32_t)dst;
     uint32_t p;
@@ -125,12 +145,9 @@ static int naomi_cart_dst_stream(const void *dst, uint32_t size, uint32_t offset
     int slot;
 
     if((a >> 24) == 0) {
-        return naomi->game_id == NAOMI_ID_BDS0
-            || naomi->game_id == NAOMI_ID_BAC0
-            || naomi->game_id == NAOMI_ID_BCV0
-            || naomi->game_id == NAOMI_ID_BDF0;
+        return naomi_cart_aica_stream_game();
     }
-    if(size != 1024) {
+    if(!naomi_cart_async_game() || size != 1024) {
         return 0;
     }
     p = PHYS_ADDR(a);
@@ -190,7 +207,7 @@ static int naomi_cart_use_async(const gdc_cart_read_params_t *params) {
     if(naomi_cart_ctx_blocked()) {
         return 0;
     }
-    return naomi->game_id == NAOMI_ID_BAU0 || naomi->game_id == NAOMI_ID_BAC0;
+    return naomi_cart_async_game();
 }
 
 static void cart_dma_cb(size_t size) {
@@ -282,30 +299,62 @@ static void naomi_cart_read_sd(gdc_cart_read_params_t *params) {
     }
 }
 #else
-/* Sector-aligned mid: HIDDEN async (kick+return; drain via wait_dma) or SHARED.
+static inline int naomi_cart_uncached(uint32_t addr) {
+    return ((addr >> 24) & 0xf0) == 0xa0;
+}
+
+static void naomi_cart_cache_read(void *dst, uint32_t size) {
+    uint32_t addr = (uint32_t)dst;
+
+    if(!size || naomi_cart_uncached(addr)) {
+        return;
+    }
+    if(size < NAOMI_CART_DMA_UNIT) {
+        dcache_purge_range(addr, size);
+    }
+    else {
+        dcache_inval_range(addr, size);
+    }
+}
+
+static void naomi_cart_cache_purge(void *dst, uint32_t size) {
+    uint32_t addr = (uint32_t)dst;
+
+    if(!size || naomi_cart_uncached(addr)) {
+        return;
+    }
+    dcache_purge_range(addr, size);
+}
+
+/* ATA-aligned mid: HIDDEN async (kick+return; drain via wait_dma) or SHARED.
  * Unaligned head/tail stay PIO. */
 static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
     uint8_t *dst = (uint8_t *)params->dst_buf;
     uint32_t off = params->offset;
     uint32_t size = params->size;
     uint32_t ss = IsoInfo->sector_size;
-    uint32_t dest_hi = ((uint32_t)dst) >> 24;
     uint32_t head = 0;
     uint32_t mid;
     uint32_t tail;
-    uint32_t step = ss;
+    uint32_t align = CART_ATA_SEC_SIZE;
+    uint32_t step;
 
+    if(naomi->game_id == NAOMI_ID_BCQ0) {
+        align = ss;
+    }
+
+    step = align;
     if(params->type) {
         while(step & 0x1f) {
-            step += ss;
+            step += align;
         }
     }
 
     if(params->type && (((off ^ (uint32_t)dst) & 0x1f) != 0)) {
         head = size;
     }
-    else if(off % ss) {
-        head = ss - (off % ss);
+    else if(off % align) {
+        head = align - (off % align);
         if(head > size) {
             head = size;
         }
@@ -321,30 +370,30 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
 
     if(params->type) {
         *((volatile uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 1;
-        if((dest_hi & 0xf0) != 0xa0) {
-            dcache_inval_range(CACHED_ADDR((uint32_t)dst), size);
-        }
     }
 
     if(head || tail) {
         fs_enable_dma(FS_DMA_DISABLED);
         if(head) {
+            naomi_cart_cache_read(dst, head);
             lseek(iso_fd, off, SEEK_SET);
             read(iso_fd, dst, head);
-            if(params->type && (dest_hi & 0xf0) != 0xa0) {
-                dcache_purge_range(CACHED_ADDR((uint32_t)dst), head);
+            if(params->type) {
+                naomi_cart_cache_purge(dst, head);
             }
         }
         if(tail) {
+            naomi_cart_cache_read(dst + head + mid, tail);
             lseek(iso_fd, off + head + mid, SEEK_SET);
             read(iso_fd, dst + head + mid, tail);
-            if(params->type && (dest_hi & 0xf0) != 0xa0) {
-                dcache_purge_range(CACHED_ADDR((uint32_t)(dst + head + mid)), tail);
+            if(params->type) {
+                naomi_cart_cache_purge(dst + head + mid, tail);
             }
         }
     }
 
     if(mid) {
+        int mid_dma = 0;
         if(params->type) {
 #ifdef _FS_ASYNC
             if(naomi_cart_use_async(params)) {
@@ -354,6 +403,7 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
                         cart_aica_async = 1;
                         *((volatile uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
                     }
+                    cart_async_kicked = 1;
                     return;
                 }
             }
@@ -362,15 +412,23 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
             }
             else {
                 fs_enable_dma(FS_DMA_SHARED);
+                mid_dma = 1;
             }
 #else
             fs_enable_dma(FS_DMA_SHARED);
+            mid_dma = 1;
 #endif
         }
         else {
             fs_enable_dma(FS_DMA_DISABLED);
         }
+        if(!mid_dma) {
+            naomi_cart_cache_read(dst + head, mid);
+        }
         ReadSectors(dst + head, (off + head) / ss, mid / ss, NULL);
+        if(!mid_dma && params->type) {
+            naomi_cart_cache_purge(dst + head, mid);
+        }
     }
 
     *((volatile uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
@@ -397,9 +455,10 @@ static void naomi_cart_read_work(gdc_cart_read_params_t *params) {
     naomi_cart_read_sd(params);
     *((volatile uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
 #elif defined(_FS_ASYNC)
+    cart_async_kicked = 0;
     naomi_cart_drain_dma();
     naomi_cart_read_ide(params);
-    if(!cart_aica_async) {
+    if(!cart_async_kicked) {
         naomi_cart_wait_dma();
     }
 #else
@@ -658,10 +717,25 @@ void naomi_setup_env(void) {
 uint32_t naomi_load_bin(int test_mode) {
     naomi_cart_header_t hdr __attribute__((aligned(32)));
     const uint32_t sec_size = IsoInfo->sector_size;
+    uint32_t hdr_off;
+    int hdr_ok = 0;
 
-    if(ReadSectors((uint8_t *)&hdr, 0, sizeof(hdr) / sec_size, NULL) != COMPLETED) {
+    for(hdr_off = 0; hdr_off < NAOMI_CART_HDR_SCAN_MAX; hdr_off += NAOMI_CART_PROBE_STEP) {
+        if(ReadSectors((uint8_t *)&hdr, hdr_off / sec_size,
+                sizeof(hdr) / sec_size, NULL) != COMPLETED) {
+            continue;
+        }
+        if(naomi_cart_valid(&hdr)) {
+            hdr_ok = 1;
+            break;
+        }
+    }
+    if(!hdr_ok) {
         LOGF("Failed to read NAOMI header\n");
         return 0;
+    }
+    if(hdr_off) {
+        LOGF("NAOMI header at %08lx\n", hdr_off);
     }
     memcpy(&naomi->game_id, hdr.serial, 4);
     naomi->aw = false;
@@ -730,6 +804,27 @@ uint32_t naomi_load_bin(int test_mode) {
         if(exe[i].offset == (uint32_t)-1) {
             break;
         }
+        if(PHYS_ADDR((uint32_t)exe[i].dst_buf) >= 0x0d000000
+            && exe[i].size > 0x1000) {
+            uint8_t peek[2048] __attribute__((aligned(32)));
+            uint32_t lba = NAOMI_M2_OVERLAY_OFF / sec_size;
+
+            if((NAOMI_M2_OVERLAY_OFF % sec_size) == 0
+                && sec_size <= sizeof(peek)
+                && ReadSectors(peek, lba, 1, NULL) == COMPLETED
+                && peek[0] != 0xff) {
+                naomi->have_win = true;
+                naomi->win_off = NAOMI_M2_OVERLAY_OFF;
+                LOGF("NAOMI M2 overlay at %08lx\n", naomi->win_off);
+            }
+            break;
+        }
+    }
+
+    for(int i = 0; i < 8; i++) {
+        if(exe[i].offset == (uint32_t)-1) {
+            break;
+        }
         if(exe[i].size == 0) {
             continue;
         }
@@ -757,8 +852,11 @@ uint32_t naomi_load_bin(int test_mode) {
             }
         }
     }
-    if(stub && naomi->have_win) {
+    if(stub && naomi->win_off == NAOMI_M2_OVERLAY_OFF) {
         naomi_boot_preload(stub, stub_size, naomi->win_off);
+    }
+    else if(stub) {
+        LOGF("NAOMI M2 overlay missing\n");
     }
 
     /* In-game test: hook TEST into a task already in the game binary. */
