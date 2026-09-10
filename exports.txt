@@ -2202,6 +2202,17 @@ fs_iso9660_shutdown
 pvr_init_defaults
 pvr_dma_shutdown
 pvr_dma_transfer
+pvr_wait_render_done
+pvr2_init
+pvr2_shutdown
+pvr2_enabled
+elan_present
+elan_revision
+elan_ifctl_get
+elan_ifctl_set
+elan_pvr2_enable
+elan_pvr2_disable
+elan_pvr2_enabled
 #
 library_lookup
 library_by_libid
