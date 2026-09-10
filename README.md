@@ -30,7 +30,7 @@ sudo mkdir -p /usr/local/dc/kos
 sudo chown -R $(id -u):$(id -g) /usr/local/dc
 cd /usr/local/dc/kos
 git clone https://github.com/KallistiOS/kos-ports.git
-git clone https://github.com/KallistiOS/KallistiOS.git kos
+git clone https://github.com/DC-SWAT/KallistiOS.git kos
 cd /usr/local/dc/kos/kos
 git clone https://github.com/DC-SWAT/DreamShell.git ds
 git checkout `cat ds/sdk/doc/KallistiOS.txt`
