@@ -60,6 +60,9 @@ jobs:
     if: needs.gate.outputs.should_run == 'true'
     runs-on: ubuntu-22.04
     timeout-minutes: 360
+    permissions:
+      contents: write
+      actions: read
     env:
       GIT_TERMINAL_PROMPT: "0"
 
@@ -89,7 +92,7 @@ jobs:
           make -C /tmp/tolua/build -j"$(nproc)"
           sudo make -C /tmp/tolua/build install
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -104,14 +107,14 @@ jobs:
 
       - name: Restore toolchain cache
         id: cache-toolchain
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: /opt/toolchains/dc
           key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff', 'sdk/doc/KallistiOS.txt') }}
 
       - name: Restore kos-ports cache
         id: cache-ports
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: /usr/local/dc/kos/kos-ports
           key: kos-ports-${{ runner.os }}-${{ steps.ports.outputs.sha }}-${{ hashFiles('sdk/doc/KallistiOS.txt', 'sdk/toolchain/Makefile.cfg') }}
@@ -134,7 +137,7 @@ jobs:
 
       - name: Save toolchain cache
         if: steps.cache-toolchain.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: /opt/toolchains/dc
           key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff', 'sdk/doc/KallistiOS.txt') }}
@@ -147,7 +150,7 @@ jobs:
 
       - name: Save kos-ports cache
         if: steps.cache-ports.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: /usr/local/dc/kos/kos-ports
           key: kos-ports-${{ runner.os }}-${{ steps.ports.outputs.sha }}-${{ hashFiles('sdk/doc/KallistiOS.txt', 'sdk/toolchain/Makefile.cfg') }}
@@ -156,20 +159,20 @@ jobs:
         run: bash .github/scripts/dev-build.sh release
 
       - name: Publish dev prerelease
-        uses: ncipollo/release-action@v1
-        with:
-          tag: dev
-          name: DreamShell Dev
-          commit: ${{ github.sha }}
-          prerelease: true
-          makeLatest: "false"
-          allowUpdates: true
-          replacesArtifacts: true
-          removeArtifacts: true
-          artifacts: DreamShell-dev.zip
-          artifactErrorsFailBuild: true
-          body: |
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: |
             Development snapshot from `master`. This prerelease is overwritten on each successful build.
 
             - Commit: ${{ github.sha }}
             - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if gh release view dev >/dev/null 2>&1; then
+            gh release delete dev --yes --cleanup-tag
+          fi
+          gh release create dev DreamShell-dev.zip \
+            --title "DreamShell Dev" \
+            --prerelease \
+            --latest=false \
+            --target "${{ github.sha }}" \
+            --notes "$RELEASE_NOTES"
