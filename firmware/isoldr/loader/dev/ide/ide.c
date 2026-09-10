@@ -711,9 +711,14 @@ static s32 g1_dev_scan(void)
 #ifdef DEV_TYPE_IDE
 
 static void g1_lba28_chain_next(void) {
+	u32 nb_sectors;
+
+	if (g1_lba28_count <= 256 || g1_dma_in_progress()) {
+		return;
+	}
 	g1_lba28_sector += 256;
 	g1_lba28_count -= 256;
-	u32 nb_sectors = (g1_lba28_count > 256) ? 256 : g1_lba28_count;
+	nb_sectors = (g1_lba28_count > 256) ? 256 : g1_lba28_count;
 
 	g1_ata_set_sector_and_count(g1_lba28_sector, nb_sectors, 1, 1);
 
@@ -721,8 +726,8 @@ static void g1_lba28_chain_next(void) {
 	OUT32(G1_ATA_DMA_LENGTH, nb_sectors * 512);
 	OUT8(G1_ATA_DMA_DIRECTION, !(g1_lba28_cmd == ATA_CMD_WRITE_DMA));
 
-    g1_ata_wait_nbsy();
-    g1_ata_wait_drdy();
+	g1_ata_wait_nbsy();
+	g1_ata_wait_drdy();
 
 	OUT8(G1_ATA_COMMAND_REG, g1_lba28_cmd);
 
@@ -730,8 +735,8 @@ static void g1_lba28_chain_next(void) {
 		g1_dma_set_irq_mask(fs_dma_enabled() != FS_DMA_HIDDEN);
 	}
 
-    OUT8(G1_ATA_DMA_ENABLE, 1);
-    OUT8(G1_ATA_DMA_STATUS, 1);
+	OUT8(G1_ATA_DMA_ENABLE, 1);
+	OUT8(G1_ATA_DMA_STATUS, 1);
 }
 
 static void g1_ata_set_sector_and_count(u64 sector, u32 count, u8 drive, int lba28) {
@@ -1206,8 +1211,8 @@ s32 g1_ata_poll(void) {
 
 	/* Handle LBA28 chaining when DMA is complete */
 	if (g1_lba28_count > 256) {
-		rv = g1_dma_transfered();
 		g1_lba28_chain_next();
+		return 1;
 	}
 	else if(!g1_dma_part_avail) {
 		OUT8(G1_ATA_DMA_ENABLE, 0);
