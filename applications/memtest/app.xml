@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<app name="Memtest" version="1.0.0" icon="images/icon.png">
+	<resources>
+		<module src="modules/app_memtest.klf" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="22" name="label-22" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="16" name="label-16" />
+		<font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="14" name="label-14" />
+		<surface height="45" name="header-bg">
+			<fill color="#163A45" />
+			<fill color="#1E4A58" height="22" />
+			<fill color="#0C252C" height="1" y="43" />
+			<fill color="#2A6574" height="1" y="44" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-normal">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#31799F" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-hl">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#61BDEC" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-pressed">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#D4F129" />
+		</surface>
+		<surface width="120" height="40" name="but-medium-disabled">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="116" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="114" height="34" color="#CCCCCC" />
+		</surface>
+		<surface width="620" height="40" name="info-back">
+			<fill color="#EEEEEE" />
+			<fill x="2" y="2" width="616" height="36" color="#BBBBBB" />
+			<fill x="3" y="3" width="614" height="34" color="#F4F8FA" />
+		</surface>
+		<surface width="600" height="32" name="row-back">
+			<fill color="#C9DADE" />
+			<fill color="#EEEEEE" height="2" y="30" />
+		</surface>
+		<surface width="600" height="32" name="head-back">
+			<fill color="#31799F" />
+		</surface>
+		<theme>
+			<input type="button" normal="but-medium-normal" highlight="but-medium-hl"
+				pressed="but-medium-pressed" disabled="but-medium-disabled" />
+		</theme>
+	</resources>
+	<body width="100%" height="100%" background="#DDDDDD"
+		onload="export:MemtestApp_Init()"
+		onopen="export:MemtestApp_Open()"
+		onunload="export:MemtestApp_Shutdown()">
+		<panel height="45" background="header-bg" name="header-panel">
+			<label name="sys-label" font="label-16" color="#E8F4F6" text="Memtest"
+				align="center" valign="center" width="100%" height="45" />
+		</panel>
+
+		<panel x="20" y="54" width="600" height="32" backgroundCenter="head-back">
+			<label align="left" valign="center" color="#EEEEEE" font="label-14"
+				height="32" width="28" x="4" text="" />
+			<label align="left" valign="center" color="#EEEEEE" font="label-14"
+				height="32" width="150" x="32" text="Region" />
+			<label align="left" valign="center" color="#EEEEEE" font="label-14"
+				height="32" width="80" x="200" text="Size" />
+			<label align="left" valign="center" color="#EEEEEE" font="label-14"
+				height="32" width="110" x="290" text="Address" />
+			<label align="left" valign="center" color="#EEEEEE" font="label-14"
+				height="32" width="180" x="410" text="Result" />
+		</panel>
+
+		<panel x="20" y="86" width="600" height="32" backgroundCenter="row-back" name="row-0">
+			<input type="checkbox" name="chk-0" x="4" y="4" height="24" width="178">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="24" x="32" name="name-0" text="AICA RAM" />
+			</input>
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="80" x="200" name="size-0" text="--" />
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="110" x="290" name="addr-0" text="--" />
+			<label align="left" valign="center" color="#31799F" font="label-14"
+				height="32" width="180" x="410" name="result-0" text="--" />
+		</panel>
+		<panel x="20" y="118" width="600" height="32" backgroundCenter="row-back" name="row-1">
+			<input type="checkbox" name="chk-1" x="4" y="4" height="24" width="178">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="24" x="32" name="name-1" text="Video RAM" />
+			</input>
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="80" x="200" name="size-1" text="--" />
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="110" x="290" name="addr-1" text="--" />
+			<label align="left" valign="center" color="#31799F" font="label-14"
+				height="32" width="180" x="410" name="result-1" text="--" />
+		</panel>
+		<panel x="20" y="150" width="600" height="32" backgroundCenter="row-back" name="row-2">
+			<input type="checkbox" name="chk-2" x="4" y="4" height="24" width="178">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="24" x="32" name="name-2" text="VRAM B" />
+			</input>
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="80" x="200" name="size-2" text="--" />
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="110" x="290" name="addr-2" text="--" />
+			<label align="left" valign="center" color="#31799F" font="label-14"
+				height="32" width="180" x="410" name="result-2" text="--" />
+		</panel>
+		<panel x="20" y="182" width="600" height="32" backgroundCenter="row-back" name="row-3">
+			<input type="checkbox" name="chk-3" x="4" y="4" height="24" width="178">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="24" x="32" name="name-3" text="Elan RAM" />
+			</input>
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="80" x="200" name="size-3" text="--" />
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="110" x="290" name="addr-3" text="--" />
+			<label align="left" valign="center" color="#31799F" font="label-14"
+				height="32" width="180" x="410" name="result-3" text="--" />
+		</panel>
+		<panel x="20" y="214" width="600" height="32" backgroundCenter="row-back" name="row-4">
+			<input type="checkbox" name="chk-4" x="4" y="4" height="24" width="178">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="24" x="32" name="name-4" text="System RAM" />
+			</input>
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="80" x="200" name="size-4" text="--" />
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="110" x="290" name="addr-4" text="--" />
+			<label align="left" valign="center" color="#31799F" font="label-14"
+				height="32" width="180" x="410" name="result-4" text="--" />
+		</panel>
+
+		<panel x="20" y="286" width="600" height="26">
+			<input type="checkbox" name="quick-checkbox" x="0" y="0" height="26" width="280">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="26" x="32" text="Quick test (bus only)" />
+			</input>
+		</panel>
+
+		<panel x="20" y="318" width="600" height="60">
+			<progressbar width="600" height="24" name="progress-bar" pos="0.0" />
+			<label align="left" color="#31799F" font="label-14" height="24" width="100%"
+				y="32" name="status-label" text="Ready" />
+		</panel>
+
+		<panel x="20" y="382" width="620" height="50">
+			<input type="button" width="120" height="40" x="0"
+				onclick="export:MemtestApp_Start()" name="start_btn">
+				<label font="label-16" color="#EEEEEE" text="Start" align="center" />
+			</input>
+			<input type="button" width="120" height="40" x="125"
+				onclick="export:MemtestApp_Stop()" name="stop_btn">
+				<label font="label-16" color="#EEEEEE" text="Stop" align="center" />
+			</input>
+			<input type="button" width="120" height="40" x="480"
+				onclick="console:app -o">
+				<label font="label-16" color="#EEEEEE" text="Exit" align="center" />
+			</input>
+		</panel>
+
+		<dialog name="results-dialog" font="label-16"
+			x="40" y="40" width="560" height="340"
+			onconfirm="export:MemtestApp_DialogConfirm" />
+	</body>
+</app>

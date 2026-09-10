@@ -1,0 +1,9 @@
+include kos/exports.h
+include app_module.h
+
+MemtestApp_Init
+MemtestApp_Shutdown
+MemtestApp_Open
+MemtestApp_Start
+MemtestApp_Stop
+MemtestApp_DialogConfirm
