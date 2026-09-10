@@ -1,0 +1,175 @@
+name: Dev build
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: dreamshell-dev-build
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  gate:
+    name: Check for new commit
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-22.04
+    outputs:
+      should_run: ${{ steps.decide.outputs.should_run }}
+    steps:
+      - name: Decide whether to build
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          CURRENT_SHA: ${{ github.sha }}
+          REPO: ${{ github.repository }}
+          BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Manual dispatch, building."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last="$(gh run list --repo "$REPO" --workflow dev-build.yml --branch "$BRANCH" \
+            --status completed --limit 1 --json headSha --jq '.[0].headSha // empty')"
+
+          if [ -z "$last" ] || [ "$last" = "null" ]; then
+            echo "No previous completed run, building."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$last" = "$CURRENT_SHA" ]; then
+            echo "Commit $CURRENT_SHA already attempted, skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "New commit $CURRENT_SHA (last attempt $last), building."
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build and publish
+    needs: gate
+    if: needs.gate.outputs.should_run == 'true'
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360
+    env:
+      GIT_TERMINAL_PROMPT: "0"
+
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/.ghcup || true
+          sudo apt-get clean || true
+          df -hT
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gawk patch bzip2 tar make cmake pkg-config \
+            gettext wget bison flex sed meson ninja-build \
+            build-essential diffutils curl python3 rake \
+            genisoimage squashfs-tools texinfo git zip \
+            libgmp-dev libmpfr-dev libmpc-dev libelf-dev libisofs-dev \
+            libpng-dev libjpeg-dev liblzo2-dev liblua5.2-dev lua5.2
+
+      - name: Install tolua
+        run: |
+          git clone --depth 1 https://github.com/LuaDist/tolua.git /tmp/tolua
+          cmake -S /tmp/tolua -B /tmp/tolua/build
+          make -C /tmp/tolua/build -j"$(nproc)"
+          sudo make -C /tmp/tolua/build install
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Prepare directories
+        run: |
+          sudo mkdir -p /usr/local/dc/kos /opt/toolchains/dc
+          sudo chown -R "$(id -u):$(id -g)" /usr/local/dc /opt/toolchains
+
+      - name: Resolve kos-ports SHA
+        id: ports
+        run: echo "sha=$(git ls-remote https://github.com/KallistiOS/kos-ports.git HEAD | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Restore toolchain cache
+        id: cache-toolchain
+        uses: actions/cache/restore@v4
+        with:
+          path: /opt/toolchains/dc
+          key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff', 'sdk/doc/KallistiOS.txt') }}
+
+      - name: Restore kos-ports cache
+        id: cache-ports
+        uses: actions/cache/restore@v4
+        with:
+          path: /usr/local/dc/kos/kos-ports
+          key: kos-ports-${{ runner.os }}-${{ steps.ports.outputs.sha }}-${{ hashFiles('sdk/doc/KallistiOS.txt', 'sdk/toolchain/Makefile.cfg') }}
+
+      - name: Clone kos-ports
+        if: steps.cache-ports.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --filter=blob:none \
+            https://github.com/KallistiOS/kos-ports.git /usr/local/dc/kos/kos-ports
+
+      - name: Prepare KallistiOS tree
+        run: bash .github/scripts/dev-build.sh prepare
+
+      - name: Build toolchain
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        run: bash .github/scripts/dev-build.sh toolchain
+
+      - name: Verify toolchain
+        run: test -x /opt/toolchains/dc/sh-elf/bin/sh-elf-gcc
+
+      - name: Save toolchain cache
+        if: steps.cache-toolchain.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /opt/toolchains/dc
+          key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff', 'sdk/doc/KallistiOS.txt') }}
+
+      - name: Build KallistiOS
+        run: bash .github/scripts/dev-build.sh kos
+
+      - name: Build kos-ports
+        run: bash .github/scripts/dev-build.sh ports
+
+      - name: Save kos-ports cache
+        if: steps.cache-ports.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: /usr/local/dc/kos/kos-ports
+          key: kos-ports-${{ runner.os }}-${{ steps.ports.outputs.sha }}-${{ hashFiles('sdk/doc/KallistiOS.txt', 'sdk/toolchain/Makefile.cfg') }}
+
+      - name: Build DreamShell release
+        run: bash .github/scripts/dev-build.sh release
+
+      - name: Publish dev prerelease
+        uses: ncipollo/release-action@v1
+        with:
+          tag: dev
+          name: DreamShell Dev
+          commit: ${{ github.sha }}
+          prerelease: true
+          makeLatest: "false"
+          allowUpdates: true
+          replacesArtifacts: true
+          removeArtifacts: true
+          artifacts: DreamShell-dev.zip
+          artifactErrorsFailBuild: true
+          body: |
+            Development snapshot from `master`. This prerelease is overwritten on each successful build.
+
+            - Commit: ${{ github.sha }}
+            - Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
