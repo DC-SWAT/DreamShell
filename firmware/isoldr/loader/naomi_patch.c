@@ -690,6 +690,49 @@ static int naomi_bdu0_gdst(uint8_t *dst, uint32_t size) {
     return 1;
 }
 
+static const uint32_t bcz0_exe_addr = 0x0c020000;
+static const uint32_t bcz0_g1_off[] = { 0x5bec0, 0x5bef0 };
+static const uint32_t bcz0_win_off[] = { 0x5c930, 0x5c9c0, 0x5caf0 };
+static const uint32_t bcz0_ac_wait_bf_off[] = { 0x5c016, 0x5f238, 0x5f268 };
+static const uint16_t bcz0_g1_op[] = { 0xd230, 0xd224 };
+static const uint16_t bcz0_win_op = 0x2fe6;
+static const uint16_t bcz0_ac_wait_bf_op = 0x8bfc;
+
+static int naomi_bcz0_gdst(uint8_t *dst, uint32_t size) {
+    static const uint8_t rts_nop[] = { 0x0b, 0x00, 0x09, 0x00 };
+    uint16_t *w;
+    uint32_t i;
+
+    if(get_naomi()->game_id != NAOMI_ID_BCZ0) {
+        return 0;
+    }
+    if(PHYS_ADDR((uint32_t)dst) != bcz0_exe_addr) {
+        return 0;
+    }
+    if(size <= bcz0_ac_wait_bf_off[sizeof(bcz0_ac_wait_bf_off) / sizeof(bcz0_ac_wait_bf_off[0]) - 1] + 2) {
+        return 0;
+    }
+    for(i = 0; i < sizeof(bcz0_g1_off) / sizeof(bcz0_g1_off[0]); i++) {
+        w = (uint16_t *)(dst + bcz0_g1_off[i]);
+        if(w[0] == bcz0_g1_op[i]) {
+            memcpy(dst + bcz0_g1_off[i], rts_nop, sizeof(rts_nop));
+        }
+    }
+    for(i = 0; i < sizeof(bcz0_win_off) / sizeof(bcz0_win_off[0]); i++) {
+        w = (uint16_t *)(dst + bcz0_win_off[i]);
+        if(w[0] == bcz0_win_op) {
+            memcpy(dst + bcz0_win_off[i], rts_nop, sizeof(rts_nop));
+        }
+    }
+    for(i = 0; i < sizeof(bcz0_ac_wait_bf_off) / sizeof(bcz0_ac_wait_bf_off[0]); i++) {
+        w = (uint16_t *)(dst + bcz0_ac_wait_bf_off[i]);
+        if(w[0] == bcz0_ac_wait_bf_op) {
+            w[0] = SH4_OPCODE_NOP;
+        }
+    }
+    return 1;
+}
+
 int naomi_is_aw_stub(uint8_t *dst, uint32_t size) {
     uint16_t *w;
 
@@ -1137,6 +1180,7 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
     n_gdst += naomi_replace_gdst(dst, size);
     n_gdst += naomi_fix_gdst_wait(dst, size);
     n_gdst += naomi_bdu0_gdst(dst, size);
+    n_gdst += naomi_bcz0_gdst(dst, size);
     if(naomi->game_id == NAOMI_ID_BAL1) {
         n_mbox = naomi_fix_cart_mbox(dst, size);
     }
