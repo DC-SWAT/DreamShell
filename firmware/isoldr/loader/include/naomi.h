@@ -21,6 +21,7 @@
 #define NAOMI_ID_BBJ0 NAOMI_ID('B', 'B', 'J', '0') /* Power Stone 2 */
 #define NAOMI_ID_BBK0 NAOMI_ID('B', 'B', 'K', '0') /* 18 Wheeler */
 #define NAOMI_ID_BCV0 NAOMI_ID('B', 'C', 'V', '0') /* Gundam Federation vs Zeon */
+#define NAOMI_ID_BDU0 NAOMI_ID('B', 'D', 'U', '0') /* Gundam Federation vs Zeon DX */
 #define NAOMI_ID_BDS0 NAOMI_ID('B', 'D', 'S', '0') /* Virtua Tennis 2 */
 #define NAOMI_ID_BDF0 NAOMI_ID('B', 'D', 'F', '0') /* Monkey Ball */
 #define NAOMI_ID_BCW0 NAOMI_ID('B', 'C', 'W', '0') /* Heavy Metal Geomatrix */

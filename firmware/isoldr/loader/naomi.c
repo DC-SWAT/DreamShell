@@ -126,7 +126,8 @@ static int naomi_cart_async_game(void) {
     return id == NAOMI_ID_BAU0
         || id == NAOMI_ID_BAC0
         || id == NAOMI_ID_BAL1
-        || id == NAOMI_ID_BCV0;
+        || id == NAOMI_ID_BCV0
+        || id == NAOMI_ID_BDU0;
 }
 
 static int naomi_cart_aica_stream_game(void) {
@@ -135,6 +136,7 @@ static int naomi_cart_aica_stream_game(void) {
     return id == NAOMI_ID_BDS0
         || id == NAOMI_ID_BAC0
         || id == NAOMI_ID_BCV0
+        || id == NAOMI_ID_BDU0
         || id == NAOMI_ID_BDF0;
 }
 
