@@ -9,7 +9,6 @@
 
 #include "ds.h"
 #include <dc/sd.h>
-#include <dc/sci.h>
 #include <dc/g1ata.h>
 #include <kos/blockdev.h>
 
@@ -130,11 +129,16 @@ static void set_device_unavailable(device_ui_t *dev) {
 
 static void get_sd_interface(char *iface, size_t len) {
 
-	if(sci_spi_rw_byte(0, NULL) != SCI_ERR_NOT_INITIALIZED) {
-		snprintf(iface, len, "SCI-SPI");
-	}
-	else {
-		snprintf(iface, len, "SCIF-SPI");
+	switch(sd_get_interface()) {
+		case SD_IF_SCI:
+			snprintf(iface, len, "SCI-SPI");
+			break;
+		case SD_IF_SCIF:
+			snprintf(iface, len, "SCIF-SPI");
+			break;
+		default:
+			snprintf(iface, len, "N/A");
+			break;
 	}
 }
 

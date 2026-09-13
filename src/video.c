@@ -11,7 +11,8 @@
 #include "img/load.h"
 #include <kmg/kmg.h>
 #include <zlib/zlib.h>
-#include <dc/sci.h>
+#include <dc/sd.h>
+#include <dc/net/w5500_adapter.h>
 
 static int sdl_dc_no_ask_60hz = 0;
 static int sdl_dc_default_60hz = 0;
@@ -499,7 +500,8 @@ int InitVideo(int w, int h, int bpp) {
 	}
 
 	/* Disable PVR DMA if SCI-SPI DMA is used due to conflict (?) */
-	if(sci_spi_rw_byte(0, NULL) != SCI_ERR_NOT_INITIALIZED) {
+	if(sd_get_interface() == SD_IF_SCI ||
+		w5500_adapter_interface() == W5500_IF_SCI) {
 		video_dma = 0;
 	}
 
