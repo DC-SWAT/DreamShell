@@ -306,33 +306,14 @@ extern "C" {
 	}
 
 	static void *CreateFont(const char *name, RTF_FontFamily family, int charset, int size, int style) {
-		int index;
-		TTF_Font *font;
+		(void)name;
+		(void)charset;
 
 		if (!g_current_rtf) {
 			return NULL;
 		}
 
-		index = FontFamilyToIndex(family);
-
-		if (!g_current_rtf->FontList[index][0])
-			index = 0;
-
-		font = TTF_OpenFont(g_current_rtf->FontList[index], size);
-
-		if (font) {
-			int TTF_style = TTF_STYLE_NORMAL;
-			if (style & RTF_FontBold)
-				TTF_style |= TTF_STYLE_BOLD;
-			if (style & RTF_FontItalic)
-				TTF_style |= TTF_STYLE_ITALIC;
-			if (style & RTF_FontUnderline)
-				TTF_style |= TTF_STYLE_UNDERLINE;
-
-			TTF_SetFontStyle(font, TTF_style);
-		}
-
-		return font;
+		return g_current_rtf->GetCachedFont(family, size, style);
 	}
 
 	static int GetLineSpacing(void *_font) {
@@ -371,10 +352,17 @@ extern "C" {
 	}
 
 	static void FreeFont(void *_font) {
-		TTF_Font *font = (TTF_Font *)_font;
-		TTF_CloseFont(font);
+		(void)_font;
 	}
 }
+
+struct GUI_RTF::FontCache {
+	char path[NAME_MAX];
+	int size;
+	int style;
+	TTF_Font *font;
+	FontCache *next;
+};
 
 
 GUI_RTF::GUI_RTF(const char *aname, const char *file, const char *default_font, int x, int y, int w, int h)
@@ -382,6 +370,7 @@ GUI_RTF::GUI_RTF(const char *aname, const char *file, const char *default_font, 
 {
 	surface = NULL;
 	offset = 0;
+	font_cache = NULL;
 	FontList = new char[NUM_FONT_FAMILIES][NAME_MAX];
 	SetupFonts(default_font);
 
@@ -402,6 +391,7 @@ GUI_RTF::GUI_RTF(const char *aname, SDL_RWops *src, int freesrc, const char *def
 {
 	surface = NULL;
 	offset = 0;
+	font_cache = NULL;
 	FontList = new char[NUM_FONT_FAMILIES][NAME_MAX];
 	SetupFonts(default_font);
 
@@ -422,6 +412,7 @@ GUI_RTF::GUI_RTF(const char *aname, const char *text, int x, int y, int w, int h
 	ctx = NULL;
 	surface = NULL;
 	offset = 0;
+	font_cache = NULL;
 	FontList = new char[NUM_FONT_FAMILIES][NAME_MAX];
 	SetupFonts(default_font);
 	SetText(text);
@@ -431,6 +422,7 @@ GUI_RTF::GUI_RTF(const char *aname, const char *text, int x, int y, int w, int h
 GUI_RTF::~GUI_RTF()
 {
 	if(ctx) RTF_FreeContext(ctx);
+	FreeFontCache();
 	if(surface) surface->DecRef();
 	delete[] FontList;
 }
@@ -462,6 +454,66 @@ void GUI_RTF::SetupFonts(const char *default_font) {
 		snprintf(FontList[FontFamilyToIndex(RTF_FontDecor)],   NAME_MAX, "%s/fonts/ttf/arial_lite.ttf", base_path);
 		snprintf(FontList[FontFamilyToIndex(RTF_FontTech)],    NAME_MAX, "%s/fonts/ttf/arial_lite.ttf", base_path);
 		snprintf(FontList[FontFamilyToIndex(RTF_FontBidi)],    NAME_MAX, "%s/fonts/ttf/arial_lite.ttf", base_path);
+	}
+}
+
+TTF_Font *GUI_RTF::GetCachedFont(RTF_FontFamily family, int size, int style) {
+	int index = FontFamilyToIndex(family);
+
+	if (!FontList[index][0]) {
+		index = 0;
+	}
+
+	const char *path = FontList[index];
+	if (!path[0]) {
+		return NULL;
+	}
+
+	int ttf_style = TTF_STYLE_NORMAL;
+	if (style & RTF_FontBold)
+		ttf_style |= TTF_STYLE_BOLD;
+	if (style & RTF_FontItalic)
+		ttf_style |= TTF_STYLE_ITALIC;
+	if (style & RTF_FontUnderline)
+		ttf_style |= TTF_STYLE_UNDERLINE;
+
+	for (FontCache *c = font_cache; c; c = c->next) {
+		if (c->size == size && c->style == ttf_style && strcmp(c->path, path) == 0) {
+			return c->font;
+		}
+	}
+
+	TTF_Font *ttf = TTF_OpenFont(path, size);
+	if (!ttf) {
+		return NULL;
+	}
+
+	TTF_SetFontStyle(ttf, ttf_style);
+
+	FontCache *c = (FontCache *)malloc(sizeof(FontCache));
+	if (!c) {
+		TTF_CloseFont(ttf);
+		return NULL;
+	}
+
+	strncpy(c->path, path, NAME_MAX - 1);
+	c->path[NAME_MAX - 1] = '\0';
+	c->size = size;
+	c->style = ttf_style;
+	c->font = ttf;
+	c->next = font_cache;
+	font_cache = c;
+	return ttf;
+}
+
+void GUI_RTF::FreeFontCache() {
+	while (font_cache) {
+		FontCache *c = font_cache;
+		font_cache = c->next;
+		if (c->font) {
+			TTF_CloseFont(c->font);
+		}
+		free(c);
 	}
 }
 

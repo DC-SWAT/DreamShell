@@ -710,10 +710,14 @@ class GUI_RTF : public GUI_Widget
 		GUI_Surface *surface;
 		Uint32 color;
 		int offset;
+		struct FontCache;
+		FontCache *font_cache;
 		void SetupFonts(const char *default_font);
 		void SetupSurface();
+		void FreeFontCache();
 	public:
 		char (*FontList)[NAME_MAX];
+		TTF_Font *GetCachedFont(RTF_FontFamily family, int size, int style);
 		GUI_RTF(const char *aname, const char *file, const char *default_font, int x, int y, int w, int h);
 		GUI_RTF(const char *aname, SDL_RWops *src, int freesrc, const char *default_font, int x, int y, int w, int h);
 		GUI_RTF(const char *aname, const char *text, int x, int y, int w, int h, const char *default_font);
