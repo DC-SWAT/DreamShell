@@ -136,6 +136,10 @@
 				<label align="left" valign="center" color="#333333" font="label-14"
 					height="26" x="32" text="Quick test (bus only)" />
 			</input>
+			<input type="checkbox" name="led-checkbox" x="300" y="0" height="26" width="280">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="26" x="32" text="Activity LED (SPI CS)" />
+			</input>
 		</panel>
 
 		<panel x="20" y="318" width="600" height="60">

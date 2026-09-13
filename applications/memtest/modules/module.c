@@ -33,6 +33,7 @@ static struct {
     GUI_Widget *start_btn;
     GUI_Widget *stop_btn;
     GUI_Widget *quick_chk;
+    GUI_Widget *led_chk;
     GUI_Widget *dialog;
     region_ui_t rows[MEMTEST_REGIONS_MAX];
     memtest_plan_t plan;
@@ -91,6 +92,9 @@ static void set_controls(int running) {
     GUI_WidgetSetEnabled(self.stop_btn, running);
     if(self.quick_chk) {
         GUI_WidgetSetEnabled(self.quick_chk, !running);
+    }
+    if(self.led_chk) {
+        GUI_WidgetSetEnabled(self.led_chk, !running);
     }
     for(i = 0; i < self.plan.region_count; i++) {
         if(self.rows[i].chk) {
@@ -212,6 +216,7 @@ static void read_options(void) {
     int i;
 
     self.plan.quick = self.quick_chk && GUI_WidgetGetState(self.quick_chk);
+    self.plan.cs_led = self.led_chk && GUI_WidgetGetState(self.led_chk);
     for(i = 0; i < self.plan.region_count; i++) {
         if(self.rows[i].chk) {
             self.plan.regions[i].enabled = GUI_WidgetGetState(self.rows[i].chk);
@@ -452,6 +457,7 @@ void MemtestApp_Init(App_t *app) {
     self.start_btn = APP_GET_WIDGET("start_btn");
     self.stop_btn = APP_GET_WIDGET("stop_btn");
     self.quick_chk = APP_GET_WIDGET("quick-checkbox");
+    self.led_chk = APP_GET_WIDGET("led-checkbox");
     self.dialog = APP_GET_WIDGET("results-dialog");
 
     memtest_plan_init(&self.plan);

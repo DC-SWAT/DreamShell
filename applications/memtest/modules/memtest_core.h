@@ -73,6 +73,7 @@ typedef struct memtest_plan {
     size_t elan_size;
     int region_count;
     int quick;
+    int cs_led;
     volatile int cancel;
     memtest_region_t regions[MEMTEST_REGIONS_MAX];
 } memtest_plan_t;

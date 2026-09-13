@@ -12,6 +12,10 @@
 #include <dc/memory.h>
 #include <dc/perfctr.h>
 #include <dc/pvr.h>
+#include <dc/net/w5500_adapter.h>
+#include <dc/sci.h>
+#include <dc/scif.h>
+#include <dc/sd.h>
 #include <dc/spu.h>
 #include <kos/cache.h>
 #include <kos/irq.h>
@@ -22,6 +26,11 @@
 #define PATTERN_5             0x55555555
 #define ADDR_SAVE_MAX         32
 #define RAM_PHYS_BASE         0x0c000000
+#define CS_LED_NONE           0
+#define CS_LED_SCIF           1
+#define CS_LED_SCI            2
+#define CS_LED_PERIOD_NS      200000000
+#define CS_LED_POLL_MASK      0x0FFF
 
 typedef uint32_t datum;
 
@@ -34,10 +43,44 @@ typedef struct {
     uint8_t *backup;
     size_t backup_size;
     int sub_id;
+    int cs_led;
 } run_ctx_t;
 
 void memtest_ocram_set(int enable);
 uint32_t memtest_call_on_ocram(uint32_t (*fn)(void *), void *arg);
+
+static int cs_led_detect(void) {
+    sd_interface_t sd = sd_get_interface();
+    w5500_interface_t w5500 = w5500_adapter_interface();
+
+    if((sd == SD_IF_SCI || w5500 == W5500_IF_SCI) &&
+        sd != SD_IF_SCIF && w5500 != W5500_IF_SCIF) {
+        return CS_LED_SCI;
+    }
+    return CS_LED_SCIF;
+}
+
+static void cs_led_set(int mode, int on) {
+    if(mode == CS_LED_SCI) {
+        sci_spi_set_cs(on);
+    }
+    else if(mode == CS_LED_SCIF) {
+        scif_spi_set_cs(on ? 0 : 1);
+    }
+}
+
+static void cs_led_poll(int mode) {
+    if(!mode) {
+        return;
+    }
+    cs_led_set(mode, (perf_cntr_timer_ns() / CS_LED_PERIOD_NS) & 1);
+}
+
+static void cs_led_poll_at(int mode, unsigned long i) {
+    if((i & CS_LED_POLL_MASK) == 0) {
+        cs_led_poll(mode);
+    }
+}
 
 static uintptr_t phys_addr(uintptr_t addr) {
     return addr & MEM_AREA_CACHE_MASK;
@@ -216,7 +259,7 @@ static void fail_sub(memtest_sub_t *sub, uintptr_t addr, uint32_t expected, uint
     sub->actual = actual;
 }
 
-static int test_databus(int access, uintptr_t addr, memtest_sub_t *sub) {
+static int test_databus(int access, uintptr_t addr, memtest_sub_t *sub, int cs_led) {
     datum orig;
     datum pattern;
     datum got;
@@ -224,6 +267,7 @@ static int test_databus(int access, uintptr_t addr, memtest_sub_t *sub) {
     orig = bus_read(access, addr);
 
     for(pattern = 1; pattern != 0; pattern <<= 1) {
+        cs_led_poll(cs_led);
         bus_write(access, addr, pattern);
         got = bus_read(access, addr);
         if(got != pattern) {
@@ -245,7 +289,7 @@ static int in_skip(uintptr_t addr, uintptr_t skip_lo, uintptr_t skip_hi) {
 }
 
 static int test_addrbus(int access, uintptr_t base, size_t nbytes,
-        uintptr_t skip_lo, uintptr_t skip_hi, memtest_sub_t *sub) {
+        uintptr_t skip_lo, uintptr_t skip_hi, memtest_sub_t *sub, int cs_led) {
     unsigned long mask = (nbytes / sizeof(datum)) - 1;
     unsigned long offset;
     unsigned long test;
@@ -261,6 +305,7 @@ static int test_addrbus(int access, uintptr_t base, size_t nbytes,
     }
 
     for(offset = 1; (offset & mask) != 0; offset <<= 1) {
+        cs_led_poll(cs_led);
         addr = base + offset * sizeof(datum);
         if(!in_skip(addr, skip_lo, skip_hi)) {
             bus_write(access, addr, PATTERN_A);
@@ -272,6 +317,7 @@ static int test_addrbus(int access, uintptr_t base, size_t nbytes,
     }
 
     for(offset = 1; (offset & mask) != 0; offset <<= 1) {
+        cs_led_poll(cs_led);
         addr = base + offset * sizeof(datum);
         if(in_skip(addr, skip_lo, skip_hi)) {
             continue;
@@ -288,6 +334,7 @@ static int test_addrbus(int access, uintptr_t base, size_t nbytes,
     }
 
     for(test = 1; (test & mask) != 0; test <<= 1) {
+        cs_led_poll(cs_led);
         addr = base + test * sizeof(datum);
         if(in_skip(addr, skip_lo, skip_hi) || in_skip(base, skip_lo, skip_hi)) {
             continue;
@@ -326,7 +373,7 @@ restore:
 }
 
 static int test_device_range(int access, uintptr_t base, size_t nbytes,
-        memtest_sub_t *sub) {
+        memtest_sub_t *sub, int cs_led) {
     unsigned long nwords = nbytes / sizeof(datum);
     unsigned long i;
     datum pattern;
@@ -335,10 +382,12 @@ static int test_device_range(int access, uintptr_t base, size_t nbytes,
     uintptr_t addr;
 
     for(i = 0, pattern = 1; i < nwords; i++, pattern++) {
+        cs_led_poll_at(cs_led, i);
         bus_write(access, base + i * sizeof(datum), pattern);
     }
 
     for(i = 0, pattern = 1; i < nwords; i++, pattern++) {
+        cs_led_poll_at(cs_led, i);
         addr = base + i * sizeof(datum);
         got = bus_read(access, addr);
         if(got != pattern) {
@@ -350,6 +399,7 @@ static int test_device_range(int access, uintptr_t base, size_t nbytes,
     }
 
     for(i = 0, pattern = 1; i < nwords; i++, pattern++) {
+        cs_led_poll_at(cs_led, i);
         addr = base + i * sizeof(datum);
         anti = ~pattern;
         got = bus_read(access, addr);
@@ -363,7 +413,7 @@ static int test_device_range(int access, uintptr_t base, size_t nbytes,
 }
 
 static int test_device_safe(int access, uintptr_t base, size_t nbytes,
-        memtest_sub_t *sub, volatile int *cancel) {
+        memtest_sub_t *sub, volatile int *cancel, int cs_led) {
     unsigned long nwords = nbytes / sizeof(datum);
     unsigned long i;
     datum orig;
@@ -372,8 +422,11 @@ static int test_device_safe(int access, uintptr_t base, size_t nbytes,
     uintptr_t addr;
 
     for(i = 0; i < nwords; i++) {
-        if((i & 0xFFF) == 0 && *cancel) {
-            return 1;
+        if((i & CS_LED_POLL_MASK) == 0) {
+            cs_led_poll(cs_led);
+            if(*cancel) {
+                return 1;
+            }
         }
         addr = base + i * sizeof(datum);
         orig = bus_read(access, addr);
@@ -410,19 +463,20 @@ static int run_sub_on_range(run_ctx_t *ctx, int sub_id, uintptr_t base, size_t s
     memtest_sub_t *sub = ctx->sub;
 
     if(sub_id == MEMTEST_SUB_DATABUS) {
-        return test_databus(ctx->reg->access, base, sub);
+        return test_databus(ctx->reg->access, base, sub, ctx->cs_led);
     }
     if(sub_id == MEMTEST_SUB_ADDRBUS) {
         return test_addrbus(ctx->reg->access, base, size,
-            ctx->island_lo, ctx->island_hi, sub);
+            ctx->island_lo, ctx->island_hi, sub, ctx->cs_led);
     }
     if(ctx->plan->cancel) {
         return 1;
     }
     if(destructive) {
-        return test_device_range(ctx->reg->access, base, size, sub);
+        return test_device_range(ctx->reg->access, base, size, sub, ctx->cs_led);
     }
-    return test_device_safe(ctx->reg->access, base, size, sub, &ctx->plan->cancel);
+    return test_device_safe(ctx->reg->access, base, size, sub, &ctx->plan->cancel,
+        ctx->cs_led);
 }
 
 static uint32_t run_sub_body(void *arg) {
@@ -444,6 +498,7 @@ static uint32_t run_sub_body(void *arg) {
     }
 
     for(chunk = reg->base; chunk < end; chunk += chunk_size) {
+        cs_led_poll(ctx->cs_led);
         if(ctx->plan->cancel) {
             return 1;
         }
@@ -578,6 +633,10 @@ int memtest_run_region(memtest_plan_t *plan, int index) {
         ctx.backup = heap_backup;
     }
 
+    ctx.cs_led = plan->cs_led ? cs_led_detect() : CS_LED_NONE;
+    if(ctx.cs_led) {
+        cs_led_set(ctx.cs_led, 0);
+    }
     reg->status = MEMTEST_ST_RUNNING;
     t0 = perf_cntr_timer_ns();
     max_sub = plan->quick ? MEMTEST_SUB_ADDRBUS : (MEMTEST_SUBTESTS - 1);
@@ -628,5 +687,8 @@ int memtest_run_region(memtest_plan_t *plan, int index) {
         pvr2_shutdown();
     }
 
+    if(ctx.cs_led) {
+        cs_led_set(ctx.cs_led, 0);
+    }
     return failed ? -1 : 0;
 }
