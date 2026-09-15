@@ -377,7 +377,7 @@ void LockVideo() {
 }
 
 void UnlockVideo() {
-	if(!VideoMustLock()) {
+	if(video_mutex.holder != thd_get_current()) {
 		return;
 	}
 	mutex_unlock(&video_mutex);
@@ -615,7 +615,10 @@ static void *VideoThread(void *ptr) {
 			thd_pass();
 			continue;
 		}
-		LockVideo();
+		if(!video_inited) {
+			break;
+		}
+		mutex_lock(&video_mutex);
 
 		if(draw_screen) {
 			ProcessVideoEventsRender();
@@ -675,7 +678,7 @@ static void *VideoThread(void *ptr) {
 			}
 		}
 		pvr_scene_finish();
-		UnlockVideo();
+		mutex_unlock(&video_mutex);
 	}
 
 	//dbglog(DBG_DEBUG, "Exiting from video thread\n");
