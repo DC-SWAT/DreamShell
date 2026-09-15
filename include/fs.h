@@ -18,10 +18,20 @@
 int InitSDCard();
 
 /**
+ * Unmount FAT partitions and shutdown SD Card
+ */
+void ShutdownSDCard();
+
+/**
  * Initialize G1-ATA device
  * and mount all partitions with FAT filesystems
  */
 int InitIDE();
+
+/**
+ * Unmount FAT partitions and shutdown G1-ATA device
+ */
+void ShutdownIDE();
 
 /**
  * Search romdisk images in BIOS ROM and mount it
@@ -32,6 +42,12 @@ int InitRomdisk();
  * Unmount FAT filesystems and shutdown SD/IDE devices
  */
 void ShutdownFS();
+
+/**
+ * Get FAT/exFAT filesystem type name for a mount point
+ * ("FAT12", "FAT16", "FAT32", "exFAT"), or NULL if not mounted
+ */
+const char *fs_fat_get_type(const char *mp);
 
 /**
  * Search DreamShell root directory on all usable devices

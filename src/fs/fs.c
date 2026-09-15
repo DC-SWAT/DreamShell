@@ -30,8 +30,16 @@ int InitSDCard() {
 	return fs_fat_mount_sd();
 }
 
+void ShutdownSDCard() {
+	fs_fat_unmount_sd();
+}
+
 int InitIDE() {
 	return fs_fat_mount_ide();
+}
+
+void ShutdownIDE() {
+	fs_fat_unmount_ide();
 }
 
 void ShutdownFS() {

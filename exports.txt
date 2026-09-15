@@ -76,7 +76,9 @@ dbgio_set_dev_fb
 dbgio_set_dev_sd
 dbgio_hex_dump
 InitSDCard
+ShutdownSDCard
 InitIDE
+ShutdownIDE
 InitRomdisk
 SearchRoot
 RootDeviceIsSupported
@@ -2266,6 +2268,11 @@ fs_fat_shutdown
 fs_fat_mount
 fs_fat_unmount
 fs_fat_is_mounted
+fs_fat_get_type
+fs_fat_mount_sd
+fs_fat_unmount_sd
+fs_fat_mount_ide
+fs_fat_unmount_ide
 #
 # Shutdown
 dcload_syscall_net_shutdown
