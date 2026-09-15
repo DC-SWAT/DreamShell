@@ -140,6 +140,7 @@ int main(int argc, char *argv[]) {
     printf("Initializing file system...\n");
     fs_enable_dma(FS_DMA_DISABLED);
     int part;
+    int fd = -1;
 
     for(part = 0; part < 4; part++) {
         if(!fs_init(part)) {
@@ -149,13 +150,12 @@ int main(int argc, char *argv[]) {
 
     if(part == 4) {
         printf("Failed to initialize file system\n");
-        goto error;
     }
-
-    fs_enable_dma(FS_DMA_SHARED);
-    printf("Loading executable...\n");
-
-    int fd = open_boot_file();
+    else {
+        fs_enable_dma(FS_DMA_SHARED);
+        printf("Loading executable...\n");
+        fd = open_boot_file();
+    }
 
     if(fd >= 0) {
         uint32_t total_len = total(fd);
