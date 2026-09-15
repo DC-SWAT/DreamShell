@@ -7,9 +7,8 @@
 
 #define NUM_FONT_FAMILIES 8
 
-// Global pointer to the current RTF widget being processed.
-// This is a workaround for the SDL_rtf library not supporting user data in callbacks.
 static GUI_RTF *g_current_rtf = NULL;
+static mutex_t rtf_mutex = RECURSIVE_MUTEX_INITIALIZER;
 
 typedef struct {
     const char *name;
@@ -374,6 +373,7 @@ GUI_RTF::GUI_RTF(const char *aname, const char *file, const char *default_font, 
 	FontList = new char[NUM_FONT_FAMILIES][NAME_MAX];
 	SetupFonts(default_font);
 
+	mutex_lock(&rtf_mutex);
 	g_current_rtf = this;
 	ctx = RTF_CreateContext(&font);
 
@@ -382,6 +382,7 @@ GUI_RTF::GUI_RTF(const char *aname, const char *file, const char *default_font, 
 	}
 
 	g_current_rtf = NULL;
+	mutex_unlock(&rtf_mutex);
 	SetupSurface();
 }
 
@@ -395,6 +396,7 @@ GUI_RTF::GUI_RTF(const char *aname, SDL_RWops *src, int freesrc, const char *def
 	FontList = new char[NUM_FONT_FAMILIES][NAME_MAX];
 	SetupFonts(default_font);
 
+	mutex_lock(&rtf_mutex);
 	g_current_rtf = this;
 	ctx = RTF_CreateContext(&font);
 
@@ -403,6 +405,7 @@ GUI_RTF::GUI_RTF(const char *aname, SDL_RWops *src, int freesrc, const char *def
 	}
 
 	g_current_rtf = NULL;
+	mutex_unlock(&rtf_mutex);
 	SetupSurface();
 }
 
@@ -549,31 +552,40 @@ int GUI_RTF::SetFont(RTF_FontFamily family, const char *file) {
 }
 
 int GUI_RTF::GetFullHeight() {
+	int height;
+
+	mutex_lock(&rtf_mutex);
 	g_current_rtf = this;
-	int height = RTF_GetHeight(ctx, area.w);
+	height = RTF_GetHeight(ctx, area.w);
 	g_current_rtf = NULL;
+	mutex_unlock(&rtf_mutex);
 	return height;
 }
 
 void GUI_RTF::SetText(const char *text) {
+	char *rtf_text = MarkupToRTF(text);
 
+	mutex_lock(&rtf_mutex);
 	g_current_rtf = this;
 
 	if (ctx) {
 		RTF_FreeContext(ctx);
+		ctx = NULL;
 	}
 
 	ctx = RTF_CreateContext(&font);
 
-	if (ctx) {
-		char *rtf_text = MarkupToRTF(text);
-		if (rtf_text) {
-			SDL_RWops *rw = SDL_RWFromMem(rtf_text, strlen(rtf_text));
-			RTF_Load_RW(ctx, rw, 1);
-			free(rtf_text);
-		}
+	if (ctx && rtf_text) {
+		SDL_RWops *rw = SDL_RWFromMem(rtf_text, strlen(rtf_text));
+		RTF_Load_RW(ctx, rw, 1);
 	}
 	g_current_rtf = NULL;
+	mutex_unlock(&rtf_mutex);
+
+	if (rtf_text) {
+		free(rtf_text);
+	}
+
 	MarkChanged();
 }
 
@@ -624,9 +636,11 @@ void GUI_RTF::DrawWidget(const SDL_Rect *clip) {
 
 	if (ctx && surface) {
 		surface->Fill(NULL, color);
+		mutex_lock(&rtf_mutex);
 		g_current_rtf = this;
 		RTF_Render(ctx, surface->GetSurface(), NULL, offset);
 		g_current_rtf = NULL;
+		mutex_unlock(&rtf_mutex);
 		SDL_Rect dr;
 		SDL_Rect sr;
 
