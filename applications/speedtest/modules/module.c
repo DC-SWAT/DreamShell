@@ -8,9 +8,13 @@
 */
 
 #include "ds.h"
+#include "fs.h"
 #include <dc/sd.h>
 #include <dc/g1ata.h>
+#include <dc/cdrom.h>
+#include <dc/fs_iso9660.h>
 #include <kos/blockdev.h>
+#include <drivers/hollysh.h>
 
 DEFAULT_MODULE_EXPORTS(app_speedtest);
 
@@ -19,6 +23,7 @@ typedef struct {
 	GUI_Widget *size_label;
 	GUI_Widget *lba_label;
 	GUI_Widget *iface_label;
+	GUI_Widget *fs_label;
 	GUI_Widget *test_btn;
 } device_ui_t;
 
@@ -28,6 +33,9 @@ static struct {
 	device_ui_t ide;
 	device_ui_t cd;
 	GUI_Widget *dialog;
+	GUI_Widget *sd_reinit_btn;
+	GUI_Widget *ide_reinit_btn;
+	GUI_Widget *cd_reinit_btn;
 	char result_body[2048];
 	char test_wname[16];
 	char test_device[32];
@@ -97,10 +105,12 @@ static int device_ui_ready(const device_ui_t *dev) {
 		&& dev->size_label != NULL
 		&& dev->lba_label != NULL
 		&& dev->iface_label != NULL
+		&& dev->fs_label != NULL
 		&& dev->test_btn != NULL;
 }
 
-static void set_device_labels(device_ui_t *dev, const char *size, const char *lba, const char *iface) {
+static void set_device_labels(device_ui_t *dev, const char *size, const char *lba,
+	const char *iface, const char *fs) {
 
 	char buf[128];
 
@@ -116,14 +126,30 @@ static void set_device_labels(device_ui_t *dev, const char *size, const char *lb
 
 	snprintf(buf, sizeof(buf), "Interface: %s", iface);
 	GUI_LabelSetText(dev->iface_label, buf);
+
+	snprintf(buf, sizeof(buf), "FS: %s", fs);
+	GUI_LabelSetText(dev->fs_label, buf);
 }
 
 static void update_test_btn(device_ui_t *dev, int hide, int enabled);
+static void update_reinit_btn(GUI_Widget *btn, int enabled);
 static void refresh_devices(void);
+
+static const char *get_mount_fs_type(const char *mp) {
+	const char *fs;
+
+	fs = fs_fat_get_type(mp);
+
+	if(fs != NULL) {
+		return fs;
+	}
+
+	return "N/A";
+}
 
 static void set_device_unavailable(device_ui_t *dev) {
 
-	set_device_labels(dev, "N/A", "N/A", "N/A");
+	set_device_labels(dev, "N/A", "N/A", "N/A", "N/A");
 	update_test_btn(dev, 0, 0);
 }
 
@@ -151,6 +177,7 @@ static void update_sd_info(void) {
 
 	if(!DirExists("/sd")) {
 		set_device_unavailable(&self.sd);
+		update_reinit_btn(self.sd_reinit_btn, 1);
 		return;
 	}
 
@@ -161,8 +188,9 @@ static void update_sd_info(void) {
 
 	format_size(size, size_str, sizeof(size_str));
 	get_sd_interface(iface, sizeof(iface));
-	set_device_labels(&self.sd, size_str, "Block", iface);
+	set_device_labels(&self.sd, size_str, "Block", iface, get_mount_fs_type("/sd"));
 	update_test_btn(&self.sd, 0, 1);
+	update_reinit_btn(self.sd_reinit_btn, 1);
 }
 
 static void update_ide_info(void) {
@@ -175,6 +203,7 @@ static void update_ide_info(void) {
 
 	if(!DirExists("/ide")) {
 		set_device_unavailable(&self.ide);
+		update_reinit_btn(self.ide_reinit_btn, 1);
 		return;
 	}
 
@@ -186,19 +215,22 @@ static void update_ide_info(void) {
 	lba_mode = g1_ata_lba_mode();
 	lba = lba_mode_str(lba_mode);
 	format_size(size, size_str, sizeof(size_str));
-	set_device_labels(&self.ide, size_str, lba, "G1 ATA slave");
+	set_device_labels(&self.ide, size_str, lba, "G1 ATA slave", get_mount_fs_type("/ide"));
 	update_test_btn(&self.ide, 0, 1);
+	update_reinit_btn(self.ide_reinit_btn, 1);
 }
 
 static void update_cd_info(void) {
 
-	if(is_custom_bios()) {
+	if(hollysh_bios_detect()) {
 		set_device_unavailable(&self.cd);
+		update_reinit_btn(self.cd_reinit_btn, 0);
 		return;
 	}
 
-	set_device_labels(&self.cd, "N/A", "LBA48", "G1 ATA master");
+	set_device_labels(&self.cd, "N/A", "LBA48", "G1 ATA master", "ISO9660");
 	update_test_btn(&self.cd, 0, 1);
+	update_reinit_btn(self.cd_reinit_btn, 1);
 }
 
 static void show_dialog(GUI_DialogMode mode, const char *title, const char *body) {
@@ -314,18 +346,32 @@ static void update_test_btn(device_ui_t *dev, int hide, int enabled) {
 	}
 }
 
+static void update_reinit_btn(GUI_Widget *btn, int enabled) {
+
+	if(btn == NULL) {
+		return;
+	}
+
+	GUI_WidgetClearFlags(btn, WIDGET_HIDDEN);
+	GUI_WidgetSetEnabled(btn, enabled && !self.testing);
+}
+
 static void set_testing(int active) {
 
 	self.testing = active;
 
 	update_test_btn(&self.sd, active, !active && DirExists("/sd"));
 	update_test_btn(&self.ide, active, !active && DirExists("/ide"));
+	update_reinit_btn(self.sd_reinit_btn, !active);
+	update_reinit_btn(self.ide_reinit_btn, !active);
 
-	if(!is_custom_bios()) {
+	if(!hollysh_bios_detect()) {
 		update_test_btn(&self.cd, active, !active);
+		update_reinit_btn(self.cd_reinit_btn, !active);
 	}
 	else {
 		update_test_btn(&self.cd, active, 0);
+		update_reinit_btn(self.cd_reinit_btn, 0);
 	}
 }
 
@@ -370,6 +416,7 @@ static int test_ide_io(void) {
 		bdev.shutdown(&bdev);
 		free(buf);
 		InitVideoThread();
+		show_error("Can't read block");
 		return -1;
 	}
 
@@ -426,6 +473,7 @@ static int test_sd_io(void) {
 		bdev.shutdown(&bdev);
 		free(buf);
 		InitVideoThread();
+		show_error("Can't read block");
 		return -1;
 	}
 
@@ -667,6 +715,100 @@ void Speedtest_DialogConfirm(GUI_Widget *widget) {
 	refresh_devices();
 }
 
+void Speedtest_ReinitSD(GUI_Widget *widget) {
+
+	char body[256];
+
+	(void)widget;
+
+	if(self.testing) {
+		return;
+	}
+
+	set_testing(1);
+	show_progress("Reinitializing SD card...");
+	thd_sleep(50);
+
+	ShutdownSDCard();
+
+	if(InitSDCard() < 0) {
+		snprintf(body, sizeof(body),
+			"[align=center][size=20][color=red][b]SD reinit failed[/b][/color][/size][/align]");
+		show_dialog(DIALOG_MODE_ALERT, "SD Card", body);
+	}
+	else {
+		snprintf(body, sizeof(body),
+			"[align=center][size=20][color=green][b]SD card ready[/b][/color][/size]\n"
+			"[size=16]FS: %s[/size][/align]",
+			get_mount_fs_type("/sd"));
+		show_dialog(DIALOG_MODE_ALERT, "SD Card", body);
+	}
+
+	refresh_devices();
+}
+
+void Speedtest_ReinitIDE(GUI_Widget *widget) {
+
+	char body[256];
+
+	(void)widget;
+
+	if(self.testing) {
+		return;
+	}
+
+	set_testing(1);
+	show_progress("Reinitializing IDE drive...");
+	thd_sleep(50);
+
+	ShutdownIDE();
+
+	if(InitIDE() < 0) {
+		snprintf(body, sizeof(body),
+			"[align=center][size=20][color=red][b]IDE reinit failed[/b][/color][/size][/align]");
+		show_dialog(DIALOG_MODE_ALERT, "IDE Drive", body);
+	}
+	else {
+		snprintf(body, sizeof(body),
+			"[align=center][size=20][color=green][b]IDE drive ready[/b][/color][/size]\n"
+			"[size=16]FS: %s[/size][/align]",
+			get_mount_fs_type("/ide"));
+		show_dialog(DIALOG_MODE_ALERT, "IDE Drive", body);
+	}
+
+	refresh_devices();
+}
+
+void Speedtest_ReinitCD(GUI_Widget *widget) {
+
+	char body[256];
+
+	(void)widget;
+
+	if(self.testing || hollysh_bios_detect()) {
+		return;
+	}
+
+	set_testing(1);
+	show_progress("Reinitializing GD-ROM...");
+	thd_sleep(50);
+
+	if(cdrom_reinit() != 0) {
+		snprintf(body, sizeof(body),
+			"[align=center][size=20][color=red][b]GD-ROM reinit failed[/b][/color][/size][/align]");
+		show_dialog(DIALOG_MODE_ALERT, "GD-ROM", body);
+	}
+	else {
+		iso_reset();
+		snprintf(body, sizeof(body),
+			"[align=center][size=20][color=green][b]GD-ROM ready[/b][/color][/size]\n"
+			"[size=16]FS: ISO9660[/size][/align]");
+		show_dialog(DIALOG_MODE_ALERT, "GD-ROM", body);
+	}
+
+	refresh_devices();
+}
+
 static int load_device_ui(device_ui_t *dev, const char *prefix) {
 
 	char name[32];
@@ -682,6 +824,9 @@ static int load_device_ui(device_ui_t *dev, const char *prefix) {
 
 	snprintf(name, sizeof(name), "%s-iface", prefix);
 	dev->iface_label = APP_GET_WIDGET(name);
+
+	snprintf(name, sizeof(name), "%s-fs", prefix);
+	dev->fs_label = APP_GET_WIDGET(name);
 
 	snprintf(name, sizeof(name), "/%s", prefix);
 	dev->test_btn = APP_GET_WIDGET(name);
@@ -713,6 +858,9 @@ void Speedtest_Init(App_t *app) {
 
 	self.app = app;
 	self.dialog = APP_GET_WIDGET("results-dialog");
+	self.sd_reinit_btn = APP_GET_WIDGET("sd-reinit");
+	self.ide_reinit_btn = APP_GET_WIDGET("ide-reinit");
+	self.cd_reinit_btn = APP_GET_WIDGET("cd-reinit");
 
 	if(self.dialog == NULL) {
 		ds_printf("DS_ERROR: Speedtest: Missing dialog widget 'results-dialog'\n");

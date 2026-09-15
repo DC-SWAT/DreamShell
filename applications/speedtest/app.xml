@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="Speedtest" version="0.5.0" icon="images/icon.png">
+<app name="Speedtest" version="0.6.0" icon="images/icon.png">
     <resources>
         <module src="modules/app_speedtest.klf" />
         <font src="../../fonts/ttf/comic_lite.ttf" type="ttf" size="22" name="comic-22" />
@@ -13,9 +13,9 @@
             <fill color="#BBBBBB" height="1" y="43" />
             <fill color="#CCCCCC" height="1" y="44" />
         </surface>
-        <surface width="190" height="250" name="card_bg">
+        <surface width="190" height="280" name="card_bg">
             <fill color="#EEEEEE" />
-            <fill x="2" y="2" width="186" height="246" color="#3E6BA4" />
+            <fill x="2" y="2" width="186" height="276" color="#3E6BA4" />
         </surface>
         <image src="images/icon_sd.png" name="icon_sd" />
         <image src="images/icon_ide.png" name="icon_ide" />
@@ -32,9 +32,9 @@
             <label font="comic-22" color="#666666" text="Speedtest" />
         </panel>
 
-        <panel x="25" y="95" width="590" height="250">
-            <panel x="0" y="0" width="190" height="250">
-                <panel width="190" height="250" backgroundCenter="card_bg" name="dev-sd">
+        <panel x="25" y="80" width="590" height="280">
+            <panel x="0" y="0" width="190" height="280">
+                <panel width="190" height="280" backgroundCenter="card_bg" name="dev-sd">
 
                     <panel x="6" y="8" width="178" height="28">
                         <label width="100%" height="28" font="comic-22" color="#FFFFFF" text="SD Card" align="center" />
@@ -44,30 +44,41 @@
                         <image src="icon_sd" />
                     </panel>
 
-                    <panel x="6" y="112" width="178" height="18">
+                    <panel x="6" y="108" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="sd-size" text="Size: N/A" align="left" />
                     </panel>
 
-                    <panel x="6" y="132" width="178" height="18">
+                    <panel x="6" y="126" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="sd-lba" text="Mode: N/A" align="left" />
                     </panel>
 
-                    <panel x="6" y="152" width="178" height="18">
+                    <panel x="6" y="144" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="sd-iface" text="Interface: N/A" align="left" />
                     </panel>
 
-                    <panel y="198" width="190" height="36">
-                        <input type="button" width="120" height="30" align="center"
+                    <panel x="6" y="162" width="178" height="18">
+                        <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="sd-fs" text="FS: N/A" align="left" />
+                    </panel>
+
+                    <panel y="192" width="190" height="30">
+                        <input type="button" width="120" height="28" align="center"
                                 onclick="export:Speedtest_Run()" name="/sd">
                             <label font="comic-16" color="#EEEEEE" text="Speed Test" align="center" />
+                        </input>
+                    </panel>
+
+                    <panel y="228" width="190" height="30">
+                        <input type="button" width="120" height="28" align="center"
+                                onclick="export:Speedtest_ReinitSD()" name="sd-reinit">
+                            <label font="comic-16" color="#EEEEEE" text="Reinit SD" align="center" />
                         </input>
                     </panel>
 
                 </panel>
             </panel>
 
-            <panel x="200" y="0" width="190" height="250">
-                <panel width="190" height="250" backgroundCenter="card_bg" name="dev-ide">
+            <panel x="200" y="0" width="190" height="280">
+                <panel width="190" height="280" backgroundCenter="card_bg" name="dev-ide">
 
                     <panel x="6" y="8" width="178" height="28">
                         <label width="100%" height="28" font="comic-22" color="#FFFFFF" text="IDE Drive" align="center" />
@@ -77,30 +88,41 @@
                         <image src="icon_ide" />
                     </panel>
 
-                    <panel x="6" y="112" width="178" height="18">
+                    <panel x="6" y="108" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="ide-size" text="Size: N/A" align="left" />
                     </panel>
 
-                    <panel x="6" y="132" width="178" height="18">
+                    <panel x="6" y="126" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="ide-lba" text="Mode: N/A" align="left" />
                     </panel>
 
-                    <panel x="6" y="152" width="178" height="18">
+                    <panel x="6" y="144" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="ide-iface" text="Interface: N/A" align="left" />
                     </panel>
 
-                    <panel y="198" width="190" height="36">
-                        <input type="button" width="120" height="30" align="center"
+                    <panel x="6" y="162" width="178" height="18">
+                        <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="ide-fs" text="FS: N/A" align="left" />
+                    </panel>
+
+                    <panel y="192" width="190" height="30">
+                        <input type="button" width="120" height="28" align="center"
                                 onclick="export:Speedtest_Run()" name="/ide">
                             <label font="comic-16" color="#EEEEEE" text="Speed Test" align="center" />
+                        </input>
+                    </panel>
+
+                    <panel y="228" width="190" height="30">
+                        <input type="button" width="120" height="28" align="center"
+                                onclick="export:Speedtest_ReinitIDE()" name="ide-reinit">
+                            <label font="comic-16" color="#EEEEEE" text="Reinit IDE" align="center" />
                         </input>
                     </panel>
 
                 </panel>
             </panel>
 
-            <panel x="400" y="0" width="190" height="250">
-                <panel width="190" height="250" backgroundCenter="card_bg" name="dev-cd">
+            <panel x="400" y="0" width="190" height="280">
+                <panel width="190" height="280" backgroundCenter="card_bg" name="dev-cd">
 
                     <panel x="6" y="8" width="178" height="28">
                         <label width="100%" height="28" font="comic-22" color="#FFFFFF" text="GD-ROM" align="center" />
@@ -110,22 +132,33 @@
                         <image src="icon_gd" />
                     </panel>
 
-                    <panel x="6" y="112" width="178" height="18">
+                    <panel x="6" y="108" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="cd-size" text="Size: N/A" align="left" />
                     </panel>
 
-                    <panel x="6" y="132" width="178" height="18">
+                    <panel x="6" y="126" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="cd-lba" text="Mode: LBA48" align="left" />
                     </panel>
 
-                    <panel x="6" y="152" width="178" height="18">
+                    <panel x="6" y="144" width="178" height="18">
                         <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="cd-iface" text="Interface: GD-ROM" align="left" />
                     </panel>
 
-                    <panel y="198" width="190" height="36">
-                        <input type="button" width="120" height="30" align="center"
+                    <panel x="6" y="162" width="178" height="18">
+                        <label width="100%" height="18" font="comic-15" color="#FFFFFF" name="cd-fs" text="FS: ISO9660" align="left" />
+                    </panel>
+
+                    <panel y="192" width="190" height="30">
+                        <input type="button" width="120" height="28" align="center"
                                 onclick="export:Speedtest_Run()" name="/cd">
                             <label font="comic-16" color="#EEEEEE" text="Speed Test" align="center" />
+                        </input>
+                    </panel>
+
+                    <panel y="228" width="190" height="30">
+                        <input type="button" width="120" height="28" align="center"
+                                onclick="export:Speedtest_ReinitCD()" name="cd-reinit">
+                            <label font="comic-16" color="#EEEEEE" text="Reinit GD" align="center" />
                         </input>
                     </panel>
 

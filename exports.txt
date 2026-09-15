@@ -2200,6 +2200,7 @@ sbrk
 #
 fs_iso9660_init
 fs_iso9660_shutdown
+iso_reset
 #
 pvr_init_defaults
 pvr_dma_shutdown

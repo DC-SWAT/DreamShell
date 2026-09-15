@@ -13,6 +13,12 @@ void Speedtest_Run(GUI_Widget *widget);
 
 void Speedtest_DialogConfirm(GUI_Widget *widget);
 
+void Speedtest_ReinitSD(GUI_Widget *widget);
+
+void Speedtest_ReinitIDE(GUI_Widget *widget);
+
+void Speedtest_ReinitCD(GUI_Widget *widget);
+
 void Speedtest_Init(App_t *app);
 
 void Speedtest_Open(App_t *app);

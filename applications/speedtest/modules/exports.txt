@@ -5,3 +5,6 @@ Speedtest_Init
 Speedtest_Open
 Speedtest_Run
 Speedtest_DialogConfirm
+Speedtest_ReinitSD
+Speedtest_ReinitIDE
+Speedtest_ReinitCD
