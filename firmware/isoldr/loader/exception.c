@@ -1,7 +1,7 @@
 /**
  * DreamShell ISO Loader
  * Exception handling
- * (c)2014-2025 SWAT <http://www.dc-swat.ru>
+ * (c)2014-2026 SWAT <http://www.dc-swat.ru>
  * Based on Netplay VOOT code by Scott Robinson <scott_vo@quadhome.com>
  */
 
@@ -21,6 +21,35 @@ static uint8 *vbr_buffer_orig;
 
 int exception_inited(void) {
 	return inited; //exception_vbr_ok();
+}
+
+static uint8 *sh4_bra_target(uint16 instr, uint32 pc) {
+	uint32 disp;
+
+	if((instr & SH4_OPCODE_BRA_MASK) != SH4_OPCODE_BRA) {
+		return NULL;
+	}
+
+	disp = instr & SH4_BRA_DISP_MASK;
+	if(disp & SH4_BRA_DISP_SIGN) {
+		disp |= ~(uint32)SH4_BRA_DISP_MASK;
+	}
+
+	return (uint8 *)(pc + SH4_BRA_PC_BIAS + (disp << 1));
+}
+
+static uint8 *kos_irq_entry(uint8 *vbr_base) {
+	uint16 *vector = (uint16 *)VBR_INT(vbr_base);
+
+	if(vector[0] != SH4_OPCODE_NOP) {
+		return NULL;
+	}
+
+	if(vector[2] != (uint16)SH4_OPCODE_MOV_IMM_RN(4, EXP_TYPE_INT)) {
+		return NULL;
+	}
+
+	return sh4_bra_target(vector[1], (uint32)&vector[1]);
 }
 
 static int exception_vbr_ok(void) {
@@ -81,8 +110,11 @@ int exception_init(uint32 vbr_addr) {
 		// Skip one more instruction because it in paired using with old replaced instruction.
 		vbr_buffer_orig = vbr_buffer + (sizeof (uint16) * 4);
 	} else if(exception_os_type == BIN_TYPE_KOS) {
-		// Direct usage of _irq_save_regs by fixed offset.
-		vbr_buffer_orig = vbr_buffer - 0x188;
+		vbr_buffer_orig = kos_irq_entry(vbr_buffer);
+		if(!vbr_buffer_orig) {
+			LOGFF("KOS IRQ entry not found at VBR 0x%08lx\n", (uint32)vbr_buffer);
+			return -1;
+		}
 	} else {
 		// Normally skip only 3 replaced instruction.
 		vbr_buffer_orig = vbr_buffer + (sizeof (uint16) * 3);
@@ -92,7 +124,8 @@ int exception_init(uint32 vbr_addr) {
 	// 	interrupt_stack = (uint32)malloc(2048);
 	// }
 	// LOGFF("VBR buffer 0x%08lx -> 0x%08lx, stack 0x%08lx\n", vbr_buffer, vbr_buffer_orig, interrupt_stack);
-	LOGFF("VBR INT hooking at 0x%08lx -> 0x%08lx\n", VBR_INT(vbr_buffer), VBR_INT(vbr_buffer_orig));
+	LOGFF("VBR INT hooking at 0x%08lx -> 0x%08lx\n", VBR_INT(vbr_buffer),
+		exception_os_type == BIN_TYPE_KOS ? vbr_buffer_orig : VBR_INT(vbr_buffer_orig));
 
 	/* Interrupt hack for VBR. */
 	memcpy(
