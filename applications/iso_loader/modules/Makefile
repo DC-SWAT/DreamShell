@@ -1,6 +1,6 @@
 #
 # ISO Loader app module for DreamShell
-# Copyright (C) 2011-2025 SWAT
+# Copyright (C) 2011-2026 SWAT
 # http://www.dc-swat.ru
 #
 
@@ -13,8 +13,8 @@ EXPORTS_FILE = exports.txt
 KOS_CFLAGS += -I./
 
 VER_MAJOR = 0
-VER_MINOR = 8
-VER_MICRO = 4
+VER_MINOR = 9
+VER_MICRO = 0
 
 all: rm-elf
 

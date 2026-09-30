@@ -414,8 +414,8 @@ isoldr_info_t *isoldr_get_info(const char *file, int test_mode) {
 		goto error;
 	}
 
-	// Keep interface version 0.6.x up to 0.8.x loaders
-	if (VER_MAJOR == 0 && VER_MINOR <= 8 && VER_MINOR >= 6) {
+	// Keep interface version 0.6.x up to 0.9.x loaders
+	if (VER_MAJOR == 0 && VER_MINOR <= 9 && VER_MINOR >= 6) {
 		snprintf(info->magic, 12, "DSISOLDR%d%d%d", VER_MAJOR, 6, VER_MICRO);
 	} else {
 		snprintf(info->magic, 12, "DSISOLDR%d%d%d", VER_MAJOR, VER_MINOR, VER_MICRO);
