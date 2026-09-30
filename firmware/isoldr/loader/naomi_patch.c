@@ -157,16 +157,17 @@ static int naomi_pio_head(const uint16_t *w, uint32_t i, uint32_t size) {
         return 0;
     }
     hi = i >> 1;
-    if((w[hi] & 0xff00) != 0xd200) {
+    if((w[hi] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(2)) {
         return 0;
     }
     if(w[hi + 1] != 0x634d || w[hi + 2] != 0x2232) {
         return 0;
     }
-    if((w[hi + 3] & 0xff00) != 0xd300 && (w[hi + 3] & 0xff00) != 0xd000) {
+    if((w[hi + 3] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(3)
+        && (w[hi + 3] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(0)) {
         return 0;
     }
-    if((w[hi + 4] & 0xff00) != 0xd100) {
+    if((w[hi + 4] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(1)) {
         return 0;
     }
     if(w[hi + 5] != 0x6032 && w[hi + 5] != 0x6302) {
@@ -175,7 +176,7 @@ static int naomi_pio_head(const uint16_t *w, uint32_t i, uint32_t size) {
     if(w[hi + 6] != 0x2419) {
         return 0;
     }
-    if((w[hi + 7] & 0xff00) != 0xd200) {
+    if((w[hi + 7] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(2)) {
         return 0;
     }
     has_bd = 0;
@@ -296,7 +297,7 @@ static int naomi_g1_poll(uint16_t *w, uint32_t i, uint32_t size) {
             if(w[hi2232 - k] == 0xe500) {
                 w[hi2232 - k] = SH4_OPCODE_NOP;
                 for(t = hi2232 - k + 1; t < hi2232; t++) {
-                    if((w[t] & 0xf000) == 0xd000) {
+                    if((w[t] & SH4_OPCODE_NIBBLE_MASK) == SH4_OPCODE_MOVL_PC) {
                         w[t] = SH4_OPCODE_NOP;
                     }
                 }
@@ -385,7 +386,7 @@ static int naomi_skip_cart_boot(uint8_t *dst, uint16_t *w, uint32_t size) {
         uint32_t fn;
 
         op = w[i >> 1];
-        if((op & 0xf000) != 0xd000) {
+        if((op & SH4_OPCODE_NIBBLE_MASK) != SH4_OPCODE_MOVL_PC) {
             continue;
         }
         rn = (op >> 8) & 0xf;
@@ -432,7 +433,7 @@ static int naomi_fix_cart_mbox(uint8_t *dst, uint32_t size) {
         uint32_t k;
         int hit;
 
-        if((op & 0xf000) == 0xd000) {
+        if((op & SH4_OPCODE_NIBBLE_MASK) == SH4_OPCODE_MOVL_PC) {
             disp = op & 0xff;
             poff = (i & ~3) + 4 + disp * 4;
             if(poff + 4 > size) {
@@ -483,7 +484,7 @@ static int naomi_fix_cart_mbox(uint8_t *dst, uint32_t size) {
             uint32_t pp;
             uint32_t pl;
 
-            if((p & 0xf000) != 0xd000) {
+            if((p & SH4_OPCODE_NIBBLE_MASK) != SH4_OPCODE_MOVL_PC) {
                 continue;
             }
             if(((p >> 8) & 0xf) != rn2) {
@@ -517,7 +518,7 @@ static void naomi_nop_gdst_spin(uint8_t *dst, uint32_t size) {
         uint16_t op = w[i >> 1];
         uint32_t poff;
 
-        if((op & 0xf000) != 0xd000) {
+        if((op & SH4_OPCODE_NIBBLE_MASK) != SH4_OPCODE_MOVL_PC) {
             continue;
         }
         poff = (i & ~3) + 4 + (op & 0xff) * 4;
@@ -550,7 +551,7 @@ static int naomi_replace_gdst(uint8_t *dst, uint32_t size) {
         uint16_t ld;
         uint32_t rm;
 
-        if((op & 0xf000) != 0xd000) {
+        if((op & SH4_OPCODE_NIBBLE_MASK) != SH4_OPCODE_MOVL_PC) {
             continue;
         }
         disp = op & 0xff;
@@ -587,7 +588,7 @@ static int naomi_fix_gdst_wait(uint8_t *dst, uint32_t size) {
         uint32_t poff;
         uint32_t lit;
 
-        if((op & 0xff00) != 0xd000) {
+        if((op & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(0)) {
             continue;
         }
         disp = op & 0xff;

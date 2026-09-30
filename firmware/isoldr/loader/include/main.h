@@ -21,6 +21,7 @@
 #include "reader.h"
 #include "cdda.h"
 #include "malloc.h"
+#include "sh4_opcode.h"
 #ifdef HAVE_NAOMI
 #include "naomi.h"
 #endif
@@ -63,12 +64,6 @@
 
 #define SYD_DDS_FLAG_ADDR  (IP_BIN_ADDR + 0xfc)
 #define SYD_DDS_FLAG_CLEAR 0x20
-
-#define SH4_OPCODE_NOP               0x0009
-#define SH4_OPCODE_RTS               0x000b
-#define SH4_OPCODE_JMP_R0            0x402b
-#define SH4_OPCODE_MOV_0_R0          0xe000
-#define SH4_OPCODE_MOVL_R0_PC(disp)  (0xd000 | ((disp) >> 2))
 
 #define HOLLY_REV_VA1 0x10
 #define HOLLY_REV_VA0 0x0b
