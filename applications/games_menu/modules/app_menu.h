@@ -78,7 +78,6 @@ struct MenuStructure
 	int games_category_array_count;
 	int firmware_array_count;
 	int current_dev;
-	int vmu_mode;
 	int last_device;
 	int last_game_played_index;
 
@@ -173,8 +172,7 @@ void LoadFFmpegModules();
 void UnloadFFmpegModules();
 bool LoadCache();
 bool SaveCache();
-void PatchParseText(PresetStruct *preset);
-PresetStruct* GetDefaultPresetGame(const char* full_path_game, SectorDataStruct *sector_data);
+uintptr_t PresetLoaderAddress(const PresetStruct *preset);
 PresetStruct* LoadPresetGame(int game_index, bool default_preset);
 bool SavePresetGame(PresetStruct *preset);
 isoldr_info_t* ParsePresetToIsoldr(int game_index, PresetStruct *preset);

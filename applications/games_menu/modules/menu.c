@@ -116,7 +116,6 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	menu_data.cdda_game_changed = false;
 	menu_data.stop_load_pvr_cover = false;
 	menu_data.firmware_array = NULL;
-	menu_data.vmu_mode = 0;
 	menu_data.preset = NULL;
 	menu_data.games_array_ptr_count = 0;
 	menu_data.games_array_ptr = NULL;
@@ -238,7 +237,6 @@ void DestroyMenuData()
 	FreeCategories();
 	FreeCache();
 	UnloadFFmpegModules();
-	UnmountAllPresetsRomdisks();
 
 	memset(&menu_data, 0, sizeof(struct MenuStructure));
 }
@@ -1378,477 +1376,491 @@ bool LoadFirmwareFiles()
 	return true;
 }
 
-PresetStruct *GetDefaultPresetGame(const char *full_path_game, SectorDataStruct *sector_data)
+static int read_image_identity(const char *game_path, uint8 *md5, char *title, size_t title_size)
 {
-	PresetStruct *preset = NULL;
+	SectorDataStruct sector_data;
+	int usable = 0;
 
-	if (full_path_game)
+	if (md5 != NULL)
 	{
-		preset = (PresetStruct *)malloc(sizeof(PresetStruct));
-		memset(preset, 0, sizeof(PresetStruct));
-
-		bool free_sector_data = false;
-		if (sector_data == NULL)
-		{
-			if (fs_iso_mount("/iso_game", full_path_game) == 0)
-			{
-				sector_data = (SectorDataStruct *)malloc(sizeof(SectorDataStruct));
-				memset(sector_data, 0, sizeof(SectorDataStruct));
-				GetMD5HashISO("/iso_game", sector_data);
-				fs_iso_unmount("/iso_game");
-				free_sector_data = true;
-			}
-		}
-
-		if (CanUseTrueAsyncDMA(sector_data->sector_size, GetDeviceType(full_path_game), sector_data->image_type))
-		{
-			preset->use_dma = 1;
-			preset->emu_async = 0;
-			sprintf(preset->memory, "0x%08lx", (unsigned long)ISOLDR_DEFAULT_ADDR_MIN_GINSU);
-		}
-		else
-		{
-			preset->use_dma = 0;
-			preset->emu_async = 8;
-			sprintf(preset->memory, "0x%08lx", (unsigned long)ISOLDR_DEFAULT_ADDR_LOW);
-		}
-
-		char title[32];
-		memset(title, 0, sizeof(title));
-
-		ipbin_meta_t *ipbin = (ipbin_meta_t *)sector_data->boot_sector;
-		TrimSpaces(ipbin->title, title, sizeof(ipbin->title));
-
-		if (free_sector_data)
-		{
-			free(sector_data);
-		}
-
-		preset->alt_read = 0;
-		strcpy(preset->device, "auto");
-		preset->emu_cdda = CDDA_MODE_DISABLED;
-		preset->use_irq = 0;
-		preset->emu_vmu = 0;
-		preset->scr_hotkey = 0;
-		preset->boot_mode = BOOT_MODE_DIRECT;
-		strcpy(preset->title, title);
-
-		// Enable CDDA if present
-		if (full_path_game[0] != '\0')
-		{
-			char *track_file_path = NULL;
-			size_t track_size = GetCDDATrackFilename(4, full_path_game, &track_file_path);
-
-			if (track_size && track_size < 30 * 1024 * 1024)
-			{
-				track_size = GetCDDATrackFilename(6, full_path_game, &track_file_path);
-			}
-
-			if (track_size > 0)
-			{
-				preset->use_irq = 1;
-				preset->emu_cdda = 1;
-			}
-
-			if (track_file_path)
-			{
-				free(track_file_path);
-			}
-		}
-
-		preset->heap = strtoul(preset->heap_memory, NULL, 16);
-		PatchParseText(preset);
+		memset(md5, 0, PRESET_MD5_SIZE);
 	}
 
+	if (title != NULL && title_size > 0)
+	{
+		title[0] = '\0';
+	}
+
+	if (fs_iso_mount("/iso_game", game_path) != 0)
+	{
+		return 0;
+	}
+
+	memset(&sector_data, 0, sizeof(sector_data));
+	GetMD5HashISO("/iso_game", &sector_data);
+	fs_iso_unmount("/iso_game");
+
+	if (md5 != NULL)
+	{
+		memcpy(md5, sector_data.md5, PRESET_MD5_SIZE);
+
+		for (int i = 0; i < PRESET_MD5_SIZE; i++)
+		{
+			if (md5[i] != 0)
+			{
+				usable = 1;
+				break;
+			}
+		}
+	}
+
+	if (title != NULL && title_size > 0)
+	{
+		ipbin_meta_t *ipbin = (ipbin_meta_t *)sector_data.boot_sector;
+		TrimSpaces(ipbin->title, title, (int)title_size);
+	}
+
+	return usable;
+}
+
+static void remember_image_md5(PresetStruct *preset, const uint8 *md5, int hash_ok)
+{
+	if (!hash_ok || md5 == NULL)
+	{
+		return;
+	}
+
+	memcpy(preset->image_md5, md5, sizeof(preset->image_md5));
+	preset->has_image_md5 = 1;
+}
+
+static int ensure_image_md5(PresetStruct *preset, const char *game_path, uint8 *md5)
+{
+	if (preset->has_image_md5)
+	{
+		memcpy(md5, preset->image_md5, sizeof(preset->image_md5));
+		return 1;
+	}
+
+	if (!read_image_identity(game_path, md5, NULL, 0))
+	{
+		return 0;
+	}
+
+	remember_image_md5(preset, md5, 1);
+	return 1;
+}
+
+static int loader_matches_image_device(const char *fs_dev, const char *game_path)
+{
+	const char *dev_name;
+
+	if (device_is_auto_name(fs_dev))
+	{
+		return 1;
+	}
+
+	dev_name = GetDeviceName(GetDeviceType(game_path));
+
+	if (dev_name[0] == '\0')
+	{
+		return 0;
+	}
+
+	return strncmp(fs_dev, dev_name, sizeof(((isoldr_info_t *)0)->fs_dev)) == 0;
+}
+
+static void fill_vmu_state(PresetStruct *preset, const char *game_path)
+{
+	char dst_path[NAME_MAX];
+	int dst_size;
+
+	preset->vmu_mode = 0;
+	memset(preset->vmu_file, 0, sizeof(preset->vmu_file));
+
+	if (preset->emu_vmu == 0)
+	{
+		return;
+	}
+
+	preset->use_irq = 1;
+	snprintf(preset->vmu_file, sizeof(preset->vmu_file), "%03ld", preset->emu_vmu);
+	snprintf(dst_path, NAME_MAX, "%s/vmu%03ld.vmd", GetFolderPathFromFile(game_path), preset->emu_vmu);
+	dst_size = FileSize(dst_path);
+
+	if (dst_size <= 0)
+	{
+		preset->vmu_mode = 1;
+	}
+	else if (dst_size < VMU_SMALL_SIZE)
+	{
+		preset->vmu_mode = 2;
+	}
+	else
+	{
+		preset->vmu_mode = 3;
+	}
+}
+
+static PresetStruct *blank_preset(int game_index)
+{
+	PresetStruct *preset = (PresetStruct *)malloc(sizeof(PresetStruct));
+
+	if (preset == NULL)
+	{
+		return NULL;
+	}
+
+	memset(preset, 0, sizeof(PresetStruct));
+	preset->game_index = game_index;
+	preset->emu_async = PRESET_DEFAULT_ASYNC;
+	strcpy(preset->device, PRESET_DEVICE_AUTO);
+	snprintf(preset->memory, sizeof(preset->memory), "0x%08lx", (unsigned long)ISOLDR_DEFAULT_ADDR_LOW);
 	return preset;
+}
+
+static void fill_preset_from_info(PresetStruct *preset, const isoldr_info_t *info, uintptr_t exec_addr, const char *game_path, const char *title, bool use_auto_os)
+{
+	preset->use_dma = info->use_dma;
+	preset->emu_async = info->emu_async;
+	preset->use_irq = info->use_irq;
+	preset->alt_read = info->alt_read;
+	preset->fastboot = info->fast_boot;
+	preset->low = info->syscalls ? 1 : 0;
+	preset->use_gpio = info->use_gpio;
+	preset->region = info->region;
+	preset->scr_hotkey = info->scr_hotkey;
+	preset->screenshot = info->scr_hotkey ? 1 : 0;
+	preset->boot_mode = info->boot_mode;
+	preset->bin_type = use_auto_os ? BIN_TYPE_AUTO : (int)info->exec.type;
+	preset->emu_cdda = info->emu_cdda;
+	preset->cdda = info->emu_cdda ? 1 : 0;
+	preset->heap = info->heap;
+	preset->emu_vmu = info->emu_vmu;
+	preset->alt_boot = strcasecmp(info->exec.file, ALT_BOOT_FILE) == 0;
+
+	if (title != NULL)
+	{
+		strncpy(preset->title, title, sizeof(preset->title) - 1);
+		preset->title[sizeof(preset->title) - 1] = '\0';
+	}
+
+	memset(preset->device, 0, sizeof(preset->device));
+
+	if (loader_matches_image_device(info->fs_dev, game_path))
+	{
+		strcpy(preset->device, PRESET_DEVICE_AUTO);
+	}
+	else
+	{
+		strncpy(preset->device, info->fs_dev, FIRMWARE_SIZE);
+		preset->device[FIRMWARE_SIZE] = '\0';
+	}
+
+	snprintf(preset->memory, sizeof(preset->memory), "0x%08lx", (unsigned long)exec_addr);
+
+	if (preset->heap > HEAP_MODE_MAPLE)
+	{
+		snprintf(preset->heap_memory, sizeof(preset->heap_memory), "0x%08lx", preset->heap);
+	}
+
+	for (int i = 0; i < PRESET_PATCH_SLOTS; i++)
+	{
+		preset->pa[i] = info->patch_addr[i];
+		preset->pv[i] = info->patch_value[i];
+
+		if (preset->pa[i] != 0)
+		{
+			snprintf(preset->patch_a[i], sizeof(preset->patch_a[i]), "%08lx", preset->pa[i]);
+		}
+
+		if (preset->pv[i] != 0)
+		{
+			snprintf(preset->patch_v[i], sizeof(preset->patch_v[i]), "%08lx", preset->pv[i]);
+		}
+	}
+
+	if (preset->scr_hotkey != 0)
+	{
+		preset->use_irq = 1;
+	}
+
+	fill_vmu_state(preset, game_path);
+}
+
+uintptr_t PresetLoaderAddress(const PresetStruct *preset)
+{
+	char memory[sizeof(preset->memory) + sizeof(preset->custom_memory)];
+
+	if (preset == NULL)
+	{
+		return ISOLDR_DEFAULT_ADDR_LOW;
+	}
+
+	memset(memory, 0, sizeof(memory));
+
+	if (strcasecmp(preset->memory, PRESET_CUSTOM_MEMORY) == 0)
+	{
+		snprintf(memory, sizeof(memory), "%s%s", preset->memory, preset->custom_memory);
+	}
+	else
+	{
+		strncpy(memory, preset->memory, sizeof(memory) - 1);
+	}
+
+	return (uintptr_t)strtoul(memory, NULL, 16);
+}
+
+static void copy_preset_settings(isoldr_info_t *info, const PresetStruct *preset)
+{
+	info->use_dma = preset->use_dma;
+	info->alt_read = preset->alt_read;
+	info->emu_async = preset->emu_async;
+	info->emu_cdda = preset->cdda ? preset->emu_cdda : CDDA_MODE_DISABLED;
+	info->use_irq = preset->use_irq;
+	info->scr_hotkey = preset->screenshot ? preset->scr_hotkey : 0;
+	info->heap = preset->heap;
+	info->boot_mode = preset->boot_mode;
+	info->fast_boot = preset->fastboot;
+	info->emu_vmu = preset->vmu_mode > 0 ? preset->emu_vmu : 0;
+	info->syscalls = preset->low ? 1 : 0;
+	info->use_gpio = preset->use_gpio;
+	info->region = preset->region;
+
+	for (int i = 0; i < PRESET_PATCH_SLOTS; i++)
+	{
+		info->patch_addr[i] = preset->pa[i];
+		info->patch_value[i] = preset->pv[i];
+	}
+
+	if (info->emu_vmu != 0 || info->scr_hotkey != 0)
+	{
+		info->use_irq = 1;
+	}
+}
+
+static void apply_ui_to_isoldr(isoldr_info_t *isoldr, const PresetStruct *preset, const char *game_path, const char *original_dev, const isoldr_exec_info_t *original_exec)
+{
+	uint32 applied_type = isoldr->exec.type;
+
+	copy_preset_settings(isoldr, preset);
+
+	if (!device_is_auto_name(preset->device))
+	{
+		memset(isoldr->fs_dev, 0, sizeof(isoldr->fs_dev));
+		strncpy(isoldr->fs_dev, preset->device, sizeof(isoldr->fs_dev) - 1);
+	}
+	else
+	{
+		memcpy(isoldr->fs_dev, original_dev, sizeof(isoldr->fs_dev));
+	}
+
+	if (preset->alt_boot)
+	{
+		isoldr_set_boot_file(isoldr, game_path, ALT_BOOT_FILE);
+	}
+	else
+	{
+		isoldr->exec = *original_exec;
+	}
+
+	if (preset->bin_type != BIN_TYPE_AUTO)
+	{
+		isoldr->exec.type = preset->bin_type;
+	}
+	else
+	{
+		isoldr->exec.type = applied_type;
+	}
 }
 
 PresetStruct *LoadPresetGame(int game_index, bool default_preset)
 {
-	PresetStruct *preset = NULL;
+	char game_path[NAME_MAX];
+	char title[sizeof(((PresetStruct *)0)->title)];
+	uint8 md5[PRESET_MD5_SIZE];
+	isoldr_info_t *info;
+	char *preset_file = NULL;
+	uintptr_t exec_addr;
+	PresetStruct *preset;
+	int hash_ok;
 
-	if (game_index >= 0)
+	if (game_index < 0)
 	{
-		preset = (PresetStruct *)malloc(sizeof(PresetStruct));
-		memset(preset, 0, sizeof(PresetStruct));
-
-		preset->game_index = game_index;
-
-		const char *full_path_game = GetFullGamePathByIndex(game_index);
-		char *full_preset_file_name = NULL;
-		SectorDataStruct sector_data;
-		memset(&sector_data, 0, sizeof(SectorDataStruct));
-
-		if (fs_iso_mount("/iso_game", full_path_game) == 0)
-		{
-			GetMD5HashISO("/iso_game", &sector_data);
-			fs_iso_unmount("/iso_game");
-
-			bool exists_preset = false;
-			int game_device_type = GetDeviceType(full_path_game);
-			int app_name_count = 0;
-			const char *app_name_array[3] = {"games_menu", "iso_loader", NULL};
-
-			while (!default_preset && app_name_array[app_name_count] != NULL)
-			{
-				if (game_device_type == APP_DEVICE_SD)
-				{
-					full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_SD), GetDefaultDir(APP_DEVICE_SD), sector_data.md5, app_name_array[app_name_count]);
-					if (!FileExists(full_preset_file_name) && menu_data.ide)
-					{
-						full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_SD), sector_data.md5, app_name_array[app_name_count]);
-					}
-				}
-				else if (game_device_type == APP_DEVICE_IDE)
-				{
-					full_preset_file_name = MakePresetFilename(GetDefaultDir(APP_DEVICE_IDE), GetDefaultDir(APP_DEVICE_IDE), sector_data.md5, app_name_array[app_name_count]);
-				}
-				else
-				{
-					full_preset_file_name = MakePresetFilename(getenv("PATH"), GetDefaultDir(menu_data.current_dev), sector_data.md5, app_name_array[app_name_count]);
-				}
-
-				if (FileSize(full_preset_file_name) >= 5)
-				{
-					exists_preset = true;
-					break;
-				}
-
-				++app_name_count;
-			}
-
-			if (!exists_preset)
-			{
-				if (MountPresetsRomdisk(game_device_type) == 0)
-				{
-					full_preset_file_name = MakePresetFilename(GetDefaultDir(game_device_type), GetDefaultDir(game_device_type), sector_data.md5, NULL);
-				}
-			}
-		}
-
-		if (full_preset_file_name != NULL)
-		{
-			memset(preset->preset_file_name, 0, sizeof(preset->preset_file_name));
-			strcpy(preset->preset_file_name, strrchr(full_preset_file_name, '/') + 1);
-		}
-
-		if (FileSize(full_preset_file_name) < 5)
-		{
-			full_preset_file_name = NULL;
-		}
-
-		preset->emu_async = 16;
-		preset->boot_mode = BOOT_MODE_DIRECT;
-		preset->bin_type = BIN_TYPE_AUTO;
-		preset->cdda = CDDA_MODE_DISABLED;
-		strcpy(preset->title, "");
-		strcpy(preset->device, "");
-		sprintf(preset->memory, "0x%08lx", (unsigned long)ISOLDR_DEFAULT_ADDR_MIN);
-
-		strcpy(preset->heap_memory, "");
-		strcpy(preset->bin_file, "");
-
-		memset(preset->patch_a, 0, 2 * 10);
-		memset(preset->patch_v, 0, 2 * 10);
-		memset(preset->pa, 0, 2 * sizeof(uint32));
-		memset(preset->pv, 0, 2 * sizeof(uint32));
-
-		char scr_hotkey[4];
-		memset(scr_hotkey, 0, sizeof(scr_hotkey));
-
-		isoldr_conf options[] = {
-			{"dma", CONF_INT, (void *)&preset->use_dma},
-			{"altread", CONF_INT, (void *)&preset->alt_read},
-			{"cdda", CONF_ULONG, (void *)&preset->emu_cdda},
-			{"irq", CONF_INT, (void *)&preset->use_irq},
-			{"low", CONF_INT, (void *)&preset->low},
-			{"vmu", CONF_INT, (void *)&preset->emu_vmu},
-			{"scrhotkey", CONF_STR, (void *)scr_hotkey},
-			{"heap", CONF_STR, (void *)&preset->heap_memory},
-			{"memory", CONF_STR, (void *)preset->memory},
-			{"async", CONF_INT, (void *)&preset->emu_async},
-			{"mode", CONF_INT, (void *)&preset->boot_mode},
-			{"type", CONF_INT, (void *)&preset->bin_type},
-			{"file", CONF_STR, (void *)preset->bin_file},
-			{"title", CONF_STR, (void *)preset->title},
-			{"device", CONF_STR, (void *)preset->device},
-			{"fastboot", CONF_INT, (void *)&preset->fastboot},
-			{"pa1", CONF_STR, (void *)preset->patch_a[0]},
-			{"pv1", CONF_STR, (void *)preset->patch_v[0]},
-			{"pa2", CONF_STR, (void *)preset->patch_a[1]},
-			{"pv2", CONF_STR, (void *)preset->patch_v[1]},
-			{NULL, CONF_END, NULL}};
-
-		char preset_file_name[100];
-		memset(preset_file_name, 0, sizeof(preset_file_name));
-		strcpy(preset_file_name, preset->preset_file_name);
-
-		if (full_preset_file_name != NULL)
-		{
-			if (ConfigParse(options, full_preset_file_name) == 0)
-			{
-				preset->heap = strtoul(preset->heap_memory, NULL, 16);
-				PatchParseText(preset);
-
-				if (scr_hotkey[0] != '\0' && scr_hotkey[0] != ' ')
-				{
-					preset->scr_hotkey = strtol(scr_hotkey, NULL, 16);
-				}
-			}
-			else
-			{
-				free(preset);
-				preset = GetDefaultPresetGame(full_path_game, &sector_data);
-				preset->game_index = game_index;
-				strcpy(preset->preset_file_name, preset_file_name);
-			}
-
-			if (preset->scr_hotkey)
-			{
-				preset->screenshot = 1;
-				preset->use_irq = 1;
-			}
-
-			if (preset->emu_vmu)
-			{
-				preset->use_irq = 1;
-				snprintf(preset->vmu_file, sizeof(preset->vmu_file), "vmu%03ld.vmd", preset->emu_vmu);
-
-				char dst_path[NAME_MAX];
-				snprintf(dst_path, NAME_MAX, "%s/%s", GetFolderPathFromFile(full_path_game), preset->vmu_file);
-
-				int dst_size = FileSize(dst_path);
-
-				menu_data.vmu_mode = 0;
-				if (dst_size <= 0)
-				{
-					preset->vmu_mode = 1;
-				}
-				else if (dst_size < 256 << 10)
-				{
-					preset->vmu_mode = 2;
-				}
-				else
-				{
-					preset->vmu_mode = 3;
-				}
-				menu_data.vmu_mode = preset->vmu_mode;
-			}
-			else
-			{
-				preset->vmu_mode = 0;
-			}
-
-			if (preset->device[0] == '\0')
-			{
-				strcpy(preset->device, "auto");
-			}
-		}
-		else
-		{
-			free(preset);
-			preset = GetDefaultPresetGame(full_path_game, &sector_data);
-			preset->game_index = game_index;
-			strcpy(preset->preset_file_name, preset_file_name);
-		}
-
-		if (preset->emu_cdda)
-		{
-			preset->cdda = 1;
-		}
+		return NULL;
 	}
 
+	memset(game_path, 0, sizeof(game_path));
+	strncpy(game_path, GetFullGamePathByIndex(game_index), sizeof(game_path) - 1);
+
+	if (game_path[0] == '\0')
+	{
+		return NULL;
+	}
+
+	info = isoldr_get_info(game_path, 0);
+
+	if (info == NULL)
+	{
+		return blank_preset(game_index);
+	}
+
+	memset(title, 0, sizeof(title));
+	hash_ok = read_image_identity(game_path, md5, title, sizeof(title));
+
+	if (!default_preset)
+	{
+		preset_file = isoldr_find_preset(game_path, hash_ok ? md5 : NULL, 0);
+	}
+
+	exec_addr = isoldr_apply_preset(info, preset_file);
+
+	if (exec_addr == (uintptr_t)-1)
+	{
+		exec_addr = isoldr_apply_preset(info, NULL);
+	}
+
+	if (exec_addr == (uintptr_t)-1)
+	{
+		free(info);
+		return blank_preset(game_index);
+	}
+
+	preset = (PresetStruct *)malloc(sizeof(PresetStruct));
+
+	if (preset == NULL)
+	{
+		free(info);
+		return NULL;
+	}
+
+	memset(preset, 0, sizeof(PresetStruct));
+	preset->game_index = game_index;
+	fill_preset_from_info(preset, info, exec_addr, game_path, title, default_preset);
+	remember_image_md5(preset, md5, hash_ok);
+	free(info);
 	return preset;
 }
 
-void PatchParseText(PresetStruct *preset)
+static void fill_info_for_save(isoldr_info_t *info, PresetStruct *preset)
 {
-	if (preset)
+	memset(info, 0, sizeof(*info));
+	copy_preset_settings(info, preset);
+	info->exec.type = preset->bin_type;
+
+	if (device_is_auto_name(preset->device))
 	{
-		for (int i = 0; i < 2; ++i)
-		{
-			if (preset->patch_a[i][1] != '0' && strlen(preset->patch_a[i]) == 8 && strlen(preset->patch_v[i]))
-			{
-				preset->pa[i] = strtoul(preset->patch_a[i], NULL, 16);
-				preset->pv[i] = strtoul(preset->patch_v[i], NULL, 16);
-			}
-			else
-			{
-				preset->pa[i] = 0;
-				preset->pv[i] = 0;
-			}
-		}
+		strncpy(info->fs_dev, PRESET_DEVICE_AUTO, sizeof(info->fs_dev) - 1);
 	}
-}
-
-isoldr_info_t *ParsePresetToIsoldr(int game_index, PresetStruct *preset)
-{
-	isoldr_info_t *isoldr = NULL;
-	if (game_index >= 0 && preset != NULL && preset->game_index >= 0)
+	else
 	{
-		const char *full_path_game = GetFullGamePathByIndex(game_index);
-
-		if ((isoldr = isoldr_get_info(full_path_game, 0)) == NULL)
-		{
-			return NULL;
-		}
-
-		isoldr->use_dma = preset->use_dma;
-		isoldr->alt_read = preset->alt_read;
-		isoldr->emu_async = preset->emu_async;
-		isoldr->emu_cdda = preset->emu_cdda;
-		isoldr->use_irq = preset->use_irq;
-		isoldr->scr_hotkey = preset->scr_hotkey;
-		isoldr->heap = preset->heap;
-		isoldr->boot_mode = preset->boot_mode;
-		isoldr->fast_boot = preset->fastboot;
-		isoldr->emu_vmu = preset->emu_vmu;
-
-		if (preset->low)
-		{
-			isoldr->syscalls = 1;
-		}
-
-		if (preset->bin_type != BIN_TYPE_AUTO)
-		{
-			isoldr->exec.type = preset->bin_type;
-		}
-
-		if (strlen(preset->device) > 0)
-		{
-			if (strncmp(preset->device, "auto", 4) != 0)
-			{
-				strcpy(isoldr->fs_dev, preset->device);
-			}
-			else
-			{
-				strcpy(isoldr->fs_dev, "auto");
-			}
-		}
-		else
-		{
-			strcpy(isoldr->fs_dev, "auto");
-		}
-
-		for (int i = 0; i < sizeof(isoldr->patch_addr) >> 2; ++i)
-		{
-			if (preset->pa[i] & 0xffffff)
-			{
-				isoldr->patch_addr[i] = preset->pa[i];
-				isoldr->patch_value[i] = preset->pa[i];
-			}
-		}
-
-		if (preset->alt_boot && menu_data.games_array[game_index].folder)
-		{
-			char game_path[NAME_MAX];
-			memset(game_path, 0, NAME_MAX);
-			snprintf(game_path, NAME_MAX, "%s/%s", GetGamesPath(menu_data.games_array[game_index].device), menu_data.games_array[game_index].folder);
-			isoldr_set_boot_file(isoldr, game_path, ALT_BOOT_FILE);
-		}
+		strncpy(info->fs_dev, preset->device, sizeof(info->fs_dev) - 1);
 	}
-
-	return isoldr;
 }
 
 bool SavePresetGame(PresetStruct *preset)
 {
-	bool saved = false;
+	char game_path[NAME_MAX];
+	char filename[NAME_MAX];
+	char presets_dir[NAME_MAX];
+	uint8 md5[PRESET_MD5_SIZE];
+	isoldr_info_t info;
+	char *made;
+	const char *base_path;
+	int path_dev;
+	const char *alt_file;
 
-	if (menu_data.current_dev != APP_DEVICE_SD && menu_data.current_dev != APP_DEVICE_IDE)
+	if (preset == NULL || preset->game_index < 0)
 	{
 		return false;
 	}
 
-	if (preset != NULL && preset->game_index >= 0)
+	base_path = getenv("PATH");
+
+	if (base_path == NULL)
 	{
-		file_t fd;
-		char result[1024];
-		char memory[24];
-		int async = 0, type = 0, mode = 0;
-		uint32 heap = HEAP_MODE_AUTO;
-		uint32 cdda_mode = CDDA_MODE_DISABLED;
-
-		char preset_file_name[NAME_MAX];
-		memset(preset_file_name, 0, NAME_MAX);
-
-		snprintf(preset_file_name, sizeof(preset_file_name),
-				 "%s/apps/%s/presets/%s",
-				 GetDefaultDir(menu_data.current_dev), "games_menu", preset->preset_file_name);
-
-		fd = fs_open(preset_file_name, O_CREAT | O_TRUNC | O_WRONLY);
-
-		if (fd == FILEHND_INVALID)
-		{
-			return false;
-		}
-
-		memset(result, 0, sizeof(result));
-		memset(memory, 0, sizeof(memory));
-
-		async = preset->emu_async;
-		type = preset->bin_type;
-		mode = preset->boot_mode;
-
-		if (preset->cdda)
-		{
-			cdda_mode = preset->emu_cdda;
-		}
-
-		if (strcasecmp(preset->memory, "0x8c") == 0)
-		{
-			snprintf(memory, sizeof(memory), "%s%s", preset->memory, preset->custom_memory);
-		}
-		else
-		{
-			strcpy(memory, preset->memory);
-		}
-
-		heap = preset->heap;
-
-		if (preset->device[0] == '\0' || preset->device[0] == ' ')
-		{
-			strcpy(preset->device, "auto");
-		}
-
-		if (preset->emu_vmu > 0 || preset->scr_hotkey)
-		{
-			preset->use_irq = 1;
-		}
-
-		snprintf(result, sizeof(result),
-				 "title = %s\ndevice = %s\ndma = %d\nasync = %d\ncdda = %08lx\n"
-				 "irq = %d\nlow = %d\nheap = %08lx\nfastboot = %d\ntype = %d\nmode = %d\nmemory = %s\n"
-				 "vmu = %d\nscrhotkey = %lx\naltread = %d\n"
-				 "pa1 = %08lx\npv1 = %08lx\npa2 = %08lx\npv2 = %08lx\n",
-				 preset->title, preset->device, preset->use_dma, async,
-				 cdda_mode, preset->use_irq, preset->low, heap,
-				 preset->fastboot, type, mode, memory,
-				 (int)preset->emu_vmu, (uint32)preset->scr_hotkey,
-				 preset->alt_read,
-				 preset->pa[0], preset->pv[0], preset->pa[1], preset->pv[1]);
-
-		if (preset->alt_boot)
-		{
-			strcat(result, "file = " ALT_BOOT_FILE "\n");
-		}
-
-		fs_write(fd, result, strlen(result));
-		fs_close(fd);
-
-		char isoldr_preset_file_name[NAME_MAX];
-		memset(isoldr_preset_file_name, 0, NAME_MAX);
-
-		snprintf(isoldr_preset_file_name, sizeof(isoldr_preset_file_name),
-				 "%s/apps/%s/presets/%s",
-				 GetDefaultDir(menu_data.current_dev), "iso_loader", preset->preset_file_name);
-
-		// COPY TO ISO LOADER FOLDER
-		CopyFile(preset_file_name, isoldr_preset_file_name, 0);
-		saved = true;
+		return false;
 	}
 
-	return saved;
+	path_dev = GetDeviceType(base_path);
+
+	if (path_dev != APP_DEVICE_SD && path_dev != APP_DEVICE_IDE)
+	{
+		return false;
+	}
+
+	memset(game_path, 0, sizeof(game_path));
+	strncpy(game_path, GetFullGamePathByIndex(preset->game_index), sizeof(game_path) - 1);
+
+	if (!ensure_image_md5(preset, game_path, md5))
+	{
+		return false;
+	}
+
+	made = isoldr_make_preset_filename(game_path, md5);
+
+	if (made == NULL || made[0] == '\0')
+	{
+		return false;
+	}
+
+	memset(filename, 0, sizeof(filename));
+	strncpy(filename, made, sizeof(filename) - 1);
+	snprintf(presets_dir, sizeof(presets_dir), "%s/apps/iso_loader/presets", base_path);
+	fs_mkdir(presets_dir);
+	fill_info_for_save(&info, preset);
+	alt_file = preset->alt_boot ? ALT_BOOT_FILE : NULL;
+
+	if (isoldr_save_preset(&info, filename, preset->title, PresetLoaderAddress(preset), alt_file) != 0)
+	{
+		ds_printf("DS_ERROR: Can't save preset %s\n", filename);
+		return false;
+	}
+
+	ds_printf("DS_OK: Preset saved: %s\n", filename);
+	return true;
+}
+
+isoldr_info_t *ParsePresetToIsoldr(int game_index, PresetStruct *preset)
+{
+	char game_path[NAME_MAX];
+	char original_dev[sizeof(((isoldr_info_t *)0)->fs_dev)];
+	uint8 md5[PRESET_MD5_SIZE];
+	isoldr_info_t *isoldr;
+	isoldr_exec_info_t original_exec;
+	char *preset_file;
+	int hash_ok;
+
+	if (game_index < 0 || preset == NULL || preset->game_index < 0)
+	{
+		return NULL;
+	}
+
+	memset(game_path, 0, sizeof(game_path));
+	strncpy(game_path, GetFullGamePathByIndex(game_index), sizeof(game_path) - 1);
+	isoldr = isoldr_get_info(game_path, 0);
+
+	if (isoldr == NULL)
+	{
+		return NULL;
+	}
+
+	memcpy(original_dev, isoldr->fs_dev, sizeof(original_dev));
+	original_exec = isoldr->exec;
+	hash_ok = ensure_image_md5(preset, game_path, md5);
+	preset_file = isoldr_find_preset(game_path, hash_ok ? md5 : NULL, 0);
+
+	if (isoldr_apply_preset(isoldr, preset_file) == (uintptr_t)-1)
+	{
+		if (isoldr_apply_preset(isoldr, NULL) == (uintptr_t)-1)
+		{
+			free(isoldr);
+			return NULL;
+		}
+	}
+
+	apply_ui_to_isoldr(isoldr, preset, game_path, original_dev, &original_exec);
+	return isoldr;
 }
 
 void LoadDefaultMenuConfig()

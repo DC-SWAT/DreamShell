@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    utils.c - app utils
-   Copyright (C) 2022-2025 SWAT
+   Copyright (C) 2022-2026 SWAT
    Copyright (C) 2024-2025 Maniac Vera
 
 */
@@ -13,9 +13,6 @@
 #include "app_utils.h"
 #include "audio/wav.h"
 #include "settings.h"
-
-static uint8 *romdisk_data[3] = {NULL, NULL, NULL};
-static const char *mount_points[] = {"/presets_cd", "/presets_sd", "/presets_ide"};
 
 char *StrdupSafe(const char *string)
 {
@@ -385,11 +382,14 @@ const char *GetDeviceName(int type)
 	}
 }
 
-int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type)
+int device_is_auto_name(const char *device)
 {
-	return (sector_size == 2048 &&
-			(current_dev == APP_DEVICE_IDE || current_dev == APP_DEVICE_CD) &&
-			(image_type == ISOFS_IMAGE_TYPE_ISO || image_type == ISOFS_IMAGE_TYPE_GDI));
+	if (device == NULL || device[0] == '\0' || device[0] == ' ')
+	{
+		return 1;
+	}
+
+	return strncmp(device, PRESET_DEVICE_AUTO, sizeof(PRESET_DEVICE_AUTO)) == 0;
 }
 
 void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data)
@@ -407,17 +407,6 @@ void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data)
 		else
 		{
 			kos_md5(sector_data->boot_sector, sizeof(sector_data->boot_sector), sector_data->md5);
-		}
-
-		// Also get image type and sector size
-		if (fs_ioctl(fd, ISOFS_IOCTL_GET_IMAGE_TYPE, (int)&sector_data->image_type) < 0)
-		{
-			ds_printf("Can't get image type\n");
-		}
-
-		if (fs_ioctl(fd, ISOFS_IOCTL_GET_DATA_TRACK_SECTOR_SIZE, (int)&sector_data->sector_size) < 0)
-		{
-			ds_printf("Can't get sector size\n");
 		}
 
 		fs_close(fd);
@@ -482,7 +471,7 @@ bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full
 		strcat(cmd, async);
 	}
 
-	if (strncmp(preset->device, "auto", 4) != 0)
+	if (!device_is_auto_name(preset->device))
 	{
 		strcat(cmd, " -d ");
 		strcat(cmd, preset->device);
@@ -535,7 +524,7 @@ bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full
 		}
 	}
 
-	if (preset->emu_cdda)
+	if (preset->cdda && preset->emu_cdda)
 	{
 		char cdda_mode[12];
 		sprintf(cdda_mode, "0x%08lx", preset->emu_cdda);
@@ -546,27 +535,27 @@ bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full
 	if (preset->heap <= HEAP_MODE_MAPLE)
 	{
 		char mode[24];
-		sprintf(mode, " -h %d", i);
+		sprintf(mode, " -h %lu", preset->heap);
 		strcat(cmd, mode);
 	}
-	else
+	else if (preset->heap_memory[0] != '\0')
 	{
-		char *addr = preset->heap_memory;
 		strcat(cmd, " -h ");
-		strcat(cmd, addr);
+		strcat(cmd, preset->heap_memory);
 	}
 
-	if (preset->vmu_mode > 0)
+	if (preset->vmu_mode > 0 && preset->emu_vmu > 0)
 	{
 		char number[12];
-		sprintf(number, " -v %d", atoi(preset->vmu_file));
+		sprintf(number, " -v %lu", preset->emu_vmu);
 		strcat(cmd, number);
 	}
 
 	if (preset->screenshot)
 	{
 		char hotkey[24];
-		sprintf(hotkey, " -k 0x%lx", (uint32)SCREENSHOT_HOTKEY);
+		uint32 hotkey_mask = preset->scr_hotkey ? preset->scr_hotkey : (uint32)SCREENSHOT_HOTKEY;
+		sprintf(hotkey, " -k 0x%lx", hotkey_mask);
 		strcat(cmd, hotkey);
 	}
 
@@ -601,44 +590,6 @@ bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full
 	}
 
 	return true;
-}
-
-char *MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name)
-{
-	char dev[8];
-	static char filename[NAME_MAX];
-
-	memset(filename, 0, sizeof(filename));
-	strncpy(dev, &device_dir[1], 3);
-
-	if (dev[2] == '/')
-	{
-		dev[2] = '\0';
-	}
-	else
-	{
-		dev[3] = '\0';
-	}
-
-	char presets_dir[100] = {0};
-	if (app_name == NULL)
-	{
-		int device_type = GetDeviceType(default_dir);
-		strcpy(presets_dir, mount_points[device_type]);
-	}
-	else
-	{
-		snprintf(presets_dir, sizeof(presets_dir), "%s/apps/%s/presets", default_dir, app_name);		
-	}
-
-	snprintf(filename, sizeof(filename),
-			 "%s/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-			 presets_dir, dev, md5[0],
-			 md5[1], md5[2], md5[3], md5[4], md5[5],
-			 md5[6], md5[7], md5[8], md5[9], md5[10],
-			 md5[11], md5[12], md5[13], md5[14], md5[15]);
-
-	return filename;
 }
 
 const char *GetFolderPathFromFile(const char *full_path_file)
@@ -728,52 +679,3 @@ void PlayCDDATrack(const char *file, int loop)
 	}
 }
 
-int MountPresetsRomdisk(int device_type)
-{
-	char romdisk_path[NAME_MAX];
-	const char *romdisk_names[] = {"presets_cd.romfs", "presets_sd.romfs", "presets_ide.romfs"};
-
-	if (device_type < 0 || device_type >= 3 || romdisk_data[device_type])
-	{
-		return 0;
-	}
-
-	snprintf(romdisk_path, NAME_MAX, "%s/apps/iso_loader/resources/%s",
-			 getenv("PATH"), romdisk_names[device_type]);
-
-	if (fs_load(romdisk_path, (void **)&romdisk_data[device_type]) <= 0)
-	{
-		ds_printf("DS_ERROR: Failed to load romdisk %s\n", romdisk_path);
-		return -1;
-	}
-
-	if (fs_romdisk_mount(mount_points[device_type], romdisk_data[device_type], 0) < 0)
-	{
-		ds_printf("DS_ERROR: Failed to mount romdisk %s\n", mount_points[device_type]);
-		free(romdisk_data[device_type]);
-		romdisk_data[device_type] = NULL;
-		return -1;
-	}
-
-	return 0;
-}
-
-void UnmountPresetsRomdisk(int device_type)
-{
-	if (device_type < 0 || device_type >= 3 || !romdisk_data[device_type])
-	{
-		return;
-	}
-
-	fs_romdisk_unmount(mount_points[device_type]);
-	free(romdisk_data[device_type]);
-	romdisk_data[device_type] = NULL;
-}
-
-void UnmountAllPresetsRomdisks()
-{
-	for (int i = 0; i < sizeof(mount_points) / sizeof(mount_points[0]); i++)
-	{
-		UnmountPresetsRomdisk(i);
-	}
-}

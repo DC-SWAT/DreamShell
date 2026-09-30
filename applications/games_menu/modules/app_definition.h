@@ -20,6 +20,13 @@
 #define MAX_MENU 3
 #define FIRMWARE_SIZE 8
 #define MAX_VMU 999
+#define PRESET_DEVICE_AUTO "auto"
+#define PRESET_CUSTOM_MEMORY "0x8c"
+#define PRESET_PATCH_SLOTS 2
+#define PRESET_MD5_SIZE 16
+#define PRESET_BOOT_SECTOR_SIZE 2048
+#define PRESET_DEFAULT_ASYNC 8
+#define VMU_SMALL_SIZE (256 << 10)
 #define DEFAULT_VMU_NUMBER "001"
 #define SCREENSHOT_HOTKEY (CONT_START | CONT_A | CONT_B)
 #define ALT_BOOT_FILE "2ND_READ.BIN"
@@ -197,7 +204,9 @@ typedef struct PresetStructure
 	int use_irq;
 	int alt_read;
 	int fastboot;
-	int low;	
+	int low;
+	int use_gpio;
+	uint32 region;
 	int scr_hotkey;
 	int boot_mode;
 	int bin_type;
@@ -212,28 +221,26 @@ typedef struct PresetStructure
 	uint32 emu_vmu;
 	uint32 emu_cdda;
 	uint32 heap;
-	uint32 pa[2];
-	uint32 pv[2];
+	uint32 pa[PRESET_PATCH_SLOTS];
+	uint32 pv[PRESET_PATCH_SLOTS];
 
 	char title[32];
-	char device[FIRMWARE_SIZE+1];	
+	char device[FIRMWARE_SIZE+1];
 	char memory[12];
 	char custom_memory[12];
 	char heap_memory[12];
-	char bin_file[12];
-	char patch_a[2][10];
-	char patch_v[2][10];
+	char patch_a[PRESET_PATCH_SLOTS][10];
+	char patch_v[PRESET_PATCH_SLOTS][10];
 	char vmu_file[32];
 	char shortcut_name[33];
-	char preset_file_name[100];
+	uint8 image_md5[PRESET_MD5_SIZE];
+	int has_image_md5;
 } PresetStruct;
 
 typedef struct SectorDataStructure
 {
-	int image_type;
-	int sector_size;
-	uint8 md5[16];
-	uint8 boot_sector[2048];
+	uint8 md5[PRESET_MD5_SIZE];
+	uint8 boot_sector[PRESET_BOOT_SECTOR_SIZE];
 } SectorDataStruct;
 
 typedef struct MenuOptionStructure

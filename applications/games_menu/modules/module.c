@@ -2010,12 +2010,19 @@ static int LoadPreset()
 {
 	if (menu_data.preset == NULL || menu_data.preset->game_index != self.game_index_selected)
 	{
+		PresetStruct *preset = LoadPresetGame(self.game_index_selected, false);
+
+		if (preset == NULL)
+		{
+			return 0;
+		}
+
 		if (menu_data.preset != NULL)
 		{
 			free(menu_data.preset);
 		}
 
-		menu_data.preset = LoadPresetGame(self.game_index_selected, false);
+		menu_data.preset = preset;
 	}
 
 	if ((self.isoldr = ParsePresetToIsoldr(self.game_index_selected, menu_data.preset)) == NULL)
@@ -2023,46 +2030,11 @@ static int LoadPreset()
 		return 0;
 	}
 
-	char memory[12];
-	memset(memory, 0, sizeof(memory));
+	self.addr = PresetLoaderAddress(menu_data.preset);
 
-	if (strcasecmp(menu_data.preset->memory, "0x8c") == 0)
-	{
-		snprintf(memory, sizeof(memory), "%s%s", menu_data.preset->memory, menu_data.preset->custom_memory);
-	}
-	else
-	{
-		strcpy(memory, menu_data.preset->memory);
-	}
-
-	self.addr = strtoul(memory, NULL, 16);
-
-	if (menu_data.preset->emu_vmu)
+	if (menu_data.preset->emu_vmu && menu_data.preset->vmu_mode > 0)
 	{
 		GenerateVMUFile(self.item_value_selected, menu_data.preset->vmu_mode, menu_data.preset->emu_vmu);
-	}
-
-	if (strncmp(self.isoldr->fs_dev, "auto", 4) == 0)
-	{
-		if (self.device_selected == APP_DEVICE_SD)
-		{
-			strcpy(self.isoldr->fs_dev, "sd");
-		}
-		else
-		{
-			if (!strncasecmp(GetDefaultDir(menu_data.current_dev), "/cd", 3))
-			{
-				strcpy(self.isoldr->fs_dev, "cd");
-			}
-			else if (!strncasecmp(GetDefaultDir(menu_data.current_dev), "/sd", 3))
-			{
-				strcpy(self.isoldr->fs_dev, "sd");
-			}
-			else if (!strncasecmp(GetDefaultDir(menu_data.current_dev), "/ide", 4))
-			{
-				strcpy(self.isoldr->fs_dev, "ide");
-			}
-		}
 	}
 
 	return 1;

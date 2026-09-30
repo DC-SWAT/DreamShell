@@ -577,7 +577,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_DrawableSetId((Drawable *)self.loader_option, LOADER_CONTROL_ID);
 
 		TSU_OptionGroupSetStates(self.loader_option, SA_CONTROL + LOADER_CONTROL_ID, SA_PRESET_MENU);
-		TSU_OptionGroupAdd(self.loader_option, 0, "auto");
+		TSU_OptionGroupAdd(self.loader_option, 0, PRESET_DEVICE_AUTO);
 
 		for (int i = 0; i < menu_data.firmware_array_count; i++)
 		{
@@ -727,7 +727,7 @@ void CreateGeneralView(Form *form_ptr)
 		TSU_OptionGroupAdd(self.memory_option, 13, "0x8cff0000");
 		TSU_OptionGroupAdd(self.memory_option, 14, "0x8cff4800");
 		TSU_OptionGroupAdd(self.memory_option, 15, "0x8d000000");
-		TSU_OptionGroupAdd(self.memory_option, 16, "0x8c");
+		TSU_OptionGroupAdd(self.memory_option, 16, PRESET_CUSTOM_MEMORY);
 		TSU_OptionGroupSetStates(self.memory_option, SA_CONTROL + MEMORY_CONTROL_ID, SA_PRESET_MENU);
 		TSU_FormAddBodyOptionGroup(form_ptr, self.memory_option, 2, 7);
 		TSU_DrawableEventSetClick((Drawable *)self.memory_option, &MemoryOptionClick);
@@ -741,14 +741,14 @@ void CreateGeneralView(Form *form_ptr)
 			}
 			else
 			{
-				TSU_OptionGroupSelectOptionByText(self.memory_option, "0x8c");
+				TSU_OptionGroupSelectOptionByText(self.memory_option, PRESET_CUSTOM_MEMORY);
 				memset(menu_data.preset->custom_memory, 0, sizeof(menu_data.preset->custom_memory));
 
 				if (strlen(menu_data.preset->memory) == 10)
 				{
 					strcpy(menu_data.preset->custom_memory, &menu_data.preset->memory[4]);
 					memset(menu_data.preset->memory, 0, sizeof(menu_data.preset->memory));
-					strcpy(menu_data.preset->memory, "0x8c");
+					strcpy(menu_data.preset->memory, PRESET_CUSTOM_MEMORY);
 				}
 				else
 				{
@@ -1575,12 +1575,25 @@ void ShowPresetMenu(int game_index)
 			self.save = menu_data.save_preset;
 			if (menu_data.preset == NULL || menu_data.preset->game_index != self.game_index)
 			{
+				PresetStruct *preset = LoadPresetGame(self.game_index, false);
+
+				if (preset == NULL)
+				{
+					if (self.game_cover_path != NULL)
+					{
+						free(self.game_cover_path);
+						self.game_cover_path = NULL;
+					}
+
+					return;
+				}
+
 				if (menu_data.preset != NULL)
 				{
 					free(menu_data.preset);
-				}	
-				
-				menu_data.preset = LoadPresetGame(self.game_index, false);
+				}
+
+				menu_data.preset = preset;
 			}
 
 			SetModeScreenshot();
@@ -1785,12 +1798,20 @@ void DefaultPresetOptionClick(Drawable *drawable)
 
 		TSU_LabelSetTint(TSU_ItemMenuGetLabel(self.default_preset_option), &press_color);
 
+		PresetStruct *preset = LoadPresetGame(self.game_index, true);
+
+		if (preset == NULL)
+		{
+			TSU_LabelSetTint(TSU_ItemMenuGetLabel(self.default_preset_option), &drop_color);
+			return;
+		}
+
 		if (menu_data.preset != NULL)
 		{
 			free(menu_data.preset);
 		}
 
-		menu_data.preset = LoadPresetGame(self.game_index, true);
+		menu_data.preset = preset;
 
 		TSU_FormClearBodyObjects(self.preset_menu_form);
 		OnViewIndexChangedEvent((Drawable *)self.preset_menu_form, GENERAL_VIEW);

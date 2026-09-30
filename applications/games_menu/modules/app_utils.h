@@ -45,15 +45,11 @@ const char* GetLastPart(const char *source, const char separator, int option_pat
 bool ContainsOnlyNumbers(const char *string);
 int  GetDeviceType(const char *dir);
 const char *GetDeviceName(int type);
-int CanUseTrueAsyncDMA(int sector_size, int current_dev, int image_type);
+int device_is_auto_name(const char *device);
 void GetMD5HashISO(const char *file_mount_point, SectorDataStruct *sector_data);
-char* MakePresetFilename(const char *default_dir, const char *device_dir, uint8 *md5, const char *app_name);
 const char *GetFolderPathFromFile(const char *full_path_file);
 size_t GetCDDATrackFilename(int num, const char *full_path_game, char **result);
 void PlayCDDATrack(const char *file, int loop);
 void StopCDDATrack();
-int MountPresetsRomdisk(int device_type);
-void UnmountPresetsRomdisk(int device_type);
-void UnmountAllPresetsRomdisks();
 
 #endif // __APP_UTILS_H
