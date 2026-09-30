@@ -1391,6 +1391,29 @@ static int read_image_identity(const char *game_path, uint8 *md5, char *title, s
 		title[0] = '\0';
 	}
 
+	if (IsNaomiImageName(game_path))
+	{
+		if (!ReadNaomiImageMd5(game_path, md5, title, (int)title_size))
+		{
+			return 0;
+		}
+
+		if (md5 == NULL)
+		{
+			return 1;
+		}
+
+		for (int i = 0; i < PRESET_MD5_SIZE; i++)
+		{
+			if (md5[i] != 0)
+			{
+				return 1;
+			}
+		}
+
+		return 0;
+	}
+
 	if (fs_iso_mount("/iso_game", game_path) != 0)
 	{
 		return 0;
@@ -2579,6 +2602,11 @@ bool ExtractPVRCover(int game_index)
 		const char *full_game_path = GetFullGamePathByIndex(game_index);
 		menu_data.games_array[game_index].check_pvr = false;
 
+		if (IsNaomiImageName(full_game_path))
+		{
+			return false;
+		}
+
 		GetCoverName(game_index, &game_without_extension);
 		menu_data.send_message_scan("Mounting GAME: %s", game_without_extension);
 
@@ -3445,7 +3473,7 @@ void RetrieveGamesRecursive()
 				upper_game_name[0] = '\0';
 
 				if (menu_data.enable_cache &&
-					(ent->attr == O_DIR || (file_type && (EndsWith(ent->name, ".gdi") || EndsWith(ent->name, ".cdi") || EndsWith(ent->name, ".cso") || (EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0)))))
+					(ent->attr == O_DIR || IsGameImageName(ent->name)))
 				{
 					game_cache = FindInCache(temp_folder_path);
 
@@ -3465,9 +3493,7 @@ void RetrieveGamesRecursive()
 						is_folder_name = frame.level > 0;
 						is_valid_game = true;
 					}
-					else if (file_type && (EndsWith(ent->name, ".cdi") ||
-										   (EndsWith(ent->name, ".iso") && strncasecmp(ent->name, "track", 5) != 0) ||
-										   EndsWith(ent->name, ".cso")))
+					else if (IsGameImageName(ent->name) && !EndsWith(ent->name, ".gdi"))
 					{
 						strcpy(upper_game_name, ent->name);
 						is_folder_name = (frame.level > 0 && unique_file == 0);

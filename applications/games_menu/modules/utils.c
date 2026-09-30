@@ -54,6 +54,85 @@ bool EndsWith(const char *filename, const char *ext)
 	return len >= ext_len && strcasecmp(filename + len - ext_len, ext) == 0;
 }
 
+bool IsNaomiImageName(const char *name)
+{
+	return name != NULL && EndsWith(name, ".dni");
+}
+
+bool IsGameImageName(const char *name)
+{
+	if (name == NULL || name[0] == '\0')
+	{
+		return false;
+	}
+
+	if (EndsWith(name, ".gdi") || EndsWith(name, ".cdi") || EndsWith(name, ".cso") || IsNaomiImageName(name))
+	{
+		return true;
+	}
+
+	if (!EndsWith(name, ".iso"))
+	{
+		return false;
+	}
+
+	return strncasecmp(name, "track", 5) != 0;
+}
+
+int ReadNaomiImageMd5(const char *game_path, uint8 *md5, char *title, int title_size)
+{
+	file_t fd;
+	naomi_cart_header_t cart_hdr;
+	int region_count;
+	int i;
+
+	if (md5 != NULL)
+	{
+		memset(md5, 0, PRESET_MD5_SIZE);
+	}
+
+	if (title != NULL && title_size > 0)
+	{
+		title[0] = '\0';
+	}
+
+	fd = fs_open(game_path, O_RDONLY);
+
+	if (fd == FILEHND_INVALID)
+	{
+		return 0;
+	}
+
+	if (isoldr_naomi_read_header(fd, &cart_hdr) < 0)
+	{
+		fs_close(fd);
+		return 0;
+	}
+
+	fs_close(fd);
+
+	if (md5 != NULL)
+	{
+		kos_md5((uint8 *)&cart_hdr, sizeof(cart_hdr), md5);
+	}
+
+	if (title != NULL && title_size > 0)
+	{
+		region_count = (int)(sizeof(cart_hdr.regional_name) / sizeof(cart_hdr.regional_name[0]));
+
+		for (i = 0; i < region_count; i++)
+		{
+			if (cart_hdr.regional_name[i][0] != '\0' && cart_hdr.regional_name[i][0] != ' ')
+			{
+				TrimSpaces(cart_hdr.regional_name[i], title, title_size);
+				break;
+			}
+		}
+	}
+
+	return 1;
+}
+
 void TrimSlashes(char *path)
 {
 	int length = strlen(path);

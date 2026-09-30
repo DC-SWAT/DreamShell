@@ -32,6 +32,9 @@ enum {
 char *StrdupSafe(const char *string);
 const char* GetFileName(const char* path);
 bool EndsWith(const char *filename, const char *ext);
+bool IsGameImageName(const char *name);
+bool IsNaomiImageName(const char *name);
+int ReadNaomiImageMd5(const char *game_path, uint8 *md5, char *title, int title_size);
 void TrimSlashes(char *path);
 char *Trim(char *string);
 void TrimSpaces(char *input, char *output, int size);

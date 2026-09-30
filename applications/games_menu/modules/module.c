@@ -359,6 +359,10 @@ static void SetTitleType(const char *full_path_game, bool is_gdi_optimized)
 		{
 			strncpy(title_text, "CSO", 3);
 		}
+		else if (strcasecmp(file_type, ".dni") == 0)
+		{
+			strncpy(title_text, "DNI", 3);
+		}
 		else if (strcasecmp(file_type, ".gdi") == 0)
 		{
 			strncpy(title_text, "GDI", 3);
