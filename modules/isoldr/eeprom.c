@@ -11,6 +11,7 @@
 
 #include <dc/maple/mie.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define NAOMI_EEPROM_GAME_MAX   42
 #define NAOMI_CALIB_AXES        7
@@ -36,6 +37,9 @@ typedef struct naomi_calib_map {
 	0x0080, 0x0080, 0x0080, \
 	0x0080 \
 }
+#define NAOMI_CALIB_BBK_OFFS { 33, 32, 35, 36, 37, 38, 39 }
+#define NAOMI_CALIB_BBK_DEFS { 0x0000, 0x0080, 0x001f, 0x00df, 0x0025, 0x0050, 0x0050 }
+#define NAOMI_CALIB_BBK_RIGHT_MIN 34
 #define NAOMI_CALIB_BAC_OFFS { 25, 24, 26, 20, 21, 22, 23 }
 #define NAOMI_CALIB_BAC_DEFS { 0x0028, 0x0081, 0x00e1, 0x002c, 0x00c3, 0x0037, 0x00ce }
 #define NAOMI_CALIB_BAU_OFFS { 17, 16, 18, 12, 13, 14, 15 }
@@ -43,7 +47,7 @@ typedef struct naomi_calib_map {
 
 static const naomi_calib_map_t naomi_calib_maps[] = {
 	/* 18 Wheeler: American Pro Trucker */
-	{ "BBK0", 32, NAOMI_CALIB_N1_OFFS, NAOMI_CALIB_N1_DEFS },
+	{ "BBK0", 40, NAOMI_CALIB_BBK_OFFS, NAOMI_CALIB_BBK_DEFS },
 	/* Airline Pilots */
 	{ "BAE0", 32, NAOMI_CALIB_N1_OFFS, NAOMI_CALIB_N1_DEFS },
 	/* Jambo! Safari */
@@ -116,6 +120,39 @@ static const naomi_calib_map_t naomi_calib_maps[] = {
 	{ "BHH0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 	/* Initial D Arcade Stage Ver. 3 (Export) */
 	{ "BHR0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
+};
+
+static const uint8_t naomi_factory_bbk0[] = {
+	0x30, 0x20, 0x01, 0x00, 0x31, 0x38, 0x57, 0x48, 0x45, 0x45, 0x4c, 0x45, 0x52, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x22, 0x11, 0x44, 0x33, 0x66, 0x55, 0x00, 0x00, 0x02, 0x00, 0x02, 0x00, 0x01, 0x00,
+	0x80, 0x00, 0xce, 0x1f, 0xdf, 0x25, 0x50, 0x50
+};
+
+static const uint8_t naomi_factory_bac0[] = {
+	0x90, 0x04, 0x10, 0xa3, 0x43, 0x52, 0x41, 0x5a, 0x59, 0x54, 0x41, 0x58, 0x49, 0x20, 0x41, 0x4d,
+	0x33, 0x03, 0x03, 0x04, 0x2c, 0xc3, 0x37, 0xce, 0x81, 0x28, 0xe1, 0x00
+};
+
+static const uint8_t naomi_factory_bau0[] = {
+	0xdd, 0xbe, 0x04, 0x00, 0x18, 0x08, 0x99, 0x19, 0x02, 0x02, 0x02, 0x02, 0x20, 0xd0, 0x20, 0xd0,
+	0x80, 0x20, 0xe0, 0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+static const uint8_t naomi_factory_bee0[] = {
+	0x17, 0x05, 0x01, 0x00, 0x4b, 0x4f, 0x52, 0x36, 0x36, 0x00, 0x76, 0x98, 0x32, 0x54, 0x98, 0x10,
+	0x12, 0x4d, 0x01, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80,
+	0x00, 0x80, 0x00, 0x00
+};
+
+static const struct {
+	char game_id[4];
+	uint8_t len;
+	const uint8_t *data;
+} naomi_game_factory[] = {
+	{ "BBK0", sizeof(naomi_factory_bbk0), naomi_factory_bbk0 },
+	{ "BAC0", sizeof(naomi_factory_bac0), naomi_factory_bac0 },
+	{ "BAU0", sizeof(naomi_factory_bau0), naomi_factory_bau0 },
+	{ "BEE0", sizeof(naomi_factory_bee0), naomi_factory_bee0 },
 };
 
 static void naomi_eeprom_make_path(const char *game_id, char *path, size_t path_size) {
@@ -201,6 +238,19 @@ static const naomi_calib_map_t *naomi_calib_find(const char *game_id) {
 	return NULL;
 }
 
+static const uint8_t *naomi_game_factory_find(const char *game_id, size_t *len) {
+	size_t i;
+
+	for(i = 0; i < sizeof(naomi_game_factory) / sizeof(naomi_game_factory[0]); i++) {
+		if(!strncmp(game_id, naomi_game_factory[i].game_id, 4)) {
+			*len = naomi_game_factory[i].len;
+			return naomi_game_factory[i].data;
+		}
+	}
+
+	return NULL;
+}
+
 static bool naomi_eeprom_patch_calib(uint8_t *eeprom, const char *game_id,
 		const uint8_t *rom_defaults, size_t def_len,
 		const mie_analog_calib_t *calib) {
@@ -235,6 +285,13 @@ static bool naomi_eeprom_patch_calib(uint8_t *eeprom, const char *game_id,
 			val = (uint8_t)(values[i] >> 8);
 			game[off] = val;
 			game[off + game_len] = val;
+			patched = true;
+		}
+		if(!strncmp(game_id, "BBK0", 4) && NAOMI_CALIB_BBK_RIGHT_MIN < game_len) {
+			uint8_t center = (uint8_t)(calib->wheel.center >> 8);
+
+			game[NAOMI_CALIB_BBK_RIGHT_MIN] = center;
+			game[NAOMI_CALIB_BBK_RIGHT_MIN + game_len] = center;
 			patched = true;
 		}
 	}
@@ -281,19 +338,29 @@ static size_t naomi_eeprom_game_size(const char *game_id, size_t rom_len) {
 }
 
 static void naomi_eeprom_build_default(const char *game_id, const uint8_t *game_defaults,
-		size_t rom_len, uint8_t *out) {
+		size_t rom_len, uint8_t *out, bool exact_game) {
 	uint8_t system[16];
 	uint8_t game_buf[NAOMI_EEPROM_GAME_MAX];
 	uint16_t crc;
 	size_t game_len;
+	size_t copy_len;
 	size_t game_off;
 	size_t i;
 
-	game_len = naomi_eeprom_game_size(game_id, rom_len);
+	if(exact_game) {
+		game_len = rom_len;
+	}
+	else {
+		game_len = naomi_eeprom_game_size(game_id, rom_len);
+	}
 	memset(game_buf, 0, sizeof(game_buf));
-	memcpy(game_buf, game_defaults, rom_len);
+	copy_len = rom_len < game_len ? rom_len : game_len;
+	if(copy_len > NAOMI_EEPROM_GAME_MAX) {
+		copy_len = NAOMI_EEPROM_GAME_MAX;
+	}
+	memcpy(game_buf, game_defaults, copy_len);
 
-	{
+	if(!exact_game) {
 		const naomi_calib_map_t *map = naomi_calib_find(game_id);
 		size_t ai;
 
@@ -356,10 +423,15 @@ static void naomi_eeprom_build_default(const char *game_id, const uint8_t *game_
 }
 
 static bool naomi_eeprom_read_cart(const char *rom_file, char *game_id,
-		uint8_t *rom_defaults, size_t *rom_defaults_len) {
+		uint8_t *rom_defaults, size_t *rom_defaults_len,
+		uint8_t *game_blob, size_t *game_blob_len) {
 	naomi_cart_header_t cart_hdr;
+	const uint8_t *factory;
 	file_t fd;
 	size_t period;
+	size_t factory_len = 0;
+
+	*game_blob_len = 0;
 
 	fd = fs_open(rom_file, O_RDONLY);
 	if(fd == FILEHND_INVALID) {
@@ -379,18 +451,22 @@ static bool naomi_eeprom_read_cart(const char *rom_file, char *game_id,
 		return false;
 	}
 
-	fs_seek(fd, NAOMI_EEPROM_GAME_ID_OFFSET, SEEK_SET);
-	if(fs_read(fd, game_id, 4) != 4) {
-		fs_close(fd);
-		return false;
-	}
-	fs_close(fd);
+	memcpy(game_id, cart_hdr.serial, 4);
 	game_id[4] = '\0';
 
 	period = naomi_eeprom_rom_period(cart_hdr.EEPROM_init_val,
 			sizeof(cart_hdr.EEPROM_init_val));
 	memcpy(rom_defaults, cart_hdr.EEPROM_init_val, period);
 	*rom_defaults_len = period;
+	fs_close(fd);
+
+	factory = naomi_game_factory_find(game_id, &factory_len);
+	if(factory && factory_len > 0 && factory_len <= NAOMI_EEPROM_GAME_MAX) {
+		memcpy(game_blob, factory, factory_len);
+		*game_blob_len = factory_len;
+		ds_printf("DS_OK: Using game EEPROM record for %.4s\n", game_id);
+	}
+
 	return true;
 }
 
@@ -398,17 +474,20 @@ void isoldr_naomi_eeprom_prepare(isoldr_info_t *info) {
 	uint8_t current[MIE_EEPROM_SIZE];
 	uint8_t prepared[MIE_EEPROM_SIZE];
 	uint8_t rom_defaults[NAOMI_EEPROM_GAME_MAX];
+	uint8_t game_blob[NAOMI_EEPROM_GAME_MAX];
 	char target_id[5];
 	char current_id[5];
 	char rom_path[NAME_MAX];
 	size_t rom_defaults_len;
+	size_t game_blob_len;
 
 	if(mie_port0_mode() != MIE_PORT0_JVS) {
 		return;
 	}
 
 	snprintf(rom_path, sizeof(rom_path), "/%s%s", info->fs_dev, info->image_file);
-	if(!naomi_eeprom_read_cart(rom_path, target_id, rom_defaults, &rom_defaults_len)) {
+	if(!naomi_eeprom_read_cart(rom_path, target_id, rom_defaults, &rom_defaults_len,
+			game_blob, &game_blob_len)) {
 		return;
 	}
 
@@ -432,7 +511,12 @@ void isoldr_naomi_eeprom_prepare(isoldr_info_t *info) {
 		ds_printf("DS_OK: Restored EEPROM for %.4s\n", target_id);
 	}
 	else {
-		naomi_eeprom_build_default(target_id, rom_defaults, rom_defaults_len, prepared);
+		if(game_blob_len > 0) {
+			naomi_eeprom_build_default(target_id, game_blob, game_blob_len, prepared, true);
+		}
+		else {
+			naomi_eeprom_build_default(target_id, rom_defaults, rom_defaults_len, prepared, false);
+		}
 
 		if(!mie_analog_calib_valid()) {
 			ds_printf("DS_WARNING: DS calibration patch skipped for %.4s, calib invalid\n",
