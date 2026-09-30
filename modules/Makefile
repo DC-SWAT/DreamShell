@@ -8,7 +8,7 @@ _SUBDIRS = minilzo isofs isoldr ppp bflash dreameye \
 		bzip2 zip ini opkg sqlite3 vkb \
 		luaTask luaSocket tolua tolua++ \
 		luaDS luaKOS luaSDL luaGUI luaMXML luaSQL luaSTD \
-		SDL_net http httpd telnetd mongoose gumbo \
+		SDL_net http httpd telnetd \
 		adx s3m mp3 ogg wav ffmpeg bitcoin openssl ftpd quirc \
 		polarssl mbedtls curl luaCURL
 
