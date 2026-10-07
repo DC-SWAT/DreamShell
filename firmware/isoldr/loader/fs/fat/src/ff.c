@@ -2628,12 +2628,14 @@ FRESULT f_open (
 #include <mmu.h>
 #endif
 
-static int f_fragmented(FIL *fp) {
-	if (!fp->cltbl || fp->cltbl[0] > 4) {
+#if _USE_FASTSEEK
+int f_fragmented(FIL *fp) {
+	if (!fp->cltbl || fp->cltbl[0] > CLMT_CONTIGUOUS_ITEMS) {
 		return 1;
 	}
 	return 0;
 }
+#endif
 
 FRESULT f_read (
 	FIL* fp, 		/* Pointer to the file object */

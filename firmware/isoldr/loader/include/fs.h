@@ -104,6 +104,8 @@ void fs_shutdown();
 void fs_enable_dma(int state);
 int fs_dma_enabled();
 
+int fs_fragmented(int fd);
+
 int open(const char *path, int mode);
 int close(int fd);
 

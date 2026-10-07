@@ -377,6 +377,11 @@ int read(int fd, void *ptr, unsigned int size) {
 	return br;
 }
 
+int fs_fragmented(int fd) {
+	CHECK_FD();
+	return f_fragmented(&file->fp);
+}
+
 #if _FS_ASYNC
 
 int pre_read(int fd, unsigned int size) {

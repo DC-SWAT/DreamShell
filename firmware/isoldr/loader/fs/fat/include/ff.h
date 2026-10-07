@@ -254,6 +254,11 @@ TCHAR* f_gets (TCHAR* buff, int len, FIL* fp);						/* Get a string from the fil
 #define f_tell(fp) ((fp)->fptr)
 #define f_size(fp) ((fp)->fsize)
 
+#if _USE_FASTSEEK
+#define CLMT_CONTIGUOUS_ITEMS 4
+int f_fragmented(FIL *fp);
+#endif
+
 #ifndef EOF
 #define EOF (-1)
 #endif
