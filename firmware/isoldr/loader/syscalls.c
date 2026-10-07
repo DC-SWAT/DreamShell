@@ -1537,43 +1537,57 @@ int flashrom_info(int part, uint32 *info) {
 	return 0;
 }
 
+static void flashrom_mix(uint8_t *dst, int offset, int bytes,
+		int field_off, int field_len, const uint8_t *field) {
+	int from, to;
+
+	from = offset > field_off ? offset : field_off;
+	to = offset + bytes;
+	if(to > field_off + field_len) {
+		to = field_off + field_len;
+	}
+	if(from >= to) {
+		return;
+	}
+	memcpy(dst + (from - offset), field + (from - field_off), to - from);
+}
+
 int flashrom_read(int offset, void *buffer, int bytes) {
+	const int region_offset = FLASH_ROM_REGION_ADDR - FLASH_ROM_ADDR;
+	const int region_len = 5;
+	const int sysid_offset = FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR;
+	const int sysid_len = 8;
+	uint8_t *dst = (uint8_t *)buffer;
+	const uint8_t *region = (const uint8_t *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
+	const uint8_t *sysid = (const uint8_t *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR);
+
 	DBGFF("0x%08lx 0x%08lx %d\n", offset, (uintptr_t)buffer, bytes);
 
-	const int region_offset = FLASH_ROM_REGION_ADDR - FLASH_ROM_ADDR;
-	const int region_size = 8;
-	const int sysid_offset = FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR;
-	const int sysid_size = 8;
-	uint8_t *src;
-
-	if(offset >= region_offset && offset < region_offset + region_size) {
-		src = (uint8_t *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR) + (offset - region_offset);
-		memcpy(buffer, src, bytes);
-		LOGFF("region: %c%c%c%c%c\n",
-			((uint8_t *)buffer)[0], ((uint8_t *)buffer)[1],
-			((uint8_t *)buffer)[2], ((uint8_t *)buffer)[3],
-			((uint8_t *)buffer)[4]);
-		return 0;
-	}
-
-	if(offset >= sysid_offset && offset < sysid_offset + sysid_size) {
-		src = (uint8_t *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR) + (offset - sysid_offset);
-		memcpy(buffer, src, bytes);
-		LOGFF("sysid: %x%x%x%x%x%x%x%x\n",
-			((uint8_t *)buffer)[0], ((uint8_t *)buffer)[1],
-			((uint8_t *)buffer)[2], ((uint8_t *)buffer)[3],
-			((uint8_t *)buffer)[4], ((uint8_t *)buffer)[5],
-			((uint8_t *)buffer)[6], ((uint8_t *)buffer)[7]);
+	if(bytes <= 0) {
 		return 0;
 	}
 
 	if(IsoInfo->firmware) {
-		src = (uint8_t *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + offset);
-		memcpy(buffer, src, bytes);
+		memcpy(dst, (uint8_t *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + offset), bytes);
+	}
+	else if(!is_dreamcast()) {
+		memset(dst, 0xff, bytes);
 	}
 	else {
-		src = (uint8_t *)(NONCACHED_ADDR(FLASH_ROM_ADDR) + offset);
-		rom_memcpy(buffer, src, bytes);
+		rom_memcpy(dst, (void *)(NONCACHED_ADDR(FLASH_ROM_ADDR) + offset), bytes);
+	}
+
+	flashrom_mix(dst, offset, bytes, region_offset, region_len, region);
+	flashrom_mix(dst, offset, bytes, sysid_offset, sysid_len, sysid);
+
+	if(offset < region_offset + region_len && offset + bytes > region_offset) {
+		LOGFF("region: %c%c%c%c%c\n",
+			region[0], region[1], region[2], region[3], region[4]);
+	}
+	if(offset < sysid_offset + sysid_len && offset + bytes > sysid_offset) {
+		LOGFF("sysid: %x%x%x%x%x%x%x%x\n",
+			sysid[0], sysid[1], sysid[2], sysid[3],
+			sysid[4], sysid[5], sysid[6], sysid[7]);
 	}
 	return 0;
 }
@@ -1693,6 +1707,9 @@ int sys_misc_init(void) {
 	if(IsoInfo->firmware) {
 		src = (uint8 *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + (FLASH_ROM_SYS_ID_ADDR - FLASH_ROM_ADDR));
 		memcpy((uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR), src, 8);
+	}
+	else if(!is_dreamcast()) {
+		memset((uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_SYS_ID_ADDR), 0xff, 8);
 	}
 	else {
 		src = (uint8 *)NONCACHED_ADDR(FLASH_ROM_SYS_ID_ADDR);

@@ -172,6 +172,14 @@ void setup_region() {
 	uint8 *dst = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_REGION_ADDR);
 	uint8 *reg = (uint8 *)NONCACHED_ADDR(SYSCALLS_INFO_ADDR + 0x20);
 	char *ipbin = (char *)NONCACHED_ADDR(IP_BIN_REGION_ADDR);
+	const int region_usa = 2;
+
+	if(!IsoInfo->firmware && !is_dreamcast()) {
+		*reg = region_usa;
+		memcpy(dst, region_str[region_usa - 1], 5);
+		LOGFF("cur=%c%c%c%c%c\n", dst[0], dst[1], dst[2], dst[3], dst[4]);
+		return;
+	}
 
 	if(IsoInfo->firmware) {
 		src = (uint8 *)(IsoInfo->firmware + ISOLDR_FLASHROM_PATH_SIZE + (FLASH_ROM_REGION_ADDR - FLASH_ROM_ADDR));
