@@ -21,6 +21,19 @@ static int read_ciso_sectors(uint8 *buff, uint sector, uint cnt);
 #endif
 static int read_data_sectors(uint8 *buff, uint sector, uint cnt, fs_callback_f *cb);
 
+static void set_image_fragmented(gd_state_t *GDS) {
+#if defined(DEV_TYPE_IDE)
+	int fragmented = 0;
+
+	if(iso_fd >= 0 && fs_fragmented(iso_fd)) {
+		fragmented = 1;
+	}
+	GDS->fragmented = fragmented;
+#else
+	(void)GDS;
+#endif
+}
+
 static void open_iso(gd_state_t *GDS) {
 
 	if(IsoInfo->image_type == ISOFS_IMAGE_TYPE_GDI) {
@@ -34,10 +47,12 @@ static void open_iso(gd_state_t *GDS) {
 		 */
 		if(GDS->data_track == 1 && _iso_fd[0] > -1) {
 			iso_fd = _iso_fd[0];
+			set_image_fragmented(GDS);
 			return;
 		}
 		else if(GDS->data_track == 2 && _iso_fd[1] > -1) {
 			iso_fd = _iso_fd[1];
+			set_image_fragmented(GDS);
 			return;
 		}
 		else if(GDS->data_track == 3 && _iso_fd[1] > -1) {
@@ -47,6 +62,7 @@ static void open_iso(gd_state_t *GDS) {
 				close(_iso_fd[0]);
 				_iso_fd[0] = -1;
 			}
+			set_image_fragmented(GDS);
 			return;
 		}
 		else if(GDS->data_track > 3 && _iso_fd[2] > -1) {
@@ -56,6 +72,7 @@ static void open_iso(gd_state_t *GDS) {
 				close(_iso_fd[0]);
 				_iso_fd[0] = -1;
 			}
+			set_image_fragmented(GDS);
 			return;
 		}
 	}
@@ -75,6 +92,7 @@ static void open_iso(gd_state_t *GDS) {
 			_iso_fd[2] = iso_fd;
 		}
 	}
+	set_image_fragmented(GDS);
 }
 
 static void switch_sector_size(gd_state_t *GDS) {

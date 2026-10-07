@@ -619,7 +619,8 @@ void data_transfer() {
 static void data_transfer_dma_stream() {
 
 	gd_state_t *GDS = get_GDS();
-	const int alt_read = IsoInfo->alt_read;
+	const int alt_read = IsoInfo->alt_read ||
+		(IsoInfo->exec.type != BIN_TYPE_KOS && GDS->fragmented);
 
 	if(alt_read) {
 		fs_enable_dma(FS_DMA_STREAM);
@@ -670,7 +671,8 @@ static void data_transfer_dma_stream() {
 static void data_transfer_pio_stream() {
 
 	gd_state_t *GDS = get_GDS();
-	const int alt_read = IsoInfo->alt_read;
+	const int alt_read = IsoInfo->alt_read ||
+		(IsoInfo->exec.type != BIN_TYPE_KOS && GDS->fragmented);
 
 	fs_enable_dma(FS_DMA_DISABLED);
 	GDS->status = PreReadSectors(GDS->param[0], GDS->param[1], alt_read);
@@ -822,24 +824,16 @@ int gdcReqCmd(int cmd, uint32 *param) {
 
 	int gd_chn = GDC_CHN_ERROR;
 #ifdef DEV_TYPE_SD
-	/* SD card can't provide DMA streams,
-	* but it will work for Atomiswave games,
-	* because they doesn't uses IRQ and MMU.
-	* In other cases, we will return an error.
-	*/
+	/* Homebrew falls back to sector reads. Other types use alt_read. */
 	if((cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX) &&
-			IsoInfo->exec.type != BIN_TYPE_KATANA) {
+			IsoInfo->exec.type == BIN_TYPE_KOS) {
 		return -1;
 	}
 #elif defined(DEV_TYPE_IDE)
-	/* Use this method for the alternate read mode
-	   if you're using homebrew that supports stream commands.
-	   They also support fallback to the normal sector read mode,
-	   (I took care of it) so we can just return an error here.
-	   At least until I finish the alternative mode completely.
-	*/
-	if(IsoInfo->alt_read && IsoInfo->exec.type == BIN_TYPE_KOS &&
-		(cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX)) {
+	/* Homebrew falls back to sector reads. */
+	if(IsoInfo->exec.type == BIN_TYPE_KOS &&
+		(cmd == CMD_DMAREAD_STREAM || cmd == CMD_DMAREAD_STREAM_EX) &&
+		(IsoInfo->alt_read || get_GDS()->fragmented)) {
 		return -1;
 	}
 #endif

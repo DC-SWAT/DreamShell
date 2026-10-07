@@ -166,6 +166,7 @@ typedef struct gd_state {
 	uint32 cdda_track;
 	uint32 data_track;
 	uint32 lba;
+	int fragmented;
 
 	int cdda_stat;
 	int drv_stat;
