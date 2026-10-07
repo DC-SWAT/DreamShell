@@ -433,8 +433,14 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	        && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI
 	        && !naomi_set) {
 		/* Non-retail (NAOMI arcade) hardware with Dreamcast disc image */
-		exec_addr = ISOLDR_DEFAULT_ADDR_NAOMI_DC;
-		isoldr->boot_mode = BOOT_MODE_IPBIN;
+		if(actual_type == BIN_TYPE_KOS) {
+			exec_addr = ISOLDR_DEFAULT_ADDR_MIN;
+			isoldr->boot_mode = BOOT_MODE_DIRECT;
+		}
+		else {
+			exec_addr = ISOLDR_DEFAULT_ADDR_NAOMI_DC;
+			isoldr->boot_mode = BOOT_MODE_IPBIN;
+		}
 	}
 	else if(actual_type == BIN_TYPE_WINCE) {
 		/* WinCE: use minimum address on retail hardware */
