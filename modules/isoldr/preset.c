@@ -448,7 +448,8 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 	}
 
 	if(hardware_sys_mode(NULL) != HW_TYPE_RETAIL
-	        && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI) {
+	        && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI
+	        && (actual_type != BIN_TYPE_KOS || exec_addr >= ISOLDR_DEFAULT_ADDR)) {
 		isoldr->firmware = 1;
 	}
 
