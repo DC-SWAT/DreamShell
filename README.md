@@ -114,6 +114,11 @@ cd ${KOS_BASE}/ds/firmware/bootloader && make && make release
 cd ${KOS_BASE}/ds/firmware/isoldr && make -j8 && make install
 cd ${KOS_BASE}/ds/firmware/hollysh && make && make install
 ```
+##### MIE firmware
+`mie_z80.bin` ships as-is. Rebuild only after changing the firmware; this needs SDCC.
+```console
+cd ${KOS_BASE}/ds/firmware/mie && make && make install
+```
 
 ### Running
 - dc-tool-ip: `make run`
