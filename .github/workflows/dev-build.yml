@@ -110,7 +110,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: /opt/toolchains/dc
-          key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff', 'sdk/doc/KallistiOS.txt') }}
+          key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff') }}
 
       - name: Restore kos-ports cache
         id: cache-ports
@@ -140,7 +140,7 @@ jobs:
         uses: actions/cache/save@v5
         with:
           path: /opt/toolchains/dc
-          key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff', 'sdk/doc/KallistiOS.txt') }}
+          key: dc-toolchain-${{ runner.os }}-${{ hashFiles('sdk/toolchain/Makefile.cfg', 'sdk/toolchain/patches/*.diff') }}
 
       - name: Build KallistiOS
         run: bash .github/scripts/dev-build.sh kos
