@@ -131,10 +131,10 @@ static const char *port_mode_name(mie_port0_mode_t mode) {
 
 static const char *calib_step_name(mie_analog_calib_step_t step) {
     switch(step) {
-    case MIE_ANALOG_CALIB_WHEEL:
-        return "Turn wheel fully both ways, press A";
     case MIE_ANALOG_CALIB_WHEEL_CENTER:
         return "Hold wheel centered, press A";
+    case MIE_ANALOG_CALIB_WHEEL:
+        return "Turn wheel left and right, press A";
     case MIE_ANALOG_CALIB_ACCEL:
         return "Press accelerator fully, press A";
     case MIE_ANALOG_CALIB_BRAKE:
@@ -406,22 +406,32 @@ static void update_wheel_bar_ui(MieAnalogUi_t *ui, uint16_t raw,
     if(ui->wheel_bar_center) {
         float cx = WHEEL_BAR_W * 0.5f;
         float show_center = 1.0f;
+        mie_analog_calib_step_t step = MIE_ANALOG_CALIB_IDLE;
 
-        if(use_range && range_max > range_min) {
-            range = (float)(range_max - range_min);
-            if(mie_analog_calib_active()) {
-                mie_analog_calib_step_t step = mie_analog_calib_current();
+        if(mie_analog_calib_active()) {
+            step = mie_analog_calib_current();
+        }
 
-                if(step == MIE_ANALOG_CALIB_WHEEL) {
-                    show_center = 0.0f;
-                }
-                else if(step == MIE_ANALOG_CALIB_WHEEL_CENTER) {
-                    cx = ((float)((raw & MIE_RAW_MASK) - range_min) / range) * WHEEL_BAR_W;
-                }
-            }
-            else if(self.calib_wheel_center >= range_min && self.calib_wheel_center <= range_max) {
+        if(step == MIE_ANALOG_CALIB_WHEEL_CENTER) {
+            cx = pos;
+        }
+        else if(step == MIE_ANALOG_CALIB_WHEEL) {
+            if(use_range && range_max > range_min &&
+                    self.calib_wheel_center >= range_min &&
+                    self.calib_wheel_center <= range_max) {
+                range = (float)(range_max - range_min);
                 cx = ((float)(self.calib_wheel_center - range_min) / range) * WHEEL_BAR_W;
             }
+            else
+            {
+                show_center = 0.0f;
+            }
+        }
+        else if(use_range && range_max > range_min &&
+                self.calib_wheel_center >= range_min &&
+                self.calib_wheel_center <= range_max) {
+            range = (float)(range_max - range_min);
+            cx = ((float)(self.calib_wheel_center - range_min) / range) * WHEEL_BAR_W;
         }
         else if(mie_analog_calib_valid()) {
             const mie_analog_calib_t *c = mie_analog_calib_get();
@@ -673,15 +683,12 @@ static void update_monitor_panel(const mie_state_t *st, int norm_w, int norm_a, 
 
 static void calib_wheel_val_text(char *line, size_t len, const mie_state_t *st,
                                  mie_analog_calib_step_t step) {
-    if(step == MIE_ANALOG_CALIB_WHEEL) {
+    if(step == MIE_ANALOG_CALIB_WHEEL_CENTER) {
+        snprintf(line, len, "ctr 0x%04x", st->jvs.wheel & MIE_RAW_MASK);
+    }
+    else if(step == MIE_ANALOG_CALIB_WHEEL) {
         snprintf(line, len,
                  "0x%04x  %04x-%04x",
-                 st->jvs.wheel & MIE_RAW_MASK,
-                 self.calib_wheel_min, self.calib_wheel_max);
-    }
-    else if(step == MIE_ANALOG_CALIB_WHEEL_CENTER) {
-        snprintf(line, len,
-                 "ctr 0x%04x  %04x-%04x",
                  st->jvs.wheel & MIE_RAW_MASK,
                  self.calib_wheel_min, self.calib_wheel_max);
     }
@@ -922,14 +929,20 @@ static void update_calib_panel(const mie_state_t *st) {
         }
 
         switch(step) {
+        case MIE_ANALOG_CALIB_WHEEL_CENTER:
+            if(st) {
+                snprintf(line, sizeof(line), "center raw=%04x",
+                         st->jvs.wheel & MIE_RAW_MASK);
+            }
+            else
+            {
+                snprintf(line, sizeof(line), "center raw=----");
+            }
+            break;
         case MIE_ANALOG_CALIB_WHEEL:
             snprintf(line, sizeof(line),
-                     "tracking min=%04x max=%04x",
-                     self.calib_wheel_min, self.calib_wheel_max);
-            break;
-        case MIE_ANALOG_CALIB_WHEEL_CENTER:
-            snprintf(line, sizeof(line),
-                     "captured min=%04x max=%04x center=----",
+                     "center=%04x  min=%04x max=%04x",
+                     self.calib_wheel_center,
                      self.calib_wheel_min, self.calib_wheel_max);
             break;
         case MIE_ANALOG_CALIB_ACCEL:
@@ -1037,7 +1050,7 @@ static void update_ui(const mie_state_t *st) {
     }
 
     if(!st || mode != MIE_PORT0_JVS) {
-        snprintf(line, sizeof(line), "Port A: %s  MIE: %s",
+        snprintf(line, sizeof(line), "Port A: %s MIE: %s",
                  port_mode_name(mode),
                  st ? "connected" : "waiting...");
         if(self.status_label) {
@@ -1048,10 +1061,10 @@ static void update_ui(const mie_state_t *st) {
         track_calib_ui(st);
 
         if(self.board_id[0]) {
-            snprintf(line, sizeof(line), "Port A: JVS  ID: %s", self.board_id);
+            snprintf(line, sizeof(line), "Port A: JVS: %s", self.board_id);
         }
         else {
-            snprintf(line, sizeof(line), "Port A: JVS  ID: n/a");
+            snprintf(line, sizeof(line), "Port A: JVS: n/a");
         }
         if(self.status_label) {
             TSU_LabelSetText(self.status_label, line);
@@ -1182,17 +1195,11 @@ static void handle_capture(void) {
     step = mie_analog_calib_current();
     st = mie_dev_state();
 
-    if(mie_analog_calib_capture()) {
-        if(st) {
-            switch(step) {
-            case MIE_ANALOG_CALIB_WHEEL_CENTER:
-                self.calib_wheel_center = st->jvs.wheel & MIE_RAW_MASK;
-                break;
-            default:
-                break;
-            }
-        }
+    if(step == MIE_ANALOG_CALIB_WHEEL_CENTER && st) {
+        self.calib_wheel_center = st->jvs.wheel & MIE_RAW_MASK;
+    }
 
+    if(mie_analog_calib_capture()) {
         if(mie_analog_calib_valid()) {
             settings = GetSettings();
             calib = mie_analog_calib_get();
@@ -1206,7 +1213,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     uint32_t btns = nav_btns | jvs_btns;
 
     if(mie_analog_calib_active()) {
-        if((btns & CONT_B) && !(self.old_btns & CONT_B) && !(btns & CONT_START)) {
+        if((btns & CONT_B) && !(self.old_btns & CONT_B) &&
+                !(btns & (CONT_START | CONT_A))) {
             mie_analog_calib_cancel();
         }
     }
@@ -1219,7 +1227,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
         sync_view_cardstack();
     }
 
-    if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_START)) {
+    if((btns & CONT_A) && !(self.old_btns & CONT_A) &&
+            !(btns & (CONT_START | CONT_B))) {
         if(mie_analog_calib_active()) {
             handle_capture();
         }
@@ -1352,6 +1361,7 @@ static uint32_t exit_btns_old;
 
 static void InputHandler(void *ds_event, void *param, int action) {
     uint32_t btns;
+    mie_state_t *st;
 
     (void)ds_event;
     (void)param;
@@ -1361,6 +1371,10 @@ static void InputHandler(void *ds_event, void *param, int action) {
     }
 
     btns = poll_aux_buttons();
+    st = mie_dev_state();
+    if(st) {
+        btns |= st->cont.buttons;
+    }
     if(combo_activated(btns, exit_btns_old, CONT_A | CONT_B)) {
         OnExit();
         return;
