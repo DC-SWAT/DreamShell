@@ -527,9 +527,21 @@ static void set_loader_type(isoldr_info_t *info) {
 	}
 }
 
+static void loader_fw_name(char *fn, const char *dev, const char *type, const char *ext) {
+	if(type[0] != '\0') {
+		snprintf(fn, NAME_MAX, "%s/firmware/%s/%s_%s.%s",
+			getenv("PATH"), lib_get_name(), dev, type, ext);
+	}
+	else {
+		snprintf(fn, NAME_MAX, "%s/firmware/%s/%s.%s",
+			getenv("PATH"), lib_get_name(), dev, ext);
+	}
+}
+
 void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 
 	char fn[NAME_MAX];
+	const char *bin_type;
 	uint8_t *loader = NULL;
 	size_t len = 0;
 	size_t buf_size;
@@ -543,14 +555,13 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		set_loader_type(info);
 	}
 
-	if(info->fs_type[0] != '\0') {
-		snprintf(fn, NAME_MAX, "%s/firmware/%s/%s_%s.bin",
-			getenv("PATH"), lib_get_name(), info->fs_dev, info->fs_type);
+	bin_type = info->fs_type;
+
+	if(strcmp(bin_type, ISOLDR_TYPE_NAOMI) == 0) {
+		bin_type = ISOLDR_TYPE_FULL;
 	}
-	else {
-		snprintf(fn, NAME_MAX, "%s/firmware/%s/%s.bin",
-			getenv("PATH"), lib_get_name(), info->fs_dev);
-	}
+
+	loader_fw_name(fn, info->fs_dev, bin_type, "bin");
 
 	fd = fs_open(fn, O_RDONLY);
 
@@ -584,11 +595,7 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		}
 	}
 	else {
-		char *dot = strrchr(fn, '.');
-
-		if(dot != NULL) {
-			strcpy(dot, ".elf");
-		}
+		loader_fw_name(fn, info->fs_dev, info->fs_type, "elf");
 		if(isoldr_elf_load(fn, addr, &loader, &len) < 0) {
 			return;
 		}

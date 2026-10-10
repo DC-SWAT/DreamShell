@@ -141,23 +141,59 @@ static char preset_filename_buf[NAME_MAX];
 
 #define PRESET_ISO_HASH_LEN 2048
 #define PRESET_MD5_LEN 16
+#define PRESET_HASH_MOUNT "/isohash"
+#define PRESET_ISO_SECTOR_SIZE 2048
+
+static int hash_boot_sector_md5(const char *image_file, uint8_t *md5) {
+	file_t fd;
+	file_t mounted;
+	uint8_t buf[PRESET_ISO_HASH_LEN];
+
+	mounted = fs_open(PRESET_HASH_MOUNT, O_DIR | O_RDONLY);
+	if(mounted != FILEHND_INVALID) {
+		fs_close(mounted);
+		if(fs_iso_unmount(PRESET_HASH_MOUNT) < 0) {
+			return 0;
+		}
+	}
+
+	if(fs_iso_mount(PRESET_HASH_MOUNT, image_file) < 0) {
+		return 0;
+	}
+
+	fd = fs_iso_first_file(PRESET_HASH_MOUNT);
+	if(fd == FILEHND_INVALID) {
+		fs_iso_unmount(PRESET_HASH_MOUNT);
+		return 0;
+	}
+
+	if(fs_ioctl(fd, ISOFS_IOCTL_GET_BOOT_SECTOR_DATA, buf) < 0) {
+		fs_close(fd);
+		fs_iso_unmount(PRESET_HASH_MOUNT);
+		return 0;
+	}
+
+	fs_close(fd);
+	fs_iso_unmount(PRESET_HASH_MOUNT);
+	kos_md5(buf, PRESET_ISO_HASH_LEN, md5);
+	return 1;
+}
 
 static void hash_image_md5(const char *image_file, uint8_t *md5) {
 	file_t fd;
 	const char *ext;
 	uint8_t buf[PRESET_ISO_HASH_LEN];
 	naomi_cart_header_t cart_hdr;
-	size_t n = PRESET_ISO_HASH_LEN;
 	ssize_t rd;
 
 	memset(md5, 0, PRESET_MD5_LEN);
-	fd = fs_open(image_file, O_RDONLY);
-	if(fd == FILEHND_INVALID) {
-		return;
-	}
 
 	ext = strrchr(image_file, '.');
 	if(ext && !strcasecmp(ext, ".dni")) {
+		fd = fs_open(image_file, O_RDONLY);
+		if(fd == FILEHND_INVALID) {
+			return;
+		}
 		if(isoldr_naomi_read_header(fd, &cart_hdr) < 0) {
 			fs_close(fd);
 			return;
@@ -167,10 +203,19 @@ static void hash_image_md5(const char *image_file, uint8_t *md5) {
 		return;
 	}
 
-	rd = fs_read(fd, buf, n);
+	if(hash_boot_sector_md5(image_file, md5)) {
+		return;
+	}
+
+	fd = fs_open(image_file, O_RDONLY);
+	if(fd == FILEHND_INVALID) {
+		return;
+	}
+
+	rd = fs_read(fd, buf, PRESET_ISO_HASH_LEN);
 	fs_close(fd);
-	if(rd == (ssize_t)n) {
-		kos_md5(buf, n, md5);
+	if(rd == (ssize_t)PRESET_ISO_HASH_LEN) {
+		kos_md5(buf, PRESET_ISO_HASH_LEN, md5);
 	}
 }
 
@@ -260,21 +305,34 @@ char *isoldr_find_preset(const char *image_file, uint8_t *md5, int default_only)
 	return NULL;
 }
 
-int isoldr_can_use_dma(const isoldr_info_t *info) {
-	int can = 0;
+static int g1_dma_device(const isoldr_info_t *info) {
+	return strncasecmp(info->fs_dev, ISOLDR_DEV_G1ATA, sizeof(info->fs_dev)) == 0
+		|| strncasecmp(info->fs_dev, ISOLDR_DEV_GDROM, sizeof(info->fs_dev)) == 0;
+}
 
-	if(strncasecmp(info->fs_dev, ISOLDR_DEV_G1ATA, sizeof(info->fs_dev)) == 0 ||
-		strncasecmp(info->fs_dev, ISOLDR_DEV_GDROM, sizeof(info->fs_dev)) == 0) {
-		if(info->sector_size <= 2048) {
-			++can;
-		}
-		if(info->image_type == IMAGE_TYPE_ISO ||
-			info->image_type == IMAGE_TYPE_GDI ||
-			info->image_type == IMAGE_TYPE_ROM_NAOMI) {
-			++can;
-		}
+int isoldr_can_use_dma(const isoldr_info_t *info) {
+	int iso_sectors;
+	int data_image;
+
+	if(!g1_dma_device(info)) {
+		return 0;
 	}
-	return can;
+
+	iso_sectors = info->sector_size > 0 && info->sector_size <= PRESET_ISO_SECTOR_SIZE;
+	data_image = info->image_type == IMAGE_TYPE_ISO ||
+		info->image_type == IMAGE_TYPE_GDI ||
+		info->image_type == IMAGE_TYPE_CDI ||
+		info->image_type == IMAGE_TYPE_ROM_NAOMI;
+
+	if(iso_sectors &&
+		info->image_type != IMAGE_TYPE_CSO &&
+		info->image_type != IMAGE_TYPE_ZSO) {
+		return 2;
+	}
+	if(data_image || iso_sectors) {
+		return 1;
+	}
+	return 0;
 }
 
 static void build_image_full_path(const isoldr_info_t *isoldr, char *out, size_t size) {
@@ -291,30 +349,26 @@ static void build_image_full_path(const isoldr_info_t *isoldr, char *out, size_t
 	}
 }
 
-static int cdda_track_sz(const char *dir, int num) {
-	char path[NAME_MAX];
-	int sz;
-	snprintf(path, NAME_MAX, "%s/track%02d.raw", dir, num);
-	sz = FileSize(path);
-	if(sz > 0) return sz;
-	snprintf(path, NAME_MAX, "%s/track%02d.wav", dir, num);
-	return FileSize(path);
-}
+static int toc_has_cdda(const cd_toc_t *toc) {
+	int first = TOC_TRACK(toc->first);
+	int last = TOC_TRACK(toc->last);
+	int i;
 
-static int cdda_exists(const char *image_file) {
-	if(!image_file[0]) return 0;
-	const char *slash = strrchr(image_file, '/');
-	if(!slash) return 0;
-	char dir[NAME_MAX];
-	size_t len = slash - image_file;
-	strncpy(dir, image_file, len);
-	dir[len] = '\0';
-	int sz = cdda_track_sz(dir, 4);
-	if(!sz) return 0;
-	if(sz < 30 * 1024 * 1024) {
-		return cdda_track_sz(dir, 6) > 0;
+	if(first < 1 || last > 99 || first > last) {
+		return 0;
 	}
-	return 1;
+
+	for(i = first; i <= last; i++) {
+		uint32_t entry = toc->entry[i - 1];
+
+		if(entry == (uint32_t)-1) {
+			continue;
+		}
+		if(TOC_CTRL(entry) == 0) {
+			return 1;
+		}
+	}
+	return 0;
 }
 
 uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
@@ -369,7 +423,7 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 			return (uintptr_t)-1;
 		}
 	}
-	else if(isoldr->image_file[0]) {
+	else {
 		use_dma = isoldr_can_use_dma(isoldr);
 		if(use_dma > 1) {
 			emu_async = 0;
@@ -470,16 +524,12 @@ uintptr_t isoldr_apply_preset(isoldr_info_t *isoldr, const char *preset_file) {
 		}
 	}
 
-	if(!preset_file && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI) {
-		char image_path[NAME_MAX];
-		build_image_full_path(isoldr, image_path, sizeof(image_path));
-		if(cdda_exists(image_path)) {
-			isoldr->emu_cdda = CDDA_MODE_EXTENDED | CDDA_MODE_SRC_DMA |
-				CDDA_MODE_DST_DMA | CDDA_MODE_POS_TMU2 | CDDA_MODE_CH_ADAPT;
-			isoldr->use_irq = 1;
-			if(exec_addr == ISOLDR_DEFAULT_ADDR_LOW) {
-				exec_addr = ISOLDR_DEFAULT_ADDR_MIN_GINSU;
-			}
+	if(!preset_file && isoldr->image_type != IMAGE_TYPE_ROM_NAOMI && toc_has_cdda(&isoldr->toc)) {
+		isoldr->emu_cdda = CDDA_MODE_EXTENDED | CDDA_MODE_SRC_DMA |
+			CDDA_MODE_DST_DMA | CDDA_MODE_POS_TMU2 | CDDA_MODE_CH_ADAPT;
+		isoldr->use_irq = 1;
+		if(exec_addr == ISOLDR_DEFAULT_ADDR_LOW) {
+			exec_addr = ISOLDR_DEFAULT_ADDR_MIN_GINSU;
 		}
 	}
 
