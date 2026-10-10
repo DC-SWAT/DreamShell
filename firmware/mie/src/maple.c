@@ -6,6 +6,7 @@
 
 #include "hw.h"
 #include "maple.h"
+#include "pad.h"
 
 static uint8_t spin_set(volatile uint8_t *reg, uint8_t mask) {
     uint8_t n = 0;
@@ -116,10 +117,10 @@ void maple_reply_tbuf(void) {
     }
 }
 
-void maple_reply_long(uint8_t *data, uint8_t len, uint8_t response,
+void maple_reply_long(const uint8_t *data, uint8_t len, uint8_t response,
                       uint8_t dest, uint8_t src) {
     uint8_t words;
-    uint8_t *srcp;
+    const uint8_t *srcp;
 
     mie_zero((uint8_t *)MAPLE_BUF, MAPLE_FRAME);
     if (len == 0) {
@@ -191,7 +192,7 @@ void maple_on_irq(void) {
     uint8_t st;
 
     st = MAPLE_STAT;
-    if (st & MAPLE_STAT_HRES) {
+    if ((st & MAPLE_STAT_HRES) && !pad_active()) {
         mie_rom();
     }
     if ((st & MAPLE_STAT_RFB) == 0) {

@@ -11,6 +11,7 @@
 
 void jvs_uart_init(void);
 void jvs_on_irq(void);
+uint8_t jvs_pad_read(uint8_t *rx, uint8_t rx_max);
 void ior_jvs_req(uint8_t *payload);
 void ior_jvs_fetch(uint8_t *payload);
 void ior_jvs_11(uint8_t *payload);

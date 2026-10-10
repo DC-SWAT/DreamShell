@@ -13,10 +13,20 @@ BUILD := build
 IMAGE := $(BUILD)/mie_z80.bin
 INSTALL_BIN := $(DS_RES)/firmware/mie_z80.bin
 
-CFLAGS := -mz80 --std-sdcc11 -c --opt-code-size --fomit-frame-pointer -Iinclude
-LDFLAGS := -mz80 --no-std-crt0 --nostdlib --code-loc 0x8010 --data-loc 0xA000 -Wl-b_VECTORS=0x9FF2
+MIE_SERIAL ?= 0
+MIE_JVS_EXTRA ?= 0
 
-CSRCS := main.c maple.c cmd.c eeprom.c jvs.c gpio.c serial.c util.c
+CFLAGS := -mz80 --std-sdcc11 -c --opt-code-size --fomit-frame-pointer -Iinclude
+ifneq ($(MIE_SERIAL),0)
+CFLAGS += -DMIE_SERIAL
+endif
+ifneq ($(MIE_JVS_EXTRA),0)
+CFLAGS += -DMIE_JVS_EXTRA
+endif
+LDFLAGS := -mz80 --no-std-crt0 --nostdlib --code-loc 0x8010 \
+		--data-loc 0xA000 -Wl-b_VECTORS=0x9FF2
+
+CSRCS := main.c maple.c cmd.c eeprom.c jvs.c gpio.c serial.c pad.c util.c
 ASMS := crt0.s abs.s
 
 CRELS := $(addprefix $(BUILD)/,$(CSRCS:.c=.rel))

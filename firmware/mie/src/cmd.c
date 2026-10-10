@@ -10,20 +10,22 @@
 #include "eeprom.h"
 #include "jvs.h"
 #include "serial.h"
+#include "pad.h"
 
 static const uint8_t version_pkt0[VERSION_FRAME] = {
     0x83, 0x00, 0x20, 0x07,
-    0x33, 0x31, 0x35, 0x2d, 0x36, 0x31, 0x34, 0x39,
-    0x20, 0x20, 0x20, 0x20,
-    0x43, 0x4f, 0x50, 0x59, 0x52, 0x49, 0x47, 0x48, 0x54, 0x20,
-    0x53, 0x45, 0x47, 0x41, 0x20, 0x45
+    '3', '1', '5', '-', '6', '1', '4', '9',
+    ' ', 'D', 'R', 'E', 'A', 'M', 'S', 'H',
+    'E', 'L', 'L', ' ', 'F', 'W', ' ', 'C',
+    'O', 'P', 'Y', 'R'
 };
 
 static const uint8_t version_pkt1[VERSION_FRAME] = {
-    0x83, 0x00, 0x20, 0x05,
-    0x4e, 0x54, 0x45, 0x52, 0x50, 0x52, 0x49, 0x53, 0x45, 0x53,
-    0x20, 0x43, 0x4f, 0x2c, 0x4c, 0x54, 0x44, 0x2e, 0x20, 0x20,
-    0x31, 0x39, 0x39, 0x38, 0x00, 0x00, 0x00, 0x00
+    0x83, 0x00, 0x20, 0x07,
+    'I', 'G', 'H', 'T', ' ', 'S', 'W', 'A',
+    'T', ' ', 'h', 't', 't', 'p', ':', '/',
+    '/', 'd', 'c', '-', 's', 'w', 'a', 't',
+    '.', 'r', 'u', 0x00
 };
 
 static const uint8_t gpio_reply_hdr[5] = {
@@ -32,6 +34,9 @@ static const uint8_t gpio_reply_hdr[5] = {
 
 static void cmd_reset(void) {
     maple_send_ok();
+    if (pad_active()) {
+        return;
+    }
     mie_rom();
 }
 
@@ -139,18 +144,21 @@ static void cmd_io(uint8_t *payload) {
         case 0x0B:
             ior_eeprom_write(payload);
             return;
+#ifdef MIE_JVS_EXTRA
         case 0x11:
             ior_jvs_11(payload);
             return;
         case 0x13:
             ior_jvs_13(payload);
             return;
+#endif
         case 0x15:
             ior_jvs_fetch(payload);
             return;
         case 0x17:
             ior_jvs_req(payload);
             return;
+#ifdef MIE_JVS_EXTRA
         case 0x19:
             ior_jvs_19(payload);
             return;
@@ -166,9 +174,11 @@ static void cmd_io(uint8_t *payload) {
         case 0x27:
             ior_jvs_27(payload);
             return;
+#endif
         case 0x31:
             ior_gpio(payload);
             return;
+#ifdef MIE_JVS_EXTRA
         case 0x33:
             ior_jvs_33(payload);
             return;
@@ -178,6 +188,8 @@ static void cmd_io(uint8_t *payload) {
         case 0x37:
             ior_jvs_37(payload);
             return;
+#endif
+#ifdef MIE_SERIAL
         case 0x41:
             ior_serial_41(payload);
             return;
@@ -202,6 +214,10 @@ static void cmd_io(uint8_t *payload) {
         case 0x4F:
             ior_serial_4f(payload);
             return;
+#endif
+        case MAPLE_IO_PAD:
+            ior_pad(payload);
+            return;
         case 0xFF:
             ior_peek(payload);
             return;
@@ -213,6 +229,12 @@ static void cmd_io(uint8_t *payload) {
 
 void maple_dispatch(uint8_t cmd) {
     switch (cmd) {
+        case MAPLE_CMD_DEVINFO:
+            pad_devinfo();
+            return;
+        case MAPLE_CMD_GETCOND:
+            pad_getcond();
+            return;
         case MAPLE_CMD_RESET:
             cmd_reset();
             return;

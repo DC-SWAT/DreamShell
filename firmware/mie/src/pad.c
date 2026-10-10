@@ -1,0 +1,358 @@
+/**
+ * DreamShell MIE firmware
+ * Dreamcast controller bridge
+ * (c)2026 SWAT <http://www.dc-swat.ru>
+ */
+
+#include "hw.h"
+#include "maple.h"
+#include "jvs.h"
+#include "pad.h"
+
+static const uint8_t pad_idle[PAD_COND_BYTES] = {
+    0xFF, 0xFF, 0x00, 0x00,
+    PAD_AXIS_CENTER, PAD_AXIS_CENTER, PAD_AXIS_CENTER, PAD_AXIS_CENTER
+};
+
+static uint8_t pad_mode;
+static uint8_t pad_cal_on;
+static uint16_t pad_cal[PAD_CAL_COUNT];
+static uint8_t pad_cond[PAD_COND_BYTES];
+
+static const uint8_t pad_info[PAD_DEVINFO_LEN] = {
+    0x00, 0x00, 0x00, 0x01, 0x00, 0x0F, 0x06, 0xFE, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x44, 0x72, 0x65, 0x61, 0x6D, 0x63,
+    0x61, 0x73, 0x74, 0x20, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x6F, 0x6C, 0x6C,
+    0x65, 0x72, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+    0x50, 0x72, 0x6F, 0x64, 0x75, 0x63, 0x65, 0x64, 0x20, 0x42, 0x79, 0x20,
+    0x6F, 0x72, 0x20, 0x55, 0x6E, 0x64, 0x65, 0x72, 0x20, 0x4C, 0x69, 0x63,
+    0x65, 0x6E, 0x73, 0x65, 0x20, 0x46, 0x72, 0x6F, 0x6D, 0x20, 0x53, 0x45,
+    0x47, 0x41, 0x20, 0x45, 0x4E, 0x54, 0x45, 0x52, 0x50, 0x52, 0x49, 0x53,
+    0x45, 0x53, 0x2C, 0x4C, 0x54, 0x44, 0x2E, 0x20, 0x20, 0x20, 0x20, 0x20,
+    0xAE, 0x00, 0xF4, 0x01
+};
+
+uint8_t pad_active(void) {
+    if (pad_mode == PAD_MODE_ON) {
+        return 1;
+    }
+    return 0;
+}
+
+static void pad_center(void) {
+    mie_copy(pad_cond, pad_idle, PAD_COND_BYTES);
+}
+
+#define PAD_MAP_LEN   30
+#define PAD_MAP_STEP  3
+#define PAD_MAP_JVS_LO 0x01
+#define PAD_MAP_COND_HI 0x02
+
+static const uint8_t pad_map[PAD_MAP_LEN] = {
+    JVS_HI_START, 0x08, 0x00,
+    JVS_HI_UP, 0x10, 0x00,
+    JVS_HI_DOWN, 0x20, 0x00,
+    JVS_HI_LEFT, 0x40, 0x00,
+    JVS_HI_RIGHT, 0x80, 0x00,
+    JVS_HI_B, 0x02, 0x00,
+    JVS_HI_X, 0x04, PAD_MAP_COND_HI,
+    JVS_HI_SERVICE, 0x01, PAD_MAP_COND_HI,
+    JVS_LO_A, 0x04, PAD_MAP_JVS_LO,
+    JVS_LO_Y, 0x02, PAD_MAP_JVS_LO | PAD_MAP_COND_HI
+};
+
+static void pad_player(uint8_t *blo, uint8_t *bhi, uint8_t jhi, uint8_t jlo) {
+    uint8_t i;
+    uint8_t sw;
+    uint8_t *dst;
+
+    for (i = 0; i < PAD_MAP_LEN; i = (uint8_t)(i + PAD_MAP_STEP)) {
+        if (pad_map[i + 2] & PAD_MAP_JVS_LO) {
+            sw = jlo;
+        }
+        else {
+            sw = jhi;
+        }
+        if ((sw & pad_map[i]) == 0) {
+            continue;
+        }
+        if (pad_map[i + 2] & PAD_MAP_COND_HI) {
+            dst = bhi;
+        }
+        else {
+            dst = blo;
+        }
+        *dst = (uint8_t)(*dst & (uint8_t)~pad_map[i + 1]);
+    }
+}
+
+static uint16_t pad_div(uint32_t n, uint16_t d) {
+    uint32_t q;
+    uint32_t r;
+    uint8_t i;
+
+    if (d == 0) {
+        return 0;
+    }
+    q = 0;
+    r = 0;
+    for (i = 0; i < 32; i++) {
+        if (pkt_flag != 0) {
+            return 0;
+        }
+        r = (r << 1) | (n >> 31);
+        n <<= 1;
+        q <<= 1;
+        if (r >= d) {
+            r -= d;
+            q |= 1;
+        }
+    }
+    if (q > 0xFFFF) {
+        return 0xFFFF;
+    }
+    return (uint16_t)q;
+}
+
+static uint16_t pad_u16(const uint8_t *p) {
+    return (uint16_t)p[0] | ((uint16_t)p[1] << 8);
+}
+
+static uint8_t pad_cal_valid(void) {
+    if (pad_cal[PAD_CAL_WHEEL_MIN] >= pad_cal[PAD_CAL_WHEEL_MID]) {
+        return 0;
+    }
+    if (pad_cal[PAD_CAL_WHEEL_MID] >= pad_cal[PAD_CAL_WHEEL_MAX]) {
+        return 0;
+    }
+    if (pad_cal[PAD_CAL_ACCEL_MIN] >= pad_cal[PAD_CAL_ACCEL_MAX]) {
+        return 0;
+    }
+    if (pad_cal[PAD_CAL_BRAKE_MIN] >= pad_cal[PAD_CAL_BRAKE_MAX]) {
+        return 0;
+    }
+    return 1;
+}
+
+static void pad_cal_load(const uint8_t *payload) {
+    uint8_t i;
+    const uint8_t *p;
+
+    pad_cal_on = 0;
+    if (MAPLE_BUF[3] < PAD_CAL_WORDS || payload[PAD_PAY_CAL] == 0) {
+        return;
+    }
+    p = payload + PAD_PAY_DATA;
+    for (i = 0; i < PAD_CAL_COUNT; i++) {
+        pad_cal[i] = pad_u16(p);
+        p += 2;
+    }
+    if (pad_cal_valid()) {
+        pad_cal_on = 1;
+    }
+}
+
+static uint8_t pad_pedal(uint16_t raw, uint16_t min, uint16_t max) {
+    uint16_t v;
+
+    raw = (uint16_t)(raw & PAD_ANALOG_MASK);
+    if (max <= min || raw <= min) {
+        return 0;
+    }
+    if (raw >= max) {
+        return PAD_PEDAL_MAX;
+    }
+    v = pad_div(((uint32_t)(raw - min) << 8) - (raw - min),
+                (uint16_t)(max - min));
+    if (v > PAD_PEDAL_MAX) {
+        return PAD_PEDAL_MAX;
+    }
+    return (uint8_t)v;
+}
+
+static uint8_t pad_wheel(uint16_t raw) {
+    uint16_t min;
+    uint16_t mid;
+    uint16_t max;
+    uint16_t v;
+
+    raw = (uint16_t)(raw & PAD_ANALOG_MASK);
+    min = pad_cal[PAD_CAL_WHEEL_MIN];
+    mid = pad_cal[PAD_CAL_WHEEL_MID];
+    max = pad_cal[PAD_CAL_WHEEL_MAX];
+    if (raw <= mid) {
+        if (mid <= min) {
+            return 0;
+        }
+        v = pad_div((uint32_t)(mid - raw) << 7, (uint16_t)(mid - min));
+        if (v > PAD_WHEEL_NEG) {
+            v = PAD_WHEEL_NEG;
+        }
+        return (uint8_t)(PAD_AXIS_CENTER - v);
+    }
+    if (max <= mid) {
+        return (uint8_t)(PAD_AXIS_CENTER + PAD_WHEEL_POS);
+    }
+    v = pad_div(((uint32_t)(raw - mid) << 7) - (raw - mid),
+                (uint16_t)(max - mid));
+    if (v > PAD_WHEEL_POS) {
+        v = PAD_WHEEL_POS;
+    }
+    return (uint8_t)(PAD_AXIS_CENTER + v);
+}
+
+static uint8_t pad_analog_idle(uint16_t wheel, uint16_t accel) {
+    uint16_t diff;
+
+    if (wheel > accel) {
+        diff = (uint16_t)(wheel - accel);
+    }
+    else {
+        diff = (uint16_t)(accel - wheel);
+    }
+    if (diff <= PAD_ANALOG_IDLE) {
+        return 1;
+    }
+    return 0;
+}
+
+static void pad_apply(const uint8_t *rx, uint8_t stored) {
+    uint8_t blo;
+    uint8_t bhi;
+    uint8_t next[PAD_COND_BYTES];
+    uint16_t wheel;
+    uint16_t accel;
+    uint16_t brake;
+    const uint8_t *an;
+
+    if (stored < PAD_JVS_AN_ACK) {
+        return;
+    }
+    if (rx[PAD_JVS_STATUS] != JVS_STATUS_OK) {
+        return;
+    }
+    if (rx[PAD_JVS_SW_ACK] != JVS_REPORT_OK) {
+        return;
+    }
+    blo = (uint8_t)PAD_BTN_IDLE;
+    bhi = (uint8_t)(PAD_BTN_IDLE >> 8);
+    if (rx[PAD_JVS_SYS] & JVS_SYS_TEST) {
+        blo = (uint8_t)(blo & (uint8_t)~PAD_BTN_C);
+    }
+    pad_player(&blo, &bhi,
+               (uint8_t)(rx[PAD_JVS_P1] | rx[PAD_JVS_P2]),
+               (uint8_t)(rx[PAD_JVS_P1 + 1] | rx[PAD_JVS_P2 + 1]));
+    next[0] = blo;
+    next[1] = bhi;
+    next[PAD_COND_RTRIG] = 0;
+    next[PAD_COND_LTRIG] = 0;
+    next[PAD_COND_JOYX] = PAD_AXIS_CENTER;
+    next[PAD_COND_JOYY] = PAD_AXIS_CENTER;
+    next[PAD_COND_JOY2X] = PAD_AXIS_CENTER;
+    next[PAD_COND_JOY2Y] = PAD_AXIS_CENTER;
+    if (stored >= PAD_JVS_MIN && rx[PAD_JVS_AN_ACK] == JVS_REPORT_OK) {
+        an = rx + PAD_JVS_ANALOG;
+        wheel = ((uint16_t)an[0] << 8) | an[1];
+        accel = ((uint16_t)an[2] << 8) | an[3];
+        brake = ((uint16_t)an[4] << 8) | an[5];
+        if (pad_cal_on) {
+            next[PAD_COND_JOYX] = pad_wheel(wheel);
+            next[PAD_COND_RTRIG] = pad_pedal(accel,
+                                             pad_cal[PAD_CAL_ACCEL_MIN],
+                                             pad_cal[PAD_CAL_ACCEL_MAX]);
+            next[PAD_COND_LTRIG] = pad_pedal(brake,
+                                             pad_cal[PAD_CAL_BRAKE_MIN],
+                                             pad_cal[PAD_CAL_BRAKE_MAX]);
+        }
+        else
+        if (pad_analog_idle(wheel, accel) == 0) {
+            next[PAD_COND_JOYX] = (uint8_t)(wheel >> 8);
+            next[PAD_COND_RTRIG] = (uint8_t)(accel >> 8);
+            next[PAD_COND_LTRIG] = (uint8_t)(brake >> 8);
+        }
+    }
+    if (pkt_flag != 0) {
+        return;
+    }
+    mie_copy(pad_cond, next, PAD_COND_BYTES);
+}
+
+void pad_poll(void) {
+    uint8_t rx[JVS_PAD_RX];
+    uint8_t stored;
+
+    if (pad_mode != PAD_MODE_ON) {
+        return;
+    }
+    stored = jvs_pad_read(rx, JVS_PAD_RX);
+    if (stored == 0 || pkt_flag != 0) {
+        return;
+    }
+    pad_apply(rx, stored);
+}
+
+void pad_devinfo(void) {
+    if (pad_mode != PAD_MODE_ON) {
+        maple_reply_badcmd();
+        return;
+    }
+    maple_reply_long(pad_info, PAD_DEVINFO_LEN, MAPLE_RESP_DEVINFO,
+                     0, MAPLE_ADDR);
+}
+
+static uint8_t pad_func_ok(void) {
+    if (MAPLE_PAYLOAD[0] != PAD_FUNC_LO || MAPLE_PAYLOAD[1] != PAD_FUNC_LO) {
+        return 0;
+    }
+    if (MAPLE_PAYLOAD[2] != PAD_FUNC_LO || MAPLE_PAYLOAD[3] != PAD_FUNC_HI) {
+        return 0;
+    }
+    return 1;
+}
+
+void pad_getcond(void) {
+    uint8_t i;
+
+    if (pad_mode != PAD_MODE_ON) {
+        maple_reply_badcmd();
+        return;
+    }
+    if (!pad_func_ok()) {
+        maple_reply(MAPLE_RESP_BADFUNC, 0, MAPLE_ADDR, 0);
+        return;
+    }
+    MAPLE_BUF[0] = MAPLE_RESP_DATATRF;
+    MAPLE_BUF[1] = 0;
+    MAPLE_BUF[2] = MAPLE_ADDR;
+    MAPLE_BUF[3] = PAD_COND_WORDS;
+    MAPLE_BUF[4] = PAD_FUNC_LO;
+    MAPLE_BUF[5] = PAD_FUNC_LO;
+    MAPLE_BUF[6] = PAD_FUNC_LO;
+    MAPLE_BUF[7] = PAD_FUNC_HI;
+    for (i = 0; i < PAD_COND_BYTES; i++) {
+        MAPLE_BUF[8 + i] = pad_cond[i];
+    }
+    MAPLE_LREG = PAD_COND_WORDS;
+    maple_reply_tbuf();
+}
+
+void ior_pad(uint8_t *payload) {
+    if (payload[PAD_PAY_MODE] == PAD_MODE_OFF) {
+        pad_mode = PAD_MODE_OFF;
+        pad_cal_on = 0;
+    }
+    else {
+        pad_mode = PAD_MODE_ON;
+        pad_center();
+        pad_cal_load(payload);
+    }
+    reply_buf[0] = MAPLE_RESP_IO;
+    reply_buf[1] = 0;
+    reply_buf[2] = MAPLE_ADDR;
+    reply_buf[3] = 1;
+    reply_buf[4] = MAPLE_IO_PAD_ACK;
+    reply_buf[5] = pad_mode;
+    reply_buf[6] = 0;
+    reply_buf[7] = 0;
+    maple_reply_iy();
+}

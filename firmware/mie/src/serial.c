@@ -8,6 +8,8 @@
 #include "serial.h"
 #include "maple.h"
 
+#ifdef MIE_SERIAL
+
 #define SER_IDLE        0
 #define SER_TX          1
 #define SER_ARM         2
@@ -75,7 +77,7 @@ static void serial_tx_next(void) {
     mie_ei();
 }
 
-void bus_init(void) {
+void serial_init(void) {
     (void)port_0b;
     (void)port_0c;
     serial_state = SER_IDLE;
@@ -277,3 +279,10 @@ void ior_serial_4f(uint8_t *payload) {
     }
     serial_arm_rx();
 }
+
+#else
+
+void serial_on_irq(void) {
+}
+
+#endif

@@ -9,7 +9,7 @@
 
 #include <stdint.h>
 
-void bus_init(void);
+void serial_init(void);
 void serial_on_irq(void);
 void ior_serial_41(uint8_t *payload);
 void ior_serial_43(uint8_t *payload);

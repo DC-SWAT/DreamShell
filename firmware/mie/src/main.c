@@ -9,6 +9,7 @@
 #include "gpio.h"
 #include "jvs.h"
 #include "serial.h"
+#include "pad.h"
 
 static const uint8_t wave_gpio[] = {
     0x1c,
@@ -46,11 +47,16 @@ static void hw_bringup(void) {
 void mie_start(void) {
     hw_bringup();
     mie_ei();
-    bus_init();
+#ifdef MIE_SERIAL
+    serial_init();
+#endif
     for (;;) {
         pkt_flag = 0;
+        if (pad_active()) {
+            pad_poll();
+        }
         for (;;) {
-            if (MAPLE_STAT & MAPLE_STAT_HRES) {
+            if ((MAPLE_STAT & MAPLE_STAT_HRES) && !pad_active()) {
                 maple_dispatch(MAPLE_CMD_RESET);
             }
             if (pkt_flag == 1) {

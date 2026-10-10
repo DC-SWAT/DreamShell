@@ -9,6 +9,16 @@
 #include "maple.h"
 #include "jvs.h"
 
+static uint8_t jvs_yield;
+static uint8_t jvs_rx_limit;
+
+static uint8_t jvs_preempted(void) {
+    if (jvs_yield == 0) {
+        return 0;
+    }
+    return pkt_flag;
+}
+
 static uint8_t *node_slot(uint8_t node) {
     return (uint8_t *)(NODE_BASE + (uint16_t)node * NODE_STRIDE);
 }
@@ -18,6 +28,9 @@ static uint8_t uart_wait(uint8_t mask) {
 
     n = 0;
     for (;;) {
+        if (jvs_preempted()) {
+            return 0;
+        }
         n++;
         if (n == MAPLE_SPIN) {
             return 0;
@@ -41,6 +54,9 @@ static uint8_t uart_get(uint8_t *byte) {
 
     n = 0;
     for (;;) {
+        if (jvs_preempted()) {
+            return 0;
+        }
         n++;
         if (n == JVS_RX_SPIN) {
             return 0;
@@ -112,8 +128,14 @@ static uint8_t jvs_wait_data(void) {
 
     tries = 0;
     while (tries != JVS_SENSE_TRIES) {
+        if (jvs_preempted()) {
+            return JVS_RX_NONE;
+        }
         polls = 0;
         while (polls != JVS_SENSE_POLLS) {
+            if (jvs_preempted()) {
+                return JVS_RX_NONE;
+            }
             if (uart_lsr & UART_LSR_DR) {
                 return JVS_RX_OK;
             }
@@ -164,6 +186,10 @@ static uint8_t jvs_recv(uint8_t *dest, uint8_t *stored) {
         *stored = n;
         return JVS_RX_SUM;
     }
+    if (jvs_rx_limit != 0 && (uint16_t)length + JVS_RX_FRAME > jvs_rx_limit) {
+        *stored = n;
+        return JVS_RX_SUM;
+    }
     left = (uint8_t)(length - 1);
     while (left != 0) {
         if (!uart_get(&byte)) {
@@ -196,6 +222,66 @@ static uint8_t jvs_recv(uint8_t *dest, uint8_t *stored) {
         return JVS_RX_SUM;
     }
     return JVS_RX_OK;
+}
+
+static void jvs_pad_drop(void) {
+    uint8_t spins;
+
+    if ((uart_lsr & UART_LSR_DR) == 0) {
+        return;
+    }
+    spins = 0;
+    while (spins != JVS_RX_SPIN) {
+        if (pkt_flag != 0) {
+            return;
+        }
+        if (uart_lsr & UART_LSR_DR) {
+            (void)uart_data;
+            spins = 0;
+            continue;
+        }
+        spins++;
+    }
+}
+
+uint8_t jvs_pad_read(uint8_t *rx, uint8_t rx_max) {
+    static const uint8_t req[JVS_PAD_REQ_LEN] = {
+        JVS_CMD_SWINP, JVS_PAD_PLAYERS, JVS_PAD_SW_BYTES,
+        JVS_CMD_ANLINP, JVS_PAD_ANALOG
+    };
+    uint8_t stored;
+    uint8_t status;
+
+    if (pkt_flag != 0) {
+        return 0;
+    }
+    jvs_pad_drop();
+    if (pkt_flag != 0) {
+        return 0;
+    }
+    jvs_yield = 1;
+    jvs_rx_limit = rx_max;
+    jvs_tx(JVS_PAD_NODE, JVS_PAD_REQ_LEN, req);
+    if (pkt_flag != 0) {
+        jvs_yield = 0;
+        jvs_rx_limit = 0;
+        jvs_control = 0;
+        return 0;
+    }
+    status = jvs_wait_data();
+    if (status != JVS_RX_OK || pkt_flag != 0) {
+        jvs_yield = 0;
+        jvs_rx_limit = 0;
+        return 0;
+    }
+    stored = 0;
+    status = jvs_recv(rx, &stored);
+    jvs_yield = 0;
+    jvs_rx_limit = 0;
+    if (status != JVS_RX_OK) {
+        return 0;
+    }
+    return stored;
 }
 
 void jvs_uart_init(void) {
@@ -265,6 +351,8 @@ static void jvs_reply_node(uint8_t sub) {
     maple_reply_iy();
 }
 
+#ifdef MIE_JVS_EXTRA
+
 static uint16_t macro_off(uint8_t index) {
     uint8_t hi;
     uint8_t lo;
@@ -301,6 +389,7 @@ static void jvs_gap(void) {
 static void jvs_run_batch(uint8_t count) {
     uint8_t *rec;
     uint8_t *cursor;
+    uint8_t *slot;
     uint8_t total;
     uint8_t left;
 
@@ -341,17 +430,15 @@ static void jvs_run_batch(uint8_t count) {
         jvs_gap();
         left--;
     }
-    {
-        uint8_t *slot;
-
-        slot = node_slot(jvs_state);
-        slot[JVS_SLOT_LEN] = (uint8_t)(total + 4);
-        slot[JVS_SLOT_TAG] = JVS_SLOT_TAG_VALUE;
-        slot[JVS_SLOT_NODE] = jvs_state;
-        slot[JVS_SLOT_SENSE] = 0;
-    }
+    slot = node_slot(jvs_state);
+    slot[JVS_SLOT_LEN] = (uint8_t)(total + 4);
+    slot[JVS_SLOT_TAG] = JVS_SLOT_TAG_VALUE;
+    slot[JVS_SLOT_NODE] = jvs_state;
+    slot[JVS_SLOT_SENSE] = 0;
     active_flag = 1;
 }
+
+#endif
 
 void jvs_on_irq(void) {
     uint8_t status;
@@ -403,6 +490,8 @@ static void jvs_fetch_node(uint8_t node) {
 void ior_jvs_fetch(uint8_t *payload) {
     jvs_fetch_node((uint8_t)(payload[1] & JVS_NODE_MASK));
 }
+
+#ifdef MIE_JVS_EXTRA
 
 void ior_jvs_11(uint8_t *payload) {
     reply_buf[0] = MAPLE_RESP_IO;
@@ -693,3 +782,5 @@ void ior_jvs_37(uint8_t *payload) {
     reply_buf[7] = 0;
     maple_reply_iy();
 }
+
+#endif

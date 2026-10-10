@@ -14,7 +14,7 @@ typedef void (*maple_fn)(uint8_t *payload);
 void maple_reply(uint8_t response, uint8_t dest, uint8_t src, uint8_t words);
 void maple_reply_iy(void);
 void maple_reply_tbuf(void);
-void maple_reply_long(uint8_t *data, uint8_t len, uint8_t response,
+void maple_reply_long(const uint8_t *data, uint8_t len, uint8_t response,
                       uint8_t dest, uint8_t src);
 void maple_tx(void);
 void maple_tx_cont(void);
