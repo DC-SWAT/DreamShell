@@ -48,8 +48,8 @@ _pcm16_split:
 	bt/s .pcm16_store_alloc
 	xtrct r1, r11
 .pcm16_store:
-	mov.l r12, @(r0,r5)
-	mov.l r11, @(r0,r6)
+	mov.l r11, @(r0,r5)
+	mov.l r12, @(r0,r6)
 .pcm16_loops:
 	tst r3, r4
 	bf/s .pcm16_load
@@ -69,9 +69,9 @@ _pcm16_split:
 	add r0, r5
 	! ocbp @r6
 	add r0, r6
-	mov r12, r0
-	movca.l r0, @r5
 	mov r11, r0
+	movca.l r0, @r5
+	mov r12, r0
 	movca.l r0, @r6
 	bra .pcm16_loops
 	mov #0, r0
