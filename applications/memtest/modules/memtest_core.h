@@ -11,18 +11,21 @@
 #include <stdint.h>
 
 #define MEMTEST_NAME_MAX      20
-#define MEMTEST_REGIONS_MAX   5
+#define MEMTEST_REGIONS_MAX   6
 #define MEMTEST_SUBTESTS      3
 #define MEMTEST_CHUNK_SIZE    (512 * 1024)
 #define MEMTEST_OCRAM_BASE    0x7C001000
 #define MEMTEST_ISLAND_PAD    0xC000
+#define MEMTEST_SRAM_PHYS     0x00200000
+#define MEMTEST_SRAM_SIZE     (32 * 1024)
 
 enum {
     MEMTEST_REGION_RAM = 0,
     MEMTEST_REGION_VRAM,
     MEMTEST_REGION_VRAM_B,
     MEMTEST_REGION_AICA,
-    MEMTEST_REGION_ELAN
+    MEMTEST_REGION_ELAN,
+    MEMTEST_REGION_SRAM
 };
 
 enum {
@@ -71,6 +74,7 @@ typedef struct memtest_plan {
     size_t vram_b_size;
     size_t aica_size;
     size_t elan_size;
+    size_t sram_size;
     int region_count;
     int quick;
     int cs_led;

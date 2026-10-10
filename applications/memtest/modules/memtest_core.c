@@ -191,12 +191,22 @@ static void backup_write(int access, uintptr_t dst, const uint8_t *src, size_t n
 static void add_region(memtest_plan_t *plan, int type, int access,
         const char *name, uintptr_t base, size_t size) {
     memtest_region_t *reg;
+    uintptr_t phys;
+    int i;
 
     if(!size || plan->region_count >= MEMTEST_REGIONS_MAX) {
         return;
     }
 
-    reg = &plan->regions[plan->region_count++];
+    phys = phys_addr(base);
+    i = plan->region_count;
+    while(i > 0 && phys_addr(plan->regions[i - 1].base) > phys) {
+        plan->regions[i] = plan->regions[i - 1];
+        i--;
+    }
+
+    reg = &plan->regions[i];
+    plan->region_count++;
     memset(reg, 0, sizeof(*reg));
     reg->type = type;
     reg->access = access;
@@ -229,6 +239,10 @@ void memtest_plan_init(memtest_plan_t *plan) {
         plan->hw_name = DBL_MEM ? "Dreamcast 32MB" : "Dreamcast";
     }
 
+    if(hw == HW_TYPE_NAOMI) {
+        plan->sram_size = MEMTEST_SRAM_SIZE;
+    }
+
     add_region(plan, MEMTEST_REGION_AICA, MEMTEST_ACC_G2,
         "AICA RAM", SPU_RAM_UNCACHED_BASE, plan->aica_size);
     add_region(plan, MEMTEST_REGION_VRAM, MEMTEST_ACC_CPU,
@@ -243,6 +257,11 @@ void memtest_plan_init(memtest_plan_t *plan) {
     if(plan->elan_size) {
         add_region(plan, MEMTEST_REGION_ELAN, MEMTEST_ACC_CPU,
             "Elan RAM", ELAN_RAM_BASE, plan->elan_size);
+    }
+
+    if(plan->sram_size) {
+        add_region(plan, MEMTEST_REGION_SRAM, MEMTEST_ACC_CPU,
+            "SRAM", MEM_AREA_P2_BASE | MEMTEST_SRAM_PHYS, plan->sram_size);
     }
 
     add_region(plan, MEMTEST_REGION_RAM, MEMTEST_ACC_CPU,

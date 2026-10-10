@@ -130,8 +130,20 @@
 			<label align="left" valign="center" color="#31799F" font="label-14"
 				height="32" width="180" x="410" name="result-4" text="--" />
 		</panel>
+		<panel x="20" y="246" width="600" height="32" backgroundCenter="row-back" name="row-5">
+			<input type="checkbox" name="chk-5" x="4" y="4" height="24" width="178">
+				<label align="left" valign="center" color="#333333" font="label-14"
+					height="24" x="32" name="name-5" text="SRAM" />
+			</input>
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="80" x="200" name="size-5" text="--" />
+			<label align="left" valign="center" color="#333333" font="label-14"
+				height="32" width="110" x="290" name="addr-5" text="--" />
+			<label align="left" valign="center" color="#31799F" font="label-14"
+				height="32" width="180" x="410" name="result-5" text="--" />
+		</panel>
 
-		<panel x="20" y="286" width="600" height="26">
+		<panel x="20" y="318" width="600" height="26">
 			<input type="checkbox" name="quick-checkbox" x="0" y="0" height="26" width="280">
 				<label align="left" valign="center" color="#333333" font="label-14"
 					height="26" x="32" text="Quick test (bus only)" />
@@ -142,13 +154,13 @@
 			</input>
 		</panel>
 
-		<panel x="20" y="318" width="600" height="60">
+		<panel x="20" y="350" width="600" height="60">
 			<progressbar width="600" height="24" name="progress-bar" pos="0.0" />
 			<label align="left" color="#31799F" font="label-14" height="24" width="100%"
 				y="32" name="status-label" text="Ready" />
 		</panel>
 
-		<panel x="20" y="382" width="620" height="50">
+		<panel x="20" y="414" width="620" height="50">
 			<input type="button" width="120" height="40" x="0"
 				onclick="export:MemtestApp_Start()" name="start_btn">
 				<label font="label-16" color="#EEEEEE" text="Start" align="center" />
