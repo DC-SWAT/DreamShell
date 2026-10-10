@@ -23,6 +23,7 @@ int builtin_isoldr_cmd(int argc, char *argv[]);
 DEFAULT_MODULE_HEADER(isoldr);
 
 void isoldr_naomi_eeprom_prepare(isoldr_info_t *info);
+void isoldr_naomi_mie_pad(uint32_t image_type);
 int isoldr_elf_load(const char *path, uint32_t dest,
 	uint8_t **out_data, size_t *out_size);
 
@@ -797,6 +798,7 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 	if(info->image_type == IMAGE_TYPE_ROM_NAOMI) {
 		isoldr_naomi_eeprom_prepare(info);
 	}
+	isoldr_naomi_mie_pad(info->image_type);
 
 	ds_printf("DS_PROCESS: Executing at 0x%08lx (0x%08lx)...\n",
 		addr, addr + ISOLDR_PARAMS_SIZE);
