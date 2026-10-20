@@ -15,6 +15,7 @@
 #include "network/net.h"
 #include "sfx.h"
 #include <naomi/coins.h>
+#include <naomi/input.h>
 #include <dc/syscalls.h>
 #include <dc/dcload.h>
 #include <dc/maple.h>
@@ -154,8 +155,17 @@ void ShutdownNet() {
 }
 
 static void *mie_fw_init_thread(void *param) {
+	Settings_t *settings;
+
 	mie_init_fw((const char *)param);
 	free(param);
+	if(mie_port0_mode() != MIE_PORT0_JVS) {
+		return NULL;
+	}
+
+	settings = GetSettings();
+	mie_analog_calib_set(&settings->analog);
+	ApplyJvsButtonMap(settings->jvs_map);
 	return NULL;
 }
 
@@ -255,7 +265,6 @@ int InitDS() {
 		if(mie_port0_mode() != MIE_PORT0_MAPLE) {
 			mie_fw_init_start(fn);
 		}
-		mie_analog_calib_set(&settings->analog);
 	}
 	else {
 		if(strncmp(getenv("PATH"), "/cd", 3)) {

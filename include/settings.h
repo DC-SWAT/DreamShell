@@ -10,9 +10,10 @@
 
 #include <kos.h>
 #include <dc/maple/mie.h>
+#include <naomi/input.h>
 
 /* need increment when settings structure changed */
-#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '2')
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '3')
 
 typedef struct VideoSettings {
 
@@ -99,6 +100,9 @@ typedef struct Settings {
 
 	/* NAOMI JVS wheel and pedal calibration */
 	mie_analog_calib_t analog;
+
+	/* NAOMI JVS buttons to Dreamcast pad. */
+	uint16_t jvs_map[DS_JVS_MAP_SRC];
 
 }  Settings_t;
 

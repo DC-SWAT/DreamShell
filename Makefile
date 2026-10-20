@@ -122,7 +122,7 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/irq/exceptions.o $(SRC_DIR)/irq/setjmp.o \
 		$(SRC_DIR)/settings.o $(SRC_DIR)/sfx.o \
 		$(SRC_DIR)/naomi/bsram.o $(SRC_DIR)/naomi/coins.o \
-		$(SRC_DIR)/naomi/cart.o \
+		$(SRC_DIR)/naomi/cart.o $(SRC_DIR)/naomi/input.o \
 		$(DRIVERS_OBJ) $(GUI_OBJS) \
 		$(UTILS_OBJ) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o

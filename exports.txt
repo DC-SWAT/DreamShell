@@ -29,6 +29,7 @@ include ds.h
 include naomi/bsram.h
 include naomi/coins.h
 include naomi/cart.h
+include naomi/input.h
 include fs.h
 include fatfs.h
 include uthash.h
@@ -291,6 +292,7 @@ GetVolumeFromSettings
 GetStartupAppName
 GetMainAppName
 GetMainAppSubdir
+ApplyJvsButtonMap
 #
 naomi_bsram_read_credits
 naomi_bsram_read
