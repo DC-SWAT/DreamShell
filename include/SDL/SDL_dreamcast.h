@@ -32,6 +32,7 @@ typedef enum {
 } SDL_DC_button;
 
 void SDL_DC_EmulateMouse(SDL_bool value);
+int SDL_DC_MouseEmulated(void);
 
 void SDL_DC_SetSoundBuffer(void *buffer);
 void SDL_DC_RestoreSoundBuffer(void);

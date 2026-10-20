@@ -38,7 +38,7 @@ static char rcsid =
 #include "SDL_timer_c.h"
 #include "SDL_systhread.h"
 
-static uint64 start;
+static uint64_t start;
 
 /* 
 	jif =  ms * HZ /1000

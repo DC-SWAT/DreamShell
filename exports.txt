@@ -769,6 +769,7 @@ SDL_WriteBE64
 #SDL_DC_ShowAskHz
 #SDL_DC_Default60Hz
 SDL_DC_EmulateMouse
+SDL_DC_MouseEmulated
 #SDL_DC_SetSoundBuffer
 #SDL_DC_RestoreSoundBuffer
 #

@@ -280,6 +280,10 @@ void SDL_DC_EmulateMouse(SDL_bool value) {
 	__sdl_dc_emulate_mouse = (int)value;
 }
 
+int SDL_DC_MouseEmulated(void) {
+	return __sdl_dc_emulate_mouse;
+}
+
 int SDL_SYS_JoystickInit(void) {
 	return MAX_JOYSTICKS;
 }
