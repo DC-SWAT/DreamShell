@@ -4,3 +4,5 @@ include app_module.h
 MieJvsApp_Init
 MieJvsApp_Shutdown
 MieJvsApp_Open
+MieJvsApp_SaveConfirm
+MieJvsApp_SaveCancel

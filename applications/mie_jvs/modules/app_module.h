@@ -6,7 +6,10 @@
 */
 
 #include <ds.h>
+#include <tsunami/tsunami.h>
 
 void MieJvsApp_Init(App_t *app);
 void MieJvsApp_Shutdown(App_t *app);
 void MieJvsApp_Open(App_t *app);
+void MieJvsApp_SaveConfirm(Drawable *drawable);
+void MieJvsApp_SaveCancel(Drawable *drawable);

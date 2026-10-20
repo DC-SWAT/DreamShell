@@ -7,7 +7,10 @@
 
 #include <ds.h>
 #include <settings.h>
+#include <sfx.h>
+#include <string.h>
 #include <naomi/coins.h>
+#include <naomi/input.h>
 #include <dc/maple/keyboard.h>
 #include <dc/maple/mie.h>
 #include <tsunami/tsunami.h>
@@ -32,6 +35,27 @@ DEFAULT_MODULE_EXPORTS(app_mie_jvs);
 #define MIE_LINE_MAX           128
 #define OUTPUT_BIT(index)      MIE_JVS_OUTPUT_MASK(index)
 #define MIE_RAW_MASK           0xFF7F
+#define MENU_ITEM_X            148.0f
+#define MENU_ITEM_Y0           168.0f
+#define MENU_ITEM_STEP         40.0f
+#define MENU_CURSOR_X          120.0f
+#define MENU_CURSOR_W          400.0f
+#define MENU_CURSOR_H          32.0f
+#define MENU_CURSOR_BELOW      8.0f
+#define MAP_VISIBLE            12
+#define MAP_HDR_Y              68.0f
+#define MAP_SRC_X              48.0f
+#define MAP_DST_X              400.0f
+#define MAP_POS_X              560.0f
+#define MAP_ROW_Y0             96.0f
+#define MAP_ROW_STEP           24.0f
+#define MAP_CURSOR_X           32.0f
+#define MAP_CURSOR_W           576.0f
+#define MAP_CURSOR_H           22.0f
+#define MAP_CURSOR_BELOW       4.0f
+#define EXIT_LABEL_Y           24.0f
+#define EXIT_LABEL_MARGIN      8.0f
+#define HELD_BUTTONS           0xFFFFFFFFU
 
 typedef struct {
     Label *wheel_title;
@@ -50,11 +74,22 @@ typedef struct {
 } MieAnalogUi_t;
 
 typedef enum {
-    MIE_VIEW_MONITOR = 0,
+    MIE_VIEW_MENU = 0,
+    MIE_VIEW_MONITOR,
     MIE_VIEW_CALIB,
     MIE_VIEW_OUTPUTS,
+    MIE_VIEW_MAP,
     MIE_VIEW_COUNT
 } mie_view_t;
+
+typedef enum {
+    MIE_MENU_MONITOR = 0,
+    MIE_MENU_CALIB,
+    MIE_MENU_OUTPUTS,
+    MIE_MENU_MAP,
+    MIE_MENU_EXIT,
+    MIE_MENU_COUNT
+} mie_menu_t;
 
 typedef struct {
     App_t *app;
@@ -96,10 +131,28 @@ typedef struct {
     MieAnalogUi_t calib_ui;
     Rectangle *outputs_led[MIE_JVS_OUTPUT_COUNT];
     Label *outputs_num[MIE_JVS_OUTPUT_COUNT];
+    Label *menu_item[MIE_MENU_COUNT];
+    Rectangle *menu_cursor;
+    Label *map_hdr_src;
+    Label *map_hdr_dst;
+    Label *map_pos;
+    Label *map_src[MAP_VISIBLE];
+    Label *map_dst[MAP_VISIBLE];
+    Rectangle *map_cursor;
+    Dialog *save_dialog;
     Event_t *input_event;
     Event_t *video_event;
     int exiting;
     mie_view_t view;
+    int menu_sel;
+    int map_sel;
+    int map_scroll;
+    int map_dirty;
+    int map_prompt;
+    int map_after_exit;
+    mie_view_t map_after;
+    int panel_combo;
+    uint16_t map[DS_JVS_MAP_SRC];
     int output_blink;
     uint8_t output_blink_step;
     uint64_t output_blink_last_ms;
@@ -117,6 +170,8 @@ typedef struct {
 } MieJvsContext_t;
 
 static MieJvsContext_t self;
+
+static int prompt_map_save(mie_view_t view, int do_exit);
 
 static const char *port_mode_name(mie_port0_mode_t mode) {
     switch(mode) {
@@ -146,15 +201,334 @@ static const char *calib_step_name(mie_analog_calib_step_t step) {
 
 static const char *view_name(mie_view_t view) {
     switch(view) {
+    case MIE_VIEW_MENU:
+        return "Menu";
     case MIE_VIEW_MONITOR:
         return "Monitor";
     case MIE_VIEW_CALIB:
         return "Calibration";
     case MIE_VIEW_OUTPUTS:
         return "Outputs";
+    case MIE_VIEW_MAP:
+        return "Mapping";
     default:
         return "";
     }
+}
+
+static const Color COL_TEXT = {1.0f, 1.0f, 1.0f, 1.0f};
+static const Color COL_SEL = {1.0f, 0.831f, 0.945f, 0.161f};
+static const Color COL_ACTIVE = {1.0f, 0.439f, 0.788f, 0.859f};
+static const Color COL_EXIT = {1.0f, 1.0f, 0.533f, 0.533f};
+
+static const char *const jvs_player_names[DS_JVS_MAP_PLAYER] = {
+    "Start", "Up", "Down", "Left", "Right",
+    "BTN1", "BTN2", "BTN3", "BTN4", "BTN5",
+    "BTN6", "BTN7", "BTN8", "BTN9", "BTN10",
+    "Service"
+};
+
+static const uint16_t pad_cycle[] = {
+    0,
+    CONT_A, CONT_B, CONT_X, CONT_Y, CONT_Z, CONT_C, CONT_D, CONT_START,
+    CONT_DPAD_UP, CONT_DPAD_DOWN, CONT_DPAD_LEFT, CONT_DPAD_RIGHT
+};
+
+static const char *const pad_names[] = {
+    "---",
+    "A", "B", "X", "Y", "Z", "C", "D", "Start",
+    "Up", "Down", "Left", "Right"
+};
+
+#define PAD_CYCLE_COUNT ((int)(sizeof(pad_cycle) / sizeof(pad_cycle[0])))
+
+static const uint16_t axis_cycle[] = {
+    DS_JVS_AXIS_NONE,
+    DS_JVS_AXIS_JOYX,
+    DS_JVS_AXIS_JOYY,
+    DS_JVS_AXIS_JOY2X,
+    DS_JVS_AXIS_JOY2Y,
+    DS_JVS_AXIS_LTRIG,
+    DS_JVS_AXIS_RTRIG
+};
+
+static const char *const axis_names[] = {
+    "---", "X", "Y", "X2", "Y2", "L", "R"
+};
+
+#define AXIS_CYCLE_COUNT ((int)(sizeof(axis_cycle) / sizeof(axis_cycle[0])))
+
+static const char *const jvs_analog_names[DS_JVS_MAP_ANALOG] = {
+    "Wheel", "Accel", "Brake", "CH3", "CH4", "CH5", "CH6", "CH7"
+};
+
+static const char *pad_btn_name(uint16_t slot) {
+    int i;
+
+    for(i = 0; i < PAD_CYCLE_COUNT; i++) {
+        if(pad_cycle[i] == slot) {
+            return pad_names[i];
+        }
+    }
+
+    return "---";
+}
+
+static const char *axis_name(uint16_t slot) {
+    int i;
+
+    for(i = 0; i < AXIS_CYCLE_COUNT; i++) {
+        if(axis_cycle[i] == slot) {
+            return axis_names[i];
+        }
+    }
+
+    return "---";
+}
+
+static const char *map_slot_name(int idx, uint16_t slot) {
+    if(idx >= DS_JVS_MAP_BUTTON) {
+        return axis_name(slot);
+    }
+
+    return pad_btn_name(slot);
+}
+
+static void jvs_btn_label(char *dst, size_t len, int idx) {
+    int extra;
+
+    if(idx >= DS_JVS_MAP_BUTTON) {
+        snprintf(dst, len, "%s", jvs_analog_names[idx - DS_JVS_MAP_BUTTON]);
+        return;
+    }
+
+    if(idx < DS_JVS_MAP_PLAYER) {
+        snprintf(dst, len, "P1 %s", jvs_player_names[idx]);
+        return;
+    }
+
+    if(idx < DS_JVS_MAP_PANEL) {
+        snprintf(dst, len, "P2 %s", jvs_player_names[idx - DS_JVS_MAP_PLAYER]);
+        return;
+    }
+
+    extra = idx - DS_JVS_MAP_PANEL;
+    if(extra == 0) {
+        snprintf(dst, len, "Test");
+        return;
+    }
+    if(extra == 1) {
+        snprintf(dst, len, "Service");
+        return;
+    }
+
+    snprintf(dst, len, "Sys Test");
+}
+
+static void place_bar(Rectangle *rect, float x, float y, float w, float h) {
+    Vector pos;
+
+    if(!rect) {
+        return;
+    }
+
+    TSU_RectangleSetSize(rect, w, h);
+    pos = (Vector){x, y, 60.0f, 1.0f};
+    TSU_DrawableSetTranslate((Drawable *)rect, &pos);
+}
+
+static void place_label(Label *label, float x, float y) {
+    Vector pos;
+
+    if(!label) {
+        return;
+    }
+
+    pos = (Vector){x, y, 80.0f, 1.0f};
+    TSU_DrawableSetTranslate((Drawable *)label, &pos);
+}
+
+static const uint16_t jvs_player_bit[DS_JVS_MAP_PLAYER] = {
+    MIE_JVS_START_BIT,
+    MIE_JVS_UP_BIT,
+    MIE_JVS_DOWN_BIT,
+    MIE_JVS_LEFT_BIT,
+    MIE_JVS_RIGHT_BIT,
+    MIE_JVS_SW2_BIT,
+    MIE_JVS_SW1_BIT,
+    MIE_JVS_SW9_BIT,
+    MIE_JVS_SW10_BIT,
+    MIE_JVS_SW11_BIT,
+    MIE_JVS_SW12_BIT,
+    MIE_JVS_SW13_BIT,
+    MIE_JVS_SW14_BIT,
+    MIE_JVS_SW15_BIT,
+    MIE_JVS_SW16_BIT,
+    MIE_JVS_SERVICE_BIT
+};
+
+static const uint16_t jvs_player_pad[DS_JVS_MAP_PLAYER] = {
+    CONT_START,
+    CONT_DPAD_UP,
+    CONT_DPAD_DOWN,
+    CONT_DPAD_LEFT,
+    CONT_DPAD_RIGHT,
+    CONT_B,
+    CONT_X,
+    0, 0, 0, 0, 0,
+    CONT_Y,
+    0,
+    CONT_A,
+    CONT_Z
+};
+
+static int jvs_map_blank(const uint16_t *map) {
+    int i;
+
+    for(i = 0; i < DS_JVS_MAP_SRC; i++) {
+        if(map[i] != 0) {
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+static void jvs_map_default(uint16_t *map) {
+    memset(map, 0, DS_JVS_MAP_SRC * sizeof(*map));
+    memcpy(map, jvs_player_pad, sizeof(jvs_player_pad));
+    memcpy(map + DS_JVS_MAP_PLAYER, jvs_player_pad, sizeof(jvs_player_pad));
+    map[DS_JVS_MAP_PANEL] = CONT_C;
+    map[DS_JVS_MAP_PANEL + 1] = CONT_D;
+    map[DS_JVS_MAP_BUTTON] = DS_JVS_AXIS_JOYX;
+    map[DS_JVS_MAP_BUTTON + 1] = DS_JVS_AXIS_RTRIG;
+    map[DS_JVS_MAP_BUTTON + 2] = DS_JVS_AXIS_LTRIG;
+}
+
+static int jvs_src_down(const mie_jvs_inputs_t *jvs, int src) {
+    int extra;
+
+    if(!jvs || src < 0 || src >= DS_JVS_MAP_BUTTON) {
+        return 0;
+    }
+
+    if(src < DS_JVS_MAP_PLAYER) {
+        return (jvs->p1.raw & jvs_player_bit[src]) != 0;
+    }
+
+    if(src < DS_JVS_MAP_PANEL) {
+        return (jvs->p2.raw & jvs_player_bit[src - DS_JVS_MAP_PLAYER]) != 0;
+    }
+
+    extra = src - DS_JVS_MAP_PANEL;
+    if(extra == 0) {
+        return (jvs->panel.psw.raw & MIE_JVS_PANEL_TEST_BIT) != 0;
+    }
+    if(extra == 1) {
+        return (jvs->panel.psw.raw & MIE_JVS_PANEL_SERVICE_BIT) != 0;
+    }
+
+    return (jvs->system.raw & MIE_JVS_SYS_TEST_BIT) != 0;
+}
+
+static int jvs_map_is_default(const uint16_t *map) {
+    uint16_t def[DS_JVS_MAP_SRC];
+
+    jvs_map_default(def);
+    return memcmp(map, def, DS_JVS_MAP_SRC * sizeof(*map)) == 0;
+}
+
+static void save_btn_map(void) {
+    Settings_t *settings;
+
+    settings = GetSettings();
+    if(jvs_map_is_default(self.map)) {
+        memset(settings->jvs_map, 0, sizeof(settings->jvs_map));
+    }
+    else {
+        memcpy(settings->jvs_map, self.map, sizeof(self.map));
+    }
+    SaveSettings();
+    ApplyJvsButtonMap(settings->jvs_map);
+    self.map_dirty = 0;
+}
+
+static void revert_map(void) {
+    Settings_t *settings;
+
+    settings = GetSettings();
+    if(jvs_map_blank(settings->jvs_map)) {
+        jvs_map_default(self.map);
+    }
+    else {
+        memcpy(self.map, settings->jvs_map, sizeof(self.map));
+    }
+    ApplyJvsButtonMap(settings->jvs_map);
+    self.map_dirty = 0;
+}
+
+static int prompt_map_save(mie_view_t view, int do_exit) {
+    if(!self.map_dirty || self.map_prompt) {
+        return self.map_prompt;
+    }
+
+    self.map_after = view;
+    self.map_after_exit = do_exit;
+    if(!self.save_dialog) {
+        save_btn_map();
+        return 0;
+    }
+
+    self.map_prompt = 1;
+    TSU_DialogShow(self.save_dialog, "Save changed mapping to settings?");
+    return 1;
+}
+
+static void map_apply(void) {
+    uint16_t stored[DS_JVS_MAP_SRC];
+
+    if(jvs_map_is_default(self.map)) {
+        memset(stored, 0, sizeof(stored));
+        ApplyJvsButtonMap(stored);
+    }
+    else {
+        ApplyJvsButtonMap(self.map);
+    }
+    self.map_dirty = 1;
+}
+
+static void map_cycle(int dir) {
+    const uint16_t *cycle;
+    int count;
+    int i;
+    int slot;
+
+    if(self.map_sel >= DS_JVS_MAP_BUTTON) {
+        cycle = axis_cycle;
+        count = AXIS_CYCLE_COUNT;
+    }
+    else {
+        cycle = pad_cycle;
+        count = PAD_CYCLE_COUNT;
+    }
+
+    slot = 0;
+    for(i = 0; i < count; i++) {
+        if(cycle[i] == self.map[self.map_sel]) {
+            slot = i;
+            break;
+        }
+    }
+
+    slot += dir;
+    if(slot < 0) {
+        slot = count - 1;
+    }
+    if(slot >= count) {
+        slot = 0;
+    }
+    self.map[self.map_sel] = cycle[slot];
+    map_apply();
 }
 
 static mie_state_t *mie_dev_state(void) {
@@ -569,7 +943,7 @@ static void update_monitor_calib_text(void) {
             TSU_LabelSetText(self.monitor_calib, "not calibrated");
         }
         if(self.monitor_calib2) {
-            TSU_LabelSetText(self.monitor_calib2, "START+A on calib page");
+            TSU_LabelSetText(self.monitor_calib2, "");
         }
     }
 }
@@ -1007,29 +1381,136 @@ static void reset_calib_settings(void) {
 
 static void update_hint(void) {
     char line[128];
+    const char *back;
 
     if(mie_analog_calib_active()) {
-        snprintf(line, sizeof(line),
-                 "A=capture  B=cancel");
+        snprintf(line, sizeof(line), "A=capture  B=cancel");
+        back = "Back: A+B or Test+Service";
+    }
+    else if(self.view == MIE_VIEW_MENU) {
+        snprintf(line, sizeof(line), "Up/Down=select  A=open");
+        back = "Exit: A+B or Test+Service";
     }
     else if(self.view == MIE_VIEW_CALIB) {
-        snprintf(line, sizeof(line),
-                 "START+A=calibrate  Y=reset  X+D-pad=Mon/Calib/Out");
+        snprintf(line, sizeof(line), "START+A=calibrate  Y=reset");
+        back = "Back: A+B or Test+Service";
     }
     else if(self.view == MIE_VIEW_OUTPUTS) {
+        snprintf(line, sizeof(line), "D-pad=select  A=toggle  START+B=all");
+        back = "Back: A+B or Test+Service";
+    }
+    else if(self.view == MIE_VIEW_MAP) {
         snprintf(line, sizeof(line),
-                 "D-pad=select  A=toggle  START+B=all  X+D-pad=Mon/Calib/Out");
+                 "Up/Down=select  Left/Right=pad  Y=clear  X=default");
+        back = "Back: A+B or Test+Service";
     }
     else {
-        snprintf(line, sizeof(line),
-                 "X+D-pad=Mon/Calib/Out  START+A=calibrate  START=blink outputs");
+        snprintf(line, sizeof(line), "START=blink outputs");
+        back = "Back: A+B or Test+Service";
     }
 
     if(self.hint_label) {
         TSU_LabelSetText(self.hint_label, line);
     }
     if(self.exit_label) {
-        TSU_LabelSetText(self.exit_label, "Exit: A + B");
+        float w;
+        float h;
+
+        TSU_LabelSetText(self.exit_label, back);
+        TSU_LabelGetSize(self.exit_label, &w, &h);
+        place_label(self.exit_label, (float)SCREEN_WIDTH - EXIT_LABEL_MARGIN - w,
+                    EXIT_LABEL_Y);
+    }
+}
+
+static void update_menu_ui(void) {
+    int i;
+    Color col;
+    float y;
+
+    for(i = 0; i < MIE_MENU_COUNT; i++) {
+        if(!self.menu_item[i]) {
+            continue;
+        }
+        place_label(self.menu_item[i], MENU_ITEM_X,
+                    MENU_ITEM_Y0 + (float)i * MENU_ITEM_STEP);
+        if(i == self.menu_sel) {
+            col = COL_SEL;
+        }
+        else if(i == MIE_MENU_EXIT) {
+            col = COL_EXIT;
+        }
+        else {
+            col = COL_TEXT;
+        }
+        TSU_LabelSetTint(self.menu_item[i], &col);
+    }
+
+    y = MENU_ITEM_Y0 + (float)self.menu_sel * MENU_ITEM_STEP;
+    place_bar(self.menu_cursor, MENU_CURSOR_X, y + MENU_CURSOR_BELOW,
+              MENU_CURSOR_W, MENU_CURSOR_H);
+}
+
+static void update_map_ui(const mie_state_t *st) {
+    int row;
+    int idx;
+    char name[32];
+    char pos[16];
+    Color col;
+    float y;
+
+    if(self.map_sel < self.map_scroll) {
+        self.map_scroll = self.map_sel;
+    }
+    if(self.map_sel >= self.map_scroll + MAP_VISIBLE) {
+        self.map_scroll = self.map_sel - MAP_VISIBLE + 1;
+    }
+
+    for(row = 0; row < MAP_VISIBLE; row++) {
+        idx = self.map_scroll + row;
+        col = COL_TEXT;
+        if(idx >= DS_JVS_MAP_SRC) {
+            if(self.map_src[row]) {
+                TSU_LabelSetText(self.map_src[row], "");
+            }
+            if(self.map_dst[row]) {
+                TSU_LabelSetText(self.map_dst[row], "");
+            }
+            continue;
+        }
+
+        if(row == self.map_sel - self.map_scroll) {
+            col = COL_SEL;
+        }
+        else if(st && jvs_src_down(&st->jvs, idx)) {
+            col = COL_ACTIVE;
+        }
+
+        jvs_btn_label(name, sizeof(name), idx);
+        y = MAP_ROW_Y0 + (float)row * MAP_ROW_STEP;
+        if(self.map_src[row]) {
+            place_label(self.map_src[row], MAP_SRC_X, y);
+            TSU_LabelSetText(self.map_src[row], name);
+            TSU_LabelSetTint(self.map_src[row], &col);
+        }
+        if(self.map_dst[row]) {
+            place_label(self.map_dst[row], MAP_DST_X, y);
+            TSU_LabelSetText(self.map_dst[row], map_slot_name(idx, self.map[idx]));
+            TSU_LabelSetTint(self.map_dst[row], &col);
+        }
+    }
+
+    place_label(self.map_hdr_src, MAP_SRC_X, MAP_HDR_Y);
+    place_label(self.map_hdr_dst, MAP_DST_X, MAP_HDR_Y);
+    place_label(self.map_pos, MAP_POS_X, MAP_HDR_Y);
+
+    y = MAP_ROW_Y0 + (float)(self.map_sel - self.map_scroll) * MAP_ROW_STEP;
+    place_bar(self.map_cursor, MAP_CURSOR_X, y + MAP_CURSOR_BELOW,
+              MAP_CURSOR_W, MAP_CURSOR_H);
+
+    if(self.map_pos) {
+        snprintf(pos, sizeof(pos), "%d/%d", self.map_sel + 1, DS_JVS_MAP_SRC);
+        TSU_LabelSetText(self.map_pos, pos);
     }
 }
 
@@ -1090,6 +1571,14 @@ static void update_ui(const mie_state_t *st) {
         }
     }
 
+    if(self.view == MIE_VIEW_MENU && !mie_analog_calib_active()) {
+        update_menu_ui();
+    }
+
+    if(self.view == MIE_VIEW_MAP && !mie_analog_calib_active()) {
+        update_map_ui(st);
+    }
+
     if(calib_view) {
         update_calib_panel(st);
         update_calib_analog_ui(st);
@@ -1101,22 +1590,48 @@ static void update_ui(const mie_state_t *st) {
     sync_view_cardstack();
 }
 
-static void switch_view(int dir) {
+static void OnExit(void);
+
+static void open_view(mie_view_t view) {
     mie_view_t prev;
 
-    if(mie_analog_calib_active()) {
-        self.view = MIE_VIEW_CALIB;
-        sync_view_cardstack();
+    if(mie_analog_calib_active() && view != MIE_VIEW_CALIB) {
+        mie_analog_calib_cancel();
+    }
+
+    if(self.view == MIE_VIEW_MAP && view != MIE_VIEW_MAP &&
+            prompt_map_save(view, 0)) {
         return;
     }
 
     prev = self.view;
-    self.view = (mie_view_t)((self.view + dir + MIE_VIEW_COUNT) % MIE_VIEW_COUNT);
-    sync_view_cardstack();
-
-    if(self.view == MIE_VIEW_OUTPUTS && prev != MIE_VIEW_OUTPUTS) {
+    self.view = view;
+    if(view == MIE_VIEW_OUTPUTS && prev != MIE_VIEW_OUTPUTS) {
         self.output_blink = 0;
         outputs_sync_manual();
+    }
+    sync_view_cardstack();
+}
+
+static void open_menu_item(void) {
+    switch(self.menu_sel) {
+    case MIE_MENU_MONITOR:
+        open_view(MIE_VIEW_MONITOR);
+        break;
+    case MIE_MENU_CALIB:
+        open_view(MIE_VIEW_CALIB);
+        break;
+    case MIE_MENU_OUTPUTS:
+        open_view(MIE_VIEW_OUTPUTS);
+        break;
+    case MIE_MENU_MAP:
+        open_view(MIE_VIEW_MAP);
+        break;
+    case MIE_MENU_EXIT:
+        OnExit();
+        break;
+    default:
+        break;
     }
 }
 
@@ -1128,33 +1643,19 @@ static int combo_activated(uint32_t btns, uint32_t old_btns, uint32_t combo) {
     return (btns & combo) == combo && (old_btns & combo) != combo;
 }
 
-static void try_switch_view(int dir, uint32_t btns, uint32_t old_btns) {
-    uint32_t combo;
+static int test_service_down(const mie_state_t *st) {
+    int service;
 
-    if(mie_analog_calib_active()) {
-        return;
-    }
-
-    if(dir < 0) {
-        combo = CONT_X | CONT_DPAD_LEFT;
-        if(combo_activated(btns, old_btns, combo)) {
-            switch_view(dir);
-            return;
-        }
-        combo = CONT_X | CONT_DPAD_UP;
-    }
-    else {
-        combo = CONT_X | CONT_DPAD_RIGHT;
-        if(combo_activated(btns, old_btns, combo)) {
-            switch_view(dir);
-            return;
-        }
-        combo = CONT_X | CONT_DPAD_DOWN;
+    if(!st) {
+        return 0;
     }
 
-    if(combo_activated(btns, old_btns, combo)) {
-        switch_view(dir);
+    if(st->jvs.panel.psw.test && st->jvs.panel.psw.service) {
+        return 1;
     }
+
+    service = st->jvs.panel.psw.service || st->jvs.p1.service || st->jvs.p2.service;
+    return st->jvs.system.test && service;
 }
 
 static void OnExit(void) {
@@ -1162,6 +1663,11 @@ static void OnExit(void) {
     if(self.exiting) {
         return;
     }
+
+    if(prompt_map_save(MIE_VIEW_MENU, 1)) {
+        return;
+    }
+
     self.exiting = 1;
 
     outputs_clear();
@@ -1209,8 +1715,64 @@ static void handle_capture(void) {
     }
 }
 
+static void finish_map_prompt(int save) {
+    mie_view_t view;
+    int do_exit;
+
+    if(self.save_dialog) {
+        TSU_DialogHide(self.save_dialog);
+    }
+    if(save) {
+        save_btn_map();
+    }
+    else {
+        revert_map();
+    }
+
+    view = self.map_after;
+    do_exit = self.map_after_exit;
+    self.map_prompt = 0;
+    self.map_after_exit = 0;
+    if(do_exit) {
+        OnExit();
+        return;
+    }
+    open_view(view);
+}
+
+void MieJvsApp_SaveConfirm(Drawable *drawable) {
+    (void)drawable;
+    finish_map_prompt(1);
+}
+
+void MieJvsApp_SaveCancel(Drawable *drawable) {
+    (void)drawable;
+    finish_map_prompt(0);
+}
+
 static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     uint32_t btns = nav_btns | jvs_btns;
+
+    if(self.save_dialog && TSU_DialogIsVisible(self.save_dialog)) {
+        if((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT)) {
+            ds_sfx_play(DS_SFX_CLICK2);
+            TSU_DialogMoveFocus(self.save_dialog, -1);
+        }
+        if((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT)) {
+            ds_sfx_play(DS_SFX_CLICK2);
+            TSU_DialogMoveFocus(self.save_dialog, 1);
+        }
+        if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_B)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            TSU_DialogActivateFocused(self.save_dialog);
+        }
+        if((btns & CONT_B) && !(self.old_btns & CONT_B) && !(btns & CONT_A)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            MieJvsApp_SaveCancel(NULL);
+        }
+        self.old_btns = btns;
+        return;
+    }
 
     if(mie_analog_calib_active()) {
         if((btns & CONT_B) && !(self.old_btns & CONT_B) &&
@@ -1219,7 +1781,79 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
         }
     }
 
-    if(!mie_analog_calib_active() &&
+    if(self.view == MIE_VIEW_MENU) {
+        if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP)) {
+            ds_sfx_play(DS_SFX_CLICK2);
+            self.menu_sel--;
+            if(self.menu_sel < 0) {
+                self.menu_sel = MIE_MENU_COUNT - 1;
+            }
+        }
+
+        if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN)) {
+            ds_sfx_play(DS_SFX_CLICK2);
+            self.menu_sel++;
+            if(self.menu_sel >= MIE_MENU_COUNT) {
+                self.menu_sel = 0;
+            }
+        }
+
+        if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_B)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            open_menu_item();
+            if(self.exiting) {
+                return;
+            }
+        }
+
+        self.old_btns = btns;
+        return;
+    }
+
+    if(self.view == MIE_VIEW_MAP && !mie_analog_calib_active()) {
+        if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP)) {
+            ds_sfx_play(DS_SFX_CLICK2);
+            self.map_sel--;
+            if(self.map_sel < 0) {
+                self.map_sel = DS_JVS_MAP_SRC - 1;
+            }
+        }
+
+        if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN)) {
+            ds_sfx_play(DS_SFX_CLICK2);
+            self.map_sel++;
+            if(self.map_sel >= DS_JVS_MAP_SRC) {
+                self.map_sel = 0;
+            }
+        }
+
+        if((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            map_cycle(-1);
+        }
+
+        if((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            map_cycle(1);
+        }
+
+        if((btns & CONT_Y) && !(self.old_btns & CONT_Y) && !(btns & CONT_START)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            self.map[self.map_sel] = 0;
+            map_apply();
+        }
+
+        if((btns & CONT_X) && !(self.old_btns & CONT_X) && !(btns & CONT_START)) {
+            ds_sfx_play(DS_SFX_CLICK);
+            jvs_map_default(self.map);
+            map_apply();
+        }
+
+        self.old_btns = btns;
+        return;
+    }
+
+    if(!mie_analog_calib_active() && self.view == MIE_VIEW_CALIB &&
             combo_activated(btns, self.old_btns, CONT_START | CONT_A)) {
         reset_calib_ui_tracking();
         mie_analog_calib_start();
@@ -1235,6 +1869,7 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
         else if(self.view == MIE_VIEW_OUTPUTS &&
                 !(btns & (CONT_DPAD_LEFT | CONT_DPAD_RIGHT |
                           CONT_DPAD_UP | CONT_DPAD_DOWN | CONT_X | CONT_B))) {
+            ds_sfx_play(DS_SFX_CLICK);
             outputs_toggle_selected();
         }
     }
@@ -1253,10 +1888,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     }
 
     if((btns & CONT_Y) && !(self.old_btns & CONT_Y) && !mie_analog_calib_active() &&
-            !(btns & CONT_START)) {
-        if(self.view != MIE_VIEW_OUTPUTS) {
-            reset_calib_settings();
-        }
+            !(btns & CONT_START) && self.view == MIE_VIEW_CALIB) {
+        reset_calib_settings();
     }
 
     if((btns & CONT_START) && !(self.old_btns & CONT_START) &&
@@ -1275,27 +1908,28 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     if(self.view == MIE_VIEW_OUTPUTS && !mie_analog_calib_active()) {
         if((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT) &&
                 !(btns & CONT_X)) {
+            ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(-1);
         }
 
         if((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT) &&
                 !(btns & CONT_X)) {
+            ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(1);
         }
 
         if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP) &&
                 !(btns & CONT_X)) {
+            ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(-1);
         }
 
         if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN) &&
                 !(btns & CONT_X)) {
+            ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(1);
         }
     }
-
-    try_switch_view(-1, btns, self.old_btns);
-    try_switch_view(1, btns, self.old_btns);
 
     self.old_btns = btns;
 }
@@ -1362,6 +1996,7 @@ static uint32_t exit_btns_old;
 static void InputHandler(void *ds_event, void *param, int action) {
     uint32_t btns;
     mie_state_t *st;
+    int panel_now;
 
     (void)ds_event;
     (void)param;
@@ -1370,16 +2005,33 @@ static void InputHandler(void *ds_event, void *param, int action) {
         return;
     }
 
+    if(self.save_dialog && TSU_DialogIsVisible(self.save_dialog)) {
+        return;
+    }
+
     btns = poll_aux_buttons();
     st = mie_dev_state();
     if(st) {
         btns |= st->cont.buttons;
     }
-    if(combo_activated(btns, exit_btns_old, CONT_A | CONT_B)) {
-        OnExit();
+    panel_now = test_service_down(st);
+    if(combo_activated(btns, exit_btns_old, CONT_A | CONT_B) ||
+            (panel_now && !self.panel_combo)) {
+        self.old_btns = HELD_BUTTONS;
+        exit_btns_old = btns;
+        self.panel_combo = panel_now;
+        if(self.view == MIE_VIEW_MENU) {
+            ds_sfx_play(DS_SFX_CH_PAGE);
+            OnExit();
+        }
+        else {
+            ds_sfx_play(DS_SFX_CH_PAGE);
+            open_view(MIE_VIEW_MENU);
+        }
         return;
     }
     exit_btns_old = btns;
+    self.panel_combo = panel_now;
 }
 
 static void VideoHandler(void *ds_event, void *param, int action) {
@@ -1397,6 +2049,9 @@ static void VideoHandler(void *ds_event, void *param, int action) {
 
     outputs_update_mode();
     poll_input();
+    if(self.exiting) {
+        return;
+    }
     st = mie_dev_state();
     update_ui(st);
 }
@@ -1488,6 +2143,23 @@ static void bind_drawables(void) {
         snprintf(name, sizeof(name), "outputs_num_%d", i);
         self.outputs_num[i] = get_label(name);
     }
+
+    for(i = 0; i < MIE_MENU_COUNT; i++) {
+        snprintf(name, sizeof(name), "menu_item_%d", i);
+        self.menu_item[i] = get_label(name);
+    }
+    self.menu_cursor = get_rect("menu_cursor");
+    self.map_hdr_src = get_label("map_hdr_src");
+    self.map_hdr_dst = get_label("map_hdr_dst");
+    self.map_pos = get_label("map_pos");
+    self.map_cursor = get_rect("map_cursor");
+    self.save_dialog = (Dialog *)APP_GET_TSU_DRAWABLE("save_dialog");
+    for(i = 0; i < MAP_VISIBLE; i++) {
+        snprintf(name, sizeof(name), "map_src_%d", i);
+        self.map_src[i] = get_label(name);
+        snprintf(name, sizeof(name), "map_dst_%d", i);
+        self.map_dst[i] = get_label(name);
+    }
 }
 
 void MieJvsApp_Init(App_t *app) {
@@ -1496,7 +2168,7 @@ void MieJvsApp_Init(App_t *app) {
     memset(&self, 0, sizeof(self));
     exit_btns_old = 0;
     self.app = app;
-    self.view = MIE_VIEW_MONITOR;
+    self.view = MIE_VIEW_MENU;
 
     if(!app || !app->tsunami) {
         return;
@@ -1506,6 +2178,13 @@ void MieJvsApp_Init(App_t *app) {
 
     settings = GetSettings();
     mie_analog_calib_set(&settings->analog);
+    if(jvs_map_blank(settings->jvs_map)) {
+        jvs_map_default(self.map);
+    }
+    else {
+        memcpy(self.map, settings->jvs_map, sizeof(self.map));
+    }
+    ApplyJvsButtonMap(settings->jvs_map);
 
     if(mie_port0_mode() == MIE_PORT0_JVS) {
         mie_get_id(self.board_id);

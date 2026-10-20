@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<app name="MIE JVS" icon="images/icon.png" version="1.0.0">
+<app name="MIE JVS" icon="images/icon.png" version="1.1.0">
     <resources>
         <module src="modules/app_mie_jvs.klf" />
         <font src="../../fonts/txf/m23_full.txf" name="ui_font" />
@@ -13,6 +13,21 @@
             topLeft="#1A2A3A" topRight="#1A2A3A" bottomLeft="#050508" bottomRight="#050508" />
 
         <cardstack name="pages" x="0" y="0" width="100%" height="100%" z="10.0" fade="0.12">
+
+            <panel name="menu">
+                <rectangle name="menu_cursor" x="120" y="366" width="400" height="28" z="60.0"
+                    color="#123040FF" transparent="false" />
+                <label name="menu_item_0" font="ui_font" fontsize="18" x="148" y="348" z="80.0"
+                    text="Monitor" smear="true" color="#FFFFFFFF" />
+                <label name="menu_item_1" font="ui_font" fontsize="18" x="148" y="312" z="80.0"
+                    text="Calibration" smear="true" color="#FFFFFFFF" />
+                <label name="menu_item_2" font="ui_font" fontsize="18" x="148" y="276" z="80.0"
+                    text="Outputs" smear="true" color="#FFFFFFFF" />
+                <label name="menu_item_3" font="ui_font" fontsize="18" x="148" y="240" z="80.0"
+                    text="Mapping" smear="true" color="#FFFFFFFF" />
+                <label name="menu_item_4" font="ui_font" fontsize="18" x="148" y="204" z="80.0"
+                    text="Exit" smear="true" color="#FF8888FF" />
+            </panel>
 
             <panel name="monitor">
                 <label name="p1_title" font="ui_font" fontsize="14" x="24" y="150" z="80.0"
@@ -240,18 +255,59 @@
                 </panel>
             </panel>
 
+            <panel name="map">
+                <label name="map_hdr_src" font="ui_font" fontsize="14" x="48" y="392" z="80.0"
+                    text="JVS" smear="true" color="#70C9DBFF" />
+                <label name="map_hdr_dst" font="ui_font" fontsize="14" x="400" y="392" z="80.0"
+                    text="Dreamcast" smear="true" color="#70C9DBFF" />
+                <label name="map_pos" font="ui_font" fontsize="12" x="560" y="392" z="80.0"
+                    text="" smear="true" color="#AAAAAAFF" />
+                <rectangle name="map_cursor" x="32" y="378" width="576" height="22" z="60.0"
+                    color="#123040FF" transparent="false" />
+                <label name="map_src_0" font="ui_font" fontsize="14" x="48" y="360" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_0" font="ui_font" fontsize="14" x="400" y="360" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_1" font="ui_font" fontsize="14" x="48" y="338" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_1" font="ui_font" fontsize="14" x="400" y="338" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_2" font="ui_font" fontsize="14" x="48" y="316" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_2" font="ui_font" fontsize="14" x="400" y="316" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_3" font="ui_font" fontsize="14" x="48" y="294" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_3" font="ui_font" fontsize="14" x="400" y="294" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_4" font="ui_font" fontsize="14" x="48" y="272" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_4" font="ui_font" fontsize="14" x="400" y="272" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_5" font="ui_font" fontsize="14" x="48" y="250" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_5" font="ui_font" fontsize="14" x="400" y="250" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_6" font="ui_font" fontsize="14" x="48" y="228" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_6" font="ui_font" fontsize="14" x="400" y="228" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_7" font="ui_font" fontsize="14" x="48" y="206" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_7" font="ui_font" fontsize="14" x="400" y="206" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_8" font="ui_font" fontsize="14" x="48" y="184" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_8" font="ui_font" fontsize="14" x="400" y="184" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_9" font="ui_font" fontsize="14" x="48" y="162" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_9" font="ui_font" fontsize="14" x="400" y="162" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_10" font="ui_font" fontsize="14" x="48" y="140" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_10" font="ui_font" fontsize="14" x="400" y="140" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_src_11" font="ui_font" fontsize="14" x="48" y="118" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+                <label name="map_dst_11" font="ui_font" fontsize="14" x="400" y="118" z="80.0" text="" smear="true" color="#FFFFFFFF" />
+            </panel>
+
         </cardstack>
 
         <label name="title_label" font="ui_font" fontsize="20" x="16" y="448" z="90.0"
             text="DreamShell MIE JVS" smear="true" color="#70C9DBFF" />
-        <label name="page_label" font="ui_font" fontsize="14" x="520" y="448" z="90.0"
-            text="Monitor" smear="true" color="#AAAAAAFF" />
+        <label name="page_label" font="ui_font" fontsize="14" x="500" y="448" z="90.0"
+            text="Menu" smear="true" color="#AAAAAAFF" />
         <label name="status_label" font="ui_font" fontsize="14" x="16" y="424" z="90.0"
             text="" smear="true" color="#CCCCCCFF" />
         <label name="hint_label" font="ui_font" fontsize="12" x="16" y="24" z="90.0"
             text="" smear="true" color="#888888FF" />
-        <label name="exit_label" font="ui_font" fontsize="12" x="500" y="24" z="90.0"
-            text="Exit: A + B" smear="true" color="#D4F129FF" />
+        <label name="exit_label" font="ui_font" fontsize="12" x="400" y="24" z="90.0"
+            text="Exit: A+B or Test+Service" smear="true" color="#D4F129FF" />
+
+        <dialog name="save_dialog" font="ui_font" fontsize="14" x="0" y="0" width="480" height="160"
+            align="center" valign="center" z="200.0"
+            visibility="hidden" color="#000000A6" panelColor="#1A3340E6" textColor="#FFFFFFFF" buttonColor="#D4F129FF"
+            confirmText="Yes" cancelText="No"
+            onconfirm="export:MieJvsApp_SaveConfirm" oncancel="export:MieJvsApp_SaveCancel" />
 
     </body>
 </app>
