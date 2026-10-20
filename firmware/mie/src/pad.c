@@ -32,11 +32,33 @@ static const uint8_t pad_info[PAD_DEVINFO_LEN] = {
     0xAE, 0x00, 0xF4, 0x01
 };
 
+static const uint8_t rumble_info[PAD_DEVINFO_LEN] = {
+    0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x50, 0x75, 0x72, 0x75, 0x20, 0x50,
+    0x75, 0x72, 0x75, 0x20, 0x50, 0x61, 0x63, 0x6B, 0x20, 0x20, 0x20, 0x20,
+    0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20,
+    0x50, 0x72, 0x6F, 0x64, 0x75, 0x63, 0x65, 0x64, 0x20, 0x42, 0x79, 0x20,
+    0x6F, 0x72, 0x20, 0x55, 0x6E, 0x64, 0x65, 0x72, 0x20, 0x4C, 0x69, 0x63,
+    0x65, 0x6E, 0x73, 0x65, 0x20, 0x46, 0x72, 0x6F, 0x6D, 0x20, 0x53, 0x45,
+    0x47, 0x41, 0x20, 0x45, 0x4E, 0x54, 0x45, 0x52, 0x50, 0x52, 0x49, 0x53,
+    0x45, 0x53, 0x2C, 0x4C, 0x54, 0x44, 0x2E, 0x20, 0x20, 0x20, 0x20, 0x20,
+    0xAE, 0x00, 0xF4, 0x01
+};
+
+static uint8_t pad_exp;
+
 uint8_t pad_active(void) {
     if (pad_mode == PAD_MODE_ON) {
         return 1;
     }
     return 0;
+}
+
+static uint8_t pad_src(void) {
+    if (pad_exp) {
+        return MAPLE_AP_EXP;
+    }
+    return MAPLE_ADDR;
 }
 
 static void pad_center(void) {
@@ -297,7 +319,7 @@ void pad_devinfo(void) {
         return;
     }
     maple_reply_long(pad_info, PAD_DEVINFO_LEN, MAPLE_RESP_DEVINFO,
-                     0, MAPLE_ADDR);
+                     0, pad_src());
 }
 
 static uint8_t pad_func_ok(void) {
@@ -318,12 +340,12 @@ void pad_getcond(void) {
         return;
     }
     if (!pad_func_ok()) {
-        maple_reply(MAPLE_RESP_BADFUNC, 0, MAPLE_ADDR, 0);
+        maple_reply(MAPLE_RESP_BADFUNC, 0, pad_src(), 0);
         return;
     }
     MAPLE_BUF[0] = MAPLE_RESP_DATATRF;
     MAPLE_BUF[1] = 0;
-    MAPLE_BUF[2] = MAPLE_ADDR;
+    MAPLE_BUF[2] = pad_src();
     MAPLE_BUF[3] = PAD_COND_WORDS;
     MAPLE_BUF[4] = PAD_FUNC_LO;
     MAPLE_BUF[5] = PAD_FUNC_LO;
@@ -336,15 +358,115 @@ void pad_getcond(void) {
     maple_reply_tbuf();
 }
 
+static void pad_sub_ok(uint8_t src) {
+    maple_reply(MAPLE_RESP_OK, 0, src, 0);
+}
+
+static uint8_t rumble_func_ok(void) {
+    if (MAPLE_PAYLOAD[0] != 0 || MAPLE_PAYLOAD[1] != 0) {
+        return 0;
+    }
+    if (MAPLE_PAYLOAD[2] != MAPLE_FUNC_RUMBLE || MAPLE_PAYLOAD[3] != 0) {
+        return 0;
+    }
+    return 1;
+}
+
+static void rumble_clear(void) {
+    uint8_t i;
+
+    for (i = 0; i < RUMBLE_BYTES; i++) {
+        rumble_fx[i] = 0;
+    }
+}
+
+static void pad_rumble(uint8_t cmd) {
+    uint8_t i;
+
+    if (cmd == MAPLE_CMD_DEVINFO) {
+        maple_reply_long(rumble_info, PAD_DEVINFO_LEN, MAPLE_RESP_DEVINFO,
+                         0, MAPLE_AP_RUMBLE);
+        return;
+    }
+    if (cmd == MAPLE_CMD_ALLINFO) {
+        maple_reply_long(rumble_info, PAD_DEVINFO_LEN, MAPLE_RESP_ALLINFO,
+                         0, MAPLE_AP_RUMBLE);
+        return;
+    }
+    if (cmd == MAPLE_CMD_RESET) {
+        rumble_clear();
+        pad_sub_ok(MAPLE_AP_RUMBLE);
+        return;
+    }
+    if (cmd == MAPLE_CMD_SETCOND) {
+        if (!rumble_func_ok() || MAPLE_BUF[3] < 2) {
+            maple_reply(MAPLE_RESP_BADFUNC, 0, MAPLE_AP_RUMBLE, 0);
+            return;
+        }
+        for (i = 0; i < RUMBLE_BYTES; i++) {
+            rumble_fx[i] = MAPLE_PAYLOAD[4 + i];
+        }
+        rumble_seq++;
+        pad_sub_ok(MAPLE_AP_RUMBLE);
+        return;
+    }
+    if (cmd == MAPLE_CMD_GETCOND) {
+        if (!rumble_func_ok()) {
+            maple_reply(MAPLE_RESP_BADFUNC, 0, MAPLE_AP_RUMBLE, 0);
+            return;
+        }
+        MAPLE_BUF[0] = MAPLE_RESP_DATATRF;
+        MAPLE_BUF[1] = 0;
+        MAPLE_BUF[2] = MAPLE_AP_RUMBLE;
+        MAPLE_BUF[3] = 2;
+        MAPLE_BUF[4] = 0;
+        MAPLE_BUF[5] = 0;
+        MAPLE_BUF[6] = MAPLE_FUNC_RUMBLE;
+        MAPLE_BUF[7] = 0;
+        for (i = 0; i < RUMBLE_BYTES; i++) {
+            MAPLE_BUF[8 + i] = rumble_fx[i];
+        }
+        MAPLE_LREG = 2;
+        maple_reply_tbuf();
+        return;
+    }
+    pad_sub_ok(MAPLE_AP_RUMBLE);
+}
+
+uint8_t pad_maple(uint8_t cmd) {
+    uint8_t dest;
+
+    if (!pad_active() || !pad_exp) {
+        return 0;
+    }
+    dest = MAPLE_BUF[1];
+    if (dest == MAPLE_AP_VMU) {
+        pad_sub_ok(MAPLE_AP_VMU);
+        return 1;
+    }
+    if (dest == MAPLE_AP_RUMBLE) {
+        pad_rumble(cmd);
+        return 1;
+    }
+    return 0;
+}
+
 void ior_pad(uint8_t *payload) {
     if (payload[PAD_PAY_MODE] == PAD_MODE_OFF) {
         pad_mode = PAD_MODE_OFF;
         pad_cal_on = 0;
+        pad_exp = 0;
+        rumble_clear();
     }
     else {
         pad_mode = PAD_MODE_ON;
         pad_center();
         pad_cal_load(payload);
+        pad_exp = 0;
+        if (payload[PAD_PAY_FEAT] & PAD_FEAT_VMU) {
+            pad_exp = 1;
+        }
+        rumble_clear();
     }
     reply_buf[0] = MAPLE_RESP_IO;
     reply_buf[1] = 0;

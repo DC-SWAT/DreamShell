@@ -30,9 +30,15 @@
 #define MAPLE_STAT_HRES     0x80
 
 #define MAPLE_ADDR          0x20
+#define MAPLE_AP_VMU        0x01
+#define MAPLE_AP_RUMBLE     0x02
+#define MAPLE_FUNC_RUMBLE   0x01
+#define MAPLE_AP_EXP        (MAPLE_ADDR | MAPLE_AP_VMU | MAPLE_AP_RUMBLE)
 #define MAPLE_CMD_DEVINFO   0x01
+#define MAPLE_CMD_ALLINFO   0x02
 #define MAPLE_CMD_RESET     0x03
 #define MAPLE_CMD_GETCOND   0x09
+#define MAPLE_CMD_SETCOND   0x0E
 #define MAPLE_CMD_UPLOAD    0x80
 #define MAPLE_CMD_VERSION   0x82
 #define MAPLE_CMD_SELFTEST  0x84
@@ -41,6 +47,7 @@
 #define MAPLE_IO_PAD_ACK    0x52
 
 #define MAPLE_RESP_DEVINFO  0x05
+#define MAPLE_RESP_ALLINFO  0x06
 #define MAPLE_RESP_OK       0x07
 #define MAPLE_RESP_DATATRF  0x08
 #define MAPLE_RESP_BADFUNC  0xFE
@@ -135,7 +142,10 @@
 #define PAD_CAL_BYTES       18
 #define PAD_PAY_MODE        1
 #define PAD_PAY_CAL         2
+#define PAD_PAY_FEAT        3
+#define PAD_FEAT_VMU        0x01
 #define PAD_PAY_DATA        4
+#define RUMBLE_BYTES        4
 #define PAD_CAL_WORDS       6
 #define PAD_CAL_WHEEL_MIN   0
 #define PAD_CAL_WHEEL_MID   1
@@ -250,6 +260,8 @@ extern uint8_t jvs_mark;
 extern uint8_t jvs_saved;
 extern uint8_t active_flag;
 extern uint8_t pkt_flag;
+extern uint8_t rumble_fx[RUMBLE_BYTES];
+extern uint8_t rumble_seq;
 extern uint8_t jvs_frame[];
 extern uint8_t eeprom_buf[EEPROM_SIZE];
 extern uint8_t eeprom_wr[EEPROM_SIZE];

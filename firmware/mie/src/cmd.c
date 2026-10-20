@@ -228,6 +228,9 @@ static void cmd_io(uint8_t *payload) {
 }
 
 void maple_dispatch(uint8_t cmd) {
+    if (pad_maple(cmd)) {
+        return;
+    }
     switch (cmd) {
         case MAPLE_CMD_DEVINFO:
             pad_devinfo();

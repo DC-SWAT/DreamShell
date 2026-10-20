@@ -12,6 +12,8 @@
 .globl _jvs_saved
 .globl _active_flag
 .globl _pkt_flag
+.globl _rumble_fx
+.globl _rumble_seq
 .globl _jvs_frame
 .globl _eeprom_buf
 .globl _eeprom_wr
@@ -32,6 +34,8 @@ _jvs_mark = 0xA484
 _jvs_saved = 0xA4B0
 _active_flag = 0xA4C8
 _pkt_flag = 0xA4CE
+_rumble_fx = 0xA4D0
+_rumble_seq = 0xA4D4
 _jvs_frame = 0xA800
 _eeprom_buf = 0xB200
 _eeprom_wr = 0xB300
