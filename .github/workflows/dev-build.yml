@@ -54,6 +54,24 @@ jobs:
           echo "New commit $CURRENT_SHA (last attempt $last), building."
           echo "should_run=true" >> "$GITHUB_OUTPUT"
 
+      - name: Keep toolchain cache alive
+        if: steps.decide.outputs.should_run != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: /opt/toolchains/dc
+          key: dc-toolchain-${{ runner.os }}-
+          restore-keys: dc-toolchain-${{ runner.os }}-
+          lookup-only: true
+
+      - name: Keep kos-ports cache alive
+        if: steps.decide.outputs.should_run != 'true'
+        uses: actions/cache/restore@v5
+        with:
+          path: /usr/local/dc/kos/kos-ports
+          key: kos-ports-${{ runner.os }}-
+          restore-keys: kos-ports-${{ runner.os }}-
+          lookup-only: true
+
   build:
     name: Build and publish
     needs: gate
