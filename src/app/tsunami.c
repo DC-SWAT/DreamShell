@@ -759,6 +759,22 @@ static int parseAppTsunamiCheckBoxElement(App_t *app, mxml_node_t *node, SDL_Rec
 	return addAppTsunamiElement(app, name, (void *)checkbox, APP_TSU_DRAWABLE_CHECKBOX);
 }
 
+static void parseDialogColorAttr(mxml_node_t *node, char *attr, Color *color) {
+	char *value = FindXmlAttr(attr, node, NULL);
+
+	if(value != NULL) {
+		parseAppTsunamiColor(value, color, color);
+	}
+}
+
+static void parseDialogFloatAttr(mxml_node_t *node, char *attr, float *out) {
+	char *value = FindXmlAttr(attr, node, NULL);
+
+	if(value != NULL) {
+		*out = (float)atof(value);
+	}
+}
+
 static int parseAppTsunamiDialogElement(App_t *app, mxml_node_t *node, SDL_Rect *parent) {
 
 	Font *font;
@@ -779,6 +795,7 @@ static int parseAppTsunamiDialogElement(App_t *app, mxml_node_t *node, SDL_Rect 
 	int cancel_id;
 	Vector pos;
 	Color panel_color = {0.95f, 0.16f, 0.16f, 0.35f};
+	DialogStyle style;
 	int screen_w;
 	int screen_h;
 
@@ -801,8 +818,22 @@ static int parseAppTsunamiDialogElement(App_t *app, mxml_node_t *node, SDL_Rect 
 	parseAppTsunamiColor(FindXmlAttr("panelColor", node, "#552E7AE6"), &panel_color, &panel_color);
 	parseAppTsunamiColor(FindXmlAttr("textColor", node, FindXmlAttr("fontcolor", node, "#FFFFFFFF")), &text_color, &text_color);
 	parseAppTsunamiColor(FindXmlAttr("buttonColor", node, "#D4D41414"), &btn_color, &btn_color);
+	TSU_DialogStyleDefault(&style, &btn_color);
+	parseDialogColorAttr(node, "borderColor", &style.panel_border);
+	parseDialogColorAttr(node, "focusColor", &style.focus_bg);
+	parseDialogColorAttr(node, "idleColor", &style.idle_bg);
+	parseDialogColorAttr(node, "focusTextColor", &style.focus_text);
+	parseDialogColorAttr(node, "idleTextColor", &style.idle_text);
+	parseDialogColorAttr(node, "focusBorderColor", &style.focus_border);
+	parseDialogColorAttr(node, "idleBorderColor", &style.idle_border);
+	parseDialogFloatAttr(node, "radius", &style.panel_radius);
+	parseDialogFloatAttr(node, "borderWidth", &style.panel_border_width);
+	parseDialogFloatAttr(node, "buttonRadius", &style.button_radius);
+	parseDialogFloatAttr(node, "buttonBorderWidth", &style.button_border_width);
+	parseDialogFloatAttr(node, "buttonPadX", &style.button_pad_x);
+	parseDialogFloatAttr(node, "buttonPadY", &style.button_pad_y);
 
-	dialog = TSU_DialogCreateEx(font, (float)screen_w, (float)screen_h, (float)w, (float)h, &bg_color, &panel_color, &text_color, &btn_color, confirm_text, cancel_text, font_size);
+	dialog = TSU_DialogCreateStyled(font, (float)screen_w, (float)screen_h, (float)w, (float)h, &bg_color, &panel_color, &text_color, &btn_color, confirm_text, cancel_text, font_size, &style);
 
 	if(dialog == NULL) {
 		return 0;

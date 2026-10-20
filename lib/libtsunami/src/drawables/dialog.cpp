@@ -1,6 +1,22 @@
 #include "drawables/dialog.h"
 #include "tsudefinition.h"
 
+static const float DIALOG_COLOR_SCALE = 255.0f;
+static const float DIALOG_PANEL_RADIUS = 10.0f;
+static const float DIALOG_PANEL_BORDER_WIDTH = 2.0f;
+static const float DIALOG_PANEL_BORDER_ALPHA = 1.0f;
+static const float DIALOG_PANEL_BORDER_R = 0x70 / DIALOG_COLOR_SCALE;
+static const float DIALOG_PANEL_BORDER_G = 0xC9 / DIALOG_COLOR_SCALE;
+static const float DIALOG_PANEL_BORDER_B = 0xDB / DIALOG_COLOR_SCALE;
+static const float DIALOG_BUTTON_RADIUS = 8.0f;
+static const float DIALOG_BUTTON_BORDER_WIDTH = 2.0f;
+static const float DIALOG_BUTTON_PAD_X = 14.0f;
+static const float DIALOG_BUTTON_PAD_Y = 8.0f;
+static const float DIALOG_FOCUS_BG_ALPHA = 0.95f;
+static const float DIALOG_FOCUS_TEXT = 0.10f;
+static const float DIALOG_IDLE_TEXT = 0.62f;
+static const float DIALOG_IDLE_TEXT_ALPHA = 0.38f;
+
 static void layoutButtonBg(Rectangle *bg, Label *label, float cx, float cy, float pad_x, float pad_y, float z) {
 	float tw;
 	float th;
@@ -21,18 +37,22 @@ static void layoutButtonBg(Rectangle *bg, Label *label, float cx, float cy, floa
 }
 
 Dialog::Dialog(Font *display_font, float screen_w, float screen_h, const Color &overlay_color, const Color &text_color, const Color &btn_color)
-	: Dialog(display_font, screen_w, screen_h, screen_w, screen_h, overlay_color, overlay_color, text_color, btn_color, "Yes", "No", 14) {
+	: Dialog(display_font, screen_w, screen_h, screen_w, screen_h, overlay_color, overlay_color, text_color, btn_color, "Yes", "No", 14, nullptr) {
 }
 
-Dialog::Dialog(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, const Color &overlay_color, const Color &panel_color, const Color &text_color, const Color &btn_color, const char *confirm_text, const char *cancel_text, uint text_size) {
-	Color border_color = {1.0f, 1.0f, 1.0f, 0.35f};
-	Color focus_bg_color = {0.85f, 1.0f, 1.0f, 0.22f};
-	Color idle_bg_color = {1.0f, 1.0f, 1.0f, 0.06f};
+Dialog::Dialog(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, const Color &overlay_color, const Color &panel_color, const Color &text_color, const Color &btn_color, const char *confirm_text, const char *cancel_text, uint text_size, const DialogStyle *style) {
+	DialogStyle fallback;
 	float confirm_cx;
 	float cancel_cx;
 	float msg_y;
 	float btn_y;
 	Vector pos;
+	Color overlay_border = {0.0f, 0.0f, 0.0f, 0.0f};
+
+	if(style == nullptr) {
+		TSU_DialogStyleDefault(&fallback, &btn_color);
+		style = &fallback;
+	}
 
 	setObjectType(ObjectTypeEnum::DIALOG_TYPE);
 	m_screen_w = screen_w;
@@ -44,10 +64,7 @@ Dialog::Dialog(Font *display_font, float screen_w, float screen_h, float box_w, 
 	m_focus_btn = 0;
 	m_bg_z = 200.0f;
 	m_msg_z = 201.5f;
-	m_text_color = text_color;
-	m_btn_color = btn_color;
-	m_btn_dim_color = Color(btn_color.a * 0.45f, btn_color.r * 0.55f, btn_color.g * 0.55f, btn_color.b * 0.55f);
-	m_btn_focus_color = Color(1.0f, btn_color.r, btn_color.g, btn_color.b);
+	m_style = *style;
 	m_confirm_text = confirm_text ? confirm_text : "Yes";
 	m_cancel_text = cancel_text ? cancel_text : "No";
 
@@ -66,10 +83,10 @@ Dialog::Dialog(Font *display_font, float screen_w, float screen_h, float box_w, 
 	confirm_cx = m_panel_x + m_box_w * 0.32f;
 	cancel_cx = m_panel_x + m_box_w * 0.68f;
 
-	m_overlay = new Rectangle(PVR_LIST_TR_POLY, 0.0f, m_screen_h, m_screen_w, m_screen_h, overlay_color, m_bg_z, 0.0f, border_color, 0.0f);
-	m_panel = new Rectangle(PVR_LIST_TR_POLY, m_panel_x, m_panel_y, m_box_w, m_box_h, panel_color, m_bg_z + 0.05f, 2.0f, border_color, 10.0f);
-	m_confirm_bg = new Rectangle(PVR_LIST_TR_POLY, 0.0f, 0.0f, 64.0f, 24.0f, focus_bg_color, m_msg_z - 0.2f, 2.0f, border_color, 8.0f);
-	m_cancel_bg = new Rectangle(PVR_LIST_TR_POLY, 0.0f, 0.0f, 64.0f, 24.0f, idle_bg_color, m_msg_z - 0.2f, 2.0f, border_color, 8.0f);
+	m_overlay = new Rectangle(PVR_LIST_TR_POLY, 0.0f, m_screen_h, m_screen_w, m_screen_h, overlay_color, m_bg_z, 0.0f, overlay_border, 0.0f);
+	m_panel = new Rectangle(PVR_LIST_TR_POLY, m_panel_x, m_panel_y, m_box_w, m_box_h, panel_color, m_bg_z + 0.05f, m_style.panel_border_width, m_style.panel_border, m_style.panel_radius);
+	m_confirm_bg = new Rectangle(PVR_LIST_TR_POLY, 0.0f, 0.0f, 64.0f, 24.0f, m_style.focus_bg, m_msg_z - 0.2f, m_style.button_border_width, m_style.focus_border, m_style.button_radius);
+	m_cancel_bg = new Rectangle(PVR_LIST_TR_POLY, 0.0f, 0.0f, 64.0f, 24.0f, m_style.idle_bg, m_msg_z - 0.2f, m_style.button_border_width, m_style.idle_border, m_style.button_radius);
 	m_msg = new Label(display_font, "", text_size, true, false, false);
 	m_confirm = new Label(display_font, m_confirm_text, text_size, true, false, false);
 	m_cancel = new Label(display_font, m_cancel_text, text_size, true, false, false);
@@ -180,8 +197,6 @@ void Dialog::updateLayout() {
 	float cancel_cx;
 	float msg_y;
 	float btn_y;
-	const float btn_pad_x = 14.0f;
-	const float btn_pad_y = 8.0f;
 
 	m_panel_x = (m_screen_w - m_box_w) * 0.5f;
 	m_panel_y = (m_screen_h - m_box_h) * 0.5f + m_box_h;
@@ -217,40 +232,32 @@ void Dialog::updateLayout() {
 	pos.y = btn_y;
 	m_cancel->setTranslate(pos);
 
-	layoutButtonBg(m_confirm_bg, m_confirm, confirm_cx, btn_y, btn_pad_x, btn_pad_y, m_msg_z - 0.2f);
-	layoutButtonBg(m_cancel_bg, m_cancel, cancel_cx, btn_y, btn_pad_x, btn_pad_y, m_msg_z - 0.2f);
+	layoutButtonBg(m_confirm_bg, m_confirm, confirm_cx, btn_y, m_style.button_pad_x, m_style.button_pad_y, m_msg_z - 0.2f);
+	layoutButtonBg(m_cancel_bg, m_cancel, cancel_cx, btn_y, m_style.button_pad_x, m_style.button_pad_y, m_msg_z - 0.2f);
 	updateButtonFocus();
 }
 
 void Dialog::updateButtonFocus() {
-	Color focus_bg_color = Color(0.95f, m_btn_color.r, m_btn_color.g, m_btn_color.b);
-	Color idle_bg_color = {0.0f, 0.0f, 0.0f, 0.0f};
-	Color focus_border_color = {1.0f, 1.0f, 1.0f, 1.0f};
-	Color idle_border_color = {0.0f, 0.0f, 0.0f, 0.0f};
-	Color focus_text_color = {1.0f, 0.10f, 0.10f, 0.10f};
-	Color idle_text_color = {0.38f, 0.62f, 0.62f, 0.62f};
-
 	if(m_focus_btn == 0) {
-		m_confirm->setTint(focus_text_color);
-		m_cancel->setTint(idle_text_color);
-		m_confirm_bg->setTint(focus_bg_color);
-		m_cancel_bg->setTint(idle_bg_color);
-		m_confirm_bg->setBorderColor(focus_border_color);
-		m_cancel_bg->setBorderColor(idle_border_color);
+		m_confirm->setTint(m_style.focus_text);
+		m_cancel->setTint(m_style.idle_text);
+		m_confirm_bg->setTint(m_style.focus_bg);
+		m_cancel_bg->setTint(m_style.idle_bg);
+		m_confirm_bg->setBorderColor(m_style.focus_border);
+		m_cancel_bg->setBorderColor(m_style.idle_border);
 	}
 	else {
-		m_confirm->setTint(idle_text_color);
-		m_cancel->setTint(focus_text_color);
-		m_confirm_bg->setTint(idle_bg_color);
-		m_cancel_bg->setTint(focus_bg_color);
-		m_confirm_bg->setBorderColor(idle_border_color);
-		m_cancel_bg->setBorderColor(focus_border_color);
+		m_confirm->setTint(m_style.idle_text);
+		m_cancel->setTint(m_style.focus_text);
+		m_confirm_bg->setTint(m_style.idle_bg);
+		m_cancel_bg->setTint(m_style.focus_bg);
+		m_confirm_bg->setBorderColor(m_style.idle_border);
+		m_cancel_bg->setBorderColor(m_style.focus_border);
 	}
 }
 
 void Dialog::setVisible(bool visible) {
 	Color transparent_border = {0.0f, 0.0f, 0.0f, 0.0f};
-	Color panel_border = {1.0f, 1.0f, 1.0f, 0.35f};
 
 	m_visible = visible;
 	setAlpha(visible ? 1.0f : 0.0f);
@@ -263,7 +270,7 @@ void Dialog::setVisible(bool visible) {
 	m_cancel_bg->setAlpha(visible ? 1.0f : 0.0f);
 
 	if(visible) {
-		m_panel->setBorderColor(panel_border);
+		m_panel->setBorderColor(m_style.panel_border);
 		updateButtonFocus();
 	}
 	else {
@@ -397,6 +404,54 @@ void Dialog::handleClick(int mx, int my) {
 
 extern "C"
 {
+	void TSU_DialogStyleDefault(DialogStyle *style, const Color *button_color)
+	{
+		Color btn = {1.0f, 1.0f, 1.0f, 1.0f};
+
+		if(style == nullptr) {
+			return;
+		}
+
+		if(button_color != nullptr) {
+			btn = *button_color;
+		}
+
+		style->panel_border.a = DIALOG_PANEL_BORDER_ALPHA;
+		style->panel_border.r = DIALOG_PANEL_BORDER_R;
+		style->panel_border.g = DIALOG_PANEL_BORDER_G;
+		style->panel_border.b = DIALOG_PANEL_BORDER_B;
+		style->focus_bg.a = DIALOG_FOCUS_BG_ALPHA;
+		style->focus_bg.r = btn.r;
+		style->focus_bg.g = btn.g;
+		style->focus_bg.b = btn.b;
+		style->idle_bg.a = 0.0f;
+		style->idle_bg.r = 0.0f;
+		style->idle_bg.g = 0.0f;
+		style->idle_bg.b = 0.0f;
+		style->focus_text.a = 1.0f;
+		style->focus_text.r = DIALOG_FOCUS_TEXT;
+		style->focus_text.g = DIALOG_FOCUS_TEXT;
+		style->focus_text.b = DIALOG_FOCUS_TEXT;
+		style->idle_text.a = DIALOG_IDLE_TEXT_ALPHA;
+		style->idle_text.r = DIALOG_IDLE_TEXT;
+		style->idle_text.g = DIALOG_IDLE_TEXT;
+		style->idle_text.b = DIALOG_IDLE_TEXT;
+		style->focus_border.a = 1.0f;
+		style->focus_border.r = 1.0f;
+		style->focus_border.g = 1.0f;
+		style->focus_border.b = 1.0f;
+		style->idle_border.a = 0.0f;
+		style->idle_border.r = 0.0f;
+		style->idle_border.g = 0.0f;
+		style->idle_border.b = 0.0f;
+		style->panel_radius = DIALOG_PANEL_RADIUS;
+		style->panel_border_width = DIALOG_PANEL_BORDER_WIDTH;
+		style->button_radius = DIALOG_BUTTON_RADIUS;
+		style->button_border_width = DIALOG_BUTTON_BORDER_WIDTH;
+		style->button_pad_x = DIALOG_BUTTON_PAD_X;
+		style->button_pad_y = DIALOG_BUTTON_PAD_Y;
+	}
+
 	Dialog* TSU_DialogCreate(Font *display_font, float screen_w, float screen_h, Color *bg_color, Color *text_color, Color *btn_color)
 	{
 		if (display_font == nullptr || bg_color == nullptr || text_color == nullptr || btn_color == nullptr) {
@@ -418,7 +473,22 @@ extern "C"
 			panel_color = &default_panel;
 		}
 
-		return new Dialog(display_font, screen_w, screen_h, box_w, box_h, *overlay_color, *panel_color, *text_color, *btn_color, confirm_text, cancel_text, text_size);
+		return new Dialog(display_font, screen_w, screen_h, box_w, box_h, *overlay_color, *panel_color, *text_color, *btn_color, confirm_text, cancel_text, text_size, nullptr);
+	}
+
+	Dialog* TSU_DialogCreateStyled(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, Color *overlay_color, Color *panel_color, Color *text_color, Color *btn_color, const char *confirm_text, const char *cancel_text, uint text_size, const DialogStyle *style)
+	{
+		Color default_panel = {0.95f, 0.16f, 0.16f, 0.35f};
+
+		if (display_font == nullptr || overlay_color == nullptr || text_color == nullptr || btn_color == nullptr) {
+			return nullptr;
+		}
+
+		if(panel_color == nullptr) {
+			panel_color = &default_panel;
+		}
+
+		return new Dialog(display_font, screen_w, screen_h, box_w, box_h, *overlay_color, *panel_color, *text_color, *btn_color, confirm_text, cancel_text, text_size, style);
 	}
 
 	void TSU_DialogDestroy(Dialog **dialog_ptr)

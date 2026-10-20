@@ -1377,6 +1377,8 @@ TSU_CheckBoxGetWindowState
 TSU_CheckBoxSetWindowState
 TSU_DialogCreate
 TSU_DialogCreateEx
+TSU_DialogCreateStyled
+TSU_DialogStyleDefault
 TSU_DialogDestroy
 TSU_DialogSetConfirmText
 TSU_DialogSetCancelText

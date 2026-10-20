@@ -15,6 +15,22 @@
 #include "label.h"
 #include "rectangle.h"
 
+typedef struct DialogStyle {
+	Color panel_border;
+	Color focus_bg;
+	Color idle_bg;
+	Color focus_text;
+	Color idle_text;
+	Color focus_border;
+	Color idle_border;
+	float panel_radius;
+	float panel_border_width;
+	float button_radius;
+	float button_border_width;
+	float button_pad_x;
+	float button_pad_y;
+} DialogStyle;
+
 #ifdef __cplusplus
 
 #include <string>
@@ -35,10 +51,7 @@ private:
 	int m_focus_btn;
 	std::string m_confirm_text;
 	std::string m_cancel_text;
-	Color m_text_color;
-	Color m_btn_color;
-	Color m_btn_dim_color;
-	Color m_btn_focus_color;
+	DialogStyle m_style;
 	Rectangle *m_overlay;
 	Rectangle *m_panel;
 	Rectangle *m_confirm_bg;
@@ -53,7 +66,7 @@ private:
 
 public:
 	Dialog(Font *display_font, float screen_w, float screen_h, const Color &overlay_color, const Color &text_color, const Color &btn_color);
-	Dialog(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, const Color &overlay_color, const Color &panel_color, const Color &text_color, const Color &btn_color, const char *confirm_text, const char *cancel_text, uint text_size);
+	Dialog(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, const Color &overlay_color, const Color &panel_color, const Color &text_color, const Color &btn_color, const char *confirm_text, const char *cancel_text, uint text_size, const DialogStyle *style);
 	virtual ~Dialog();
 
 	void show(const char *text);
@@ -81,8 +94,10 @@ extern "C"
 {
 #endif
 
+	void TSU_DialogStyleDefault(DialogStyle *style, const Color *button_color);
 	Dialog* TSU_DialogCreate(Font *display_font, float screen_w, float screen_h, Color *bg_color, Color *text_color, Color *btn_color);
 	Dialog* TSU_DialogCreateEx(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, Color *overlay_color, Color *panel_color, Color *text_color, Color *btn_color, const char *confirm_text, const char *cancel_text, uint text_size);
+	Dialog* TSU_DialogCreateStyled(Font *display_font, float screen_w, float screen_h, float box_w, float box_h, Color *overlay_color, Color *panel_color, Color *text_color, Color *btn_color, const char *confirm_text, const char *cancel_text, uint text_size, const DialogStyle *style);
 	void TSU_DialogDestroy(Dialog **dialog_ptr);
 	void TSU_DialogSetConfirmText(Dialog *dialog_ptr, const char *text);
 	void TSU_DialogSetCancelText(Dialog *dialog_ptr, const char *text);
