@@ -66,6 +66,8 @@ static plx_texture_t *plx_screen_txr;
 static plx_texture_t *plx_cursor_txr;
 static int screen_filter = PVR_FILTER_NEAREST;
 
+static volatile int virt_keyboard_shown;
+
 static float sdl_dc_u1 = 0.3f;
 static float sdl_dc_u2 = 0.3f;
 static float sdl_dc_v1 = 0.9f;
@@ -569,6 +571,14 @@ static void DrawFadeText(float z) {
 }
 
 
+void SetVirtKeyboardShown(int shown) {
+	virt_keyboard_shown = shown ? 1 : 0;
+}
+
+int VirtKeyboardShown(void) {
+	return virt_keyboard_shown;
+}
+
 void SDL_DS_Blit_Textured() {
 
 	DrawFadeText(12.0f);
@@ -586,7 +596,7 @@ void SDL_DS_Blit_Textured() {
 }
 
 void SDL_DS_Blit_Cursor() {
-	if (!ConsoleIsVisible() && plx_cursor_txr && screen_opacity > 0.0f) {
+	if (!ConsoleIsVisible() && !virt_keyboard_shown && plx_cursor_txr && screen_opacity > 0.0f) {
 		int mouse_cursor_x = 0;
 		int mouse_cursor_y = 0;
 		uint32 color = PVR_PACK_COLOR(screen_opacity, 1.0f, 1.0f, 1.0f);
@@ -658,6 +668,7 @@ static void *VideoThread(void *ptr) {
 		else {
 			ProcessVideoEventsRender();
 			ScreenFadeStep();
+			ProcessVideoEventsRenderPost();
 
 			if(screen_opacity < 1.0f) {
 				pvr_poly_cxt_t cxt;
@@ -738,19 +749,7 @@ void SetScreenMode(int w, int h, float x, float y, float z) {
 	sdl_dc_z = z;
 	
 	SDL_DS_SetWindow(w, h);
-
-	/* FIXME: resize console
-	ConsoleInformation *console = GetConsole();
-	
-	if(console != NULL && (console->ConsoleSurface->w != w || console->ConsoleSurface->h != h)) {
-		SDL_Rect rect;
-		rect.w = w;
-		rect.h = h;
-		rect.x = 0;
-		rect.y = 0;
-		CON_Resize(console, rect);
-	}
-	*/
+	ConsoleResize(0, 0, w, h);
 }
 
 void ShowLogo() {

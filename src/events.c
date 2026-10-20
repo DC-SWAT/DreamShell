@@ -11,6 +11,7 @@
 #include "video.h"
 #include "events.h"
 #include "console.h"
+#include "gui.h"
 
 static Item_list_t *events;
 
@@ -138,6 +139,25 @@ void ProcessInputEvents(SDL_Event *event) {
 
 	Event_t *e;
 	Item_t *c, *n;
+	int block_app;
+
+	block_app = ConsoleIsVisible();
+	if(!block_app && VirtKeyboardShown()) {
+		switch(event->type) {
+			case SDL_JOYAXISMOTION:
+			case SDL_JOYBALLMOTION:
+			case SDL_JOYBUTTONDOWN:
+			case SDL_JOYBUTTONUP:
+			case SDL_JOYHATMOTION:
+			case SDL_MOUSEMOTION:
+			case SDL_MOUSEBUTTONDOWN:
+			case SDL_MOUSEBUTTONUP:
+				block_app = 1;
+				break;
+			default:
+				break;
+		}
+	}
 
 	c = listGetItemFirst(events);
 
@@ -145,10 +165,17 @@ void ProcessInputEvents(SDL_Event *event) {
 		n = listGetItemNext(c);
 		e = (Event_t *)c->data;
 
-		if(e->type == EVENT_TYPE_INPUT && e->active) {
-			e->event(e, event, EVENT_ACTION_UPDATE);
+		if(e->type != EVENT_TYPE_INPUT || !e->active) {
+			c = n;
+			continue;
 		}
 
+		if(e->prio != EVENT_PRIO_OVERLAY && block_app) {
+			c = n;
+			continue;
+		}
+
+		e->event(e, event, EVENT_ACTION_UPDATE);
 		c = n;
 	}
 }

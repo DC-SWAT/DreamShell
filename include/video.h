@@ -39,6 +39,8 @@ void SetScreen(SDL_Surface *new_screen);
 int GetScreenWidth();
 int GetScreenHeight();
 void SDL_DS_Blit_Cursor();
+void SetVirtKeyboardShown(int shown);
+int VirtKeyboardShown(void);
 
 /* Always RGB565 */
 int GetVideoMode();

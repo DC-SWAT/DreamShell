@@ -247,6 +247,8 @@ SetScreen
 GetScreenWidth
 GetScreenHeight
 SDL_DS_Blit_Cursor
+SetVirtKeyboardShown
+VirtKeyboardShown
 SDL_DS_SetWindow
 SetScreenMode
 SDL_DS_AllocScreenTexture
