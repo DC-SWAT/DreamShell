@@ -25,7 +25,6 @@ struct App;
 int VirtKeyboardInit();
 void VirtKeyboardShutdown();
 int VirtKeyboardIsVisible();
-void VirtKeyboardReDraw();
 void VirtKeyboardShow();
 void VirtKeyboardHide();
 void VirtKeyboardToggle();

@@ -8,5 +8,4 @@ VirtKeyboardHide
 VirtKeyboardToggle
 #VirtKeyboardGetSurface
 #VirtKeyboardSetSurface
-VirtKeyboardReDraw
 VirtKeyboardIsVisible

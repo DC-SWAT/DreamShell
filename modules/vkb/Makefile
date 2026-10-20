@@ -10,8 +10,8 @@ DBG_LIBS = -lds
 EXPORTS_FILE = exports.txt
 
 VER_MAJOR = 1
-VER_MINOR = 3
-VER_MICRO = 1
+VER_MINOR = 4
+VER_MICRO = 0
 
 all: rm-elf
 

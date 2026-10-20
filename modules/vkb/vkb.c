@@ -1,12 +1,13 @@
 /** 
 * \file    vkb.c
 * \brief   DreamShell virtual keyboard
-* \date    2007-2023
+* \date    2007-2026
 * \author  SWAT www.dc-swat.ru
 */
 
 #include "ds.h"
-#include "SDL/SDL_rotozoom.h"
+
+#include <math.h>
 
 #define VIRT_KB_SURFACE_COUNT      3
 #define VIRT_KB_SURFACE_KEYS       0
@@ -29,31 +30,29 @@ typedef struct virt_kb_syms {
 } virt_kb_syms_t;
 
 
-typedef struct virt_kb_surface {
-	
-	SDL_Surface *s;
-	float zoom;
-	
-} virt_kb_surface_t;
-
-
-
 typedef struct virt_kb {
 
 	int cur_surf;
 	int visible;
-	int redraw;
 
 	int row;
 	int col;
+	float zoom;
 
 	SDL_Event event;
 	uint8_t last_joy_state;
 	uint8_t cur_joy_state;
 
 	uint32 clr;
+	float fade;
+	float fade_from;
+	int fade_target;
+	int fade_run;
+	int mouse_was;
+	uint64 fade_start;
+	uint32 fade_span;
 
-	virt_kb_surface_t surface[VIRT_KB_SURFACE_COUNT];
+	plx_texture_t *tex[VIRT_KB_SURFACE_COUNT];
 
 	Event_t *input;
 	Event_t *video;
@@ -65,9 +64,26 @@ static virt_kb_t vkb;
 
 static void VirtKeyboardEvent(void *da_event, void *param, int action);
 static void VirtKeyboardDraw(void *da_event, void *param, int action);
-static void VirtKeyboardUpdateWorkPlace();
 
 #define VKB_DRAW_PADDING 10
+#define VKB_GRID 3
+#define VKB_ZOOM_MIN 1.0f
+#define VKB_ZOOM_STEP 0.2f
+#define VKB_ZOOM_MAX 2.0f
+#define VKB_ZOOM_EPSILON (VKB_ZOOM_STEP * 0.5f)
+#define VKB_TRIG_RIGHT 2
+#define VKB_TRIG_LEFT 4
+#define VKB_TRIG_BOTH (VKB_TRIG_RIGHT | VKB_TRIG_LEFT)
+#define VKB_Z 460.0f
+#define VKB_Z_BOX 461.0f
+#define VKB_Z_FRAME 462.0f
+#define VKB_FRAME_PX 1.0f
+#define VKB_FRAME_ALPHA 0.4f
+#define VKB_FADE_MS 120
+#define VKB_BLINK_MS 1000
+#define VKB_BLINK_PI 3.14159265f
+#define VKB_CURSOR_COLOR 0x0000007F
+#define VKB_CURSOR_PRESS_COLOR 0xFD241F7F
 
 static virt_kb_syms_t VirtKeyboardKeySyms[VIRT_KB_SURFACE_COUNT] = 
 {
@@ -113,61 +129,59 @@ static virt_kb_syms_t VirtKeyboardKeySyms[VIRT_KB_SURFACE_COUNT] =
 
 
 
-static int VirtKeyboardLoading(int reset) {
+static const char *const vkb_page_name[VIRT_KB_SURFACE_COUNT] = {
+	"syms.png",
+	"cap_syms.png",
+	"nums.png"
+};
 
+static void vkb_free_pages(void) {
+	int i;
+
+	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
+		if(vkb.tex[i]) {
+			plx_txr_destroy(vkb.tex[i]);
+			vkb.tex[i] = NULL;
+		}
+	}
+}
+
+static int vkb_load_page(int index) {
 	char fn[NAME_MAX];
-	int i = 0;
+	plx_texture_t *txr;
+
+	snprintf(fn, sizeof(fn), "%s/gui/keyboard/%s", getenv("PATH"), vkb_page_name[index]);
+	txr = plx_txr_load(fn, 0, 0);
+	if(!txr) {
+		ds_printf("DS_ERROR: Can't load %s\n", fn);
+		return -1;
+	}
+
+	txr->cxt_trans.gen.culling = PVR_CULLING_NONE;
+	plx_txr_setfilter(txr, PVR_FILTER_BILINEAR);
+	vkb.tex[index] = txr;
+	return 0;
+}
+
+static int VirtKeyboardLoading(int reset) {
+	int i;
+
 	LockVideo();
 
 	if(reset) {
+		vkb_free_pages();
+	}
 
-		for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
-			if(vkb.surface[i].s != NULL) {
-				SDL_FreeSurface(vkb.surface[i].s);
-			}
+	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
+		if(vkb_load_page(i) < 0) {
+			vkb_free_pages();
+			UnlockVideo();
+			return -1;
 		}
 	}
 
-	sprintf(fn, "%s/gui/keyboard/syms.bmp", getenv("PATH"));
-	vkb.surface[VIRT_KB_SURFACE_KEYS].s = IMG_Load(fn);
-
-	if(vkb.surface[VIRT_KB_SURFACE_KEYS].s == NULL) {
-		ds_printf("DS_ERROR: Can't load %s\n", fn);
-		goto error;
-	}
-
-	vkb.surface[VIRT_KB_SURFACE_KEYS].zoom = 1.0f;
-
-	sprintf(fn, "%s/gui/keyboard/cap_syms.bmp", getenv("PATH"));
-	vkb.surface[VIRT_KB_SURFACE_KEYS_CAPS].s = IMG_Load(fn);
-
-	if(vkb.surface[VIRT_KB_SURFACE_KEYS_CAPS].s == NULL) {
-		ds_printf("DS_ERROR: Can't load %s\n", fn);
-		goto error;
-	}
-
-	vkb.surface[VIRT_KB_SURFACE_KEYS_CAPS].zoom = 1.0f;
-
-	sprintf(fn, "%s/gui/keyboard/nums.bmp", getenv("PATH"));
-	vkb.surface[VIRT_KB_SURFACE_NUMS].s = IMG_Load(fn);
-
-	if(vkb.surface[VIRT_KB_SURFACE_NUMS].s == NULL) {
-		ds_printf("DS_ERROR: Can't load %s\n", fn);
-		goto error;
-	}
-
-	vkb.surface[VIRT_KB_SURFACE_NUMS].zoom = 1.0f;
 	UnlockVideo();
 	return 0;
-
-error:
-	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
-		if(vkb.surface[i].s != NULL) {
-			SDL_FreeSurface(vkb.surface[i].s);
-		}
-	}
-	UnlockVideo();
-	return -1;
 }
 
 
@@ -185,10 +199,10 @@ int VirtKeyboardInit() {
 
 	vkb.col = 1;
 	vkb.row = 1;
+	vkb.zoom = VKB_ZOOM_MIN;
 	vkb.cur_surf = VIRT_KB_SURFACE_KEYS;
 	vkb.visible = 0;
-	vkb.redraw = 0;
-	vkb.clr = 0x0000007F;
+	vkb.clr = VKB_CURSOR_COLOR;
 	
 	vkb.input = AddEvent(
 		"VirtKeyboardInput",
@@ -218,14 +232,16 @@ int VirtKeyboardInit() {
 	
 	vkb.event.type = SDL_KEYDOWN;
 	vkb.event.key.type = SDL_KEYDOWN;
+	SetEventActive(vkb.video, 0);
 	return 0;
 }
 
 
 
 void VirtKeyboardShutdown() {
-	int i;
-	
+	SetVirtKeyboardShown(0);
+	vkb_free_pages();
+
 	if (!inited) {
 		return;
 	}
@@ -239,39 +255,103 @@ void VirtKeyboardShutdown() {
 		
 	if(vkb.video)
 		RemoveEvent(vkb.video);
-	
-	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
-		if(vkb.surface[i].s != NULL) {
-			SDL_FreeSurface(vkb.surface[i].s);
-		}
-	}
 }
 
 
+static float vkb_ease(float t) {
+	float inv;
+
+	if(t <= 0.0f) {
+		return 0.0f;
+	}
+	if(t >= 1.0f) {
+		return 1.0f;
+	}
+	inv = 1.0f - t;
+	return 1.0f - inv * inv * inv;
+}
+
+static void vkb_fade_begin(int show) {
+	float travel;
+
+	vkb.fade_from = vkb.fade;
+	vkb.fade_target = show;
+	travel = show ? (1.0f - vkb.fade_from) : vkb.fade_from;
+	if(travel < 0.0f) {
+		travel = 0.0f;
+	}
+	vkb.fade_span = (uint32)((float)VKB_FADE_MS * travel + 0.5f);
+	if(vkb.fade_span < 1) {
+		vkb.fade_span = 1;
+	}
+	vkb.fade_start = timer_ms_gettime64();
+	vkb.fade_run = 1;
+}
+
+static int vkb_fade_step(void) {
+	float t;
+	float eased;
+	uint64 now;
+
+	if(!vkb.fade_run) {
+		return 0;
+	}
+
+	now = timer_ms_gettime64();
+	if(now <= vkb.fade_start) {
+		t = 0.0f;
+	}
+	else {
+		t = (float)(now - vkb.fade_start) / (float)vkb.fade_span;
+	}
+	eased = vkb_ease(t);
+	if(vkb.fade_target) {
+		vkb.fade = vkb.fade_from + (1.0f - vkb.fade_from) * eased;
+	}
+	else {
+		vkb.fade = vkb.fade_from * (1.0f - eased);
+	}
+	if(t < 1.0f) {
+		return 0;
+	}
+
+	vkb.fade_run = 0;
+	if(vkb.fade_target) {
+		vkb.fade = 1.0f;
+		return 0;
+	}
+	vkb.fade = 0.0f;
+	vkb.visible = 0;
+	SetVirtKeyboardShown(0);
+	return 1;
+}
+
 void VirtKeyboardShow() {
-	
-    if(vkb.surface[0].s == NULL) {
-        if(VirtKeyboardLoading(0) < 0) {
-            return;
-        }
-    }
-	
-    vkb.visible = 1;
-    vkb.redraw = 1;
-    SDL_DC_EmulateMouse(SDL_FALSE);
-    SetEventActive(vkb.video, 1);
+	if(vkb.tex[0] == NULL) {
+		if(VirtKeyboardLoading(0) < 0) {
+			return;
+		}
+	}
+	if(vkb.visible && !vkb.fade_run && vkb.fade >= 1.0f) {
+		return;
+	}
+
+	if(!vkb.visible) {
+		vkb.mouse_was = SDL_DC_MouseEmulated();
+	}
+	vkb_fade_begin(1);
+	vkb.visible = 1;
+	SetVirtKeyboardShown(1);
+	SDL_DC_EmulateMouse(SDL_FALSE);
+	SetEventActive(vkb.video, 1);
 }
 
 
 void VirtKeyboardHide() {
-    vkb.visible = 0;
-    vkb.redraw = 0;
-    SetEventActive(vkb.video, 0);
-    VirtKeyboardUpdateWorkPlace();
-
-    if(!ConsoleIsVisible()) {
-        SDL_DC_EmulateMouse(SDL_TRUE);
-    }
+	if(!vkb.visible || (vkb.fade_run && !vkb.fade_target)) {
+		return;
+	}
+	vkb_fade_begin(0);
 }
 
 
@@ -281,60 +361,20 @@ int VirtKeyboardIsVisible() {
 
 
 void VirtKeyboardToggle() {
-	if(!vkb.visible)
-		VirtKeyboardShow();
-	else 
+	if(vkb.visible && (vkb.fade_target || !vkb.fade_run)) {
 		VirtKeyboardHide();
-}
-
-
-static virt_kb_surface_t *VirtKeyboardGetSurface() {
-	return &vkb.surface[vkb.cur_surf];
-}
-
-
-static void VirtKeyboardUpdateWorkPlace() {
-
-	VideoEventUpdate_t area;
-	virt_kb_surface_t *surf = VirtKeyboardGetSurface();
-	SDL_Surface *DScreen = GetScreen();
-
-	area.x = DScreen->w - surf->s->w - VKB_DRAW_PADDING;
-	area.y = VKB_DRAW_PADDING;
-	area.w = surf->s->w;
-	area.h = surf->s->h;
-
-	ProcessVideoEventsUpdate(&area);
-}
-
-
-static void VirtKeyboardResize() {
-	int i;
-
-	for(i = 0; i < VIRT_KB_SURFACE_COUNT; i++) {
-		if(vkb.surface[i].s != NULL) {
-
-			if(vkb.surface[i].zoom <= 1.8f) {
-				vkb.surface[i].zoom += 0.2f;
-			} else {
-				VirtKeyboardLoading(1);
-				VirtKeyboardUpdateWorkPlace();
-				VirtKeyboardReDraw();
-				return;
-			}
-
-			SDL_Surface *s = zoomSurface(vkb.surface[i].s, 1.2f, 1.2f, 1);
-
-			if(s == NULL) {
-				ds_printf("DS_ERROR: Virtual keyboard zoom error\n");
-			} else {
-				SDL_FreeSurface(vkb.surface[i].s);
-				vkb.surface[i].s = s;
-			}
-		}
 	}
+	else {
+		VirtKeyboardShow();
+	}
+}
 
-	VirtKeyboardReDraw();
+
+static void VirtKeyboardResize(void) {
+	vkb.zoom += VKB_ZOOM_STEP;
+	if(vkb.zoom > VKB_ZOOM_MAX + VKB_ZOOM_EPSILON) {
+		vkb.zoom = VKB_ZOOM_MIN;
+	}
 }
 
 
@@ -342,66 +382,153 @@ static void VirtKeyboardSetSurface(int index) {
 	vkb.cur_surf = index;
 }
 
-void VirtKeyboardReDraw() {
-	if(vkb.visible) {
-		vkb.redraw = 1;
+static void vkb_frame(float x, float y, float w, float h, uint32 color) {
+	float t = VKB_FRAME_PX;
+
+	if(t > w * 0.5f) {
+		t = w * 0.5f;
 	}
+	if(t > h * 0.5f) {
+		t = h * 0.5f;
+	}
+
+	plx_vert_ifp(PLX_VERT, x, y, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + w, y, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x, y + t, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT_EOS, x + w, y + t, VKB_Z_FRAME, color, 0.0f, 0.0f);
+
+	plx_vert_ifp(PLX_VERT, x, y + h - t, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + w, y + h - t, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x, y + h, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT_EOS, x + w, y + h, VKB_Z_FRAME, color, 0.0f, 0.0f);
+
+	plx_vert_ifp(PLX_VERT, x, y, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + t, y, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x, y + h, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT_EOS, x + t, y + h, VKB_Z_FRAME, color, 0.0f, 0.0f);
+
+	plx_vert_ifp(PLX_VERT, x + w - t, y, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + w, y, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + w - t, y + h, VKB_Z_FRAME, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT_EOS, x + w, y + h, VKB_Z_FRAME, color, 0.0f, 0.0f);
 }
 
-static void VirtKeyboardBlit() {
+static void VirtKeyboardDrawHw(void) {
+	pvr_poly_cxt_t cxt;
+	pvr_poly_hdr_t hdr;
+	int cx = 0;
+	int cy = 0;
+	int cw = GetScreenWidth();
+	int ch = GetScreenHeight();
+	float zoom;
+	float draw_w;
+	float draw_h;
+	float cell_w;
+	float cell_h;
+	float x;
+	float y;
+	float u;
+	float v;
+	float box_x;
+	float box_y;
+	uint32 color;
+	uint8 r;
+	uint8 g;
+	uint8 b;
+	uint8 a;
+	plx_texture_t *txr;
 
-	ConsoleInformation *DSConsole = GetConsole();
-	SDL_Surface *DScreen = GetScreen();
-
-	SDL_Surface *dst = ConsoleIsVisible() ? DSConsole->ConsoleSurface : DScreen;
-	virt_kb_surface_t *surf = VirtKeyboardGetSurface();
-	
-	SDL_Rect dest;
-	dest.x = dst->w - surf->s->w - VKB_DRAW_PADDING;
-	dest.y = VKB_DRAW_PADDING;
-	
-	int box_w = (surf->s->h / 3) - 1;
-	int box_h = (surf->s->w / 3) - 1;
-	
-	if(surf->zoom > 1.0f) {
-		box_w += surf->zoom;
-		box_h += surf->zoom;
+	txr = vkb.tex[vkb.cur_surf];
+	if(!txr || txr->w < 1 || txr->h < 1) {
+		return;
 	}
-	
-	//SDL_FillRect(scr, 0, SDL_MapRGBA(scr->format, 250, 250, 250, 0));
-	SDL_BlitSurface(surf->s, NULL, dst, &dest); 
 
-	boxRGBA(dst, dest.x + (box_w * vkb.col) + vkb.col, 
-				dest.y + (box_h * vkb.row) + vkb.row, 
-				dest.x + (box_w * vkb.col) + box_w, 
-				dest.y + (box_h * vkb.row) + box_h,
-				(vkb.clr >> 24) & 0xff, 
-				(vkb.clr >> 16) & 0xff, 
-				(vkb.clr >> 8) & 0xff, 
-				(vkb.clr >> 0) & 0xff);
+	zoom = vkb.zoom;
+	if(zoom < VKB_ZOOM_MIN) {
+		zoom = VKB_ZOOM_MIN;
+	}
 
-	vkb.redraw = 0;
-	
-	if(ConsoleIsVisible())
-		// FIXME: WasUnicode used now as async update
-		DSConsole->WasUnicode = 1; // CON_UpdateConsole(DSConsole);
-	else
-		ScreenChanged();
+	if(ConsoleIsVisible()) {
+		ConsoleGetRect(&cx, &cy, &cw, &ch);
+	}
+
+	draw_w = (float)txr->w * zoom;
+	draw_h = (float)txr->h * zoom;
+	x = (float)(cx + cw) - draw_w - (float)VKB_DRAW_PADDING;
+	y = (float)(cy + VKB_DRAW_PADDING);
+	u = 1.0f;
+	v = 1.0f;
+	color = PVR_PACK_COLOR(vkb.fade, 1.0f, 1.0f, 1.0f);
+
+	plx_txr_send_hdr(txr, PVR_LIST_TR_POLY, 0);
+	plx_vert_ifp(PLX_VERT, x, y, VKB_Z, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + draw_w, y, VKB_Z, color, u, 0.0f);
+	plx_vert_ifp(PLX_VERT, x, y + draw_h, VKB_Z, color, 0.0f, v);
+	plx_vert_ifp(PLX_VERT_EOS, x + draw_w, y + draw_h, VKB_Z, color, u, v);
+
+	cell_w = draw_w / (float)VKB_GRID;
+	cell_h = draw_h / (float)VKB_GRID;
+	box_x = x + cell_w * (float)vkb.col;
+	box_y = y + cell_h * (float)vkb.row;
+	r = (uint8)((vkb.clr >> 24) & 0xff);
+	g = (uint8)((vkb.clr >> 16) & 0xff);
+	b = (uint8)((vkb.clr >> 8) & 0xff);
+	a = (uint8)(vkb.clr & 0xff);
+	{
+		float alpha = (float)a / 255.0f;
+		float phase;
+		float wave;
+		uint64 now;
+
+		if(vkb.clr != VKB_CURSOR_PRESS_COLOR) {
+			now = timer_ms_gettime64();
+			phase = (float)(now % (uint64)VKB_BLINK_MS) / (float)VKB_BLINK_MS;
+			wave = 0.5f + 0.5f * cosf(phase * 2.0f * VKB_BLINK_PI);
+			alpha *= wave;
+		}
+		alpha *= vkb.fade;
+		color = PVR_PACK_COLOR(alpha, (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f);
+	}
+
+	pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
+	cxt.gen.culling = PVR_CULLING_NONE;
+	pvr_poly_compile(&hdr, &cxt);
+	pvr_prim(&hdr, sizeof(hdr));
+	plx_vert_ifp(PLX_VERT, box_x, box_y, VKB_Z_BOX, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, box_x + cell_w, box_y, VKB_Z_BOX, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, box_x, box_y + cell_h, VKB_Z_BOX, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT_EOS, box_x + cell_w, box_y + cell_h, VKB_Z_BOX, color, 0.0f, 0.0f);
+
+	color = PVR_PACK_COLOR(VKB_FRAME_ALPHA * vkb.fade, 1.0f, 1.0f, 1.0f);
+	vkb_frame(box_x, box_y, cell_w, cell_h, color);
 }
 
 static void VirtKeyboardDraw(void *ds_event, void *param, int action) {
+	int closed;
 
-	if(action == EVENT_ACTION_RENDER && vkb.redraw) {
+	(void)ds_event;
+	(void)param;
 
-		VirtKeyboardBlit();
+	if(!vkb.visible) {
+		return;
+	}
 
-	} else if(action == EVENT_ACTION_UPDATE) {
-		if(vkb.visible) {
-			vkb.redraw = 1;
-			// GUI_Enable() can switch on this feature.
-			SDL_DC_EmulateMouse(SDL_FALSE);
-			// VirtKeyboardBlit();
+	if(action == EVENT_ACTION_RENDER_POST) {
+		closed = vkb_fade_step();
+		if(closed) {
+			SetEventActive(vkb.video, 0);
+			if(!ConsoleIsVisible()) {
+				SDL_DC_EmulateMouse(vkb.mouse_was ? SDL_TRUE : SDL_FALSE);
+			}
+			return;
 		}
+		if(vkb.fade <= 0.0f) {
+			return;
+		}
+		VirtKeyboardDrawHw();
+	}
+	else if(action == EVENT_ACTION_UPDATE) {
+		SDL_DC_EmulateMouse(SDL_FALSE);
 	}
 }
 
@@ -430,9 +557,8 @@ static int ButtonToKey(int but) {
 			break;
 	}
 	
-	return VirtKeyboardKeySyms[vkb.cur_surf].sections[(vkb.row*3) + vkb.col].keys[key];
+	return VirtKeyboardKeySyms[vkb.cur_surf].sections[(vkb.row * VKB_GRID) + vkb.col].keys[key];
 }
-
 
 
 static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
@@ -461,16 +587,6 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 
 		switch(event->type) {
 			
-			case SDL_KEYDOWN:
-    			switch(event->key.keysym.sym) {
-					case SDLK_F1:
-					case SDLK_ESCAPE:
-						VirtKeyboardReDraw();
-					default:
-						break;
-				}
-				break;
-
 			case SDL_JOYBUTTONDOWN:
 				
 				switch(event->jbutton.button) {
@@ -505,8 +621,7 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 						}
 						
 						SDL_PushEvent(&vkb.event);
-						vkb.clr = 0xFD241F7F;
-						VirtKeyboardReDraw();
+						vkb.clr = VKB_CURSOR_PRESS_COLOR;
 						break;
 					case 3:
 						VirtKeyboardHide();
@@ -522,8 +637,7 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 				break; 
 			
 			case SDL_JOYBUTTONUP:
-				vkb.clr = 0x0000007F;
-				VirtKeyboardReDraw();
+				vkb.clr = VKB_CURSOR_COLOR;
 				break;
 			
 			case SDL_JOYHATMOTION:
@@ -588,42 +702,48 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 					case 2: // rtrig
 					
 						if(event->jaxis.value) {
-							vkb.cur_joy_state |= 2;
+							vkb.cur_joy_state |= VKB_TRIG_RIGHT;
 							VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS_CAPS);
-						} else {
-							vkb.cur_joy_state ^= 2;
-							VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS);
 						}
-						
+						else {
+							vkb.cur_joy_state &= ~VKB_TRIG_RIGHT;
+							if(!(vkb.cur_joy_state & VKB_TRIG_LEFT)) {
+								VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS);
+							}
+						}
+
 						break;
 					case 3: //ltrig
 
 						if(event->jaxis.value) {
-							vkb.cur_joy_state |= 4;
+							vkb.cur_joy_state |= VKB_TRIG_LEFT;
 							VirtKeyboardSetSurface(VIRT_KB_SURFACE_NUMS);
-						} else {
-							vkb.cur_joy_state ^= 4;
-							VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS);
 						}
-						
+						else {
+							vkb.cur_joy_state &= ~VKB_TRIG_LEFT;
+							if(!(vkb.cur_joy_state & VKB_TRIG_RIGHT)) {
+								VirtKeyboardSetSurface(VIRT_KB_SURFACE_KEYS);
+							}
+						}
+
 						break;
 				}
 
-				VirtKeyboardReDraw();
 				break;
 			default:
 				break;
 		}
 
-		if(vkb.cur_joy_state != vkb.last_joy_state && vkb.last_joy_state == 6) {
+		if(vkb.cur_joy_state != vkb.last_joy_state && vkb.last_joy_state == VKB_TRIG_BOTH) {
 			VirtKeyboardResize();
 		}
 		vkb.last_joy_state = vkb.cur_joy_state;
 
 	} else {
 		
-		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == SDL_DC_START && ScreenIsEnabled()) {
+		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == SDL_DC_START) {
 			VirtKeyboardToggle();
+			event->type = 0;
 		}
 	}
 }
