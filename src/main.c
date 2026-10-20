@@ -313,7 +313,7 @@ int InitDS() {
 	TTF_Init();
 	InitGUI();
 
-	snprintf(fn, NAME_MAX, "%s/fonts/bitmap/console.png", getenv("PATH"));
+	snprintf(fn, NAME_MAX, "%s/fonts/txf/typewriter.txf", getenv("PATH"));
 	InitCmd(); 
 	InitConsole(fn, NULL, 40, 0, 0, GetScreenWidth(), GetScreenHeight(), 255);
 

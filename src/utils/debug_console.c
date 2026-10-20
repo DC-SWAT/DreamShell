@@ -54,33 +54,37 @@ static int dsd_flush() {
 }
 
 static int dsd_write_buffer(const uint8_t *data, int len, int xlat) {
-
-	ConsoleInformation *DSConsole = GetConsole();
-	char *ptemp, *b;
+	static char irq_buf[1024];
+	char *buf;
+	int owned = 0;
+	int n = len;
 
 	(void)xlat;
 
-	if(DSConsole != NULL && DSConsole->ConsoleLines) {
-
-		ptemp = (char*)data;
-
-		while((b = strsep(&ptemp, "\n")) != NULL) {
-
-			while(strlen(b) > DSConsole->VChars) {
-				CON_NewLineConsole(DSConsole);
-				strncpy(DSConsole->ConsoleLines[0], ptemp, DSConsole->VChars);
-				DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
-				b = &b[DSConsole->VChars];
-			}
-
-			CON_NewLineConsole(DSConsole);
-			strncpy(DSConsole->ConsoleLines[0], b, DSConsole->VChars);
-			DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
-		}
-
-		CON_UpdateConsole(DSConsole);
+	if(n <= 0) {
+		return 0;
 	}
 
+	if(irq_inside_int()) {
+		if(n >= (int)sizeof(irq_buf)) {
+			n = (int)sizeof(irq_buf) - 1;
+		}
+		buf = irq_buf;
+	}
+	else {
+		buf = (char *)malloc((size_t)n + 1);
+		if(!buf) {
+			return -1;
+		}
+		owned = 1;
+	}
+
+	memcpy(buf, data, (size_t)n);
+	buf[n] = '\0';
+	ds_printf("%s", buf);
+	if(owned) {
+		free(buf);
+	}
 	return len;
 }
 

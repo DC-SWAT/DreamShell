@@ -10,313 +10,1992 @@
 #include "ds.h"
 #include "video.h"
 #include "console.h"
+#include "SDL/SDL_dreamcast.h"
 
-//#define CONSOLE_DEBUG 1
+#include <ctype.h>
+#include <math.h>
+#include <stdarg.h>
 
-static ConsoleInformation *DSConsole = NULL;
-static Event_t *con_input_event;
-static Event_t *con_video_event;
+#define CONSOLE_FONT_SIZE 16.0f
+#define CONSOLE_FONT_UNIT_MIN 0.01f
+#define CONSOLE_SLANT 0.18f
+#define CONSOLE_LINE_LEAD 2.0f
+#define CONSOLE_BORDER 8.0f
+#define CONSOLE_BLINK_MS 1000
+#define CONSOLE_CURSOR_ALPHA 1.0f
+#define CONSOLE_CURSOR_PI 3.14159265f
+#define CONSOLE_SLIDE_MS 220
+#define CONSOLE_PAGE_LINES 2
+#define CONSOLE_TAB_WIDTH 8
+#define CONSOLE_MAX_COLS 160
+#define CONSOLE_CMD_MAX 256
+#define CONSOLE_SCROLL_EVERY 5
+#define CONSOLE_PROMPT_MAX 64
+#define CONSOLE_SGR_PARAMS 16
+#define CONSOLE_CSI_MAX 64
+#define CONSOLE_Z_BG 450.0f
+#define CONSOLE_Z_IMAGE 451.0f
+#define CONSOLE_GLASS_R 8
+#define CONSOLE_GLASS_G 10
+#define CONSOLE_GLASS_B 14
+#define CONSOLE_GLASS_ALPHA 0.9f
+#define CONSOLE_Z_CELL 452.0f
+#define CONSOLE_Z_TEXT 453.0f
+#define CONSOLE_Z_DECOR 454.0f
+#define CONSOLE_UNDERLINE_PX 1.0f
+#define CONSOLE_FG_R 220
+#define CONSOLE_FG_G 220
+#define CONSOLE_FG_B 220
+#define CONSOLE_PROMPT_R 90
+#define CONSOLE_PROMPT_G 220
+#define CONSOLE_PROMPT_B 220
+#define CONSOLE_TAG_ERROR "DS_ERROR"
+#define CONSOLE_TAG_OK "DS_OK"
+#define CONSOLE_TAG_INFO "DS_INFO"
+#define CONSOLE_TAG_PROCESS "DS_PROCESS"
+#define CONSOLE_TAG_WARNING "DS_WARNING"
+#define CONSOLE_TAG_ERROR_R 255
+#define CONSOLE_TAG_ERROR_G 80
+#define CONSOLE_TAG_ERROR_B 80
+#define CONSOLE_TAG_OK_R 90
+#define CONSOLE_TAG_OK_G 220
+#define CONSOLE_TAG_OK_B 110
+#define CONSOLE_TAG_INFO_R 80
+#define CONSOLE_TAG_INFO_G 200
+#define CONSOLE_TAG_INFO_B 255
+#define CONSOLE_TAG_PROCESS_R 220
+#define CONSOLE_TAG_PROCESS_G 90
+#define CONSOLE_TAG_PROCESS_B 230
+#define CONSOLE_TAG_WARNING_R 255
+#define CONSOLE_TAG_WARNING_G 150
+#define CONSOLE_TAG_WARNING_B 40
+#define CONSOLE_DIM_NUM 2
+#define CONSOLE_DIM_DEN 3
+#define CONSOLE_BOLD_MIX 3
+
+#define CONSOLE_COLOR_DEFAULT 0
+#define CONSOLE_COLOR_INDEX 1
+#define CONSOLE_COLOR_RGB 2
+
+#define CONSOLE_ATTR_ITALIC 0x01
+#define CONSOLE_ATTR_UNDERLINE 0x02
+#define CONSOLE_ATTR_REVERSE 0x04
+
+#define CONSOLE_ANSI_COUNT 16
+#define CONSOLE_ANSI_BRIGHT 8
+#define CONSOLE_GRAY_START 232
+#define CONSOLE_CUBE_START 16
+#define CONSOLE_CUBE_STEP 6
+
+typedef struct {
+	unsigned char ch;
+	unsigned char attr;
+	unsigned char fg_r, fg_g, fg_b;
+	unsigned char bg_r, bg_g, bg_b;
+	unsigned char bg_on;
+} ConCell;
+
+typedef struct {
+	int bold;
+	int dim;
+	int italic;
+	int underline;
+	int reverse;
+	int fg_mode;
+	int bg_mode;
+	int fg_idx;
+	int bg_idx;
+	unsigned char fg_r, fg_g, fg_b;
+	unsigned char bg_r, bg_g, bg_b;
+} ConStyle;
+
+typedef struct {
+	int visible;
+	int x, y, w, h;
+	int alpha;
+	int vchars;
+	int vis_rows;
+	int line_count;
+	int scroll;
+	int col;
+	float char_w;
+	float line_h;
+	float ascent;
+	float slant;
+	ConStyle style;
+	ConCell **lines;
+	char **commands;
+	int command_count;
+	int command_scroll;
+	char prompt[CONSOLE_PROMPT_MAX];
+	char command[CONSOLE_CMD_MAX + 1];
+	char lcmd[CONSOLE_CMD_MAX + 1];
+	char rcmd[CONSOLE_CMD_MAX + 1];
+	int cursor;
+	int offset;
+	int insert;
+	int back_x;
+	int back_y;
+	plx_font_t *font;
+	plx_fcxt_t *fcxt;
+	plx_texture_t *background;
+} ConsoleState;
+
+static ConsoleState *console = NULL;
+static Event_t *con_input_event = NULL;
+static Event_t *con_video_event = NULL;
 static int console_debug = 0;
 
-static char printf_buf[1024];
-static spinlock_t lock = SPINLOCK_INITIALIZER;
+static mutex_t console_mutex = RECURSIVE_MUTEX_INITIALIZER;
+
+static const unsigned char ansi_palette[CONSOLE_ANSI_COUNT][3] = {
+	{0, 0, 0},
+	{170, 0, 0},
+	{0, 170, 0},
+	{170, 85, 0},
+	{0, 0, 170},
+	{170, 0, 170},
+	{0, 170, 170},
+	{170, 170, 170},
+	{85, 85, 85},
+	{255, 85, 85},
+	{85, 255, 85},
+	{255, 255, 85},
+	{85, 85, 255},
+	{255, 85, 255},
+	{85, 255, 255},
+	{255, 255, 255}
+};
+
+static const unsigned char ansi_cube[CONSOLE_CUBE_STEP] = {
+	0, 95, 135, 175, 215, 255
+};
+
+static int flat_open = 0;
+static int cursor_draw = 0;
+static float cursor_alpha = 0.0f;
+static float cursor_x = 0.0f;
+static float cursor_y = 0.0f;
+static float slide_pos = 0.0f;
+static float slide_from = 0.0f;
+static int slide_open = 0;
+static int slide_run = 0;
+static uint64 slide_start = 0;
+static uint32 slide_span = 1;
+static int console_mouse_was = 1;
 
 
-void SetConsoleDebug(int mode) {
-	spinlock_lock(&lock);
-	console_debug = mode;
-	spinlock_unlock(&lock);
+static void style_reset(ConStyle *st) {
+	memset(st, 0, sizeof(*st));
 }
 
-int ds_printf(const char *fmt, ...) {
+static void color_from_index(int idx, unsigned char *r, unsigned char *g, unsigned char *b) {
+	int n;
 
-	char *ptemp, *b;
-	va_list args;
-	int i, len;
-
-	if(!irq_inside_int()) {
-		spinlock_lock(&lock);
+	if(idx < 0) {
+		idx = 0;
+	}
+	if(idx > 255) {
+		idx = 255;
 	}
 
-	va_start(args, fmt);
-	i = vsnprintf(printf_buf, sizeof(printf_buf), fmt, args);
-	va_end(args);
-
-	if(console_debug) {
-		dbglog(DBG_DEBUG, printf_buf);
+	if(idx < CONSOLE_ANSI_COUNT) {
+		*r = ansi_palette[idx][0];
+		*g = ansi_palette[idx][1];
+		*b = ansi_palette[idx][2];
+		return;
 	}
 
-	if(DSConsole != NULL) {
+	if(idx >= CONSOLE_GRAY_START) {
+		unsigned char v = (unsigned char)(8 + (idx - CONSOLE_GRAY_START) * 10);
+		*r = v;
+		*g = v;
+		*b = v;
+		return;
+	}
 
-		ptemp = printf_buf;
+	n = idx - CONSOLE_CUBE_START;
+	*r = ansi_cube[n / 36];
+	*g = ansi_cube[(n / CONSOLE_CUBE_STEP) % CONSOLE_CUBE_STEP];
+	*b = ansi_cube[n % CONSOLE_CUBE_STEP];
+}
 
-		if(ConsoleIsVisible()) {
-			SetEventActive(con_video_event, 0);
+static void lighten(unsigned char *c) {
+	*c = (unsigned char)(*c + (255 - *c) / CONSOLE_BOLD_MIX);
+}
+
+static void style_fg(const ConStyle *st, unsigned char *r, unsigned char *g, unsigned char *b) {
+	if(st->fg_mode == CONSOLE_COLOR_INDEX) {
+		int idx = st->fg_idx;
+
+		if(st->bold && idx < CONSOLE_ANSI_BRIGHT) {
+			idx += CONSOLE_ANSI_BRIGHT;
 		}
+		color_from_index(idx, r, g, b);
+		if(st->bold && st->fg_idx >= CONSOLE_ANSI_COUNT) {
+			lighten(r);
+			lighten(g);
+			lighten(b);
+		}
+	}
+	else if(st->fg_mode == CONSOLE_COLOR_RGB) {
+		*r = st->fg_r;
+		*g = st->fg_g;
+		*b = st->fg_b;
+		if(st->bold) {
+			lighten(r);
+			lighten(g);
+			lighten(b);
+		}
+	}
+	else {
+		*r = CONSOLE_FG_R;
+		*g = CONSOLE_FG_G;
+		*b = CONSOLE_FG_B;
+		if(st->bold) {
+			*r = 255;
+			*g = 255;
+			*b = 255;
+		}
+	}
 
-		while((b = strsep(&ptemp, "\n")) != NULL) {
+	if(st->dim) {
+		*r = (unsigned char)(*r * CONSOLE_DIM_NUM / CONSOLE_DIM_DEN);
+		*g = (unsigned char)(*g * CONSOLE_DIM_NUM / CONSOLE_DIM_DEN);
+		*b = (unsigned char)(*b * CONSOLE_DIM_NUM / CONSOLE_DIM_DEN);
+	}
+}
 
-			while(strlen(b) > DSConsole->VChars) {
-				CON_NewLineConsole(DSConsole);
-				strncpy(DSConsole->ConsoleLines[0], b, DSConsole->VChars);
-				DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
-				b = &b[DSConsole->VChars];
-			}
-
-			len = strlen(b);
-
-			if(len > 0 && b[len - 1] == '\r') {
-				b[len - 1] = '\0';
-				len--;
+static void style_bg(const ConStyle *st, unsigned char *r, unsigned char *g, unsigned char *b) {
+	if(st->bg_mode == CONSOLE_COLOR_INDEX) {
+		color_from_index(st->bg_idx, r, g, b);
+	}
+	else if(st->bg_mode == CONSOLE_COLOR_RGB) {
+		*r = st->bg_r;
+		*g = st->bg_g;
+		*b = st->bg_b;
 			}
 			else {
-				CON_NewLineConsole(DSConsole);
-			}
+		*r = 0;
+		*g = 0;
+		*b = 0;
+	}
+}
 
-			if(len > DSConsole->VChars) {
-				len = DSConsole->VChars;
-			}
+static void style_set_index(ConStyle *st, int bg, int idx) {
+	if(idx < 0) {
+		idx = 0;
+	}
+	if(idx > 255) {
+		idx = 255;
+	}
 
-			memcpy(DSConsole->ConsoleLines[0], b, len);
+	if(bg) {
+		st->bg_mode = CONSOLE_COLOR_INDEX;
+		st->bg_idx = idx;
+	}
+	else {
+		st->fg_mode = CONSOLE_COLOR_INDEX;
+		st->fg_idx = idx;
+	}
+}
 
-			if(len < DSConsole->VChars) {
-				DSConsole->ConsoleLines[0][len] = '\0';
+static void style_set_rgb(ConStyle *st, int bg, int r, int g, int b) {
+	if(r < 0) {
+		r = 0;
+	}
+	if(g < 0) {
+		g = 0;
+	}
+	if(b < 0) {
+		b = 0;
+	}
+	if(r > 255) {
+		r = 255;
+	}
+	if(g > 255) {
+		g = 255;
+	}
+	if(b > 255) {
+		b = 255;
+	}
+
+	if(bg) {
+		st->bg_mode = CONSOLE_COLOR_RGB;
+		st->bg_r = (unsigned char)r;
+		st->bg_g = (unsigned char)g;
+		st->bg_b = (unsigned char)b;
 			}
 			else {
-				DSConsole->ConsoleLines[0][DSConsole->VChars] = '\0';
+		st->fg_mode = CONSOLE_COLOR_RGB;
+		st->fg_r = (unsigned char)r;
+		st->fg_g = (unsigned char)g;
+		st->fg_b = (unsigned char)b;
+	}
+}
+
+static void style_apply(ConStyle *st, const int *params, int count) {
+	int i;
+
+	if(count <= 0) {
+		style_reset(st);
+		return;
+	}
+
+	for(i = 0; i < count; i++) {
+		int p = params[i];
+
+		if(p == 0) {
+			style_reset(st);
+		}
+		else if(p == 1) {
+			st->bold = 1;
+		}
+		else if(p == 2) {
+			st->dim = 1;
+		}
+		else if(p == 3) {
+			st->italic = 1;
+		}
+		else if(p == 4) {
+			st->underline = 1;
+		}
+		else if(p == 7) {
+			st->reverse = 1;
+		}
+		else if(p == 21 || p == 22) {
+			st->bold = 0;
+			st->dim = 0;
+		}
+		else if(p == 23) {
+			st->italic = 0;
+		}
+		else if(p == 24) {
+			st->underline = 0;
+		}
+		else if(p == 27) {
+			st->reverse = 0;
+		}
+		else if(p == 39) {
+			st->fg_mode = CONSOLE_COLOR_DEFAULT;
+		}
+		else if(p == 49) {
+			st->bg_mode = CONSOLE_COLOR_DEFAULT;
+		}
+		else if(p >= 30 && p <= 37) {
+			style_set_index(st, 0, p - 30);
+		}
+		else if(p >= 40 && p <= 47) {
+			style_set_index(st, 1, p - 40);
+		}
+		else if(p >= 90 && p <= 97) {
+			style_set_index(st, 0, p - 90 + CONSOLE_ANSI_BRIGHT);
+		}
+		else if(p >= 100 && p <= 107) {
+			style_set_index(st, 1, p - 100 + CONSOLE_ANSI_BRIGHT);
+		}
+		else if(p == 38 || p == 48) {
+			int bg = (p == 48);
+
+			if(i + 2 < count && params[i + 1] == 5) {
+				style_set_index(st, bg, params[i + 2]);
+				i += 2;
+			}
+			else if(i + 4 < count && params[i + 1] == 2) {
+				style_set_rgb(st, bg, params[i + 2], params[i + 3], params[i + 4]);
+				i += 4;
 			}
 		}
+	}
+}
 
-		if(ConsoleIsVisible()) {
-			CON_UpdateConsole(DSConsole);
-			SetEventActive(con_video_event, 1);
+static int apply_csi(const char *s, int n, ConStyle *st) {
+	int params[CONSOLE_SGR_PARAMS];
+	int count = 0;
+	int acc = 0;
+	int any = 0;
+	int i = 0;
+
+	while(i < n && i < CONSOLE_CSI_MAX) {
+		char c = s[i];
+
+		if(c >= '0' && c <= '9') {
+			acc = acc * 10 + (c - '0');
+			if(acc > 255) {
+				acc = 255;
+			}
+			any = 1;
+			i++;
+			continue;
 		}
+
+		if(c == ';') {
+			if(count < CONSOLE_SGR_PARAMS) {
+				params[count++] = any ? acc : 0;
+			}
+			acc = 0;
+			any = 0;
+			i++;
+			continue;
+		}
+
+		if(c >= '@' && c <= '~') {
+			if(count < CONSOLE_SGR_PARAMS) {
+				params[count++] = any ? acc : 0;
+			}
+			if(c == 'm') {
+				style_apply(st, params, count);
+			}
+			return i + 1;
+		}
+		break;
 	}
 
-	if(!irq_inside_int()) {
-		spinlock_unlock(&lock);
-	}
 	return i;
 }
 
-
-static void Command_Handler(ConsoleInformation *console, char* command) {
-	dsystem(command);
+static void console_clear_line(ConCell *line) {
+	memset(line, 0, sizeof(ConCell) * CONSOLE_MAX_COLS);
 }
 
+static void console_newline(void) {
+	ConCell *last;
+	int i;
 
-static char *TabFunction(char* command) {
+	if(!console || !console->lines) {
+		return;
+	}
 
+	last = console->lines[console->line_count - 1];
+	for(i = console->line_count - 1; i > 0; i--) {
+		console->lines[i] = console->lines[i - 1];
+	}
+	console->lines[0] = last;
+	console_clear_line(console->lines[0]);
+	console->col = 0;
+
+	if(console->scroll != 0) {
+		console->scroll++;
+		if(console->scroll > console->line_count - 1) {
+			console->scroll = console->line_count - 1;
+		}
+	}
+}
+
+static void console_putc(unsigned char ch) {
+	ConCell *cell;
+
+	if(!console || console->vchars < 1) {
+		return;
+	}
+
+	if(console->col >= console->vchars) {
+		console_newline();
+	}
+
+	cell = &console->lines[0][console->col];
+	cell->ch = ch;
+	cell->attr = 0;
+	if(console->style.italic) {
+		cell->attr |= CONSOLE_ATTR_ITALIC;
+	}
+	if(console->style.underline) {
+		cell->attr |= CONSOLE_ATTR_UNDERLINE;
+	}
+	if(console->style.reverse) {
+		cell->attr |= CONSOLE_ATTR_REVERSE;
+	}
+	style_fg(&console->style, &cell->fg_r, &cell->fg_g, &cell->fg_b);
+	style_bg(&console->style, &cell->bg_r, &cell->bg_g, &cell->bg_b);
+	cell->bg_on = console->style.bg_mode != CONSOLE_COLOR_DEFAULT;
+	console->col++;
+}
+
+static void console_put_span(const char *s, int n) {
+	int i = 0;
+
+	while(i < n) {
+		unsigned char ch = (unsigned char)s[i];
+
+		if(ch == '\r') {
+			console->col = 0;
+			i++;
+			continue;
+		}
+
+		if(ch == '\b') {
+			if(console->col > 0) {
+				console->col--;
+			}
+			i++;
+			continue;
+		}
+
+		if(ch == '\t') {
+			int next = (console->col + CONSOLE_TAB_WIDTH) & ~(CONSOLE_TAB_WIDTH - 1);
+
+			if(next > console->vchars) {
+				next = console->vchars;
+			}
+			while(console->col < next) {
+				console_putc(' ');
+			}
+			i++;
+			continue;
+		}
+
+		if(ch == 0x1b) {
+			if(i + 1 < n && s[i + 1] == '[') {
+				int used = apply_csi(s + i + 2, n - (i + 2), &console->style);
+
+				if(used > 0) {
+					i += 2 + used;
+					continue;
+				}
+			}
+			i++;
+			continue;
+		}
+
+		if(ch < 32) {
+			i++;
+			continue;
+		}
+
+		console_putc(ch);
+		i++;
+	}
+}
+
+static int tag_prefix(const char *s, int n, const char *prefix) {
+	int i;
+
+	for(i = 0; prefix[i] != 0; i++) {
+		if(i >= n || s[i] != prefix[i]) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int tag_word(const char *s, int n, const char *prefix) {
+	int i;
+
+	for(i = 0; prefix[i] != 0; i++) {
+		if(i >= n || s[i] != prefix[i]) {
+			return 0;
+		}
+	}
+	if(i < n && isalnum((unsigned char)s[i])) {
+		return 0;
+	}
+	return 1;
+}
+
+static int line_tag_color(const char *s, int n, int *r, int *g, int *b) {
+	if(tag_prefix(s, n, CONSOLE_TAG_ERROR)) {
+		*r = CONSOLE_TAG_ERROR_R;
+		*g = CONSOLE_TAG_ERROR_G;
+		*b = CONSOLE_TAG_ERROR_B;
+		return 1;
+	}
+	if(tag_word(s, n, CONSOLE_TAG_OK)) {
+		*r = CONSOLE_TAG_OK_R;
+		*g = CONSOLE_TAG_OK_G;
+		*b = CONSOLE_TAG_OK_B;
+		return 1;
+	}
+	if(tag_word(s, n, CONSOLE_TAG_INFO)) {
+		*r = CONSOLE_TAG_INFO_R;
+		*g = CONSOLE_TAG_INFO_G;
+		*b = CONSOLE_TAG_INFO_B;
+		return 1;
+	}
+	if(tag_word(s, n, CONSOLE_TAG_PROCESS)) {
+		*r = CONSOLE_TAG_PROCESS_R;
+		*g = CONSOLE_TAG_PROCESS_G;
+		*b = CONSOLE_TAG_PROCESS_B;
+		return 1;
+	}
+	if(tag_word(s, n, CONSOLE_TAG_WARNING)) {
+		*r = CONSOLE_TAG_WARNING_R;
+		*g = CONSOLE_TAG_WARNING_G;
+		*b = CONSOLE_TAG_WARNING_B;
+		return 1;
+	}
+	return 0;
+}
+
+static void console_feed_n(const char *s, int n) {
+	int i = 0;
+
+	if(!console || !console->lines || n <= 0) {
+		return;
+	}
+
+	while(i < n) {
+		int start = i;
+		int end;
+		int replace = 0;
+		int r;
+		int g;
+		int b;
+		int tagged;
+		ConStyle saved;
+
+		while(i < n && s[i] != '\n') {
+			i++;
+		}
+		end = i;
+		if(i < n && s[i] == '\n') {
+			i++;
+		}
+		if(end > start && s[end - 1] == '\r') {
+			end--;
+			replace = 1;
+		}
+
+		if(!replace) {
+			console_newline();
+		}
+		else {
+			console_clear_line(console->lines[0]);
+			console->col = 0;
+		}
+		saved = console->style;
+		tagged = line_tag_color(s + start, end - start, &r, &g, &b);
+		if(tagged) {
+			style_set_rgb(&console->style, 0, r, g, b);
+		}
+		console_put_span(s + start, end - start);
+		if(tagged) {
+			console->style = saved;
+		}
+	}
+}
+
+static int console_open_font(const char *path) {
+	plx_font_t *font;
+	plx_fcxt_t *fcxt;
+	float max_w = 0.5f;
+	float asc = 1.0f;
+	float desc = 0.0f;
+	int i;
+
+	font = plx_font_load(path);
+	if(!font) {
+		return 0;
+	}
+
+	fcxt = plx_fcxt_create(font, PVR_LIST_TR_POLY);
+	if(!fcxt) {
+		plx_font_destroy(font);
+		return 0;
+	}
+
+	for(i = 0; i < font->glyph_cnt; i++) {
+		if(font->vert_ur[i].x > max_w) {
+			max_w = font->vert_ur[i].x;
+		}
+		if(font->vert_ur[i].y > asc) {
+			asc = font->vert_ur[i].y;
+		}
+		if(-font->vert_ll[i].y > desc) {
+			desc = -font->vert_ll[i].y;
+		}
+	}
+
+	if(asc < CONSOLE_FONT_UNIT_MIN) {
+		asc = CONSOLE_FONT_UNIT_MIN;
+	}
+	if(max_w < CONSOLE_FONT_UNIT_MIN) {
+		max_w = CONSOLE_FONT_UNIT_MIN;
+	}
+
+	fcxt->gap = 0.0f;
+	fcxt->fixed_width = max_w;
+	fcxt->flags |= PLX_FCXT_FIXED;
+	plx_fcxt_setsize(fcxt, CONSOLE_FONT_SIZE / asc);
+	plx_txr_setfilter(font->txr, PVR_FILTER_BILINEAR);
+
+	console->font = font;
+	console->fcxt = fcxt;
+	console->char_w = max_w * console->fcxt->size;
+	if(console->char_w < 1.0f) {
+		console->char_w = 1.0f;
+	}
+	console->ascent = asc * console->fcxt->size;
+	console->line_h = (asc + desc) * console->fcxt->size + CONSOLE_LINE_LEAD;
+	console->slant = console->fcxt->size * CONSOLE_SLANT;
+	return 1;
+}
+
+static int console_load_font(const char *path) {
+	static const char *names[] = {
+		"fonts/txf/typewriter.txf",
+		"fonts/txf/lucida.txf",
+		"fonts/txf/dreamshell.txf",
+		NULL
+	};
+	char fn[NAME_MAX];
+	const char *base;
+	size_t len;
+	int i;
+
+	if(path && path[0]) {
+		len = strlen(path);
+		if(len >= 4 && !strcasecmp(path + len - 4, ".txf") && console_open_font(path)) {
+			return 1;
+		}
+	}
+
+	base = getenv("PATH");
+	if(!base) {
+		base = "";
+	}
+
+	for(i = 0; names[i] != NULL; i++) {
+		snprintf(fn, sizeof(fn), "%s/%s", base, names[i]);
+		if(console_open_font(fn)) {
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+static void console_layout(void) {
+	int cols;
+	int rows;
+
+	cols = (int)(((float)console->w - CONSOLE_BORDER * 2.0f) / console->char_w);
+	if(cols < 1) {
+		cols = 1;
+	}
+	if(cols > CONSOLE_MAX_COLS) {
+		cols = CONSOLE_MAX_COLS;
+	}
+	console->vchars = cols;
+
+	rows = (int)(((float)console->h - CONSOLE_BORDER * 2.0f) / console->line_h);
+	if(rows < 2) {
+		rows = 2;
+	}
+	console->vis_rows = rows - 1;
+}
+
+static void command_assemble(void) {
+	int left = (int)strlen(console->lcmd);
+	int right = (int)strlen(console->rcmd);
+
+	if(left > CONSOLE_CMD_MAX) {
+		left = CONSOLE_CMD_MAX;
+	}
+	if(left + right > CONSOLE_CMD_MAX) {
+		right = CONSOLE_CMD_MAX - left;
+	}
+
+	memcpy(console->command, console->lcmd, (size_t)left);
+	memcpy(console->command + left, console->rcmd, (size_t)right);
+	console->command[left + right] = '\0';
+}
+
+static void command_clear(void) {
+	console->cursor = 0;
+	console->offset = 0;
+	console->command[0] = '\0';
+	console->lcmd[0] = '\0';
+	console->rcmd[0] = '\0';
+}
+
+static void command_newline(void) {
+	char *last;
+	int i;
+
+	last = console->commands[console->line_count - 1];
+	for(i = console->line_count - 1; i > 0; i--) {
+		console->commands[i] = console->commands[i - 1];
+	}
+	console->commands[0] = last;
+	console->commands[0][0] = '\0';
+
+	if(console->command_count < console->line_count - 1) {
+		console->command_count++;
+	}
+}
+
+static void cursor_left(void) {
+	size_t n;
+
+	if(console->cursor <= 0) {
+		return;
+	}
+
+	n = strlen(console->lcmd);
+	if(n == 0) {
+		return;
+	}
+
+	memmove(console->rcmd + 1, console->rcmd, strlen(console->rcmd) + 1);
+	console->rcmd[0] = console->lcmd[n - 1];
+	console->lcmd[n - 1] = '\0';
+	console->cursor--;
+	command_assemble();
+}
+
+static void cursor_right(void) {
+	size_t n;
+
+	if(console->cursor >= (int)strlen(console->command)) {
+		return;
+	}
+	if(console->rcmd[0] == '\0') {
+		return;
+	}
+
+	n = strlen(console->lcmd);
+	if(n >= CONSOLE_CMD_MAX) {
+		return;
+	}
+	console->lcmd[n] = console->rcmd[0];
+	console->lcmd[n + 1] = '\0';
+	memmove(console->rcmd, console->rcmd + 1, strlen(console->rcmd + 1) + 1);
+	console->cursor++;
+	command_assemble();
+}
+
+static void cursor_home(void) {
+	char tmp[CONSOLE_CMD_MAX + 1];
+
+	snprintf(tmp, sizeof(tmp), "%s%s", console->lcmd, console->rcmd);
+	snprintf(console->rcmd, sizeof(console->rcmd), "%s", tmp);
+	console->lcmd[0] = '\0';
+	console->cursor = 0;
+	command_assemble();
+}
+
+static void cursor_end(void) {
+	size_t n = strlen(console->lcmd);
+	size_t r = strlen(console->rcmd);
+
+	if(n + r > CONSOLE_CMD_MAX) {
+		r = CONSOLE_CMD_MAX - n;
+	}
+	memcpy(console->lcmd + n, console->rcmd, r);
+	console->lcmd[n + r] = '\0';
+	console->rcmd[0] = '\0';
+	console->cursor = (int)strlen(console->lcmd);
+	command_assemble();
+}
+
+static void cursor_backspace(void) {
+	size_t n;
+
+	if(console->cursor <= 0) {
+		return;
+	}
+
+	n = strlen(console->lcmd);
+	if(n == 0) {
+		return;
+	}
+	console->lcmd[n - 1] = '\0';
+	console->cursor--;
+	if(console->offset > 0) {
+		console->offset--;
+	}
+	command_assemble();
+}
+
+static void cursor_delete(void) {
+	if(console->rcmd[0] == '\0') {
+		return;
+	}
+	memmove(console->rcmd, console->rcmd + 1, strlen(console->rcmd + 1) + 1);
+	command_assemble();
+}
+
+static void cursor_add(unsigned char ch) {
+	size_t n;
+
+	if(strlen(console->command) + 1 >= CONSOLE_CMD_MAX) {
+		return;
+	}
+
+	n = strlen(console->lcmd);
+	if(n >= CONSOLE_CMD_MAX) {
+		return;
+	}
+
+	if(!console->insert && console->rcmd[0] != '\0') {
+		console->lcmd[n] = (char)ch;
+		console->lcmd[n + 1] = '\0';
+		memmove(console->rcmd, console->rcmd + 1, strlen(console->rcmd + 1) + 1);
+	}
+	else {
+		console->lcmd[n] = (char)ch;
+		console->lcmd[n + 1] = '\0';
+	}
+	console->cursor++;
+	command_assemble();
+}
+
+static void command_up(void) {
+	if(console->command_scroll >= console->command_count - 1) {
+		return;
+	}
+
+	console->command_scroll++;
+	console->rcmd[0] = '\0';
+	console->offset = 0;
+	snprintf(console->lcmd, sizeof(console->lcmd), "%s", console->commands[console->command_scroll]);
+	console->cursor = (int)strlen(console->lcmd);
+	command_assemble();
+}
+
+static void command_down(void) {
+	if(console->command_scroll <= -1) {
+		return;
+	}
+
+	console->command_scroll--;
+	console->rcmd[0] = '\0';
+	console->offset = 0;
+	if(console->command_scroll > -1) {
+		snprintf(console->lcmd, sizeof(console->lcmd), "%s", console->commands[console->command_scroll]);
+	}
+	else {
+		console->lcmd[0] = '\0';
+	}
+	console->cursor = (int)strlen(console->lcmd);
+	command_assemble();
+}
+
+static char *TabFunction(char *command);
+
+static void console_tab(void) {
+	char tmp[CONSOLE_CMD_MAX + 1];
+	char *done;
+	int n;
+	int i;
+
+	snprintf(tmp, sizeof(tmp), "%s", console->lcmd);
+	done = TabFunction(tmp);
+	if(!done) {
+		return;
+	}
+
+	n = (int)strlen(done);
+	if(n + 2 > CONSOLE_CMD_MAX) {
+		n = CONSOLE_CMD_MAX - 2;
+	}
+
+	console->lcmd[0] = '\0';
+	console->cursor = 0;
+	for(i = 0; i < n; i++) {
+		console->lcmd[i] = done[i];
+		console->cursor++;
+	}
+	console->lcmd[n] = ' ';
+	console->lcmd[n + 1] = '\0';
+	console->cursor++;
+	command_assemble();
+}
+
+static uint32 pack_rgb(unsigned char r, unsigned char g, unsigned char b, float extra_a) {
+	float a = ((float)console->alpha / 255.0f) * extra_a;
+
+	if(a < 0.0f) {
+		a = 0.0f;
+	}
+	if(a > 1.0f) {
+		a = 1.0f;
+	}
+	return PVR_PACK_COLOR(a, (float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f);
+}
+
+static void flat_begin(void) {
+	pvr_poly_cxt_t cxt;
+	pvr_poly_hdr_t hdr;
+
+	pvr_poly_cxt_col(&cxt, PVR_LIST_TR_POLY);
+	cxt.gen.culling = PVR_CULLING_NONE;
+	pvr_poly_compile(&hdr, &cxt);
+	pvr_prim(&hdr, sizeof(hdr));
+	flat_open = 1;
+}
+
+static void flat_quad(float x, float y, float w, float h, float z, uint32 color) {
+	if(w <= 0.0f || h <= 0.0f) {
+		return;
+	}
+	if(!flat_open) {
+		flat_begin();
+	}
+
+	plx_vert_ifp(PLX_VERT, x, y, z, color, 0.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x + w, y, z, color, 1.0f, 0.0f);
+	plx_vert_ifp(PLX_VERT, x, y + h, z, color, 0.0f, 1.0f);
+	plx_vert_ifp(PLX_VERT_EOS, x + w, y + h, z, color, 1.0f, 1.0f);
+}
+
+static void cell_colors(const ConCell *cell, uint32 *fg, uint32 *bg, int *has_bg) {
+	unsigned char fr = cell->fg_r;
+	unsigned char fg_g = cell->fg_g;
+	unsigned char fb = cell->fg_b;
+	unsigned char br = cell->bg_r;
+	unsigned char bg_g = cell->bg_g;
+	unsigned char bb = cell->bg_b;
+	int on = cell->bg_on;
+
+	if(cell->attr & CONSOLE_ATTR_REVERSE) {
+		unsigned char tr = fr;
+		unsigned char tg = fg_g;
+		unsigned char tb = fb;
+
+		fr = on ? br : 0;
+		fg_g = on ? bg_g : 0;
+		fb = on ? bb : 0;
+		br = tr;
+		bg_g = tg;
+		bb = tb;
+		on = 1;
+	}
+
+	*fg = pack_rgb(fr, fg_g, fb, 1.0f);
+	*bg = pack_rgb(br, bg_g, bb, 1.0f);
+	*has_bg = on;
+}
+
+static void draw_line_decals(const ConCell *line, float x0, float y) {
+	int col = 0;
+
+	while(col < console->vchars) {
+		uint32 fg, bg, run_bg;
+		int has_bg;
+		int start;
+		int underline = 0;
+		uint32 ul = 0;
+
+		if(line[col].ch == 0) {
+			col++;
+			continue;
+		}
+
+		cell_colors(&line[col], &fg, &bg, &has_bg);
+		start = col;
+		run_bg = bg;
+		underline = (line[col].attr & CONSOLE_ATTR_UNDERLINE) ? 1 : 0;
+		ul = fg;
+		col++;
+
+		while(col < console->vchars && line[col].ch != 0) {
+			uint32 nfg, nbg;
+			int non;
+			int nul;
+
+			cell_colors(&line[col], &nfg, &nbg, &non);
+			nul = (line[col].attr & CONSOLE_ATTR_UNDERLINE) ? 1 : 0;
+			if(non != has_bg || (has_bg && nbg != run_bg) || nul != underline || (nul && nfg != ul)) {
+				break;
+			}
+			col++;
+		}
+
+		if(has_bg) {
+			flat_quad(x0 + (float)start * console->char_w, y,
+				(float)(col - start) * console->char_w, console->line_h,
+				CONSOLE_Z_CELL, run_bg);
+		}
+		if(underline) {
+			flat_quad(x0 + (float)start * console->char_w,
+				y + console->line_h - CONSOLE_UNDERLINE_PX,
+				(float)(col - start) * console->char_w, CONSOLE_UNDERLINE_PX,
+				CONSOLE_Z_DECOR, ul);
+		}
+	}
+}
+
+static void draw_line_text(const ConCell *line, float x0, float y) {
+	int col;
+
+	for(col = 0; col < console->vchars; col++) {
+		const ConCell *cell = &line[col];
+		uint32 fg, bg;
+		int has_bg;
+
+		if(cell->ch == 0 || cell->ch == ' ') {
+			continue;
+		}
+
+		cell_colors(cell, &fg, &bg, &has_bg);
+		console->fcxt->color = fg;
+		console->fcxt->slant = (cell->attr & CONSOLE_ATTR_ITALIC) ? console->slant : 0.0f;
+		plx_fcxt_setpos(console->fcxt,
+			x0 + (float)col * console->char_w,
+			y + console->ascent,
+			CONSOLE_Z_TEXT);
+		plx_fcxt_draw_ch(console->fcxt, cell->ch);
+	}
+}
+
+static void draw_string(const char *text, int n, float x, float y, uint32 color) {
+	int i;
+
+	console->fcxt->color = color;
+	console->fcxt->slant = 0.0f;
+	for(i = 0; i < n; i++) {
+		unsigned char ch = (unsigned char)text[i];
+
+		if(ch == 0 || ch == ' ') {
+			continue;
+		}
+		plx_fcxt_setpos(console->fcxt, x + (float)i * console->char_w, y + console->ascent, CONSOLE_Z_TEXT);
+		plx_fcxt_draw_ch(console->fcxt, ch);
+	}
+}
+
+static void draw_scroll_mark(float x0, float y) {
+	int count = (console->vchars / CONSOLE_SCROLL_EVERY) + 1;
+	int i;
+	uint32 color = pack_rgb(CONSOLE_FG_R, CONSOLE_FG_G, CONSOLE_FG_B, 1.0f);
+
+	console->fcxt->color = color;
+	console->fcxt->slant = 0.0f;
+	for(i = 0; i < count; i++) {
+		plx_fcxt_setpos(console->fcxt,
+			x0 + (float)(i * CONSOLE_SCROLL_EVERY) * console->char_w,
+			y + console->ascent,
+			CONSOLE_Z_TEXT);
+		plx_fcxt_draw_ch(console->fcxt, '^');
+	}
+}
+
+static void draw_background(float x, float y) {
+	uint32 color = pack_rgb(CONSOLE_GLASS_R, CONSOLE_GLASS_G, CONSOLE_GLASS_B, CONSOLE_GLASS_ALPHA);
+
+	flat_open = 0;
+	flat_begin();
+	flat_quad(x, y, (float)console->w, (float)console->h, CONSOLE_Z_BG, color);
+	flat_open = 0;
+
+	if(!console->background) {
+		return;
+	}
+
+	{
+		float dw = (float)console->background->w;
+		float dh = (float)console->background->h;
+		float u, v;
+		uint32 tint = pack_rgb(255, 255, 255, 1.0f);
+
+		if((float)console->back_x + dw > (float)console->w) {
+			dw = (float)console->w - (float)console->back_x;
+		}
+		if((float)console->back_y + dh > (float)console->h) {
+			dh = (float)console->h - (float)console->back_y;
+		}
+		if(dw <= 0.0f || dh <= 0.0f) {
+			return;
+		}
+
+		u = dw / (float)console->background->w;
+		v = dh / (float)console->background->h;
+		plx_txr_send_hdr(console->background, PVR_LIST_TR_POLY, 0);
+		plx_vert_ifp(PLX_VERT, x + (float)console->back_x, y + (float)console->back_y, CONSOLE_Z_IMAGE, tint, 0.0f, 0.0f);
+		plx_vert_ifp(PLX_VERT, x + (float)console->back_x + dw, y + (float)console->back_y, CONSOLE_Z_IMAGE, tint, u, 0.0f);
+		plx_vert_ifp(PLX_VERT, x + (float)console->back_x, y + (float)console->back_y + dh, CONSOLE_Z_IMAGE, tint, 0.0f, v);
+		plx_vert_ifp(PLX_VERT_EOS, x + (float)console->back_x + dw, y + (float)console->back_y + dh, CONSOLE_Z_IMAGE, tint, u, v);
+	}
+}
+
+static void draw_command(float x0, float y) {
+	int prompt_len = (int)strlen(console->prompt);
+	int window;
+	int visible;
+	int cmd_len;
+	uint32 prompt_color;
+	uint32 text_color;
+	uint64 now;
+	float phase;
+	float wave;
+
+	if(prompt_len > console->vchars) {
+		prompt_len = console->vchars;
+	}
+	window = console->vchars - prompt_len - 1;
+	if(window < 1) {
+		window = 1;
+	}
+	if(console->offset < console->cursor - window) {
+		console->offset = console->cursor - window;
+	}
+	if(console->offset > console->cursor) {
+		console->offset = console->cursor;
+	}
+	if(console->offset < 0) {
+		console->offset = 0;
+	}
+
+	cmd_len = (int)strlen(console->command + console->offset);
+	visible = cmd_len;
+	if(visible > window) {
+		visible = window;
+	}
+
+	prompt_color = pack_rgb(CONSOLE_PROMPT_R, CONSOLE_PROMPT_G, CONSOLE_PROMPT_B, 1.0f);
+	text_color = pack_rgb(CONSOLE_FG_R, CONSOLE_FG_G, CONSOLE_FG_B, 1.0f);
+	draw_string(console->prompt, prompt_len, x0, y, prompt_color);
+	draw_string(console->command + console->offset, visible, x0 + (float)prompt_len * console->char_w, y, text_color);
+
+	now = timer_ms_gettime64();
+	phase = (float)(now % (uint64)CONSOLE_BLINK_MS) / (float)CONSOLE_BLINK_MS;
+	wave = 0.5f + 0.5f * cosf(phase * 2.0f * CONSOLE_CURSOR_PI);
+	cursor_alpha = CONSOLE_CURSOR_ALPHA * wave;
+	cursor_draw = 1;
+	{
+		int cx = prompt_len + console->cursor - console->offset;
+
+		if(cx < 0) {
+			cx = 0;
+		}
+		if(cx > console->vchars - 1) {
+			cx = console->vchars - 1;
+		}
+		cursor_x = x0 + (float)cx * console->char_w;
+		cursor_y = y;
+	}
+}
+
+static float console_ease(float t) {
+	float inv;
+
+	if(t <= 0.0f) {
+		return 0.0f;
+	}
+	if(t >= 1.0f) {
+		return 1.0f;
+	}
+	inv = 1.0f - t;
+	return 1.0f - inv * inv * inv;
+}
+
+static void console_slide_begin(int open) {
+	float travel;
+
+	slide_from = slide_pos;
+	slide_open = open;
+	travel = open ? (1.0f - slide_from) : slide_from;
+	if(travel < 0.0f) {
+		travel = 0.0f;
+	}
+	slide_span = (uint32)((float)CONSOLE_SLIDE_MS * travel + 0.5f);
+	if(slide_span < 1) {
+		slide_span = 1;
+	}
+	slide_start = timer_ms_gettime64();
+	slide_run = 1;
+}
+
+static int console_slide_step(void) {
+	float t;
+	float eased;
+	uint64 now;
+
+	if(!slide_run) {
+		return 0;
+	}
+
+	now = timer_ms_gettime64();
+	if(now <= slide_start) {
+		t = 0.0f;
+	}
+	else {
+		t = (float)(now - slide_start) / (float)slide_span;
+	}
+	eased = console_ease(t);
+	if(slide_open) {
+		slide_pos = slide_from + (1.0f - slide_from) * eased;
+	}
+	else {
+		slide_pos = slide_from * (1.0f - eased);
+	}
+	if(t < 1.0f) {
+		return 0;
+	}
+
+	slide_run = 0;
+	if(slide_open) {
+		slide_pos = 1.0f;
+		return 0;
+	}
+	slide_pos = 0.0f;
+	console->visible = 0;
+	return 1;
+}
+
+static void console_slide_closed(void) {
+	if(con_video_event) {
+		SetEventActive(con_video_event, 0);
+	}
+	GUI_Enable();
+	if(VirtKeyboardShown()) {
+		SDL_DC_EmulateMouse(SDL_FALSE);
+	}
+	else {
+		SDL_DC_EmulateMouse(console_mouse_was ? SDL_TRUE : SDL_FALSE);
+	}
+}
+
+static void console_draw(void) {
+	float x;
+	float y;
+	float x0;
+	int i;
+	int closed;
+
+	if(irq_inside_int()) {
+		return;
+	}
+
+	mutex_lock(&console_mutex);
+	if(!console || !console->fcxt || !console->lines || console->w < 1 || console->h < 1) {
+		mutex_unlock(&console_mutex);
+		return;
+	}
+	closed = console_slide_step();
+	if(!console->visible || slide_pos <= 0.0f) {
+		mutex_unlock(&console_mutex);
+		if(closed && !ConsoleIsVisible()) {
+			console_slide_closed();
+		}
+		return;
+	}
+
+	x = (float)console->x;
+	y = (float)console->y - (float)console->h * (1.0f - slide_pos);
+	x0 = x + CONSOLE_BORDER;
+
+	draw_background(x, y);
+
+	flat_open = 0;
+	flat_begin();
+	for(i = 0; i < console->vis_rows; i++) {
+		int idx = console->scroll + i;
+		float ly;
+
+		if(idx < 0 || idx >= console->line_count) {
+			break;
+		}
+		if(console->scroll != 0 && i == 0) {
+			continue;
+		}
+		ly = y + CONSOLE_BORDER + (float)(console->vis_rows - 1 - i) * console->line_h;
+		draw_line_decals(console->lines[idx], x0, ly);
+	}
+	flat_open = 0;
+
+	plx_fcxt_begin(console->fcxt);
+	for(i = 0; i < console->vis_rows; i++) {
+		int idx = console->scroll + i;
+		float ly = y + CONSOLE_BORDER + (float)(console->vis_rows - 1 - i) * console->line_h;
+
+		if(idx < 0 || idx >= console->line_count) {
+			break;
+		}
+		if(console->scroll != 0 && i == 0) {
+			draw_scroll_mark(x0, ly);
+		}
+		else {
+			draw_line_text(console->lines[idx], x0, ly);
+		}
+	}
+	cursor_draw = 0;
+	draw_command(x0, y + (float)console->h - CONSOLE_BORDER - console->line_h);
+	plx_fcxt_end(console->fcxt);
+
+	if(cursor_draw && cursor_alpha > 0.0f) {
+		uint32 color = pack_rgb(CONSOLE_FG_R, CONSOLE_FG_G, CONSOLE_FG_B, cursor_alpha);
+
+		flat_open = 0;
+		flat_begin();
+		if(console->insert) {
+			flat_quad(cursor_x, cursor_y + console->line_h - CONSOLE_UNDERLINE_PX * 2.0f,
+				console->char_w, CONSOLE_UNDERLINE_PX * 2.0f, CONSOLE_Z_DECOR, color);
+		}
+		else {
+			flat_quad(cursor_x, cursor_y, CONSOLE_UNDERLINE_PX * 2.0f,
+				console->line_h, CONSOLE_Z_DECOR, color);
+		}
+		flat_open = 0;
+	}
+	mutex_unlock(&console_mutex);
+}
+
+static char *TabFunction(char *command) {
 	if(strstr(command, " ") != NULL) {
 		return command;
 	}
 
+	{
 	Item_list_t *cmds = GetCmdList();
 	Cmd_t *c;
 	Item_t *i;
 	int internal = 0;
 	
 	SLIST_FOREACH(i, cmds, list) {
-		c = (Cmd_t *) i->data;
+			c = (Cmd_t *)i->data;
 		if(!strncmp(c->command, command, strlen(command))) {
-			strcpy(command, c->command);
+				snprintf(command, CONSOLE_CMD_MAX + 1, "%s", c->command);
 			internal = 1;
 			break;
 		}
 	}
 	
 	if(!internal) {
-
 		file_t fd;
 		const dirent_t *ent;
 		char dir[NAME_MAX];
+			const char *base = getenv("PATH");
 
-		snprintf(dir, NAME_MAX, "%s/cmds", getenv("PATH"));
+			if(base) {
+				snprintf(dir, NAME_MAX, "%s/cmds", base);
 		fd = fs_open(dir, O_RDONLY | O_DIR);
 
 		if(fd != FILEHND_INVALID) {
-			
-			while ((ent = fs_readdir(fd)) != NULL) {
+					while((ent = fs_readdir(fd)) != NULL) {
 				if(ent->attr != O_DIR && !strncmp(ent->name, command, strlen(command))) {
-					strcpy(command, ent->name);
+							snprintf(command, CONSOLE_CMD_MAX + 1, "%s", ent->name);
 				}
 			}
-
 			fs_close(fd);
+				}
+			}
 		}
 	}
 
 	return command;
 }
 
+static void Command_Handler(const char *command) {
+	dsystem(command);
+}
 
-static void ConsoleDrawHandler(void *ds_event, void *param, int action) {
+static void console_submit_command(void) {
+	char shown[CONSOLE_CMD_MAX + CONSOLE_PROMPT_MAX + 16];
+	char run[CONSOLE_CMD_MAX + 1];
 
-	if(!ConsoleIsVisible()) {
+	if(irq_inside_int() || !console || console->command[0] == '\0') {
 		return;
 	}
 
-	switch(action) {
-		case EVENT_ACTION_RENDER:
-			CON_DrawConsole(DSConsole);
-			break;
-		case EVENT_ACTION_UPDATE:
-			CON_UpdateConsole(DSConsole);
-			break;
-		default:
-			break;
+	mutex_lock(&console_mutex);
+	if(!console || console->command[0] == '\0') {
+		mutex_unlock(&console_mutex);
+		return;
 	}
+	command_newline();
+	snprintf(console->commands[0], CONSOLE_CMD_MAX + 1, "%s", console->command);
+	snprintf(shown, sizeof(shown), "\033[36m%s\033[0m%s", console->prompt, console->command);
+	snprintf(run, sizeof(run), "%s", console->command);
+	command_clear();
+	console->command_scroll = -1;
+	mutex_unlock(&console_mutex);
+
+	ds_printf("%s", shown);
+	Command_Handler(run);
 }
 
-
 static void ConsoleEventHandler(void *ds_event, void *param, int action) {
-	
-	SDL_Event *event = (SDL_Event *) param;
-	
-	if(ConsoleIsVisible()) {
-		
-		CON_Events(event);
+	SDL_Event *event = (SDL_Event *)param;
 
-		switch(event->type) {
-			
-			case SDL_KEYDOWN:
+	(void)ds_event;
+	(void)action;
+
+	if(!console) {
+		return;
+	}
+
+	if(console->visible) {
+		if(event->type == SDL_KEYDOWN) {
+			if(event->key.keysym.sym == SDLK_F1 || event->key.keysym.sym == SDLK_ESCAPE) {
+				if(slide_run && !slide_open) {
+					ShowConsole();
+				}
+				else {
+					HideConsole();
+				}
+				return;
+			}
+
+			if(irq_inside_int()) {
+				return;
+			}
+			mutex_lock(&console_mutex);
+			if(!console) {
+				mutex_unlock(&console_mutex);
+				return;
+			}
+
+			if(event->key.keysym.mod & KMOD_CTRL) {
 				switch(event->key.keysym.sym) {
-					case SDLK_F1:
-					case SDLK_ESCAPE:
-						HideConsole();
+					case SDLK_a:
+						cursor_home();
+						break;
+					case SDLK_e:
+						cursor_end();
+						break;
+					case SDLK_c:
+						command_clear();
+						break;
+					case SDLK_l:
+						ConsoleClear();
+						break;
 					default:
 						break;
 				}
+			}
+			else if(!(event->key.keysym.mod & KMOD_ALT)) {
+				switch(event->key.keysym.sym) {
+					case SDLK_HOME:
+						if(event->key.keysym.mod & KMOD_SHIFT) {
+							console->scroll = console->line_count - 1;
+						}
+						else {
+							cursor_home();
+				}
 				break;
+					case SDLK_END:
+						if(event->key.keysym.mod & KMOD_SHIFT) {
+							console->scroll = 0;
+						}
+						else {
+							cursor_end();
+						}
+						break;
+					case SDLK_PAGEUP:
+						console->scroll += CONSOLE_PAGE_LINES;
+						if(console->scroll > console->line_count - 1) {
+							console->scroll = console->line_count - 1;
+						}
+						break;
+					case SDLK_PAGEDOWN:
+						console->scroll -= CONSOLE_PAGE_LINES;
+						if(console->scroll < 0) {
+							console->scroll = 0;
+						}
+						break;
+					case SDLK_UP:
+						command_up();
+						break;
+					case SDLK_DOWN:
+						command_down();
+						break;
+					case SDLK_LEFT:
+						cursor_left();
+						break;
+					case SDLK_RIGHT:
+						cursor_right();
+						break;
+					case SDLK_BACKSPACE:
+						cursor_backspace();
+						break;
+					case SDLK_DELETE:
+						cursor_delete();
+						break;
+					case SDLK_INSERT:
+						console->insert = !console->insert;
+						break;
+					case SDLK_TAB:
+						console_tab();
+						break;
+					case SDLK_RETURN:
+						mutex_unlock(&console_mutex);
+						console_submit_command();
+						return;
 			default:
+						if(event->key.keysym.unicode > 0 && event->key.keysym.unicode < 256 &&
+							isprint((int)event->key.keysym.unicode)) {
+							cursor_add((unsigned char)event->key.keysym.unicode);
+						}
 				break;
 		} 
-		
-	} else {
-		switch(event->type) {
-			case SDL_KEYDOWN:
+			}
+			mutex_unlock(&console_mutex);
+		}
+	}
+	else if(event->type == SDL_KEYDOWN) {
 				switch(event->key.keysym.sym) {
 					case SDLK_F1:
 						ShowConsole();
 						break;
 					case SDLK_ESCAPE:
-						if (GUI_ScreenGetFocusWidget(GUI_GetScreen()) == NULL) {
+				if(GUI_ScreenGetFocusWidget(GUI_GetScreen()) == NULL) {
 							ShowConsole();
 						}
 						break;
 					default:
 						break;
 				}
-				break;
-			default:
-				break;
+	}
+}
+
+static void ConsoleDrawHandler(void *ds_event, void *param, int action) {
+	(void)ds_event;
+	(void)param;
+
+	if(!console || !console->visible) {
+		return;
+	}
+	if(action == EVENT_ACTION_RENDER_POST) {
+		console_draw();
+	}
+}
+
+static void console_free_lines(ConsoleState *con) {
+	int i;
+
+	if(!con) {
+		return;
+	}
+
+	if(con->lines) {
+		for(i = 0; i < con->line_count; i++) {
+			free(con->lines[i]);
 		}
+		free(con->lines);
+		con->lines = NULL;
+	}
+	if(con->commands) {
+		for(i = 0; i < con->line_count; i++) {
+			free(con->commands[i]);
+		}
+		free(con->commands);
+		con->commands = NULL;
+	}
+}
+
+void SetConsoleDebug(int mode) {
+	console_debug = mode;
+}
+
+int ds_printf(const char *fmt, ...) {
+	va_list args;
+	char buf[1024];
+	int i;
+	int n;
+
+	va_start(args, fmt);
+	i = vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	n = i;
+	if(n < 0 || n >= (int)sizeof(buf)) {
+		n = (int)strlen(buf);
+	}
+
+	if(irq_inside_int()) {
+		dbglog(DBG_DEBUG, "%s", buf);
+		return i;
+	}
+
+	mutex_lock(&console_mutex);
+	if(console_debug) {
+		dbglog(DBG_DEBUG, "%s", buf);
+	}
+	console_feed_n(buf, n);
+	mutex_unlock(&console_mutex);
+	return i;
+}
+
+void ConsoleClear(void) {
+	int i;
+
+	if(irq_inside_int()) {
+		return;
+	}
+
+	mutex_lock(&console_mutex);
+	if(console && console->lines) {
+		for(i = 0; i < console->line_count; i++) {
+			console_clear_line(console->lines[i]);
+		}
+		console->col = 0;
+		console->scroll = 0;
+		style_reset(&console->style);
+	}
+	mutex_unlock(&console_mutex);
+}
+
+void ConsoleSetBackground(const char *image, int x, int y) {
+	plx_texture_t *txr;
+
+	if(!console) {
+		return;
+	}
+
+	if(!image || !image[0]) {
+		if(console->background) {
+			plx_txr_destroy(console->background);
+			console->background = NULL;
+		}
+		return;
+	}
+
+	txr = plx_txr_load(image, 1, 0);
+	if(!txr) {
+		ds_printf("DS_ERROR: Cannot load background %s\n", image);
+		return;
+	}
+
+	txr->cxt_trans.gen.culling = PVR_CULLING_NONE;
+	plx_txr_flush_hdrs(txr);
+	if(console->background) {
+		plx_txr_destroy(console->background);
+	}
+	console->background = txr;
+	console->back_x = x;
+	console->back_y = y;
+}
+
+void ConsoleSetPosition(int x, int y) {
+	if(!console) {
+		return;
+	}
+	if(x < 0) {
+		x = 0;
+	}
+	if(y < 0) {
+		y = 0;
+	}
+	console->x = x;
+	console->y = y;
+}
+
+void ConsoleResize(int x, int y, int w, int h) {
+	if(!console) {
+		return;
+	}
+	if(w < 1) {
+		w = 1;
+	}
+	if(h < 1) {
+		h = 1;
+	}
+	console->x = x;
+	console->y = y;
+	console->w = w;
+	console->h = h;
+	console_layout();
+	console->scroll = 0;
+}
+
+void ConsoleSetAlpha(int alpha) {
+	if(!console) {
+		return;
+	}
+	if(alpha < 0) {
+		alpha = 0;
+	}
+	if(alpha > 255) {
+		alpha = 255;
+	}
+	console->alpha = alpha;
+}
+
+void ConsoleGetRect(int *x, int *y, int *w, int *h) {
+	if(!console) {
+		if(x) {
+			*x = 0;
+		}
+		if(y) {
+			*y = 0;
+		}
+		if(w) {
+			*w = 0;
+		}
+		if(h) {
+			*h = 0;
+		}
+		return;
+	}
+
+	if(x) {
+		*x = console->x;
+	}
+	if(y) {
+		*y = console->y;
+	}
+	if(w) {
+		*w = console->w;
+	}
+	if(h) {
+		*h = console->h;
 	}
 }
 
 int InitConsole(const char *font, const char *background, int lines, int x, int y, int w, int h, int alpha) {
-	
-	SDL_Rect Con_rect;
+	int i;
 
-	Con_rect.x = x;
-	Con_rect.y = y;
-	Con_rect.w = w;
-	Con_rect.h = h;
-
-	if((DSConsole = CON_Init(font, GetScreen(), lines, Con_rect)) == NULL)
-		return 0;
-
-	CON_SetPrompt(DSConsole, "D$: ");
-	
-	if(background != NULL) {
-		CON_Background(DSConsole, background, 0, 0); 
+	if(lines < 2) {
+		lines = 2;
 	}
-	
-	CON_SetExecuteFunction(DSConsole, Command_Handler);
-	CON_SetTabCompletion(DSConsole, TabFunction);
-	CON_Alpha(DSConsole, alpha);
-	ds_printf("Enter 'help' for print command list.\n\n");
-	
-	con_input_event = AddEvent(
-		"Console_Input",
-		EVENT_TYPE_INPUT,
-		EVENT_PRIO_DEFAULT,
-		ConsoleEventHandler,
-		NULL
-	);
-	con_video_event = AddEvent(
-		"Console_Video",
-		EVENT_TYPE_VIDEO,
-		EVENT_PRIO_DEFAULT,
-		ConsoleDrawHandler,
-		NULL
-	);
-	return 1;
-}
 
+	console = (ConsoleState *)calloc(1, sizeof(ConsoleState));
+	if(!console) {
+		dbglog(DBG_ERROR, "console: out of memory\n");
+		return 0;
+	}
 
-void ShutdownConsole() {
-	RemoveEvent(con_input_event);
-	RemoveEvent(con_video_event);
-	CON_Destroy(DSConsole);
-}
+	console->command_scroll = -1;
+	console->insert = 1;
+	style_reset(&console->style);
 
+	if(!console_load_font(font)) {
+		dbglog(DBG_ERROR, "console: can't load a TXF font\n");
+		free(console);
+		console = NULL;
+		return 0;
+	}
 
-int ToggleConsole() {
+	console->x = x;
+	console->y = y;
+	console->w = w > 0 ? w : 1;
+	console->h = h > 0 ? h : 1;
+	console_layout();
 
-	int vis = 0;
+	if(alpha < 0) {
+		alpha = 0;
+	}
+	if(alpha > 255) {
+		alpha = 255;
+	}
+	console->alpha = alpha;
+	snprintf(console->prompt, sizeof(console->prompt), "D$: ");
 
-	if(DSConsole != NULL) {
+	console->line_count = lines;
+	console->lines = (ConCell **)calloc((size_t)lines, sizeof(ConCell *));
+	console->commands = (char **)calloc((size_t)lines, sizeof(char *));
+	if(!console->lines || !console->commands) {
+		dbglog(DBG_ERROR, "console: out of memory\n");
+		ShutdownConsole();
+		return 0;
+	}
 
-		if((vis = ConsoleIsVisible())) {
-			HideConsole();
-		} else {
-			ShowConsole();
+	for(i = 0; i < lines; i++) {
+		console->lines[i] = (ConCell *)calloc(CONSOLE_MAX_COLS, sizeof(ConCell));
+		console->commands[i] = (char *)calloc(CONSOLE_CMD_MAX + 1, 1);
+		if(!console->lines[i] || !console->commands[i]) {
+			dbglog(DBG_ERROR, "console: out of memory\n");
+			ShutdownConsole();
+			return 0;
 		}
 	}
 
+	if(background && background[0]) {
+		ConsoleSetBackground(background, 0, 0);
+	}
+
+	con_input_event = AddEvent("Console_Input", EVENT_TYPE_INPUT, EVENT_PRIO_OVERLAY, ConsoleEventHandler, NULL);
+	con_video_event = AddEvent("Console_Video", EVENT_TYPE_VIDEO, EVENT_PRIO_DEFAULT, ConsoleDrawHandler, NULL);
+
+	ds_printf("Enter 'help' for print command list.\n");
+	ds_printf("Colors: \033[31mred\033[0m \033[32mgreen\033[0m \033[33myellow\033[0m \033[36mcyan\033[0m\n\n");
+	return 1;
+}
+
+void ShutdownConsole(void) {
+	ConsoleState *con;
+
+	if(irq_inside_int()) {
+		return;
+	}
+
+	mutex_lock(&console_mutex);
+	con = console;
+	console = NULL;
+	mutex_unlock(&console_mutex);
+
+	if(con_input_event) {
+	RemoveEvent(con_input_event);
+		con_input_event = NULL;
+	}
+	if(con_video_event) {
+	RemoveEvent(con_video_event);
+		con_video_event = NULL;
+	}
+
+	if(!con) {
+		return;
+	}
+
+	if(con->background) {
+		plx_txr_destroy(con->background);
+	}
+	if(con->fcxt) {
+		plx_fcxt_destroy(con->fcxt);
+	}
+	if(con->font) {
+		plx_font_destroy(con->font);
+	}
+	console_free_lines(con);
+	free(con);
+}
+
+int ToggleConsole(void) {
+	int vis = 0;
+
+	if(console) {
+		if((vis = ConsoleIsVisible())) {
+			HideConsole();
+		}
+		else {
+			ShowConsole();
+		}
+	}
 	return vis;
 }
 
-void ShowConsole() {
+void ShowConsole(void) {
+	int enable;
 
-	if(ConsoleIsVisible()) {
+	if(!console) {
 		return;
 	}
 
-	ScreenFadeOutEx(NULL, 1);
-	GUI_Disable();
+	mutex_lock(&console_mutex);
+	if(!console || (console->visible && !slide_run && slide_pos >= 1.0f)) {
+		mutex_unlock(&console_mutex);
+		return;
+	}
+	enable = !console->visible;
+	console_slide_begin(1);
+	console->visible = 1;
+	mutex_unlock(&console_mutex);
 
-	CON_Show(DSConsole);
-	CON_Topmost(DSConsole);
-	CON_UpdateConsole(DSConsole);
-	CON_DrawConsole(DSConsole);
-
-	SetEventActive(con_video_event, 1);
-	ScreenFadeIn();
+	if(enable) {
+		console_mouse_was = SDL_DC_MouseEmulated();
+		GUI_Disable();
+		if(con_video_event) {
+			SetEventActive(con_video_event, 1);
+		}
+	}
 }
 
-void HideConsole() {
-
-	if(!ConsoleIsVisible()) {
+void HideConsole(void) {
+	if(!console) {
 		return;
 	}
 
-	ScreenFadeOutEx(NULL, 1);
-	SetEventActive(con_video_event, 0);
-
-	CON_Hide(DSConsole);
-	CON_Topmost(NULL);
-
-	GUI_Enable();
-	ProcessVideoEventsUpdate(NULL);
-	ScreenFadeIn();
+	mutex_lock(&console_mutex);
+	if(!console || !console->visible || (slide_run && !slide_open)) {
+		mutex_unlock(&console_mutex);
+		return;
+	}
+	console_slide_begin(0);
+	mutex_unlock(&console_mutex);
 }
 
-ConsoleInformation *GetConsole() {
-	 return DSConsole;
-}
-
-int ConsoleIsVisible() {
-	return CON_isVisible(DSConsole);
+int ConsoleIsVisible(void) {
+	return console && console->visible;
 }

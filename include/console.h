@@ -1,7 +1,7 @@
 /** 
  * \file    console.h
  * \brief   DreamShell console
- * \date    2004-2014
+ * \date    2004-2014, 2026
  * \author  SWAT www.dc-swat.ru
  */
 
@@ -87,6 +87,7 @@ void ShutdownCmd();
 void SetConsoleDebug(int mode);
 
 
+/* Supports ANSI SGR, for example "\033[31mred\033[0m". */
 int ds_printf(const char *fmt, ...); 
 int ds_uprintf(const char *fmt, ...);
 int dbg_printf(const char *fmt, ...);
@@ -106,9 +107,12 @@ void ShowConsole();
 void HideConsole();
 int ConsoleIsVisible();
 
-#ifndef _NO_VIDEO_H
-ConsoleInformation *GetConsole();
-#endif
+void ConsoleClear(void);
+void ConsoleSetBackground(const char *image, int x, int y);
+void ConsoleSetPosition(int x, int y);
+void ConsoleResize(int x, int y, int w, int h);
+void ConsoleSetAlpha(int alpha);
+void ConsoleGetRect(int *x, int *y, int *w, int *h);
 
 extern dbgio_handler_t dbgio_ds;
 extern dbgio_handler_t dbgio_sd;

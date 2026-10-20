@@ -16,8 +16,6 @@
 #include "SDL/SDL_gfxPrimitives.h"
 #include "SDL/SDL_gfxBlitFunc.h"
 #include "SDL/SDL_rotozoom.h"
-#include "SDL/SDL_console.h"
-#include "SDL/DT_drawtext.h"
 
 #include "plx/font.h"
 #include "plx/sprite.h"

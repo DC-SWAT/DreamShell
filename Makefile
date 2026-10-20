@@ -17,7 +17,7 @@ VER_MAJOR = 4
 VER_MINOR = 0
 VER_MICRO = 5
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
-VER_BUILD = 0x14
+VER_BUILD = 0x15
 
 BUILD_TYPE_BASE = $(if $(filter 0x3%,$(VER_BUILD)),Release,$(if $(filter 0x2%,$(VER_BUILD)),RC,$(if $(filter 0x1%,$(VER_BUILD)),Beta,$(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
 BUILD_NUM = $(lastword $(subst 0x2,,$(subst 0x1,,$(subst 0x0,,$(subst 0x3,,$(VER_BUILD))))))
@@ -90,7 +90,6 @@ GRAPHICS_LIBS = -ltsunami_$(TSUNAMI_VER) \
 CORE_LIBS = $(EXTRA_LIBS) $(SDL_LIBS) $(GRAPHICS_LIBS) $(IMAGE_LIBS) $(LUA_LIBS) $(KLIBS)
 
 SDL_GUI = $(LIB_DIR)/SDL_gui
-SDL_CONSOLE = $(LIB_DIR)/SDL_Console/src
 
 GUI_OBJS = $(SDL_GUI)/SDL_gui.o $(SDL_GUI)/Exception.o $(SDL_GUI)/Object.o \
 			$(SDL_GUI)/Surface.o $(SDL_GUI)/Font.o $(SDL_GUI)/Callback.o \
@@ -103,9 +102,6 @@ GUI_OBJS = $(SDL_GUI)/SDL_gui.o $(SDL_GUI)/Exception.o $(SDL_GUI)/Object.o \
 			$(SDL_GUI)/AbstractTable.o $(SDL_GUI)/ListBox.o $(SDL_GUI)/VBoxLayout.o \
 			$(SDL_GUI)/RealScreen.o $(SDL_GUI)/ScrollPanel.o $(SDL_GUI)/RTF.o \
 			$(SDL_GUI)/Window.o $(SDL_GUI)/FileManager.o $(SDL_GUI)/Dialog.o
-
-CONSOLE_OBJ = $(SDL_CONSOLE)/SDL_console.o $(SDL_CONSOLE)/DT_drawtext.o \
-				$(SDL_CONSOLE)/internal.o
 
 DRIVERS_OBJ =
 
@@ -127,7 +123,7 @@ OBJS = $(SRC_DIR)/main.o $(SRC_DIR)/video.o $(SRC_DIR)/console.o \
 		$(SRC_DIR)/settings.o $(SRC_DIR)/sfx.o \
 		$(SRC_DIR)/naomi/bsram.o $(SRC_DIR)/naomi/coins.o \
 		$(SRC_DIR)/naomi/cart.o \
-		$(DRIVERS_OBJ) $(GUI_OBJS) $(CONSOLE_OBJ) \
+		$(DRIVERS_OBJ) $(GUI_OBJS) \
 		$(UTILS_OBJ) $(SRC_DIR)/exports.o $(SRC_DIR)/exports_gcc.o \
 		romdisk.o
 

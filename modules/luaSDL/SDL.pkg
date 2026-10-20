@@ -1822,15 +1822,6 @@ SDL_Surface * IMG_Load_RW(SDL_RWops *src, int freesrc);
 SDL_Surface * IMG_ReadXPMFromArray(char **xpm);
 
 
-void DT_DrawText(const char *string, SDL_Surface *surface, int FontType, int x, int y );
-int	DT_LoadFont(const char *BitmapName, int flags );
-int	DT_FontHeight( int FontNumber );
-int	DT_FontWidth( int FontNumber );
-BitFont* DT_FontPointer(int FontNumber );
-void DT_DestroyDrawText();
-
-
-
 /* Ends C function definitions when using C++ */
 
 

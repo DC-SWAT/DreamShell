@@ -562,9 +562,9 @@ int builtin_env(int argc, char *argv[]) {
 
 /* clear the screen */
 static int builtin_clear(int argc, char *argv[]) {
-	ConsoleInformation *console = GetConsole();
-	Clear_History(console);
-	CON_UpdateConsole(console);
+	(void)argc;
+	(void)argv;
+	ConsoleClear();
 	return CMD_OK;
 }
 
@@ -1725,8 +1725,9 @@ static int builtin_console(int argc, char *argv[]) {
 	if(back) {
 		if(file) {
 			fs_normalize_path(file, fn);
-			CON_Background(GetConsole(), fn, x, y);
-		} else {
+			ConsoleSetBackground(fn, x, y);
+		}
+		else {
 			ds_printf("DS_ERROR: Too few arguments.\n");
 			return CMD_NO_ARG;
 		}
@@ -1735,27 +1736,21 @@ static int builtin_console(int argc, char *argv[]) {
 	}
 
 	if(pos) {
-		CON_Position(GetConsole(), x, y);
+		ConsoleSetPosition(x, y);
 		return CMD_OK;
 	}
 
 	if(resize) {
-		SDL_Rect rect;
-		rect.x = x;
-		rect.y = y;
-		rect.w = w;
-		rect.h = h;
-		CON_Resize(GetConsole(), rect);
+		ConsoleResize(x, y, w, h);
 		return CMD_OK;
 	}
 
 	if(alpha) {
-		CON_Alpha(GetConsole(), t);
+		ConsoleSetAlpha(t);
 		return CMD_OK;
 	}
 
 	if(update) {
-		CON_UpdateConsole(GetConsole());
 		return CMD_OK;
 	}
 
