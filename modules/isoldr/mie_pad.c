@@ -22,6 +22,8 @@
 #define MIE_PAD_OFF      0
 #define MIE_PAD_ON       1
 #define MIE_PAD_CAL      2
+#define MIE_PAD_FEAT     3
+#define MIE_PAD_FEAT_VMU 1
 #define MIE_PAD_DATA     4
 #define MIE_PAD_WORDS    6
 #define MIE_PAD_TIMEOUT  1000
@@ -46,7 +48,7 @@ static int mie_pad_cal_ok(const mie_analog_calib_t *c) {
 	return 1;
 }
 
-static int mie_pad_cmd(int on) {
+static int mie_pad_cmd(int on, uint32_t emu_vmu) {
 	maple_device_t *dev;
 	maple_frame_t *frm;
 	maple_response_t *resp;
@@ -65,6 +67,9 @@ static int mie_pad_cmd(int on) {
 	words = 1;
 	if(on) {
 		mie_pad_tx[1] = MIE_PAD_ON;
+		if(emu_vmu) {
+			mie_pad_tx[MIE_PAD_FEAT] = MIE_PAD_FEAT_VMU;
+		}
 		settings = GetSettings();
 		if(settings && mie_pad_cal_ok(&settings->analog)) {
 			mie_pad_tx[MIE_PAD_CAL] = 1;
@@ -97,7 +102,7 @@ static int mie_pad_cmd(int on) {
 	return resp->data[0] == MIE_IOR_PAD_ACK;
 }
 
-void isoldr_naomi_mie_pad(uint32_t image_type) {
+void isoldr_naomi_mie_pad(uint32_t image_type, uint32_t emu_vmu) {
 	int on;
 
 	if(hardware_sys_mode(NULL) == HW_TYPE_RETAIL) {
@@ -111,7 +116,7 @@ void isoldr_naomi_mie_pad(uint32_t image_type) {
 		on = 1;
 	}
 
-	if(mie_pad_cmd(on)) {
+	if(mie_pad_cmd(on, emu_vmu)) {
 		ds_printf("DS_PROCESS: MIE pad bridge %s\n", on ? "on" : "off");
 	}
 	else {
