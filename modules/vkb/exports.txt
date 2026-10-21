@@ -1,11 +1,13 @@
 include kos/exports.h
 include ds.h
+include vkb.h
 
 VirtKeyboardInit
 VirtKeyboardShutdown
 VirtKeyboardShow
 VirtKeyboardHide
 VirtKeyboardToggle
+VirtKeyboardSetEnabled
 #VirtKeyboardGetSurface
 #VirtKeyboardSetSurface
 VirtKeyboardIsVisible

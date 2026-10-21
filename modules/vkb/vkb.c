@@ -34,6 +34,7 @@ typedef struct virt_kb {
 
 	int cur_surf;
 	int visible;
+	int enabled;
 
 	int row;
 	int col;
@@ -202,6 +203,7 @@ int VirtKeyboardInit() {
 	vkb.zoom = VKB_ZOOM_MIN;
 	vkb.cur_surf = VIRT_KB_SURFACE_KEYS;
 	vkb.visible = 0;
+	vkb.enabled = 1;
 	vkb.clr = VKB_CURSOR_COLOR;
 	
 	vkb.input = AddEvent(
@@ -327,6 +329,9 @@ static int vkb_fade_step(void) {
 }
 
 void VirtKeyboardShow() {
+	if(!vkb.enabled) {
+		return;
+	}
 	if(vkb.tex[0] == NULL) {
 		if(VirtKeyboardLoading(0) < 0) {
 			return;
@@ -357,6 +362,13 @@ void VirtKeyboardHide() {
 
 int VirtKeyboardIsVisible() {
 	return vkb.visible;
+}
+
+void VirtKeyboardSetEnabled(int enabled) {
+	vkb.enabled = enabled ? 1 : 0;
+	if(!vkb.enabled && VirtKeyboardIsVisible()) {
+		VirtKeyboardHide();
+	}
 }
 
 
@@ -568,7 +580,7 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 	/* Handle text entry focus events */
 	switch(event->type) {
 		case DS_SHOW_VKB_EVENT:
-			if(!VirtKeyboardIsVisible()) {
+			if(vkb.enabled && !VirtKeyboardIsVisible()) {
 				VirtKeyboardShow();
 			}
 			/* Don't process this event further inside vkb */
@@ -623,17 +635,10 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 						SDL_PushEvent(&vkb.event);
 						vkb.clr = VKB_CURSOR_PRESS_COLOR;
 						break;
-					case 3:
+					case SDL_DC_START:
 						VirtKeyboardHide();
 						break;
 				}
-				/*
-				 * 1 -  B
-				 * 6 -  X
-				 * 5 -  Y
-				 * 2 -  A
-				 * 3 -  START
-				 */
 				break; 
 			
 			case SDL_JOYBUTTONUP:
@@ -739,11 +744,11 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 		}
 		vkb.last_joy_state = vkb.cur_joy_state;
 
-	} else {
-		
-		if(event->type == SDL_JOYBUTTONDOWN && event->jbutton.button == SDL_DC_START) {
-			VirtKeyboardToggle();
-			event->type = 0;
-		}
+	}
+	else if(vkb.enabled &&
+			event->type == SDL_JOYBUTTONDOWN &&
+			event->jbutton.button == SDL_DC_START) {
+		VirtKeyboardToggle();
+		event->type = 0;
 	}
 }

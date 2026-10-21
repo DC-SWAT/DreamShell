@@ -15,6 +15,7 @@
 #include "video.h"
 #include "list.h"
 #include "module.h"
+#include "vkb.h"
 #include "events.h"
 #include "console.h"
 #include "lua.h"
