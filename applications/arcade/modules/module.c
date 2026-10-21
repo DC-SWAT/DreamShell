@@ -1298,6 +1298,7 @@ void ArcadeApp_Open(App_t *app) {
     if (self.app->tsunami) {
         self.launching = false;
         SDL_DC_EmulateMouse(SDL_FALSE);
+        SetVirtKeyboardEnabled(0);
 
         naomi_coin_set_callback(ArcadeCoinCountCb, NULL);
         mie_jvs_callback(MIE_JVS_IN_PANEL_PSW, MIE_JVS_PANEL_TEST_BIT, ArcadeTestCb);
@@ -1330,6 +1331,7 @@ void ArcadeApp_Close(App_t *app) {
     }
 
     SDL_DC_EmulateMouse(SDL_TRUE);
+    SetVirtKeyboardEnabled(1);
 }
 
 void ArcadeApp_Shutdown(App_t *app) {
@@ -1374,5 +1376,6 @@ void ArcadeApp_Shutdown(App_t *app) {
     }
 
     SDL_DC_EmulateMouse(SDL_TRUE);
+    SetVirtKeyboardEnabled(1);
     mutex_destroy(&self.trailer.mutex);
 }
