@@ -556,9 +556,11 @@ static void HandleDialogInput(SDL_Event *event) {
 
         switch(event->jhat.value) {
             case SDL_HAT_LEFT:
+            case SDL_HAT_UP:
                 TSU_DialogMoveFocus(self.delete_dialog, -1);
                 break;
             case SDL_HAT_RIGHT:
+            case SDL_HAT_DOWN:
                 TSU_DialogMoveFocus(self.delete_dialog, 1);
                 break;
             default:
@@ -570,9 +572,11 @@ static void HandleDialogInput(SDL_Event *event) {
     if(event->type == SDL_KEYDOWN) {
         switch(event->key.keysym.sym) {
             case SDLK_LEFT:
+            case SDLK_UP:
                 TSU_DialogMoveFocus(self.delete_dialog, -1);
                 break;
             case SDLK_RIGHT:
+            case SDLK_DOWN:
                 TSU_DialogMoveFocus(self.delete_dialog, 1);
                 break;
             case SDLK_RETURN:
@@ -666,7 +670,6 @@ static void InputHandler(void *ds_event, void *param, int action) {
                     RequestItemDelete(0, 0, 1);
                     break;
                 case SDL_DC_A:
-                case SDL_DC_START:
                     ActivateFocused();
                     break;
                 case SDL_DC_L:
