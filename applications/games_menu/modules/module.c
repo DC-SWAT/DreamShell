@@ -2919,6 +2919,7 @@ void GamesApp_Open(App_t *app)
 	}
 
 	SDL_DC_EmulateMouse(SDL_TRUE);
+	SetVirtKeyboardEnabled(0);
 
 	do_menu_control_event = AddEvent
 	(
@@ -2942,6 +2943,8 @@ void GamesApp_Open(App_t *app)
 void GamesApp_Shutdown(App_t *app)
 {
 	(void)app;
+
+	SetVirtKeyboardEnabled(1);
 
 	if (do_menu_control_event != NULL)
 	{

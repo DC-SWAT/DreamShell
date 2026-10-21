@@ -670,6 +670,8 @@ static void InputHandler(void *ds_event, void *param, int action) {
                     RequestItemDelete(0, 0, 1);
                     break;
                 case SDL_DC_A:
+                case SDL_DC_X:
+                case SDL_DC_Y:
                     ActivateFocused();
                     break;
                 case SDL_DC_L:
