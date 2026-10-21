@@ -15,9 +15,13 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
+#include <stdlib.h>
 
 #define CONSOLE_FONT_SIZE 16.0f
 #define CONSOLE_FONT_UNIT_MIN 0.01f
+#define CONSOLE_WIDTH_RANK_NUM 9
+#define CONSOLE_WIDTH_RANK_DEN 10
+#define CONSOLE_WIDTH_MONO 1.2f
 #define CONSOLE_SLANT 0.18f
 #define CONSOLE_LINE_LEAD 2.0f
 #define CONSOLE_BORDER 8.0f
@@ -26,7 +30,15 @@
 #define CONSOLE_CURSOR_PI 3.14159265f
 #define CONSOLE_SLIDE_MS 220
 #define CONSOLE_PAGE_LINES 2
+#define CONSOLE_TRIG_AXIS_RIGHT 2
+#define CONSOLE_TRIG_AXIS_LEFT 3
+#define CONSOLE_TRIG_THRESHOLD 192
+#define CONSOLE_TRIG_REPEAT_MS 50
+#define CONSOLE_TRIG_STEP 1
 #define CONSOLE_TAB_WIDTH 8
+#define CONSOLE_HINT_COLUMNS 4
+#define CONSOLE_HINT_GAP 2
+#define CONSOLE_HINT_LINE 160
 #define CONSOLE_MAX_COLS 160
 #define CONSOLE_CMD_MAX 256
 #define CONSOLE_SCROLL_EVERY 5
@@ -76,6 +88,9 @@
 #define CONSOLE_COLOR_DEFAULT 0
 #define CONSOLE_COLOR_INDEX 1
 #define CONSOLE_COLOR_RGB 2
+#define CONSOLE_EL_TO_END 0
+#define CONSOLE_EL_TO_CURSOR 1
+#define CONSOLE_EL_ALL 2
 
 #define CONSOLE_ATTR_ITALIC 0x01
 #define CONSOLE_ATTR_UNDERLINE 0x02
@@ -183,6 +198,11 @@ static int slide_run = 0;
 static uint64 slide_start = 0;
 static uint32 slide_span = 1;
 static int console_mouse_was = 1;
+static int feed_pending_nl = 0;
+static int feed_tag_on = 0;
+static ConStyle feed_tag_saved;
+static uint64 trig_left_next = 0;
+static uint64 trig_right_next = 0;
 
 
 static void style_reset(ConStyle *st) {
@@ -409,6 +429,8 @@ static void style_apply(ConStyle *st, const int *params, int count) {
 	}
 }
 
+static void console_erase_line(int mode);
+
 static int apply_csi(const char *s, int n, ConStyle *st) {
 	int params[CONSOLE_SGR_PARAMS];
 	int count = 0;
@@ -446,6 +468,14 @@ static int apply_csi(const char *s, int n, ConStyle *st) {
 			if(c == 'm') {
 				style_apply(st, params, count);
 			}
+			else if(c == 'K') {
+				int mode = CONSOLE_EL_TO_END;
+
+				if(count > 0) {
+					mode = params[0];
+				}
+				console_erase_line(mode);
+			}
 			return i + 1;
 		}
 		break;
@@ -456,6 +486,40 @@ static int apply_csi(const char *s, int n, ConStyle *st) {
 
 static void console_clear_line(ConCell *line) {
 	memset(line, 0, sizeof(ConCell) * CONSOLE_MAX_COLS);
+}
+
+static void console_erase_line(int mode) {
+	int from;
+	int to;
+	int i;
+
+	if(!console || !console->lines || !console->lines[0]) {
+		return;
+	}
+
+	if(mode == CONSOLE_EL_ALL) {
+		console_clear_line(console->lines[0]);
+		return;
+	}
+
+	if(mode == CONSOLE_EL_TO_CURSOR) {
+		from = 0;
+		to = console->col + 1;
+	}
+	else {
+		from = console->col;
+		to = CONSOLE_MAX_COLS;
+	}
+
+	if(from < 0) {
+		from = 0;
+	}
+	if(to > CONSOLE_MAX_COLS) {
+		to = CONSOLE_MAX_COLS;
+	}
+	for(i = from; i < to; i++) {
+		memset(&console->lines[0][i], 0, sizeof(ConCell));
+	}
 }
 
 static void console_newline(void) {
@@ -516,12 +580,6 @@ static void console_put_span(const char *s, int n) {
 
 	while(i < n) {
 		unsigned char ch = (unsigned char)s[i];
-
-		if(ch == '\r') {
-			console->col = 0;
-			i++;
-			continue;
-		}
 
 		if(ch == '\b') {
 			if(console->col > 0) {
@@ -626,6 +684,71 @@ static int line_tag_color(const char *s, int n, int *r, int *g, int *b) {
 	return 0;
 }
 
+static void feed_tag_off(void) {
+	if(!feed_tag_on) {
+		return;
+	}
+	console->style = feed_tag_saved;
+	feed_tag_on = 0;
+}
+
+static void feed_tag_try(const char *s, int n) {
+	int r;
+	int g;
+	int b;
+
+	feed_tag_off();
+	if(!line_tag_color(s, n, &r, &g, &b)) {
+		return;
+	}
+	feed_tag_saved = console->style;
+	style_set_rgb(&console->style, 0, r, g, b);
+	feed_tag_on = 1;
+}
+
+static void feed_commit_nl(void) {
+	if(!feed_pending_nl) {
+		return;
+	}
+	feed_tag_off();
+	console_newline();
+	feed_pending_nl = 0;
+}
+
+static void feed_newline(void) {
+	feed_tag_off();
+	if(feed_pending_nl) {
+		console_newline();
+	}
+	feed_pending_nl = 1;
+}
+
+static void feed_cr(void) {
+	feed_tag_off();
+	if(feed_pending_nl) {
+		console_newline();
+		feed_pending_nl = 0;
+		return;
+	}
+	console->col = 0;
+}
+
+static void feed_write(const char *s, int n) {
+	if(n <= 0) {
+		return;
+	}
+	feed_commit_nl();
+	if(console->col == 0) {
+		feed_tag_try(s, n);
+	}
+	console_put_span(s, n);
+}
+
+static void feed_reset(void) {
+	feed_pending_nl = 0;
+	feed_tag_on = 0;
+}
+
 static void console_feed_n(const char *s, int n) {
 	int i = 0;
 
@@ -634,43 +757,119 @@ static void console_feed_n(const char *s, int n) {
 	}
 
 	while(i < n) {
-		int start = i;
-		int end;
-		int replace = 0;
-		int r;
-		int g;
-		int b;
-		int tagged;
-		ConStyle saved;
+		int start;
 
-		while(i < n && s[i] != '\n') {
+		if(s[i] == '\r' && i + 1 < n && s[i + 1] == '\n') {
+			feed_newline();
+			i += 2;
+			continue;
+		}
+		if(s[i] == '\n') {
+			feed_newline();
+			i++;
+			continue;
+		}
+		if(s[i] == '\r') {
+			feed_cr();
+			i++;
+			continue;
+		}
+		start = i;
+		while(i < n && s[i] != '\n' && s[i] != '\r') {
 			i++;
 		}
-		end = i;
-		if(i < n && s[i] == '\n') {
-			i++;
-		}
-		if(end > start && s[end - 1] == '\r') {
-			end--;
-			replace = 1;
-		}
+		feed_write(s + start, i - start);
+	}
+}
 
-		if(!replace) {
-			console_newline();
+static int console_cmp_width(const void *a, const void *b) {
+	float da;
+	float db;
+
+	da = *(const float *)a;
+	db = *(const float *)b;
+	if(da < db) {
+		return -1;
+	}
+	if(da > db) {
+		return 1;
+	}
+	return 0;
+}
+
+static float console_cell_unit(plx_font_t *font, float max_w) {
+	float *widths;
+	float cell;
+	int n;
+	int i;
+	int rank;
+
+	widths = (float *)malloc(sizeof(float) * (size_t)font->glyph_cnt);
+	if(!widths) {
+		return max_w;
+	}
+
+	n = 0;
+	for(i = 0; i < font->glyph_cnt; i++) {
+		if(font->vert_ur[i].x < CONSOLE_FONT_UNIT_MIN) {
+			continue;
 		}
-		else {
-			console_clear_line(console->lines[0]);
-			console->col = 0;
+		widths[n] = font->vert_ur[i].x;
+		n++;
+	}
+	if(n < 1) {
+		free(widths);
+		return max_w;
+	}
+
+	qsort(widths, (size_t)n, sizeof(float), console_cmp_width);
+	rank = (n - 1) * CONSOLE_WIDTH_RANK_NUM / CONSOLE_WIDTH_RANK_DEN;
+	cell = widths[rank];
+	free(widths);
+	if(cell < CONSOLE_FONT_UNIT_MIN) {
+		return max_w;
+	}
+	if(max_w <= cell * CONSOLE_WIDTH_MONO) {
+		return max_w;
+	}
+	return cell;
+}
+
+static void console_fit_widths(plx_font_t *font, float cell) {
+	int i;
+
+	for(i = 0; i < font->glyph_cnt; i++) {
+		float w;
+		float k;
+
+		w = font->vert_ur[i].x;
+		if(w <= cell || w < CONSOLE_FONT_UNIT_MIN) {
+			continue;
 		}
-		saved = console->style;
-		tagged = line_tag_color(s + start, end - start, &r, &g, &b);
-		if(tagged) {
-			style_set_rgb(&console->style, 0, r, g, b);
+		k = cell / w;
+		font->vert_ll[i].x *= k;
+		font->vert_ur[i].x *= k;
+	}
+}
+
+static void console_center_glyphs(plx_font_t *font, float cell) {
+	int i;
+
+	for(i = 0; i < font->glyph_cnt; i++) {
+		float left;
+		float right;
+		float width;
+		float shift;
+
+		left = font->vert_ll[i].x;
+		right = font->vert_ur[i].x;
+		width = right - left;
+		if(width < CONSOLE_FONT_UNIT_MIN) {
+			continue;
 		}
-		console_put_span(s + start, end - start);
-		if(tagged) {
-			console->style = saved;
-		}
+		shift = (cell - width) * 0.5f - left;
+		font->vert_ll[i].x = left + shift;
+		font->vert_ur[i].x = right + shift;
 	}
 }
 
@@ -710,6 +909,16 @@ static int console_open_font(const char *path) {
 	}
 	if(max_w < CONSOLE_FONT_UNIT_MIN) {
 		max_w = CONSOLE_FONT_UNIT_MIN;
+	}
+
+	{
+		float cell = console_cell_unit(font, max_w);
+
+		if(cell < max_w) {
+			console_fit_widths(font, cell);
+			console_center_glyphs(font, cell);
+			max_w = cell;
+		}
 	}
 
 	fcxt->gap = 0.0f;
@@ -971,35 +1180,168 @@ static void command_down(void) {
 	command_assemble();
 }
 
-static char *TabFunction(char *command);
+typedef struct {
+	char common[CONSOLE_CMD_MAX + 1];
+	int count;
+	int started;
+} TabScan;
 
-static void console_tab(void) {
-	char tmp[CONSOLE_CMD_MAX + 1];
-	char *done;
-	int n;
-	int i;
+typedef struct {
+	char line[CONSOLE_HINT_LINE];
+	int col;
+	int len;
+} TabPrint;
 
-	snprintf(tmp, sizeof(tmp), "%s", console->lcmd);
-	done = TabFunction(tmp);
-	if(!done) {
+static int tab_prefix(const char *name, const char *prefix) {
+	size_t n;
+
+	if(!name || !name[0]) {
+		return 0;
+	}
+	n = strlen(prefix);
+	return strncmp(name, prefix, n) == 0;
+}
+
+static void tab_note(const char *name, void *arg) {
+	TabScan *scan = (TabScan *)arg;
+	size_t i;
+
+	if(!scan->started) {
+		snprintf(scan->common, sizeof(scan->common), "%s", name);
+		scan->started = 1;
+		scan->count = 1;
 		return;
 	}
 
-	n = (int)strlen(done);
-	if(n + 2 > CONSOLE_CMD_MAX) {
-		n = CONSOLE_CMD_MAX - 2;
+	i = 0;
+	while(scan->common[i] && name[i] && scan->common[i] == name[i]) {
+		i++;
+	}
+	scan->common[i] = '\0';
+	scan->count++;
+}
+
+static void tab_flush(TabPrint *out) {
+	if(out->len <= 0) {
+		return;
+	}
+	ds_printf("%s\n", out->line);
+	out->line[0] = '\0';
+	out->col = 0;
+	out->len = 0;
+}
+
+static void tab_print_name(const char *name, void *arg) {
+	TabPrint *out = (TabPrint *)arg;
+	int n;
+	int gap;
+	int i;
+
+	n = (int)strlen(name);
+	if(n >= CONSOLE_HINT_LINE) {
+		tab_flush(out);
+		ds_printf("%s\n", name);
+		return;
 	}
 
-	console->lcmd[0] = '\0';
-	console->cursor = 0;
-	for(i = 0; i < n; i++) {
-		console->lcmd[i] = done[i];
-		console->cursor++;
+	gap = out->len > 0 ? CONSOLE_HINT_GAP : 0;
+	if(out->col >= CONSOLE_HINT_COLUMNS || out->len + gap + n >= CONSOLE_HINT_LINE) {
+		tab_flush(out);
+		gap = 0;
 	}
-	console->lcmd[n] = ' ';
-	console->lcmd[n + 1] = '\0';
-	console->cursor++;
+	for(i = 0; i < gap; i++) {
+		out->line[out->len++] = ' ';
+	}
+	memcpy(out->line + out->len, name, (size_t)n);
+	out->len += n;
+	out->line[out->len] = '\0';
+	out->col++;
+}
+
+static void tab_each(const char *prefix, void (*fn)(const char *name, void *arg), void *arg) {
+	Item_list_t *list;
+	Item_t *item;
+	file_t fd;
+	const dirent_t *ent;
+	char dir[NAME_MAX];
+	const char *base;
+
+	list = GetCmdList();
+	if(list) {
+		SLIST_FOREACH(item, list, list) {
+			Cmd_t *cmd = (Cmd_t *)item->data;
+
+			if(cmd && tab_prefix(cmd->command, prefix)) {
+				fn(cmd->command, arg);
+			}
+		}
+	}
+
+	base = getenv("PATH");
+	if(!base) {
+		return;
+	}
+	snprintf(dir, sizeof(dir), "%s/cmds", base);
+	fd = fs_open(dir, O_RDONLY | O_DIR);
+	if(fd == FILEHND_INVALID) {
+		return;
+	}
+	while((ent = fs_readdir(fd)) != NULL) {
+		if(ent->attr == O_DIR) {
+			continue;
+		}
+		if(tab_prefix(ent->name, prefix)) {
+			fn(ent->name, arg);
+		}
+	}
+	fs_close(fd);
+}
+
+static void console_tab_apply(const char *text, int add_space) {
+	int n;
+
+	n = (int)strlen(text);
+	if(n + (add_space ? 2 : 1) > CONSOLE_CMD_MAX) {
+		n = CONSOLE_CMD_MAX - (add_space ? 2 : 1);
+	}
+	memcpy(console->lcmd, text, (size_t)n);
+	if(add_space) {
+		console->lcmd[n] = ' ';
+		n++;
+	}
+	console->lcmd[n] = '\0';
+	console->rcmd[0] = '\0';
+	console->cursor = n;
+	console->offset = 0;
 	command_assemble();
+}
+
+static void console_tab(void) {
+	TabScan scan;
+	TabPrint out;
+	const char *prefix;
+
+	prefix = console->lcmd;
+	if(strchr(prefix, ' ') != NULL) {
+		return;
+	}
+
+	memset(&scan, 0, sizeof(scan));
+	tab_each(prefix, tab_note, &scan);
+	if(scan.count < 1) {
+		return;
+	}
+	if(scan.count == 1) {
+		console_tab_apply(scan.common, 1);
+		return;
+	}
+
+	memset(&out, 0, sizeof(out));
+	tab_each(prefix, tab_print_name, &out);
+	tab_flush(&out);
+	if(strlen(scan.common) > strlen(prefix)) {
+		console_tab_apply(scan.common, 0);
+	}
 }
 
 static uint32 pack_rgb(unsigned char r, unsigned char g, unsigned char b, float extra_a) {
@@ -1432,51 +1774,6 @@ static void console_draw(void) {
 	mutex_unlock(&console_mutex);
 }
 
-static char *TabFunction(char *command) {
-	if(strstr(command, " ") != NULL) {
-		return command;
-	}
-
-	{
-	Item_list_t *cmds = GetCmdList();
-	Cmd_t *c;
-	Item_t *i;
-	int internal = 0;
-	
-	SLIST_FOREACH(i, cmds, list) {
-			c = (Cmd_t *)i->data;
-		if(!strncmp(c->command, command, strlen(command))) {
-				snprintf(command, CONSOLE_CMD_MAX + 1, "%s", c->command);
-			internal = 1;
-			break;
-		}
-	}
-	
-	if(!internal) {
-		file_t fd;
-		const dirent_t *ent;
-		char dir[NAME_MAX];
-			const char *base = getenv("PATH");
-
-			if(base) {
-				snprintf(dir, NAME_MAX, "%s/cmds", base);
-		fd = fs_open(dir, O_RDONLY | O_DIR);
-
-		if(fd != FILEHND_INVALID) {
-					while((ent = fs_readdir(fd)) != NULL) {
-				if(ent->attr != O_DIR && !strncmp(ent->name, command, strlen(command))) {
-							snprintf(command, CONSOLE_CMD_MAX + 1, "%s", ent->name);
-				}
-			}
-			fs_close(fd);
-				}
-			}
-		}
-	}
-
-	return command;
-}
-
 static void Command_Handler(const char *command) {
 	dsystem(command);
 }
@@ -1502,8 +1799,59 @@ static void console_submit_command(void) {
 	console->command_scroll = -1;
 	mutex_unlock(&console_mutex);
 
-	ds_printf("%s", shown);
+	ds_printf("%s\n", shown);
 	Command_Handler(run);
+}
+
+static void console_scroll_by(int delta) {
+	int next;
+
+	if(!console) {
+		return;
+	}
+	next = console->scroll + delta;
+	if(next < 0) {
+		next = 0;
+	}
+	if(next > console->line_count - 1) {
+		next = console->line_count - 1;
+	}
+	console->scroll = next;
+}
+
+static void console_trigger_scroll(int axis, int value) {
+	uint64 *due;
+	uint64 now;
+	int delta;
+	int held;
+
+	if(axis == CONSOLE_TRIG_AXIS_LEFT) {
+		due = &trig_left_next;
+		delta = CONSOLE_TRIG_STEP;
+	}
+	else if(axis == CONSOLE_TRIG_AXIS_RIGHT) {
+		due = &trig_right_next;
+		delta = -CONSOLE_TRIG_STEP;
+	}
+	else {
+		return;
+	}
+
+	held = value >= CONSOLE_TRIG_THRESHOLD;
+	if(!held) {
+		*due = 0;
+		return;
+	}
+
+	now = timer_ms_gettime64();
+	if(*due != 0 && now < *due) {
+		return;
+	}
+
+	mutex_lock(&console_mutex);
+	console_scroll_by(delta);
+	mutex_unlock(&console_mutex);
+	*due = now + CONSOLE_TRIG_REPEAT_MS;
 }
 
 static void ConsoleEventHandler(void *ds_event, void *param, int action) {
@@ -1517,6 +1865,12 @@ static void ConsoleEventHandler(void *ds_event, void *param, int action) {
 	}
 
 	if(console->visible) {
+		if(event->type == SDL_JOYAXISMOTION) {
+			if(!VirtKeyboardShown() && event->jaxis.which == 0) {
+				console_trigger_scroll(event->jaxis.axis, event->jaxis.value);
+			}
+			return;
+		}
 		if(event->type == SDL_KEYDOWN) {
 			if(event->key.keysym.sym == SDLK_F1 || event->key.keysym.sym == SDLK_ESCAPE) {
 				if(slide_run && !slide_open) {
@@ -1722,6 +2076,7 @@ void ConsoleClear(void) {
 		}
 		console->col = 0;
 		console->scroll = 0;
+		feed_reset();
 		style_reset(&console->style);
 	}
 	mutex_unlock(&console_mutex);
@@ -1849,6 +2204,7 @@ int InitConsole(const char *font, const char *background, int lines, int x, int 
 
 	console->command_scroll = -1;
 	console->insert = 1;
+	feed_reset();
 	style_reset(&console->style);
 
 	if(!console_load_font(font)) {

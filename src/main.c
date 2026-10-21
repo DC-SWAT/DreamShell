@@ -322,9 +322,9 @@ int InitDS() {
 	TTF_Init();
 	InitGUI();
 
-	snprintf(fn, NAME_MAX, "%s/fonts/txf/typewriter.txf", getenv("PATH"));
+	snprintf(fn, NAME_MAX, "%s/fonts/txf/dreamshell.txf", getenv("PATH"));
 	InitCmd(); 
-	InitConsole(fn, NULL, 40, 0, 0, GetScreenWidth(), GetScreenHeight(), 255);
+	InitConsole(fn, NULL, 100, 0, 0, GetScreenWidth(), GetScreenHeight(), 255);
 
 	if(InitModules()) {
 		dbglog(DBG_ERROR, "Can't init modules\n");
