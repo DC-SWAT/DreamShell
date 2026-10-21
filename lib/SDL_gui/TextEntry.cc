@@ -5,6 +5,7 @@
 
 #include "SDL_gui.h"
 #include "gui.h"
+#include "vkb.h"
 
 extern "C"
 {
