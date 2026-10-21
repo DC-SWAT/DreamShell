@@ -622,8 +622,7 @@ static void VirtKeyboardEvent(void *ds_event, void *param, int action) {
 								break;
 							case SDLK_TAB:
 								vkb.event.key.keysym.mod = 0;
-								vkb.event.key.keysym.unicode = '_';
-								vkb.event.key.keysym.sym = SDLK_UNDERSCORE;
+								vkb.event.key.keysym.unicode = 0;
 								break;
 							default:
 								vkb.event.key.keysym.unicode = vkb.event.key.keysym.sym;
