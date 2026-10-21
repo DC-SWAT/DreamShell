@@ -108,7 +108,10 @@ static int analog_channel_value(const mie_jvs_inputs_t *jvs, int ch, int as_trig
     uint16_t raw;
 
     raw = jvs->analog[ch];
-    if(mie_analog_calib_active()) {
+    if(ch <= JVS_ANALOG_BRAKE && !mie_analog_calib_valid()) {
+        return 0;
+    }
+    if(mie_analog_calib_active() && ch > JVS_ANALOG_BRAKE) {
         return (int)(raw & MIE_JVS_ANALOG_RAW_MASK);
     }
     if(ch == JVS_ANALOG_WHEEL) {
@@ -179,6 +182,9 @@ static void jvs_cont_map(const mie_jvs_inputs_t *jvs, cont_state_t *cont) {
     for(ch = 0; ch < DS_JVS_MAP_ANALOG; ch++) {
         slot = active_jvs_map[DS_JVS_MAP_BUTTON + ch];
         if(slot == DS_JVS_AXIS_NONE || slot >= DS_JVS_AXIS_COUNT) {
+            continue;
+        }
+        if(ch <= JVS_ANALOG_BRAKE && !mie_analog_calib_valid()) {
             continue;
         }
         if(ch == JVS_ANALOG_WHEEL && wheel_unused(jvs)) {
