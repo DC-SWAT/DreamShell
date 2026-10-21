@@ -218,6 +218,9 @@ static void cmd_io(uint8_t *payload) {
         case MAPLE_IO_PAD:
             ior_pad(payload);
             return;
+        case MAPLE_IO_PAD_MAP:
+            ior_pad_map(payload);
+            return;
         case 0xFF:
             ior_peek(payload);
             return;

@@ -45,6 +45,7 @@
 #define MAPLE_CMD_IO        0x86
 #define MAPLE_IO_PAD        0x51
 #define MAPLE_IO_PAD_ACK    0x52
+#define MAPLE_IO_PAD_MAP    0x53
 
 #define MAPLE_RESP_DEVINFO  0x05
 #define MAPLE_RESP_ALLINFO  0x06
@@ -111,7 +112,7 @@
 #define JVS_PAD_NODE        0x01
 #define JVS_PAD_PLAYERS     0x02
 #define JVS_PAD_SW_BYTES    0x02
-#define JVS_PAD_ANALOG      0x03
+#define JVS_PAD_ANALOG      8
 #define JVS_PAD_REQ_LEN     5
 #define JVS_PAD_RX          32
 #define JVS_RX_FRAME        3
@@ -133,7 +134,6 @@
 #define PAD_COND_WORDS      3
 #define PAD_DEVINFO_LEN     112
 #define PAD_AXIS_CENTER     0x80
-#define PAD_ANALOG_IDLE     0x0500
 #define PAD_ANALOG_MASK     0xFF7F
 #define PAD_WHEEL_NEG       128
 #define PAD_WHEEL_POS       127
@@ -145,6 +145,26 @@
 #define PAD_PAY_FEAT        3
 #define PAD_FEAT_VMU        0x01
 #define PAD_PAY_DATA        4
+#define PAD_MAP_SLOTS       43
+#define PAD_MAP_BYTES       (PAD_MAP_SLOTS * 2)
+#define PAD_PAY_MAP_OFF     1
+#define PAD_PAY_MAP_DATA    2
+#define PAD_SRC_PANEL_TEST  32
+#define PAD_SRC_PANEL_SERVICE 33
+#define PAD_SRC_SYS_TEST    34
+#define PAD_SRC_ANALOG      35
+#define PAD_CHAN_WHEEL      0
+#define PAD_CHAN_ACCEL      1
+#define PAD_CHAN_BRAKE      2
+#define PAD_DST_AXIS_MAX    6
+#define PAD_PANEL_TEST_BIT  0x10
+#define PAD_PANEL_SERVICE_BIT 0x20
+#define PAD_AXIS_JOYX       1
+#define PAD_AXIS_JOYY       2
+#define PAD_AXIS_JOY2X      3
+#define PAD_AXIS_JOY2Y      4
+#define PAD_AXIS_LTRIG      5
+#define PAD_AXIS_RTRIG      6
 #define RUMBLE_BYTES        4
 #define PAD_CAL_WORDS       6
 #define PAD_CAL_WHEEL_MIN   0
@@ -165,6 +185,10 @@
 #define PAD_BTN_Z           0x0100
 #define PAD_BTN_Y           0x0200
 #define PAD_BTN_X           0x0400
+#define PAD_BTN_D           0x0800
+#define PAD_BTN_MASK        (PAD_BTN_C | PAD_BTN_B | PAD_BTN_A | PAD_BTN_START | \
+                             PAD_BTN_UP | PAD_BTN_DOWN | PAD_BTN_LEFT | PAD_BTN_RIGHT | \
+                             PAD_BTN_Z | PAD_BTN_Y | PAD_BTN_X | PAD_BTN_D)
 #define PAD_BTN_IDLE        0xFFFF
 #define PAD_FUNC_LO         0x00
 #define PAD_FUNC_HI         0x01

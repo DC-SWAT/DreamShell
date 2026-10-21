@@ -15,5 +15,6 @@ void pad_poll(void);
 void pad_devinfo(void);
 void pad_getcond(void);
 void ior_pad(uint8_t *payload);
+void ior_pad_map(uint8_t *payload);
 
 #endif
