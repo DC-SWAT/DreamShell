@@ -23,6 +23,8 @@ DEFAULT_MODULE_EXPORTS(app_mie_jvs);
 #define SCREEN_HEIGHT          480
 #define WHEEL_BAR_W            220.0f
 #define WHEEL_BAR_H            14.0f
+#define WHEEL_BAR_CENTER_Z     70.5f
+#define WHEEL_BAR_CENTER_EXT   4.0f
 #define PEDAL_BAR_W            40.0f
 #define PEDAL_BAR_H            128.0f
 #define CALIB_WHEEL_BAR_X      120.0f
@@ -35,6 +37,9 @@ DEFAULT_MODULE_EXPORTS(app_mie_jvs);
 #define MIE_LINE_MAX           128
 #define OUTPUT_BIT(index)      MIE_JVS_OUTPUT_MASK(index)
 #define MIE_RAW_MASK           0xFF7F
+#define SAVE_KIND_MAP          0
+#define SAVE_KIND_CALIB        1
+#define SAVE_KIND_RESET        2
 #define MENU_ITEM_X            148.0f
 #define MENU_ITEM_Y0           168.0f
 #define MENU_ITEM_STEP         40.0f
@@ -53,6 +58,8 @@ DEFAULT_MODULE_EXPORTS(app_mie_jvs);
 #define MAP_CURSOR_W           576.0f
 #define MAP_CURSOR_H           22.0f
 #define MAP_CURSOR_BELOW       4.0f
+#define MAP_AXIS_DEADZONE      48
+#define MAP_AXIS_HOLD_MS       200
 #define EXIT_LABEL_Y           24.0f
 #define EXIT_LABEL_MARGIN      8.0f
 #define HELD_BUTTONS           0xFFFFFFFFU
@@ -147,8 +154,13 @@ typedef struct {
     int menu_sel;
     int map_sel;
     int map_scroll;
+    int map_axis_dir;
+    int map_axis_arm;
+    uint64_t map_axis_ms;
     int map_dirty;
+    int calib_dirty;
     int map_prompt;
+    int save_kind;
     int map_after_exit;
     mie_view_t map_after;
     int panel_combo;
@@ -172,6 +184,8 @@ typedef struct {
 static MieJvsContext_t self;
 
 static int prompt_map_save(mie_view_t view, int do_exit);
+static int prompt_calib_save(mie_view_t view, int do_exit);
+static mie_state_t *mie_dev_state(void);
 
 static const char *port_mode_name(mie_port0_mode_t mode) {
     switch(mode) {
@@ -187,13 +201,13 @@ static const char *port_mode_name(mie_port0_mode_t mode) {
 static const char *calib_step_name(mie_analog_calib_step_t step) {
     switch(step) {
     case MIE_ANALOG_CALIB_WHEEL_CENTER:
-        return "Hold wheel centered, press A";
+        return "Hold wheel centered, press A or START";
     case MIE_ANALOG_CALIB_WHEEL:
-        return "Turn wheel left and right, press A";
+        return "Turn wheel left and right, press A or START";
     case MIE_ANALOG_CALIB_ACCEL:
-        return "Press accelerator fully, press A";
+        return "Press accelerator fully, press A or START";
     case MIE_ANALOG_CALIB_BRAKE:
-        return "Press brake fully, press A";
+        return "Press brake fully, press A or START";
     default:
         return "Idle";
     }
@@ -474,6 +488,7 @@ static int prompt_map_save(mie_view_t view, int do_exit) {
 
     self.map_after = view;
     self.map_after_exit = do_exit;
+    self.save_kind = SAVE_KIND_MAP;
     if(!self.save_dialog) {
         save_btn_map();
         return 0;
@@ -481,6 +496,71 @@ static int prompt_map_save(mie_view_t view, int do_exit) {
 
     self.map_prompt = 1;
     TSU_DialogShow(self.save_dialog, "Save changed mapping to settings?");
+    return 1;
+}
+
+static int calib_matches_settings(void) {
+    Settings_t *settings;
+    const mie_analog_calib_t *live;
+
+    settings = GetSettings();
+    live = mie_analog_calib_get();
+    if(!settings || !live) {
+        return 1;
+    }
+    return memcmp(live, &settings->analog, sizeof(settings->analog)) == 0;
+}
+
+static void save_calib(void) {
+    Settings_t *settings;
+
+    settings = GetSettings();
+    if(!settings) {
+        self.calib_dirty = 0;
+        return;
+    }
+    if(mie_analog_calib_valid()) {
+        settings->analog = *mie_analog_calib_get();
+    }
+    else {
+        memset(&settings->analog, 0, sizeof(settings->analog));
+    }
+    SaveSettings();
+    self.calib_dirty = 0;
+}
+
+static void revert_calib(void) {
+    Settings_t *settings;
+
+    settings = GetSettings();
+    if(settings) {
+        mie_analog_calib_set(&settings->analog);
+    }
+    else {
+        mie_analog_calib_reset();
+    }
+    self.calib_dirty = 0;
+}
+
+static void mark_calib_dirty(void) {
+    self.calib_dirty = !calib_matches_settings();
+}
+
+static int prompt_calib_save(mie_view_t view, int do_exit) {
+    if(!self.calib_dirty || self.map_prompt) {
+        return self.map_prompt;
+    }
+
+    self.map_after = view;
+    self.map_after_exit = do_exit;
+    self.save_kind = SAVE_KIND_CALIB;
+    if(!self.save_dialog) {
+        save_calib();
+        return 0;
+    }
+
+    self.map_prompt = 1;
+    TSU_DialogShow(self.save_dialog, "Save changed calibration to settings?");
     return 1;
 }
 
@@ -529,6 +609,64 @@ static void map_cycle(int dir) {
     }
     self.map[self.map_sel] = cycle[slot];
     map_apply();
+}
+
+static int map_axis_side(int axis) {
+    if(axis <= -MAP_AXIS_DEADZONE) {
+        return -1;
+    }
+    if(axis >= MAP_AXIS_DEADZONE) {
+        return 1;
+    }
+    return 0;
+}
+
+static int map_pad_axis(void) {
+    int axis = 0;
+    mie_state_t *st;
+
+    st = mie_dev_state();
+    if(st) {
+        axis = st->cont.joyx;
+    }
+
+    MAPLE_FOREACH_BEGIN(MAPLE_FUNC_CONTROLLER, cont_state_t, c)
+        if(c && abs(c->joyx) > abs(axis)) {
+            axis = c->joyx;
+        }
+    MAPLE_FOREACH_END()
+
+    return axis;
+}
+
+static void map_from_analog(int axis) {
+    int side = map_axis_side(axis);
+    uint64_t now;
+
+    if(side == 0 || side == self.map_axis_dir) {
+        self.map_axis_arm = 0;
+        self.map_axis_ms = 0;
+        if(side == 0) {
+            self.map_axis_dir = 0;
+        }
+        return;
+    }
+    if(side != self.map_axis_arm) {
+        self.map_axis_arm = side;
+        self.map_axis_ms = timer_ms_gettime64();
+        return;
+    }
+
+    now = timer_ms_gettime64();
+    if(now - self.map_axis_ms < MAP_AXIS_HOLD_MS) {
+        return;
+    }
+
+    self.map_axis_dir = side;
+    self.map_axis_arm = 0;
+    self.map_axis_ms = 0;
+    ds_sfx_play(DS_SFX_CLICK);
+    map_cycle(side);
 }
 
 static mie_state_t *mie_dev_state(void) {
@@ -652,8 +790,20 @@ static void outputs_toggle_selected(void) {
     outputs_apply(self.output_manual);
 }
 
+static void outputs_cycle_toggle(void) {
+    if(self.output_blink) {
+        self.output_blink = 0;
+        outputs_clear();
+        return;
+    }
+
+    self.output_blink = 1;
+    self.output_blink_step = (uint8_t)output_next_available(-1, 1);
+    self.output_blink_last_ms = 0;
+}
+
 static void outputs_update_mode(void) {
-    if(self.output_blink && self.view != MIE_VIEW_OUTPUTS) {
+    if(self.output_blink) {
         outputs_blink_step();
         return;
     }
@@ -779,41 +929,18 @@ static void update_wheel_bar_ui(MieAnalogUi_t *ui, uint16_t raw,
 
     if(ui->wheel_bar_center) {
         float cx = WHEEL_BAR_W * 0.5f;
-        float show_center = 1.0f;
         mie_analog_calib_step_t step = MIE_ANALOG_CALIB_IDLE;
 
         if(mie_analog_calib_active()) {
             step = mie_analog_calib_current();
         }
 
-        if(step == MIE_ANALOG_CALIB_WHEEL_CENTER) {
-            cx = pos;
-        }
-        else if(step == MIE_ANALOG_CALIB_WHEEL) {
-            if(use_range && range_max > range_min &&
-                    self.calib_wheel_center >= range_min &&
-                    self.calib_wheel_center <= range_max) {
-                range = (float)(range_max - range_min);
-                cx = ((float)(self.calib_wheel_center - range_min) / range) * WHEEL_BAR_W;
-            }
-            else
-            {
-                show_center = 0.0f;
-            }
-        }
-        else if(use_range && range_max > range_min &&
+        if(step == MIE_ANALOG_CALIB_WHEEL &&
+                use_range && range_max > range_min &&
                 self.calib_wheel_center >= range_min &&
                 self.calib_wheel_center <= range_max) {
             range = (float)(range_max - range_min);
             cx = ((float)(self.calib_wheel_center - range_min) / range) * WHEEL_BAR_W;
-        }
-        else if(mie_analog_calib_valid()) {
-            const mie_analog_calib_t *c = mie_analog_calib_get();
-            float calib_range = (float)(c->wheel.max - c->wheel.min);
-
-            if(calib_range > 0.0f) {
-                cx = ((float)(c->wheel.center - c->wheel.min) / calib_range) * WHEEL_BAR_W;
-            }
         }
 
         if(cx < 0.0f) {
@@ -823,8 +950,10 @@ static void update_wheel_bar_ui(MieAnalogUi_t *ui, uint16_t raw,
             cx = WHEEL_BAR_W;
         }
 
-        TSU_DrawableSetAlpha((Drawable *)ui->wheel_bar_center, show_center);
-        vpos = (Vector){CALIB_WHEEL_BAR_X + cx - 1.0f, CALIB_WHEEL_BAR_Y - 4.0f, 72.0f, 1.0f};
+        TSU_DrawableSetAlpha((Drawable *)ui->wheel_bar_center, 1.0f);
+        vpos = (Vector){CALIB_WHEEL_BAR_X + cx - 1.0f,
+                        CALIB_WHEEL_BAR_Y - WHEEL_BAR_CENTER_EXT,
+                        WHEEL_BAR_CENTER_Z, 1.0f};
         TSU_DrawableSetTranslate((Drawable *)ui->wheel_bar_center, &vpos);
     }
 }
@@ -1339,7 +1468,7 @@ static void update_calib_panel(const mie_state_t *st) {
         TSU_LabelSetText(self.calib_data, line);
     }
     else if(mie_analog_calib_valid()) {
-        TSU_LabelSetText(self.calib_step, "Calibration saved");
+        TSU_LabelSetText(self.calib_step, "Calibrated");
         c = mie_analog_calib_get();
         snprintf(line, sizeof(line),
                  "wheel %04x/%04x/%04x",
@@ -1354,7 +1483,7 @@ static void update_calib_panel(const mie_state_t *st) {
     else {
         TSU_LabelSetText(self.calib_step, "Not calibrated");
         TSU_LabelSetText(self.calib_raw, "");
-        TSU_LabelSetText(self.calib_data, "START+A to start");
+        TSU_LabelSetText(self.calib_data, "A or START+UP to start");
     }
 }
 
@@ -1371,12 +1500,23 @@ static void sync_view_cardstack(void) {
 }
 
 static void reset_calib_settings(void) {
-    Settings_t *settings;
-
     mie_analog_calib_reset();
-    settings = GetSettings();
-    memset(&settings->analog, 0, sizeof(settings->analog));
-    SaveSettings();
+    mark_calib_dirty();
+}
+
+static void prompt_reset_calib(void) {
+    if(self.map_prompt) {
+        return;
+    }
+
+    self.save_kind = SAVE_KIND_RESET;
+    if(!self.save_dialog) {
+        reset_calib_settings();
+        return;
+    }
+
+    self.map_prompt = 1;
+    TSU_DialogShow(self.save_dialog, "Reset calibration?");
 }
 
 static void update_hint(void) {
@@ -1384,29 +1524,29 @@ static void update_hint(void) {
     const char *back;
 
     if(mie_analog_calib_active()) {
-        snprintf(line, sizeof(line), "A=capture  B=cancel");
-        back = "Back: A+B or Test+Service";
+        snprintf(line, sizeof(line), "A/START=capture  B=cancel");
+        back = "Back: Start+Down or Test+Service";
     }
     else if(self.view == MIE_VIEW_MENU) {
-        snprintf(line, sizeof(line), "Up/Down=select  A=open");
-        back = "Exit: A+B or Test+Service";
+        snprintf(line, sizeof(line), "Up/Down=select  A/START=open");
+        back = "Exit: Start+Down or Test+Service";
     }
     else if(self.view == MIE_VIEW_CALIB) {
-        snprintf(line, sizeof(line), "START+A=calibrate  Y=reset");
-        back = "Back: A+B or Test+Service";
+        snprintf(line, sizeof(line), "A/START+UP=start  A+START/TEST+START=reset");
+        back = "Back: Start+Down or Test+Service";
     }
     else if(self.view == MIE_VIEW_OUTPUTS) {
-        snprintf(line, sizeof(line), "D-pad=select  A=toggle  START+B=all");
-        back = "Back: A+B or Test+Service";
+        snprintf(line, sizeof(line), "D-pad=select  A/START=toggle  START+UP=cycle");
+        back = "Back: Start+Down or Test+Service";
     }
     else if(self.view == MIE_VIEW_MAP) {
         snprintf(line, sizeof(line),
-                 "Up/Down=select  Left/Right=pad  Y=clear  X=default");
-        back = "Back: A+B or Test+Service";
+                 "Up/Down=select  Analog=pad  A=default  B=clear");
+        back = "Back: Start+Down or Test+Service";
     }
     else {
-        snprintf(line, sizeof(line), "START=blink outputs");
-        back = "Back: A+B or Test+Service";
+        snprintf(line, sizeof(line), "START+UP=blink outputs");
+        back = "Back: Start+Down or Test+Service";
     }
 
     if(self.hint_label) {
@@ -1599,6 +1739,11 @@ static void open_view(mie_view_t view) {
         mie_analog_calib_cancel();
     }
 
+    if(self.view == MIE_VIEW_CALIB && view != MIE_VIEW_CALIB &&
+            prompt_calib_save(view, 0)) {
+        return;
+    }
+
     if(self.view == MIE_VIEW_MAP && view != MIE_VIEW_MAP &&
             prompt_map_save(view, 0)) {
         return;
@@ -1609,6 +1754,11 @@ static void open_view(mie_view_t view) {
     if(view == MIE_VIEW_OUTPUTS && prev != MIE_VIEW_OUTPUTS) {
         self.output_blink = 0;
         outputs_sync_manual();
+    }
+    if(view == MIE_VIEW_MAP && prev != MIE_VIEW_MAP) {
+        self.map_axis_dir = map_axis_side(map_pad_axis());
+        self.map_axis_arm = 0;
+        self.map_axis_ms = 0;
     }
     sync_view_cardstack();
 }
@@ -1664,6 +1814,10 @@ static void OnExit(void) {
         return;
     }
 
+    if(prompt_calib_save(MIE_VIEW_MENU, 1)) {
+        return;
+    }
+
     if(prompt_map_save(MIE_VIEW_MENU, 1)) {
         return;
     }
@@ -1684,13 +1838,12 @@ static void OnExit(void) {
     }
 
     SDL_DC_EmulateMouse(SDL_TRUE);
+    SetVirtKeyboardEnabled(1);
 
     OpenMainApp();
 }
 
 static void handle_capture(void) {
-    Settings_t *settings;
-    const mie_analog_calib_t *calib;
     mie_analog_calib_step_t step;
     mie_state_t *st;
 
@@ -1706,27 +1859,41 @@ static void handle_capture(void) {
     }
 
     if(mie_analog_calib_capture()) {
-        if(mie_analog_calib_valid()) {
-            settings = GetSettings();
-            calib = mie_analog_calib_get();
-            settings->analog = *calib;
-            SaveSettings();
-        }
+        mark_calib_dirty();
     }
 }
 
 static void finish_map_prompt(int save) {
     mie_view_t view;
     int do_exit;
+    int kind;
 
     if(self.save_dialog) {
         TSU_DialogHide(self.save_dialog);
     }
-    if(save) {
-        save_btn_map();
+    kind = self.save_kind;
+    if(kind == SAVE_KIND_RESET) {
+        self.map_prompt = 0;
+        if(save) {
+            reset_calib_settings();
+        }
+        return;
+    }
+    if(kind == SAVE_KIND_CALIB) {
+        if(save) {
+            save_calib();
+        }
+        else {
+            revert_calib();
+        }
     }
     else {
-        revert_map();
+        if(save) {
+            save_btn_map();
+        }
+        else {
+            revert_map();
+        }
     }
 
     view = self.map_after;
@@ -1750,19 +1917,62 @@ void MieJvsApp_SaveCancel(Drawable *drawable) {
     finish_map_prompt(0);
 }
 
+static int button_edge(uint32_t btns, uint32_t mask) {
+    return (btns & mask) && !(self.old_btns & mask);
+}
+
+static int test_button_down(const mie_state_t *st) {
+    if(!st) {
+        return 0;
+    }
+    if(st->jvs.panel.psw.service || st->jvs.p1.service || st->jvs.p2.service) {
+        return 0;
+    }
+    return st->jvs.panel.psw.test || st->jvs.system.test;
+}
+
+static int test_start_edge(uint32_t btns) {
+    static int test_old;
+    int test_now = test_button_down(mie_dev_state());
+    int edge;
+
+    edge = test_now && (btns & CONT_START) &&
+            !(test_old && (self.old_btns & CONT_START));
+    test_old = test_now;
+    return edge;
+}
+
+static int select_edge(uint32_t btns) {
+    if(btns & CONT_B) {
+        return 0;
+    }
+    if(button_edge(btns, CONT_A)) {
+        return 1;
+    }
+    if(button_edge(btns, CONT_START) &&
+            !(btns & (CONT_DPAD_UP | CONT_DPAD_DOWN))) {
+        return 1;
+    }
+    return 0;
+}
+
 static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     uint32_t btns = nav_btns | jvs_btns;
+    int test_start = test_start_edge(btns);
+    int calib_reset;
 
     if(self.save_dialog && TSU_DialogIsVisible(self.save_dialog)) {
-        if((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT)) {
+        if(((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT)) ||
+                ((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP))) {
             ds_sfx_play(DS_SFX_CLICK2);
             TSU_DialogMoveFocus(self.save_dialog, -1);
         }
-        if((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT)) {
+        if(((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT)) ||
+                ((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN))) {
             ds_sfx_play(DS_SFX_CLICK2);
             TSU_DialogMoveFocus(self.save_dialog, 1);
         }
-        if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_B)) {
+        if(select_edge(btns)) {
             ds_sfx_play(DS_SFX_CLICK);
             TSU_DialogActivateFocused(self.save_dialog);
         }
@@ -1782,7 +1992,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     }
 
     if(self.view == MIE_VIEW_MENU) {
-        if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP)) {
+        if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP) &&
+                !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK2);
             self.menu_sel--;
             if(self.menu_sel < 0) {
@@ -1790,7 +2001,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
             }
         }
 
-        if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN)) {
+        if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN) &&
+                !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK2);
             self.menu_sel++;
             if(self.menu_sel >= MIE_MENU_COUNT) {
@@ -1798,7 +2010,7 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
             }
         }
 
-        if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_B)) {
+        if(select_edge(btns)) {
             ds_sfx_play(DS_SFX_CLICK);
             open_menu_item();
             if(self.exiting) {
@@ -1811,7 +2023,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
     }
 
     if(self.view == MIE_VIEW_MAP && !mie_analog_calib_active()) {
-        if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP)) {
+        if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP) &&
+                !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK2);
             self.map_sel--;
             if(self.map_sel < 0) {
@@ -1819,7 +2032,8 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
             }
         }
 
-        if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN)) {
+        if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN) &&
+                !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK2);
             self.map_sel++;
             if(self.map_sel >= DS_JVS_MAP_SRC) {
@@ -1837,13 +2051,15 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
             map_cycle(1);
         }
 
-        if((btns & CONT_Y) && !(self.old_btns & CONT_Y) && !(btns & CONT_START)) {
+        map_from_analog(map_pad_axis());
+
+        if((btns & CONT_B) && !(self.old_btns & CONT_B) && !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK);
             self.map[self.map_sel] = 0;
             map_apply();
         }
 
-        if((btns & CONT_X) && !(self.old_btns & CONT_X) && !(btns & CONT_START)) {
+        if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK);
             jvs_map_default(self.map);
             map_apply();
@@ -1853,79 +2069,58 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
         return;
     }
 
-    if(!mie_analog_calib_active() && self.view == MIE_VIEW_CALIB &&
-            combo_activated(btns, self.old_btns, CONT_START | CONT_A)) {
+    calib_reset = self.view == MIE_VIEW_CALIB &&
+            (combo_activated(btns, self.old_btns, CONT_A | CONT_START) ||
+             test_start);
+    if(calib_reset) {
+        prompt_reset_calib();
+    }
+    else if(mie_analog_calib_active()) {
+        if(select_edge(btns)) {
+            handle_capture();
+        }
+    }
+    else if(self.view == MIE_VIEW_CALIB &&
+            ((button_edge(btns, CONT_A) && !(btns & (CONT_START | CONT_B))) ||
+             combo_activated(btns, self.old_btns, CONT_START | CONT_DPAD_UP))) {
         reset_calib_ui_tracking();
         mie_analog_calib_start();
         self.view = MIE_VIEW_CALIB;
         sync_view_cardstack();
     }
 
-    if((btns & CONT_A) && !(self.old_btns & CONT_A) &&
-            !(btns & (CONT_START | CONT_B))) {
-        if(mie_analog_calib_active()) {
-            handle_capture();
-        }
-        else if(self.view == MIE_VIEW_OUTPUTS &&
-                !(btns & (CONT_DPAD_LEFT | CONT_DPAD_RIGHT |
-                          CONT_DPAD_UP | CONT_DPAD_DOWN | CONT_X | CONT_B))) {
-            ds_sfx_play(DS_SFX_CLICK);
-            outputs_toggle_selected();
-        }
-    }
-
     if(self.view == MIE_VIEW_OUTPUTS && !mie_analog_calib_active() &&
-            combo_activated(btns, self.old_btns, CONT_START | CONT_B)) {
-        uint32_t avail = outputs_avail_mask();
-
-        if((self.output_manual & avail) == avail) {
-            self.output_manual &= ~avail;
-        }
-        else {
-            self.output_manual |= avail;
-        }
-        outputs_apply(self.output_manual);
+            select_edge(btns)) {
+        self.output_blink = 0;
+        ds_sfx_play(DS_SFX_CLICK);
+        outputs_toggle_selected();
     }
 
-    if((btns & CONT_Y) && !(self.old_btns & CONT_Y) && !mie_analog_calib_active() &&
-            !(btns & CONT_START) && self.view == MIE_VIEW_CALIB) {
-        reset_calib_settings();
-    }
-
-    if((btns & CONT_START) && !(self.old_btns & CONT_START) &&
-            !mie_analog_calib_active() && self.view == MIE_VIEW_MONITOR &&
-            !(btns & (CONT_DPAD_LEFT | CONT_DPAD_RIGHT | CONT_X | CONT_Y))) {
-        self.output_blink = !self.output_blink;
-        if(self.output_blink) {
-            self.output_blink_step = (uint8_t)output_next_available(-1, 1);
-            self.output_blink_last_ms = 0;
-        }
-        else {
-            outputs_clear();
-        }
+    if(!mie_analog_calib_active() &&
+            (self.view == MIE_VIEW_OUTPUTS || self.view == MIE_VIEW_MONITOR) &&
+            combo_activated(btns, self.old_btns, CONT_START | CONT_DPAD_UP)) {
+        outputs_cycle_toggle();
     }
 
     if(self.view == MIE_VIEW_OUTPUTS && !mie_analog_calib_active()) {
-        if((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT) &&
-                !(btns & CONT_X)) {
+        if((btns & CONT_DPAD_LEFT) && !(self.old_btns & CONT_DPAD_LEFT)) {
             ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(-1);
         }
 
-        if((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT) &&
-                !(btns & CONT_X)) {
+        if((btns & CONT_DPAD_RIGHT) && !(self.old_btns & CONT_DPAD_RIGHT)) {
             ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(1);
         }
 
         if((btns & CONT_DPAD_UP) && !(self.old_btns & CONT_DPAD_UP) &&
-                !(btns & CONT_X)) {
+                !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(-1);
         }
 
         if((btns & CONT_DPAD_DOWN) && !(self.old_btns & CONT_DPAD_DOWN) &&
-                !(btns & CONT_X)) {
+                !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK2);
             switch_output_sel(1);
         }
@@ -2015,7 +2210,7 @@ static void InputHandler(void *ds_event, void *param, int action) {
         btns |= st->cont.buttons;
     }
     panel_now = test_service_down(st);
-    if(combo_activated(btns, exit_btns_old, CONT_A | CONT_B) ||
+    if(combo_activated(btns, exit_btns_old, CONT_START | CONT_DPAD_DOWN) ||
             (panel_now && !self.panel_combo)) {
         self.old_btns = HELD_BUTTONS;
         exit_btns_old = btns;
@@ -2202,6 +2397,7 @@ void MieJvsApp_Open(App_t *app) {
     }
 
     SDL_DC_EmulateMouse(SDL_FALSE);
+    SetVirtKeyboardEnabled(0);
 
     self.input_event = AddEvent("MieJvsInput", EVENT_TYPE_INPUT,
                                 EVENT_PRIO_DEFAULT, InputHandler, NULL);
@@ -2227,4 +2423,5 @@ void MieJvsApp_Shutdown(App_t *app) {
     }
 
     SDL_DC_EmulateMouse(SDL_TRUE);
+    SetVirtKeyboardEnabled(1);
 }

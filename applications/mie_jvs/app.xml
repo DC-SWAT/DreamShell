@@ -106,6 +106,8 @@
                     color="#333344FF" transparent="false" />
                 <rectangle name="calib_brake_bar_fill" x="380" y="319" width="40" height="1" z="71.0"
                     color="#FF4444FF" transparent="false" />
+                <rectangle name="calib_brake_bar_center" x="376" y="255" width="48" height="2" z="72.0"
+                    color="#FFFFFF88" transparent="false" />
 
                 <label name="calib_accel_title" font="ui_font" fontsize="14" x="500" y="176" z="80.0"
                     text="Accel" smear="true" color="#70C9DBFF" />
@@ -115,6 +117,8 @@
                     color="#333344FF" transparent="false" />
                 <rectangle name="calib_accel_bar_fill" x="500" y="319" width="40" height="1" z="71.0"
                     color="#FFAA44FF" transparent="false" />
+                <rectangle name="calib_accel_bar_center" x="496" y="255" width="48" height="2" z="72.0"
+                    color="#FFFFFF88" transparent="false" />
 
                 <label name="calib_wheel_title" font="ui_font" fontsize="14" x="120" y="286" z="80.0"
                     text="Steering" smear="true" color="#70C9DBFF" />
@@ -124,7 +128,7 @@
                     color="#333344FF" transparent="false" />
                 <rectangle name="calib_wheel_bar_fill" x="120" y="300" width="1" height="14" z="71.0"
                     color="#44DD88FF" transparent="false" />
-                <rectangle name="calib_wheel_bar_center" x="229" y="296" width="2" height="22" z="72.0"
+                <rectangle name="calib_wheel_bar_center" x="229" y="296" width="2" height="22" z="70.5"
                     color="#FFFFFF88" transparent="false" />
             </panel>
 
@@ -301,7 +305,7 @@
         <label name="hint_label" font="ui_font" fontsize="12" x="16" y="24" z="90.0"
             text="" smear="true" color="#888888FF" />
         <label name="exit_label" font="ui_font" fontsize="12" x="400" y="24" z="90.0"
-            text="Exit: A+B or Test+Service" smear="true" color="#D4F129FF" />
+            text="Exit: Start+Down or Test+Service" smear="true" color="#D4F129FF" />
 
         <dialog name="save_dialog" font="ui_font" fontsize="14" x="0" y="0" width="480" height="160"
             align="center" valign="center" z="200.0"
