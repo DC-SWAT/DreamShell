@@ -960,6 +960,7 @@ void GUI_FileManager::HandleJoyHatMotion(const SDL_Event *event) {
 			LockVideo();
 			if(panel->ContainsWidget(item)) {
 				GetWidgetAbsolutePosition(item, &abs_x, &abs_y);
+				memset(&evt, 0, sizeof(evt));
 				evt.type = SDL_MOUSEMOTION;
 				evt.motion.x = abs_x;
 				evt.motion.y = abs_y;

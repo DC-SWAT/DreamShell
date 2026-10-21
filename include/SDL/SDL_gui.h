@@ -443,10 +443,11 @@ class GUI_AbstractButton : public GUI_Widget
 		GUI_Callback *context_click;
 		GUI_Callback *hover;
 		GUI_Callback *unhover;
-		virtual GUI_Surface *GetCurrentImage(void);
 	public:
 		GUI_AbstractButton(const char *aname, int x, int y, int w, int h);
 		virtual ~GUI_AbstractButton(void);
+
+		virtual GUI_Surface *GetCurrentImage(void);
 
 		virtual void RemoveWidget(GUI_Widget *widget);
 		void SetCaption(GUI_Widget *widget);
@@ -914,6 +915,9 @@ class GUI_Screen : public GUI_Drawable
 		Uint32 background_color;
 		void find_widget_rec(GUI_Container *p);
 		void calc_parent_offset(GUI_Widget *widget, Uint16 *x, Uint16 *y);
+		void calc_widget_area(GUI_Widget *widget, SDL_Rect *rect);
+		void calc_widget_target(GUI_Widget *widget, SDL_Rect *rect);
+		void move_joysel(int dx, int dy, int xoffset, int yoffset);
 		virtual void FlushUpdates(void);
 		virtual void UpdateRect(const SDL_Rect *r);
 		virtual void Update(int force);
