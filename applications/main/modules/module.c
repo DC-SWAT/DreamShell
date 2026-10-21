@@ -208,7 +208,8 @@ static void BuildAppList() {
 	int plen, elen, type;
 	App_t *app;
 	Item_list_t *applist = GetAppList();
-	const char *app_name = lib_get_name() + 4;
+	const char *app_name = self.app->name;
+	const char *dir_name = lib_get_name() + 4;
 
 	if(applist != NULL) {
 		Item_t *item = listGetItemFirst(applist);
@@ -231,7 +232,7 @@ static void BuildAppList() {
 		self.pages++;
 	}
 
-	snprintf(path, NAME_MAX, "%s/apps/%s/scripts", getenv("PATH"), app_name);
+	snprintf(path, NAME_MAX, "%s/apps/%s/scripts", getenv("PATH"), dir_name);
 	fd = fs_open(path, O_RDONLY | O_DIR);
 
 	if(fd == FILEHND_INVALID)
@@ -250,8 +251,8 @@ static void BuildAppList() {
 			if(si == NULL)
 				break;
 
-			snprintf(si->file, NAME_MAX, "%s/apps/%s/scripts/%s", getenv("PATH"), app_name, ent->name);
-			snprintf(path, NAME_MAX, "%s/apps/%s/images/%s", getenv("PATH"), app_name, ent->name);
+			snprintf(si->file, NAME_MAX, "%s/apps/%s/scripts/%s", getenv("PATH"), dir_name, ent->name);
+			snprintf(path, NAME_MAX, "%s/apps/%s/images/%s", getenv("PATH"), dir_name, ent->name);
 			plen = strlen(path);
 
 			path[plen - 3] = 'p';
@@ -332,7 +333,7 @@ static int DeleteShortcutFiles(const char *file, const char *name) {
 		"pvr",
 		NULL
 	};
-	const char *app_name = lib_get_name() + 4;
+	const char *dir_name = lib_get_name() + 4;
 	char icon_path[NAME_MAX];
 	int i;
 
@@ -346,7 +347,7 @@ static int DeleteShortcutFiles(const char *file, const char *name) {
 	}
 
 	for(i = 0; icon_exts[i]; i++) {
-		snprintf(icon_path, sizeof(icon_path), "%s/apps/%s/images/%s.%s", getenv("PATH"), app_name, name, icon_exts[i]);
+		snprintf(icon_path, sizeof(icon_path), "%s/apps/%s/images/%s.%s", getenv("PATH"), dir_name, name, icon_exts[i]);
 		fs_unlink(icon_path);
 	}
 	return 1;
