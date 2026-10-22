@@ -148,6 +148,7 @@ typedef struct {
     Color glow_color;
     Event_t *input_event;
     Event_t *video_event;
+    int vkb_suppressed;
     script_item_t pending_shortcut;
     launch_delete_type_t pending_delete_type;
     int pending_app_id;

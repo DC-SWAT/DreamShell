@@ -7,6 +7,7 @@
 
 #include <ds.h>
 #include <sfx.h>
+#include <dc/maple/mie.h>
 #include <tsunami/tsunami.h>
 #include <math.h>
 
@@ -674,6 +675,11 @@ static void InputHandler(void *ds_event, void *param, int action) {
                 case SDL_DC_Y:
                     ActivateFocused();
                     break;
+                case SDL_DC_START:
+                    if(self.vkb_suppressed) {
+                        ActivateFocused();
+                    }
+                    break;
                 case SDL_DC_L:
                     SlideLeft();
                     break;
@@ -854,6 +860,51 @@ void LaunchApp_Init(App_t *app) {
     UpdateFocusLabels();
 }
 
+static int DreamcastPadConnected(void) {
+    size_t i;
+    maple_device_t *dev;
+
+    for(i = 0; (dev = maple_enum_type(i, MAPLE_FUNC_CONTROLLER)) != NULL; i++) {
+        if(dev->info.functions & MAPLE_FUNC_MIE) {
+            continue;
+        }
+
+        return 1;
+    }
+
+    return 0;
+}
+
+static int MieOnlyInput(void) {
+    if(mie_port0_mode() != MIE_PORT0_JVS) {
+        return 0;
+    }
+
+    if(maple_enum_type(0, MAPLE_FUNC_MIE) == NULL) {
+        return 0;
+    }
+
+    return !DreamcastPadConnected();
+}
+
+static void SuppressVirtKeyboard(void) {
+    if(!MieOnlyInput()) {
+        return;
+    }
+
+    SetVirtKeyboardEnabled(0);
+    self.vkb_suppressed = 1;
+}
+
+static void RestoreVirtKeyboard(void) {
+    if(!self.vkb_suppressed) {
+        return;
+    }
+
+    SetVirtKeyboardEnabled(1);
+    self.vkb_suppressed = 0;
+}
+
 static void StopLaunchAppEvents(void) {
     if(self.input_event) {
         RemoveEvent(self.input_event);
@@ -865,6 +916,7 @@ static void StopLaunchAppEvents(void) {
         self.video_event = NULL;
     }
 
+    RestoreVirtKeyboard();
     SDL_DC_EmulateMouse(SDL_TRUE);
 }
 
@@ -876,6 +928,7 @@ void LaunchApp_Open(App_t *app) {
     }
 
     SDL_DC_EmulateMouse(SDL_FALSE);
+    SuppressVirtKeyboard();
 
     self.mouse_visible = 0;
     self.warp_motion_skip = 0;
