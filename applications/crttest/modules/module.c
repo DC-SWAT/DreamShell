@@ -129,7 +129,7 @@ static void crt_music_start(void) {
 		crt_wav_ready = 1;
 	}
 	GetAppPath(dir, sizeof(dir), crt.app->fn);
-	snprintf(file, sizeof(file), "%s/theme.wav", dir);
+	snprintf(file, sizeof(file), "%s/sounds/theme.wav", dir);
 	crt_wav_hnd = wav_create(file, 1);
 	if(crt_wav_hnd == SND_STREAM_INVALID) {
 		if(!crt_music_warned) {

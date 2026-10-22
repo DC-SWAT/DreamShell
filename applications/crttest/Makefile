@@ -12,8 +12,8 @@ DEPS = modules/app_$(APP_NAME).klf
 
 all: install
 
-ART = modules/scroll_near.rgb modules/scroll_sky.rgb modules/scroll_mid.rgb \
-	modules/scroll_cloud.rgb modules/scroll_floor.rgb modules/scroll_vert.rgb
+ART = images/scroll_near.rgb images/scroll_sky.rgb images/scroll_mid.rgb \
+	images/scroll_cloud.rgb images/scroll_floor.rgb images/scroll_vert.rgb
 
 $(DEPS): modules/module.c modules/draw.c modules/patterns.c modules/draw.h modules/patterns.h \
 	modules/view.c modules/view.h modules/gpu.c modules/gpu.h \
@@ -23,12 +23,14 @@ $(DEPS): modules/module.c modules/draw.c modules/patterns.c modules/draw.h modul
 clean:
 	cd modules && $(MAKE) clean && cd ../
 
-install: app.xml $(DEPS) theme.wav $(ART)
+install: app.xml $(DEPS) sounds/theme.wav $(ART)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
 	-mkdir -p $(APP_DIR)/images
+	-mkdir -p $(APP_DIR)/sounds
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
-	cp theme.wav $(APP_DIR)/theme.wav
+	cp sounds/theme.wav $(APP_DIR)/sounds/theme.wav
+	-rm -f $(APP_DIR)/theme.wav
 	cp $(ART) $(APP_DIR)/images/
 	-rm -f $(APP_DIR)/scroll_near.rgb $(APP_DIR)/scroll_sky.rgb \
 		$(APP_DIR)/scroll_mid.rgb $(APP_DIR)/scroll_cloud.rgb \
