@@ -261,40 +261,6 @@ void fb_text(fb_t *fb, int x, int y, int scale, uint16_t color, const char *text
 	}
 }
 
-void fb_text_strong(fb_t *fb, int x, int y, int scale, uint16_t color, const char *text) {
-	fb_text(fb, x, y, scale, color, text);
-	fb_text(fb, x + 1, y, scale, color, text);
-}
-
-void fb_text_span(fb_t *fb, int x, int y, int scale, int span, uint16_t color, const char *text) {
-	int advance;
-
-	if(!text) {
-		return;
-	}
-	if(scale < 1) {
-		scale = 1;
-	}
-	if(span < 1) {
-		span = 8;
-	}
-	advance = span * scale;
-
-	while(*text) {
-		if(x >= fb->w) {
-			break;
-		}
-		fb_glyph(fb, x, y, scale, color, (unsigned char)*text);
-		x += advance;
-		text++;
-	}
-}
-
-void fb_text_span_strong(fb_t *fb, int x, int y, int scale, int span, uint16_t color, const char *text) {
-	fb_text_span(fb, x, y, scale, span, color, text);
-	fb_text_span(fb, x + 1, y, scale, span, color, text);
-}
-
 void fb_text_center(fb_t *fb, int y, int scale, uint16_t color, const char *text) {
 	int x = (fb->w - fb_text_width(text, scale)) / 2;
 

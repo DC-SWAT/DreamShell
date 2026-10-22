@@ -352,6 +352,12 @@ void plx_fcxt_destroy(plx_fcxt_t * cxt) {
 	free(cxt);
 }
 
+static float plx_fcxt_space_advance(plx_fcxt_t * cxt) {
+	if (cxt->flags & PLX_FCXT_EM_SPACE)
+		return (cxt->gap + cxt->fixed_width) * cxt->size;
+	return cxt->gap + cxt->size / 2.0f;
+}
+
 void plx_fcxt_char_metrics(plx_fcxt_t * cxt, uint16 ch,
 	float * outleft, float * outup, float * outright, float *outdown)
 {
@@ -372,7 +378,7 @@ void plx_fcxt_char_metrics(plx_fcxt_t * cxt, uint16 ch,
 	if (ch == ' ') {
 		*outleft = 0;
 		*outup = 0;
-		*outright = cxt->gap + cxt->size / 2.0f;
+		*outright = plx_fcxt_space_advance(cxt);
 		*outdown = 0;
 		return;
 	}
@@ -413,7 +419,7 @@ void plx_fcxt_str_metrics(plx_fcxt_t * cxt, const char * str,
 		if (fnt->map[ch] == -1)
 			ch = ' ';
 		if (ch == ' ') {
-			r += cxt->gap + cxt->size / 2.0f;
+			r += plx_fcxt_space_advance(cxt);
 			continue;
 		}
 
@@ -522,8 +528,10 @@ float plx_fcxt_draw_ch(plx_fcxt_t * cxt, uint16 ch) {
 	if (fnt->map[ch] == -1)
 		ch = 32;
 	if (ch == 32) {
-		cxt->pos.x += cxt->gap + cxt->size / 2.0f;
-		return cxt->gap + cxt->size / 2.0f;
+		float space = plx_fcxt_space_advance(cxt);
+
+		cxt->pos.x += space;
+		return space;
 	}
 
 	i = fnt->map[ch];

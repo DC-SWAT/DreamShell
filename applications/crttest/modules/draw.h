@@ -35,9 +35,6 @@ void fb_circle(fb_t *fb, int cx, int cy, int r, uint16_t color);
 
 int fb_text_width(const char *text, int scale);
 void fb_text(fb_t *fb, int x, int y, int scale, uint16_t color, const char *text);
-void fb_text_strong(fb_t *fb, int x, int y, int scale, uint16_t color, const char *text);
-void fb_text_span(fb_t *fb, int x, int y, int scale, int span, uint16_t color, const char *text);
-void fb_text_span_strong(fb_t *fb, int x, int y, int scale, int span, uint16_t color, const char *text);
 void fb_text_center(fb_t *fb, int y, int scale, uint16_t color, const char *text);
 
 #endif

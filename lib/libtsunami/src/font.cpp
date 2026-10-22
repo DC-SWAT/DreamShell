@@ -15,6 +15,7 @@ Font::Font(const std::filesystem::path &fn, pvr_list_type_t list) {
 	m_list = list;
 	m_font = nullptr;
 	m_cxt = nullptr;
+	m_bold = false;
 	if (!fn.empty()) {
 		if (!loadFromFile(fn)) {
 			assert( false );
@@ -58,6 +59,28 @@ void Font::setFilter(int type) {
 	plx_txr_setfilter(m_font->txr, type);
 }
 
+void Font::setGap(float gap) {
+	if (m_cxt != nullptr) {
+		m_cxt->gap = gap;
+	}
+}
+
+void Font::setFixed(bool enabled) {
+	if (m_cxt == nullptr) {
+		return;
+	}
+	if (enabled) {
+		m_cxt->flags |= PLX_FCXT_FIXED | PLX_FCXT_EM_SPACE;
+	}
+	else {
+		m_cxt->flags &= ~(PLX_FCXT_FIXED | PLX_FCXT_EM_SPACE);
+	}
+}
+
+void Font::setBold(bool enabled) {
+	m_bold = enabled;
+}
+
 void Font::setColor(float r, float g, float b) {
 	assert( m_cxt );
 
@@ -84,9 +107,13 @@ void Font::setSize(float size) {
 void Font::draw(float x, float y, float z, const std::string &text) {
 	assert( m_cxt );
 
-	plx_fcxt_setpos(m_cxt, x, y, z);
 	plx_fcxt_begin(m_cxt);
+	plx_fcxt_setpos(m_cxt, x, y, z);
 	plx_fcxt_draw(m_cxt, text.c_str());
+	if (m_bold) {
+		plx_fcxt_setpos(m_cxt, x + 1.0f, y, z);
+		plx_fcxt_draw(m_cxt, text.c_str());
+	}
 	plx_fcxt_end(m_cxt);
 }
 
@@ -244,6 +271,27 @@ extern "C"
 	{
 		if (font_ptr != NULL) {
 			font_ptr->setFilter(type);
+		}
+	}
+
+	void TSU_FontSetGap(Font *font_ptr, float gap)
+	{
+		if (font_ptr != NULL) {
+			font_ptr->setGap(gap);
+		}
+	}
+
+	void TSU_FontSetFixed(Font *font_ptr, bool enabled)
+	{
+		if (font_ptr != NULL) {
+			font_ptr->setFixed(enabled);
+		}
+	}
+
+	void TSU_FontSetBold(Font *font_ptr, bool enabled)
+	{
+		if (font_ptr != NULL) {
+			font_ptr->setBold(enabled);
 		}
 	}
 

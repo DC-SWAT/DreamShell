@@ -276,34 +276,6 @@ static const char *scan_name(int mode) {
 	}
 }
 
-static int ui_scale(const fb_t *fb) {
-	return fb->h >= 200 ? 2 : 1;
-}
-
-static int safe_x(const fb_t *fb) {
-	int margin = fb->w / 20;
-
-	if(margin < 12) {
-		margin = 12;
-	}
-	if(margin > 32) {
-		margin = 32;
-	}
-	return margin;
-}
-
-static int safe_y(const fb_t *fb) {
-	int margin = fb->h / 10;
-
-	if(margin < 20) {
-		margin = 20;
-	}
-	if(margin > 48) {
-		margin = 48;
-	}
-	return margin;
-}
-
 static void draw_menu_box(fb_t *fb, int x, int y, int w, int h, uint16_t fill, uint16_t edge) {
 	fb_fill_rect(fb, x, y, w, h, fill);
 	fb_rect(fb, x, y, w, h, edge);
@@ -336,10 +308,28 @@ static int wrap_take(const char *cursor, int limit) {
 	return take;
 }
 
-static int draw_wrap_box(fb_t *fb, int box_x, int box_w, int y, int scale, uint16_t color,
-	const char *text, int max_lines, int draw) {
+static void copy_span(char *dst, int dst_len, const char *src, int take) {
+	int i;
+	int n = take;
+
+	if(n >= dst_len) {
+		n = dst_len - 1;
+	}
+	if(n < 0) {
+		n = 0;
+	}
+	for(i = 0; i < n; i++) {
+		dst[i] = src[i];
+	}
+	while(n > 0 && dst[n - 1] == ' ') {
+		n--;
+	}
+	dst[n] = '\0';
+}
+
+static int fill_lines(const char *text, int box_w, int scale, int max_lines, char lines[][96]) {
 	int limit;
-	int lines = 0;
+	int count = 0;
 	const char *cursor = text;
 
 	if(!text || max_lines < 1 || scale < 1) {
@@ -353,12 +343,8 @@ static int draw_wrap_box(fb_t *fb, int box_x, int box_w, int y, int scale, uint1
 		limit = 96;
 	}
 
-	while(*cursor && lines < max_lines) {
+	while(*cursor && count < max_lines) {
 		int take;
-		int width;
-		int x;
-		char line[128];
-		int i;
 
 		while(*cursor == ' ') {
 			cursor++;
@@ -367,152 +353,147 @@ static int draw_wrap_box(fb_t *fb, int box_x, int box_w, int y, int scale, uint1
 			break;
 		}
 		take = wrap_take(cursor, limit);
-		if(draw) {
-			for(i = 0; i < take; i++) {
-				line[i] = cursor[i];
-			}
-			line[take] = '\0';
-			width = take * 8 * scale;
-			x = box_x + (box_w - width) / 2;
-			if(x < box_x + 8) {
-				x = box_x + 8;
-			}
-			fb_text_strong(fb, x, y + lines * 8 * scale, scale, color, line);
-		}
-		lines++;
+		copy_span(lines[count], 96, cursor, take);
+		count++;
 		cursor += take;
 	}
-	return lines;
+	return count;
 }
 
-static void draw_centered(fb_t *fb, int box_x, int box_w, int y, int scale, uint16_t color,
-	const char *text) {
-	int width = fb_text_width(text, scale);
-	int x = box_x + (box_w - width) / 2;
-
-	if(x < box_x + 8) {
-		x = box_x + 8;
-	}
-	fb_text_strong(fb, x, y, scale, color, text);
-}
-
-static void draw_help(fb_t *fb) {
-	const char *controls[5];
-	char head[96];
-	char head2[96];
-	char status[96];
+int crt_overlay_build(int w, int h, int pattern, int variant, int param, crt_overlay_t *out) {
+	const char *chart_name;
 	const char *help;
-	uint16_t black = fb_rgb(fb, 0, 0, 0);
-	uint16_t green = fb_rgb(fb, 140, 255, 48);
-	uint16_t dim = fb_rgb(fb, 64, 168, 36);
-	uint16_t red = fb_rgb(fb, 255, 42, 28);
-	uint16_t white = fb_rgb(fb, 240, 244, 236);
-	int scale = ui_scale(fb);
-	int big = scale;
-	int margin_x = safe_x(fb);
-	int margin_y = safe_y(fb);
-	int box_x = margin_x;
-	int box_w = fb->w - margin_x * 2;
-	int line_h = 8 * scale + 4;
+	int scale;
+	int big;
+	int margin_x;
+	int margin_y;
+	int box_w;
+	int line_h;
 	int name_lines;
 	int name_h;
 	int help_lines;
 	int help_h;
 	int help_scale;
 	int controls_h;
-	int y;
-	int i;
+	int list_scale;
 
-	if(fb->h < 160 || box_w < 8 * scale * 8) {
-		return;
+	if(!out || w < 1 || h < 1) {
+		return 0;
 	}
-	if(fb->h >= 400) {
+	memset(out, 0, sizeof(*out));
+	scale = h >= 200 ? 2 : 1;
+	big = scale;
+	if(h >= 400) {
 		big = scale + 1;
 	}
-
-	controls[0] = "Wheel or Left/Right: next chart.";
-	controls[1] = "Lever or Up/Down changes value.";
-	controls[2] = "Gas or A changes the option.";
-	controls[3] = "Brake or B: back to menu.";
-	controls[4] = "Start or Y hides this text.";
-
-	pattern_status(crt.pattern, crt.variant[crt.pattern], crt.param[crt.pattern],
-		status, (int)sizeof(status));
-	{
-		const char *chart_name = pattern_name(crt.pattern);
-
-		head2[0] = '\0';
-		if(chart_name && !strcmp(chart_name, "Horizontal/Vertical Stripes")) {
-			snprintf(head, sizeof(head), "%d/%d  Horizontal/Vertical",
-				crt.pattern + 1, pattern_count());
-			snprintf(head2, sizeof(head2), "Stripes");
-		}
-		else if(chart_name && !strcmp(chart_name, "Color Bars with Gray Scale")) {
-			snprintf(head, sizeof(head), "%d/%d  Color Bars with",
-				crt.pattern + 1, pattern_count());
-			snprintf(head2, sizeof(head2), "Gray Scale");
-		}
-		else {
-			snprintf(head, sizeof(head), "%d/%d  %s", crt.pattern + 1, pattern_count(),
-				chart_name ? chart_name : "");
-		}
+	margin_x = w / 20;
+	if(margin_x < 12) {
+		margin_x = 12;
 	}
-	help = pattern_help(crt.pattern, crt.variant[crt.pattern], crt.param[crt.pattern]);
+	if(margin_x > 32) {
+		margin_x = 32;
+	}
+	margin_y = h / 10;
+	if(margin_y < 20) {
+		margin_y = 20;
+	}
+	if(margin_y > 48) {
+		margin_y = 48;
+	}
+	box_w = w - margin_x * 2;
+	if(h < 160 || box_w < 8 * scale * 8) {
+		return 0;
+	}
+	line_h = 8 * scale + 4;
+	list_scale = (h >= 400 && w >= 600) ? 3 : scale;
+	chart_name = pattern_name(pattern);
+	if(chart_name && !strcmp(chart_name, "Horizontal/Vertical Stripes")) {
+		snprintf(out->head, sizeof(out->head), "%d/%d  Horizontal/Vertical",
+			pattern + 1, pattern_count());
+		snprintf(out->head2, sizeof(out->head2), "Stripes");
+	}
+	else if(chart_name && !strcmp(chart_name, "Color Bars with Gray Scale")) {
+		snprintf(out->head, sizeof(out->head), "%d/%d  Color Bars with",
+			pattern + 1, pattern_count());
+		snprintf(out->head2, sizeof(out->head2), "Gray Scale");
+	}
+	else {
+		snprintf(out->head, sizeof(out->head), "%d/%d  %s", pattern + 1, pattern_count(),
+			chart_name ? chart_name : "");
+	}
+	pattern_status(pattern, variant, param, out->status, (int)sizeof(out->status));
+	help = pattern_help(pattern, variant, param);
 	name_lines = 1;
-	if(head2[0]) {
+	if(out->head2[0]) {
 		name_lines++;
 	}
-	if(status[0]) {
+	if(out->status[0]) {
 		name_lines++;
 	}
 	name_h = 12 + line_h * name_lines;
 	help_scale = big;
-	help_lines = draw_wrap_box(fb, box_x, box_w, 0, help_scale, red, help, 4, 0);
+	help_lines = fill_lines(help, box_w, help_scale, CRT_HELP_LINE, out->help_line);
 	if(help_lines < 1) {
 		help_lines = 1;
 	}
 	help_h = 12 + help_lines * 8 * help_scale;
 	controls_h = 12 + line_h * 5;
-	if(margin_y + name_h + 8 + help_h + 8 + controls_h + margin_y > fb->h) {
+	if(margin_y + name_h + 8 + help_h + 8 + controls_h + margin_y > h) {
+		int i;
+
 		help_scale = scale;
-		help_lines = draw_wrap_box(fb, box_x, box_w, 0, help_scale, red, help, 2, 0);
+		for(i = 0; i < CRT_HELP_LINE; i++) {
+			out->help_line[i][0] = '\0';
+		}
+		help_lines = fill_lines(help, box_w, help_scale, 2, out->help_line);
 		if(help_lines < 1) {
 			help_lines = 1;
 		}
 		help_h = 12 + help_lines * 8 * help_scale;
 	}
+	out->box_x = margin_x;
+	out->box_w = box_w;
+	out->scale = scale;
+	out->help_scale = help_scale;
+	out->line_h = line_h;
+	out->arrow = 8 * list_scale;
+	out->side = 8 + out->arrow + 8;
+	out->name_y = margin_y;
+	out->name_h = name_h;
+	out->help_y = margin_y + name_h + 8;
+	out->help_h = help_h;
+	out->ctrl_y = h - margin_y - controls_h;
+	out->ctrl_h = controls_h;
+	out->help_n = help_lines;
+	snprintf(out->ctrl[0], sizeof(out->ctrl[0]), "Wheel or Left/Right: next chart.");
+	snprintf(out->ctrl[1], sizeof(out->ctrl[1]), "Lever or Up/Down changes value.");
+	snprintf(out->ctrl[2], sizeof(out->ctrl[2]), "Gas or A changes the option.");
+	snprintf(out->ctrl[3], sizeof(out->ctrl[3]), "Brake or B: back to menu.");
+	snprintf(out->ctrl[4], sizeof(out->ctrl[4]), "Start or Y hides this text.");
+	return 1;
+}
 
-	y = margin_y;
-	draw_menu_box(fb, box_x, y, box_w, name_h, black, green);
-	{
-		int arrow_w = fb_text_width("<", scale);
-		int side = 8 + arrow_w + 8;
-		int text_y = y + 8;
-		int arrow_y = y + (name_h - 8 * scale) / 2;
+static void draw_help(fb_t *fb) {
+	crt_overlay_t lay;
+	uint16_t black;
+	uint16_t green;
+	uint16_t red;
+	uint16_t white;
 
-		fb_text_strong(fb, box_x + 8, arrow_y, scale, green, "<");
-		fb_text_strong(fb, box_x + box_w - 8 - arrow_w, arrow_y, scale, green, ">");
-		draw_centered(fb, box_x + side, box_w - side * 2, text_y, scale, green, head);
-		if(head2[0]) {
-			draw_centered(fb, box_x + side, box_w - side * 2, text_y + line_h,
-				scale, green, head2);
-			text_y += line_h;
-		}
-		if(status[0]) {
-			draw_centered(fb, box_x + side, box_w - side * 2, text_y + line_h,
-				scale, dim, status);
-		}
+	if(!fb) {
+		return;
 	}
-
-	y += name_h + 8;
-	draw_menu_box(fb, box_x, y, box_w, help_h, black, red);
-	draw_wrap_box(fb, box_x, box_w, y + 8, help_scale, red, help, help_lines, 1);
-
-	y = fb->h - margin_y - controls_h;
-	draw_menu_box(fb, box_x, y, box_w, controls_h, black, white);
-	for(i = 0; i < 5; i++) {
-		draw_centered(fb, box_x, box_w, y + 8 + i * line_h, scale, white, controls[i]);
+	if(!crt_overlay_build(fb->w, fb->h, crt.pattern, crt.variant[crt.pattern],
+		crt.param[crt.pattern], &lay)) {
+		return;
 	}
+	black = fb_rgb(fb, 0, 0, 0);
+	green = fb_rgb(fb, 140, 255, 48);
+	red = fb_rgb(fb, 255, 42, 28);
+	white = fb_rgb(fb, 240, 244, 236);
+	draw_menu_box(fb, lay.box_x, lay.name_y, lay.box_w, lay.name_h, black, green);
+	draw_menu_box(fb, lay.box_x, lay.help_y, lay.box_w, lay.help_h, black, red);
+	draw_menu_box(fb, lay.box_x, lay.ctrl_y, lay.box_w, lay.ctrl_h, black, white);
 }
 
 void crt_compose_chart(fb_t *fb, unsigned frame, int pattern, int variant, int param, int show_help) {

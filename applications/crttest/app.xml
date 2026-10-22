@@ -4,11 +4,108 @@
 	<resources>
 		<module src="../../modules/wave.klf" />
 		<module src="modules/app_crttest.klf" />
+		<font src="font/crttest.txf" name="ui" gap="0" fixed="true" filter="nearest" bold="true" />
 	</resources>
 	<body type="tsunami" width="100%" height="100%" backgroundColor="#000000"
 		onload="export:CrtTest_Init()"
 		onopen="export:CrtTest_Open()"
 		onclose="export:CrtTest_Close()"
 		onunload="export:CrtTest_Shutdown()">
+
+		<rectangle name="backdrop" x="0" y="0" width="100%" height="100%" z="1.0" color="#000000FF" />
+
+		<cardstack name="pages" x="0" y="0" width="100%" height="100%" z="2.0" fade="0">
+			<panel name="menu">
+				<box name="menu_screen_0" x="16" y="24" width="608" height="432" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="menu_screen_1" x="19" y="27" width="602" height="426" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<rectangle name="menu_hint_fill" x="32" y="136" width="576" height="96" z="8.0" color="#000000FF" transparent="true" />
+				<box name="menu_hint_0" x="32" y="136" width="576" height="96" z="9.0" borderWidth="1" color="#FF2A1CFF" transparent="true" />
+				<box name="menu_hint_1" x="35" y="139" width="570" height="90" z="9.0" borderWidth="1" color="#FF2A1CFF" transparent="true" />
+				<box name="menu_list_0" x="34" y="238" width="520" height="188" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="menu_list_1" x="36" y="240" width="516" height="184" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="menu_scroll_0" x="562" y="238" width="38" height="188" z="17.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="menu_scroll_1" x="565" y="241" width="32" height="182" z="17.2" borderWidth="1" color="#8CFF30FF" transparent="true" />
+			</panel>
+			<panel name="quiet">
+				<box name="quiet_screen_0" x="16" y="24" width="608" height="432" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="quiet_screen_1" x="19" y="27" width="602" height="426" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="quiet_list_0" x="34" y="138" width="520" height="288" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="quiet_list_1" x="36" y="140" width="516" height="284" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="quiet_scroll_0" x="562" y="138" width="38" height="288" z="17.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
+				<box name="quiet_scroll_1" x="565" y="141" width="32" height="282" z="17.2" borderWidth="1" color="#8CFF30FF" transparent="true" />
+			</panel>
+			<panel name="chart" />
+		</cardstack>
+
+		<rectangle name="select_bar" x="40" y="244" width="508" height="26" z="15.0" color="#F0F4ECFF" transparent="true" />
+		<rectangle name="list_track" x="570" y="274" width="22" height="120" z="16.2" color="#40A824FF" transparent="true" />
+		<rectangle name="list_thumb" x="570" y="274" width="22" height="40" z="16.6" color="#8CFF30FF" transparent="true" />
+
+		<rectangle name="option_fill" x="155" y="128" width="330" height="224" z="32.0" color="#000000FF" transparent="true" />
+		<rectangle name="option_bar" x="165" y="184" width="310" height="28" z="33.0" color="#F0F4ECFF" transparent="true" />
+		<box name="option_frame_0" x="155" y="128" width="330" height="224" z="33.4" borderWidth="1" color="#F0F4ECFF" transparent="true" visibility="hidden" />
+		<box name="option_frame_1" x="158" y="131" width="324" height="218" z="33.6" borderWidth="1" color="#F0F4ECFF" transparent="true" visibility="hidden" />
+		<box name="option_check" x="193" y="188" width="24" height="24" z="35.0" borderWidth="1" color="#8CFF30FF" transparent="true" visibility="hidden" />
+		<rectangle name="option_mark" x="198" y="193" width="14" height="14" z="35.2" color="#8CFF30FF" transparent="true" />
+
+		<rectangle name="saver_dim" x="0" y="0" width="100%" height="100%" z="40.0" color="#000000FF" transparent="true" />
+		<rectangle name="saver_fill" x="127" y="200" width="386" height="80" z="41.0" color="#000000FF" transparent="true" />
+		<box name="saver_frame_0" x="127" y="200" width="386" height="80" z="42.0" borderWidth="1" color="#FFFFFFFF" transparent="true" visibility="hidden" />
+		<box name="saver_frame_1" x="130" y="203" width="380" height="74" z="42.2" borderWidth="1" color="#FFFFFFFF" transparent="true" visibility="hidden" />
+
+		<label name="title" font="ui" fontsize="32" x="256" y="80" z="20.0" text="CRT TEST" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="author" font="ui" fontsize="16" x="256" y="112" z="20.0" text="HEADHUNTER" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="version" font="ui" fontsize="16" x="256" y="448" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="index" font="ui" fontsize="16" x="560" y="112" z="20.0" text="" centered="false" smear="false" color="#8CFF30FF" />
+		<label name="mode" font="ui" fontsize="16" x="200" y="136" z="20.0" text="" centered="true" smear="false" color="#40A824FF" />
+		<label name="hint_0" font="ui" fontsize="16" x="64" y="160" z="20.0" text="UP/DOWN OR LEVER SELECTS" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="hint_1" font="ui" fontsize="16" x="64" y="180" z="20.0" text="LEFT/RIGHT OR WHEEL PAGES" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="hint_2" font="ui" fontsize="16" x="64" y="200" z="20.0" text="GAS OR A OPENS   BRAKE OR B: OPTIONS, EXIT" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="hint_3" font="ui" fontsize="16" x="64" y="220" z="20.0" text="START OR Y HIDES TEXT" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="name_0" font="ui" fontsize="24" x="40" y="270" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_1" font="ui" fontsize="24" x="40" y="300" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_2" font="ui" fontsize="24" x="40" y="330" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_3" font="ui" fontsize="24" x="40" y="360" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_4" font="ui" fontsize="24" x="40" y="390" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_5" font="ui" fontsize="24" x="40" y="420" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_6" font="ui" fontsize="24" x="40" y="450" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_7" font="ui" fontsize="24" x="40" y="270" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_8" font="ui" fontsize="24" x="40" y="300" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_9" font="ui" fontsize="24" x="40" y="330" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_10" font="ui" fontsize="24" x="40" y="360" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_11" font="ui" fontsize="24" x="40" y="390" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_12" font="ui" fontsize="24" x="40" y="420" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_13" font="ui" fontsize="24" x="40" y="450" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_14" font="ui" fontsize="24" x="40" y="270" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_15" font="ui" fontsize="24" x="40" y="300" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_16" font="ui" fontsize="24" x="40" y="330" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_17" font="ui" fontsize="24" x="40" y="360" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_18" font="ui" fontsize="24" x="40" y="390" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_19" font="ui" fontsize="24" x="40" y="420" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_20" font="ui" fontsize="24" x="40" y="450" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_21" font="ui" fontsize="24" x="40" y="270" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_22" font="ui" fontsize="24" x="40" y="300" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_23" font="ui" fontsize="24" x="40" y="330" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="name_24" font="ui" fontsize="24" x="40" y="360" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="option_title" font="ui" fontsize="32" x="207" y="172" z="36.0" text="OPTIONS" centered="true" smear="false" color="#F0F4ECFF" />
+		<label name="option_music" font="ui" fontsize="24" x="229" y="216" z="36.0" text="MUSIC OFF" centered="false" smear="false" color="#8CFF30FF" />
+		<label name="option_exit" font="ui" fontsize="24" x="165" y="248" z="36.0" text="EXIT" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="option_resume" font="ui" fontsize="24" x="165" y="280" z="36.0" text="RESUME" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="option_hint_0" font="ui" fontsize="16" x="165" y="312" z="36.0" text="GAS OR A CONFIRMS" centered="true" smear="false" color="#40A824FF" />
+		<label name="option_hint_1" font="ui" fontsize="16" x="165" y="332" z="36.0" text="BRAKE OR B RETURNS" centered="true" smear="false" color="#40A824FF" />
+		<label name="saver_title" font="ui" fontsize="32" x="160" y="220" z="44.0" text="CRT TEST" centered="true" smear="false" color="#FFFFFFFF" />
+		<label name="saver_version" font="ui" fontsize="16" x="160" y="252" z="44.0" text="" centered="true" smear="false" color="#FFFFFFFF" />
+		<label name="chart_head_0" font="ui" fontsize="16" x="64" y="64" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="chart_head_1" font="ui" fontsize="16" x="64" y="84" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="chart_status" font="ui" fontsize="16" x="64" y="104" z="20.0" text="" centered="true" smear="false" color="#40A824FF" />
+		<label name="chart_help_0" font="ui" fontsize="24" x="64" y="160" z="20.0" text="" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="chart_help_1" font="ui" fontsize="24" x="64" y="184" z="20.0" text="" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="chart_help_2" font="ui" fontsize="24" x="64" y="208" z="20.0" text="" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="chart_help_3" font="ui" fontsize="24" x="64" y="232" z="20.0" text="" centered="true" smear="false" color="#FF2A1CFF" />
+		<label name="chart_ctrl_0" font="ui" fontsize="16" x="64" y="360" z="20.0" text="" centered="true" smear="false" color="#F0F4ECFF" />
+		<label name="chart_ctrl_1" font="ui" fontsize="16" x="64" y="380" z="20.0" text="" centered="true" smear="false" color="#F0F4ECFF" />
+		<label name="chart_ctrl_2" font="ui" fontsize="16" x="64" y="400" z="20.0" text="" centered="true" smear="false" color="#F0F4ECFF" />
+		<label name="chart_ctrl_3" font="ui" fontsize="16" x="64" y="420" z="20.0" text="" centered="true" smear="false" color="#F0F4ECFF" />
+		<label name="chart_ctrl_4" font="ui" fontsize="16" x="64" y="440" z="20.0" text="" centered="true" smear="false" color="#F0F4ECFF" />
 	</body>
 </app>

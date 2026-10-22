@@ -1455,9 +1455,12 @@ TSU_FadeToDestroy
 TSU_FontCreate
 TSU_FontDestroy
 TSU_FontLoadFromFile
-TSU_FontSetFilter
-TSU_FontSetColor
 TSU_FontSetAlpha
+TSU_FontSetBold
+TSU_FontSetColor
+TSU_FontSetFilter
+TSU_FontSetFixed
+TSU_FontSetGap
 TSU_FontSetSize
 TSU_FontDraw
 TSU_FontDrawCentered
@@ -1519,6 +1522,7 @@ TSU_LabelSetWindowState
 TSU_BoxCreate
 TSU_BoxDestroy
 TSU_BoxSetSize
+TSU_BoxSetBounds
 TSU_RectangleCreate
 TSU_RectangleCreateWithBorder
 TSU_RectangleDestroy

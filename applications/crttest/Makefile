@@ -23,13 +23,15 @@ $(DEPS): modules/module.c modules/draw.c modules/patterns.c modules/draw.h modul
 clean:
 	cd modules && $(MAKE) clean && cd ../
 
-install: app.xml $(DEPS) sounds/theme.wav $(ART)
+install: app.xml $(DEPS) sounds/theme.wav font/crttest.txf $(ART)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
 	-mkdir -p $(APP_DIR)/images
 	-mkdir -p $(APP_DIR)/sounds
+	-mkdir -p $(APP_DIR)/font
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp sounds/theme.wav $(APP_DIR)/sounds/theme.wav
+	cp font/crttest.txf $(APP_DIR)/font/crttest.txf
 	-rm -f $(APP_DIR)/theme.wav
 	cp $(ART) $(APP_DIR)/images/
 	-rm -f $(APP_DIR)/scroll_near.rgb $(APP_DIR)/scroll_sky.rgb \

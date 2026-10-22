@@ -23,8 +23,7 @@
 #define SCROLL_TEX_H 256
 #define VERT_TEX 512
 #define GRID_LINES 40
-#define TEXT_MAX_W 512
-#define TEXT_MAX_H 64
+#define TEXT_MAX 64
 #define FRAME_COUNT 6
 
 typedef struct {
@@ -37,16 +36,17 @@ typedef struct {
 } glyph_t;
 
 typedef struct {
-	Rectangle *edge[4];
+	Box *box;
 } frame_t;
 
 static App_t *view_app;
 static int screen_w = 640;
 static int screen_h = 480;
+static int layout_xml;
 static int ready;
 
 static uint16_t chart_pix[CHART_W * CHART_H] __attribute__((aligned(32)));
-static uint16_t text_pix[TEXT_MAX_W * TEXT_MAX_H];
+static uint16_t text_pix[TEXT_MAX * TEXT_MAX];
 static Texture *chart_tex;
 static Banner *chart_banner;
 static int chart_on;
@@ -125,25 +125,40 @@ static int shadow_made;
 static int shadow_on;
 static int shadow_variant = -999;
 
-static glyph_t title_glyph;
-static glyph_t author_glyph;
-static glyph_t version_glyph;
-static glyph_t index_glyph;
-static glyph_t mode_glyph;
-static glyph_t hint_glyph[4];
-static glyph_t name_glyph[CRT_PATTERN_MAX];
+static Label *title_label;
+static Label *author_label;
+static Label *version_label;
+static Label *index_label;
+static Label *mode_label;
+static Label *hint_label[4];
+static Label *name_label[CRT_PATTERN_MAX];
+static Label *chart_head[2];
+static Label *chart_status;
+static Label *chart_help[CRT_HELP_LINE];
+static Label *chart_ctrl[5];
+static int chart_text_on;
 static glyph_t up_glyph;
 static glyph_t down_glyph;
-static glyph_t option_title;
-static glyph_t option_music;
-static glyph_t option_exit;
-static glyph_t option_resume;
-static glyph_t option_hint[2];
-static glyph_t saver_title;
-static glyph_t saver_version;
+static glyph_t left_glyph;
+static glyph_t right_glyph;
+static Label *option_title;
+static Label *option_music;
+static Label *option_exit;
+static Label *option_resume;
+static Label *option_hint[2];
+static Label *saver_title;
+static Label *saver_version;
 static char mode_cached[80];
 static char index_cached[16];
 
+static CardStack *pages;
+static frame_t menu_screen[2];
+static frame_t quiet_screen[2];
+static frame_t menu_list[2];
+static frame_t quiet_list[2];
+static frame_t hint_frame[2];
+static frame_t menu_scroll[2];
+static frame_t quiet_scroll[2];
 static frame_t frames[FRAME_COUNT];
 static Rectangle *hint_fill;
 static Rectangle *backdrop;
@@ -155,7 +170,7 @@ static frame_t option_frames[2];
 static frame_t saver_frames[2];
 static Rectangle *option_fill;
 static Rectangle *option_bar;
-static Rectangle *check_edge[4];
+static Box *check_box;
 static Rectangle *check_mark;
 static Rectangle *saver_dim;
 static Rectangle *saver_fill;
@@ -169,6 +184,8 @@ static int saver_hue;
 static int saver_alive;
 static int view_panel;
 static LogXYZMover *select_mover;
+static LogXYZMover *option_mover;
+static int option_open;
 static int bar_h;
 static int names_ready;
 static int was_menu = -1;
@@ -298,82 +315,32 @@ static void glyph_free(glyph_t *glyph) {
 	glyph_clear(glyph);
 }
 
-static int glyph_build(glyph_t *glyph, const char *text, int scale, int span) {
-	int advance = span > 0 ? span : 8;
-	int vis_w;
-	int vis_h;
-	int tex_w;
-	int tex_h;
-	fb_t fb;
-	uint16_t white;
-
-	if(!glyph || !view_app || !view_app->tsunami || !text || !text[0]) {
-		return 0;
-	}
-	if(scale < 1) {
-		scale = 1;
-	}
-	vis_w = (int)strlen(text) * advance * scale + 2;
-	vis_h = 8 * scale;
-	if(vis_w > TEXT_MAX_W || vis_h > TEXT_MAX_H || vis_w < 1 || vis_h < 1) {
-		return 0;
-	}
-	tex_w = pot_size(vis_w);
-	tex_h = pot_size(vis_h);
-	if(glyph->tex && (glyph->tex_w != tex_w || glyph->tex_h != tex_h)) {
-		return 0;
-	}
-	if(!glyph->tex) {
-		glyph->tex = crt_canvas_argb(tex_w, tex_h);
-		if(!glyph->tex) {
-			return 0;
-		}
-		glyph->banner = TSU_BannerCreate(PVR_LIST_TR_POLY, glyph->tex);
-		if(!glyph->banner) {
-			TSU_TextureDestroy(&glyph->tex);
-			return 0;
-		}
-		TSU_AppSubAddBanner(view_app->tsunami, glyph->banner);
-		glyph->tex_w = tex_w;
-		glyph->tex_h = tex_h;
-	}
-	memset(text_pix, 0, (size_t)vis_w * (size_t)vis_h * sizeof(uint16_t));
-	white = (uint16_t)((31 << 11) | (63 << 5) | 31);
-	fb_bind(&fb, text_pix, vis_w, vis_h, vis_w, 3, 2, 3, 11, 5, 0);
-	if(span > 0) {
-		fb_text_span_strong(&fb, 0, 0, scale, span, white, text);
-	}
-	else {
-		fb_text_strong(&fb, 0, 0, scale, white, text);
-	}
-	crt_canvas_upload(glyph->tex, text_pix, vis_w, vis_h);
-	glyph->vis_w = vis_w;
-	glyph->vis_h = vis_h;
-	TSU_BannerSetSize(glyph->banner, (float)vis_w, (float)vis_h);
-	banner_uv(glyph->banner, tex_w, tex_h, vis_w, vis_h);
-	return 1;
-}
-
-static void paint_arrow(fb_t *fb, int side, int down) {
+static void paint_arrow(fb_t *fb, int side, int dir) {
 	uint16_t white = (uint16_t)((31 << 11) | (63 << 5) | 31);
-	int y;
+	int i;
 
-	for(y = 0; y < side; y++) {
-		int along = down ? (side - 1 - y) : y;
+	for(i = 0; i < side; i++) {
+		int along;
 		int span;
-		int x0;
+		int origin;
 
 		if(side < 2) {
-			fb_pixel(fb, 0, y, white);
+			fb_pixel(fb, 0, i, white);
 			continue;
 		}
+		along = (dir == 1 || dir == 3) ? (side - 1 - i) : i;
 		span = 1 + (along * (side - 1)) / (side - 1);
-		x0 = (side - span) / 2;
-		fb_fill_rect(fb, x0, y, span, 1, white);
+		origin = (side - span) / 2;
+		if(dir >= 2) {
+			fb_fill_rect(fb, i, origin, 1, span, white);
+		}
+		else {
+			fb_fill_rect(fb, origin, i, span, 1, white);
+		}
 	}
 }
 
-static int glyph_build_arrow(glyph_t *glyph, int scale, int down) {
+static int glyph_build_arrow(glyph_t *glyph, int scale, int dir) {
 	int side;
 	int tex_w;
 	int tex_h;
@@ -386,7 +353,7 @@ static int glyph_build_arrow(glyph_t *glyph, int scale, int down) {
 		scale = 1;
 	}
 	side = 8 * scale;
-	if(side > TEXT_MAX_W || side > TEXT_MAX_H) {
+	if(side > TEXT_MAX) {
 		return 0;
 	}
 	tex_w = pot_size(side);
@@ -410,26 +377,13 @@ static int glyph_build_arrow(glyph_t *glyph, int scale, int down) {
 	}
 	memset(text_pix, 0, (size_t)side * (size_t)side * sizeof(uint16_t));
 	fb_bind(&fb, text_pix, side, side, side, 3, 2, 3, 11, 5, 0);
-	paint_arrow(&fb, side, down);
+	paint_arrow(&fb, side, dir);
 	crt_canvas_upload(glyph->tex, text_pix, side, side);
 	glyph->vis_w = side;
 	glyph->vis_h = side;
 	TSU_BannerSetSize(glyph->banner, (float)side, (float)side);
 	banner_uv(glyph->banner, tex_w, tex_h, side, side);
 	return 1;
-}
-
-static float glyph_nominal(const glyph_t *glyph) {
-	float nominal;
-
-	if(!glyph || glyph->vis_w < 1) {
-		return 0.0f;
-	}
-	nominal = (float)glyph->vis_w - 2.0f;
-	if(nominal < 1.0f) {
-		nominal = (float)glyph->vis_w;
-	}
-	return nominal;
 }
 
 static void glyph_move_z(glyph_t *glyph, float left, float top, float z) {
@@ -443,14 +397,200 @@ static void glyph_move(glyph_t *glyph, float left, float top) {
 	glyph_move_z(glyph, left, top, 20.0f);
 }
 
-static void glyph_center_z(glyph_t *glyph, float origin, float span, float top, float z) {
-	float nominal = glyph_nominal(glyph);
-
-	glyph_move_z(glyph, origin + (span - nominal) * 0.5f, top, z);
+static void label_size(Label *label, int px) {
+	if(label && px > 0) {
+		TSU_LabelSetFontSize(label, px);
+	}
 }
 
-static void glyph_center(glyph_t *glyph, float origin, float span, float top) {
-	glyph_center_z(glyph, origin, span, top, 20.0f);
+static void label_metrics(Label *label, float *w, float *h) {
+	float tw = 0.0f;
+	float th = 0.0f;
+
+	if(label) {
+		TSU_LabelGetSize(label, &tw, &th);
+	}
+	if(w) {
+		*w = tw;
+	}
+	if(h) {
+		*h = th;
+	}
+}
+
+static float label_width(Label *label) {
+	float w;
+
+	label_metrics(label, &w, NULL);
+	return w;
+}
+
+static float label_height(Label *label) {
+	float h;
+
+	label_metrics(label, NULL, &h);
+	return h;
+}
+
+static void label_fit(Label *label, int px, float max_w) {
+	if(!label) {
+		return;
+	}
+	if(px < 8) {
+		px = 8;
+	}
+	label_size(label, px);
+	while(px > 8 && label_width(label) > max_w) {
+		px--;
+		label_size(label, px);
+	}
+}
+
+static void label_place(Label *label, float left, float top, float z, int centered) {
+	float w;
+	float h;
+	Vector pos;
+
+	if(!label) {
+		return;
+	}
+	TSU_LabelSetCenter(label, centered ? 1 : 0);
+	label_metrics(label, &w, &h);
+	if(centered) {
+		pos.x = left + w * 0.5f;
+		pos.y = top + h * 0.5f;
+	}
+	else {
+		pos.x = left;
+		pos.y = top + h;
+	}
+	pos.z = z;
+	pos.w = 1.0f;
+	TSU_LabelSetTranslate(label, &pos);
+}
+
+static void label_center(Label *label, float origin, float span, float top, float z) {
+	float h;
+	Vector pos;
+
+	if(!label) {
+		return;
+	}
+	TSU_LabelSetCenter(label, 1);
+	label_metrics(label, NULL, &h);
+	pos.x = origin + span * 0.5f;
+	pos.y = top + h * 0.5f;
+	pos.z = z;
+	pos.w = 1.0f;
+	TSU_LabelSetTranslate(label, &pos);
+}
+
+static void label_tint(Label *label, Color color) {
+	if(label) {
+		TSU_LabelSetTint(label, &color);
+	}
+}
+
+static void glyph_tint(glyph_t *glyph, Color color);
+
+static void chart_line(Label *label, const char *text, int scale, float origin, float span,
+	float top, Color color) {
+	if(!label) {
+		return;
+	}
+	if(!text || !text[0]) {
+		TSU_LabelSetText(label, "");
+		label_tint(label, COL_CLEAR);
+		return;
+	}
+	TSU_LabelSetText(label, text);
+	label_size(label, 8 * scale);
+	label_tint(label, color);
+	label_center(label, origin, span, top, 20.0f);
+}
+
+static int chart_arrow_scale(void) {
+	return (screen_h >= 400 && screen_w >= 600) ? 3 : ui_scale();
+}
+
+static void hide_chart_text(void) {
+	int i;
+
+	glyph_tint(&left_glyph, COL_CLEAR);
+	glyph_tint(&right_glyph, COL_CLEAR);
+	if(!chart_text_on) {
+		return;
+	}
+	chart_line(chart_head[0], "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	chart_line(chart_head[1], "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	chart_line(chart_status, "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	for(i = 0; i < CRT_HELP_LINE; i++) {
+		chart_line(chart_help[i], "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	}
+	for(i = 0; i < 5; i++) {
+		chart_line(chart_ctrl[i], "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	}
+	chart_text_on = 0;
+}
+
+static void show_chart_text(int pattern, int variant, int param) {
+	crt_overlay_t lay;
+	float box_x;
+	float box_w;
+	float title_x;
+	float title_w;
+	int text_y;
+	int i;
+
+	if(!crt_overlay_build(screen_w, screen_h, pattern, variant, param, &lay)) {
+		hide_chart_text();
+		return;
+	}
+	if(!left_glyph.banner) {
+		glyph_build_arrow(&left_glyph, chart_arrow_scale(), 2);
+	}
+	if(!right_glyph.banner) {
+		glyph_build_arrow(&right_glyph, chart_arrow_scale(), 3);
+	}
+	box_x = (float)lay.box_x;
+	box_w = (float)lay.box_w;
+	title_x = (float)(lay.box_x + lay.side);
+	title_w = (float)(lay.box_w - lay.side * 2);
+	text_y = lay.name_y + 8;
+	chart_line(chart_head[0], lay.head, lay.scale, title_x, title_w, (float)text_y, COL_GREEN);
+	if(lay.head2[0]) {
+		text_y += lay.line_h;
+		chart_line(chart_head[1], lay.head2, lay.scale, title_x, title_w, (float)text_y, COL_GREEN);
+	}
+	else {
+		chart_line(chart_head[1], "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	}
+	if(lay.status[0]) {
+		text_y += lay.line_h;
+		chart_line(chart_status, lay.status, lay.scale, title_x, title_w, (float)text_y, COL_DIM);
+	}
+	else {
+		chart_line(chart_status, "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+	}
+	for(i = 0; i < CRT_HELP_LINE; i++) {
+		if(i < lay.help_n) {
+			chart_line(chart_help[i], lay.help_line[i], lay.help_scale, box_x, box_w,
+				(float)(lay.help_y + 8 + i * 8 * lay.help_scale), COL_RED);
+		}
+		else {
+			chart_line(chart_help[i], "", 1, 0.0f, 0.0f, 0.0f, COL_CLEAR);
+		}
+	}
+	for(i = 0; i < 5; i++) {
+		chart_line(chart_ctrl[i], lay.ctrl[i], lay.scale, box_x, box_w,
+			(float)(lay.ctrl_y + 8 + i * lay.line_h), COL_PAPER);
+	}
+	text_y = lay.name_y + (lay.name_h - lay.arrow) / 2;
+	glyph_move_z(&left_glyph, (float)(lay.box_x + 8), (float)text_y, 21.0f);
+	glyph_move_z(&right_glyph, (float)(lay.box_x + lay.box_w - 8 - lay.arrow), (float)text_y, 21.0f);
+	glyph_tint(&left_glyph, COL_GREEN);
+	glyph_tint(&right_glyph, COL_GREEN);
+	chart_text_on = 1;
 }
 
 static void glyph_tint(glyph_t *glyph, Color color) {
@@ -498,53 +638,27 @@ static Rectangle *make_rect_off(pvr_list_type_t list, Color color, float z) {
 	return TSU_RectangleCreate(list, 0.0f, (float)screen_h, 1.0f, 1.0f, &color, z, 0.0f);
 }
 
-static Rectangle *make_rect(pvr_list_type_t list, Color color, float z) {
-	Rectangle *rect;
-
-	rect = make_rect_off(list, color, z);
-	if(rect && view_app && view_app->tsunami) {
-		TSU_AppSubAddRectangle(view_app->tsunami, rect);
+static void *scene_drawable(const char *name) {
+	if(!view_app || !name) {
+		return NULL;
 	}
-	return rect;
+	return getAppElement(view_app, name, LIST_ITEM_TSU_DRAWABLE);
 }
 
-static void frame_make(frame_t *frame, Color color, float z) {
-	int i;
-
-	for(i = 0; i < 4; i++) {
-		frame->edge[i] = make_rect(PVR_LIST_TR_POLY, color, z);
-	}
+static int bind_box(frame_t *frame, const char *name) {
+	frame->box = (Box *)scene_drawable(name);
+	return frame->box != NULL;
 }
 
 static void frame_place(frame_t *frame, float x, float top, float w, float h) {
-	if(!frame || w < 1.0f || h < 1.0f) {
-		return;
+	if(frame && frame->box) {
+		TSU_BoxSetBounds(frame->box, x, top, w, h);
 	}
-	rect_move(frame->edge[0], x, top, w, 1.0f);
-	rect_move(frame->edge[1], x, top + h - 1.0f, w, 1.0f);
-	rect_move(frame->edge[2], x, top, 1.0f, h);
-	rect_move(frame->edge[3], x + w - 1.0f, top, 1.0f, h);
 }
 
 static void frame_alpha(frame_t *frame, float alpha) {
-	int i;
-
-	if(!frame) {
-		return;
-	}
-	for(i = 0; i < 4; i++) {
-		rect_alpha(frame->edge[i], alpha);
-	}
-}
-
-static void frame_free(frame_t *frame) {
-	int i;
-
-	if(!frame) {
-		return;
-	}
-	for(i = 0; i < 4; i++) {
-		rect_free(&frame->edge[i]);
+	if(frame && frame->box) {
+		TSU_DrawableSetAlpha((Drawable *)frame->box, alpha);
 	}
 }
 
@@ -575,6 +689,34 @@ static void bar_go(float x, float top, float w, float h, int snap) {
 	TSU_DrawableAnimRemove((Drawable *)select_bar, (Animation *)select_mover);
 	TSU_LogXYZMoverSetTarget(select_mover, pos.x, pos.y, pos.z);
 	TSU_DrawableAnimAdd((Drawable *)select_bar, (Animation *)select_mover);
+}
+
+static void option_bar_go(float x, float top, float w, float h, int snap) {
+	Vector pos;
+
+	if(!option_bar) {
+		return;
+	}
+	pos.x = x;
+	pos.y = top + h;
+	pos.z = 33.0f;
+	pos.w = 1.0f;
+	TSU_RectangleSetSize(option_bar, w, h);
+	if(snap || !option_mover) {
+		TSU_DrawableAnimRemove((Drawable *)option_bar, (Animation *)option_mover);
+		TSU_DrawableSetTranslate((Drawable *)option_bar, &pos);
+		if(!option_mover) {
+			option_mover = TSU_LogXYZMoverCreate(pos.x, pos.y, pos.z);
+			TSU_LogXYZMoverSetFactor(option_mover, 6.0f);
+		}
+		else {
+			TSU_LogXYZMoverSetTarget(option_mover, pos.x, pos.y, pos.z);
+		}
+		return;
+	}
+	TSU_DrawableAnimRemove((Drawable *)option_bar, (Animation *)option_mover);
+	TSU_LogXYZMoverSetTarget(option_mover, pos.x, pos.y, pos.z);
+	TSU_DrawableAnimAdd((Drawable *)option_bar, (Animation *)option_mover);
 }
 
 static int scroll_arrow(int list_scale) {
@@ -687,57 +829,64 @@ static void place_header(int show_help) {
 
 	(void)layout_metrics(show_help, &list_x, &list_w, &list_top, &list_bottom,
 		&line_h, &hint_y, &hint_h, &hint_step);
-	glyph_center(&title_glyph, 0.0f, (float)screen_w, (float)y);
+	label_center(title_label, 0.0f, (float)screen_w, (float)y, 20.0f);
 	y += 8 * title_scale + 8;
-	glyph_center(&author_glyph, 0.0f, (float)screen_w, (float)y);
-	glyph_move(&index_glyph,
-		(float)screen_w - (float)margin_x - glyph_nominal(&index_glyph) - 2.0f, (float)y);
+	label_center(author_label, 0.0f, (float)screen_w, (float)y, 20.0f);
+	label_place(index_label,
+		(float)screen_w - (float)margin_x - label_width(index_label) - 2.0f, (float)y, 20.0f, 0);
 	y += 8 * scale + 6;
-	glyph_center(&mode_glyph, 0.0f, (float)screen_w, (float)y);
+	label_center(mode_label, 0.0f, (float)screen_w, (float)y, 20.0f);
 
-	rect_move(hint_fill, (float)box_x, (float)hint_y, (float)box_w, (float)hint_h);
+	if(!layout_xml) {
+		rect_move(hint_fill, (float)box_x, (float)hint_y, (float)box_w, (float)hint_h);
+		frame_place(&frames[4], (float)box_x, (float)hint_y, (float)box_w, (float)hint_h);
+		frame_place(&frames[5], (float)(box_x + 3), (float)(hint_y + 3),
+			(float)(box_w - 6), (float)(hint_h - 6));
+	}
 	rect_alpha(hint_fill, hint_alpha);
-	frame_place(&frames[4], (float)box_x, (float)hint_y, (float)box_w, (float)hint_h);
-	frame_place(&frames[5], (float)(box_x + 3), (float)(hint_y + 3),
-		(float)(box_w - 6), (float)(hint_h - 6));
 	frame_alpha(&frames[4], hint_alpha);
 	frame_alpha(&frames[5], hint_alpha);
 	hint_color.a = hint_alpha;
 	text_y = hint_y + 8;
 	for(i = 0; i < 4; i++) {
-		glyph_center(&hint_glyph[i], (float)box_x, (float)box_w, (float)text_y);
-		glyph_tint(&hint_glyph[i], hint_color);
+		label_center(hint_label[i], (float)box_x, (float)box_w, (float)text_y, 20.0f);
+		label_tint(hint_label[i], hint_color);
 		text_y += hint_step;
 	}
 
-	frame_place(&frames[0], (float)(margin_x / 2), (float)(margin_y / 2),
-		(float)(screen_w - margin_x), (float)(screen_h - margin_y));
-	frame_place(&frames[1], (float)(margin_x / 2 + 3), (float)(margin_y / 2 + 3),
-		(float)(screen_w - margin_x - 6), (float)(screen_h - margin_y - 6));
-	frame_place(&frames[2], (float)(list_x - 6), (float)(list_top - 6),
-		(float)(list_w + 12), (float)(list_bottom - list_top + 8));
-	frame_place(&frames[3], (float)(list_x - 4), (float)(list_top - 4),
-		(float)(list_w + 8), (float)(list_bottom - list_top + 4));
+	if(!layout_xml) {
+		frame_place(&frames[0], (float)(margin_x / 2), (float)(margin_y / 2),
+			(float)(screen_w - margin_x), (float)(screen_h - margin_y));
+		frame_place(&frames[1], (float)(margin_x / 2 + 3), (float)(margin_y / 2 + 3),
+			(float)(screen_w - margin_x - 6), (float)(screen_h - margin_y - 6));
+		frame_place(&frames[2], (float)(list_x - 6), (float)(list_top - 6),
+			(float)(list_w + 12), (float)(list_bottom - list_top + 8));
+		frame_place(&frames[3], (float)(list_x - 4), (float)(list_top - 4),
+			(float)(list_w + 8), (float)(list_bottom - list_top + 4));
+	}
 	frame_alpha(&frames[0], 1.0f);
 	frame_alpha(&frames[1], 1.0f);
 	frame_alpha(&frames[2], 1.0f);
 	frame_alpha(&frames[3], 1.0f);
-	glyph_tint(&title_glyph, COL_GREEN);
-	glyph_tint(&author_glyph, COL_GREEN);
-	glyph_tint(&version_glyph, COL_GREEN);
-	glyph_tint(&index_glyph, COL_GREEN);
-	glyph_tint(&mode_glyph, COL_DIM);
+	label_tint(title_label, COL_GREEN);
+	label_tint(author_label, COL_GREEN);
+	label_tint(version_label, COL_GREEN);
+	label_tint(index_label, COL_GREEN);
+	label_tint(mode_label, COL_DIM);
 	{
 		int gap_top = list_bottom + 2;
 		int gap_bot = screen_h - margin_y / 2 - 4;
-		int text_h = version_glyph.vis_h > 0 ? version_glyph.vis_h : 8 * scale;
+		int text_h = (int)label_height(version_label);
 		int room = gap_bot - gap_top;
 		int text_y = gap_top;
 
+		if(text_h < 1) {
+			text_h = 8 * scale;
+		}
 		if(room > text_h) {
 			text_y = gap_top + (room - text_h) / 2;
 		}
-		glyph_center(&version_glyph, 0.0f, (float)screen_w, (float)text_y);
+		label_center(version_label, 0.0f, (float)screen_w, (float)text_y, 20.0f);
 	}
 }
 
@@ -748,40 +897,34 @@ static void rect_tint(Rectangle *rect, Color color) {
 }
 
 static void frame_tint(frame_t *frame, Color color) {
-	int i;
-
-	if(!frame) {
-		return;
-	}
-	for(i = 0; i < 4; i++) {
-		rect_tint(frame->edge[i], color);
+	if(frame && frame->box) {
+		TSU_DrawableSetTint((Drawable *)frame->box, &color);
 	}
 }
 
-static void box_place(Rectangle **edge, float x, float y, float side) {
-	rect_move(edge[0], x, y, side, 1.0f);
-	rect_move(edge[1], x, y + side - 1.0f, side, 1.0f);
-	rect_move(edge[2], x, y, 1.0f, side);
-	rect_move(edge[3], x + side - 1.0f, y, 1.0f, side);
+static void box_place(Box *box, float x, float y, float side) {
+	TSU_BoxSetBounds(box, x, y, side, side);
 }
 
 static void hide_options(void) {
-	int i;
-
 	frame_alpha(&option_frames[0], 0.0f);
 	frame_alpha(&option_frames[1], 0.0f);
 	rect_alpha(option_fill, 0.0f);
 	rect_alpha(option_bar, 0.0f);
 	rect_alpha(check_mark, 0.0f);
-	for(i = 0; i < 4; i++) {
-		rect_alpha(check_edge[i], 0.0f);
+	if(check_box) {
+		TSU_DrawableSetAlpha((Drawable *)check_box, 0.0f);
 	}
-	glyph_tint(&option_title, COL_CLEAR);
-	glyph_tint(&option_music, COL_CLEAR);
-	glyph_tint(&option_exit, COL_CLEAR);
-	glyph_tint(&option_resume, COL_CLEAR);
-	glyph_tint(&option_hint[0], COL_CLEAR);
-	glyph_tint(&option_hint[1], COL_CLEAR);
+	if(option_bar && option_mover) {
+		TSU_DrawableAnimRemove((Drawable *)option_bar, (Animation *)option_mover);
+	}
+	option_open = 0;
+	label_tint(option_title, COL_CLEAR);
+	label_tint(option_music, COL_CLEAR);
+	label_tint(option_exit, COL_CLEAR);
+	label_tint(option_resume, COL_CLEAR);
+	label_tint(option_hint[0], COL_CLEAR);
+	label_tint(option_hint[1], COL_CLEAR);
 }
 
 static void hide_saver(void) {
@@ -789,8 +932,8 @@ static void hide_saver(void) {
 	frame_alpha(&saver_frames[1], 0.0f);
 	rect_alpha(saver_dim, 0.0f);
 	rect_alpha(saver_fill, 0.0f);
-	glyph_tint(&saver_title, COL_CLEAR);
-	glyph_tint(&saver_version, COL_CLEAR);
+	label_tint(saver_title, COL_CLEAR);
+	label_tint(saver_version, COL_CLEAR);
 	saver_alive = 0;
 }
 
@@ -798,11 +941,11 @@ static void show_options(int sel, int music_off) {
 	int scale = ui_scale();
 	int list_scale = (screen_h >= 400 && screen_w >= 600) ? 3 : scale;
 	int row_h = 8 * list_scale + 8;
-	int title_h = option_title.vis_h > 0 ? option_title.vis_h : 8 * list_scale;
+	int title_h = (int)label_height(option_title);
 	int hint_step = 8 * scale + 4;
 	int box = 8 * list_scale;
 	int pad = 20;
-	int text_w = option_music.vis_w + 12 + box;
+	int text_w = (int)label_width(option_music) + 12 + box;
 	int width;
 	int height;
 	int x;
@@ -818,20 +961,23 @@ static void show_options(int sel, int music_off) {
 	if(sel > 2) {
 		sel = 2;
 	}
-	if(option_title.vis_w > text_w) {
-		text_w = option_title.vis_w;
+	if(title_h < 1) {
+		title_h = 8 * list_scale;
 	}
-	if(option_exit.vis_w > text_w) {
-		text_w = option_exit.vis_w;
+	if((int)label_width(option_title) > text_w) {
+		text_w = (int)label_width(option_title);
 	}
-	if(option_resume.vis_w > text_w) {
-		text_w = option_resume.vis_w;
+	if((int)label_width(option_exit) > text_w) {
+		text_w = (int)label_width(option_exit);
 	}
-	if(option_hint[0].vis_w > text_w) {
-		text_w = option_hint[0].vis_w;
+	if((int)label_width(option_resume) > text_w) {
+		text_w = (int)label_width(option_resume);
 	}
-	if(option_hint[1].vis_w > text_w) {
-		text_w = option_hint[1].vis_w;
+	if((int)label_width(option_hint[0]) > text_w) {
+		text_w = (int)label_width(option_hint[0]);
+	}
+	if((int)label_width(option_hint[1]) > text_w) {
+		text_w = (int)label_width(option_hint[1]);
 	}
 	width = text_w + pad * 2;
 	height = 16 + title_h + 12 + row_h * 3 + 12 + hint_step * 2 + 16;
@@ -844,32 +990,31 @@ static void show_options(int sel, int music_off) {
 	x = (screen_w - width) / 2;
 	y = (screen_h - height) / 2;
 	rect_move(option_fill, (float)x, (float)y, (float)width, (float)height);
-	rect_alpha(option_fill, 1.0f);
 	frame_place(&option_frames[0], (float)x, (float)y, (float)width, (float)height);
 	frame_place(&option_frames[1], (float)(x + 3), (float)(y + 3),
 		(float)(width - 6), (float)(height - 6));
+	rect_alpha(option_fill, 1.0f);
 	frame_alpha(&option_frames[0], 1.0f);
 	frame_alpha(&option_frames[1], 1.0f);
-	glyph_center_z(&option_title, (float)x, (float)width, (float)(y + 12), text_z);
-	glyph_tint(&option_title, COL_PAPER);
+	label_center(option_title, (float)x, (float)width, (float)(y + 12), text_z);
+	label_tint(option_title, COL_PAPER);
 
 	row_y = y + 12 + title_h + 12;
-	rect_move(option_bar, (float)(x + 10), (float)row_y + (float)sel * (float)row_h,
-		(float)(width - 20), (float)(row_h - 4));
+	option_bar_go((float)(x + 10), (float)row_y + (float)sel * (float)row_h,
+		(float)(width - 20), (float)(row_h - 4), !option_open);
+	option_open = 1;
 	rect_alpha(option_bar, 1.0f);
 	if(sel == 0) {
 		mark = COL_INK;
 	}
 	{
-		int group = box + 12 + option_music.vis_w;
+		int group = box + 12 + (int)label_width(option_music);
 		int cx = x + (width - group) / 2;
 		int cy = row_y + (row_h - box) / 2;
-		int i_edge;
-
-		box_place(check_edge, (float)cx, (float)cy, (float)box);
-		for(i_edge = 0; i_edge < 4; i_edge++) {
-			rect_alpha(check_edge[i_edge], 1.0f);
-			rect_tint(check_edge[i_edge], mark);
+		box_place(check_box, (float)cx, (float)cy, (float)box);
+		if(check_box) {
+			TSU_DrawableSetAlpha((Drawable *)check_box, 1.0f);
+			TSU_DrawableSetTint((Drawable *)check_box, &mark);
 		}
 		if(music_off && box > 10) {
 			rect_move(check_mark, (float)(cx + 5), (float)(cy + 5),
@@ -880,18 +1025,18 @@ static void show_options(int sel, int music_off) {
 		else {
 			rect_alpha(check_mark, 0.0f);
 		}
-		glyph_move_z(&option_music, (float)(cx + box + 12), (float)(row_y + 2), text_z);
-		glyph_tint(&option_music, mark);
+		label_place(option_music, (float)(cx + box + 12), (float)(row_y + 2), text_z, 0);
+		label_tint(option_music, mark);
 	}
-	glyph_center_z(&option_exit, (float)x, (float)width, (float)(row_y + row_h + 2), text_z);
-	glyph_tint(&option_exit, sel == 1 ? COL_INK : COL_GREEN);
-	glyph_center_z(&option_resume, (float)x, (float)width,
+	label_center(option_exit, (float)x, (float)width, (float)(row_y + row_h + 2), text_z);
+	label_tint(option_exit, sel == 1 ? COL_INK : COL_GREEN);
+	label_center(option_resume, (float)x, (float)width,
 		(float)(row_y + row_h * 2 + 2), text_z);
-	glyph_tint(&option_resume, sel == 2 ? COL_INK : COL_GREEN);
+	label_tint(option_resume, sel == 2 ? COL_INK : COL_GREEN);
 	row_y += row_h * 3 + 8;
 	for(i = 0; i < 2; i++) {
-		glyph_center_z(&option_hint[i], (float)x, (float)width, (float)row_y, text_z);
-		glyph_tint(&option_hint[i], COL_DIM);
+		label_center(option_hint[i], (float)x, (float)width, (float)row_y, text_z);
+		label_tint(option_hint[i], COL_DIM);
 		row_y += hint_step;
 	}
 }
@@ -942,9 +1087,9 @@ static void show_saver(void) {
 	int pad_x = 16;
 	int pad_y = 12;
 	int gap = 8;
-	int title_h = saver_title.vis_h > 0 ? saver_title.vis_h : 32;
-	int ver_h = saver_version.vis_h > 0 ? saver_version.vis_h : 16;
-	int content = saver_title.vis_w;
+	int title_h = (int)label_height(saver_title);
+	int ver_h = (int)label_height(saver_version);
+	int content = (int)label_width(saver_title);
 	int box_w;
 	int box_h;
 	int block;
@@ -953,8 +1098,14 @@ static void show_saver(void) {
 	Color hue;
 	const float text_z = 44.0f;
 
-	if(saver_version.vis_w > content) {
-		content = saver_version.vis_w;
+	if(title_h < 1) {
+		title_h = 32;
+	}
+	if(ver_h < 1) {
+		ver_h = 16;
+	}
+	if((int)label_width(saver_version) > content) {
+		content = (int)label_width(saver_version);
 	}
 	block = title_h + gap + ver_h;
 	box_w = content + pad_x * 2;
@@ -995,11 +1146,11 @@ static void show_saver(void) {
 	frame_alpha(&saver_frames[0], 1.0f);
 	frame_alpha(&saver_frames[1], 1.0f);
 	text_y = saver_y + (box_h - block) / 2;
-	glyph_center_z(&saver_title, (float)saver_x, (float)box_w, (float)text_y, text_z);
-	glyph_center_z(&saver_version, (float)saver_x, (float)box_w,
+	label_center(saver_title, (float)saver_x, (float)box_w, (float)text_y, text_z);
+	label_center(saver_version, (float)saver_x, (float)box_w,
 		(float)(text_y + title_h + gap), text_z);
-	glyph_tint(&saver_title, hue);
-	glyph_tint(&saver_version, hue);
+	label_tint(saver_title, hue);
+	label_tint(saver_version, hue);
 }
 
 static void hide_menu(void) {
@@ -1014,20 +1165,20 @@ static void hide_menu(void) {
 	hide_saver();
 	rect_alpha(hint_fill, 0.0f);
 	rect_alpha(select_bar, 0.0f);
-	glyph_tint(&title_glyph, COL_CLEAR);
-	glyph_tint(&author_glyph, COL_CLEAR);
-	glyph_tint(&version_glyph, COL_CLEAR);
-	glyph_tint(&index_glyph, COL_CLEAR);
-	glyph_tint(&mode_glyph, COL_CLEAR);
+	label_tint(title_label, COL_CLEAR);
+	label_tint(author_label, COL_CLEAR);
+	label_tint(version_label, COL_CLEAR);
+	label_tint(index_label, COL_CLEAR);
+	label_tint(mode_label, COL_CLEAR);
 	glyph_tint(&up_glyph, COL_CLEAR);
 	glyph_tint(&down_glyph, COL_CLEAR);
 	rect_alpha(list_track, 0.0f);
 	rect_alpha(list_thumb, 0.0f);
 	for(i = 0; i < 4; i++) {
-		glyph_tint(&hint_glyph[i], COL_CLEAR);
+		label_tint(hint_label[i], COL_CLEAR);
 	}
 	for(i = 0; i < CRT_PATTERN_MAX; i++) {
-		glyph_tint(&name_glyph[i], COL_CLEAR);
+		label_tint(name_label[i], COL_CLEAR);
 	}
 }
 
@@ -2079,9 +2230,16 @@ static void show_chart(int pattern, int variant, int param, int show_help, unsig
 			help_banner ? 0 : show_help);
 	}
 	sync_help(pattern, variant, param, show_help);
+	if(show_help) {
+		show_chart_text(pattern, variant, param);
+	}
+	else {
+		hide_chart_text();
+	}
 }
 
 static void hide_chart(void) {
+	hide_chart_text();
 	hide_chart_banner();
 	hide_help();
 	hide_grid();
@@ -2094,12 +2252,14 @@ static int sync_index(int menu_sel, int count) {
 	char line[16];
 
 	snprintf(line, sizeof(line), "%d/%d", menu_sel + 1, count);
-	if(strcmp(line, index_cached) == 0 && index_glyph.banner) {
+	if(strcmp(line, index_cached) == 0 && index_label) {
 		return 0;
 	}
-	if(!glyph_build(&index_glyph, line, ui_scale(), 0)) {
+	if(!index_label) {
 		return 0;
 	}
+	TSU_LabelSetText(index_label, line);
+	label_size(index_label, 8 * ui_scale());
 	snprintf(index_cached, sizeof(index_cached), "%s", line);
 	return 1;
 }
@@ -2114,12 +2274,14 @@ static int sync_mode(const char *mode_line) {
 	if(line[0] == '\0') {
 		return 0;
 	}
-	if(strcmp(line, mode_cached) == 0 && mode_glyph.banner) {
+	if(strcmp(line, mode_cached) == 0 && mode_label) {
 		return 0;
 	}
-	if(!glyph_build(&mode_glyph, line, ui_scale(), 0)) {
+	if(!mode_label) {
 		return 0;
 	}
+	TSU_LabelSetText(mode_label, line);
+	label_fit(mode_label, 8 * ui_scale(), (float)(screen_w - safe_x() * 2));
 	snprintf(mode_cached, sizeof(mode_cached), "%s", line);
 	return 1;
 }
@@ -2127,20 +2289,49 @@ static int sync_mode(const char *mode_line) {
 static void build_names(void) {
 	int count = pattern_count();
 	int list_scale = (screen_h >= 400 && screen_w >= 600) ? 3 : ui_scale();
-	int span = list_scale >= 3 ? 6 : 8;
+	int list_x;
+	int list_w;
+	int list_top;
+	int list_bottom;
+	int line_h;
+	int hint_y;
+	int hint_h;
+	int hint_step;
+	int px;
 	int i;
 
+	layout_metrics(1, &list_x, &list_w, &list_top, &list_bottom,
+		&line_h, &hint_y, &hint_h, &hint_step);
 	if(count > CRT_PATTERN_MAX) {
 		count = CRT_PATTERN_MAX;
 	}
+	px = 8 * list_scale;
 	for(i = 0; i < count; i++) {
 		char name[80];
 
 		upper_copy(name, (int)sizeof(name), pattern_name(i));
-		glyph_build(&name_glyph[i], name, list_scale, span);
+		if(!name_label[i]) {
+			continue;
+		}
+		TSU_LabelSetText(name_label[i], name);
+		label_size(name_label[i], px);
+	}
+	for(i = 0; i < count; i++) {
+		while(px > 8 && label_width(name_label[i]) > (float)list_w) {
+			int n;
+
+			px--;
+			for(n = 0; n < count; n++) {
+				label_size(name_label[n], px);
+			}
+		}
 	}
 	glyph_build_arrow(&up_glyph, list_scale, 0);
 	glyph_build_arrow(&down_glyph, list_scale, 1);
+	glyph_build_arrow(&left_glyph, list_scale, 2);
+	glyph_build_arrow(&right_glyph, list_scale, 3);
+	glyph_tint(&left_glyph, COL_CLEAR);
+	glyph_tint(&right_glyph, COL_CLEAR);
 	names_ready = 1;
 }
 
@@ -2195,10 +2386,10 @@ static void place_names(int menu_sel, int scroll, int show_help) {
 			bar_row = i;
 		}
 		if(!on) {
-			glyph_tint(&name_glyph[i], COL_CLEAR);
+			label_tint(name_label[i], COL_CLEAR);
 			continue;
 		}
-		glyph_center(&name_glyph[i], (float)list_x, (float)list_w, row_top + 2.0f);
+		label_center(name_label[i], (float)list_x, (float)list_w, row_top + 2.0f, 20.0f);
 	}
 	for(i = 0; i < count; i++) {
 		int slot = i - scroll;
@@ -2206,7 +2397,7 @@ static void place_names(int menu_sel, int scroll, int show_help) {
 		if(slot < 0 || slot >= visible) {
 			continue;
 		}
-		glyph_tint(&name_glyph[i], (i == bar_row && view_panel == CRT_PANEL_MENU) ? COL_INK : COL_GREEN);
+		label_tint(name_label[i], (i == bar_row && view_panel == CRT_PANEL_MENU) ? COL_INK : COL_GREEN);
 	}
 	{
 		int arrow = scroll_arrow(list_scale);
@@ -2256,10 +2447,12 @@ static void place_names(int menu_sel, int scroll, int show_help) {
 			rect_alpha(list_thumb, 0.0f);
 			return;
 		}
-		frame_place(&scroll_frames[0], (float)gutter_x, (float)(list_top - 6),
-			(float)gutter_w, (float)(list_bottom - list_top + 8));
-		frame_place(&scroll_frames[1], (float)(gutter_x + 3), (float)(list_top - 3),
-			(float)(gutter_w - 6), (float)(list_bottom - list_top + 2));
+		if(!layout_xml) {
+			frame_place(&scroll_frames[0], (float)gutter_x, (float)(list_top - 6),
+				(float)gutter_w, (float)(list_bottom - list_top + 8));
+			frame_place(&scroll_frames[1], (float)(gutter_x + 3), (float)(list_top - 3),
+				(float)(gutter_w - 6), (float)(list_bottom - list_top + 2));
+		}
 		frame_alpha(&scroll_frames[0], 1.0f);
 		frame_alpha(&scroll_frames[1], 1.0f);
 		thumb_h = track_h * visible / count;
@@ -2315,49 +2508,32 @@ static void build_static_text(void) {
 	int scale = ui_scale();
 	int list_scale = (screen_h >= 400 && screen_w >= 600) ? 3 : scale;
 	int title_scale = list_scale >= 3 ? 4 : scale + 1;
-	const char *hints[] = {
-		"UP/DOWN OR LEVER SELECTS",
-		"LEFT/RIGHT OR WHEEL PAGES",
-		"GAS OR A OPENS   BRAKE OR B: OPTIONS, EXIT",
-		"START OR Y HIDES TEXT"
-	};
-	int hint_span = 7;
-	int hint_w = (int)strlen(hints[2]) * hint_span * scale;
+	int hint_room = screen_w - safe_x() * 2 - 16;
+	char version[40];
 	int i;
 
-	glyph_build(&title_glyph, "CRT TEST", title_scale, 0);
-	glyph_build(&author_glyph, "HEADHUNTER", scale, 0);
-	{
-		char version[40];
-		int ver_scale = scale;
-
-		snprintf(version, sizeof(version), "VERSION %d.%d (BUILD %d)",
-			VER_MAJOR, VER_MINOR, VER_BUILD);
-		if((int)strlen(version) * 8 * ver_scale + 2 > screen_w - 8 && ver_scale > 1) {
-			ver_scale = 1;
-		}
-		glyph_build(&version_glyph, version, ver_scale, 0);
+	label_size(title_label, 8 * title_scale);
+	label_size(author_label, 8 * scale);
+	label_size(option_title, 8 * title_scale);
+	label_size(option_music, 8 * list_scale);
+	label_size(option_exit, 8 * list_scale);
+	label_size(option_resume, 8 * list_scale);
+	label_size(saver_title, 8 * title_scale);
+	snprintf(version, sizeof(version), "VERSION %d.%d (BUILD %d)",
+		VER_MAJOR, VER_MINOR, VER_BUILD);
+	if(version_label) {
+		TSU_LabelSetText(version_label, version);
+		label_fit(version_label, 8 * scale, (float)(screen_w - 8));
 	}
-	if(hint_w > screen_w - safe_x() * 2 - 16) {
-		hint_span = 6;
+	if(saver_version) {
+		TSU_LabelSetText(saver_version, version);
+		label_fit(saver_version, 8 * scale, (float)(screen_w - 8));
 	}
 	for(i = 0; i < 4; i++) {
-		glyph_build(&hint_glyph[i], hints[i], scale, hint_span);
+		label_fit(hint_label[i], 8 * scale, (float)hint_room);
 	}
-	glyph_build(&option_title, "OPTIONS", title_scale, 0);
-	glyph_build(&option_music, "MUSIC OFF", list_scale, 0);
-	glyph_build(&option_exit, "EXIT", list_scale, 0);
-	glyph_build(&option_resume, "RESUME", list_scale, 0);
-	glyph_build(&option_hint[0], "GAS OR A CONFIRMS", scale, 0);
-	glyph_build(&option_hint[1], "BRAKE OR B RETURNS", scale, 0);
-	glyph_build(&saver_title, "CRT TEST", title_scale, 0);
-	{
-		char version[40];
-
-		snprintf(version, sizeof(version), "VERSION %d.%d (BUILD %d)",
-			VER_MAJOR, VER_MINOR, VER_BUILD);
-		glyph_build(&saver_version, version, scale, 0);
-	}
+	label_fit(option_hint[0], 8 * scale, (float)(screen_w - 32));
+	label_fit(option_hint[1], 8 * scale, (float)(screen_w - 32));
 	build_names();
 }
 
@@ -2396,12 +2572,123 @@ static void current_mode(char *dst, int dst_len) {
 	snprintf(dst, dst_len, "%dx%d  %s  %s", screen_w, screen_h, cable, scan);
 }
 
+static void use_page_frames(int show_help) {
+	frames[0] = show_help ? menu_screen[0] : quiet_screen[0];
+	frames[1] = show_help ? menu_screen[1] : quiet_screen[1];
+	frames[2] = show_help ? menu_list[0] : quiet_list[0];
+	frames[3] = show_help ? menu_list[1] : quiet_list[1];
+	frames[4] = hint_frame[0];
+	frames[5] = hint_frame[1];
+	scroll_frames[0] = show_help ? menu_scroll[0] : quiet_scroll[0];
+	scroll_frames[1] = show_help ? menu_scroll[1] : quiet_scroll[1];
+}
+
+static void show_page(const char *name) {
+	if(pages && name) {
+		TSU_CardStackShow(pages, name);
+	}
+}
+
+static int bind_scene(void) {
+	int i;
+	char name[16];
+
+	pages = (CardStack *)scene_drawable("pages");
+	if(!pages
+		|| !bind_box(&menu_screen[0], "menu_screen_0")
+		|| !bind_box(&menu_screen[1], "menu_screen_1")
+		|| !bind_box(&quiet_screen[0], "quiet_screen_0")
+		|| !bind_box(&quiet_screen[1], "quiet_screen_1")
+		|| !bind_box(&menu_list[0], "menu_list_0")
+		|| !bind_box(&menu_list[1], "menu_list_1")
+		|| !bind_box(&quiet_list[0], "quiet_list_0")
+		|| !bind_box(&quiet_list[1], "quiet_list_1")
+		|| !bind_box(&hint_frame[0], "menu_hint_0")
+		|| !bind_box(&hint_frame[1], "menu_hint_1")
+		|| !bind_box(&menu_scroll[0], "menu_scroll_0")
+		|| !bind_box(&menu_scroll[1], "menu_scroll_1")
+		|| !bind_box(&quiet_scroll[0], "quiet_scroll_0")
+		|| !bind_box(&quiet_scroll[1], "quiet_scroll_1")
+		|| !bind_box(&option_frames[0], "option_frame_0")
+		|| !bind_box(&option_frames[1], "option_frame_1")
+		|| !bind_box(&saver_frames[0], "saver_frame_0")
+		|| !bind_box(&saver_frames[1], "saver_frame_1")) {
+		return 0;
+	}
+	check_box = (Box *)scene_drawable("option_check");
+	hint_fill = (Rectangle *)scene_drawable("menu_hint_fill");
+	backdrop = (Rectangle *)scene_drawable("backdrop");
+	select_bar = (Rectangle *)scene_drawable("select_bar");
+	list_track = (Rectangle *)scene_drawable("list_track");
+	list_thumb = (Rectangle *)scene_drawable("list_thumb");
+	option_fill = (Rectangle *)scene_drawable("option_fill");
+	option_bar = (Rectangle *)scene_drawable("option_bar");
+	check_mark = (Rectangle *)scene_drawable("option_mark");
+	saver_dim = (Rectangle *)scene_drawable("saver_dim");
+	saver_fill = (Rectangle *)scene_drawable("saver_fill");
+	title_label = (Label *)scene_drawable("title");
+	author_label = (Label *)scene_drawable("author");
+	version_label = (Label *)scene_drawable("version");
+	index_label = (Label *)scene_drawable("index");
+	mode_label = (Label *)scene_drawable("mode");
+	option_title = (Label *)scene_drawable("option_title");
+	option_music = (Label *)scene_drawable("option_music");
+	option_exit = (Label *)scene_drawable("option_exit");
+	option_resume = (Label *)scene_drawable("option_resume");
+	saver_title = (Label *)scene_drawable("saver_title");
+	saver_version = (Label *)scene_drawable("saver_version");
+	chart_head[0] = (Label *)scene_drawable("chart_head_0");
+	chart_head[1] = (Label *)scene_drawable("chart_head_1");
+	chart_status = (Label *)scene_drawable("chart_status");
+	for(i = 0; i < CRT_HELP_LINE; i++) {
+		snprintf(name, sizeof(name), "chart_help_%d", i);
+		chart_help[i] = (Label *)scene_drawable(name);
+	}
+	for(i = 0; i < 5; i++) {
+		snprintf(name, sizeof(name), "chart_ctrl_%d", i);
+		chart_ctrl[i] = (Label *)scene_drawable(name);
+	}
+	for(i = 0; i < 4; i++) {
+		char name[16];
+
+		snprintf(name, sizeof(name), "hint_%d", i);
+		hint_label[i] = (Label *)scene_drawable(name);
+	}
+	snprintf(name, sizeof(name), "option_hint_0");
+	option_hint[0] = (Label *)scene_drawable(name);
+	option_hint[1] = (Label *)scene_drawable("option_hint_1");
+	for(i = 0; i < pattern_count() && i < CRT_PATTERN_MAX; i++) {
+		char name[16];
+
+		snprintf(name, sizeof(name), "name_%d", i);
+		name_label[i] = (Label *)scene_drawable(name);
+		if(!name_label[i]) {
+			return 0;
+		}
+	}
+	if(!check_box || !hint_fill || !backdrop || !select_bar || !list_track
+		|| !list_thumb || !option_fill || !option_bar || !check_mark
+		|| !saver_dim || !saver_fill || !title_label || !author_label
+		|| !version_label || !index_label || !mode_label || !option_title
+		|| !option_music || !option_exit || !option_resume || !option_hint[0]
+		|| !option_hint[1] || !saver_title || !saver_version || !hint_label[0]
+		|| !hint_label[1] || !hint_label[2] || !hint_label[3]
+		|| !chart_head[0] || !chart_head[1] || !chart_status
+		|| !chart_help[0] || !chart_help[1] || !chart_help[2] || !chart_help[3]
+		|| !chart_ctrl[0] || !chart_ctrl[1] || !chart_ctrl[2] || !chart_ctrl[3]
+		|| !chart_ctrl[4]) {
+		return 0;
+	}
+	use_page_frames(1);
+	show_page("menu");
+	return 1;
+}
+
 void view_init(void *app_ptr) {
 	App_t *app = (App_t *)app_ptr;
 	Vector center;
 	char mode[80];
 	int scroll = 0;
-	int i;
 
 	if(ready) {
 		return;
@@ -2425,6 +2712,7 @@ void view_init(void *app_ptr) {
 	if(screen_h > CHART_H) {
 		screen_h = CHART_H;
 	}
+	layout_xml = (screen_w == 640 && screen_h == 480);
 
 	chart_tex = crt_canvas_linear_rgb(CHART_W, CHART_H);
 	if(chart_tex) {
@@ -2444,50 +2732,24 @@ void view_init(void *app_ptr) {
 		ds_printf("DS_ERROR: CRT Test: chart texture was not created\n");
 	}
 
+	if(!bind_scene()) {
+		ds_printf("DS_ERROR: CRT Test: scene layout is missing\n");
+		return;
+	}
 	build_static_text();
 	current_mode(mode, (int)sizeof(mode));
 	sync_mode(mode);
 	sync_index(0, pattern_count());
-
-	for(i = 0; i < 4; i++) {
-		frame_make(&frames[i], COL_GREEN, 6.0f);
-	}
-	frame_make(&frames[4], COL_RED, 9.0f);
-	frame_make(&frames[5], COL_RED, 9.0f);
-	hint_fill = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 8.0f);
-	backdrop = make_rect(PVR_LIST_OP_POLY, COL_BLACK, 1.0f);
-	select_bar = make_rect(PVR_LIST_TR_POLY, COL_PAPER, 15.0f);
-	list_track = make_rect(PVR_LIST_TR_POLY, COL_DIM, 16.2f);
-	list_thumb = make_rect(PVR_LIST_TR_POLY, COL_GREEN, 16.6f);
 	rect_alpha(list_track, 0.0f);
 	rect_alpha(list_thumb, 0.0f);
-	frame_make(&scroll_frames[0], COL_GREEN, 17.0f);
-	frame_make(&scroll_frames[1], COL_GREEN, 17.2f);
-	frame_alpha(&scroll_frames[0], 0.0f);
-	frame_alpha(&scroll_frames[1], 0.0f);
-	option_fill = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 32.0f);
-	option_bar = make_rect(PVR_LIST_TR_POLY, COL_PAPER, 33.0f);
-	frame_make(&option_frames[0], COL_PAPER, 33.4f);
-	frame_make(&option_frames[1], COL_PAPER, 33.6f);
-	frame_alpha(&option_frames[0], 0.0f);
-	frame_alpha(&option_frames[1], 0.0f);
-	for(i = 0; i < 4; i++) {
-		check_edge[i] = make_rect(PVR_LIST_TR_POLY, COL_GREEN, 35.0f);
-		rect_alpha(check_edge[i], 0.0f);
-	}
-	check_mark = make_rect(PVR_LIST_TR_POLY, COL_GREEN, 35.2f);
-	saver_dim = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 40.0f);
-	saver_fill = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 41.0f);
-	frame_make(&saver_frames[0], COL_WHITE, 42.0f);
-	frame_make(&saver_frames[1], COL_WHITE, 42.2f);
-	frame_alpha(&saver_frames[0], 0.0f);
-	frame_alpha(&saver_frames[1], 0.0f);
 	rect_alpha(option_fill, 0.0f);
 	rect_alpha(option_bar, 0.0f);
 	rect_alpha(check_mark, 0.0f);
 	rect_alpha(saver_dim, 0.0f);
 	rect_alpha(saver_fill, 0.0f);
-	rect_move(backdrop, 0.0f, 0.0f, (float)screen_w, (float)screen_h);
+	if(!layout_xml) {
+		rect_move(backdrop, 0.0f, 0.0f, (float)screen_w, (float)screen_h);
+	}
 	ready = select_bar != NULL && backdrop != NULL;
 	if(ready) {
 		view_frame(1, 1, 0, &scroll, 0, 0, 0, 0, mode, CRT_PANEL_MENU, 0, 0);
@@ -2504,6 +2766,13 @@ void view_shutdown(void) {
 	if(select_mover) {
 		TSU_LogXYZMoverDestroy(&select_mover);
 	}
+	if(option_bar && option_mover) {
+		TSU_DrawableAnimRemove((Drawable *)option_bar, (Animation *)option_mover);
+	}
+	if(option_mover) {
+		TSU_LogXYZMoverDestroy(&option_mover);
+	}
+	option_open = 0;
 	if(chart_banner && view_app && view_app->tsunami) {
 		TSU_AppSubRemoveBanner(view_app->tsunami, chart_banner);
 	}
@@ -2535,49 +2804,51 @@ void view_shutdown(void) {
 	rect_free(&grid_cross[1]);
 	rect_free(&shadow_fill);
 	rect_free(&shadow_box);
-	glyph_free(&title_glyph);
-	glyph_free(&author_glyph);
-	glyph_free(&version_glyph);
-	glyph_free(&index_glyph);
-	glyph_free(&mode_glyph);
 	glyph_free(&up_glyph);
 	glyph_free(&down_glyph);
-	glyph_free(&option_title);
-	glyph_free(&option_music);
-	glyph_free(&option_exit);
-	glyph_free(&option_resume);
-	glyph_free(&option_hint[0]);
-	glyph_free(&option_hint[1]);
-	glyph_free(&saver_title);
-	glyph_free(&saver_version);
+	glyph_free(&left_glyph);
+	glyph_free(&right_glyph);
+	title_label = NULL;
+	author_label = NULL;
+	version_label = NULL;
+	index_label = NULL;
+	mode_label = NULL;
+	option_title = NULL;
+	option_music = NULL;
+	option_exit = NULL;
+	option_resume = NULL;
+	option_hint[0] = NULL;
+	option_hint[1] = NULL;
+	saver_title = NULL;
+	saver_version = NULL;
+	chart_head[0] = NULL;
+	chart_head[1] = NULL;
+	chart_status = NULL;
+	chart_text_on = 0;
 	for(i = 0; i < 4; i++) {
-		glyph_free(&hint_glyph[i]);
+		hint_label[i] = NULL;
+	}
+	for(i = 0; i < CRT_HELP_LINE; i++) {
+		chart_help[i] = NULL;
+	}
+	for(i = 0; i < 5; i++) {
+		chart_ctrl[i] = NULL;
 	}
 	for(i = 0; i < CRT_PATTERN_MAX; i++) {
-		glyph_free(&name_glyph[i]);
+		name_label[i] = NULL;
 	}
-	for(i = 0; i < FRAME_COUNT; i++) {
-		frame_free(&frames[i]);
-	}
-	rect_free(&hint_fill);
-	rect_free(&backdrop);
-	rect_free(&list_track);
-	rect_free(&list_thumb);
-	frame_free(&scroll_frames[0]);
-	frame_free(&scroll_frames[1]);
-	frame_free(&option_frames[0]);
-	frame_free(&option_frames[1]);
-	frame_free(&saver_frames[0]);
-	frame_free(&saver_frames[1]);
-	rect_free(&option_fill);
-	rect_free(&option_bar);
-	rect_free(&check_mark);
-	rect_free(&saver_dim);
-	rect_free(&saver_fill);
-	for(i = 0; i < 4; i++) {
-		rect_free(&check_edge[i]);
-	}
-	rect_free(&select_bar);
+	pages = NULL;
+	check_box = NULL;
+	hint_fill = NULL;
+	backdrop = NULL;
+	list_track = NULL;
+	list_thumb = NULL;
+	option_fill = NULL;
+	option_bar = NULL;
+	check_mark = NULL;
+	saver_dim = NULL;
+	saver_fill = NULL;
+	select_bar = NULL;
 	saver_alive = 0;
 	mode_cached[0] = '\0';
 	index_cached[0] = '\0';
@@ -2637,13 +2908,16 @@ void view_frame(int in_menu, int show_help, int menu_sel, int *menu_scroll,
 	if(menu_sel >= count) {
 		menu_sel = count - 1;
 	}
+	use_page_frames(!in_menu ? 1 : show_help);
 	if(!in_menu) {
+		show_page("chart");
 		hide_menu();
 		show_chart(pattern, variant, param, show_help, frame);
 		was_menu = 0;
 		return;
 	}
 
+	show_page(show_help ? "menu" : "quiet");
 	hide_chart();
 	view_panel = panel;
 	if(sync_mode(mode_line) || sync_index(menu_sel, count)) {

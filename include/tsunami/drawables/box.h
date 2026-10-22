@@ -27,6 +27,7 @@ public:
 	virtual ~Box();
 
 	void setSize(float w, float h);
+	void setBounds(float x, float top, float w, float h);
 
 	virtual void draw(pvr_list_type_t list);
 
@@ -59,6 +60,7 @@ extern "C"
 Box* TSU_BoxCreate(pvr_list_type_t list, float x, float y, float width, float height, float border_width, const Color *color, float zIndex, float radius);
 void TSU_BoxDestroy(Box **box_ptr);
 void TSU_BoxSetSize(Box *box_ptr, float width, float height);
+void TSU_BoxSetBounds(Box *box_ptr, float x, float top, float width, float height);
 
 #ifdef __cplusplus
 };
