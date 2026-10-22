@@ -712,7 +712,7 @@ static void crt_action(int act) {
 				pattern_cycle_param(id, &crt.param[id], 1);
 			}
 			else {
-				crt_change_option(-1);
+				crt_change_option(1);
 			}
 			break;
 		case ACT_DOWN:
@@ -723,7 +723,7 @@ static void crt_action(int act) {
 				pattern_cycle_param(id, &crt.param[id], -1);
 			}
 			else {
-				crt_change_option(1);
+				crt_change_option(-1);
 			}
 			break;
 		case ACT_A:
