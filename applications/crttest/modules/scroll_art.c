@@ -43,7 +43,7 @@ void scroll_art_bind(const char *dir) {
 		art_dir[0] = '\0';
 		return;
 	}
-	snprintf(art_dir, sizeof(art_dir), "%s", dir);
+	snprintf(art_dir, sizeof(art_dir), "%s/images", dir);
 }
 
 void scroll_art_free(void) {

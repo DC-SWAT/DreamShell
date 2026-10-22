@@ -29,6 +29,9 @@ install: app.xml $(DEPS) theme.wav $(ART)
 	-mkdir -p $(APP_DIR)/images
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp theme.wav $(APP_DIR)/theme.wav
-	cp $(ART) $(APP_DIR)/
+	cp $(ART) $(APP_DIR)/images/
+	-rm -f $(APP_DIR)/scroll_near.rgb $(APP_DIR)/scroll_sky.rgb \
+		$(APP_DIR)/scroll_mid.rgb $(APP_DIR)/scroll_cloud.rgb \
+		$(APP_DIR)/scroll_floor.rgb $(APP_DIR)/scroll_vert.rgb
 	cp app.xml $(APP_DIR)/app.xml
 	cp images/*.png $(APP_DIR)/images
