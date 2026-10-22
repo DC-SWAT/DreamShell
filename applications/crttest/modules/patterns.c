@@ -1393,6 +1393,28 @@ static void draw_conv_dots(fb_t *fb, int size) {
 	fb_rect(fb, 0, 0, fb->w, fb->h, white);
 }
 
+static void draw_conv_points(fb_t *fb, int size) {
+	static const int steps[] = {16, 32, 80};
+	uint16_t white = gray(fb, 255);
+	int step;
+	int x;
+	int y;
+
+	if(size < 0) {
+		size = 0;
+	}
+	if(size > 2) {
+		size = 2;
+	}
+	step = steps[size];
+	fb_clear(fb, gray(fb, 0));
+	for(y = 0; y + step <= fb->h; y += step) {
+		for(x = 0; x + step <= fb->w; x += step) {
+			fb_pixel(fb, x + step / 2, y + step / 2, white);
+		}
+	}
+}
+
 static void draw_conv_colors(fb_t *fb, int mode) {
 	static const int src[4][3] = {
 		{255, 0, 0},
@@ -1447,6 +1469,9 @@ static void draw_convergence(fb_t *fb, unsigned frame, int variant, int param) {
 		draw_conv_dots(fb, conv_part(param, 1, 3, 3));
 	}
 	else if(variant == 6) {
+		draw_conv_points(fb, conv_part(param, 1, 3, 3));
+	}
+	else if(variant == 7) {
 		draw_conv_colors(fb, conv_part(param, 3, 7, 7));
 	}
 	else {
@@ -2155,7 +2180,7 @@ static const pattern_def_t patterns[PAT_COUNT] = {
 	{"Grid", "Gas or A selects cells or lines. Up/Down sets spacing.", 4, 0, 3, 1, 1, draw_grid},
 	{"Linearity", "Equal circles. Gas, A, or Up/Down adds rows. Egg is bow.", 3, 0, 0, 0, 0, draw_linearity},
 	{"Overscan", "Edge marks at 5% and 10%. Missing ticks are off screen.", 1, 0, 0, 0, 0, draw_overscan},
-	{"Convergence", "White crosses. A colored fringe on the arms is misconvergence.", 7, 0, 0, 0, 0, draw_convergence},
+	{"Convergence", "White crosses. A colored fringe on the arms is misconvergence.", 8, 0, 0, 0, 0, draw_convergence},
 	{"Horizontal/Vertical Stripes", "Gas or A picks the axis. Up/Down or lever sets thickness.", 2, 0, 2, 1, 0, draw_stripes},
 	{"Checkerboard", "Up/Down, lever, gas, or A sets the square, from 1 pixel to 16.", 1, 0, 4, 1, 0, draw_checker},
 	{"Grid Scroll", "Gas or A sets the axis. Up/Down or lever sets the speed.", 3, 1, 6, 1, 2, draw_scroll},
@@ -2271,6 +2296,9 @@ const char *pattern_help(int id, int variant, int param) {
 				return "White grid, one-pixel dot. Up/Down or lever sets the size. Gas or A changes the chart.";
 			}
 			if(variant == 6) {
+				return "One-pixel dots. Up/Down or lever sets the spacing. Gas or A changes the chart.";
+			}
+			if(variant == 7) {
 				return "Color squares. Up/Down or lever turns guns off. Gas or A changes the chart.";
 			}
 			return "White crosses. Fringe means misconvergence. Gas or A changes the chart.";
@@ -2466,6 +2494,12 @@ void pattern_status(int id, int variant, int param, char *dst, int dst_len) {
 					size == 1 ? "medium" : (size == 2 ? "coarse" : "fine"));
 			}
 			else if(variant == 6) {
+				int size = conv_part(param, 1, 3, 3);
+
+				snprintf(dst, dst_len, "dots, %s",
+					size == 1 ? "medium" : (size == 2 ? "coarse" : "fine"));
+			}
+			else if(variant == 7) {
 				static const char *guns[] = {
 					"all guns", "blue off", "green off", "red off",
 					"red only", "green only", "blue only"
@@ -2554,10 +2588,10 @@ void pattern_convergence_value(int variant, int *param, int dir) {
 	if(variant == 4) {
 		conv_cycle(param, 0, 1, 2, dir);
 	}
-	else if(variant == 5) {
+	else if(variant == 5 || variant == 6) {
 		conv_cycle(param, 1, 3, 3, dir);
 	}
-	else if(variant == 6) {
+	else if(variant == 7) {
 		conv_cycle(param, 3, 7, 7, dir);
 	}
 }

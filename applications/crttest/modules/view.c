@@ -1010,7 +1010,7 @@ static void show_options(int sel, int music_off) {
 	{
 		int group = box + 12 + (int)label_width(option_music);
 		int cx = x + (width - group) / 2;
-		int cy = row_y + (row_h - box) / 2;
+		int cy = row_y + (row_h - box) / 2 - 2;
 		box_place(check_box, (float)cx, (float)cy, (float)box);
 		if(check_box) {
 			TSU_DrawableSetAlpha((Drawable *)check_box, 1.0f);
@@ -1025,13 +1025,13 @@ static void show_options(int sel, int music_off) {
 		else {
 			rect_alpha(check_mark, 0.0f);
 		}
-		label_place(option_music, (float)(cx + box + 12), (float)(row_y + 2), text_z, 0);
+		label_place(option_music, (float)(cx + box + 12), (float)(row_y + 4), text_z, 0);
 		label_tint(option_music, mark);
 	}
-	label_center(option_exit, (float)x, (float)width, (float)(row_y + row_h + 2), text_z);
+	label_center(option_exit, (float)x, (float)width, (float)(row_y + row_h + 4), text_z);
 	label_tint(option_exit, sel == 1 ? COL_INK : COL_GREEN);
 	label_center(option_resume, (float)x, (float)width,
-		(float)(row_y + row_h * 2 + 2), text_z);
+		(float)(row_y + row_h * 2 + 4), text_z);
 	label_tint(option_resume, sel == 2 ? COL_INK : COL_GREEN);
 	row_y += row_h * 3 + 8;
 	for(i = 0; i < 2; i++) {
@@ -2389,7 +2389,7 @@ static void place_names(int menu_sel, int scroll, int show_help) {
 			label_tint(name_label[i], COL_CLEAR);
 			continue;
 		}
-		label_center(name_label[i], (float)list_x, (float)list_w, row_top + 2.0f, 20.0f);
+		label_center(name_label[i], (float)list_x, (float)list_w, row_top + 4.0f, 20.0f);
 	}
 	for(i = 0; i < count; i++) {
 		int slot = i - scroll;

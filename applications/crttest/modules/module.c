@@ -422,6 +422,18 @@ int crt_overlay_build(int w, int h, int pattern, int variant, int param, crt_ove
 			chart_name ? chart_name : "");
 	}
 	pattern_status(pattern, variant, param, out->status, (int)sizeof(out->status));
+	if(pattern_variant_count(pattern) > 1) {
+		char body[96];
+		int count = pattern_variant_count(pattern);
+
+		snprintf(body, sizeof(body), "%s", out->status);
+		if(body[0]) {
+			snprintf(out->status, sizeof(out->status), "%d/%d  %s", variant + 1, count, body);
+		}
+		else {
+			snprintf(out->status, sizeof(out->status), "%d/%d", variant + 1, count);
+		}
+	}
 	help = pattern_help(pattern, variant, param);
 	name_lines = 1;
 	if(out->head2[0]) {
