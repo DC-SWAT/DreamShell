@@ -6,7 +6,9 @@
 #include <string.h>
 #include <stdio.h>
 #include <audio/wav.h>
+#include <dc/maple/mie.h>
 #include <dc/sound/stream.h>
+#include <kos/timer.h>
 #include <SDL/SDL_dreamcast.h>
 
 #include "app_module.h"
@@ -44,6 +46,11 @@ static struct {
 	int panel;
 	int option_sel;
 	int music_off;
+	int lamp_off;
+	int lamp_phase;
+	int lamp_lit;
+	int lamp_sent;
+	uint64_t lamp_ms;
 	unsigned idle_frame;
 	unsigned frame;
 	int variant[CRT_PATTERN_MAX];
@@ -93,10 +100,14 @@ static void crt_events_shutdown(void) {
 
 enum {
 	OPT_MUSIC = 0,
+	OPT_LAMP,
 	OPT_EXIT,
 	OPT_RESUME,
 	OPT_COUNT
 };
+
+#define START_LAMP_INDEX 0
+#define START_LAMP_MS 1000
 
 static int crt_wav_ready;
 static int crt_wav_hnd = SND_STREAM_INVALID;
@@ -165,14 +176,16 @@ static void crt_cfg_path(char *file, size_t size) {
 	snprintf(file, size, "%s/crttest.cfg", dir);
 }
 
-static void crt_music_load(void) {
+static void crt_cfg_load(void) {
 	char file[NAME_MAX];
-	char buf[16];
+	char buf[32];
 	int fd;
 	int n;
 	int i;
+	int field;
 
 	crt.music_off = 0;
+	crt.lamp_off = 0;
 	crt_cfg_path(file, sizeof(file));
 	if(!file[0]) {
 		return;
@@ -183,33 +196,83 @@ static void crt_music_load(void) {
 	}
 	n = read(fd, buf, sizeof(buf));
 	close(fd);
-	for(i = 0; i < n; i++) {
-		if(buf[i] == '1') {
-			crt.music_off = 1;
-			return;
+	field = 0;
+	for(i = 0; i < n && field < 2; i++) {
+		if(buf[i] != '0' && buf[i] != '1') {
+			continue;
 		}
-		if(buf[i] == '0') {
-			return;
+		if(field == 0) {
+			crt.music_off = buf[i] == '1';
 		}
+		else {
+			crt.lamp_off = buf[i] == '1';
+		}
+		field++;
 	}
 }
 
-static void crt_music_save(void) {
+static void crt_cfg_save(void) {
 	char file[NAME_MAX];
-	const char *text;
+	char text[8];
 	int fd;
+	int n;
 
 	crt_cfg_path(file, sizeof(file));
 	if(!file[0]) {
 		return;
 	}
-	text = crt.music_off ? "1\n" : "0\n";
+	n = snprintf(text, sizeof(text), "%d\n%d\n",
+		crt.music_off ? 1 : 0, crt.lamp_off ? 1 : 0);
 	fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
 	if(fd < 0) {
 		return;
 	}
-	write(fd, text, 2);
+	if(n > 0) {
+		write(fd, text, (size_t)n);
+	}
 	close(fd);
+}
+
+static void crt_lamp_write(int on) {
+	if(mie_port0_mode() != MIE_PORT0_JVS) {
+		return;
+	}
+	if(mie_jvs_set_output(START_LAMP_INDEX, on ? true : false, false)) {
+		crt.lamp_lit = on ? 1 : 0;
+		crt.lamp_sent = 1;
+	}
+}
+
+static void crt_lamp_stop(void) {
+	crt.lamp_phase = 0;
+	crt.lamp_ms = 0;
+	if(mie_port0_mode() == MIE_PORT0_JVS) {
+		mie_jvs_set_output(START_LAMP_INDEX, false, false);
+	}
+	crt.lamp_lit = 0;
+	crt.lamp_sent = 1;
+}
+
+static void crt_lamp_tick(void) {
+	int want = 0;
+	uint64_t now;
+
+	if(!crt.lamp_off && mie_port0_mode() == MIE_PORT0_JVS) {
+		now = timer_ms_gettime64();
+		if(crt.lamp_ms == 0 || now - crt.lamp_ms >= START_LAMP_MS) {
+			crt.lamp_ms = now;
+			crt.lamp_phase = !crt.lamp_phase;
+		}
+		want = crt.lamp_phase;
+	}
+	else {
+		crt.lamp_phase = 0;
+		crt.lamp_ms = 0;
+	}
+	if(crt.lamp_sent && want == crt.lamp_lit) {
+		return;
+	}
+	crt_lamp_write(want);
 }
 
 static void crt_music_shutdown(void) {
@@ -226,6 +289,7 @@ static void crt_exit(void) {
 	}
 	crt.closing = 1;
 	crt.active = 0;
+	crt_lamp_stop();
 	crt_events_remove();
 	SDL_DC_EmulateMouse(SDL_TRUE);
 	SetVirtKeyboardEnabled(1);
@@ -571,9 +635,10 @@ static void crt_video(void *ds_event, void *param, int action) {
 	}
 	snprintf(mode, sizeof(mode), "%dx%d  %s  %s",
 		GetScreenWidth(), GetScreenHeight(), cable_name(), scan_name(GetVideoMode()));
+	crt_lamp_tick();
 	view_frame(crt.in_menu, crt.show_help, crt.menu_sel, &crt.menu_scroll,
 		id, crt.variant[id], crt.param[id], crt.frame, mode,
-		crt.panel, crt.option_sel, crt.music_off);
+		crt.panel, crt.option_sel, crt.music_off, crt.lamp_off);
 }
 
 static void crt_move_menu(int delta) {
@@ -644,13 +709,19 @@ static void crt_action(int act) {
 			case ACT_A:
 				if(crt.option_sel == OPT_MUSIC) {
 					crt.music_off = !crt.music_off;
-					crt_music_save();
+					crt_cfg_save();
 					crt_music_apply();
+				}
+				else if(crt.option_sel == OPT_LAMP) {
+					crt.lamp_off = !crt.lamp_off;
+					crt.lamp_ms = 0;
+					crt.lamp_phase = 0;
+					crt_cfg_save();
 				}
 				else if(crt.option_sel == OPT_EXIT) {
 					crt_exit();
 				}
-				else {
+				else if(crt.option_sel == OPT_RESUME) {
 					crt.panel = CRT_PANEL_MENU;
 				}
 				break;
@@ -1033,13 +1104,18 @@ void CrtTest_Open(App_t *app) {
 	crt.wheel_ready = 1;
 	memset(crt.pedal, 0, sizeof(crt.pedal));
 	crt_events_add();
-	crt_music_load();
+	crt_cfg_load();
+	crt.lamp_ms = 0;
+	crt.lamp_phase = 0;
+	crt.lamp_lit = 0;
+	crt.lamp_sent = 0;
 	crt_music_apply();
 }
 
 void CrtTest_Close(App_t *app) {
 	(void)app;
-	crt_music_save();
+	crt_cfg_save();
+	crt_lamp_stop();
 	crt_music_stop();
 	crt_events_remove();
 	SDL_DC_EmulateMouse(SDL_TRUE);
@@ -1048,6 +1124,7 @@ void CrtTest_Close(App_t *app) {
 
 void CrtTest_Shutdown(App_t *app) {
 	(void)app;
+	crt_lamp_stop();
 	crt_music_shutdown();
 	crt_events_shutdown();
 	view_shutdown();

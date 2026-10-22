@@ -17,7 +17,7 @@ enum {
 
 void view_frame(int in_menu, int show_help, int menu_sel, int *menu_scroll,
 	int pattern, int variant, int param, unsigned frame, const char *mode_line,
-	int panel, int panel_sel, int music_off);
+	int panel, int panel_sel, int music_off, int lamp_off);
 void crt_compose_chart(fb_t *fb, unsigned frame, int pattern, int variant, int param, int show_help);
 uint16_t crt_compose_help(fb_t *fb);
 

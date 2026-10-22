@@ -11,7 +11,7 @@ EXPORTS_FILE = exports.txt
 KOS_CFLAGS += -I./
 
 VER_MAJOR = 1
-VER_MINOR = 4
+VER_MINOR = 5
 VER_MICRO = 0
 
 all: rm-elf

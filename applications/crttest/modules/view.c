@@ -143,6 +143,7 @@ static glyph_t left_glyph;
 static glyph_t right_glyph;
 static Label *option_title;
 static Label *option_music;
+static Label *option_lamp;
 static Label *option_exit;
 static Label *option_resume;
 static Label *option_hint[2];
@@ -172,6 +173,8 @@ static Rectangle *option_fill;
 static Rectangle *option_bar;
 static Box *check_box;
 static Rectangle *check_mark;
+static Box *lamp_box;
+static Rectangle *lamp_mark;
 static Rectangle *saver_dim;
 static Rectangle *saver_fill;
 static int saver_x;
@@ -912,8 +915,12 @@ static void hide_options(void) {
 	rect_alpha(option_fill, 0.0f);
 	rect_alpha(option_bar, 0.0f);
 	rect_alpha(check_mark, 0.0f);
+	rect_alpha(lamp_mark, 0.0f);
 	if(check_box) {
 		TSU_DrawableSetAlpha((Drawable *)check_box, 0.0f);
+	}
+	if(lamp_box) {
+		TSU_DrawableSetAlpha((Drawable *)lamp_box, 0.0f);
 	}
 	if(option_bar && option_mover) {
 		TSU_DrawableAnimRemove((Drawable *)option_bar, (Animation *)option_mover);
@@ -921,6 +928,7 @@ static void hide_options(void) {
 	option_open = 0;
 	label_tint(option_title, COL_CLEAR);
 	label_tint(option_music, COL_CLEAR);
+	label_tint(option_lamp, COL_CLEAR);
 	label_tint(option_exit, COL_CLEAR);
 	label_tint(option_resume, COL_CLEAR);
 	label_tint(option_hint[0], COL_CLEAR);
@@ -937,7 +945,33 @@ static void hide_saver(void) {
 	saver_alive = 0;
 }
 
-static void show_options(int sel, int music_off) {
+static void option_check_row(Box *box, Rectangle *mark, Label *label,
+	int checked, int selected, int x, int row_y, int width, int row_h, int side,
+	float text_z) {
+	Color ink = selected ? COL_INK : COL_GREEN;
+	int group = side + 12 + (int)label_width(label);
+	int cx = x + (width - group) / 2;
+	int cy = row_y + (row_h - side) / 2 - 2;
+
+	box_place(box, (float)cx, (float)cy, (float)side);
+	if(box) {
+		TSU_DrawableSetAlpha((Drawable *)box, 1.0f);
+		TSU_DrawableSetTint((Drawable *)box, &ink);
+	}
+	if(checked && side > 10) {
+		rect_move(mark, (float)(cx + 5), (float)(cy + 5),
+			(float)(side - 10), (float)(side - 10));
+		rect_alpha(mark, 1.0f);
+		rect_tint(mark, ink);
+	}
+	else {
+		rect_alpha(mark, 0.0f);
+	}
+	label_place(label, (float)(cx + side + 12), (float)(row_y + 4), text_z, 0);
+	label_tint(label, ink);
+}
+
+static void show_options(int sel, int music_off, int lamp_off) {
 	int scale = ui_scale();
 	int list_scale = (screen_h >= 400 && screen_w >= 600) ? 3 : scale;
 	int row_h = 8 * list_scale + 8;
@@ -946,23 +980,26 @@ static void show_options(int sel, int music_off) {
 	int box = 8 * list_scale;
 	int pad = 20;
 	int text_w = (int)label_width(option_music) + 12 + box;
+	int lamp_w = (int)label_width(option_lamp) + 12 + box;
 	int width;
 	int height;
 	int x;
 	int y;
 	int row_y;
 	int i;
-	Color mark = COL_GREEN;
 	const float text_z = 36.0f;
 
 	if(sel < 0) {
 		sel = 0;
 	}
-	if(sel > 2) {
-		sel = 2;
+	if(sel > 3) {
+		sel = 3;
 	}
 	if(title_h < 1) {
 		title_h = 8 * list_scale;
+	}
+	if(lamp_w > text_w) {
+		text_w = lamp_w;
 	}
 	if((int)label_width(option_title) > text_w) {
 		text_w = (int)label_width(option_title);
@@ -980,7 +1017,7 @@ static void show_options(int sel, int music_off) {
 		text_w = (int)label_width(option_hint[1]);
 	}
 	width = text_w + pad * 2;
-	height = 16 + title_h + 12 + row_h * 3 + 12 + hint_step * 2 + 16;
+	height = 16 + title_h + 12 + row_h * 4 + 12 + hint_step * 2 + 16;
 	if(width > screen_w - 16) {
 		width = screen_w - 16;
 	}
@@ -1004,36 +1041,17 @@ static void show_options(int sel, int music_off) {
 		(float)(width - 20), (float)(row_h - 4), !option_open);
 	option_open = 1;
 	rect_alpha(option_bar, 1.0f);
-	if(sel == 0) {
-		mark = COL_INK;
-	}
-	{
-		int group = box + 12 + (int)label_width(option_music);
-		int cx = x + (width - group) / 2;
-		int cy = row_y + (row_h - box) / 2 - 2;
-		box_place(check_box, (float)cx, (float)cy, (float)box);
-		if(check_box) {
-			TSU_DrawableSetAlpha((Drawable *)check_box, 1.0f);
-			TSU_DrawableSetTint((Drawable *)check_box, &mark);
-		}
-		if(music_off && box > 10) {
-			rect_move(check_mark, (float)(cx + 5), (float)(cy + 5),
-				(float)(box - 10), (float)(box - 10));
-			rect_alpha(check_mark, 1.0f);
-			rect_tint(check_mark, mark);
-		}
-		else {
-			rect_alpha(check_mark, 0.0f);
-		}
-		label_place(option_music, (float)(cx + box + 12), (float)(row_y + 4), text_z, 0);
-		label_tint(option_music, mark);
-	}
-	label_center(option_exit, (float)x, (float)width, (float)(row_y + row_h + 4), text_z);
-	label_tint(option_exit, sel == 1 ? COL_INK : COL_GREEN);
-	label_center(option_resume, (float)x, (float)width,
+	option_check_row(check_box, check_mark, option_music, music_off, sel == 0,
+		x, row_y, width, row_h, box, text_z);
+	option_check_row(lamp_box, lamp_mark, option_lamp, lamp_off, sel == 1,
+		x, row_y + row_h, width, row_h, box, text_z);
+	label_center(option_exit, (float)x, (float)width,
 		(float)(row_y + row_h * 2 + 4), text_z);
-	label_tint(option_resume, sel == 2 ? COL_INK : COL_GREEN);
-	row_y += row_h * 3 + 8;
+	label_tint(option_exit, sel == 2 ? COL_INK : COL_GREEN);
+	label_center(option_resume, (float)x, (float)width,
+		(float)(row_y + row_h * 3 + 4), text_z);
+	label_tint(option_resume, sel == 3 ? COL_INK : COL_GREEN);
+	row_y += row_h * 4 + 8;
 	for(i = 0; i < 2; i++) {
 		label_center(option_hint[i], (float)x, (float)width, (float)row_y, text_z);
 		label_tint(option_hint[i], COL_DIM);
@@ -2516,6 +2534,7 @@ static void build_static_text(void) {
 	label_size(author_label, 8 * scale);
 	label_size(option_title, 8 * title_scale);
 	label_size(option_music, 8 * list_scale);
+	label_size(option_lamp, 8 * list_scale);
 	label_size(option_exit, 8 * list_scale);
 	label_size(option_resume, 8 * list_scale);
 	label_size(saver_title, 8 * title_scale);
@@ -2616,6 +2635,7 @@ static int bind_scene(void) {
 		return 0;
 	}
 	check_box = (Box *)scene_drawable("option_check");
+	lamp_box = (Box *)scene_drawable("option_check_lamp");
 	hint_fill = (Rectangle *)scene_drawable("menu_hint_fill");
 	backdrop = (Rectangle *)scene_drawable("backdrop");
 	select_bar = (Rectangle *)scene_drawable("select_bar");
@@ -2624,6 +2644,7 @@ static int bind_scene(void) {
 	option_fill = (Rectangle *)scene_drawable("option_fill");
 	option_bar = (Rectangle *)scene_drawable("option_bar");
 	check_mark = (Rectangle *)scene_drawable("option_mark");
+	lamp_mark = (Rectangle *)scene_drawable("option_mark_lamp");
 	saver_dim = (Rectangle *)scene_drawable("saver_dim");
 	saver_fill = (Rectangle *)scene_drawable("saver_fill");
 	title_label = (Label *)scene_drawable("title");
@@ -2633,6 +2654,7 @@ static int bind_scene(void) {
 	mode_label = (Label *)scene_drawable("mode");
 	option_title = (Label *)scene_drawable("option_title");
 	option_music = (Label *)scene_drawable("option_music");
+	option_lamp = (Label *)scene_drawable("option_lamp");
 	option_exit = (Label *)scene_drawable("option_exit");
 	option_resume = (Label *)scene_drawable("option_resume");
 	saver_title = (Label *)scene_drawable("saver_title");
@@ -2666,11 +2688,11 @@ static int bind_scene(void) {
 			return 0;
 		}
 	}
-	if(!check_box || !hint_fill || !backdrop || !select_bar || !list_track
-		|| !list_thumb || !option_fill || !option_bar || !check_mark
+	if(!check_box || !lamp_box || !hint_fill || !backdrop || !select_bar || !list_track
+		|| !list_thumb || !option_fill || !option_bar || !check_mark || !lamp_mark
 		|| !saver_dim || !saver_fill || !title_label || !author_label
 		|| !version_label || !index_label || !mode_label || !option_title
-		|| !option_music || !option_exit || !option_resume || !option_hint[0]
+		|| !option_music || !option_lamp || !option_exit || !option_resume || !option_hint[0]
 		|| !option_hint[1] || !saver_title || !saver_version || !hint_label[0]
 		|| !hint_label[1] || !hint_label[2] || !hint_label[3]
 		|| !chart_head[0] || !chart_head[1] || !chart_status
@@ -2752,7 +2774,7 @@ void view_init(void *app_ptr) {
 	}
 	ready = select_bar != NULL && backdrop != NULL;
 	if(ready) {
-		view_frame(1, 1, 0, &scroll, 0, 0, 0, 0, mode, CRT_PANEL_MENU, 0, 0);
+		view_frame(1, 1, 0, &scroll, 0, 0, 0, 0, mode, CRT_PANEL_MENU, 0, 0, 0);
 	}
 }
 
@@ -2815,6 +2837,7 @@ void view_shutdown(void) {
 	mode_label = NULL;
 	option_title = NULL;
 	option_music = NULL;
+	option_lamp = NULL;
 	option_exit = NULL;
 	option_resume = NULL;
 	option_hint[0] = NULL;
@@ -2839,6 +2862,7 @@ void view_shutdown(void) {
 	}
 	pages = NULL;
 	check_box = NULL;
+	lamp_box = NULL;
 	hint_fill = NULL;
 	backdrop = NULL;
 	list_track = NULL;
@@ -2846,6 +2870,7 @@ void view_shutdown(void) {
 	option_fill = NULL;
 	option_bar = NULL;
 	check_mark = NULL;
+	lamp_mark = NULL;
 	saver_dim = NULL;
 	saver_fill = NULL;
 	select_bar = NULL;
@@ -2883,7 +2908,7 @@ void view_shutdown(void) {
 
 void view_frame(int in_menu, int show_help, int menu_sel, int *menu_scroll,
 	int pattern, int variant, int param, unsigned frame, const char *mode_line,
-	int panel, int panel_sel, int music_off) {
+	int panel, int panel_sel, int music_off, int lamp_off) {
 	int count;
 	int visible;
 	int list_x;
@@ -2972,7 +2997,7 @@ void view_frame(int in_menu, int show_help, int menu_sel, int *menu_scroll,
 	else if(panel == CRT_PANEL_OPTIONS) {
 		hide_saver();
 		rect_alpha(select_bar, 0.0f);
-		show_options(panel_sel, music_off);
+		show_options(panel_sel, music_off, lamp_off);
 	}
 	else {
 		hide_options();

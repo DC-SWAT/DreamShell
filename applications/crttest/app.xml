@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Author: HeadHunter -->
-<app name="CRT Test" version="1.4" icon="images/icon.png">
+<app name="CRT Test" version="1.5" icon="images/icon.png">
 	<resources>
 		<module src="../../modules/wave.klf" />
 		<module src="modules/app_crttest.klf" />
@@ -47,6 +47,8 @@
 		<box name="option_frame_1" x="158" y="131" width="324" height="218" z="33.6" borderWidth="1" color="#F0F4ECFF" transparent="true" visibility="hidden" />
 		<box name="option_check" x="193" y="188" width="24" height="24" z="35.0" borderWidth="1" color="#8CFF30FF" transparent="true" visibility="hidden" />
 		<rectangle name="option_mark" x="198" y="193" width="14" height="14" z="35.2" color="#8CFF30FF" transparent="true" />
+		<box name="option_check_lamp" x="193" y="220" width="24" height="24" z="35.0" borderWidth="1" color="#8CFF30FF" transparent="true" visibility="hidden" />
+		<rectangle name="option_mark_lamp" x="198" y="225" width="14" height="14" z="35.2" color="#8CFF30FF" transparent="true" />
 
 		<rectangle name="saver_dim" x="0" y="0" width="100%" height="100%" z="40.0" color="#000000FF" transparent="true" />
 		<rectangle name="saver_fill" x="127" y="200" width="386" height="80" z="41.0" color="#000000FF" transparent="true" />
@@ -89,7 +91,8 @@
 		<label name="name_24" font="ui" fontsize="24" x="40" y="360" z="20.0" text="" centered="true" smear="false" color="#8CFF30FF" />
 		<label name="option_title" font="ui" fontsize="32" x="207" y="172" z="36.0" text="OPTIONS" centered="true" smear="false" color="#F0F4ECFF" />
 		<label name="option_music" font="ui" fontsize="24" x="229" y="216" z="36.0" text="MUSIC OFF" centered="false" smear="false" color="#8CFF30FF" />
-		<label name="option_exit" font="ui" fontsize="24" x="165" y="248" z="36.0" text="EXIT" centered="true" smear="false" color="#8CFF30FF" />
+		<label name="option_lamp" font="ui" fontsize="24" x="229" y="248" z="36.0" text="BLINK OFF" centered="false" smear="false" color="#8CFF30FF" />
+		<label name="option_exit" font="ui" fontsize="24" x="165" y="280" z="36.0" text="EXIT" centered="true" smear="false" color="#8CFF30FF" />
 		<label name="option_resume" font="ui" fontsize="24" x="165" y="280" z="36.0" text="RESUME" centered="true" smear="false" color="#8CFF30FF" />
 		<label name="option_hint_0" font="ui" fontsize="16" x="165" y="312" z="36.0" text="GAS OR A CONFIRMS" centered="true" smear="false" color="#40A824FF" />
 		<label name="option_hint_1" font="ui" fontsize="16" x="165" y="332" z="36.0" text="BRAKE OR B RETURNS" centered="true" smear="false" color="#40A824FF" />
