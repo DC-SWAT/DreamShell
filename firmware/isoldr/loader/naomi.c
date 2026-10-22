@@ -20,10 +20,12 @@
 #endif
 
 #define CART_READ_STACK_SIZE 4096
+#define CART_DMA_ALIGN 32
 #define CART_ATA_SEC_SIZE 512
 
 static uint32_t cart_read_stack_top;
 static uint32_t cart_read_old_sp;
+static int cart_sync_read;
 
 static naomi_state_t _naomi;
 static naomi_state_t *naomi = &_naomi;
@@ -193,6 +195,9 @@ static int naomi_cart_ctx_blocked(void) {
 
 static int naomi_cart_use_async(const gdc_cart_read_params_t *params) {
     cart_stream_kick = 0;
+    if(cart_sync_read) {
+        return 0;
+    }
     if(naomi_cart_dst_stream(params->dst_buf, params->size, params->offset)) {
         if(((uint32_t)params->dst_buf >> 24) != 0 && naomi_cart_ctx_blocked()) {
             return 0;
@@ -328,8 +333,8 @@ static void naomi_cart_cache_purge(void *dst, uint32_t size) {
     dcache_purge_range(addr, size);
 }
 
-/* ATA-aligned mid: HIDDEN async (kick+return; drain via wait_dma) or SHARED.
- * Unaligned head/tail stay PIO. */
+/* ATA-sector mid: HIDDEN async (kick+return; next read drains) or SHARED.
+ * Buffer stays 32-byte aligned. Unaligned head/tail stay PIO. */
 static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
     uint8_t *dst = (uint8_t *)params->dst_buf;
     uint32_t off = params->offset;
@@ -347,12 +352,12 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
 
     step = align;
     if(params->type) {
-        while(step & 0x1f) {
+        while(step & (CART_DMA_ALIGN - 1)) {
             step += align;
         }
     }
 
-    if(params->type && (((off ^ (uint32_t)dst) & 0x1f) != 0)) {
+    if(params->type && (((off ^ (uint32_t)dst) & (CART_DMA_ALIGN - 1)) != 0)) {
         head = size;
     }
     else if(off % align) {
@@ -365,7 +370,7 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
     mid = size - head;
     tail = mid % step;
     mid -= tail;
-    if(params->type && mid && ((((uint32_t)dst + head) & 0x1f) != 0)) {
+    if(params->type && mid && ((((uint32_t)dst + head) & (CART_DMA_ALIGN - 1)) != 0)) {
         tail += mid;
         mid = 0;
     }
@@ -499,6 +504,15 @@ void naomi_cart_read(gdc_cart_read_params_t *params) {
     }
 }
 
+__attribute__((used, noinline))
+void naomi_cart_read_sync(gdc_cart_read_params_t *params) {
+    int prev = cart_sync_read;
+
+    cart_sync_read = 1;
+    naomi_cart_read(params);
+    cart_sync_read = prev;
+}
+
 /* Byte-swap 16-bit words in place (cart dumps are big-endian). */
 static void naomi_bswap16(void *dst, uint32_t size) {
     uint16_t *w = (uint16_t *)dst;
@@ -526,8 +540,9 @@ void naomi_cart_win_read(void *dst, uint32_t size, uint32_t file_base) {
     p.dst_buf = dst;
     p.size = size;
     p.type = 1;
+    cart_sync_read = 1;
     gdGdcCartRead(&p);
-    naomi_cart_wait_dma();
+    cart_sync_read = 0;
     naomi_bswap16(dst, size);
     icache_flush_range(CACHED_ADDR((uint32_t)dst), size);
 }
@@ -605,8 +620,9 @@ void naomi_aw_gdst_read(void *dst, uint32_t size, uint32_t addr) {
     p.size = size;
     p.offset = PHYS_ADDR(addr);
     p.type = 0;
+    cart_sync_read = 1;
     gdGdcCartRead(&p);
-    naomi_cart_wait_dma();
+    cart_sync_read = 0;
     naomi_aw_fix_lits(dst, size);
     icache_flush_range(CACHED_ADDR((uint32_t)dst), size);
 }
@@ -645,16 +661,18 @@ void naomi_aw_boot_copy(void) {
     p.size = 0x480000;
     p.offset = 0xff00;
     p.type = 1;
+    cart_sync_read = 1;
     gdGdcCartRead(&p);
-    naomi_cart_wait_dma();
+    cart_sync_read = 0;
     naomi_aw_fix_lits(tmp, 0x480000);
 
     p.dst_buf = copy1;
     p.size = 0x80000;
     p.offset = 0x01000000;
     p.type = 1;
+    cart_sync_read = 1;
     gdGdcCartRead(&p);
-    naomi_cart_wait_dma();
+    cart_sync_read = 0;
     naomi_aw_fix_lits(copy1, 0x80000);
 
     irq_disable();

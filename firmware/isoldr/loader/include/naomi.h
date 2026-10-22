@@ -16,6 +16,7 @@
 #define NAOMI_ID_BAD0 NAOMI_ID('B', 'A', 'D', '0') /* Zombie Revenge */
 #define NAOMI_ID_BAL1 NAOMI_ID('B', 'A', 'L', '1') /* Dead or Alive 2 Millennium */
 #define NAOMI_ID_BAU0 NAOMI_ID('B', 'A', 'U', '0') /* Jambo Safari */
+#define NAOMI_ID_BEE0 NAOMI_ID('B', 'E', 'E', '0') /* King of Route 66 */
 #define NAOMI_ID_BAC0 NAOMI_ID('B', 'A', 'C', '0') /* Crazy Taxi */
 #define NAOMI_ID_ABC0 NAOMI_ID('A', 'B', 'C', '0') /* Power Stone */
 #define NAOMI_ID_BBJ0 NAOMI_ID('B', 'B', 'J', '0') /* Power Stone 2 */
@@ -77,6 +78,7 @@ void naomi_aw_prepare(void);
 void naomi_enter_test(void);
 void naomi_enter_game(void);
 void naomi_cart_read(gdc_cart_read_params_t *params);
+void naomi_cart_read_sync(gdc_cart_read_params_t *params);
 void naomi_cart_win_read(void *dst, uint32_t size, uint32_t file_base);
 void naomi_cart_stack_setup(void);
 void naomi_patch_cart_read(uint8_t *dst, uint32_t size);

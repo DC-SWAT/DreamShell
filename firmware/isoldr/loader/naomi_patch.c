@@ -73,13 +73,14 @@ static void naomi_dma_stub_set_wait(uint8_t *stub) {
     *(uint32_t *)(stub + 52) = naomi_reloc_addr((uint32_t)naomi_cart_wait_dma);
 }
 
-/* Calls gdGdcCartRead then naomi_cart_wait_dma; lit at +0x34 is the wait addr. */
+/* Calls gdGdcCartRead. Waits only when the game passed r7 == 0.
+ * Literal at +0x34 is the wait address. r7 is preserved. */
 static const uint8_t dma_stub_tmpl[56] = {
-    0x22, 0x4f, 0xf0, 0x7f, 0x01, 0xe0, 0x42, 0x2f,
-    0x51, 0x1f, 0x62, 0x1f, 0x03, 0x1f, 0xf3, 0x64,
-    0x00, 0xe5, 0x00, 0xe6, 0x06, 0xd0, 0x02, 0x60,
-    0x0b, 0x40, 0x10, 0xe7, 0x05, 0xd0, 0x0b, 0x40,
-    0x09, 0x00, 0x09, 0x00, 0x12, 0x2f, 0x10, 0x7f,
+    0x22, 0x4f, 0x76, 0x2f, 0xf0, 0x7f, 0x01, 0xe0,
+    0x42, 0x2f, 0x51, 0x1f, 0x62, 0x1f, 0x03, 0x1f,
+    0xf3, 0x64, 0x07, 0xd0, 0x02, 0x60, 0x0b, 0x40,
+    0x10, 0xe7, 0x10, 0x7f, 0xf6, 0x67, 0x78, 0x27,
+    0x02, 0x8b, 0x04, 0xd0, 0x0b, 0x40, 0x09, 0x00,
     0x26, 0x4f, 0x0b, 0x00, 0x09, 0x00, 0x09, 0x00,
     0xbc, 0x00, 0x00, 0xac, 0xac, 0x00, 0x00, 0xac
 };
@@ -241,18 +242,6 @@ static int naomi_dma_head(const uint16_t *w, uint32_t i, uint32_t size) {
         }
     }
     return 0;
-}
-
-/* Tight poll of G1 DMA status. */
-static int naomi_g1dma_wait(const uint16_t *w, uint32_t i, uint32_t size) {
-    uint32_t hi;
-
-    if(i + 8 > size) {
-        return 0;
-    }
-    hi = i >> 1;
-    return w[hi] == 0x6271 && w[hi + 1] == 0x622d
-        && w[hi + 2] == 0x2258 && w[hi + 3] == 0x89fb;
 }
 
 /* Function that pokes Holly G1 (0xa05f74xx) to start a cart DMA. */
@@ -507,31 +496,6 @@ static int naomi_fix_cart_mbox(uint8_t *dst, uint32_t size) {
         }
     }
     return n;
-}
-
-static void naomi_nop_gdst_spin(uint8_t *dst, uint32_t size) {
-    const uint16_t bfs_m4 = 0x8bfc;
-    uint16_t *w = (uint16_t *)dst;
-    uint32_t i;
-
-    for(i = 0; i + 8 <= size; i += 2) {
-        uint16_t op = w[i >> 1];
-        uint32_t poff;
-
-        if((op & SH4_OPCODE_NIBBLE_MASK) != SH4_OPCODE_MOVL_PC) {
-            continue;
-        }
-        poff = (i & ~3) + 4 + (op & 0xff) * 4;
-        if(poff + 4 > size) {
-            continue;
-        }
-        if(*(uint32_t *)(dst + poff) != 0xa05f7418) {
-            continue;
-        }
-        if(w[(i >> 1) + 3] == bfs_m4) {
-            w[(i >> 1) + 3] = SH4_OPCODE_NOP;
-        }
-    }
 }
 
 /* Point G1 GDST (0xa05f7418) load sites at our fake cart DMA status word. */
@@ -906,14 +870,12 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
             *(uint16_t *)(dst + o->boot + 2) = SH4_OPCODE_NOP;
             memcpy(dst + o->pio, pio_stub, sizeof(pio_stub));
             naomi_dma_stub_apply(dst, o->dma);
-            naomi_g1_poll((uint16_t *)dst, o->poll, size);
             memcpy(dst + o->store_7068, rts_nop, sizeof(rts_nop));
             memcpy(dst + o->poke_7000, ready, sizeof(ready));
-            memcpy(dst + o->gdst_ready, ready, sizeof(ready));
             memcpy(dst + o->win0, rts_nop, sizeof(rts_nop));
             memcpy(dst + o->win1, rts_nop, sizeof(rts_nop));
             memcpy(dst + o->win2, rts_nop, sizeof(rts_nop));
-            naomi_nop_gdst_spin(dst, size);
+            naomi_replace_gdst(dst, size);
             dcache_flush_range(caddr, size);
             icache_flush_range(caddr, size);
             LOGF("NAOMI BBK0 overlay applied\n");
@@ -976,38 +938,59 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
     /* Jambo Safari: known-good cart-read overlay, skip generic scan. */
     if(naomi->game_id == NAOMI_ID_BAU0
         && PHYS_ADDR((uint32_t)dst) == 0x0c020000
-        && size > 0x30841e) {
+        && size > 0x308954) {
         static const uint8_t p0[] = { 0x09,0x00,0x09,0x00,0x09,0x00 };
         static const uint8_t p1[] = {
-            0x09,0x00,0x22,0x4f,0xf0,0x7f,0x01,0xe0,0x42,0x2f,0x51,0x1f,
-            0x62,0x1f,0x03,0x1f,0xf3,0x64,0x03,0x65,0x03,0x66,0x03,0xd0,
-            0x02,0x60,0x0b,0x40,0x10,0xe7,0x10,0x7f,0x26,0x4f,0x0b,0x00,
-            0x09,0x00,0xbc,0x00,0x00,0xac,0x09,0x00
+            0x22,0x4f,0xf0,0x7f,0x01,0xe0,0x42,0x2f,0x51,0x1f,0x62,0x1f,
+            0x03,0x1f,0xf3,0x64,0x03,0xd0,0x0b,0x40,0x09,0x00,0x10,0x7f,
+            0x26,0x4f,0x0b,0x00,0x09,0x00,0x00,0x00,0x00,0x00
         };
+        static const uint32_t p1_wait = sizeof(p1) - 4;
         static const uint8_t p5[] = { 0x09,0x00 };
         static const uint8_t p6[] = { 0x09,0x00,0x09,0x00,0x09,0x00,0x09,0x00 };
         static const uint8_t p7[] = { 0x0b,0x00,0x09,0x00 };
         static const uint8_t p8[] = { 0x01 };
         static const uint8_t p9[] = { 0x72,0x23,0x0b,0x00,0x09,0x00 };
         static const uint8_t p10[] = { 0x09,0x00,0x09,0x00,0x09,0x00 };
+        static const uint32_t copy = 0x0023f604;
         memcpy(dst + 0x000c85c2, p0, sizeof(p0));
         memcpy(dst + 0x000c85ce, p1, sizeof(p1));
-        memcpy(dst + 0x000c8638, dma_stub_tmpl, 3);
-        memcpy(dst + 0x000c863c, dma_stub_tmpl + 4, 28);
-        memcpy(dst + 0x000c8658, dma_stub_tmpl + 32, sizeof(dma_stub_tmpl) - 32);
-        naomi_dma_stub_set_wait(dst + 0x000c8638);
+        *(uint32_t *)(dst + 0x000c85ce + p1_wait) = naomi_reloc_addr((uint32_t)naomi_cart_read_sync);
+        naomi_dma_stub_apply(dst, 0x000c8638);
         memcpy(dst + 0x000c8e08, p5, sizeof(p5));
         memcpy(dst + 0x000c8e0c, p6, sizeof(p6));
         memcpy(dst + 0x000c8e16, p7, sizeof(p7));
         memcpy(dst + 0x000c9348, p8, sizeof(p8));
         memcpy(dst + 0x000c934a, p9, sizeof(p9));
         memcpy(dst + 0x000cc0a6, p10, sizeof(p10));
-        memcpy(dst + 0x0030840c, p5, sizeof(p5));
-        memcpy(dst + 0x00308410, p6, sizeof(p6));
-        memcpy(dst + 0x0030841a, p7, sizeof(p7));
+        memcpy(dst + 0x000c85c2 + copy, p0, sizeof(p0));
+        memcpy(dst + 0x000c85ce + copy, p1, sizeof(p1));
+        *(uint32_t *)(dst + 0x000c85ce + copy + p1_wait) = naomi_reloc_addr((uint32_t)naomi_cart_read_sync);
+        naomi_dma_stub_apply(dst, 0x000c8638 + copy);
+        memcpy(dst + 0x000c8e08 + copy, p5, sizeof(p5));
+        memcpy(dst + 0x000c8e0c + copy, p6, sizeof(p6));
+        memcpy(dst + 0x000c8e16 + copy, p7, sizeof(p7));
+        memcpy(dst + 0x000c9348 + copy, p8, sizeof(p8));
+        memcpy(dst + 0x000c934a + copy, p9, sizeof(p9));
         dcache_flush_range(caddr, size);
         icache_flush_range(caddr, size);
         LOGF("NAOMI jambo overlay applied\n");
+        return;
+    }
+    if(naomi->game_id == NAOMI_ID_BEE0
+        && PHYS_ADDR((uint32_t)dst) == 0x0c020000
+        && size > 0xf4786
+        && *(uint16_t *)(dst + 0xf4640) == 0x2fe6
+        && *(uint16_t *)(dst + 0xf46a0) == 0x2f86
+        && *(uint16_t *)(dst + 0xf4780) == 0x2fe6) {
+        static const uint8_t ready[] = { 0x01, 0xe0, 0x0b, 0x00, 0x09, 0x00 };
+
+        naomi_dma_stub_apply(dst, 0xf4640);
+        naomi_dma_stub_apply(dst, 0xf46a0);
+        memcpy(dst + 0xf4780, ready, sizeof(ready));
+        dcache_flush_range(caddr, size);
+        icache_flush_range(caddr, size);
+        LOGF("NAOMI BEE0 cart stubs applied\n");
         return;
     }
     /* Crazy Taxi: known-good cart-read overlay, skip generic scan. */
@@ -1106,28 +1089,12 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
             n_dma++;
         }
     }
-    if(naomi->game_id != NAOMI_ID_BAL1) {
-        for(i = 0; i + 8 <= size; i += 2) {
-            if(!naomi_g1dma_wait(w, i, size)) {
-                continue;
-            }
-            w[(i >> 1) + 3] = SH4_OPCODE_NOP;
-            n_dma++;
-        }
-    }
     for(i = 0; i + sizeof(dma_stub_tmpl) <= size; i += 2) {
         if(!naomi_g1dma_body(w, i, size)) {
             continue;
         }
         if(naomi_dma_stub_patch(dst, i, size)) {
             n_dma++;
-        }
-    }
-    if(naomi->game_id != NAOMI_ID_BAL1) {
-        for(i = 0; i + 12 <= size; i += 2) {
-            if(naomi_g1_poll(w, i, size)) {
-                n_dma++;
-            }
         }
     }
     for(i = 0; i + 4 <= size; i += 2) {
