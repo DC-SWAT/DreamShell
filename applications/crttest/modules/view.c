@@ -37,7 +37,7 @@ typedef struct {
 } glyph_t;
 
 typedef struct {
-	Box *box;
+	Rectangle *edge[4];
 } frame_t;
 
 static App_t *view_app;
@@ -155,7 +155,7 @@ static frame_t option_frames[2];
 static frame_t saver_frames[2];
 static Rectangle *option_fill;
 static Rectangle *option_bar;
-static Box *check_box;
+static Rectangle *check_edge[4];
 static Rectangle *check_mark;
 static Rectangle *saver_dim;
 static Rectangle *saver_fill;
@@ -498,27 +498,53 @@ static Rectangle *make_rect_off(pvr_list_type_t list, Color color, float z) {
 	return TSU_RectangleCreate(list, 0.0f, (float)screen_h, 1.0f, 1.0f, &color, z, 0.0f);
 }
 
-static void frame_place(frame_t *frame, float x, float top, float w, float h) {
-	Vector pos;
-	const Vector *cur;
-	const float border = 1.0f;
+static Rectangle *make_rect(pvr_list_type_t list, Color color, float z) {
+	Rectangle *rect;
 
-	if(!frame || !frame->box || w <= border * 2.0f || h <= border * 2.0f) {
+	rect = make_rect_off(list, color, z);
+	if(rect && view_app && view_app->tsunami) {
+		TSU_AppSubAddRectangle(view_app->tsunami, rect);
+	}
+	return rect;
+}
+
+static void frame_make(frame_t *frame, Color color, float z) {
+	int i;
+
+	for(i = 0; i < 4; i++) {
+		frame->edge[i] = make_rect(PVR_LIST_TR_POLY, color, z);
+	}
+}
+
+static void frame_place(frame_t *frame, float x, float top, float w, float h) {
+	if(!frame || w < 1.0f || h < 1.0f) {
 		return;
 	}
-	cur = TSU_DrawableGetTranslate((Drawable *)frame->box);
-	/* Box draws the stroke outside the given size, so pull it in by the border. */
-	pos.x = x + border;
-	pos.y = top + h - border;
-	pos.z = cur ? cur->z : 6.0f;
-	pos.w = 1.0f;
-	TSU_DrawableSetTranslate((Drawable *)frame->box, &pos);
-	TSU_BoxSetSize(frame->box, w - border * 2.0f, h - border * 2.0f);
+	rect_move(frame->edge[0], x, top, w, 1.0f);
+	rect_move(frame->edge[1], x, top + h - 1.0f, w, 1.0f);
+	rect_move(frame->edge[2], x, top, 1.0f, h);
+	rect_move(frame->edge[3], x + w - 1.0f, top, 1.0f, h);
 }
 
 static void frame_alpha(frame_t *frame, float alpha) {
-	if(frame && frame->box) {
-		TSU_DrawableSetAlpha((Drawable *)frame->box, alpha);
+	int i;
+
+	if(!frame) {
+		return;
+	}
+	for(i = 0; i < 4; i++) {
+		rect_alpha(frame->edge[i], alpha);
+	}
+}
+
+static void frame_free(frame_t *frame) {
+	int i;
+
+	if(!frame) {
+		return;
+	}
+	for(i = 0; i < 4; i++) {
+		rect_free(&frame->edge[i]);
 	}
 }
 
@@ -722,26 +748,33 @@ static void rect_tint(Rectangle *rect, Color color) {
 }
 
 static void frame_tint(frame_t *frame, Color color) {
-	if(frame && frame->box) {
-		TSU_DrawableSetTint((Drawable *)frame->box, &color);
+	int i;
+
+	if(!frame) {
+		return;
+	}
+	for(i = 0; i < 4; i++) {
+		rect_tint(frame->edge[i], color);
 	}
 }
 
-static void box_place(Box *box, float x, float y, float side) {
-	frame_t frame;
-
-	frame.box = box;
-	frame_place(&frame, x, y, side, side);
+static void box_place(Rectangle **edge, float x, float y, float side) {
+	rect_move(edge[0], x, y, side, 1.0f);
+	rect_move(edge[1], x, y + side - 1.0f, side, 1.0f);
+	rect_move(edge[2], x, y, 1.0f, side);
+	rect_move(edge[3], x + side - 1.0f, y, 1.0f, side);
 }
 
 static void hide_options(void) {
+	int i;
+
 	frame_alpha(&option_frames[0], 0.0f);
 	frame_alpha(&option_frames[1], 0.0f);
 	rect_alpha(option_fill, 0.0f);
 	rect_alpha(option_bar, 0.0f);
 	rect_alpha(check_mark, 0.0f);
-	if(check_box) {
-		TSU_DrawableSetAlpha((Drawable *)check_box, 0.0f);
+	for(i = 0; i < 4; i++) {
+		rect_alpha(check_edge[i], 0.0f);
 	}
 	glyph_tint(&option_title, COL_CLEAR);
 	glyph_tint(&option_music, COL_CLEAR);
@@ -831,11 +864,12 @@ static void show_options(int sel, int music_off) {
 		int group = box + 12 + option_music.vis_w;
 		int cx = x + (width - group) / 2;
 		int cy = row_y + (row_h - box) / 2;
+		int i_edge;
 
-		box_place(check_box, (float)cx, (float)cy, (float)box);
-		if(check_box) {
-			TSU_DrawableSetAlpha((Drawable *)check_box, 1.0f);
-			TSU_DrawableSetTint((Drawable *)check_box, &mark);
+		box_place(check_edge, (float)cx, (float)cy, (float)box);
+		for(i_edge = 0; i_edge < 4; i_edge++) {
+			rect_alpha(check_edge[i_edge], 1.0f);
+			rect_tint(check_edge[i_edge], mark);
 		}
 		if(music_off && box > 10) {
 			rect_move(check_mark, (float)(cx + 5), (float)(cy + 5),
@@ -1606,6 +1640,9 @@ static void patch_shaft_row(uint16_t *row, int y, int shift, int extra_w) {
 	if(!shift) {
 		return;
 	}
+	if(!scroll_near_rgb) {
+		return;
+	}
 	for(band = 0; band < 2; band++) {
 		int x;
 
@@ -1668,6 +1705,9 @@ static int build_clouds(fb_t *fb) {
 
 	if(clouds_ready) {
 		return 1;
+	}
+	if(!scroll_cloud_rgb) {
+		return 0;
 	}
 	for(y = 0; y < CLOUD_TEX_H; y++) {
 		uint16_t *row = chart_pix + y * CLOUD_TEX_W;
@@ -1852,6 +1892,9 @@ static int show_scroll_gpu(unsigned frame, int variant, int param) {
 	int i;
 	static const float strip_z[STRIP_COUNT] = {2.0f, 3.2f, 3.8f};
 
+	if(!scroll_art_ensure()) {
+		return 0;
+	}
 	if(!scroll_ensure() || !bind_chart(&fb)) {
 		return 0;
 	}
@@ -2015,6 +2058,12 @@ static void show_chart(int pattern, int variant, int param, int show_help, unsig
 
 	help_ensure();
 	gpu = !show_help || help_banner != NULL;
+	if(pattern_is_scroll(pattern)) {
+		scroll_art_ensure();
+	}
+	else {
+		scroll_art_free();
+	}
 
 	if(gpu && pattern_is_scroll(pattern)) {
 		handled = show_scroll_gpu(frame, variant, param);
@@ -2038,6 +2087,7 @@ static void hide_chart(void) {
 	hide_grid();
 	hide_shadow();
 	hide_scroll();
+	scroll_art_free();
 }
 
 static int sync_index(int menu_sel, int count) {
@@ -2346,62 +2396,12 @@ static void current_mode(char *dst, int dst_len) {
 	snprintf(dst, dst_len, "%dx%d  %s  %s", screen_w, screen_h, cable, scan);
 }
 
-static void *find_drawable(const char *name) {
-	Item_t *item;
-
-	if(!view_app || !view_app->elements || !name) {
-		return NULL;
-	}
-	item = listGetItemByName(view_app->elements, name);
-	if(!item || item->type != LIST_ITEM_TSU_DRAWABLE) {
-		return NULL;
-	}
-	return item->data;
-}
-
-static int bind_chrome(void) {
-	static const char *frame_name[FRAME_COUNT] = {
-		"frame_screen_0", "frame_screen_1", "frame_list_0", "frame_list_1",
-		"frame_hint_0", "frame_hint_1"
-	};
-	int i;
-
-	for(i = 0; i < FRAME_COUNT; i++) {
-		frames[i].box = (Box *)find_drawable(frame_name[i]);
-		if(!frames[i].box) {
-			return 0;
-		}
-	}
-	scroll_frames[0].box = (Box *)find_drawable("frame_scroll_0");
-	scroll_frames[1].box = (Box *)find_drawable("frame_scroll_1");
-	option_frames[0].box = (Box *)find_drawable("frame_option_0");
-	option_frames[1].box = (Box *)find_drawable("frame_option_1");
-	saver_frames[0].box = (Box *)find_drawable("frame_saver_0");
-	saver_frames[1].box = (Box *)find_drawable("frame_saver_1");
-	check_box = (Box *)find_drawable("frame_check");
-	backdrop = (Rectangle *)find_drawable("backdrop");
-	hint_fill = (Rectangle *)find_drawable("hint_fill");
-	select_bar = (Rectangle *)find_drawable("select_bar");
-	list_track = (Rectangle *)find_drawable("list_track");
-	list_thumb = (Rectangle *)find_drawable("list_thumb");
-	option_fill = (Rectangle *)find_drawable("option_fill");
-	option_bar = (Rectangle *)find_drawable("option_bar");
-	check_mark = (Rectangle *)find_drawable("check_mark");
-	saver_dim = (Rectangle *)find_drawable("saver_dim");
-	saver_fill = (Rectangle *)find_drawable("saver_fill");
-	return scroll_frames[0].box && scroll_frames[1].box
-		&& option_frames[0].box && option_frames[1].box
-		&& saver_frames[0].box && saver_frames[1].box
-		&& check_box && backdrop && hint_fill && select_bar
-		&& list_track && list_thumb && option_fill && option_bar
-		&& check_mark && saver_dim && saver_fill;
-}
-
 void view_init(void *app_ptr) {
 	App_t *app = (App_t *)app_ptr;
 	Vector center;
 	char mode[80];
 	int scroll = 0;
+	int i;
 
 	if(ready) {
 		return;
@@ -2449,21 +2449,39 @@ void view_init(void *app_ptr) {
 	sync_mode(mode);
 	sync_index(0, pattern_count());
 
-	if(!bind_chrome()) {
-		ds_printf("DS_ERROR: CRT Test: scene layout is missing\n");
-		return;
+	for(i = 0; i < 4; i++) {
+		frame_make(&frames[i], COL_GREEN, 6.0f);
 	}
+	frame_make(&frames[4], COL_RED, 9.0f);
+	frame_make(&frames[5], COL_RED, 9.0f);
+	hint_fill = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 8.0f);
+	backdrop = make_rect(PVR_LIST_OP_POLY, COL_BLACK, 1.0f);
+	select_bar = make_rect(PVR_LIST_TR_POLY, COL_PAPER, 15.0f);
+	list_track = make_rect(PVR_LIST_TR_POLY, COL_DIM, 16.2f);
+	list_thumb = make_rect(PVR_LIST_TR_POLY, COL_GREEN, 16.6f);
 	rect_alpha(list_track, 0.0f);
 	rect_alpha(list_thumb, 0.0f);
+	frame_make(&scroll_frames[0], COL_GREEN, 17.0f);
+	frame_make(&scroll_frames[1], COL_GREEN, 17.2f);
 	frame_alpha(&scroll_frames[0], 0.0f);
 	frame_alpha(&scroll_frames[1], 0.0f);
+	option_fill = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 32.0f);
+	option_bar = make_rect(PVR_LIST_TR_POLY, COL_PAPER, 33.0f);
+	frame_make(&option_frames[0], COL_PAPER, 33.4f);
+	frame_make(&option_frames[1], COL_PAPER, 33.6f);
 	frame_alpha(&option_frames[0], 0.0f);
 	frame_alpha(&option_frames[1], 0.0f);
+	for(i = 0; i < 4; i++) {
+		check_edge[i] = make_rect(PVR_LIST_TR_POLY, COL_GREEN, 35.0f);
+		rect_alpha(check_edge[i], 0.0f);
+	}
+	check_mark = make_rect(PVR_LIST_TR_POLY, COL_GREEN, 35.2f);
+	saver_dim = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 40.0f);
+	saver_fill = make_rect(PVR_LIST_TR_POLY, COL_BLACK, 41.0f);
+	frame_make(&saver_frames[0], COL_WHITE, 42.0f);
+	frame_make(&saver_frames[1], COL_WHITE, 42.2f);
 	frame_alpha(&saver_frames[0], 0.0f);
 	frame_alpha(&saver_frames[1], 0.0f);
-	if(check_box) {
-		TSU_DrawableSetAlpha((Drawable *)check_box, 0.0f);
-	}
 	rect_alpha(option_fill, 0.0f);
 	rect_alpha(option_bar, 0.0f);
 	rect_alpha(check_mark, 0.0f);
@@ -2539,25 +2557,27 @@ void view_shutdown(void) {
 		glyph_free(&name_glyph[i]);
 	}
 	for(i = 0; i < FRAME_COUNT; i++) {
-		frames[i].box = NULL;
+		frame_free(&frames[i]);
 	}
-	scroll_frames[0].box = NULL;
-	scroll_frames[1].box = NULL;
-	option_frames[0].box = NULL;
-	option_frames[1].box = NULL;
-	saver_frames[0].box = NULL;
-	saver_frames[1].box = NULL;
-	check_box = NULL;
-	hint_fill = NULL;
-	backdrop = NULL;
-	list_track = NULL;
-	list_thumb = NULL;
-	option_fill = NULL;
-	option_bar = NULL;
-	check_mark = NULL;
-	saver_dim = NULL;
-	saver_fill = NULL;
-	select_bar = NULL;
+	rect_free(&hint_fill);
+	rect_free(&backdrop);
+	rect_free(&list_track);
+	rect_free(&list_thumb);
+	frame_free(&scroll_frames[0]);
+	frame_free(&scroll_frames[1]);
+	frame_free(&option_frames[0]);
+	frame_free(&option_frames[1]);
+	frame_free(&saver_frames[0]);
+	frame_free(&saver_frames[1]);
+	rect_free(&option_fill);
+	rect_free(&option_bar);
+	rect_free(&check_mark);
+	rect_free(&saver_dim);
+	rect_free(&saver_fill);
+	for(i = 0; i < 4; i++) {
+		rect_free(&check_edge[i]);
+	}
+	rect_free(&select_bar);
 	saver_alive = 0;
 	mode_cached[0] = '\0';
 	index_cached[0] = '\0';

@@ -50,11 +50,15 @@ static inline int scroll_shaft_row(int y, int shift) {
 	return SCROLL_SHAFT_Y0 + pos;
 }
 
-extern const unsigned char scroll_near_rgb[];
-extern const unsigned char scroll_sky_rgb[];
-extern const unsigned char scroll_mid_rgb[];
-extern const unsigned char scroll_cloud_rgb[];
-extern const unsigned char scroll_floor_rgb[];
-extern const unsigned char scroll_vert_rgb[];
+extern unsigned char *scroll_near_rgb;
+extern unsigned char *scroll_sky_rgb;
+extern unsigned char *scroll_mid_rgb;
+extern unsigned char *scroll_cloud_rgb;
+extern unsigned char *scroll_floor_rgb;
+extern unsigned char *scroll_vert_rgb;
+
+void scroll_art_bind(const char *dir);
+int scroll_art_ensure(void);
+void scroll_art_free(void);
 
 #endif

@@ -10,6 +10,7 @@
 #include <SDL/SDL_dreamcast.h>
 
 #include "app_module.h"
+#include "scroll_art.h"
 #include "draw.h"
 #include "patterns.h"
 #include "view.h"
@@ -1003,11 +1004,17 @@ static void crt_events_add(void) {
 }
 
 void CrtTest_Init(App_t *app) {
+	char dir[NAME_MAX];
+
 	memset(&crt, 0, sizeof(crt));
 	crt.app = app;
 	crt.in_menu = 1;
 	crt.show_help = 1;
 	crt_reset_options();
+	if(app) {
+		GetAppPath(dir, sizeof(dir), app->fn);
+		scroll_art_bind(dir);
+	}
 	crt_video_event_open();
 	view_init(app);
 

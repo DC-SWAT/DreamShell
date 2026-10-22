@@ -1892,17 +1892,22 @@ static void scroll_convert(const fb_t *fb, uint16_t *dst, const unsigned char *r
 	}
 }
 
-static void scroll_prepare_assets(const fb_t *fb) {
-	int shift = fb->rshift | (fb->gshift << 8) | (fb->bshift << 16) | (fb->rloss << 24);
+static int scroll_prepare_assets(const fb_t *fb) {
+	int shift;
 
+	if(!fb || !scroll_art_ensure() || !scroll_floor_rgb || !scroll_vert_rgb) {
+		return 0;
+	}
+	shift = fb->rshift | (fb->gshift << 8) | (fb->bshift << 16) | (fb->rloss << 24);
 	if(scroll_built_shift == shift) {
-		return;
+		return 1;
 	}
 	scroll_convert(fb, scroll_floor_pix, scroll_floor_rgb,
 		SCROLL_FLOOR_W, SCROLL_FLOOR_H, 1, 0);
 	scroll_convert(fb, scroll_vert_pix, scroll_vert_rgb,
 		SCROLL_VERT_W, SCROLL_VERT_H, 0, 0);
 	scroll_built_shift = shift;
+	return 1;
 }
 
 static void track_wrap(int index, int span) {
@@ -2104,8 +2109,10 @@ static void draw_background(fb_t *fb, unsigned frame, int variant, int param) {
 
 	scroll_setup(frame, variant, param, NULL, NULL, &vertical);
 	phase = scroll_fall_shift(frame);
-	scroll_prepare_assets(fb);
 	fb_clear(fb, fb_rgb(fb, 0, 0, 0));
+	if(!scroll_prepare_assets(fb) || !scroll_sky_rgb || !scroll_mid_rgb || !scroll_near_rgb) {
+		return;
+	}
 	scale = fb->h / SCROLL_BACK_H;
 	if(scale < 1) {
 		scale = 1;

@@ -10,11 +10,8 @@
 #include <dc/pvr.h>
 #include <plx/texture.h>
 #include <kos/string.h>
-
-#include <cstdint>
-
-extern "C" void LockVideo();
-extern "C" void UnlockVideo();
+#include <stdint.h>
+#include <video.h>
 
 static int twiddle_small(int value) {
 	return (value & 1)
@@ -47,7 +44,11 @@ static uint16_t to_argb1555(uint16_t pix) {
 }
 
 static plx_texture_t *plx_of(Texture *texture) {
-	return *texture;
+	if(texture == 0) {
+		return 0;
+	}
+	/* C++ Texture is a vtable pointer, then the plx canvas. */
+	return *(plx_texture_t **)((unsigned char *)texture + sizeof(void *));
 }
 
 static Texture *make_canvas(int w, int h, int fmt) {
@@ -67,15 +68,15 @@ static Texture *make_canvas(int w, int h, int fmt) {
 	return texture;
 }
 
-extern "C" Texture *crt_canvas_argb(int w, int h) {
+Texture *crt_canvas_argb(int w, int h) {
 	return make_canvas(w, h, PVR_TXRFMT_ARGB1555);
 }
 
-extern "C" Texture *crt_canvas_linear_rgb(int w, int h) {
+Texture *crt_canvas_linear_rgb(int w, int h) {
 	return make_canvas(w, h, PVR_TXRFMT_RGB565 | PVR_TXRFMT_NONTWIDDLED);
 }
 
-extern "C" Texture *crt_canvas_linear_argb(int w, int h) {
+Texture *crt_canvas_linear_argb(int w, int h) {
 	return make_canvas(w, h, PVR_TXRFMT_ARGB1555 | PVR_TXRFMT_NONTWIDDLED);
 }
 
@@ -117,7 +118,7 @@ static int linear_span(Texture *texture, int rows, plx_texture_t **plx_out, int 
 	return (*pixels > 0) ? 1 : 0;
 }
 
-extern "C" void crt_linear_clear(Texture *texture) {
+void crt_linear_clear(Texture *texture) {
 	plx_texture_t *plx;
 	int pixels = 0;
 
@@ -130,7 +131,7 @@ extern "C" void crt_linear_clear(Texture *texture) {
 	UnlockVideo();
 }
 
-extern "C" void crt_linear_upload(Texture *texture, const uint16_t *src, int rows) {
+void crt_linear_upload(Texture *texture, const uint16_t *src, int rows) {
 	plx_texture_t *plx;
 	int pixels = 0;
 
@@ -142,7 +143,7 @@ extern "C" void crt_linear_upload(Texture *texture, const uint16_t *src, int row
 	UnlockVideo();
 }
 
-extern "C" void crt_linear_upload_rows(Texture *texture, const uint16_t *src, int row, int rows) {
+void crt_linear_upload_rows(Texture *texture, const uint16_t *src, int row, int rows) {
 	plx_texture_t *plx;
 	uint8_t *dest;
 	int pixels = 0;
@@ -159,7 +160,7 @@ extern "C" void crt_linear_upload_rows(Texture *texture, const uint16_t *src, in
 	UnlockVideo();
 }
 
-extern "C" void crt_linear_upload_key(Texture *texture, uint16_t *src, int rows, uint16_t key) {
+void crt_linear_upload_key(Texture *texture, uint16_t *src, int rows, uint16_t key) {
 	plx_texture_t *plx;
 	int pixels = 0;
 	int i;
@@ -183,7 +184,7 @@ extern "C" void crt_linear_upload_key(Texture *texture, uint16_t *src, int rows,
 	crt_linear_upload(texture, src, rows);
 }
 
-extern "C" void crt_canvas_upload(Texture *texture, const uint16_t *src, int src_w, int src_h) {
+void crt_canvas_upload(Texture *texture, const uint16_t *src, int src_w, int src_h) {
 	plx_texture_t *plx;
 	uint16_t *dst;
 	int tw;

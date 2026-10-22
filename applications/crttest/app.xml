@@ -10,33 +10,5 @@
 		onopen="export:CrtTest_Open()"
 		onclose="export:CrtTest_Close()"
 		onunload="export:CrtTest_Shutdown()">
-
-		<rectangle name="backdrop" x="0" y="0" width="100%" height="100%" z="1.0" color="#000000FF" />
-
-		<box name="frame_screen_0" x="0" y="0" width="1" height="1" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
-		<box name="frame_screen_1" x="0" y="0" width="1" height="1" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
-		<box name="frame_list_0" x="0" y="0" width="1" height="1" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
-		<box name="frame_list_1" x="0" y="0" width="1" height="1" z="6.0" borderWidth="1" color="#8CFF30FF" transparent="true" />
-		<box name="frame_hint_0" x="0" y="0" width="1" height="1" z="9.0" borderWidth="1" color="#FF2A1CFF" transparent="true" />
-		<box name="frame_hint_1" x="0" y="0" width="1" height="1" z="9.0" borderWidth="1" color="#FF2A1CFF" transparent="true" />
-
-		<rectangle name="hint_fill" x="0" y="0" width="1" height="1" z="8.0" color="#000000FF" transparent="true" />
-		<rectangle name="select_bar" x="0" y="0" width="1" height="1" z="15.0" color="#F0F4ECFF" transparent="true" />
-		<rectangle name="list_track" x="0" y="0" width="1" height="1" z="16.2" color="#40A824FF" transparent="true" />
-		<rectangle name="list_thumb" x="0" y="0" width="1" height="1" z="16.6" color="#8CFF30FF" transparent="true" />
-		<box name="frame_scroll_0" x="0" y="0" width="1" height="1" z="17.0" borderWidth="1" color="#8CFF30FF" transparent="true" visibility="hidden" />
-		<box name="frame_scroll_1" x="0" y="0" width="1" height="1" z="17.2" borderWidth="1" color="#8CFF30FF" transparent="true" visibility="hidden" />
-
-		<rectangle name="option_fill" x="0" y="0" width="1" height="1" z="32.0" color="#000000FF" transparent="true" />
-		<rectangle name="option_bar" x="0" y="0" width="1" height="1" z="33.0" color="#F0F4ECFF" transparent="true" />
-		<box name="frame_option_0" x="0" y="0" width="1" height="1" z="33.4" borderWidth="1" color="#F0F4ECFF" transparent="true" visibility="hidden" />
-		<box name="frame_option_1" x="0" y="0" width="1" height="1" z="33.6" borderWidth="1" color="#F0F4ECFF" transparent="true" visibility="hidden" />
-		<box name="frame_check" x="0" y="0" width="1" height="1" z="35.0" borderWidth="1" color="#8CFF30FF" transparent="true" visibility="hidden" />
-		<rectangle name="check_mark" x="0" y="0" width="1" height="1" z="35.2" color="#8CFF30FF" transparent="true" />
-
-		<rectangle name="saver_dim" x="0" y="0" width="1" height="1" z="40.0" color="#000000FF" transparent="true" />
-		<rectangle name="saver_fill" x="0" y="0" width="1" height="1" z="41.0" color="#000000FF" transparent="true" />
-		<box name="frame_saver_0" x="0" y="0" width="1" height="1" z="42.0" borderWidth="1" color="#FFFFFFFF" transparent="true" visibility="hidden" />
-		<box name="frame_saver_1" x="0" y="0" width="1" height="1" z="42.2" borderWidth="1" color="#FFFFFFFF" transparent="true" visibility="hidden" />
 	</body>
 </app>
