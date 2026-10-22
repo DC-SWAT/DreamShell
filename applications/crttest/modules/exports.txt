@@ -1,0 +1,7 @@
+include kos/exports.h
+include app_module.h
+
+CrtTest_Init
+CrtTest_Shutdown
+CrtTest_Open
+CrtTest_Close

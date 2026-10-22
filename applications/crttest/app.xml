@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Author: HeadHunter -->
+<app name="CRT Test" version="1.4" icon="images/icon.png">
+	<resources>
+		<module src="modules/app_crttest.klf" />
+	</resources>
+	<body type="tsunami" width="100%" height="100%" backgroundColor="#000000"
+		onload="export:CrtTest_Init()"
+		onopen="export:CrtTest_Open()"
+		onclose="export:CrtTest_Close()"
+		onunload="export:CrtTest_Shutdown()">
+	</body>
+</app>
