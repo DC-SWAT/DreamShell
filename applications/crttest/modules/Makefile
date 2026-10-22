@@ -5,7 +5,7 @@
 APP_NAME = crttest
 TARGET_NAME = app_$(APP_NAME)
 OBJS = module.o draw.o patterns.o scroll_art.o gpu.o view.o
-DBG_LIBS = -lds
+DBG_LIBS = -lds -lwave
 EXPORTS_FILE = exports.txt
 
 KOS_CFLAGS += -I./
@@ -23,6 +23,12 @@ gpu.o: gpu.cpp gpu.h
 	kos-c++ -fno-exceptions -fno-rtti $(KOS_CFLAGS) -I. -c gpu.cpp -o gpu.o
 
 include ../../../sdk/Makefile.loadable
+
+$(TARGET): ../../../sdk/lib/libwave.a
+
+../../../sdk/lib/libwave.a:
+	mkdir -p ../../../build/modules ../../../sdk/lib
+	$(MAKE) -C ../../../modules/wav install
 
 rm-elf:
 	-rm -f $(TARGET)

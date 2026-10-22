@@ -5,6 +5,8 @@
 #include <ds.h>
 #include <string.h>
 #include <stdio.h>
+#include <audio/wav.h>
+#include <dc/sound/stream.h>
 #include <SDL/SDL_dreamcast.h>
 
 #include "app_module.h"
@@ -95,92 +97,16 @@ enum {
 	OPT_COUNT
 };
 
-typedef int (*crt_wav_init_fn)(void);
-typedef void (*crt_wav_void_fn)(void);
-typedef void (*crt_wav_hnd_fn)(int);
-typedef int (*crt_wav_create_fn)(const char *, int);
-typedef void (*crt_wav_vol_fn)(int, int);
-
-static crt_wav_init_fn crt_wav_init;
-static crt_wav_void_fn crt_wav_shutdown;
-static crt_wav_hnd_fn crt_wav_destroy;
-static crt_wav_create_fn crt_wav_create;
-static crt_wav_hnd_fn crt_wav_play;
-static crt_wav_hnd_fn crt_wav_stop;
-static crt_wav_vol_fn crt_wav_volume;
-static Module_t *crt_wave;
-static int crt_wave_owned;
 static int crt_wav_ready;
-static int crt_wav_hnd = -1;
+static int crt_wav_hnd = SND_STREAM_INVALID;
 static int crt_music_warned;
 
-static uint32 crt_sym(const char *name) {
-	return GetExportSymAddr(name, NULL);
-}
-
-static int crt_wav_bind(void) {
-	if(crt_wav_init) {
-		return 1;
-	}
-	crt_wav_init = (crt_wav_init_fn)crt_sym("wav_init");
-	crt_wav_shutdown = (crt_wav_void_fn)crt_sym("wav_shutdown");
-	crt_wav_destroy = (crt_wav_hnd_fn)crt_sym("wav_destroy");
-	crt_wav_create = (crt_wav_create_fn)crt_sym("wav_create");
-	crt_wav_play = (crt_wav_hnd_fn)crt_sym("wav_play");
-	crt_wav_stop = (crt_wav_hnd_fn)crt_sym("wav_stop");
-	crt_wav_volume = (crt_wav_vol_fn)crt_sym("wav_volume");
-	if(!crt_wav_init || !crt_wav_shutdown || !crt_wav_destroy || !crt_wav_create ||
-		!crt_wav_play || !crt_wav_stop || !crt_wav_volume) {
-		crt_wav_init = NULL;
-		return 0;
-	}
-	return 1;
-}
-
-static Module_t *crt_open_wave(void) {
-	char dir[NAME_MAX];
-	char file[NAME_MAX];
-	Module_t *mod;
-	char *slash;
-
-	mod = GetModuleByName("wave");
-	if(mod) {
-		return mod;
-	}
-	if(!crt.app) {
-		return NULL;
-	}
-	GetAppPath(dir, sizeof(dir), crt.app->fn);
-	snprintf(file, sizeof(file), "%s/modules/wave.klf", dir);
-	mod = OpenModule(file);
-	if(mod) {
-		crt_wave_owned = 1;
-		return mod;
-	}
-	slash = strrchr(dir, '/');
-	if(!slash || slash == dir) {
-		return NULL;
-	}
-	*slash = '\0';
-	slash = strrchr(dir, '/');
-	if(!slash || slash == dir) {
-		return NULL;
-	}
-	*slash = '\0';
-	snprintf(file, sizeof(file), "%s/modules/wave.klf", dir);
-	mod = OpenModule(file);
-	if(mod) {
-		crt_wave_owned = 1;
-	}
-	return mod;
-}
-
 static void crt_music_stop(void) {
-	if(crt_wav_hnd >= 0 && crt_wav_stop && crt_wav_destroy) {
-		crt_wav_stop(crt_wav_hnd);
-		crt_wav_destroy(crt_wav_hnd);
+	if(crt_wav_hnd != SND_STREAM_INVALID) {
+		wav_stop(crt_wav_hnd);
+		wav_destroy(crt_wav_hnd);
 	}
-	crt_wav_hnd = -1;
+	crt_wav_hnd = SND_STREAM_INVALID;
 }
 
 static void crt_music_start(void) {
@@ -188,29 +114,23 @@ static void crt_music_start(void) {
 	char file[NAME_MAX];
 	int volume;
 
-	if(crt.music_off || crt_wav_hnd >= 0 || !crt.app) {
-		return;
-	}
-	if(!crt_wave) {
-		crt_wave = crt_open_wave();
-	}
-	if(!crt_wave || !crt_wav_bind()) {
-		if(!crt_music_warned) {
-			crt_music_warned = 1;
-			ds_printf("DS_ERROR: CRT Test: wave module was not opened\n");
-		}
+	if(crt.music_off || crt_wav_hnd != SND_STREAM_INVALID || !crt.app) {
 		return;
 	}
 	if(!crt_wav_ready) {
-		if(!crt_wav_init()) {
+		if(!wav_init()) {
+			if(!crt_music_warned) {
+				crt_music_warned = 1;
+				ds_printf("DS_ERROR: CRT Test: wave module was not opened\n");
+			}
 			return;
 		}
 		crt_wav_ready = 1;
 	}
 	GetAppPath(dir, sizeof(dir), crt.app->fn);
 	snprintf(file, sizeof(file), "%s/theme.wav", dir);
-	crt_wav_hnd = crt_wav_create(file, 1);
-	if(crt_wav_hnd < 0) {
+	crt_wav_hnd = wav_create(file, 1);
+	if(crt_wav_hnd == SND_STREAM_INVALID) {
 		if(!crt_music_warned) {
 			crt_music_warned = 1;
 			ds_printf("DS_ERROR: CRT Test: theme.wav was not opened\n");
@@ -219,9 +139,9 @@ static void crt_music_start(void) {
 	}
 	volume = GetVolumeFromSettings();
 	if(volume >= 0) {
-		crt_wav_volume(crt_wav_hnd, volume);
+		wav_volume(crt_wav_hnd, volume);
 	}
-	crt_wav_play(crt_wav_hnd);
+	wav_play(crt_wav_hnd);
 }
 
 static void crt_music_apply(void) {
@@ -293,16 +213,10 @@ static void crt_music_save(void) {
 
 static void crt_music_shutdown(void) {
 	crt_music_stop();
-	if(crt_wav_ready && crt_wav_shutdown) {
-		crt_wav_shutdown();
+	if(crt_wav_ready) {
+		wav_shutdown();
 	}
 	crt_wav_ready = 0;
-	if(crt_wave_owned && crt_wave) {
-		CloseModule(crt_wave);
-	}
-	crt_wave = NULL;
-	crt_wave_owned = 0;
-	crt_wav_init = NULL;
 }
 
 static void crt_exit(void) {

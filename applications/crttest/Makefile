@@ -22,17 +22,12 @@ $(DEPS): modules/module.c modules/draw.c modules/patterns.c modules/draw.h modul
 clean:
 	cd modules && $(MAKE) clean && cd ../
 
-WAVE_KLF = ../../modules/wav/wave.klf
-
-$(WAVE_KLF):
-	$(MAKE) -C ../../modules/wav
-
-install: app.xml $(DEPS) theme.wav $(WAVE_KLF)
+install: app.xml $(DEPS) theme.wav
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
 	-mkdir -p $(APP_DIR)/images
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
-	cp $(WAVE_KLF) $(APP_DIR)/modules/wave.klf
+	-rm -f $(APP_DIR)/modules/wave.klf
 	cp theme.wav $(APP_DIR)/theme.wav
 	cp app.xml $(APP_DIR)/app.xml
 	cp images/*.png $(APP_DIR)/images

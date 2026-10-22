@@ -8,8 +8,8 @@
 #include "gpu.h"
 
 #include <dc/pvr.h>
-#include <dc/sq.h>
 #include <plx/texture.h>
+#include <kos/string.h>
 
 #include <cstdint>
 
@@ -79,72 +79,24 @@ extern "C" Texture *crt_canvas_linear_argb(int w, int h) {
 	return make_canvas(w, h, PVR_TXRFMT_ARGB1555 | PVR_TXRFMT_NONTWIDDLED);
 }
 
-#define CRT_QACR0 (*(volatile uint32_t *)(void *)0xff000038)
-#define CRT_QACR1 (*(volatile uint32_t *)(void *)0xff00003c)
-
-static void sq_prepare(void *dest) {
-	uint32_t bits = (uint32_t)((((uintptr_t)dest) >> 24) & 0x1c);
-
-	CRT_QACR0 = bits;
-	CRT_QACR1 = bits;
-}
-
-static void sq_wait_idle(void) {
-	volatile uint32_t *queue = (volatile uint32_t *)(void *)MEM_AREA_SQ_BASE;
-
-	queue[0] = 0;
-	queue[8] = 0;
-}
-
-static void sq_store(void *dest, const uint32_t *src, int bytes, int zero) {
-	volatile uint32_t *out;
-	int blocks;
-
-	if(dest == 0 || bytes < 32) {
+static void vram_copy(void *dst, const void *src, int bytes, int clear) {
+	if(dst == 0 || bytes < 4 || (bytes & 3) != 0 || ((uintptr_t)dst & 3) != 0) {
 		return;
 	}
-	if(((uintptr_t)dest & 31) != 0) {
+	if(clear || src == 0) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+		memset4(dst, 0, (size_t)bytes);
+#pragma GCC diagnostic pop
 		return;
 	}
-	bytes &= ~31;
-	sq_prepare(dest);
-	out = (volatile uint32_t *)SQ_MASK_DEST(dest);
-	blocks = bytes >> 5;
-	while(blocks > 0) {
-		if(zero || src == 0) {
-			out[0] = 0;
-			out[1] = 0;
-			out[2] = 0;
-			out[3] = 0;
-			out[4] = 0;
-			out[5] = 0;
-			out[6] = 0;
-			out[7] = 0;
-		}
-		else {
-			out[0] = src[0];
-			out[1] = src[1];
-			out[2] = src[2];
-			out[3] = src[3];
-			out[4] = src[4];
-			out[5] = src[5];
-			out[6] = src[6];
-			out[7] = src[7];
-			src += 8;
-		}
-		sq_flush((void *)out);
-		out += 8;
-		blocks--;
+	if(((uintptr_t)src & 3) != 0) {
+		return;
 	}
-	sq_wait_idle();
-}
-
-static void vram_copy_slow(uint16_t *dst, const uint16_t *src, int pixels) {
-	int i;
-
-	for(i = 0; i < pixels; i++) {
-		dst[i] = src ? src[i] : 0;
-	}
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+	memcpy4(dst, src, (size_t)bytes);
+#pragma GCC diagnostic pop
 }
 
 static int linear_span(Texture *texture, int rows, plx_texture_t **plx_out, int *pixels) {
@@ -174,12 +126,7 @@ extern "C" void crt_linear_clear(Texture *texture) {
 	}
 	pixels = plx->w * plx->h;
 	LockVideo();
-	if(((uintptr_t)plx->ptr & 31) == 0) {
-		sq_store(plx->ptr, 0, pixels * (int)sizeof(uint16_t), 1);
-	}
-	else {
-		vram_copy_slow((uint16_t *)plx->ptr, 0, pixels);
-	}
+	vram_copy(plx->ptr, 0, pixels * (int)sizeof(uint16_t), 1);
 	UnlockVideo();
 }
 
@@ -191,12 +138,7 @@ extern "C" void crt_linear_upload(Texture *texture, const uint16_t *src, int row
 		return;
 	}
 	LockVideo();
-	if(((uintptr_t)plx->ptr & 31) == 0 && ((uintptr_t)src & 7) == 0) {
-		sq_store(plx->ptr, (const uint32_t *)src, pixels * (int)sizeof(uint16_t), 0);
-	}
-	else {
-		vram_copy_slow((uint16_t *)plx->ptr, src, pixels);
-	}
+	vram_copy(plx->ptr, src, pixels * (int)sizeof(uint16_t), 0);
 	UnlockVideo();
 }
 
@@ -213,12 +155,7 @@ extern "C" void crt_linear_upload_rows(Texture *texture, const uint16_t *src, in
 	}
 	dest = (uint8_t *)plx->ptr + (size_t)row * (size_t)plx->w * sizeof(uint16_t);
 	LockVideo();
-	if(((uintptr_t)dest & 31) == 0 && ((uintptr_t)src & 7) == 0) {
-		sq_store(dest, (const uint32_t *)src, pixels * (int)sizeof(uint16_t), 0);
-	}
-	else {
-		vram_copy_slow((uint16_t *)dest, src, pixels);
-	}
+	vram_copy(dest, src, pixels * (int)sizeof(uint16_t), 0);
 	UnlockVideo();
 }
 
