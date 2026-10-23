@@ -22,6 +22,10 @@
 #define CART_READ_STACK_SIZE 4096
 #define CART_DMA_ALIGN 32
 #define CART_ATA_SEC_SIZE 512
+#define NAOMI_CART_AHEAD_SECTORS 16
+#define NAOMI_CART_AHEAD_SIZE (CART_ATA_SEC_SIZE * NAOMI_CART_AHEAD_SECTORS)
+#define NAOMI_CART_AHEAD_RESERVE (CART_DMA_ALIGN * 2)
+#define NAOMI_BEE0_AHEAD_ADDR 0x0cd5e000
 
 static uint32_t cart_read_stack_top;
 static uint32_t cart_read_old_sp;
@@ -333,6 +337,150 @@ static void naomi_cart_cache_purge(void *dst, uint32_t size) {
     dcache_purge_range(addr, size);
 }
 
+static uint8_t *cart_ahead;
+static uint32_t cart_ahead_off;
+static uint32_t cart_ahead_len;
+static uint32_t cart_ahead_cap;
+static int cart_ahead_failed;
+
+static int naomi_cart_use_ahead(void) {
+    return naomi->game_id == NAOMI_ID_BEE0;
+}
+
+static int naomi_cart_ahead_fixed(uint32_t *addr, uint32_t *size) {
+    if(naomi->game_id == NAOMI_ID_BEE0) {
+        *addr = NAOMI_BEE0_AHEAD_ADDR;
+        *size = NAOMI_CART_AHEAD_SIZE;
+        return 1;
+    }
+    return 0;
+}
+
+static uint8_t *naomi_cart_ahead_buf(void) {
+    uint32_t limit;
+    uint32_t pos;
+    uint32_t room;
+    uint32_t size;
+    uint32_t fixed_addr;
+    uint32_t fixed_size;
+
+    if(cart_ahead || cart_ahead_failed) {
+        return cart_ahead;
+    }
+    if(naomi_cart_ahead_fixed(&fixed_addr, &fixed_size)) {
+        cart_ahead = (uint8_t *)fixed_addr;
+        cart_ahead_cap = fixed_size;
+        return cart_ahead;
+    }
+    limit = CACHED_ADDR(NAOMI_GAME_ENTER_ADDR);
+    pos = malloc_heap_pos();
+    if(!pos || pos >= limit) {
+        cart_ahead_failed = 1;
+        return NULL;
+    }
+    room = limit - pos;
+    if(room <= NAOMI_CART_AHEAD_RESERVE) {
+        cart_ahead_failed = 1;
+        return NULL;
+    }
+    room -= NAOMI_CART_AHEAD_RESERVE;
+    size = NAOMI_CART_AHEAD_SIZE;
+    if(size > room) {
+        size = room & ~(CART_ATA_SEC_SIZE - 1);
+    }
+    if(size < CART_ATA_SEC_SIZE) {
+        cart_ahead_failed = 1;
+        return NULL;
+    }
+    cart_ahead = aligned_alloc(CART_DMA_ALIGN, size);
+    if(!cart_ahead
+        || (uint32_t)cart_ahead + size > limit) {
+        if(cart_ahead) {
+            free(cart_ahead);
+            cart_ahead = NULL;
+        }
+        cart_ahead_failed = 1;
+        return NULL;
+    }
+    cart_ahead_cap = size;
+    return cart_ahead;
+}
+
+static int naomi_cart_ahead_fill(uint32_t off) {
+    uint32_t ss = IsoInfo->sector_size;
+    uint32_t file = total(iso_fd);
+    uint8_t *buf;
+    uint32_t base;
+    uint32_t len;
+
+    cart_ahead_len = 0;
+    buf = naomi_cart_ahead_buf();
+    if(!buf || !ss || !file || off >= file) {
+        return 0;
+    }
+    base = off & ~(CART_ATA_SEC_SIZE - 1);
+    if(base >= file) {
+        return 0;
+    }
+    len = cart_ahead_cap;
+    if(base + len > file) {
+        len = file - base;
+    }
+    len &= ~(CART_ATA_SEC_SIZE - 1);
+    if(!len) {
+        return 0;
+    }
+    dcache_inval_range((uint32_t)buf, len);
+    fs_enable_dma(FS_DMA_HIDDEN);
+    if(ReadSectors(buf, base / ss, len / ss, NULL) != COMPLETED) {
+        return 0;
+    }
+    cart_ahead_off = base;
+    cart_ahead_len = len;
+    return 1;
+}
+
+static void naomi_cart_pio_fill(uint8_t *dst, uint32_t off, uint32_t size) {
+    uint32_t done = 0;
+
+    while(done < size) {
+        int n;
+
+        lseek(iso_fd, off + done, SEEK_SET);
+        n = read(iso_fd, dst + done, size - done);
+        if(n <= 0) {
+            return;
+        }
+        done += (uint32_t)n;
+    }
+}
+
+static void naomi_cart_ahead_read(uint8_t *dst, uint32_t off, uint32_t size) {
+    dcache_purge_range((uint32_t)dst, size);
+    dst = (uint8_t *)NONCACHED_ADDR((uint32_t)dst);
+    while(size) {
+        uint32_t n;
+
+        if(off < cart_ahead_off || off >= cart_ahead_off + cart_ahead_len) {
+            if(!naomi_cart_ahead_fill(off)
+                || off < cart_ahead_off
+                || off >= cart_ahead_off + cart_ahead_len) {
+                naomi_cart_pio_fill(dst, off, size);
+                return;
+            }
+        }
+        n = cart_ahead_off + cart_ahead_len - off;
+        if(n > size) {
+            n = size;
+        }
+        memcpy(dst, cart_ahead + (off - cart_ahead_off), n);
+        dst += n;
+        off += n;
+        size -= n;
+    }
+}
+
+
 /* ATA-sector mid: HIDDEN async (kick+return; next read drains) or SHARED.
  * Buffer stays 32-byte aligned. Unaligned head/tail stay PIO. */
 static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
@@ -374,6 +522,11 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
         tail += mid;
         mid = 0;
     }
+    if(naomi_cart_use_ahead()) {
+        head = size;
+        mid = 0;
+        tail = 0;
+    }
 
     if(params->type) {
         *((volatile uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 1;
@@ -382,11 +535,16 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
     if(head || tail) {
         fs_enable_dma(FS_DMA_DISABLED);
         if(head) {
-            naomi_cart_cache_read(dst, head);
-            lseek(iso_fd, off, SEEK_SET);
-            read(iso_fd, dst, head);
-            if(params->type) {
-                naomi_cart_cache_purge(dst, head);
+            if(naomi_cart_use_ahead()) {
+                naomi_cart_ahead_read(dst, off, head);
+            }
+            else {
+                naomi_cart_cache_read(dst, head);
+                lseek(iso_fd, off, SEEK_SET);
+                read(iso_fd, dst, head);
+                if(params->type) {
+                    naomi_cart_cache_purge(dst, head);
+                }
             }
         }
         if(tail) {
