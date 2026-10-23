@@ -68,6 +68,26 @@ void Box::setSize(float w, float h) {
 	height = h;
 }
 
+void Box::setBounds(float x, float top, float w, float h) {
+	float inner_w = w - borderWidth * 2.0f;
+	float inner_h = h - borderWidth * 2.0f;
+
+	if (inner_w < 0.0f) {
+		inner_w = 0.0f;
+	}
+	if (inner_h < 0.0f) {
+		inner_h = 0.0f;
+	}
+
+	width = inner_w;
+	height = inner_h;
+
+	Vector pos = getTranslate();
+	pos.x = x + borderWidth;
+	pos.y = top + h - borderWidth;
+	setTranslate(pos);
+}
+
 void Box::drawBox(float x, float y, float width, float height, float lineWidth, uint32 color, float zIndex, int radius)
 {
 	float dx = 0, dy = 0;
@@ -243,6 +263,13 @@ extern "C"
 	{
 		if (box_ptr != NULL) {
 			box_ptr->setSize(w, h);
+		}
+	}
+
+	void TSU_BoxSetBounds(Box *box_ptr, float x, float top, float width, float height)
+	{
+		if (box_ptr != NULL) {
+			box_ptr->setBounds(x, top, width, height);
 		}
 	}
 }

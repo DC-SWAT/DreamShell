@@ -29,6 +29,9 @@ public:
 	bool loadFromFile(const std::filesystem::path &path);
 
 	void setFilter(int type);
+	void setGap(float gap);
+	void setFixed(bool enabled);
+	void setBold(bool enabled);
 
 	void setColor(float r, float g, float b);
 	void setAlpha(float a);
@@ -59,6 +62,7 @@ private:
 	pvr_list_type_t	m_list;
 	float		m_a, m_r, m_g, m_b;
 	float		m_ps;
+	bool		m_bold;
 };
 
 #else
@@ -77,6 +81,9 @@ Font* TSU_FontCreate(const char *path, pvr_list_type_t list);
 void TSU_FontDestroy(Font **font_ptr);
 bool TSU_FontLoadFromFile(Font *font_ptr, const char *path);
 void TSU_FontSetFilter(Font *font_ptr, int type);
+void TSU_FontSetGap(Font *font_ptr, float gap);
+void TSU_FontSetFixed(Font *font_ptr, bool enabled);
+void TSU_FontSetBold(Font *font_ptr, bool enabled);
 
 void TSU_FontSetColor(Font *font_ptr, float r, float g, float b);
 void TSU_FontSetAlpha(Font *font_ptr, float a);

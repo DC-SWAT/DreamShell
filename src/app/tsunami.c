@@ -253,6 +253,29 @@ int appTsunamiParseFontResource(App_t *app, mxml_node_t *node, char *name, char 
 		return 0;
 	}
 
+	{
+		char *gap_text = FindXmlAttr("gap", node, NULL);
+		char *filter = FindXmlAttr("filter", node, NULL);
+
+		if(gap_text != NULL) {
+			TSU_FontSetGap(font, (float)atof(gap_text));
+		}
+		if(parseAppTsunamiBool(node, "fixed", 0)) {
+			TSU_FontSetFixed(font, 1);
+		}
+		if(parseAppTsunamiBool(node, "bold", 0)) {
+			TSU_FontSetBold(font, 1);
+		}
+		if(filter != NULL) {
+			if(!strcasecmp(filter, "nearest")) {
+				TSU_FontSetFilter(font, PVR_FILTER_NEAREST);
+			}
+			else if(!strcasecmp(filter, "bilinear")) {
+				TSU_FontSetFilter(font, PVR_FILTER_BILINEAR);
+			}
+		}
+	}
+
 	listAddItem(app->resources, LIST_ITEM_TSU_FONT, name, (void *)font, 0);
 	return 1;
 }
@@ -1002,7 +1025,7 @@ static int parseAppTsunamiBoxElement(App_t *app, mxml_node_t *node, SDL_Rect *pa
 
 	box = TSU_BoxCreate(parseAppTsunamiList(node, PVR_LIST_OP_POLY),
 		(float)(parent->x + x),
-		(float)(parent->y + y + h),
+		(float)(parent->y + y),
 		(float)w,
 		(float)h,
 		border_width,
@@ -1015,6 +1038,7 @@ static int parseAppTsunamiBoxElement(App_t *app, mxml_node_t *node, SDL_Rect *pa
 	}
 
 	parseAppTsunamiDrawableAttrs(node, (Drawable *)box, parent);
+	TSU_BoxSetBounds(box, (float)(parent->x + x), (float)(parent->y + y), (float)w, (float)h);
 
 	return addAppTsunamiElement(app, name, (void *)box, APP_TSU_DRAWABLE_BOX);
 }

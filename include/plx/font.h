@@ -57,7 +57,8 @@ typedef struct plx_fcxt {
 	point_t		pos;		/**< Output position */
 } plx_fcxt_t;
 
-#define PLX_FCXT_FIXED	0x0001		/**< Fixed width flag */
+#define PLX_FCXT_FIXED		0x0001	/**< Fixed width flag */
+#define PLX_FCXT_EM_SPACE	0x0002	/**< Space advances one em in fixed mode */
 
 /**
   Load a font from the VFS. Fonts are currently in the standard TXF format,
