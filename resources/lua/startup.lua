@@ -84,12 +84,14 @@ local DreamShell = {
 		os.execute("env USER Default");
 		local path = os.getenv("PATH");
 		local time = os.time();
+		local arcade = os.getenv("ARCADE");
 
 		print(os.getenv("HOST") .. " " .. os.getenv("VERSION") .. "\n");
 		print(os.getenv("ARCH") .. ": " .. os.getenv("BOARD_ID") .. "\n");
 		print("Date: " .. os.date() .. "\n");
 		print("Base path: " .. path .. "\n");
 		print("User: " .. os.getenv("USER") .. "\n");
+		print("Arcade mode: " .. (arcade == "1" and "yes" or "no") .. "\n");
 
 		local emu = os.getenv("EMU");
 
@@ -99,7 +101,7 @@ local DreamShell = {
 
 		print("\n");
 
-		if not MapleAttached("Keyboard") then
+		if arcade ~= "1" and not MapleAttached("Keyboard") then
 			table.insert(self.modules, "vkb");
 		end
 

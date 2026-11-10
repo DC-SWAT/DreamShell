@@ -113,6 +113,7 @@ void ResetSettings() {
 	cur->startup[16] = '\0';
 
 	cur->time_zone = 0;
+	cur->arcade = 0;
 	cur->version = DS_SETTIGS_VERSION;
 
 	if(loaded) {
@@ -300,7 +301,7 @@ static int SaveSettingsFile(const char *filename) {
 	return (res <= 0 ? 0 : 1);
 }
 
-int SaveSettings() {
+int SaveSettingsTo(int where) {
 
 	char fn[NAME_MAX];
 
@@ -308,12 +309,21 @@ int SaveSettings() {
 		current_set.version = DS_SETTIGS_VERSION;
 	}
 
-	if(SaveSettingsVMU()) {
-		return 1;
+	if(where == DS_SAVE_TO_VMU) {
+		return SaveSettingsVMU();
 	}
 
 	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
 	return SaveSettingsFile(fn);
+}
+
+int SaveSettings() {
+
+	if(SaveSettingsTo(DS_SAVE_TO_VMU)) {
+		return 1;
+	}
+
+	return SaveSettingsTo(DS_SAVE_TO_ROOT);
 }
 
 int GetVolumeFromSettings() {

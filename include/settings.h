@@ -12,8 +12,11 @@
 #include <dc/maple/mie.h>
 #include <naomi/input.h>
 
-/* need increment when settings structure changed */
-#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '3')
+/* Need increment when settings structure changed */
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '4')
+
+#define DS_SAVE_TO_ROOT 0
+#define DS_SAVE_TO_VMU 1
 
 typedef struct VideoSettings {
 
@@ -89,6 +92,9 @@ typedef struct Settings {
 	/* Time zone in minutes */
 	int time_zone;
 
+	/* Arcade cabinet mode */
+	int arcade;
+
 	/* Video */
 	VideoSettings_t video;
 
@@ -113,6 +119,7 @@ void ResetSettings();
 
 int LoadSettings();
 int SaveSettings();
+int SaveSettingsTo(int where);
 
 int GetVolumeFromSettings();
 

@@ -307,6 +307,7 @@ int InitDS() {
 	setenv("PWD", fs_getwd(), 1);
 	setenv("STARTUP_APP", GetStartupAppName(), 1);
 	setenv("MAIN_APP", GetMainAppName(), 1);
+	setenv("ARCADE", settings->arcade ? "1" : "0", 1);
 
 	IMG_Init(IMG_INIT_JPG | IMG_INIT_PNG);
 	InitEvents();

@@ -288,6 +288,7 @@ SetSettings
 ResetSettings
 LoadSettings
 SaveSettings
+SaveSettingsTo
 GetVolumeFromSettings
 GetStartupAppName
 GetMainAppName
