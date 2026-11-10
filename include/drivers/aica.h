@@ -102,6 +102,12 @@
 #define AICA_DMA_DISABLE        0
 #define AICA_DMA_ENABLE         1
 
+#define AICA_MEMORY_START       0x00800000
+#define AICA_MEMORY_END         0x00a00000
+#define AICA_MEMORY_8MB_END     0x01000000
+#define AICA_MEMORY_END_ARM     0x00200000
+#define AICA_MEMORY_8MB_END_ARM 0x00800000
+
 /**
  * AICA macros
  */

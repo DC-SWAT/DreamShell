@@ -4,7 +4,7 @@
 ! arch/dreamcast/kernel/cache.s
 !
 ! Copyright (C) 2001 Megan Potter
-! Copyright (C) 2014, 2016, 2023 Ruslan Rostovtsev
+! Copyright (C) 2014, 2016, 2023, 2026 Ruslan Rostovtsev
 ! Copyright (C) 2023, 2024 Andy Barajas
 ! Copyright (C) 2024 Paul Cercueil
 !
@@ -174,24 +174,18 @@ _dcache_flush_all:
 
 
 ! This routine goes through and forces a write-back and invalidate
-! on the specified data range. If the range is bigger than the dcache,
-! we purge the whole cache instead.
+! on the specified data range.
 !
 ! r4 is starting address
 ! r5 is size
     .align 2
 _dcache_purge_range:
-    ! Check that 0 < size < purge_check  
     tst      r5, r5
-    mov.l    purge_check, r2
-    
-    bt       .dpurge_exit       ! Exit early if no blocks to purge
-    mov.l    align_mask, r0 
+    mov.l    align_mask, r0
 
-    cmp/hi   r2, r5             ! Compare with purge_check
+    bt       .dpurge_exit       ! Exit early if no blocks to purge
     add      r4, r5             ! Get ending address from size
 
-    bt       _dcache_purge_all  ! If size > purge_check, jump to _dcache_purge_all
     and      r0, r4             ! Align start address
 
 .dpurge_loop:
@@ -270,14 +264,9 @@ dc_ubit_mask:
 ! and still be faster than dcache_flush_all.
 flush_check:
     .long    66560
-    
-! _dcache_purge_range can have size param set up to 39936 bytes 
-! and still be faster than dcache_purge_all.
-purge_check:
-    .long    39936 
 
-! Shared    
-p2_mask:    
+! Shared
+p2_mask:
     .long    0xa0000000
 ormask:
     .long    0x100000f0
@@ -285,5 +274,3 @@ align_mask:
     .long    ~31           ! Align address to 32-byte boundary
 cache_lines:
     .word    512           ! Total number of cache lines in dcache
-       
-
