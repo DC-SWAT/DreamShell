@@ -20,6 +20,7 @@ DEFAULT_MODULE_EXPORTS(app_arcade);
 
 #define ANALOG_THRESHOLD 64
 #define ARCADE_TEST_LAUNCH_EVENT (SDL_USEREVENT + 12)
+#define ARCADE_EXIT_EVENT (SDL_USEREVENT + 13)
 
 AppArcadeContext_t self;
 
@@ -35,6 +36,10 @@ static bool StartMediaFadeOutIfPlaying(void);
 static void StartLoaderThread(void);
 static void *LoaderThread(void *param);
 
+static bool IsArcadeMode(void) {
+    return GetSettings()->arcade != 0;
+}
+
 static void ScheduleTestLaunch(int idx) {
     SDL_Event ev;
 
@@ -45,6 +50,18 @@ static void ScheduleTestLaunch(int idx) {
     memset(&ev, 0, sizeof(ev));
     ev.type = ARCADE_TEST_LAUNCH_EVENT;
     ev.user.code = idx;
+    SDL_PushEvent(&ev);
+}
+
+static void ScheduleArcadeExit(void) {
+    SDL_Event ev;
+
+    if (self.launching) {
+        return;
+    }
+
+    memset(&ev, 0, sizeof(ev));
+    ev.type = ARCADE_EXIT_EVENT;
     SDL_PushEvent(&ev);
 }
 
@@ -224,6 +241,11 @@ static void ArcadeTestCb(mie_jvs_input_t input, uint32_t mask) {
     (void)mask;
 
     if (self.launching) {
+        return;
+    }
+
+    if (IsArcadeMode()) {
+        ScheduleArcadeExit();
         return;
     }
 
@@ -682,11 +704,23 @@ static void InputHandler(void *ds_event, void *param, int action) {
         return;
     }
 
+    if (event->type == ARCADE_EXIT_EVENT) {
+        OpenMainApp();
+        return;
+    }
+
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
+            if (IsArcadeMode()) {
+                if (event->jbutton.button == SDL_DC_START) {
+                    OnSelect();
+                }
+                break;
+            }
+
             switch(event->jbutton.button) {
                 case SDL_DC_B: OnBack(); break;
-                case SDL_DC_A: 
+                case SDL_DC_A:
                 case SDL_DC_START: OnSelect(); break;
                 case SDL_DC_Y: OnIsoLoader(); break;
                 default: break;
@@ -778,8 +812,16 @@ static void InputHandler(void *ds_event, void *param, int action) {
                 case SDLK_UP: SwitchPage(-2); break;
                 case SDLK_DOWN: SwitchPage(2); break;
                 case SDLK_RETURN:
-                case SDLK_KP_ENTER: OnSelect(); break;
-                case SDLK_SLASH: OnIsoLoader(); break;
+                case SDLK_KP_ENTER:
+                    if (!IsArcadeMode()) {
+                        OnSelect();
+                    }
+                    break;
+                case SDLK_SLASH:
+                    if (!IsArcadeMode()) {
+                        OnIsoLoader();
+                    }
+                    break;
                 case SDLK_BACKSPACE:
                 case SDLK_ESCAPE: OnBack(); break;
                 default: break;
