@@ -14,6 +14,8 @@ void SettingsApp_ResetSettings(GUI_Widget *widget);
 
 void SettingsApp_SaveSettings(GUI_Widget *widget);
 
+void SettingsApp_Exit(GUI_Widget *widget);
+
 void SettingsApp_DialogConfirm(GUI_Widget *widget);
 
 void SettingsApp_DialogCancel(GUI_Widget *widget);
@@ -33,6 +35,8 @@ void SettingsApp_ToggleMainApp(GUI_Widget *widget);
 void SettingsApp_ToggleRoot(GUI_Widget *widget);
 
 void SettingsApp_ToggleStartup(GUI_Widget *widget);
+
+void SettingsApp_ToggleArcade(GUI_Widget *widget);
 
 void SettingsApp_TimeChange(GUI_Widget *widget);
 

@@ -1,7 +1,7 @@
 /* DreamShell ##version##
 
    module.c - Settings app module
-   Copyright (C)2016-2025 SWAT 
+   Copyright (C)2016-2026 SWAT 
 */
 
 #include "ds.h"
@@ -14,8 +14,17 @@ DEFAULT_MODULE_EXPORTS(app_settings);
 enum {
 	DIALOG_ACTION_NONE = 0,
 	DIALOG_ACTION_RESET,
-	DIALOG_ACTION_SAVE
+	DIALOG_ACTION_SAVE,
+	DIALOG_ACTION_EXIT,
+	DIALOG_ACTION_DONE
 };
+
+#define DIALOG_CONFIRM_BUTTON 0
+#define DIALOG_CANCEL_BUTTON 1
+#define DIALOG_CONFIRM_TEXT "Confirm"
+#define DIALOG_CANCEL_TEXT "Cancel"
+#define DIALOG_VMU_TEXT "VMU"
+#define DIALOG_ROOT_TEXT "Root"
 
 enum {
 	NATIVE_MODE_AUTO = 0,
@@ -45,6 +54,8 @@ static struct {
 	GUI_Widget *pages;
 	GUI_Widget *dialog;
 	int dialog_action;
+	int exit_after_dialog;
+	Settings_t stored;
 	GUI_Widget *sysdate[6];
 	GUI_Widget *volume_knob;
 	GUI_Widget *volume_label;
@@ -66,7 +77,7 @@ static void SetupVideoSettings();
 static void SetupBootSettings();
 static void SetupAudioSettings();
 static void SetupTimezoneSettings();
-static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*toggle_fn)(GUI_Widget *));
+static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, const char *selected, void (*toggle_fn)(GUI_Widget *));
 
 static int UncheckBesides(GUI_Widget *widget, const char *label) {
 
@@ -144,6 +155,7 @@ void SettingsApp_Init(App_t *app) {
 		SetupBootSettings();
 		SetupAudioSettings();
 		SetupTimezoneSettings();
+		memcpy(&self.stored, self.settings, sizeof(self.stored));
 	}
 }
 
@@ -178,24 +190,126 @@ static void DoResetSettings() {
 	SetupTimezoneSettings();
 	SetScreenMode(self.settings->video.virt_width, self.settings->video.virt_height, 0.0f, 0.0f, 1.0f);
 	SetScreenFilter(self.settings->video.tex_filter);
+	memcpy(&self.stored, self.settings, sizeof(self.stored));
+}
+
+static int SettingsChanged(void) {
+	return memcmp(self.settings, &self.stored, sizeof(self.stored)) != 0;
+}
+
+static int VmuPresent(void) {
+	return maple_enum_type(0, MAPLE_FUNC_MEMCARD) != NULL;
+}
+
+static void SetDialogButtonText(int index, const char *text) {
+	GUI_Widget *content;
+	GUI_Widget *buttons;
+	GUI_Widget *button;
+	GUI_Widget *caption;
+	int count;
+
+	if(!self.dialog) {
+		return;
+	}
+
+	content = GUI_ContainerGetChild(self.dialog, 0);
+
+	if(!content) {
+		return;
+	}
+
+	count = GUI_ContainerGetCount(content);
+
+	if(count <= 0) {
+		return;
+	}
+
+	buttons = GUI_ContainerGetChild(content, count - 1);
+	button = buttons ? GUI_ContainerGetChild(buttons, index) : NULL;
+	caption = button ? GUI_ButtonGetCaption(button) : NULL;
+
+	if(caption) {
+		GUI_LabelSetText(caption, text);
+	}
+}
+
+static void ShowConfirmDialog(const char *title, const char *body, const char *confirm_text, const char *cancel_text, int action) {
+	self.dialog_action = action;
+	SetDialogButtonText(DIALOG_CONFIRM_BUTTON, confirm_text);
+	SetDialogButtonText(DIALOG_CANCEL_BUTTON, cancel_text);
+	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, title, body);
+}
+
+static void ShowSaveTargetDialog(void) {
+	ShowConfirmDialog("Save settings?", "Choose where to save settings.", DIALOG_VMU_TEXT, DIALOG_ROOT_TEXT, DIALOG_ACTION_SAVE);
+}
+
+static void FinishSave(int where) {
+	int ok;
+	int exit_after;
+	char body[64];
+
+	SetDialogButtonText(DIALOG_CONFIRM_BUTTON, DIALOG_CONFIRM_TEXT);
+	SetDialogButtonText(DIALOG_CANCEL_BUTTON, DIALOG_CANCEL_TEXT);
+	GUI_DialogShow(self.dialog, DIALOG_MODE_INFO, "Saving settings", "Please wait, saving settings to device...");
+	ok = SaveSettingsTo(where);
+	exit_after = self.exit_after_dialog;
+
+	if(ok) {
+		memcpy(&self.stored, self.settings, sizeof(self.stored));
+	}
+	else {
+		exit_after = 0;
+		self.exit_after_dialog = 0;
+	}
+
+	if(exit_after) {
+		self.dialog_action = DIALOG_ACTION_NONE;
+		self.exit_after_dialog = 0;
+		GUI_DialogHide(self.dialog);
+		dsystem("app -o");
+		return;
+	}
+
+	if(ok) {
+		snprintf(body, sizeof(body), where == DS_SAVE_TO_VMU ? "Saved to VMU." : "Saved to root.");
+	}
+	else {
+		snprintf(body, sizeof(body), where == DS_SAVE_TO_VMU ? "Can't save to VMU." : "Can't save to root.");
+	}
+
+	self.dialog_action = DIALOG_ACTION_DONE;
+	GUI_DialogShow(self.dialog, DIALOG_MODE_ALERT, "Saving settings", body);
 }
 
 void SettingsApp_ResetSettings(GUI_Widget *widget) {
-	self.dialog_action = DIALOG_ACTION_RESET;
-	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Reset settings?", "Are you sure you want to reset all settings?");
+	(void)widget;
+	ShowConfirmDialog("Reset settings?", "Are you sure you want to reset all settings?", DIALOG_CONFIRM_TEXT, DIALOG_CANCEL_TEXT, DIALOG_ACTION_RESET);
 }
 
 void SettingsApp_SaveSettings(GUI_Widget *widget) {
-	self.dialog_action = DIALOG_ACTION_SAVE;
-	char body[NAME_MAX];
+	(void)widget;
 
-	if (maple_enum_type(0, MAPLE_FUNC_MEMCARD)) {
-		snprintf(body, sizeof(body), "Save settings to first VMU?");
+	self.exit_after_dialog = 0;
+
+	if(!VmuPresent()) {
+		FinishSave(DS_SAVE_TO_ROOT);
+		return;
 	}
-	else {
-		snprintf(body, sizeof(body), "No VMU detected. Save settings to %s?", getenv("PATH"));
+
+	ShowSaveTargetDialog();
+}
+
+void SettingsApp_Exit(GUI_Widget *widget) {
+	(void)widget;
+
+	if(!SettingsChanged()) {
+		dsystem("app -o");
+		return;
 	}
-	GUI_DialogShow(self.dialog, DIALOG_MODE_CONFIRM, "Save settings?", body);
+
+	self.exit_after_dialog = 0;
+	ShowConfirmDialog("Saving settings", "Do you want to save changed settings?", DIALOG_CONFIRM_TEXT, DIALOG_CANCEL_TEXT, DIALOG_ACTION_EXIT);
 }
 
 void SettingsApp_DialogConfirm(GUI_Widget *widget) {
@@ -203,23 +317,57 @@ void SettingsApp_DialogConfirm(GUI_Widget *widget) {
 		case DIALOG_ACTION_RESET:
 			GUI_DialogShow(widget, DIALOG_MODE_INFO, "Resetting settings", "Please wait, removing settings files...");
 			DoResetSettings();
+			self.dialog_action = DIALOG_ACTION_DONE;
 			GUI_DialogShow(widget, DIALOG_MODE_ALERT, "Resetting settings", "Completed.");
 			break;
 		case DIALOG_ACTION_SAVE:
-			GUI_DialogShow(widget, DIALOG_MODE_INFO, "Saving settings", "Please wait, saving settings to device...");
-			SaveSettings();
-			GUI_DialogShow(widget, DIALOG_MODE_ALERT, "Saving settings", "Completed.");
+			FinishSave(DS_SAVE_TO_VMU);
+			break;
+		case DIALOG_ACTION_EXIT:
+			if(VmuPresent()) {
+				self.exit_after_dialog = 1;
+				ShowSaveTargetDialog();
+			}
+			else {
+				self.exit_after_dialog = 1;
+				FinishSave(DS_SAVE_TO_ROOT);
+			}
+			break;
+		case DIALOG_ACTION_DONE:
+			{
+				int exit_after = self.exit_after_dialog;
+
+				self.dialog_action = DIALOG_ACTION_NONE;
+				self.exit_after_dialog = 0;
+				GUI_DialogHide(widget);
+
+				if(exit_after) {
+					dsystem("app -o");
+				}
+			}
 			break;
 		default:
+			self.dialog_action = DIALOG_ACTION_NONE;
 			GUI_DialogHide(widget);
 			break;
 	}
-	self.dialog_action = DIALOG_ACTION_NONE;
 }
 
 void SettingsApp_DialogCancel(GUI_Widget *widget) {
+	int action = self.dialog_action;
+
+	if(action == DIALOG_ACTION_SAVE) {
+		FinishSave(DS_SAVE_TO_ROOT);
+		return;
+	}
+
 	self.dialog_action = DIALOG_ACTION_NONE;
+	self.exit_after_dialog = 0;
 	GUI_DialogHide(widget);
+
+	if(action == DIALOG_ACTION_EXIT) {
+		dsystem("app -o");
+	}
 }
 
 void SettingsApp_Reboot(GUI_Widget *widget) {
@@ -416,24 +564,132 @@ void SettingsApp_ToggleStartup(GUI_Widget *widget) {
 	}
 }
 
+void SettingsApp_ToggleArcade(GUI_Widget *widget) {
+	self.settings->arcade = GUI_WidgetGetState(widget);
+}
+
 void SettingsApp_ToggleStartupSound(GUI_Widget *widget) {
 	self.settings->audio.startup_enabled = GUI_WidgetGetState(widget);
 }
 
 
-static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*toggle_fn)(GUI_Widget *)) {
+typedef struct AppListScroll {
+	GUI_Widget *panel;
+	GUI_Widget *scroll;
+	int content_h;
+	int view_h;
+	int travel;
+} AppListScroll_t;
+
+static void AppListScrollMoved(void *data) {
+	AppListScroll_t *scroll = (AppListScroll_t *)data;
+	int knob_y;
+	int max_offset;
+	int offset;
+
+	if(!scroll || !scroll->panel) {
+		return;
+	}
+
+	max_offset = scroll->content_h - scroll->view_h;
+
+	if(max_offset <= 0 || scroll->travel <= 0) {
+		GUI_PanelSetYOffset(scroll->panel, 0);
+		return;
+	}
+
+	knob_y = GUI_ScrollBarGetVerticalPosition(scroll->scroll);
+	offset = (knob_y * max_offset) / scroll->travel;
+
+	if(offset > max_offset) {
+		offset = max_offset;
+	}
+
+	GUI_PanelSetYOffset(scroll->panel, offset);
+}
+
+static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
+	AppListScroll_t *data;
+	GUI_Callback *callback;
+	GUI_Surface *knob;
+	SDL_Rect view;
+	SDL_Rect track;
+	int count;
+	int content_h;
+	int knob_h;
+	int travel;
+
+	if(!panel || !scroll) {
+		return;
+	}
+
+	view = GUI_WidgetGetArea(panel);
+	count = GUI_ContainerGetCount(panel);
+	content_h = 0;
+
+	if(count > 0) {
+		SDL_Rect last = GUI_WidgetGetArea(GUI_ContainerGetChild(panel, count - 1));
+		content_h = last.y + last.h;
+	}
+
+	if(content_h <= view.h) {
+		GUI_WidgetSetFlags(scroll, WIDGET_HIDDEN);
+		GUI_PanelSetYOffset(panel, 0);
+		return;
+	}
+
+	track = GUI_WidgetGetArea(scroll);
+	knob = GUI_ScrollBarGetKnobImage(scroll);
+	knob_h = knob ? GUI_SurfaceGetHeight(knob) : track.w * 2;
+	travel = track.h - knob_h;
+
+	if(travel < 1) {
+		GUI_WidgetSetFlags(scroll, WIDGET_HIDDEN);
+		return;
+	}
+
+	data = (AppListScroll_t *)malloc(sizeof(AppListScroll_t));
+
+	if(!data) {
+		return;
+	}
+
+	data->panel = panel;
+	data->scroll = scroll;
+	data->content_h = content_h;
+	data->view_h = view.h;
+	data->travel = travel;
+
+	callback = GUI_CallbackCreate(AppListScrollMoved, free, data);
+
+	if(!callback) {
+		free(data);
+		return;
+	}
+
+	GUI_WidgetClearFlags(scroll, WIDGET_HIDDEN);
+	GUI_ScrollBarSetVerticalPosition(scroll, 0);
+	GUI_ScrollBarSetMovedCallback(scroll, callback);
+	GUI_ObjectDecRef((GUI_Object *)callback);
+	GUI_PanelSetYOffset(panel, 0);
+}
+
+static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, const char *selected, void (*toggle_fn)(GUI_Widget *)) {
 
 	Item_list_t *applist = GetAppList();
 	GUI_Font *font = APP_GET_FONT("arial");
+	SDL_Rect area;
 
 	if(!applist || !panel) {
 		return;
 	}
 
-	if(GUI_ContainerGetCount(panel) > 1) {
+	if(GUI_ContainerGetCount(panel) > 0) {
 		UncheckBesides(panel, selected);
 		return;
 	}
+
+	area = GUI_WidgetGetArea(panel);
 
 	Item_t *item = listGetItemFirst(applist);
 
@@ -445,7 +701,7 @@ static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*to
 		SDL_Rect ts = GUI_FontGetTextSize(font, app->name);
 
 		int h = ts.h + 8;
-		int w = ts.w + h + 12;
+		int w = area.w > 0 ? area.w : ts.w + h + 12;
 
 		GUI_Widget *b = GUI_ToggleButtonCreate(app->name, 0, 0, w, h);
 
@@ -460,7 +716,7 @@ static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*to
 			GUI_WidgetSetState(b, 0);
 		}
 
-		GUI_Widget *l = GUI_LabelCreate(app->name, 22, 0, w, h - 5, font, app->name);
+		GUI_Widget *l = GUI_LabelCreate(app->name, 22, 0, w - 24, h - 5, font, app->name);
 		GUI_LabelSetTextColor(l, 51, 51, 51);
 		GUI_WidgetSetAlign(l, WIDGET_HORIZ_LEFT | WIDGET_VERT_CENTER);
 		GUI_ButtonSetCaption(b, l);
@@ -469,6 +725,8 @@ static void SetupAppListPanel(GUI_Widget *panel, const char *selected, void (*to
 		GUI_ContainerAdd(panel, b);
 		GUI_ObjectDecRef((GUI_Object *) b);
 	}
+
+	BindAppListScroll(panel, scroll);
 }
 
 
@@ -486,11 +744,17 @@ static void SetupBootSettings() {
 	panel = APP_GET_WIDGET("boot-startup");
 	UncheckBesides(panel, self.settings->startup);
 
+	panel = APP_GET_WIDGET("arcade-chk");
+
+	if(panel) {
+		GUI_WidgetSetState(panel, self.settings->arcade ? 1 : 0);
+	}
+
 	panel = APP_GET_WIDGET("boot-startup-app");
-	SetupAppListPanel(panel, self.settings->startup_app, SettingsApp_ToggleStartupApp);
+	SetupAppListPanel(panel, APP_GET_WIDGET("boot-startup-scroll"), self.settings->startup_app, SettingsApp_ToggleStartupApp);
 
 	panel = APP_GET_WIDGET("boot-main-app");
-	SetupAppListPanel(panel, self.settings->main_app, SettingsApp_ToggleMainApp);
+	SetupAppListPanel(panel, APP_GET_WIDGET("boot-main-scroll"), self.settings->main_app, SettingsApp_ToggleMainApp);
 }
 
 static void update_rtc_ui() {
