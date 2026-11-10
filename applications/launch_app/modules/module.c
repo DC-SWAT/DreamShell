@@ -888,6 +888,11 @@ static int MieOnlyInput(void) {
 }
 
 static void SuppressVirtKeyboard(void) {
+    if(GetModuleByName("vkb") == NULL) {
+        self.vkb_suppressed = 1;
+        return;
+    }
+
     if(!MieOnlyInput()) {
         return;
     }
