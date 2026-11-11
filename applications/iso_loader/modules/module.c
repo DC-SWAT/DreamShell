@@ -1779,8 +1779,7 @@ static void *selectFile_worker(void *p) {
 				}
 				if(GUI_CardStackGetIndex(self.pages) == 0) {
 					ffplay_params_t params;
-					memset(&params, 0, sizeof(params));
-					params.scale = 1.0f;
+					ffplay_params_init(&params);
 					params.loop = 1;
 					params.fade_in = 1000;
 

@@ -10,6 +10,7 @@
 
 #include <arch/types.h>
 #include <stdint.h>
+#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,10 +28,23 @@ typedef struct ffplay_params {
     int verbose;
     int show_stat;
     int fade_in;
+    int volume;
 
     const char *force_format;
     void (*update_callback)(int64_t current_pos, int64_t total_duration);
 } ffplay_params_t;
+
+/*
+    Fill playback parameters with defaults.
+    Volume -1 uses the settings volume.
+*/
+static inline void ffplay_params_init(ffplay_params_t *params) {
+    memset(params, 0, sizeof(*params));
+    params->x = -1;
+    params->y = -1;
+    params->scale = 1.0f;
+    params->volume = -1;
+}
 
 typedef struct ffplay_info {
     int64_t duration;

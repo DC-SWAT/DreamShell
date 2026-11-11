@@ -68,6 +68,15 @@ void StopCDDATrack() {
     }
 }
 
+static int PlaybackVolume(void) {
+    int volume = GetVolumeFromSettings();
+
+    if (GetSettings()->arcade && self.coins <= 0) {
+        volume = 0;
+    }
+    return volume;
+}
+
 void PlayCDDATrack(const char *file, int loop) {
 
     StopCDDATrack();
@@ -82,7 +91,7 @@ void PlayCDDATrack(const char *file, int loop) {
         }
         // ds_printf("DS_OK: Start playing: %s\n", file);
 
-        int volume = GetVolumeFromSettings();
+        int volume = PlaybackVolume();
         if(volume >= 0) {
             wav_volume(wav_hnd, volume);
         }
@@ -107,17 +116,14 @@ void PlayTrailer(int index) {
     }
 
     strncpy(self.trailer.path, g->trailer_path, NAME_MAX);
-    memset(&self.trailer.params, 0, sizeof(ffplay_params_t));
+    ffplay_params_init(&self.trailer.params);
 
     self.trailer.params.x = self.video_x;
     self.trailer.params.y = self.video_y;
     self.trailer.params.width = self.video_w;
     self.trailer.params.height = self.video_h;
-    self.trailer.params.scale = 1.0f;
-    self.trailer.params.fullscreen = 0;
-    self.trailer.params.loop = 0;
     self.trailer.params.fade_in = self.config.video_fade_in_ms;
-    self.trailer.params.show_stat = 0;
+    self.trailer.params.volume = PlaybackVolume();
 
     self.trailer.active = true;
     self.trailer.thread = thd_create(1, TrailerThread, NULL);

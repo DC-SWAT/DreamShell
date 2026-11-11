@@ -469,10 +469,16 @@ static int audio_init(AVCodecContext *codec) {
 
 static void audio_start() {
     AICA_CMDSTR_CHANNEL(tmp, cmd, chan);
-    int vol = GetVolumeFromSettings();
+    int vol = vid->params.volume;
 
     if(vol < 0) {
+        vol = GetVolumeFromSettings();
+    }
+    if(vol < 0) {
         vol = 240;
+    }
+    if(vol > 255) {
+        vol = 255;
     }
     aud->vol = vol;
 

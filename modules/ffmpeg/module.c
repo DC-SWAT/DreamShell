@@ -185,11 +185,8 @@ int builtin_ffplay_cmd(int argc, char *argv[]) {
     char *file = NULL;
     ffplay_params_t params;
 
-    memset(&params, 0, sizeof(ffplay_params_t));
+    ffplay_params_init(&params);
     params.fullscreen = 1;
-    params.x = -1;
-    params.y = -1;
-    params.scale = 1.0f;
 
     struct cfg_option options[] = {
         {"play",   		'p', NULL, CFG_BOOL,  (void *) &play,  	             0},
