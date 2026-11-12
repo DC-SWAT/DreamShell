@@ -541,10 +541,14 @@ SDL_RWops *SDL_RWFromFile(const char *file, const char *mode)
 	}
 	
 	if(SDL_strchr(mode,'+') != NULL) {
-		if((dc_mode & O_WRONLY) || (dc_mode & O_RDWR)) {
-			dc_mode &= ~(O_CREAT | O_TRUNC);
-		} else {
-			dc_mode |= O_RDONLY;
+		if(SDL_strchr(mode, 'w') != NULL) {
+			dc_mode = O_RDWR | O_CREAT | O_TRUNC;
+		}
+		else if(SDL_strchr(mode, 'a') != NULL) {
+			dc_mode = O_RDWR | O_CREAT | O_APPEND;
+		}
+		else {
+			dc_mode = O_RDWR;
 		}
 	}
 	
