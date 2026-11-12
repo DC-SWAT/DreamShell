@@ -180,6 +180,7 @@ typedef struct AppArcadeContext {
     AlphaFader *page_fader;
     AlphaFader *coin_fader;
     int coins;
+    int coin_locked;
     volatile uint8_t coins_dirty;
 
     struct {

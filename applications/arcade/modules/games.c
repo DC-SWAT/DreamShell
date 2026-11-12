@@ -266,6 +266,22 @@ void UnloadGameVisual(int index) {
     }
 }
 
+static bool PathIsPng(const char *path) {
+    int len;
+
+    if (!path) {
+        return false;
+    }
+
+    len = strlen(path);
+
+    if (len < 4) {
+        return false;
+    }
+
+    return !strcasecmp(path + len - 4, ".png");
+}
+
 void PreloadDefaultCover(void) {
     if (self.def_cover_texture) {
         return;
@@ -311,11 +327,13 @@ void LoadGameVisual(int index, int fly_in_dir) {
     bool is_transparent = false;
 
     if (g->has_cover) {
+        is_transparent = PathIsPng(g->cover_path);
         g->texture = TSU_TextureCreateEmpty();
-        if (!TSU_TextureLoadFromFile(g->texture, g->cover_path, true, false, 0)) {
+        if (!TSU_TextureLoadFromFile(g->texture, g->cover_path, is_transparent, false, 0)) {
             TSU_TextureDestroy(&g->texture);
             g->texture = NULL;
             g->has_cover = false;
+            is_transparent = false;
         }
     }
     else if (g->game_file[0]) {

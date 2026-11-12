@@ -40,6 +40,10 @@ static bool IsArcadeMode(void) {
     return GetSettings()->arcade != 0;
 }
 
+static bool PlayerLocked(void) {
+    return IsArcadeMode() && self.coins <= 0;
+}
+
 static void ScheduleTestLaunch(int idx) {
     SDL_Event ev;
 
@@ -275,8 +279,37 @@ static void UpdateCoinLabel(void) {
     self.coins_dirty = 0;
 }
 
+static void ApplyCoinVolume(void) {
+    int locked;
+    int vol;
+
+    if (!IsArcadeMode()) {
+        return;
+    }
+
+    locked = self.coins <= 0;
+    if (self.coin_locked == locked) {
+        return;
+    }
+
+    self.coin_locked = locked;
+    vol = GetMediaVolume();
+    if (ffplay_is_playing()) {
+        ffplay_set_volume(vol);
+    }
+    if (IsCDDATrackPlaying()) {
+        SetCDDAVolume(vol);
+    }
+}
+
 static void RefreshCoinLabelIfNeeded(void) {
-    if(!self.coin_label || self.loader_active || !self.coins_dirty) {
+    if (!self.coins_dirty) {
+        return;
+    }
+
+    ApplyCoinVolume();
+
+    if (!self.coin_label || self.loader_active) {
         return;
     }
 
@@ -709,6 +742,10 @@ static void InputHandler(void *ds_event, void *param, int action) {
         return;
     }
 
+    if (PlayerLocked()) {
+        return;
+    }
+
     switch(event->type) {
         case SDL_JOYBUTTONDOWN:
             if (IsArcadeMode()) {
@@ -728,6 +765,23 @@ static void InputHandler(void *ds_event, void *param, int action) {
             break;
 
         case SDL_JOYAXISMOTION:
+            if (IsArcadeMode()) {
+                if (event->jaxis.axis == 2) {
+                    if (event->jaxis.value > ANALOG_THRESHOLD) {
+                        if (!self.r_trig_held) {
+                            OnSelect();
+                            self.r_trig_held = true;
+                        }
+                    }
+                    else {
+                        self.r_trig_held = false;
+                    }
+                    break;
+                }
+                if (event->jaxis.axis == 3) {
+                    break;
+                }
+            }
             if (event->jaxis.axis == 0) { // Analog X
                 int ax = event->jaxis.value;
                 if (ax < -ANALOG_THRESHOLD) {
@@ -1347,7 +1401,9 @@ void ArcadeApp_Open(App_t *app) {
         mie_jvs_callback(MIE_JVS_IN_SYSTEM, MIE_JVS_SYS_TEST_BIT, ArcadeTestCb);
 
         self.coins = (int)naomi_coins_count();
+        self.coin_locked = self.coins <= 0;
         UpdateCoinLabel();
+        SetUIVisibility(true);
 
         self.input_event = AddEvent("ArcadeInput", EVENT_TYPE_INPUT, EVENT_PRIO_DEFAULT, InputHandler, NULL);
         self.video_event = AddEvent("ArcadeVideo", EVENT_TYPE_VIDEO, EVENT_PRIO_DEFAULT, VideoHandler, NULL);

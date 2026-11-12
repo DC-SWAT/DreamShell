@@ -146,6 +146,10 @@ void StopMedia() {
 }
 
 int GetMediaVolume(void) {
+    if (GetSettings()->arcade && self.coins <= 0) {
+        return 0;
+    }
+
     if (self.config.media_volume >= 0) {
         return self.config.media_volume;
     }
