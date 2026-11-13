@@ -223,7 +223,7 @@ char *isoldr_make_preset_filename(const char *image_file, uint8_t *md5) {
 	char base_path[NAME_MAX];
 
 	memset(preset_filename_buf, 0, sizeof(preset_filename_buf));
-	snprintf(base_path, NAME_MAX, "%s/apps/iso_loader/presets", getenv("PATH"));
+	snprintf(base_path, NAME_MAX, "%s/appdata/iso_loader/presets", getenv("HOME"));
 	format_preset_filename(base_path, image_file, md5, preset_filename_buf);
 	return preset_filename_buf;
 }

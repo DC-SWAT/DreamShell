@@ -618,7 +618,8 @@ void video_screenshot() {
 		req = 0;
 	}
 
-	char filename[] = "/DS/screenshot/game_scr_001.ppm";
+	/* FIXME: Pass the home directory. */
+	char filename[] = "/DS/home/screenshot/game_scr_001.ppm";
 	char header[] = "# DreamShell ISO Loader\n640 480\n255\n";
 	const size_t header_len = strlen(header);
 

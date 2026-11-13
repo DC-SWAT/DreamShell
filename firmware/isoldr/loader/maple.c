@@ -495,15 +495,18 @@ int maple_init_vmu(int num, int full_featured) {
 
     if (vmu_fd < 0) {
 
-        filename = "/DS/vmu/vmu001.vmd";
-        set_file_number(filename, num);
+        /* FIXME: Pass the home directory. */
+        char shared[] = "/DS/home/vmu/vmu001.vmd";
+        set_file_number(shared, num);
+        vmu_fd = open(shared, flags);
 
         if (vmu_fd < 0) {
-            vmu_fd = open(filename + 3, flags);
-            if (vmu_fd < 0) {
-                LOGFF("can't find VMU dump: %d\n", num);
-                return -1;
-            }
+            vmu_fd = open(shared + 3, flags);
+        }
+
+        if (vmu_fd < 0) {
+            LOGFF("can't find VMU dump: %d\n", num);
+            return -1;
         }
     }
 

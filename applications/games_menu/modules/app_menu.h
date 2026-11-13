@@ -21,19 +21,14 @@
 #define IDE_PATH "/ide"
 #define IDE_DS_PATH "/ide/DS"
 #define IDE_GAMES_PATH "/ide/games"
-#define IDE_COVERS_PATH "/ide/DS/apps/games_menu/covers"
 
 #define SD_PATH "/sd"
 #define SD_DS_PATH "/sd/DS"
 #define SD_GAMES_PATH "/sd/games"
-#define SD_COVERS_PATH "/sd/DS/apps/games_menu/covers"
 
 #define CD_PATH "/cd"
 #define CD_DS_PATH "/cd"
 #define CD_GAMES_PATH "/cd/games"
-#define CD_COVERS_PATH "/cd/apps/games_menu/covers"
-
-#define COVERS_RELATIVE_PATH "DS/apps/games_menu/covers"
 
 #define MOTOSHORT(p) ((*(p)) << 8) + *(p + 1)
 #define MAX_SIZE_CDDA 0
@@ -84,14 +79,14 @@ struct MenuStructure
 	char default_dir[20];
 	char games_config_path[100];
 	char games_path[NAME_MAX];
-	char covers_path[50];
+	char covers_path[NAME_MAX];
 	char last_game[NAME_MAX];
 	char category[32];
 	char theme[16];
 
 	char default_dir_sd[20];
 	char games_path_sd[NAME_MAX];
-	char covers_path_sd[50];
+	char covers_path_sd[NAME_MAX];
 
 	bool ffmpeg_modules_loaded;
 	Module_t *ffmpeg_modules[FFMPEG_MODULES_COUNT];

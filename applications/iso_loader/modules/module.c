@@ -296,8 +296,12 @@ void isoLoader_ShowGames(GUI_Widget *widget) {
 static void check_link_file(void) {
 	char save_file[NAME_MAX];
 	char scripts_dir[NAME_MAX];
+	const char *home = getenv("HOME");
 
-	GetMainAppSubdir(scripts_dir, sizeof(scripts_dir), "scripts");
+	if(home == NULL || home[0] == '\0')
+		return;
+
+	snprintf(scripts_dir, sizeof(scripts_dir), "%s/shortcuts/scripts", home);
 	snprintf(save_file, NAME_MAX, "%s/%s.dsc", scripts_dir, GUI_TextEntryGetText(self.linktext));
 
 	if(FileExists(save_file)) {
@@ -770,12 +774,18 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	char save_file[NAME_MAX];
 	char subdir[NAME_MAX];
 	char cmd[NAME_MAX * 2];
+	const char *home;
 	const char *tmpval;
 	int i;
 
 	StopCDDATrack();
 	stopFFplayPlayback();
-	GetMainAppSubdir(subdir, sizeof(subdir), "scripts");
+	home = getenv("HOME");
+
+	if(home == NULL || home[0] == '\0')
+		return;
+
+	snprintf(subdir, sizeof(subdir), "%s/shortcuts/scripts", home);
 	snprintf(save_file, NAME_MAX, "%s/%s.dsc", subdir, GUI_TextEntryGetText(self.linktext));
 
 	fd = fopen(save_file, "w");
@@ -944,7 +954,12 @@ void isoLoader_MakeShortcut(GUI_Widget *widget) {
 	fprintf(fd, "console --show\n");
 	fclose(fd);
 
-	GetMainAppSubdir(subdir, sizeof(subdir), "images");
+	snprintf(subdir, sizeof(subdir), "%s/shortcuts/images", home);
+
+	if(!DirExists(subdir)) {
+		mkpath(subdir);
+	}
+
 	saveShortcutIcon(GUI_TextEntryGetText(self.linktext), subdir);
 	isoLoader_ShowGames(self.settings);
 }

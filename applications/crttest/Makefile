@@ -26,6 +26,7 @@ clean:
 install: app.xml $(DEPS) sounds/theme.wav font/crttest.txf $(ART)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
+	-mkdir -p $(DS_BUILD)/home/appdata/$(APP_NAME)
 	-mkdir -p $(APP_DIR)/images
 	-mkdir -p $(APP_DIR)/sounds
 	-mkdir -p $(APP_DIR)/font

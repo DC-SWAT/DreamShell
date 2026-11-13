@@ -115,11 +115,6 @@ int OpenMainApp(void);
 void GetAppPath(char *buffer, size_t size, const char *fn);
 
 /**
- * Get subdirectory path inside main app from settings
- */
-void GetMainAppSubdir(char *buffer, size_t size, const char *subdir);
-
-/**
  * Close app and unload (if unload > 0)
  * 
  * return 0 on error and 1 on success

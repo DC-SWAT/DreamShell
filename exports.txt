@@ -292,7 +292,6 @@ SaveSettingsTo
 GetVolumeFromSettings
 GetStartupAppName
 GetMainAppName
-GetMainAppSubdir
 ApplyJvsButtonMap
 #
 naomi_bsram_read_credits

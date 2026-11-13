@@ -13,10 +13,10 @@
 #include <naomi/input.h>
 
 /* Need increment when settings structure changed */
-#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '4')
+#define DS_SETTIGS_VERSION	(('V'<<24) | ('0'<<16) | ('1')<<8 | '5')
 
-#define DS_SAVE_TO_ROOT 0
-#define DS_SAVE_TO_VMU 1
+#define DS_SAVE_DEST_HOME 0
+#define DS_SAVE_DEST_VMU 1
 
 typedef struct VideoSettings {
 
@@ -75,13 +75,13 @@ typedef struct NetworkSettings {
 typedef struct Settings {
 
 	/* Core version */
-	uint32 version;
+	uint32_t version;
 
 	/* Root directory with resources (leave empty for auto detect) */
 	char root[NAME_MAX / 2];
 
-	/* Default startup lua script path (without root) or console/lua script content */
-	char startup[NAME_MAX / 2];
+	/* User data directory. */
+	char home[NAME_MAX / 2];
 
 	/* Default startup app name */
 	char startup_app[64];

@@ -109,9 +109,6 @@ void ResetSettings() {
 	strncpy(cur->main_app, DS_DEFAULT_APP_NAME, sizeof(cur->main_app) - 1);
 	cur->main_app[sizeof(cur->main_app) - 1] = '\0';
 
-	strncpy(cur->startup, "/lua/startup.lua", 16);
-	cur->startup[16] = '\0';
-
 	cur->time_zone = 0;
 	cur->arcade = 0;
 	cur->version = DS_SETTIGS_VERSION;
@@ -120,8 +117,8 @@ void ResetSettings() {
 		char fn[NAME_MAX];
 		char save_name[24];
 		maple_device_t *vmu;
-		
-		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
+
+		snprintf(fn, NAME_MAX, "%s/%s", getenv("HOME"), DS_SAVE_FN);
 		fs_unlink(fn);
 
 		for (int i = 0; i < 8; ++i) {
@@ -211,7 +208,7 @@ int LoadSettings() {
 	loaded = LoadSettingsVMU();
 
 	if (!loaded) {
-		snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
+		snprintf(fn, NAME_MAX, "%s/%s", getenv("HOME"), DS_SAVE_FN);
 		loaded = LoadSettingsFile(fn);
 	}
 
@@ -309,7 +306,7 @@ int SaveSettingsTo(int where) {
 		current_set.version = DS_SETTIGS_VERSION;
 	}
 
-	if(where == DS_SAVE_TO_VMU) {
+	if(where == DS_SAVE_DEST_VMU) {
 		return SaveSettingsVMU();
 	}
 
@@ -319,11 +316,11 @@ int SaveSettingsTo(int where) {
 
 int SaveSettings() {
 
-	if(SaveSettingsTo(DS_SAVE_TO_VMU)) {
+	if(SaveSettingsTo(DS_SAVE_DEST_VMU)) {
 		return 1;
 	}
 
-	return SaveSettingsTo(DS_SAVE_TO_ROOT);
+	return SaveSettingsTo(DS_SAVE_DEST_HOME);
 }
 
 int GetVolumeFromSettings() {

@@ -563,8 +563,8 @@ static Texture *LoadScriptIconTexture(const char *basename, int is_lua) {
     int i;
 
     for(i = 0; icon_exts[i] != NULL; i++) {
-        snprintf(path, NAME_MAX, "%s/images/%s.%s",
-            self.app_path, basename, icon_exts[i]);
+        snprintf(path, NAME_MAX, "%s/shortcuts/images/%s.%s",
+            getenv("HOME"), basename, icon_exts[i]);
         texture = LoadIconFromPath(path, 1);
 
         if(texture != NULL) {
@@ -700,7 +700,7 @@ void BuildAppList(void) {
         }
     }
 
-    snprintf(path, NAME_MAX, "%s/scripts", self.app_path);
+    snprintf(path, sizeof(path), "%s/shortcuts/scripts", getenv("HOME"));
     fd = fs_open(path, O_RDONLY | O_DIR);
 
     if(fd == FILEHND_INVALID) {
@@ -723,7 +723,7 @@ void BuildAppList(void) {
                 break;
             }
 
-            snprintf(si->file, NAME_MAX, "%s/scripts/%s", self.app_path, ent->name);
+            snprintf(si->file, NAME_MAX, "%s/%s", path, ent->name);
 
             elen -= 4;
 
@@ -809,7 +809,7 @@ static int DeleteShortcutFiles(const char *file, const char *name) {
     }
 
     for(i = 0; icon_exts[i]; i++) {
-        snprintf(icon_path, sizeof(icon_path), "%s/images/%s.%s", self.app_path, name, icon_exts[i]);
+        snprintf(icon_path, sizeof(icon_path), "%s/shortcuts/images/%s.%s", getenv("HOME"), name, icon_exts[i]);
         fs_unlink(icon_path);
     }
 

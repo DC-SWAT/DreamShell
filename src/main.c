@@ -183,6 +183,25 @@ static void mie_fw_init_start(const char *fw_path) {
 		free(path);
 }
 
+static int SetHomeFromSettings(Settings_t *settings) {
+	const char *current = getenv("HOME");
+
+	if(settings->home[0] == '\0') {
+		return 0;
+	}
+
+	if(current != NULL && strncmp(settings->home, current, strlen(current)) == 0) {
+		return 0;
+	}
+
+	if(!DirExists(settings->home)) {
+		return 0;
+	}
+
+	setenv("HOME", settings->home, 1);
+	return 1;
+}
+
 int InitDS() {
 
 	char fn[NAME_MAX], bf[32];
@@ -222,17 +241,28 @@ int InitDS() {
 
 	InitRomdisk();
 	SearchRoot();
+
+	snprintf(fn, sizeof(fn), "%s/home", getenv("PATH"));
+	setenv("HOME", fn, 1);
 	settings = GetSettings();
+
+	if(SetHomeFromSettings(settings)) {
+		LoadSettings();
+		settings = GetSettings();
+		SetHomeFromSettings(settings);
+	}
+
+	if(!strncmp(getenv("HOME"), "/sd", 3) || 
+		!strncmp(getenv("HOME"), "/ide", 4) || 
+		!strncmp(getenv("HOME"), "/pc", 3)) {
+		setenv("TEMP", getenv("HOME"), 1);
+	}
+	else {
+		setenv("TEMP", "/ram", 1);
+	}
 
 	if(settings->root[0] != 0 && DirExists(settings->root)) {
 		setenv("PATH", settings->root, 1);
-		if(	!strncmp(getenv("PATH"), "/sd", 3) || 
-			!strncmp(getenv("PATH"), "/ide", 4) || 
-			!strncmp(getenv("PATH"), "/pc", 3)) {
-			setenv("TEMP", getenv("PATH"), 1);
-		} else {
-			setenv("TEMP", "/ram", 1);
-		}
 	}
 
 	tmpi = hardware_sys_mode(NULL);
@@ -300,7 +330,6 @@ int InitDS() {
 
 	SetConsoleDebug(1);
 
-	setenv("HOME", getenv("PATH"), 1);
 	setenv("$PATH", getenv("PATH"), 1);
 	setenv("LUA_PATH", getenv("PATH"), 1);
 	setenv("LUA_CPATH", getenv("PATH"), 1);
@@ -375,20 +404,13 @@ int InitDS() {
 	dbglog(DBG_INFO, "Initializing time: %ld ms\n", (uint32)(t_end - t_start));
 #endif
 
-	if(settings->startup[0] == '/') {
-		snprintf(fn, NAME_MAX, "%s%s", getenv("PATH"), settings->startup);
-		LuaDo(LUA_DO_FILE, fn, GetLuaState());
-	}
-	else if(settings->startup[0] == '#') {
-		dsystem_buff(settings->startup);
-	}
-	else if(settings->startup[0] != 0) {
-		LuaDo(LUA_DO_STRING, settings->startup, GetLuaState());
-	}
-	else {
+	snprintf(fn, NAME_MAX, "%s/startup.lua", getenv("HOME"));
+
+	if(!FileExists(fn)) {
 		snprintf(fn, NAME_MAX, "%s/lua/startup.lua", getenv("PATH"));
-		LuaDo(LUA_DO_FILE, fn, GetLuaState());
 	}
+
+	LuaDo(LUA_DO_FILE, fn, GetLuaState());
 
 #ifdef DS_DEBUG
 	t_end = timer_ms_gettime64();

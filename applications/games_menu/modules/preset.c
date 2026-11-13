@@ -2477,11 +2477,11 @@ void CheckIfShorcutExits()
 
 	if (TSU_CheckBoxGetValue(self.shortcut_dontshowname_option) == 0)
 	{
-		snprintf(shortcut_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", GetDefaultDir(menu_data.current_dev), menu_data.preset->shortcut_name);
+		snprintf(shortcut_file, NAME_MAX, "%s/shortcuts/scripts/%s.dsc", getenv("HOME"), menu_data.preset->shortcut_name);
 	}
 	else
 	{
-		snprintf(shortcut_file, NAME_MAX, "%s/apps/main/scripts/_%s.dsc", GetDefaultDir(menu_data.current_dev), menu_data.preset->shortcut_name);		
+		snprintf(shortcut_file, NAME_MAX, "%s/shortcuts/scripts/_%s.dsc", getenv("HOME"), menu_data.preset->shortcut_name);
 	}
 
 	if (FileExists(shortcut_file))

@@ -17,8 +17,8 @@ SettingsApp_ToggleScreenFilter
 # Boot
 SettingsApp_ToggleStartupApp
 SettingsApp_ToggleMainApp
-SettingsApp_ToggleRoot
-SettingsApp_ToggleStartup
+SettingsApp_SelectRoot
+SettingsApp_SelectHome
 SettingsApp_ToggleArcade
 # Date
 SettingsApp_Time

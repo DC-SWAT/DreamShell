@@ -157,7 +157,6 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 	if (menu_data.ide)
 	{
 		FindPathOnDevice("ide", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
-		FindPathOnDevice("ide", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
 	}
 
 	if (menu_data.sd)
@@ -165,20 +164,20 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 		if (menu_data.ide)
 		{
 			FindPathOnDevice("sd", "DS", menu_data.default_dir_sd, sizeof(menu_data.default_dir_sd));
-			FindPathOnDevice("sd", COVERS_RELATIVE_PATH, menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd));
 		}
 		else
 		{
 			FindPathOnDevice("sd", "DS", menu_data.default_dir, sizeof(menu_data.default_dir));
-			FindPathOnDevice("sd", COVERS_RELATIVE_PATH, menu_data.covers_path, sizeof(menu_data.covers_path));
 		}
 	}
 
 	if ((!menu_data.ide && !menu_data.sd) && menu_data.cd)
 	{
 		strcpy(menu_data.default_dir, CD_DS_PATH);
-		strcpy(menu_data.covers_path, CD_COVERS_PATH);
 	}
+
+	snprintf(menu_data.covers_path, sizeof(menu_data.covers_path), "%s/appdata/games_menu/covers", getenv("HOME"));
+	snprintf(menu_data.covers_path_sd, sizeof(menu_data.covers_path_sd), "%s", menu_data.covers_path);
 
 	menu_data.current_dev = GetDeviceType(menu_data.default_dir);
 	menu_data.convert_pvr_to_png = (menu_data.current_dev == APP_DEVICE_IDE);
@@ -204,7 +203,7 @@ void CreateMenuData(SendMessageCallBack *send_message_scan, SendMessageCallBack 
 
 	// CREATE DEFAULT MENU CONFIG FILE IF NOT EXISTS
 	char config_file_name[100];
-	snprintf(config_file_name, sizeof(config_file_name), "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu", "menu_games.cfg");
+	snprintf(config_file_name, sizeof(config_file_name), "%s/%s/%s", getenv("HOME"), "appdata/games_menu", "menu_games.cfg");
 	if (!FileExists(config_file_name))
 		SaveMenuConfig();
 
@@ -1784,7 +1783,6 @@ bool SavePresetGame(PresetStruct *preset)
 {
 	char game_path[NAME_MAX];
 	char filename[NAME_MAX];
-	char presets_dir[NAME_MAX];
 	uint8 md5[PRESET_MD5_SIZE];
 	isoldr_info_t info;
 	char *made;
@@ -1797,7 +1795,7 @@ bool SavePresetGame(PresetStruct *preset)
 		return false;
 	}
 
-	base_path = getenv("PATH");
+	base_path = getenv("HOME");
 
 	if (base_path == NULL)
 	{
@@ -1806,7 +1804,7 @@ bool SavePresetGame(PresetStruct *preset)
 
 	path_dev = GetDeviceType(base_path);
 
-	if (path_dev != APP_DEVICE_SD && path_dev != APP_DEVICE_IDE)
+	if (path_dev != APP_DEVICE_SD && path_dev != APP_DEVICE_IDE && path_dev != APP_DEVICE_PC)
 	{
 		return false;
 	}
@@ -1828,8 +1826,6 @@ bool SavePresetGame(PresetStruct *preset)
 
 	memset(filename, 0, sizeof(filename));
 	strncpy(filename, made, sizeof(filename) - 1);
-	snprintf(presets_dir, sizeof(presets_dir), "%s/apps/iso_loader/presets", base_path);
-	fs_mkdir(presets_dir);
 	fill_info_for_save(&info, preset);
 	alt_file = preset->alt_boot ? ALT_BOOT_FILE : NULL;
 
@@ -1923,7 +1919,7 @@ bool LoadMenuConfig()
 {
 	LoadDefaultMenuConfig();
 	char file_name[100];
-	snprintf(file_name, sizeof(file_name), "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu", "menu_games.cfg");
+	snprintf(file_name, sizeof(file_name), "%s/%s/%s", getenv("HOME"), "appdata/games_menu", "menu_games.cfg");
 
 	char background_color[10] = {0};
 	char border_color[10] = {0};
@@ -2206,18 +2202,13 @@ void ParsePresentationToMenuConfig()
 
 bool SaveMenuConfig()
 {
-	if (menu_data.current_dev != APP_DEVICE_SD && menu_data.current_dev != APP_DEVICE_IDE)
-	{
-		return false;
-	}
-
 	file_t fd;
 	char file_name[100];
 	char result[1024];
 
 	ParsePresentationToMenuConfig();
 
-	snprintf(file_name, sizeof(file_name), "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu", "menu_games.cfg");
+	snprintf(file_name, sizeof(file_name), "%s/%s/%s", getenv("HOME"), "appdata/games_menu", "menu_games.cfg");
 	fd = fs_open(file_name, O_CREAT | O_TRUNC | O_WRONLY);
 
 	if (fd == FILEHND_INVALID)
@@ -2248,13 +2239,9 @@ bool SaveMenuConfig()
 
 bool SaveScannedCover()
 {
-	if (menu_data.current_dev != APP_DEVICE_SD && menu_data.current_dev != APP_DEVICE_IDE)
-	{
-		return false;
-	}
-
 	char file_name[100];
-	snprintf(file_name, sizeof(file_name), "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu", "scanned_cover.log");
+
+	snprintf(file_name, sizeof(file_name), "%s/%s/%s", getenv("HOME"), "appdata/games_menu", "scanned_cover.log");
 
 	file_t fd = fs_open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd == FILEHND_INVALID)
@@ -2271,7 +2258,7 @@ bool SaveScannedCover()
 bool LoadScannedCover()
 {
 	char file_name[100];
-	snprintf(file_name, sizeof(file_name), "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu", "scanned_cover.log");
+	snprintf(file_name, sizeof(file_name), "%s/%s/%s", getenv("HOME"), "appdata/games_menu", "scanned_cover.log");
 
 	file_t fd = fs_open(file_name, O_RDONLY);
 	if (fd == FILEHND_INVALID)
@@ -2302,15 +2289,14 @@ bool LoadScannedCover()
 
 bool SaveCache()
 {
-	if ((menu_data.current_dev != APP_DEVICE_SD && menu_data.current_dev != APP_DEVICE_IDE) ||
-		menu_data.cache_array_count == 0 ||
-		!menu_data.cache_array)
+	if (menu_data.cache_array_count == 0 || !menu_data.cache_array)
 	{
 		return false;
 	}
 
 	char file_name[100];
-	snprintf(file_name, sizeof(file_name), "%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu/games.cache");
+
+	snprintf(file_name, sizeof(file_name), "%s/%s", getenv("HOME"), "appdata/games_menu/games.cache");
 
 	file_t fd = fs_open(file_name, O_WRONLY | O_CREAT | O_TRUNC);
 	if (fd == FILEHND_INVALID)
@@ -2358,7 +2344,7 @@ bool LoadCache()
 		return false;
 
 	char file_name[100];
-	snprintf(file_name, sizeof(file_name), "%s/%s/%s", GetDefaultDir(menu_data.current_dev), "apps/games_menu", "games.cache");
+	snprintf(file_name, sizeof(file_name), "%s/%s/%s", getenv("HOME"), "appdata/games_menu", "games.cache");
 
 	size_t total_read = 0;
 
@@ -2565,8 +2551,6 @@ void CreateOptimizedCover(int game_index, const char *game_name, kos_img_t *img,
 	uint16 image_type;
 
 	snprintf(cover_folder, NAME_MAX, "%s%s", GetCoversPath(menu_data.current_dev), GetCoverFolder(menu_type));
-	if (DirExists(cover_folder) == 0)
-		fs_mkdir(cover_folder);
 
 	if (menu_data.cover_to_pvr)
 	{

@@ -501,11 +501,11 @@ bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full
 
 	if (show_name)
 	{
-		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/%s.dsc", device_dir, preset->shortcut_name);
+		snprintf(save_file, NAME_MAX, "%s/shortcuts/scripts/%s.dsc", getenv("HOME"), preset->shortcut_name);
 	}
 	else
 	{
-		snprintf(save_file, NAME_MAX, "%s/apps/main/scripts/_%s.dsc", device_dir, preset->shortcut_name);
+		snprintf(save_file, NAME_MAX, "%s/shortcuts/scripts/_%s.dsc", getenv("HOME"), preset->shortcut_name);
 	}
 
 	fd = fopen(save_file, "w");
@@ -651,11 +651,11 @@ bool MakeShortcut(PresetStruct *preset, const char *device_dir, const char *full
 
 	if (show_name)
 	{
-		snprintf(save_file, NAME_MAX, "%s/apps/main/images/%s.png", device_dir, preset->shortcut_name);
+		snprintf(save_file, NAME_MAX, "%s/shortcuts/images/%s.png", getenv("HOME"), preset->shortcut_name);
 	}
 	else
 	{
-		snprintf(save_file, NAME_MAX, "%s/apps/main/images/_%s.png", device_dir, preset->shortcut_name);
+		snprintf(save_file, NAME_MAX, "%s/shortcuts/images/_%s.png", getenv("HOME"), preset->shortcut_name);
 	}
 
 	if (FileExists(save_file))

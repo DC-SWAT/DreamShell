@@ -166,14 +166,15 @@ static void crt_music_apply(void) {
 }
 
 static void crt_cfg_path(char *file, size_t size) {
-	char dir[NAME_MAX];
+	const char *home = getenv("HOME");
 
 	file[0] = '\0';
-	if(!crt.app || !crt.app->fn[0]) {
+
+	if(home == NULL || home[0] == '\0') {
 		return;
 	}
-	GetAppPath(dir, sizeof(dir), crt.app->fn);
-	snprintf(file, size, "%s/crttest.cfg", dir);
+
+	snprintf(file, size, "%s/appdata/crttest/crttest.cfg", home);
 }
 
 static void crt_cfg_load(void) {
@@ -221,6 +222,7 @@ static void crt_cfg_save(void) {
 	if(!file[0]) {
 		return;
 	}
+
 	n = snprintf(text, sizeof(text), "%d\n%d\n",
 		crt.music_off ? 1 : 0, crt.lamp_off ? 1 : 0);
 	fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, 0644);

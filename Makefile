@@ -17,7 +17,7 @@ VER_MAJOR = 4
 VER_MINOR = 0
 VER_MICRO = 5
 # Build types: 0x0N - Alpha, 0x1N - Beta, 0x2N - RC, 0x3N - Release
-VER_BUILD = 0x21
+VER_BUILD = 0x22
 
 BUILD_TYPE_BASE = $(if $(filter 0x3%,$(VER_BUILD)),Release,$(if $(filter 0x2%,$(VER_BUILD)),RC,$(if $(filter 0x1%,$(VER_BUILD)),Beta,$(if $(filter 0x0%,$(VER_BUILD)),Alpha,Release))))
 BUILD_NUM = $(lastword $(subst 0x2,,$(subst 0x1,,$(subst 0x0,,$(subst 0x3,,$(VER_BUILD))))))
@@ -176,13 +176,19 @@ $(DS_BUILD)/lua/startup.lua: $(DS_RES)/lua/startup.lua $(SFX_TARGETS)
 	@mkdir -p $(DS_BUILD)/apps
 	@mkdir -p $(DS_BUILD)/cmds
 	@mkdir -p $(DS_BUILD)/modules
-	@mkdir -p $(DS_BUILD)/screenshot
-	@mkdir -p $(DS_BUILD)/vmu
+	@mkdir -p $(DS_BUILD)/home/appdata
+	@mkdir -p $(DS_BUILD)/home/firmware
+	@mkdir -p $(DS_BUILD)/home/firmware/eeprom
+	@mkdir -p $(DS_BUILD)/home/screenshot
+	@mkdir -p $(DS_BUILD)/home/vmu
+	@mkdir -p $(DS_BUILD)/home/shortcuts/scripts
+	@mkdir -p $(DS_BUILD)/home/shortcuts/images
+	@cp -R $(DS_RES)/firmware/flash $(DS_BUILD)/home/firmware
+	@rm -f $(DS_BUILD)/home/firmware/flash/factory_backup.bin
 	@cp -R $(DS_RES)/doc $(DS_BUILD)
 	@cp LICENSE NOTICE $(DS_BUILD)/doc
 	@cp -R $(DS_RES)/firmware $(DS_BUILD)
 	@rm -rf $(DS_BUILD)/firmware/bios/ds/patches
-	@mkdir -p $(DS_BUILD)/firmware/eeprom
 	@cp -R $(DS_RES)/fonts $(DS_BUILD)
 	@cp -R $(DS_RES)/gui $(DS_BUILD)
 	@cp -R $(DS_RES)/lua $(DS_BUILD)

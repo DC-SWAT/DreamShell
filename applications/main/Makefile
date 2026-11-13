@@ -23,7 +23,6 @@ clean:
 install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
-	-mkdir -p $(APP_DIR)/scripts
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)

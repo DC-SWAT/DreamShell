@@ -1140,7 +1140,7 @@ static bool LoadPage(bool change_view, uint8 direction)
 
 			TSU_LabelDestroy(&self.title);
 			
-			snprintf(game_cover_path, sizeof(game_cover_path), "\n\nYou need put the games here:\n%s\n\nand images here:\n%s\n\nor change games_path in\napps/games_menu/menu_games.cfg", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));			
+			snprintf(game_cover_path, sizeof(game_cover_path), "\n\nYou need put the games here:\n%s\n\nand images here:\n%s\n\nor change games_path in\nhome/appdata/games_menu/menu_games.cfg", GetGamesPath(menu_data.current_dev), GetCoversPath(menu_data.current_dev));			
 			SetTitle(-1, game_cover_path, false);
 		}
 	}

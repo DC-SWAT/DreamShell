@@ -47,7 +47,7 @@ clean:
 install: app.xml $(DEPS) $(ROMDISKS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
-	-mkdir -p $(APP_DIR)/presets
+	-mkdir -p $(DS_BUILD)/home/appdata/$(APP_NAME)/presets
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp app.xml $(APP_DIR)/app.xml
 	cp -R images $(APP_DIR)

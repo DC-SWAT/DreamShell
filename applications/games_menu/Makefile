@@ -10,6 +10,7 @@ include ../../sdk/Makefile.cfg
 
 APP_NAME = games_menu
 APP_DIR = $(DS_BUILD)/apps/$(APP_NAME)
+APP_DATA_DIR = $(DS_BUILD)/home/appdata/$(APP_NAME)
 DEPS = modules/app_$(APP_NAME).klf
 
 KOS_CFLAGS += -I./
@@ -27,6 +28,8 @@ install: app.xml $(DEPS)
 	-mkdir -p $(APP_DIR)/modules
 	-mkdir -p $(APP_DIR)/images
 	-mkdir -p $(APP_DIR)/covers	
+	-mkdir -p $(APP_DATA_DIR)/covers/64
+	-mkdir -p $(APP_DATA_DIR)/covers/128
 	-mkdir -p $(APP_DIR)/fonts
 	-mkdir -p $(APP_DIR)/music
 	-mkdir -p $(APP_DIR)/resources
@@ -35,4 +38,3 @@ install: app.xml $(DEPS)
 	cp -R images $(APP_DIR)
 	cp -R fonts $(APP_DIR)
 	cp -R resources $(APP_DIR)
-	

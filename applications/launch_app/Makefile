@@ -22,7 +22,6 @@ clean:
 install: app.xml config.lua $(DEPS)
 	-mkdir -p $(APP_DIR)
 	-mkdir -p $(APP_DIR)/modules
-	-mkdir -p $(APP_DIR)/scripts
 	-mkdir -p $(APP_DIR)/images
 	cp modules/app_$(APP_NAME).klf $(APP_DIR)/modules/app_$(APP_NAME).klf
 	cp app.xml $(APP_DIR)/app.xml

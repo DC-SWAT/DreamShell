@@ -406,20 +406,6 @@ void GetAppPath(char *buffer, size_t size, const char *fn) {
 }
 
 
-void GetMainAppSubdir(char *buffer, size_t size, const char *subdir) {
-	App_t *app = GetAppByName(GetMainAppName());
-	char path[NAME_MAX];
-
-	if(!app || !app->fn[0]) {
-		buffer[0] = '\0';
-		return;
-	}
-
-	GetAppPath(path, sizeof(path), app->fn);
-	snprintf(buffer, size, "%s/%s", path, subdir);
-}
-
-
 static int OpenAppFinish(App_t *app, const char *args) {
 
 	App_t *cur = NULL;

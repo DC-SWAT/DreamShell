@@ -120,15 +120,15 @@ static void screenshot_callback(void)  {
 	}
 	
 	char path[NAME_MAX];
-	char *root_dir = getenv("PATH");
+	char *dir = getenv("HOME");
 	int try_cnt = 99;
 
-	if(!strncmp(root_dir, "/cd", 3)) {
-		root_dir = "/rd";
+	if(dir == NULL || dir[0] == '\0' || !strncmp(dir, "/cd", 3)) {
+		dir = "/rd";
 	}
 
 	do {
-		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.ppm", root_dir, ++scr_num);
+		snprintf(path, NAME_MAX, "%s/screenshot/ds_scr_%03d.ppm", dir, ++scr_num);
 		if (!FileExists(path)) {
 			break;
 		}

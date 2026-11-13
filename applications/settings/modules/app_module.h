@@ -32,9 +32,9 @@ void SettingsApp_ToggleStartupApp(GUI_Widget *widget);
 
 void SettingsApp_ToggleMainApp(GUI_Widget *widget);
 
-void SettingsApp_ToggleRoot(GUI_Widget *widget);
+void SettingsApp_SelectRoot(dirent_fm_t *fm_ent);
 
-void SettingsApp_ToggleStartup(GUI_Widget *widget);
+void SettingsApp_SelectHome(dirent_fm_t *fm_ent);
 
 void SettingsApp_ToggleArcade(GUI_Widget *widget);
 

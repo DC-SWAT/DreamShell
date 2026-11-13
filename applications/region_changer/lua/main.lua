@@ -184,7 +184,7 @@
 	
 		self:ChangeProgress(0.1);
 		
-		local file = os.getenv("PATH").."/firmware/flash/factory_backup.bin";
+		local file = os.getenv("HOME").."/firmware/flash/factory_backup.bin";
 		local f = KOS.fs_open(file, KOS.O_RDONLY);
 		local data = RC.flash_read_factory();
 		self:ChangeProgress(0.2);

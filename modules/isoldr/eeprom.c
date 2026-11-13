@@ -156,7 +156,7 @@ static const struct {
 };
 
 static void naomi_eeprom_make_path(const char *game_id, char *path, size_t path_size) {
-	snprintf(path, path_size, "%s/firmware/eeprom/%.4s.bin", getenv("PATH"), game_id);
+	snprintf(path, path_size, "%s/firmware/eeprom/%.4s.bin", getenv("HOME"), game_id);
 }
 
 static bool naomi_eeprom_save_file(const char *game_id, const uint8_t *eeprom) {

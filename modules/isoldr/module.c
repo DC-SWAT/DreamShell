@@ -739,7 +739,7 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 		char *p;
 		size_t plen = ISOLDR_FLASHROM_PATH_SIZE;
 
-		snprintf(fn, NAME_MAX, "%s/firmware/flash/dcus_ntsc.bin", getenv("PATH"));
+		snprintf(fn, NAME_MAX, "%s/firmware/flash/dcus_ntsc.bin", getenv("HOME"));
 		p = fn + strlen(fn) - 11;
 
 		switch(info->region) {
@@ -752,6 +752,17 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 			case ISOLDR_REGION_AUSTRALIA:
 				memcpy(p, "eu_pal.bin", sizeof("eu_pal.bin"));
 				break;
+		}
+
+		if(!FileExists(fn)) {
+			const char *name = strrchr(fn, '/');
+			char install[NAME_MAX];
+
+			if(name != NULL) {
+				snprintf(install, NAME_MAX, "%s/firmware/flash%s", getenv("PATH"), name);
+				strncpy(fn, install, NAME_MAX - 1);
+				fn[NAME_MAX - 1] = '\0';
+			}
 		}
 
 		fd = fs_open(fn, O_RDONLY);

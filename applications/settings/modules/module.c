@@ -77,7 +77,7 @@ static void SetupVideoSettings();
 static void SetupBootSettings();
 static void SetupAudioSettings();
 static void SetupTimezoneSettings();
-static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, const char *selected, void (*toggle_fn)(GUI_Widget *));
+static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, GUI_Widget *up, GUI_Widget *down, const char *selected, void (*toggle_fn)(GUI_Widget *));
 
 static int UncheckBesides(GUI_Widget *widget, const char *label) {
 
@@ -272,10 +272,10 @@ static void FinishSave(int where) {
 	}
 
 	if(ok) {
-		snprintf(body, sizeof(body), where == DS_SAVE_TO_VMU ? "Saved to VMU." : "Saved to root.");
+		snprintf(body, sizeof(body), where == DS_SAVE_DEST_VMU ? "Saved to VMU." : "Saved to root.");
 	}
 	else {
-		snprintf(body, sizeof(body), where == DS_SAVE_TO_VMU ? "Can't save to VMU." : "Can't save to root.");
+		snprintf(body, sizeof(body), where == DS_SAVE_DEST_VMU ? "Can't save to VMU." : "Can't save to root.");
 	}
 
 	self.dialog_action = DIALOG_ACTION_DONE;
@@ -293,7 +293,7 @@ void SettingsApp_SaveSettings(GUI_Widget *widget) {
 	self.exit_after_dialog = 0;
 
 	if(!VmuPresent()) {
-		FinishSave(DS_SAVE_TO_ROOT);
+		FinishSave(DS_SAVE_DEST_HOME);
 		return;
 	}
 
@@ -321,7 +321,7 @@ void SettingsApp_DialogConfirm(GUI_Widget *widget) {
 			GUI_DialogShow(widget, DIALOG_MODE_ALERT, "Resetting settings", "Completed.");
 			break;
 		case DIALOG_ACTION_SAVE:
-			FinishSave(DS_SAVE_TO_VMU);
+			FinishSave(DS_SAVE_DEST_VMU);
 			break;
 		case DIALOG_ACTION_EXIT:
 			if(VmuPresent()) {
@@ -330,7 +330,7 @@ void SettingsApp_DialogConfirm(GUI_Widget *widget) {
 			}
 			else {
 				self.exit_after_dialog = 1;
-				FinishSave(DS_SAVE_TO_ROOT);
+				FinishSave(DS_SAVE_DEST_HOME);
 			}
 			break;
 		case DIALOG_ACTION_DONE:
@@ -357,7 +357,7 @@ void SettingsApp_DialogCancel(GUI_Widget *widget) {
 	int action = self.dialog_action;
 
 	if(action == DIALOG_ACTION_SAVE) {
-		FinishSave(DS_SAVE_TO_ROOT);
+		FinishSave(DS_SAVE_DEST_HOME);
 		return;
 	}
 
@@ -542,27 +542,48 @@ void SettingsApp_ToggleMainApp(GUI_Widget *widget) {
 }
 
 
-void SettingsApp_ToggleRoot(GUI_Widget *widget) {
+static void StoreDirPath(char *dst, size_t dst_size, const char *path, const char *label_name) {
+	GUI_Widget *label;
 
-	UncheckBesides(widget, NULL);
-	GUI_Widget *label = GUI_ToggleButtonGetCaption(widget);
-	
-	if(label) {
-		char *value = GUI_LabelGetText(label);
-		strncpy(self.settings->root, value, sizeof(self.settings->root));
+	if(path == NULL || path[0] == '\0') {
+		dst[0] = '\0';
+		path = "Auto";
+	}
+	else {
+		strncpy(dst, path, dst_size - 1);
+		dst[dst_size - 1] = '\0';
+		path = dst;
+	}
+
+	label = APP_GET_WIDGET(label_name);
+
+	if(label != NULL) {
+		GUI_LabelSetText(label, path);
 	}
 }
 
+static void SelectDirectory(dirent_fm_t *fm_ent, char *dst, size_t dst_size, const char *label_name) {
+	GUI_Widget *browser;
+	const char *path;
 
-void SettingsApp_ToggleStartup(GUI_Widget *widget) {
-	UncheckBesides(widget, NULL);
-	GUI_Widget *label = GUI_ToggleButtonGetCaption(widget);
-	
-	if(label) {
-		char *value = GUI_LabelGetText(label);
-		strncpy(self.settings->startup, value, sizeof(self.settings->startup));
+	if(fm_ent == NULL || fm_ent->ent.attr != O_DIR) {
+		return;
 	}
+
+	browser = (GUI_Widget *)fm_ent->obj;
+	GUI_FileManagerChangeDir(browser, fm_ent->ent.name, fm_ent->ent.size);
+	path = GUI_FileManagerGetPath(browser);
+	StoreDirPath(dst, dst_size, path, label_name);
 }
+
+void SettingsApp_SelectRoot(dirent_fm_t *fm_ent) {
+	SelectDirectory(fm_ent, self.settings->root, sizeof(self.settings->root), "boot-root-path");
+}
+
+void SettingsApp_SelectHome(dirent_fm_t *fm_ent) {
+	SelectDirectory(fm_ent, self.settings->home, sizeof(self.settings->home), "boot-home-path");
+}
+
 
 void SettingsApp_ToggleArcade(GUI_Widget *widget) {
 	self.settings->arcade = GUI_WidgetGetState(widget);
@@ -576,10 +597,27 @@ void SettingsApp_ToggleStartupSound(GUI_Widget *widget) {
 typedef struct AppListScroll {
 	GUI_Widget *panel;
 	GUI_Widget *scroll;
+	GUI_Widget *up;
+	GUI_Widget *down;
 	int content_h;
 	int view_h;
 	int travel;
+	int step;
 } AppListScroll_t;
+
+static void AppListScrollUpdateButtons(AppListScroll_t *scroll) {
+	int offset;
+	int max_offset;
+
+	if(!scroll->up || !scroll->down) {
+		return;
+	}
+
+	max_offset = scroll->content_h - scroll->view_h;
+	offset = GUI_PanelGetYOffset(scroll->panel);
+	GUI_WidgetSetEnabled(scroll->up, offset > 0);
+	GUI_WidgetSetEnabled(scroll->down, offset < max_offset);
+}
 
 static void AppListScrollMoved(void *data) {
 	AppListScroll_t *scroll = (AppListScroll_t *)data;
@@ -595,6 +633,7 @@ static void AppListScrollMoved(void *data) {
 
 	if(max_offset <= 0 || scroll->travel <= 0) {
 		GUI_PanelSetYOffset(scroll->panel, 0);
+		AppListScrollUpdateButtons(scroll);
 		return;
 	}
 
@@ -606,9 +645,83 @@ static void AppListScrollMoved(void *data) {
 	}
 
 	GUI_PanelSetYOffset(scroll->panel, offset);
+	AppListScrollUpdateButtons(scroll);
 }
 
-static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
+static void AppListScrollByButton(AppListScroll_t *scroll, int direction) {
+	int max_offset;
+	int offset;
+	int knob_y;
+
+	if(!scroll || !scroll->panel || scroll->step < 1) {
+		return;
+	}
+
+	max_offset = scroll->content_h - scroll->view_h;
+	offset = GUI_PanelGetYOffset(scroll->panel) + direction * scroll->step;
+
+	if(offset < 0) {
+		offset = 0;
+	}
+
+	if(offset > max_offset) {
+		offset = max_offset;
+	}
+
+	GUI_PanelSetYOffset(scroll->panel, offset);
+
+	if(max_offset <= 0 || scroll->travel <= 0) {
+		knob_y = 0;
+	}
+	else {
+		knob_y = (offset * scroll->travel) / max_offset;
+	}
+
+	GUI_ScrollBarSetVerticalPosition(scroll->scroll, knob_y);
+	AppListScrollUpdateButtons(scroll);
+}
+
+static void AppListScrollUp(void *data) {
+	AppListScrollByButton((AppListScroll_t *)data, -1);
+}
+
+static void AppListScrollDown(void *data) {
+	AppListScrollByButton((AppListScroll_t *)data, 1);
+}
+
+static void AppListScrollHide(GUI_Widget *scroll, GUI_Widget *up, GUI_Widget *down) {
+	if(scroll) {
+		GUI_WidgetSetFlags(scroll, WIDGET_HIDDEN);
+	}
+
+	if(up) {
+		GUI_WidgetSetFlags(up, WIDGET_HIDDEN);
+	}
+
+	if(down) {
+		GUI_WidgetSetFlags(down, WIDGET_HIDDEN);
+	}
+}
+
+static void BindAppListScrollButton(GUI_Widget *button, void (*fn)(void *), AppListScroll_t *data) {
+	GUI_Callback *callback;
+
+	if(!button) {
+		return;
+	}
+
+	callback = GUI_CallbackCreate(fn, NULL, data);
+
+	if(!callback) {
+		return;
+	}
+
+	GUI_ButtonSetClick(button, callback);
+	GUI_ObjectDecRef((GUI_Object *)callback);
+	GUI_WidgetClearFlags(button, WIDGET_HIDDEN);
+}
+
+static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll, GUI_Widget *up, GUI_Widget *down) {
 	AppListScroll_t *data;
 	GUI_Callback *callback;
 	GUI_Surface *knob;
@@ -618,6 +731,7 @@ static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
 	int content_h;
 	int knob_h;
 	int travel;
+	int step;
 
 	if(!panel || !scroll) {
 		return;
@@ -626,14 +740,17 @@ static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
 	view = GUI_WidgetGetArea(panel);
 	count = GUI_ContainerGetCount(panel);
 	content_h = 0;
+	step = 0;
 
 	if(count > 0) {
+		SDL_Rect first = GUI_WidgetGetArea(GUI_ContainerGetChild(panel, 0));
 		SDL_Rect last = GUI_WidgetGetArea(GUI_ContainerGetChild(panel, count - 1));
 		content_h = last.y + last.h;
+		step = first.h;
 	}
 
 	if(content_h <= view.h) {
-		GUI_WidgetSetFlags(scroll, WIDGET_HIDDEN);
+		AppListScrollHide(scroll, up, down);
 		GUI_PanelSetYOffset(panel, 0);
 		return;
 	}
@@ -644,7 +761,7 @@ static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
 	travel = track.h - knob_h;
 
 	if(travel < 1) {
-		GUI_WidgetSetFlags(scroll, WIDGET_HIDDEN);
+		AppListScrollHide(scroll, up, down);
 		return;
 	}
 
@@ -656,9 +773,12 @@ static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
 
 	data->panel = panel;
 	data->scroll = scroll;
+	data->up = up;
+	data->down = down;
 	data->content_h = content_h;
 	data->view_h = view.h;
 	data->travel = travel;
+	data->step = step;
 
 	callback = GUI_CallbackCreate(AppListScrollMoved, free, data);
 
@@ -671,10 +791,13 @@ static void BindAppListScroll(GUI_Widget *panel, GUI_Widget *scroll) {
 	GUI_ScrollBarSetVerticalPosition(scroll, 0);
 	GUI_ScrollBarSetMovedCallback(scroll, callback);
 	GUI_ObjectDecRef((GUI_Object *)callback);
+	BindAppListScrollButton(up, AppListScrollUp, data);
+	BindAppListScrollButton(down, AppListScrollDown, data);
 	GUI_PanelSetYOffset(panel, 0);
+	AppListScrollUpdateButtons(data);
 }
 
-static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, const char *selected, void (*toggle_fn)(GUI_Widget *)) {
+static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, GUI_Widget *up, GUI_Widget *down, const char *selected, void (*toggle_fn)(GUI_Widget *)) {
 
 	Item_list_t *applist = GetAppList();
 	GUI_Font *font = APP_GET_FONT("arial");
@@ -726,23 +849,43 @@ static void SetupAppListPanel(GUI_Widget *panel, GUI_Widget *scroll, const char 
 		GUI_ObjectDecRef((GUI_Object *) b);
 	}
 
-	BindAppListScroll(panel, scroll);
+	BindAppListScroll(panel, scroll, up, down);
 }
 
 
-static void SetupBootSettings() {
+static void OpenDirectoryBrowser(const char *browser_name, const char *label_name, const char *stored, const char *fallback) {
+	GUI_Widget *browser;
+	GUI_Widget *label;
+	const char *open_path;
+	const char *shown;
 
-	GUI_Widget  *panel        = APP_GET_WIDGET("boot-root");
+	browser = APP_GET_WIDGET(browser_name);
+	label = APP_GET_WIDGET(label_name);
 
-	if(self.settings->root[0] == 0) {
-		UncheckBesides(GUI_ContainerGetChild(panel, WIDGET_VALUE_OFFSET), NULL);
+	if(stored != NULL && stored[0] != '\0') {
+		open_path = stored;
+		shown = stored;
 	}
 	else {
-		UncheckBesides(panel, self.settings->root);
+		open_path = (fallback != NULL && fallback[0] != '\0') ? fallback : "/";
+		shown = "Auto";
 	}
 
-	panel = APP_GET_WIDGET("boot-startup");
-	UncheckBesides(panel, self.settings->startup);
+	if(browser != NULL) {
+		GUI_FileManagerSetPath(browser, open_path);
+	}
+
+	if(label != NULL) {
+		GUI_LabelSetText(label, shown);
+	}
+}
+
+static void SetupBootSettings() {
+
+	GUI_Widget *panel;
+
+	OpenDirectoryBrowser("boot-root", "boot-root-path", self.settings->root, getenv("PATH"));
+	OpenDirectoryBrowser("boot-home", "boot-home-path", self.settings->home, getenv("HOME"));
 
 	panel = APP_GET_WIDGET("arcade-chk");
 
@@ -751,10 +894,10 @@ static void SetupBootSettings() {
 	}
 
 	panel = APP_GET_WIDGET("boot-startup-app");
-	SetupAppListPanel(panel, APP_GET_WIDGET("boot-startup-scroll"), self.settings->startup_app, SettingsApp_ToggleStartupApp);
+	SetupAppListPanel(panel, APP_GET_WIDGET("boot-startup-scroll"), APP_GET_WIDGET("boot-startup-up"), APP_GET_WIDGET("boot-startup-down"), self.settings->startup_app, SettingsApp_ToggleStartupApp);
 
 	panel = APP_GET_WIDGET("boot-main-app");
-	SetupAppListPanel(panel, APP_GET_WIDGET("boot-main-scroll"), self.settings->main_app, SettingsApp_ToggleMainApp);
+	SetupAppListPanel(panel, APP_GET_WIDGET("boot-main-scroll"), APP_GET_WIDGET("boot-main-up"), APP_GET_WIDGET("boot-main-down"), self.settings->main_app, SettingsApp_ToggleMainApp);
 }
 
 static void update_rtc_ui() {
