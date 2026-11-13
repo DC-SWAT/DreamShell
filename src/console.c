@@ -43,6 +43,7 @@
 #define CONSOLE_CMD_MAX 256
 #define CONSOLE_SCROLL_EVERY 5
 #define CONSOLE_PROMPT_MAX 64
+#define CONSOLE_PROMPT_INPUT_MIN 16
 #define CONSOLE_SGR_PARAMS 16
 #define CONSOLE_CSI_MAX 64
 #define CONSOLE_Z_BG 450.0f
@@ -1316,15 +1317,193 @@ static void console_tab_apply(const char *text, int add_space) {
 	command_assemble();
 }
 
-static void console_tab(void) {
-	TabScan scan;
-	TabPrint out;
-	const char *prefix;
+static int tab_path_token(const char *token) {
+	return token[0] == '/' || token[0] == '~' || token[0] == '.' || strchr(token, '/') != NULL;
+}
 
-	prefix = console->lcmd;
-	if(strchr(prefix, ' ') != NULL) {
+static void tab_path_split(const char *path, char *dir, char *base) {
+	const char *slash = strrchr(path, '/');
+	size_t n;
+
+	if(!slash) {
+		snprintf(dir, NAME_MAX, "%s", fs_getwd());
+		snprintf(base, NAME_MAX, "%s", path);
 		return;
 	}
+	if(slash == path) {
+		snprintf(dir, NAME_MAX, "/");
+	}
+	else {
+		n = (size_t)(slash - path);
+		if(n >= NAME_MAX) {
+			n = NAME_MAX - 1;
+		}
+		memcpy(dir, path, n);
+		dir[n] = '\0';
+	}
+	snprintf(base, NAME_MAX, "%s", slash + 1);
+}
+
+static int tab_path_join(char *dst, size_t dst_size, const char *dir, const char *name, int absolute) {
+	size_t n;
+
+	if(!absolute) {
+		return snprintf(dst, dst_size, "%s", name);
+	}
+	n = strlen(dir);
+	while(n > 1 && dir[n - 1] == '/') {
+		n--;
+	}
+	if(n == 1 && dir[0] == '/') {
+		return snprintf(dst, dst_size, "/%s", name);
+	}
+	return snprintf(dst, dst_size, "%.*s/%s", (int)n, dir, name);
+}
+
+static int tab_path_match(const char *name, const char *base) {
+	size_t i = 0;
+	size_t j = 0;
+
+	while(base[j] != '\0') {
+		char ch = base[j++];
+
+		if(ch == '\\' && base[j] != '\0') {
+			ch = base[j++];
+		}
+		if(name[i] == '\0' || name[i] != ch) {
+			return 0;
+		}
+		i++;
+	}
+	return 1;
+}
+
+static void tab_path_show(char *dst, size_t dst_size, const char *name, int dir) {
+	size_t i;
+	size_t n = 0;
+
+	for(i = 0; name[i] != '\0' && n + 1 < dst_size; i++) {
+		if(name[i] == ' ') {
+			if(n + 2 >= dst_size) {
+				break;
+			}
+			dst[n++] = '\\';
+		}
+		dst[n++] = name[i];
+	}
+	if(dir && n + 1 < dst_size) {
+		dst[n++] = '/';
+	}
+	dst[n] = '\0';
+}
+
+static void tab_path_each(const char *dir, const char *base, void (*fn)(const char *name, void *arg), void *arg) {
+	file_t fd;
+	const dirent_t *ent;
+
+	fd = fs_open(dir, O_RDONLY | O_DIR);
+	if(fd == FILEHND_INVALID) {
+		return;
+	}
+	while((ent = fs_readdir(fd)) != NULL) {
+		char shown[NAME_MAX * 2 + 2];
+
+		if(!ent->name[0]) {
+			continue;
+		}
+		if(ent->name[0] == '.' && base[0] != '.') {
+			continue;
+		}
+		if(!tab_path_match(ent->name, base)) {
+			continue;
+		}
+		tab_path_show(shown, sizeof(shown), ent->name, ent->attr == O_DIR || ent->size < 0);
+		fn(shown, arg);
+	}
+	fs_close(fd);
+}
+
+static void console_tab_path(void) {
+	const char *mark;
+	const char *token;
+	const char *home;
+	char expanded[NAME_MAX];
+	char dir[NAME_MAX];
+	char base[NAME_MAX];
+	char done[NAME_MAX];
+	char line[CONSOLE_CMD_MAX + 1];
+	int head_len;
+	int absolute;
+	int add_space;
+	int n;
+	TabScan scan;
+	TabPrint out;
+
+	mark = strrchr(console->lcmd, ' ');
+	if(mark) {
+		head_len = (int)(mark - console->lcmd) + 1;
+		token = mark + 1;
+	}
+	else {
+		head_len = 0;
+		token = console->lcmd;
+	}
+
+	if(token[0] == '~' && (token[1] == '\0' || token[1] == '/')) {
+		home = getenv("HOME");
+		n = snprintf(expanded, sizeof(expanded), "%s%s", home, token + 1);
+	}
+	else {
+		n = snprintf(expanded, sizeof(expanded), "%s", token);
+	}
+	if(n < 0 || n >= NAME_MAX) {
+		return;
+	}
+
+	absolute = strchr(expanded, '/') != NULL;
+	tab_path_split(expanded, dir, base);
+	memset(&scan, 0, sizeof(scan));
+	tab_path_each(dir, base, tab_note, &scan);
+	if(scan.count < 1) {
+		return;
+	}
+
+	if(scan.count == 1) {
+		add_space = scan.common[0] != '\0' && scan.common[strlen(scan.common) - 1] != '/';
+	}
+	else {
+		memset(&out, 0, sizeof(out));
+		tab_path_each(dir, base, tab_print_name, &out);
+		tab_flush(&out);
+		if(strlen(scan.common) <= strlen(base)) {
+			return;
+		}
+		add_space = 0;
+	}
+
+	n = tab_path_join(done, sizeof(done), dir, scan.common, absolute);
+	if(n < 0 || n >= NAME_MAX) {
+		return;
+	}
+	n = snprintf(line, sizeof(line), "%.*s%s", head_len, console->lcmd, done);
+	if(n < 0 || n > CONSOLE_CMD_MAX) {
+		return;
+	}
+	memcpy(console->lcmd, line, (size_t)n);
+	if(add_space && n < CONSOLE_CMD_MAX) {
+		console->lcmd[n++] = ' ';
+	}
+	console->lcmd[n] = '\0';
+	console->rcmd[0] = '\0';
+	console->cursor = n;
+	console->offset = 0;
+	command_assemble();
+}
+
+static void console_tab_cmd(void) {
+	TabScan scan;
+	TabPrint out;
+	const char *prefix = console->lcmd;
 
 	memset(&scan, 0, sizeof(scan));
 	tab_each(prefix, tab_note, &scan);
@@ -1342,6 +1521,17 @@ static void console_tab(void) {
 	if(strlen(scan.common) > strlen(prefix)) {
 		console_tab_apply(scan.common, 0);
 	}
+}
+
+static void console_tab(void) {
+	const char *mark = strrchr(console->lcmd, ' ');
+	const char *token = mark ? mark + 1 : console->lcmd;
+
+	if(mark || tab_path_token(token)) {
+		console_tab_path();
+		return;
+	}
+	console_tab_cmd();
 }
 
 static uint32 pack_rgb(unsigned char r, unsigned char g, unsigned char b, float extra_a) {
@@ -1551,8 +1741,28 @@ static void draw_background(float x, float y) {
 	}
 }
 
+static void console_prompt_update(void) {
+	const char *cwd = fs_getwd();
+	int cwd_len;
+	int used;
+
+	snprintf(console->prompt, sizeof(console->prompt), "D$: ");
+	if(!cwd || cwd[0] == '\0') {
+		return;
+	}
+	cwd_len = (int)strlen(cwd);
+	used = (int)strlen(console->prompt);
+	if(used + cwd_len + 1 > console->vchars - CONSOLE_PROMPT_INPUT_MIN - 1) {
+		return;
+	}
+	if(used + cwd_len + 1 >= CONSOLE_PROMPT_MAX) {
+		return;
+	}
+	snprintf(console->prompt, sizeof(console->prompt), "D$: %s ", cwd);
+}
+
 static void draw_command(float x0, float y) {
-	int prompt_len = (int)strlen(console->prompt);
+	int prompt_len;
 	int window;
 	int visible;
 	int cmd_len;
@@ -1561,6 +1771,9 @@ static void draw_command(float x0, float y) {
 	uint64 now;
 	float phase;
 	float wave;
+
+	console_prompt_update();
+	prompt_len = (int)strlen(console->prompt);
 
 	if(prompt_len > console->vchars) {
 		prompt_len = console->vchars;
@@ -1778,9 +1991,68 @@ static void Command_Handler(const char *command) {
 	dsystem(command);
 }
 
+static int console_home_token(const char *src, int i) {
+	char next = src[i + 1];
+
+	if(src[i] != '~') {
+		return 0;
+	}
+	if(i > 0 && !isspace((unsigned char)src[i - 1])) {
+		return 0;
+	}
+	return next == '\0' || next == '/' || isspace((unsigned char)next);
+}
+
+static char *console_expand_home(const char *src) {
+	const char *home;
+	size_t home_len;
+	size_t need = 1;
+	size_t out = 0;
+	int i;
+	int hit = 0;
+	char *dst;
+
+	if(strchr(src, '~') == NULL) {
+		return NULL;
+	}
+
+	home = getenv("HOME");
+	home_len = strlen(home);
+
+	for(i = 0; src[i] != '\0'; i++) {
+		if(console_home_token(src, i)) {
+			hit = 1;
+			need += home_len;
+		}
+		else {
+			need++;
+		}
+	}
+	if(!hit) {
+		return NULL;
+	}
+
+	dst = (char *)malloc(need);
+	if(!dst) {
+		return NULL;
+	}
+	for(i = 0; src[i] != '\0'; i++) {
+		if(console_home_token(src, i)) {
+			memcpy(dst + out, home, home_len);
+			out += home_len;
+		}
+		else {
+			dst[out++] = src[i];
+		}
+	}
+	dst[out] = '\0';
+	return dst;
+}
+
 static void console_submit_command(void) {
 	char shown[CONSOLE_CMD_MAX + CONSOLE_PROMPT_MAX + 16];
 	char run[CONSOLE_CMD_MAX + 1];
+	char *expanded;
 
 	if(irq_inside_int() || !console || console->command[0] == '\0') {
 		return;
@@ -1800,7 +2072,9 @@ static void console_submit_command(void) {
 	mutex_unlock(&console_mutex);
 
 	ds_printf("%s\n", shown);
-	Command_Handler(run);
+	expanded = console_expand_home(run);
+	Command_Handler(expanded != NULL ? expanded : run);
+	free(expanded);
 }
 
 static void console_scroll_by(int delta) {
