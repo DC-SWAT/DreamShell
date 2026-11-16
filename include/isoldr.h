@@ -13,6 +13,7 @@
 #include <dc/cdrom.h>
 #include "isofs/isofs.h"
 #include "isofs/ciso.h"
+#include "naomi/jvs_map.h"
 #ifndef _ISO_LOADER_H
 #include <naomi/cart.h>
 #endif
@@ -219,7 +220,8 @@ typedef struct isoldr_info {
 	uint32_t firmware;                    /* Flashrom dump (path+data) or IRQ table. Set 1 for auto load dump. */
 	uint32_t region;                      /* See isoldr_region_t */
 
-	uint32_t cdda_offset[40];             /* CDDA tracks offset, only for CDI images */
+	uint8_t jvs_map[DS_JVS_MAP_SRC];          /* Per-game JVS remap, NAOMI ROM only */
+	uint32_t cdda_offset[29];                 /* CDDA tracks offset, only for CDI images */
 
 } isoldr_info_t;
 
@@ -242,10 +244,41 @@ int isoldr_naomi_read_header(file_t fd, naomi_cart_header_t *hdr);
 int isoldr_set_boot_file(isoldr_info_t *info, const char *iso_file, const char *boot_file);
 
 /**
- * Build preset filename for the given image file path and MD5 hash.
+ * Build preset filename:
+ * $HOME/appdata/iso_loader/presets/<dev>_<md5>.cfg
+ * dev is taken from the image path.
  * Returns pointer to a static buffer.
-*/
+ */
 char *isoldr_make_preset_filename(const char *image_file, uint8_t *md5);
+
+/**
+ * Fill md5 the same way presets do: NAOMI cart header for .dni,
+ * otherwise the boot sector of image file. On failure the hash is zero.
+ */
+void isoldr_image_md5(const char *image_file, uint8_t *md5);
+
+/**
+ * Build per-game input map path:
+ * $HOME/appdata/iso_loader/input_maps/<md5>.map
+ * Returns pointer to a static buffer, or NULL if md5 is NULL
+ * or the path does not fit.
+ */
+char *isoldr_make_input_map_filename(uint8_t *md5);
+
+/**
+ * Load the per-game input map for this image.
+ * Retail hardware and a zero hash are skipped.
+ * NAOMI ROM with a jvs file fills info->jvs_map.
+ * A Dreamcast game with a pad file is kept for the MIE pad bridge.
+ * A file of the other kind is ignored.
+ */
+void isoldr_input_map_prepare(isoldr_info_t *info, const char *file);
+
+/**
+ * Per-game Dreamcast pad map prepared for this info.
+ * Returns NULL when there is none, so the settings map is used.
+ */
+const uint16_t *isoldr_game_pad_map(const isoldr_info_t *info);
 
 /**
  * Check whether the image supports true async DMA (based on image type,

@@ -120,27 +120,33 @@ static int get_preset_device_index(const char *dir) {
 	return -1;
 }
 
+#define PRESET_MD5_LEN 16
+
+static void format_md5_hex(char *dst, const uint8_t *md5) {
+	int i;
+
+	for(i = 0; i < PRESET_MD5_LEN; i++) {
+		sprintf(dst + i * 2, "%02x", md5[i]);
+	}
+	dst[PRESET_MD5_LEN * 2] = '\0';
+}
+
 static void format_preset_filename(const char *base_path, const char *dir, uint8_t *md5, char *output) {
 	char dev[8];
+	char hex[PRESET_MD5_LEN * 2 + 1];
 
 	memset(dev, 0, sizeof(dev));
 	strncpy(dev, &dir[1], 3);
 	dev[2] = (dev[2] == '/') ? '\0' : dev[2];
 	dev[3] = '\0';
+	format_md5_hex(hex, md5);
 
-	snprintf(output, NAME_MAX,
-		"%s/%s_%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x.cfg",
-		base_path, dev,
-		md5[0],  md5[1],  md5[2],  md5[3],
-		md5[4],  md5[5],  md5[6],  md5[7],
-		md5[8],  md5[9],  md5[10], md5[11],
-		md5[12], md5[13], md5[14], md5[15]);
+	snprintf(output, NAME_MAX, "%s/%s_%s.cfg", base_path, dev, hex);
 }
 
 static char preset_filename_buf[NAME_MAX];
 
 #define PRESET_ISO_HASH_LEN 2048
-#define PRESET_MD5_LEN 16
 #define PRESET_HASH_MOUNT "/isohash"
 #define PRESET_ISO_SECTOR_SIZE 2048
 
@@ -179,7 +185,7 @@ static int hash_boot_sector_md5(const char *image_file, uint8_t *md5) {
 	return 1;
 }
 
-static void hash_image_md5(const char *image_file, uint8_t *md5) {
+void isoldr_image_md5(const char *image_file, uint8_t *md5) {
 	file_t fd;
 	const char *ext;
 	uint8_t buf[PRESET_ISO_HASH_LEN];
@@ -228,6 +234,28 @@ char *isoldr_make_preset_filename(const char *image_file, uint8_t *md5) {
 	return preset_filename_buf;
 }
 
+static char jvs_map_filename_buf[NAME_MAX];
+
+char *isoldr_make_input_map_filename(uint8_t *md5) {
+	char hex[PRESET_MD5_LEN * 2 + 1];
+	int wrote;
+
+	if(!md5) {
+		return NULL;
+	}
+
+	format_md5_hex(hex, md5);
+	memset(jvs_map_filename_buf, 0, sizeof(jvs_map_filename_buf));
+	wrote = snprintf(jvs_map_filename_buf, NAME_MAX,
+		"%s/appdata/iso_loader/input_maps/%s.map",
+		getenv("HOME"), hex);
+	if(wrote < 0 || wrote >= NAME_MAX) {
+		return NULL;
+	}
+
+	return jvs_map_filename_buf;
+}
+
 static int mount_presets_romdisk(int device_idx) {
 	char romdisk_path[NAME_MAX];
 
@@ -274,7 +302,7 @@ char *isoldr_find_preset(const char *image_file, uint8_t *md5, int default_only)
 	int device_idx;
 
 	if(!md5) {
-		hash_image_md5(image_file, local_md5);
+		isoldr_image_md5(image_file, local_md5);
 		md5 = local_md5;
 	}
 

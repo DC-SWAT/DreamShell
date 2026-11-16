@@ -5,6 +5,7 @@ isoldr_get_info
 isoldr_naomi_read_header
 isoldr_set_boot_file
 isoldr_make_preset_filename
+isoldr_make_input_map_filename
 isoldr_can_use_dma
 isoldr_find_preset
 isoldr_apply_preset

@@ -158,26 +158,35 @@ static int mie_pad_map_cmd(uint8_t offset, const uint8_t *src, int n) {
 	return resp->data[0] == MIE_IOR_PAD_ACK;
 }
 
-static int mie_pad_send_map(void) {
+static int mie_pad_send_map(const isoldr_info_t *info) {
 	Settings_t *settings;
+	const uint16_t *map;
 	const uint8_t *raw;
 	int slots;
 	int bytes;
 	int off;
 	int n;
 
-	settings = GetSettings();
-	if(!settings) {
+	map = isoldr_game_pad_map(info);
+	if(map) {
+		ds_printf("DS_PROCESS: MIE pad map game\n");
+	}
+	else {
+		settings = GetSettings();
+		if(!settings) {
+			return 1;
+		}
+		map = settings->jvs_map;
+		ds_printf("DS_PROCESS: MIE pad map settings\n");
+	}
+
+	slots = DS_JVS_MAP_SRC;
+	if(!mie_pad_map_custom(map, slots)) {
 		return 1;
 	}
 
-	slots = (int)(sizeof(settings->jvs_map) / sizeof(settings->jvs_map[0]));
-	if(!mie_pad_map_custom(settings->jvs_map, slots)) {
-		return 1;
-	}
-
-	raw = (const uint8_t *)settings->jvs_map;
-	bytes = (int)sizeof(settings->jvs_map);
+	raw = (const uint8_t *)map;
+	bytes = DS_JVS_MAP_SRC * (int)sizeof(uint16_t);
 	for(off = 0; off < bytes; off += MIE_PAD_MAP_CHUNK) {
 		n = bytes - off;
 		if(n > MIE_PAD_MAP_CHUNK) {
@@ -190,22 +199,22 @@ static int mie_pad_send_map(void) {
 	return 1;
 }
 
-void isoldr_naomi_mie_pad(uint32_t image_type, uint32_t emu_vmu) {
+void isoldr_naomi_mie_pad(isoldr_info_t *info) {
 	int on;
 
-	if(hardware_sys_mode(NULL) == HW_TYPE_RETAIL) {
+	if(!info || hardware_sys_mode(NULL) == HW_TYPE_RETAIL) {
 		return;
 	}
 
-	if(image_type == IMAGE_TYPE_ROM_NAOMI) {
+	if(info->image_type == IMAGE_TYPE_ROM_NAOMI) {
 		on = 0;
 	}
 	else {
 		on = 1;
 	}
 
-	if(mie_pad_cmd(on, emu_vmu)) {
-		if(on && !mie_pad_send_map()) {
+	if(mie_pad_cmd(on, info->emu_vmu)) {
+		if(on && !mie_pad_send_map(info)) {
 			ds_printf("DS_ERROR: MIE pad map send failed\n");
 		}
 		ds_printf("DS_PROCESS: MIE pad bridge %s\n", on ? "on" : "off");

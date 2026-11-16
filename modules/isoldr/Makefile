@@ -5,7 +5,7 @@
 
 TARGET_NAME = isoldr
 OBJS = module.o exec.o execasm.o vm2.o preset.o elf.o \
-		eeprom.o mie_pad.o
+		eeprom.o mie_pad.o input_map.o
 DBG_LIBS = -lds -lisofs
 EXPORTS_FILE = exports.txt
 
