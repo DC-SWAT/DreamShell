@@ -6,7 +6,7 @@
 
 VER_MAJOR = 1
 VER_MINOR = 1
-VER_MICRO = 0
+VER_MICRO = 1
 VER_BUILD = 0x30
 
 VERSION = $(VER_MAJOR).$(VER_MINOR).$(VER_MICRO)
@@ -29,6 +29,8 @@ LOADER_ROM_SLOT_SIZE = 65536
 BOOTLOADER_DIR = ../bootloader
 BOOTLOADER_BIN = $(BOOTLOADER_DIR)/bootloader.bin
 BOOTLOADER_ROM_OFFSET = $(shell expr $(LOADER_ROM_OFFSET) + $(LOADER_ROM_SLOT_SIZE))
+G1_CHECKED_SIZE = 0x400
+G1SUM = $(DS_SDK)/bin/g1sum
 
 include ../../sdk/Makefile.cfg
 
@@ -111,8 +113,9 @@ $(ROMDISK_IMG): $(ROMDISK_CONTENT) | $(BUILD)
 	$(KOS_GENROMFS) -f $@ -d $(ROMDISK_DIR) -V DreamShell -v -x .keepme
 endif
 
-$(BIOS_BASE_BIN): $(BIOS_ELF) | $(BUILD)
+$(BIOS_BASE_BIN): $(BIOS_ELF) $(G1SUM) | $(BUILD)
 	$(KOS_OBJCOPY) -O binary -R .stack $< $@
+	$(G1SUM) -s $(G1_CHECKED_SIZE) $@
 
 $(BIOS_LOADER_BIN): $(BIOS_BASE_BIN) $(LOADER_PATH) | $(BUILD)
 	cp $< $@
