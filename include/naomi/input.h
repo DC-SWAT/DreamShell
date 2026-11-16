@@ -12,12 +12,7 @@
 
 #include <stdint.h>
 #include <dc/maple/mie.h>
-
-#define DS_JVS_MAP_PLAYER 16
-#define DS_JVS_MAP_PANEL  (DS_JVS_MAP_PLAYER * 2)
-#define DS_JVS_MAP_BUTTON (DS_JVS_MAP_PANEL + 3)
-#define DS_JVS_MAP_ANALOG MIE_JVS_ANALOG_CHANNELS
-#define DS_JVS_MAP_SRC    (DS_JVS_MAP_BUTTON + DS_JVS_MAP_ANALOG)
+#include <naomi/jvs_map.h>
 
 typedef enum {
 	DS_JVS_AXIS_NONE = 0,
@@ -30,6 +25,25 @@ typedef enum {
 	DS_JVS_AXIS_COUNT
 } ds_jvs_axis_t;
 
+typedef enum {
+	DS_JVS_MAP_KIND_PAD = 0,
+	DS_JVS_MAP_KIND_JVS
+} ds_jvs_map_kind_t;
+
 void ApplyJvsButtonMap(const uint16_t *map);
+
+int JvsMapSrcDown(const mie_jvs_inputs_t *jvs, int src);
+
+const char *JvsMapSlotName(int idx);
+
+const char *JvsMapValueName(ds_jvs_map_kind_t kind, int src, uint16_t value);
+
+uint16_t JvsMapCycle(ds_jvs_map_kind_t kind, int src, uint16_t value, int dir);
+
+void JvsMapDefault(ds_jvs_map_kind_t kind, uint16_t *map);
+
+int LoadJvsMapFile(const char *fn, ds_jvs_map_kind_t *kind, uint16_t *map);
+
+int SaveJvsMapFile(const char *fn, ds_jvs_map_kind_t kind, const uint16_t *map);
 
 #endif

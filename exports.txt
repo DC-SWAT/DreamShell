@@ -293,6 +293,13 @@ GetVolumeFromSettings
 GetStartupAppName
 GetMainAppName
 ApplyJvsButtonMap
+JvsMapSrcDown
+JvsMapSlotName
+JvsMapValueName
+JvsMapCycle
+JvsMapDefault
+LoadJvsMapFile
+SaveJvsMapFile
 #
 naomi_bsram_read_credits
 naomi_bsram_read
