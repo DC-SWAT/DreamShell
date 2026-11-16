@@ -63,6 +63,9 @@ DEFAULT_MODULE_EXPORTS(app_mie_jvs);
 #define EXIT_LABEL_Y           24.0f
 #define EXIT_LABEL_MARGIN      8.0f
 #define HELD_BUTTONS           0xFFFFFFFFU
+#define GAME_CALLER_MAX        64
+#define GAME_TITLE_MAX         128
+#define GAME_ARG_SEP           '|'
 
 typedef struct {
     Label *wheel_title;
@@ -165,6 +168,12 @@ typedef struct {
     mie_view_t map_after;
     int panel_combo;
     uint16_t map[DS_JVS_MAP_SRC];
+    uint16_t map_saved[DS_JVS_MAP_SRC];
+    int game_mode;
+    ds_jvs_map_kind_t map_kind;
+    char game_map_path[NAME_MAX];
+    char game_caller[GAME_CALLER_MAX];
+    char game_title[GAME_TITLE_MAX];
     int output_blink;
     uint8_t output_blink_step;
     uint64_t output_blink_last_ms;
@@ -235,110 +244,6 @@ static const Color COL_SEL = {1.0f, 0.831f, 0.945f, 0.161f};
 static const Color COL_ACTIVE = {1.0f, 0.439f, 0.788f, 0.859f};
 static const Color COL_EXIT = {1.0f, 1.0f, 0.533f, 0.533f};
 
-static const char *const jvs_player_names[DS_JVS_MAP_PLAYER] = {
-    "Start", "Up", "Down", "Left", "Right",
-    "BTN1", "BTN2", "BTN3", "BTN4", "BTN5",
-    "BTN6", "BTN7", "BTN8", "BTN9", "BTN10",
-    "Service"
-};
-
-static const uint16_t pad_cycle[] = {
-    0,
-    CONT_A, CONT_B, CONT_X, CONT_Y, CONT_Z, CONT_C, CONT_D, CONT_START,
-    CONT_DPAD_UP, CONT_DPAD_DOWN, CONT_DPAD_LEFT, CONT_DPAD_RIGHT
-};
-
-static const char *const pad_names[] = {
-    "---",
-    "A", "B", "X", "Y", "Z", "C", "D", "Start",
-    "Up", "Down", "Left", "Right"
-};
-
-#define PAD_CYCLE_COUNT ((int)(sizeof(pad_cycle) / sizeof(pad_cycle[0])))
-
-static const uint16_t axis_cycle[] = {
-    DS_JVS_AXIS_NONE,
-    DS_JVS_AXIS_JOYX,
-    DS_JVS_AXIS_JOYY,
-    DS_JVS_AXIS_JOY2X,
-    DS_JVS_AXIS_JOY2Y,
-    DS_JVS_AXIS_LTRIG,
-    DS_JVS_AXIS_RTRIG
-};
-
-static const char *const axis_names[] = {
-    "---", "X", "Y", "X2", "Y2", "L", "R"
-};
-
-#define AXIS_CYCLE_COUNT ((int)(sizeof(axis_cycle) / sizeof(axis_cycle[0])))
-
-static const char *const jvs_analog_names[DS_JVS_MAP_ANALOG] = {
-    "Wheel", "Accel", "Brake", "CH3", "CH4", "CH5", "CH6", "CH7"
-};
-
-static const char *pad_btn_name(uint16_t slot) {
-    int i;
-
-    for(i = 0; i < PAD_CYCLE_COUNT; i++) {
-        if(pad_cycle[i] == slot) {
-            return pad_names[i];
-        }
-    }
-
-    return "---";
-}
-
-static const char *axis_name(uint16_t slot) {
-    int i;
-
-    for(i = 0; i < AXIS_CYCLE_COUNT; i++) {
-        if(axis_cycle[i] == slot) {
-            return axis_names[i];
-        }
-    }
-
-    return "---";
-}
-
-static const char *map_slot_name(int idx, uint16_t slot) {
-    if(idx >= DS_JVS_MAP_BUTTON) {
-        return axis_name(slot);
-    }
-
-    return pad_btn_name(slot);
-}
-
-static void jvs_btn_label(char *dst, size_t len, int idx) {
-    int extra;
-
-    if(idx >= DS_JVS_MAP_BUTTON) {
-        snprintf(dst, len, "%s", jvs_analog_names[idx - DS_JVS_MAP_BUTTON]);
-        return;
-    }
-
-    if(idx < DS_JVS_MAP_PLAYER) {
-        snprintf(dst, len, "P1 %s", jvs_player_names[idx]);
-        return;
-    }
-
-    if(idx < DS_JVS_MAP_PANEL) {
-        snprintf(dst, len, "P2 %s", jvs_player_names[idx - DS_JVS_MAP_PLAYER]);
-        return;
-    }
-
-    extra = idx - DS_JVS_MAP_PANEL;
-    if(extra == 0) {
-        snprintf(dst, len, "Test");
-        return;
-    }
-    if(extra == 1) {
-        snprintf(dst, len, "Service");
-        return;
-    }
-
-    snprintf(dst, len, "Sys Test");
-}
-
 static void place_bar(Rectangle *rect, float x, float y, float w, float h) {
     Vector pos;
 
@@ -362,40 +267,6 @@ static void place_label(Label *label, float x, float y) {
     TSU_DrawableSetTranslate((Drawable *)label, &pos);
 }
 
-static const uint16_t jvs_player_bit[DS_JVS_MAP_PLAYER] = {
-    MIE_JVS_START_BIT,
-    MIE_JVS_UP_BIT,
-    MIE_JVS_DOWN_BIT,
-    MIE_JVS_LEFT_BIT,
-    MIE_JVS_RIGHT_BIT,
-    MIE_JVS_SW2_BIT,
-    MIE_JVS_SW1_BIT,
-    MIE_JVS_SW9_BIT,
-    MIE_JVS_SW10_BIT,
-    MIE_JVS_SW11_BIT,
-    MIE_JVS_SW12_BIT,
-    MIE_JVS_SW13_BIT,
-    MIE_JVS_SW14_BIT,
-    MIE_JVS_SW15_BIT,
-    MIE_JVS_SW16_BIT,
-    MIE_JVS_SERVICE_BIT
-};
-
-static const uint16_t jvs_player_pad[DS_JVS_MAP_PLAYER] = {
-    CONT_START,
-    CONT_DPAD_UP,
-    CONT_DPAD_DOWN,
-    CONT_DPAD_LEFT,
-    CONT_DPAD_RIGHT,
-    CONT_B,
-    CONT_X,
-    0, 0, 0, 0, 0,
-    CONT_Y,
-    0,
-    CONT_A,
-    CONT_Z
-};
-
 static int jvs_map_blank(const uint16_t *map) {
     int i;
 
@@ -408,52 +279,68 @@ static int jvs_map_blank(const uint16_t *map) {
     return 1;
 }
 
-static void jvs_map_default(uint16_t *map) {
-    memset(map, 0, DS_JVS_MAP_SRC * sizeof(*map));
-    memcpy(map, jvs_player_pad, sizeof(jvs_player_pad));
-    memcpy(map + DS_JVS_MAP_PLAYER, jvs_player_pad, sizeof(jvs_player_pad));
-    map[DS_JVS_MAP_PANEL] = CONT_C;
-    map[DS_JVS_MAP_PANEL + 1] = CONT_D;
-    map[DS_JVS_MAP_BUTTON] = DS_JVS_AXIS_JOYX;
-    map[DS_JVS_MAP_BUTTON + 1] = DS_JVS_AXIS_RTRIG;
-    map[DS_JVS_MAP_BUTTON + 2] = DS_JVS_AXIS_LTRIG;
-}
-
-static int jvs_src_down(const mie_jvs_inputs_t *jvs, int src) {
-    int extra;
-
-    if(!jvs || src < 0 || src >= DS_JVS_MAP_BUTTON) {
-        return 0;
-    }
-
-    if(src < DS_JVS_MAP_PLAYER) {
-        return (jvs->p1.raw & jvs_player_bit[src]) != 0;
-    }
-
-    if(src < DS_JVS_MAP_PANEL) {
-        return (jvs->p2.raw & jvs_player_bit[src - DS_JVS_MAP_PLAYER]) != 0;
-    }
-
-    extra = src - DS_JVS_MAP_PANEL;
-    if(extra == 0) {
-        return (jvs->panel.psw.raw & MIE_JVS_PANEL_TEST_BIT) != 0;
-    }
-    if(extra == 1) {
-        return (jvs->panel.psw.raw & MIE_JVS_PANEL_SERVICE_BIT) != 0;
-    }
-
-    return (jvs->system.raw & MIE_JVS_SYS_TEST_BIT) != 0;
-}
-
 static int jvs_map_is_default(const uint16_t *map) {
     uint16_t def[DS_JVS_MAP_SRC];
 
-    jvs_map_default(def);
-    return memcmp(map, def, DS_JVS_MAP_SRC * sizeof(*map)) == 0;
+    JvsMapDefault(DS_JVS_MAP_KIND_PAD, def);
+    return memcmp(map, def, sizeof(def)) == 0;
+}
+
+static void map_fallback(uint16_t *dst) {
+    Settings_t *settings;
+
+    if(self.map_kind == DS_JVS_MAP_KIND_JVS) {
+        JvsMapDefault(DS_JVS_MAP_KIND_JVS, dst);
+        return;
+    }
+
+    settings = GetSettings();
+    if(!settings || jvs_map_blank(settings->jvs_map)) {
+        JvsMapDefault(DS_JVS_MAP_KIND_PAD, dst);
+        return;
+    }
+
+    memcpy(dst, settings->jvs_map, sizeof(self.map));
+}
+
+static void preview_pad_map(void) {
+    uint16_t stored[DS_JVS_MAP_SRC];
+
+    if(self.map_kind == DS_JVS_MAP_KIND_JVS) {
+        return;
+    }
+    if(jvs_map_is_default(self.map)) {
+        memset(stored, 0, sizeof(stored));
+        ApplyJvsButtonMap(stored);
+        return;
+    }
+
+    ApplyJvsButtonMap(self.map);
+}
+
+static void save_game_map(void) {
+    uint16_t fallback[DS_JVS_MAP_SRC];
+
+    map_fallback(fallback);
+    if(memcmp(self.map, fallback, sizeof(fallback)) == 0) {
+        fs_unlink(self.game_map_path);
+    }
+    else if(SaveJvsMapFile(self.game_map_path, self.map_kind, self.map) < 0) {
+        ds_printf("DS_ERROR: Can't save JVS map %s\n", self.game_map_path);
+        return;
+    }
+
+    memcpy(self.map_saved, self.map, sizeof(self.map));
+    self.map_dirty = 0;
 }
 
 static void save_btn_map(void) {
     Settings_t *settings;
+
+    if(self.game_mode) {
+        save_game_map();
+        return;
+    }
 
     settings = GetSettings();
     if(jvs_map_is_default(self.map)) {
@@ -470,9 +357,16 @@ static void save_btn_map(void) {
 static void revert_map(void) {
     Settings_t *settings;
 
+    if(self.game_mode) {
+        memcpy(self.map, self.map_saved, sizeof(self.map));
+        preview_pad_map();
+        self.map_dirty = 0;
+        return;
+    }
+
     settings = GetSettings();
     if(jvs_map_blank(settings->jvs_map)) {
-        jvs_map_default(self.map);
+        JvsMapDefault(DS_JVS_MAP_KIND_PAD, self.map);
     }
     else {
         memcpy(self.map, settings->jvs_map, sizeof(self.map));
@@ -495,7 +389,8 @@ static int prompt_map_save(mie_view_t view, int do_exit) {
     }
 
     self.map_prompt = 1;
-    TSU_DialogShow(self.save_dialog, "Save changed mapping to settings?");
+    TSU_DialogShow(self.save_dialog, self.game_mode ?
+        "Save mapping for this game?" : "Save changed mapping to settings?");
     return 1;
 }
 
@@ -565,49 +460,18 @@ static int prompt_calib_save(mie_view_t view, int do_exit) {
 }
 
 static void map_apply(void) {
-    uint16_t stored[DS_JVS_MAP_SRC];
+    preview_pad_map();
+    if(self.game_mode) {
+        self.map_dirty = memcmp(self.map, self.map_saved, sizeof(self.map)) != 0;
+        return;
+    }
 
-    if(jvs_map_is_default(self.map)) {
-        memset(stored, 0, sizeof(stored));
-        ApplyJvsButtonMap(stored);
-    }
-    else {
-        ApplyJvsButtonMap(self.map);
-    }
     self.map_dirty = 1;
 }
 
 static void map_cycle(int dir) {
-    const uint16_t *cycle;
-    int count;
-    int i;
-    int slot;
-
-    if(self.map_sel >= DS_JVS_MAP_BUTTON) {
-        cycle = axis_cycle;
-        count = AXIS_CYCLE_COUNT;
-    }
-    else {
-        cycle = pad_cycle;
-        count = PAD_CYCLE_COUNT;
-    }
-
-    slot = 0;
-    for(i = 0; i < count; i++) {
-        if(cycle[i] == self.map[self.map_sel]) {
-            slot = i;
-            break;
-        }
-    }
-
-    slot += dir;
-    if(slot < 0) {
-        slot = count - 1;
-    }
-    if(slot >= count) {
-        slot = 0;
-    }
-    self.map[self.map_sel] = cycle[slot];
+    self.map[self.map_sel] = JvsMapCycle(self.map_kind, self.map_sel,
+        self.map[self.map_sel], dir);
     map_apply();
 }
 
@@ -1594,7 +1458,6 @@ static void update_menu_ui(void) {
 static void update_map_ui(const mie_state_t *st) {
     int row;
     int idx;
-    char name[32];
     char pos[16];
     Color col;
     float y;
@@ -1622,26 +1485,31 @@ static void update_map_ui(const mie_state_t *st) {
         if(row == self.map_sel - self.map_scroll) {
             col = COL_SEL;
         }
-        else if(st && jvs_src_down(&st->jvs, idx)) {
+        else if(st && JvsMapSrcDown(&st->jvs, idx)) {
             col = COL_ACTIVE;
         }
 
-        jvs_btn_label(name, sizeof(name), idx);
         y = MAP_ROW_Y0 + (float)row * MAP_ROW_STEP;
         if(self.map_src[row]) {
             place_label(self.map_src[row], MAP_SRC_X, y);
-            TSU_LabelSetText(self.map_src[row], name);
+            TSU_LabelSetText(self.map_src[row], JvsMapSlotName(idx));
             TSU_LabelSetTint(self.map_src[row], &col);
         }
         if(self.map_dst[row]) {
             place_label(self.map_dst[row], MAP_DST_X, y);
-            TSU_LabelSetText(self.map_dst[row], map_slot_name(idx, self.map[idx]));
+            TSU_LabelSetText(self.map_dst[row],
+                JvsMapValueName(self.map_kind, idx, self.map[idx]));
             TSU_LabelSetTint(self.map_dst[row], &col);
         }
     }
 
     place_label(self.map_hdr_src, MAP_SRC_X, MAP_HDR_Y);
     place_label(self.map_hdr_dst, MAP_DST_X, MAP_HDR_Y);
+    if(self.map_hdr_dst) {
+        TSU_LabelSetText(self.map_hdr_dst,
+            (self.game_mode && self.map_kind == DS_JVS_MAP_KIND_JVS) ?
+            "Game JVS" : "Dreamcast");
+    }
     place_label(self.map_pos, MAP_POS_X, MAP_HDR_Y);
 
     y = MAP_ROW_Y0 + (float)(self.map_sel - self.map_scroll) * MAP_ROW_STEP;
@@ -1666,8 +1534,13 @@ static void update_ui(const mie_state_t *st) {
     calib_view = self.view == MIE_VIEW_CALIB || mie_analog_calib_active();
 
     if(self.page_label) {
-        TSU_LabelSetText(self.page_label,
-            view_name(mie_analog_calib_active() ? MIE_VIEW_CALIB : self.view));
+        if(self.game_mode && self.game_title[0]) {
+            TSU_LabelSetText(self.page_label, self.game_title);
+        }
+        else {
+            TSU_LabelSetText(self.page_label,
+                view_name(mie_analog_calib_active() ? MIE_VIEW_CALIB : self.view));
+        }
     }
 
     if(!st || mode != MIE_PORT0_JVS) {
@@ -1808,6 +1681,30 @@ static int test_service_down(const mie_state_t *st) {
     return st->jvs.system.test && service;
 }
 
+static void leave_game(void) {
+    App_t *caller;
+    Settings_t *settings;
+
+    if(self.map_kind == DS_JVS_MAP_KIND_PAD) {
+        settings = GetSettings();
+        if(settings) {
+            ApplyJvsButtonMap(settings->jvs_map);
+        }
+        else {
+            ApplyJvsButtonMap(NULL);
+        }
+    }
+
+    caller = GetAppByName(self.game_caller);
+    if(caller && (caller->state & APP_STATE_LOADED)) {
+        OpenApp(caller, NULL);
+    }
+    else {
+        OpenMainApp();
+    }
+    CloseApp(self.app, 1);
+}
+
 static void OnExit(void) {
 
     if(self.exiting) {
@@ -1839,6 +1736,11 @@ static void OnExit(void) {
 
     SDL_DC_EmulateMouse(SDL_TRUE);
     SetVirtKeyboardEnabled(1);
+
+    if(self.game_mode) {
+        leave_game();
+        return;
+    }
 
     OpenMainApp();
 }
@@ -2055,13 +1957,18 @@ static void handle_input_buttons(uint32_t nav_btns, uint32_t jvs_btns) {
 
         if((btns & CONT_B) && !(self.old_btns & CONT_B) && !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK);
-            self.map[self.map_sel] = 0;
+            if(self.map_kind == DS_JVS_MAP_KIND_JVS) {
+                self.map[self.map_sel] = DS_JVS_REMAP_NONE;
+            }
+            else {
+                self.map[self.map_sel] = 0;
+            }
             map_apply();
         }
 
         if((btns & CONT_A) && !(self.old_btns & CONT_A) && !(btns & CONT_START)) {
             ds_sfx_play(DS_SFX_CLICK);
-            jvs_map_default(self.map);
+            JvsMapDefault(self.map_kind, self.map);
             map_apply();
         }
 
@@ -2215,7 +2122,7 @@ static void InputHandler(void *ds_event, void *param, int action) {
         self.old_btns = HELD_BUTTONS;
         exit_btns_old = btns;
         self.panel_combo = panel_now;
-        if(self.view == MIE_VIEW_MENU) {
+        if(self.game_mode || self.view == MIE_VIEW_MENU) {
             ds_sfx_play(DS_SFX_CH_PAGE);
             OnExit();
         }
@@ -2357,6 +2264,75 @@ static void bind_drawables(void) {
     }
 }
 
+static int parse_kind_arg(const char *text, ds_jvs_map_kind_t *kind) {
+    if(!strcasecmp(text, "pad")) {
+        *kind = DS_JVS_MAP_KIND_PAD;
+        return 1;
+    }
+    if(!strcasecmp(text, "jvs")) {
+        *kind = DS_JVS_MAP_KIND_JVS;
+        return 1;
+    }
+
+    return 0;
+}
+
+static void parse_game_args(const char *args) {
+    char buf[NAME_MAX];
+    char *kind;
+    char *path;
+    char *caller;
+    char *title;
+    char *sep;
+    ds_jvs_map_kind_t parsed;
+
+    if(!args || !args[0]) {
+        return;
+    }
+
+    strncpy(buf, args, sizeof(buf) - 1);
+    buf[sizeof(buf) - 1] = '\0';
+    kind = buf;
+    sep = strchr(kind, GAME_ARG_SEP);
+    if(!sep) {
+        return;
+    }
+    *sep++ = '\0';
+    path = sep;
+    sep = strchr(path, GAME_ARG_SEP);
+    if(!sep) {
+        return;
+    }
+    *sep++ = '\0';
+    caller = sep;
+    sep = strchr(caller, GAME_ARG_SEP);
+    if(!sep) {
+        return;
+    }
+    *sep++ = '\0';
+    title = sep;
+    if(!parse_kind_arg(kind, &parsed)) {
+        return;
+    }
+
+    self.map_kind = parsed;
+    strncpy(self.game_map_path, path, sizeof(self.game_map_path) - 1);
+    strncpy(self.game_caller, caller, sizeof(self.game_caller) - 1);
+    strncpy(self.game_title, title, sizeof(self.game_title) - 1);
+    self.game_mode = 1;
+}
+
+static void load_game_map(void) {
+    ds_jvs_map_kind_t kind;
+
+    if(LoadJvsMapFile(self.game_map_path, &kind, self.map) == 0 &&
+            kind == self.map_kind) {
+        return;
+    }
+
+    map_fallback(self.map);
+}
+
 void MieJvsApp_Init(App_t *app) {
     Settings_t *settings;
 
@@ -2364,22 +2340,32 @@ void MieJvsApp_Init(App_t *app) {
     exit_btns_old = 0;
     self.app = app;
     self.view = MIE_VIEW_MENU;
+    self.map_kind = DS_JVS_MAP_KIND_PAD;
 
     if(!app || !app->tsunami) {
         return;
     }
 
     bind_drawables();
+    parse_game_args(app->args);
 
     settings = GetSettings();
     mie_analog_calib_set(&settings->analog);
-    if(jvs_map_blank(settings->jvs_map)) {
-        jvs_map_default(self.map);
+    if(self.game_mode) {
+        load_game_map();
+        memcpy(self.map_saved, self.map, sizeof(self.map));
+        self.view = MIE_VIEW_MAP;
+    }
+    else if(jvs_map_blank(settings->jvs_map)) {
+        JvsMapDefault(DS_JVS_MAP_KIND_PAD, self.map);
     }
     else {
         memcpy(self.map, settings->jvs_map, sizeof(self.map));
     }
     ApplyJvsButtonMap(settings->jvs_map);
+    if(self.game_mode) {
+        preview_pad_map();
+    }
 
     if(mie_port0_mode() == MIE_PORT0_JVS) {
         mie_get_id(self.board_id);
