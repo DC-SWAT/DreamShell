@@ -42,3 +42,4 @@ isoLoader_toggleVMU
 isoLoader_FwItemClick
 isoLoader_FwItemSelect
 isoLoader_toggleRegion
+isoLoader_EditInputMap

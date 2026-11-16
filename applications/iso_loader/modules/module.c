@@ -27,6 +27,7 @@ DEFAULT_MODULE_EXPORTS(app_iso_loader);
 #define AUDIO_FADE_STEPS 10
 #define AUDIO_FADE_STEP_MS 30
 #define COVER_DISPLAY_MS 1000
+#define GAME_TITLE_LEN 128
 #define COVER_DISPLAY_STEP_MS 50
 
 static const char *ffmpeg_module_names[FFMPEG_MODULES_COUNT] = {
@@ -81,6 +82,7 @@ static struct {
 
 	GUI_Widget *preset;
 	GUI_Widget *preset_status;
+	GUI_Widget *input_map_btn;
 
 	GUI_Widget *dma;
 	GUI_Widget *cdda;
@@ -2562,6 +2564,10 @@ void isoLoader_Init(App_t *app) {
 		self.memory_text = APP_GET_WIDGET("boot-memory-text");
 		self.heap_memory_text = APP_GET_WIDGET("heap-memory-text");
 		self.preset_status = APP_GET_WIDGET("preset_status");
+		self.input_map_btn = APP_GET_WIDGET("input-map-btn");
+		if(self.input_map_btn && hardware_sys_mode(NULL) == HW_TYPE_RETAIL) {
+			GUI_WidgetSetEnabled(self.input_map_btn, 0);
+		}
 
 		w = APP_GET_WIDGET("async-panel");
 		self.async[0] = GUI_ContainerGetChild(w, 1);
@@ -2757,6 +2763,67 @@ void isoLoader_Shutdown(App_t *app) {
 	if(self.isoldr) {
 		free(self.isoldr);
 	}
+}
+
+void isoLoader_EditInputMap(GUI_Widget *widget) {
+	App_t *app;
+	char args[NAME_MAX];
+	char full_title[GAME_TITLE_LEN];
+	char *map_path;
+	const char *kind;
+	const char *title;
+	const char *title2;
+	int i;
+	int wrote;
+
+	(void)widget;
+	if(!self.filename[0]) {
+		return;
+	}
+
+	for(i = 0; i < (int)sizeof(self.md5); i++) {
+		if(self.md5[i]) {
+			break;
+		}
+	}
+	if(i == (int)sizeof(self.md5)) {
+		ds_printf("DS_ERROR: No image hash for input map\n");
+		return;
+	}
+
+	map_path = isoldr_make_input_map_filename(self.md5);
+	if(!map_path || !map_path[0]) {
+		return;
+	}
+
+	kind = (self.image_type == IMAGE_TYPE_ROM_NAOMI) ? "jvs" : "pad";
+	title = self.title ? GUI_LabelGetText(self.title) : NULL;
+	title2 = self.title2 ? GUI_LabelGetText(self.title2) : NULL;
+	if(title && title[0] && title2 && title2[0] && title2[0] != ' ') {
+		snprintf(full_title, sizeof(full_title), "%s %s", title, title2);
+		title = full_title;
+	}
+	if(!title || !title[0]) {
+		title = self.filename;
+	}
+
+	wrote = snprintf(args, sizeof(args), "%s|%s|%s|%s",
+		kind, map_path, self.app->name, title);
+	if(wrote < 0 || wrote >= (int)sizeof(args)) {
+		ds_printf("DS_ERROR: Input map arguments do not fit\n");
+		return;
+	}
+
+	app = GetAppByName("MIE JVS");
+	if(!app) {
+		ds_printf("DS_ERROR: MIE JVS app not found\n");
+		return;
+	}
+
+	StopCDDATrack();
+	stopFFplayPlayback();
+	CloseApp(self.app, 0);
+	OpenApp(app, args);
 }
 
 void isoLoader_Exit(GUI_Widget *widget) {

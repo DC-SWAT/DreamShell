@@ -96,6 +96,8 @@ void isoLoader_Shutdown(App_t *app);
 
 void isoLoader_Exit(GUI_Widget *widget);
 
+void isoLoader_EditInputMap(GUI_Widget *widget);
+
 uint32 getModeCDDA();
 
 void setModeCDDA(uint32 mode);
