@@ -1,10 +1,10 @@
 #
 # DreamShell SDK utils Makefile
-# Copyright (C) 2020-2022 SWAT
+# Copyright (C) 2020-2026 SWAT
 # http://www.dc-swat.ru
 #
 
-_SUBDIRS = ciso gdiopt raw2wav img4dc dcimgtool # cdirip nerorip
+_SUBDIRS = ciso gdiopt raw2wav img4dc dcimgtool g1sum
 
 all: $(patsubst %, _dir_%, $(_SUBDIRS))
 
