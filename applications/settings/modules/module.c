@@ -24,7 +24,7 @@ enum {
 #define DIALOG_CONFIRM_TEXT "Confirm"
 #define DIALOG_CANCEL_TEXT "Cancel"
 #define DIALOG_VMU_TEXT "VMU"
-#define DIALOG_ROOT_TEXT "Root"
+#define DIALOG_HOME_TEXT "Home"
 
 enum {
 	NATIVE_MODE_AUTO = 0,
@@ -241,7 +241,7 @@ static void ShowConfirmDialog(const char *title, const char *body, const char *c
 }
 
 static void ShowSaveTargetDialog(void) {
-	ShowConfirmDialog("Save settings?", "Choose where to save settings.", DIALOG_VMU_TEXT, DIALOG_ROOT_TEXT, DIALOG_ACTION_SAVE);
+	ShowConfirmDialog("Save settings?", "Choose where to save settings.", DIALOG_VMU_TEXT, DIALOG_HOME_TEXT, DIALOG_ACTION_SAVE);
 }
 
 static void FinishSave(int where) {
@@ -272,10 +272,10 @@ static void FinishSave(int where) {
 	}
 
 	if(ok) {
-		snprintf(body, sizeof(body), where == DS_SAVE_DEST_VMU ? "Saved to VMU." : "Saved to root.");
+		snprintf(body, sizeof(body), where == DS_SAVE_DEST_VMU ? "Saved to VMU." : "Saved to home.");
 	}
 	else {
-		snprintf(body, sizeof(body), where == DS_SAVE_DEST_VMU ? "Can't save to VMU." : "Can't save to root.");
+		snprintf(body, sizeof(body), where == DS_SAVE_DEST_VMU ? "Can't save to VMU." : "Can't save to home.");
 	}
 
 	self.dialog_action = DIALOG_ACTION_DONE;

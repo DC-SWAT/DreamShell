@@ -310,7 +310,7 @@ int SaveSettingsTo(int where) {
 		return SaveSettingsVMU();
 	}
 
-	snprintf(fn, NAME_MAX, "%s/%s", getenv("PATH"), DS_SAVE_FN);
+	snprintf(fn, NAME_MAX, "%s/%s", getenv("HOME"), DS_SAVE_FN);
 	return SaveSettingsFile(fn);
 }
 
