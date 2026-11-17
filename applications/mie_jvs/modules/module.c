@@ -325,7 +325,8 @@ static void save_game_map(void) {
     if(memcmp(self.map, fallback, sizeof(fallback)) == 0) {
         fs_unlink(self.game_map_path);
     }
-    else if(SaveJvsMapFile(self.game_map_path, self.map_kind, self.map) < 0) {
+    else if(SaveJvsMapFile(self.game_map_path, self.map_kind, self.map,
+            self.game_title) < 0) {
         ds_printf("DS_ERROR: Can't save JVS map %s\n", self.game_map_path);
         return;
     }

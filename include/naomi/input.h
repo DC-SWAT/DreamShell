@@ -44,6 +44,7 @@ void JvsMapDefault(ds_jvs_map_kind_t kind, uint16_t *map);
 
 int LoadJvsMapFile(const char *fn, ds_jvs_map_kind_t *kind, uint16_t *map);
 
-int SaveJvsMapFile(const char *fn, ds_jvs_map_kind_t kind, const uint16_t *map);
+int SaveJvsMapFile(const char *fn, ds_jvs_map_kind_t kind, const uint16_t *map,
+    const char *game);
 
 #endif

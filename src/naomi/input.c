@@ -229,6 +229,7 @@ void ApplyJvsButtonMap(const uint16_t *map) {
 
 #define JVS_MAP_FILE_CAP     2048
 #define JVS_MAP_FILE_ALIGN   32
+#define JVS_MAP_GAME_MAX     128
 #define JVS_REMAP_INDEX_BASE 1
 
 static const char *const jvs_slot_token[DS_JVS_MAP_SRC] = {
@@ -799,6 +800,32 @@ static const char *jvs_value_token(uint16_t value) {
     return jvs_slot_token[dst];
 }
 
+static int game_label(const char *game, char *dst, int cap) {
+    const char *end;
+    int n;
+
+    if(!game || cap < 2) {
+        return 0;
+    }
+    while(*game == ' ' || *game == '\t') {
+        game++;
+    }
+    end = game;
+    while(*end && *end != '\n' && *end != '\r') {
+        end++;
+    }
+    while(end > game && (end[-1] == ' ' || end[-1] == '\t')) {
+        end--;
+    }
+    n = (int)(end - game);
+    if(n <= 0 || n >= cap) {
+        return 0;
+    }
+    memcpy(dst, game, (size_t)n);
+    dst[n] = '\0';
+    return 1;
+}
+
 static int buf_add_pair(char *buf, int cap, int used, const char *key, const char *val) {
     int n;
 
@@ -833,9 +860,11 @@ static int map_parent(const char *fn, char *dir, size_t len) {
     return 0;
 }
 
-int SaveJvsMapFile(const char *fn, ds_jvs_map_kind_t kind, const uint16_t *map) {
+int SaveJvsMapFile(const char *fn, ds_jvs_map_kind_t kind, const uint16_t *map,
+        const char *game) {
     uint16_t def[DS_JVS_MAP_SRC];
     char buf[JVS_MAP_FILE_CAP];
+    char label[JVS_MAP_GAME_MAX];
     char dir[NAME_MAX];
     const char *value;
     file_t fd;
@@ -854,6 +883,12 @@ int SaveJvsMapFile(const char *fn, ds_jvs_map_kind_t kind, const uint16_t *map) 
         kind == DS_JVS_MAP_KIND_JVS ? "jvs" : "pad");
     if(used < 0) {
         return -1;
+    }
+    if(game_label(game, label, sizeof(label))) {
+        used = buf_add_pair(buf, JVS_MAP_FILE_CAP, used, "game", label);
+        if(used < 0) {
+            return -1;
+        }
     }
 
     for(i = 0; i < DS_JVS_MAP_SRC; i++) {
