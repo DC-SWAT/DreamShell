@@ -15,9 +15,8 @@
 #include <syscalls.h>
 #include <naomi/cart.h>
 #include <exception.h>
-#ifdef DEV_TYPE_SD
+#include <asic.h>
 #include <drivers/aica.h>
-#endif
 
 #define CART_READ_STACK_SIZE 4096
 #define CART_DMA_ALIGN 32
@@ -26,6 +25,8 @@
 #define NAOMI_CART_AHEAD_SIZE (CART_ATA_SEC_SIZE * NAOMI_CART_AHEAD_SECTORS)
 #define NAOMI_CART_AHEAD_RESERVE (CART_DMA_ALIGN * 2)
 #define NAOMI_BEE0_AHEAD_ADDR 0x0cd5e000
+#define NAOMI_FW_VEC_SIZE 0x4f00
+#define NAOMI_FW_HND_SIZE 0x7000
 
 static uint32_t cart_read_stack_top;
 static uint32_t cart_read_old_sp;
@@ -115,6 +116,10 @@ static int cart_wait_dma_busy;
 static int cart_aica_async;
 static int cart_stream_kick;
 static int cart_async_kicked;
+static uint32_t cart_dma_addr;
+static uint32_t cart_dma_size;
+
+static void naomi_cart_cache_inval(void *dst, uint32_t size);
 
 #define STREAM_TRACK 8
 
@@ -223,6 +228,10 @@ static int naomi_cart_use_async(const gdc_cart_read_params_t *params) {
 
 static void cart_dma_cb(size_t size) {
     (void)size;
+    if(cart_dma_size) {
+        naomi_cart_cache_inval((void *)cart_dma_addr, cart_dma_size);
+        cart_dma_size = 0;
+    }
     *((volatile uint32_t *)NONCACHED_ADDR(NAOMI_CART_DMA_STATUS_ADDR)) = 0;
     cart_aica_async = 0;
 }
@@ -314,13 +323,31 @@ static inline int naomi_cart_uncached(uint32_t addr) {
     return ((addr >> 24) & 0xf0) == 0xa0;
 }
 
-static void naomi_cart_cache_read(void *dst, uint32_t size) {
-    uint32_t addr = (uint32_t)dst;
+static uint32_t naomi_cart_cache_alias(uint32_t addr) {
+    uint32_t phys = PHYS_ADDR(addr);
+    uint32_t aica_end = is_dreamcast() ? AICA_MEMORY_END : AICA_MEMORY_8MB_END;
 
-    if(!size || naomi_cart_uncached(addr)) {
+    if(phys >= RAM_START_ADDR && phys < RAM_END_32MB_ADDR) {
+        return CACHED_ADDR(phys);
+    }
+    if(phys >= AICA_MEMORY_START && phys < aica_end) {
+        return CACHED_ADDR(phys);
+    }
+    return 0;
+}
+
+static int naomi_cart_line_aligned(uint32_t addr, uint32_t size) {
+    return ((addr | size) & (NAOMI_CART_DMA_UNIT - 1)) == 0;
+}
+
+static void naomi_cart_cache_read(void *dst, uint32_t size) {
+    uint32_t raw = (uint32_t)dst;
+    uint32_t addr = naomi_cart_cache_alias(raw);
+
+    if(!size || !addr || naomi_cart_uncached(raw)) {
         return;
     }
-    if(size < NAOMI_CART_DMA_UNIT) {
+    if(size < NAOMI_CART_DMA_UNIT || !naomi_cart_line_aligned(addr, size)) {
         dcache_purge_range(addr, size);
     }
     else {
@@ -329,12 +356,27 @@ static void naomi_cart_cache_read(void *dst, uint32_t size) {
 }
 
 static void naomi_cart_cache_purge(void *dst, uint32_t size) {
-    uint32_t addr = (uint32_t)dst;
+    uint32_t raw = (uint32_t)dst;
+    uint32_t addr = naomi_cart_cache_alias(raw);
 
-    if(!size || naomi_cart_uncached(addr)) {
+    if(!size || !addr || naomi_cart_uncached(raw)) {
         return;
     }
     dcache_purge_range(addr, size);
+}
+
+static void naomi_cart_cache_inval(void *dst, uint32_t size) {
+    uint32_t addr = naomi_cart_cache_alias((uint32_t)dst);
+
+    if(!size || !addr) {
+        return;
+    }
+    if(naomi_cart_line_aligned(addr, size)) {
+        dcache_inval_range(addr, size);
+    }
+    else {
+        dcache_purge_range(addr, size);
+    }
 }
 
 static uint8_t *cart_ahead;
@@ -539,6 +581,7 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
                 naomi_cart_ahead_read(dst, off, head);
             }
             else {
+                naomi_cart_cache_inval(dst, head);
                 naomi_cart_cache_read(dst, head);
                 lseek(iso_fd, off, SEEK_SET);
                 read(iso_fd, dst, head);
@@ -548,6 +591,7 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
             }
         }
         if(tail) {
+            naomi_cart_cache_inval(dst + head + mid, tail);
             naomi_cart_cache_read(dst + head + mid, tail);
             lseek(iso_fd, off + head + mid, SEEK_SET);
             read(iso_fd, dst + head + mid, tail);
@@ -559,10 +603,14 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
 
     if(mid) {
         int mid_dma = 0;
+
+        naomi_cart_cache_inval(dst + head, mid);
         if(params->type) {
 #ifdef _FS_ASYNC
             if(naomi_cart_use_async(params)) {
                 fs_enable_dma(FS_DMA_HIDDEN);
+                cart_dma_addr = (uint32_t)(dst + head);
+                cart_dma_size = mid;
                 if(ReadSectors(dst + head, (off + head) / ss, mid / ss, cart_dma_cb) == CMD_STAT_PROCESSING) {
                     if(cart_stream_kick) {
                         cart_aica_async = 1;
@@ -571,6 +619,7 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
                     cart_async_kicked = 1;
                     return;
                 }
+                cart_dma_size = 0;
             }
             if(naomi_cart_ctx_blocked()) {
                 fs_enable_dma(FS_DMA_DISABLED);
@@ -591,7 +640,10 @@ static void naomi_cart_read_ide(gdc_cart_read_params_t *params) {
             naomi_cart_cache_read(dst + head, mid);
         }
         ReadSectors(dst + head, (off + head) / ss, mid / ss, NULL);
-        if(!mid_dma && params->type) {
+        if(mid_dma) {
+            naomi_cart_cache_inval(dst + head, mid);
+        }
+        else if(params->type) {
             naomi_cart_cache_purge(dst + head, mid);
         }
     }
@@ -1064,6 +1116,21 @@ uint32_t naomi_load_bin(int test_mode) {
     return 1;
 }
 
+static void naomi_id_cap_op(uint8_t *dst, uint32_t off, uint16_t expect, uint16_t repl) {
+    volatile uint16_t *op = (volatile uint16_t *)(dst + off);
+
+    if(*op != expect) {
+        return;
+    }
+    *op = repl;
+    icache_flush_range(CACHED_ADDR((uint32_t)op), sizeof(uint16_t));
+}
+
+static void naomi_id_cap_svc9(uint8_t *dst) {
+    naomi_id_cap_op(dst, 0x6e2, 0x5b41, SH4_OPCODE_MOV_IMM_RN(11, 16));
+    naomi_id_cap_op(dst, 0x109c, 0x5231, SH4_OPCODE_MOV_IMM_RN(2, 16));
+}
+
 /* Install IRQ vectors/handlers and redirect BIOS test/game enter jumps. */
 void naomi_hook_boot_services(uint32_t test_enter, uint32_t game_enter) {
     volatile uint32_t *tbl = (volatile uint32_t *)NONCACHED_ADDR(NAOMI_BOOTSVC_ADDR);
@@ -1079,13 +1146,14 @@ void naomi_hook_boot_services(uint32_t test_enter, uint32_t game_enter) {
 
     uint8_t *dst = (uint8_t *)NONCACHED_ADDR(SYSCALLS_FW_ADDR);
     uint8_t *src = (uint8_t *)IsoInfo->firmware;
+
     LOGF("Loading IRQ vectors from %08lx to %08lx %d bytes\n",
-        (uintptr_t)src, (uintptr_t)dst, 0x4f00);
-    memcpy(dst, src, 0x4f00);
+        (uintptr_t)src, (uintptr_t)dst, NAOMI_FW_VEC_SIZE);
+    memcpy(dst, src, NAOMI_FW_VEC_SIZE);
     dst = (uint8_t *)NONCACHED_ADDR(NAOMI_BOOTSVC_ADDR);
     LOGF("Loading IRQ handlers from %08lx to %08lx %d bytes\n",
-        (uintptr_t)src + 0x4f00, (uintptr_t)dst, 0x7000);
-    memcpy(dst, src + 0x4f00, 0x7000);
+        (uintptr_t)src + NAOMI_FW_VEC_SIZE, (uintptr_t)dst, NAOMI_FW_HND_SIZE);
+    memcpy(dst, src + NAOMI_FW_VEC_SIZE, NAOMI_FW_HND_SIZE);
 
     *(volatile uint32_t *)NONCACHED_ADDR(NAOMI_BOOT_FLAG_ADDR) = 1;
     *(volatile uint32_t *)NONCACHED_ADDR(NAOMI_TEST_ENTER_ADDR) = test_enter;
@@ -1103,7 +1171,20 @@ void naomi_hook_boot_services(uint32_t test_enter, uint32_t game_enter) {
         }
         tbl[NAOMI_BOOTSVC_JUMP_INDEX + i] = fn[i];
     }
-    naomi_bad0_test_svc();
+    if(naomi->game_id == NAOMI_ID_BDG0) {
+        volatile uint16_t *dimm = (volatile uint16_t *)(dst + 0x1608);
+
+        if(dimm[0] == 0x4f22) {
+            dimm[0] = SH4_OPCODE_RTS;
+            dimm[1] = SH4_OPCODE_NOP;
+        }
+    }
+    if(naomi->game_id == NAOMI_ID_BAD0) {
+        naomi_bad0_test_svc();
+    }
+    if(naomi_is_initial_d()) {
+        naomi_id_cap_svc9(dst);
+    }
 }
 
 void naomi_bad0_test_svc(void) {
@@ -1111,10 +1192,10 @@ void naomi_bad0_test_svc(void) {
     volatile uint16_t *stub;
     uint32_t sa;
 
-    if(!naomi->test || naomi->game_id != NAOMI_ID_BAD0) {
+    if(!naomi->test) {
         return;
     }
-    sa = NAOMI_BOOTSVC_ADDR + 0x7000;
+    sa = NAOMI_BOOTSVC_ADDR + NAOMI_FW_HND_SIZE;
     stub = (volatile uint16_t *)NONCACHED_ADDR(sa);
     stub[0] = SH4_OPCODE_MOV_0_R0;
     stub[1] = SH4_OPCODE_RTS;
@@ -1157,7 +1238,6 @@ static void naomi_relaunch(int test_mode) {
     LOGF("NAOMI %s execute=%08lx insn=%08lx\n", test_mode ? "TEST" : "GAME",
         IsoInfo->exec.addr, *(volatile uint32_t *)NONCACHED_ADDR(IsoInfo->exec.addr));
 
-    naomi_bad0_test_svc();
     setup_machine();
     printf("Executing...\n");
     launch(IsoInfo->exec.addr);

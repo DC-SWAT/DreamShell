@@ -111,15 +111,15 @@ static const naomi_calib_map_t naomi_calib_maps[] = {
 	/* Initial D Arcade Stage */
 	{ "BEM0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 	/* Initial D Arcade Stage (Export) */
-	{ "BFF0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
+	{ "BFFA", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 	/* Initial D Arcade Stage Ver. 2 */
-	{ "BFK0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
+	{ "BFKA", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 	/* Initial D Arcade Stage Ver. 2 (Export) */
-	{ "BFS0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
+	{ "BFSA", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 	/* Initial D Arcade Stage Ver. 3 */
 	{ "BHH0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 	/* Initial D Arcade Stage Ver. 3 (Export) */
-	{ "BHR0", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
+	{ "BHRA", 36, NAOMI_CALIB_N2_OFFS, NAOMI_CALIB_N2_DEFS },
 };
 
 static const uint8_t naomi_factory_bbk0[] = {
@@ -140,7 +140,7 @@ static const uint8_t naomi_factory_bau0[] = {
 
 static const uint8_t naomi_factory_bee0[] = {
 	0x17, 0x05, 0x01, 0x00, 0x4b, 0x4f, 0x52, 0x36, 0x36, 0x00, 0x76, 0x98, 0x32, 0x54, 0x98, 0x10,
-	0x12, 0x4d, 0x01, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80,
+	0x12, 0x4c, 0x01, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80,
 	0x00, 0x80, 0x00, 0x00
 };
 

@@ -244,6 +244,46 @@ static int naomi_dma_head(const uint16_t *w, uint32_t i, uint32_t size) {
     return 0;
 }
 
+/* Initial D cart PIO: r4 offset, r5 dest, r6 bytes. Word pump from 0xA05F7008. */
+static int naomi_id_pio_read(const uint8_t *p, uint32_t size, uint32_t off) {
+    static const uint8_t head[] = { 0xe6, 0x2f, 0xf3, 0x6e, 0x63, 0x60 };
+    static const uint8_t mid[] = { 0x4d, 0x61, 0x12, 0x22 };
+    static const uint8_t tail[] = { 0x29, 0x44 };
+    static const uint8_t loop[] = { 0x22, 0x61, 0x11, 0x25, 0x02, 0x75 };
+    uint32_t j;
+    uint32_t end;
+
+    if(off + 0x40 > size || memcmp(p + off, head, sizeof(head)) != 0) {
+        return 0;
+    }
+    if(p[off + 7] != 0xd2 || memcmp(p + off + 8, mid, sizeof(mid)) != 0) {
+        return 0;
+    }
+    if(p[off + 13] != 0xd3 || memcmp(p + off + 14, tail, sizeof(tail)) != 0) {
+        return 0;
+    }
+    end = off + 0x40;
+    for(j = off + 16; j + sizeof(loop) <= end; j += 2) {
+        if(memcmp(p + j, loop, sizeof(loop)) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Initial D cart DMA: r4 offset, r5 dest, r6 bytes, r7 wait. Aligns r4 down itself. */
+static int naomi_id_rom_dma(const uint8_t *p, uint32_t size, uint32_t off) {
+    static const uint8_t head[] = {
+        0x86, 0x2f, 0x96, 0x2f, 0xe6, 0x2f, 0xfc, 0x7f, 0xf3, 0x6e,
+        0x53, 0x68, 0x63, 0x65, 0x73, 0x69, 0xe0, 0xe1, 0x19, 0x24
+    };
+
+    if(off + sizeof(head) > size) {
+        return 0;
+    }
+    return memcmp(p + off, head, sizeof(head)) == 0;
+}
+
 /* Function that pokes Holly G1 (0xa05f74xx) to start a cart DMA. */
 static int naomi_g1dma_body(const uint16_t *w, uint32_t i, uint32_t size) {
     static const uint16_t head[9] = {
@@ -766,6 +806,498 @@ void naomi_aw_patch_stub(uint8_t *dst, uint32_t size) {
     LOGF("NAOMI AW converter stub patched\n");
 }
 
+static void naomi_id_test_enter(uint8_t *dst, uint32_t size) {
+    static const uint8_t head[] = {
+        0x86, 0x2f, 0xe6, 0x2f, 0x22, 0x4f, 0xf3, 0x6e,
+        0x09, 0xd8, 0x0b, 0x48, 0x09, 0x00, 0x08, 0x20,
+        0xfb, 0x89, 0x08, 0xd1, 0x12, 0x61, 0x40, 0x71,
+        0x11, 0x51, 0x07, 0xd2, 0x2c, 0x31, 0x0b, 0x41
+    };
+    uint32_t i;
+    uint32_t call_off = 0x12;
+    uint32_t lit_off = 0x38;
+    uint32_t need = lit_off + sizeof(uint32_t);
+    uint32_t aligned;
+    uint32_t disp;
+    uint32_t n;
+    uint16_t *p;
+
+    if(size < need) {
+        return;
+    }
+    aligned = call_off & ~3u;
+    disp = (lit_off - (aligned + 4)) >> 2;
+    for(i = 0; i + need <= size; i += 2) {
+        if(memcmp(dst + i, head, sizeof(head)) != 0) {
+            continue;
+        }
+        if(*(uint32_t *)(dst + i + lit_off) != 0xa0000000) {
+            continue;
+        }
+        p = (uint16_t *)(dst + i);
+        p[0x0a >> 1] = SH4_OPCODE_NOP;
+        p[0x10 >> 1] = SH4_OPCODE_NOP;
+        p[call_off >> 1] = SH4_OPCODE_MOVL_PC_RN(1) | disp;
+        p[(call_off >> 1) + 1] = 0x410b;
+        for(n = (call_off + 4) >> 1; n <= (0x1e >> 1); n++) {
+            p[n] = SH4_OPCODE_NOP;
+        }
+        *(uint32_t *)(dst + i + lit_off) =
+            naomi_reloc_addr((uint32_t)naomi_enter_test);
+    }
+}
+
+/* Test image calls this on exit. Jump back to the game image. */
+static void naomi_id_test_ret(uint8_t *dst, uint32_t size) {
+    static const uint8_t head[] = {
+        0x86, 0x2f, 0xe6, 0x2f, 0x22, 0x4f, 0xf3, 0x6e,
+        0x09, 0xd8, 0x0b, 0x48, 0x09, 0x00, 0x08, 0x20,
+        0xfb, 0x89, 0x08, 0xd1, 0x12, 0x61, 0x40, 0x71,
+        0x11, 0x51, 0x07, 0xd2, 0x2c, 0x31, 0x0b, 0x41
+    };
+    uint32_t i;
+    uint32_t lit_off = 0x38;
+    uint32_t need = lit_off + sizeof(uint32_t);
+    uint32_t disp = (lit_off - 4) >> 2;
+    uint16_t *p;
+
+    if(size < need) {
+        return;
+    }
+    for(i = 0; i + need <= size; i += 2) {
+        if(memcmp(dst + i, head, sizeof(head)) != 0) {
+            continue;
+        }
+        if(*(uint32_t *)(dst + i + lit_off) != 0xa0000000) {
+            continue;
+        }
+        p = (uint16_t *)(dst + i);
+        p[0] = SH4_OPCODE_MOVL_PC_RN(0) | disp;
+        p[1] = SH4_OPCODE_JMP_R0;
+        p[2] = SH4_OPCODE_NOP;
+        *(uint32_t *)(dst + i + lit_off) =
+            naomi_reloc_addr((uint32_t)naomi_enter_game);
+    }
+}
+
+static void naomi_id_bios_keep(uint8_t *dst, uint32_t size) {
+    static const uint8_t head[] = {
+        0xe6, 0x2f, 0xf3, 0x6e, 0x0e, 0xd1, 0x0f, 0xd2, 0x22, 0x21, 0x0f, 0xd6
+    };
+    static const uint8_t ret[] = {
+        0xe3, 0x6f, 0xf6, 0x6e, 0x0b, 0x00, 0x09, 0x00
+    };
+    uint32_t i;
+    uint32_t lit_off = 0x44;
+    uint32_t need = lit_off + (sizeof(uint32_t) * 2);
+
+    if(size < need) {
+        return;
+    }
+    for(i = 0; i + need <= size; i += 2) {
+        if(memcmp(dst + i, head, sizeof(head)) != 0) {
+            continue;
+        }
+        if(*(uint32_t *)(dst + i + lit_off) != 0xac018000
+            || *(uint32_t *)(dst + i + lit_off + sizeof(uint32_t)) != 0xa0060000) {
+            continue;
+        }
+        memcpy(dst + i + 10, ret, sizeof(ret));
+    }
+}
+
+static void naomi_bios_keep(uint8_t *dst, uint32_t size) {
+    static const uint8_t copy[] = {
+        0x19, 0xd2, 0x08, 0xe7, 0x17, 0xd3, 0x00, 0xe5,
+        0x19, 0xd0, 0x1a, 0xd6, 0x17, 0xd1, 0x32, 0x22
+    };
+    static const uint8_t poke[] = {
+        0x09, 0xd3, 0x08, 0xd7, 0x0c, 0x95, 0x72, 0x23
+    };
+    uint32_t i;
+    uint32_t copy_svc = 0x64;
+    uint32_t copy_bios = 0x6c;
+    uint32_t poke_lit = 0x24;
+    uint16_t *p;
+
+    if(size < copy_bios + sizeof(uint32_t)) {
+        return;
+    }
+    for(i = 0; i + copy_bios + sizeof(uint32_t) <= size; i += 2) {
+        if(memcmp(dst + i, copy, sizeof(copy)) == 0
+            && *(uint32_t *)(dst + i + copy_svc) == 0xac018000
+            && *(uint32_t *)(dst + i + copy_bios) == 0xa0060000) {
+            p = (uint16_t *)(dst + i + sizeof(copy));
+            p[0] = SH4_OPCODE_RTS;
+            p[1] = SH4_OPCODE_NOP;
+            dcache_flush_range((uint32_t)p, 2 * sizeof(uint16_t));
+            icache_flush_range((uint32_t)p, 2 * sizeof(uint16_t));
+        }
+        if(i + poke_lit + sizeof(uint32_t) <= size
+            && memcmp(dst + i, poke, sizeof(poke)) == 0
+            && *(uint32_t *)(dst + i + poke_lit) == 0xac018000) {
+            p = (uint16_t *)(dst + i + sizeof(poke));
+            if(p[0] == 0xa005 && p[1] == 0x6673) {
+                p[0] = SH4_OPCODE_RTS;
+                p[1] = SH4_OPCODE_NOP;
+                dcache_flush_range((uint32_t)p, 2 * sizeof(uint16_t));
+                icache_flush_range((uint32_t)p, 2 * sizeof(uint16_t));
+            }
+        }
+    }
+}
+
+static void naomi_bgd1_skip_branch(uint8_t *dst, uint32_t off, uint32_t size, uint16_t op) {
+    uint16_t *p;
+
+    if(size < off + sizeof(uint16_t)) {
+        return;
+    }
+    p = (uint16_t *)(dst + off);
+    if(*p != 0x8902) {
+        return;
+    }
+    *p = op;
+    dcache_flush_range((uint32_t)p, sizeof(uint16_t));
+    icache_flush_range((uint32_t)p, sizeof(uint16_t));
+}
+
+static void naomi_bgd1_rom_ret(uint8_t *dst, uint32_t size, uint32_t off,
+    uint16_t op0, uint16_t op1, uint32_t lit_off, uint32_t lit) {
+    uint16_t *p;
+
+    if(size < off + 3 * sizeof(uint16_t) || size < lit_off + sizeof(uint32_t)) {
+        return;
+    }
+    if(*(uint32_t *)(dst + lit_off) != lit) {
+        return;
+    }
+    p = (uint16_t *)(dst + off);
+    if(p[0] != op0 || p[1] != op1) {
+        return;
+    }
+    p[0] = SH4_OPCODE_MOV_0_R0;
+    p[1] = SH4_OPCODE_RTS;
+    p[2] = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+    icache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+}
+
+static void naomi_bgd1_rom_peek(uint8_t *dst, uint32_t size) {
+    uint16_t *peek;
+    uint16_t *poke;
+
+    if(size < 0x90740 + sizeof(uint32_t)) {
+        return;
+    }
+    if(*(uint32_t *)(dst + 0x9073c) != 0xa0200000
+        || *(uint32_t *)(dst + 0x90740) != 0xa0200004) {
+        return;
+    }
+    peek = (uint16_t *)(dst + 0x9063e);
+    poke = (uint16_t *)(dst + 0x90642);
+    if(*peek != 0x6032 || *poke != 0x2202) {
+        return;
+    }
+    *peek = SH4_OPCODE_MOV_0_R0;
+    *poke = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)peek, (uint32_t)((uint8_t *)poke - (uint8_t *)peek) + sizeof(uint16_t));
+    icache_flush_range((uint32_t)peek, (uint32_t)((uint8_t *)poke - (uint8_t *)peek) + sizeof(uint16_t));
+}
+
+static void naomi_bgd1_rom_skip(uint8_t *dst, uint32_t size) {
+    static const struct {
+        uint32_t off;
+        uint16_t op0;
+        uint16_t op1;
+        uint32_t lit;
+        uint32_t addr;
+    } rom[] = {
+        { 0x8e190, 0x2fe6, 0x2fd6, 0x8e20c, 0xa0200000 },
+        { 0x8e220, 0x2fe6, 0x2fd6, 0x8e344, 0xa0200000 },
+        { 0x8e350, 0x2fe6, 0x2fd6, 0x8e424, 0xa0200000 },
+        { 0x8e440, 0xd239, 0xd338, 0x8e528, 0xa020000c },
+        { 0x8f2a0, 0xd548, 0xd649, 0x8f3c4, 0xa02001f8 },
+        { 0x8f2c0, 0xd542, 0xd643, 0x8f3cc, 0xa0200208 },
+        { 0x8f2e0, 0xd13e, 0xd33c, 0x8f3d8, 0xa0200218 }
+    };
+    uint32_t i;
+
+    naomi_bgd1_rom_peek(dst, size);
+    for(i = 0; i < sizeof(rom) / sizeof(rom[0]); i++) {
+        naomi_bgd1_rom_ret(dst, size, rom[i].off, rom[i].op0, rom[i].op1,
+            rom[i].lit, rom[i].addr);
+    }
+}
+
+static void naomi_bgd1_game(uint8_t *dst, uint32_t size) {
+    static const uint32_t bt[] = { 0x71fd8, 0x72086 };
+    uint16_t *p;
+    uint32_t i;
+
+    if(size < 0x8faf0 + 0x1e + sizeof(uint16_t)) {
+        return;
+    }
+    if(*(uint16_t *)(dst + 0x8faf0) != 0x4f22
+        || *(uint16_t *)(dst + 0x8faf0 + 0x0e) != 0xe044
+        || *(uint16_t *)(dst + 0x8faf0 + 0x1e) != 0x422b) {
+        return;
+    }
+    p = (uint16_t *)(dst + 0x8faf0);
+    p[0] = SH4_OPCODE_RTS;
+    p[1] = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)p, 2 * sizeof(uint16_t));
+    icache_flush_range((uint32_t)p, 2 * sizeof(uint16_t));
+    for(i = 0; i < sizeof(bt) / sizeof(bt[0]); i++) {
+        naomi_bgd1_skip_branch(dst, bt[i], size, SH4_OPCODE_BRA | 2);
+    }
+    naomi_bgd1_rom_skip(dst, size);
+}
+
+static void naomi_bgd1_menu(uint8_t *dst, uint32_t size) {
+    static const uint32_t bt[] = { 0xcfb8, 0xd066 };
+    uint16_t *p;
+    uint32_t i;
+
+    for(i = 0; i < sizeof(bt) / sizeof(bt[0]); i++) {
+        naomi_bgd1_skip_branch(dst, bt[i], size, SH4_OPCODE_BRA | 2);
+    }
+    if(size < 0x562 + 10) {
+        return;
+    }
+    p = (uint16_t *)(dst + 0x562);
+    if(p[0] != (SH4_OPCODE_MOVL_PC_RN(1) | 0x11) || p[2] != 0x410b) {
+        return;
+    }
+    p[0] = SH4_OPCODE_MOVL_PC_RN(0) | 1;
+    p[1] = SH4_OPCODE_JMP_R0;
+    p[2] = SH4_OPCODE_NOP;
+    *(uint32_t *)(dst + 0x562 + 6) = naomi_reloc_addr((uint32_t)naomi_enter_game);
+    dcache_flush_range((uint32_t)p, 10);
+    icache_flush_range((uint32_t)p, 10);
+}
+
+static void naomi_skip_g1_bank(uint8_t *dst, uint32_t size) {
+    uint32_t i;
+
+    for(i = 0; i + 5 * sizeof(uint16_t) <= size; i += 2) {
+        uint16_t *p = (uint16_t *)(dst + i);
+        uint32_t disp;
+        uint32_t poff;
+
+        if((p[0] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(2)) {
+            continue;
+        }
+        if(p[1] != 0x6362 || p[2] != 0x2232 || p[3] != 0xe001 || p[4] != SH4_OPCODE_RTS) {
+            continue;
+        }
+        disp = p[0] & 0xff;
+        poff = (i & ~3) + 4 + disp * 4;
+        if(poff + sizeof(uint32_t) > size || *(uint32_t *)(dst + poff) != 0xa05f7000) {
+            continue;
+        }
+        p[0] = SH4_OPCODE_MOV_IMM_RN(0, 1);
+        p[1] = SH4_OPCODE_RTS;
+        p[2] = SH4_OPCODE_NOP;
+        dcache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+        icache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+    }
+}
+
+static void naomi_bgd1_idle(uint8_t *dst, uint32_t size) {
+    uint32_t i;
+
+    for(i = 0; i + 6 * sizeof(uint16_t) <= size; i += 2) {
+        uint16_t *p = (uint16_t *)(dst + i);
+        uint32_t disp;
+        uint32_t poff;
+
+        if((p[0] & SH4_OPCODE_MOVL_PC_MASK) != SH4_OPCODE_MOVL_PC_RN(0)) {
+            continue;
+        }
+        if(p[1] != 0x6202 || p[2] != 0x2228 || p[3] != 0x8903
+            || p[4] != SH4_OPCODE_RTS || p[5] != SH4_OPCODE_MOV_0_R0) {
+            continue;
+        }
+        disp = p[0] & 0xff;
+        poff = (i & ~3) + 4 + disp * 4;
+        if(poff + sizeof(uint32_t) > size || *(uint32_t *)(dst + poff) != 0xa05f7418) {
+            continue;
+        }
+        p[0] = SH4_OPCODE_MOV_IMM_RN(0, 1);
+        p[1] = SH4_OPCODE_RTS;
+        p[2] = SH4_OPCODE_NOP;
+        dcache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+        icache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+    }
+}
+
+static void naomi_bgd1_test_enter(uint8_t *dst, uint32_t size) {
+    naomi_bios_keep(dst, size);
+    naomi_skip_g1_bank(dst, size);
+    naomi_bgd1_idle(dst, size);
+    if(size > 0x100000) {
+        naomi_bgd1_game(dst, size);
+        return;
+    }
+    naomi_bgd1_menu(dst, size);
+}
+
+static int naomi_bhl0_ret(uint8_t *dst, uint32_t size, uint32_t off, uint32_t lit_off) {
+    uint16_t *p;
+
+    if(size < off + 3 * sizeof(uint16_t) || size < lit_off + sizeof(uint32_t)) {
+        return 0;
+    }
+    if(*(uint32_t *)(dst + lit_off) != 0xa0200000) {
+        return 0;
+    }
+    p = (uint16_t *)(dst + off);
+    if(p[0] != 0x2fe6 || p[1] != 0x2fd6) {
+        return 0;
+    }
+    p[0] = SH4_OPCODE_MOV_0_R0;
+    p[1] = SH4_OPCODE_RTS;
+    p[2] = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+    icache_flush_range((uint32_t)p, 3 * sizeof(uint16_t));
+    return 1;
+}
+
+static int naomi_bhl0_nop_store(uint8_t *dst, uint32_t size, uint32_t off, uint32_t lit_off) {
+    uint16_t *p;
+
+    if(size < off + sizeof(uint16_t) || size < lit_off + sizeof(uint32_t)) {
+        return 0;
+    }
+    if(*(uint32_t *)(dst + lit_off) != 0xa0200000) {
+        return 0;
+    }
+    p = (uint16_t *)(dst + off);
+    if(*p != 0x2642) {
+        return 0;
+    }
+    *p = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)p, sizeof(uint16_t));
+    icache_flush_range((uint32_t)p, sizeof(uint16_t));
+    return 1;
+}
+
+static int naomi_bhl0_peek(uint8_t *dst, uint32_t size) {
+    uint16_t *load;
+    uint16_t *store;
+
+    if(size < 0x908e0 + sizeof(uint32_t)) {
+        return 0;
+    }
+    if(*(uint32_t *)(dst + 0x908dc) != 0xa0200000
+        || *(uint32_t *)(dst + 0x908e0) != 0xa0200004) {
+        return 0;
+    }
+    load = (uint16_t *)(dst + 0x907de);
+    store = (uint16_t *)(dst + 0x907e2);
+    if(*load != 0x6032 || *store != 0x2202) {
+        return 0;
+    }
+    *load = SH4_OPCODE_MOV_0_R0;
+    *store = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)load, (uint32_t)((uint8_t *)store - (uint8_t *)load) + sizeof(uint16_t));
+    icache_flush_range((uint32_t)load, (uint32_t)((uint8_t *)store - (uint8_t *)load) + sizeof(uint16_t));
+    return 1;
+}
+
+static int naomi_bhl0_bank(uint8_t *dst, uint32_t size) {
+    uint16_t *p;
+
+    if(size < 0x8f2a4 + sizeof(uint32_t)) {
+        return 0;
+    }
+    if(*(uint32_t *)(dst + 0x8f2a4) != 0xa05f7000) {
+        return 0;
+    }
+    p = (uint16_t *)(dst + 0x8f270);
+    if(p[0] != 0xd20c || p[1] != 0x6362 || p[2] != 0x2232 || p[3] != 0xe001) {
+        return 0;
+    }
+    p[2] = SH4_OPCODE_NOP;
+    dcache_flush_range((uint32_t)p, 4 * sizeof(uint16_t));
+    icache_flush_range((uint32_t)p, 4 * sizeof(uint16_t));
+    return 1;
+}
+
+static int naomi_bhl0_dma(uint8_t *dst, uint32_t size) {
+    uint16_t *p;
+
+    if(size < 0x88e0c + sizeof(uint32_t)) {
+        return 0;
+    }
+    if(*(uint32_t *)(dst + 0x88e0c) != 0xa05f7418) {
+        return 0;
+    }
+    p = (uint16_t *)(dst + 0x88d90);
+    if(p[0] != 0x2fe6 || p[1] != 0x7ffc) {
+        return 0;
+    }
+    naomi_dma_stub_apply(dst, 0x88d90);
+    return 1;
+}
+
+static int naomi_bhl0_exit(uint8_t *dst, uint32_t size) {
+    uint16_t *p;
+
+    if(size < 0x2f3c0 + sizeof(uint32_t)) {
+        return 0;
+    }
+    if(*(uint32_t *)(dst + 0x2f3c0) != 0xa0000000) {
+        return 0;
+    }
+    p = (uint16_t *)(dst + 0x2f2a0);
+    if(p[0] != 0x4f22 || p[1] != 0x7ffc || p[2] != 0xbb74 || p[3] != 0x0009) {
+        return 0;
+    }
+    p[0] = SH4_OPCODE_MOVL_PC_RN(0) | 1;
+    p[1] = SH4_OPCODE_JMP_R0;
+    p[2] = SH4_OPCODE_NOP;
+    *(uint32_t *)(dst + 0x2f2a0 + 8) = naomi_reloc_addr((uint32_t)naomi_enter_game);
+    dcache_flush_range((uint32_t)p, 12);
+    icache_flush_range((uint32_t)p, 12);
+    return 1;
+}
+
+static void naomi_bhl0_rom(uint8_t *dst, uint32_t size) {
+    static const struct {
+        uint32_t off;
+        uint32_t lit;
+    } ret[] = {
+        { 0x8e330, 0x8e3ac },
+        { 0x8e3c0, 0x8e4e4 },
+        { 0x8e4f0, 0x8e5c4 }
+    };
+    static const struct {
+        uint32_t off;
+        uint32_t lit;
+    } store[] = {
+        { 0x8e350, 0x8e3ac },
+        { 0x8e3e0, 0x8e4e4 }
+    };
+    uint32_t i;
+    int n = 0;
+
+    naomi_bios_keep(dst, size);
+    for(i = 0; i < sizeof(ret) / sizeof(ret[0]); i++) {
+        n += naomi_bhl0_ret(dst, size, ret[i].off, ret[i].lit);
+    }
+    for(i = 0; i < sizeof(store) / sizeof(store[0]); i++) {
+        n += naomi_bhl0_nop_store(dst, size, store[i].off, store[i].lit);
+    }
+    n += naomi_bhl0_peek(dst, size);
+    n += naomi_bhl0_bank(dst, size);
+    n += naomi_bhl0_dma(dst, size);
+    n += naomi_bhl0_exit(dst, size);
+    LOGF("BHL0 rom %d\n", n);
+    (void)n;
+}
+
 /* Rewrite cart reads in loaded code to gdGdcCartRead. Game-specific overlays
  * run first; Jambo/Crazy Taxi return without the generic scan. */
 void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
@@ -993,6 +1525,96 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
         LOGF("NAOMI BEE0 cart stubs applied\n");
         return;
     }
+    if(naomi->game_id == NAOMI_ID_BDG0
+        && PHYS_ADDR((uint32_t)dst) == 0x0c020000
+        && size > 0x16c406
+        && *(uint16_t *)(dst + 0x16c350) == 0xd235
+        && *(uint16_t *)(dst + 0x16c352) == 0x634d
+        && *(uint16_t *)(dst + 0x16c380) == 0x2fe6
+        && *(uint16_t *)(dst + 0x16c382) == 0x7ffc
+        && *(uint16_t *)(dst + 0x16c400) == 0xd00f) {
+        static const uint8_t ready[] = { 0x01, 0xe0, 0x0b, 0x00, 0x09, 0x00 };
+
+        memcpy(dst + 0x16c350, pio_stub, sizeof(pio_stub));
+        naomi_dma_stub_apply(dst, 0x16c380);
+        memcpy(dst + 0x16c400, ready, sizeof(ready));
+        naomi_replace_gdst(dst, size);
+        if(*(uint32_t *)(dst + 0x16dd30) == 0xa05f7418
+            && *(uint16_t *)(dst + 0x16dbc6) == 0x6242) {
+            *(uint32_t *)(dst + 0x16dd30) = 0xac0000ac;
+        }
+        {
+            static const uint32_t ata_off[] = {
+                0x1750f0, 0x175100, 0x175130, 0x175890, 0x1758a0
+            };
+            static const uint16_t ata_op[] = {
+                0xd325, 0xd222, 0xd515, 0xd208, 0xd30b
+            };
+            uint32_t n;
+
+            for(n = 0; n < sizeof(ata_off) / sizeof(ata_off[0]); n++) {
+                uint16_t *p = (uint16_t *)(dst + ata_off[n]);
+
+                if(p[0] != ata_op[n]) {
+                    continue;
+                }
+                p[0] = SH4_OPCODE_RTS;
+                p[1] = SH4_OPCODE_NOP;
+            }
+        }
+        static const uint32_t dma2[] = { 0x18f0b0, 0x18f100 };
+        static const uint32_t reboot_lit[] = { 0x4a924, 0x848bc, 0x84a00, 0x84af4 };
+        uint32_t n;
+
+        if(*(uint16_t *)(dst + dma2[0]) == 0x2fe6
+            && *(uint16_t *)(dst + dma2[1]) == 0x2fe6
+            && *(uint32_t *)(dst + 0x18f164) == 0xa05f7404) {
+            naomi_dma_stub_apply(dst, dma2[0]);
+            naomi_dma_stub_apply(dst, dma2[1]);
+        }
+        if(*(uint16_t *)(dst + 0x4a8a0) == 0xd120
+            && *(uint32_t *)(dst + reboot_lit[0]) == 0x0c1622a0) {
+            for(n = 0; n < sizeof(reboot_lit) / sizeof(reboot_lit[0]); n++) {
+                uint32_t *lit = (uint32_t *)(dst + reboot_lit[n]);
+
+                if(*lit != 0x0c1622a0) {
+                    continue;
+                }
+                *lit = 0x0c0ada60;
+            }
+        }
+        if(*(uint16_t *)(dst + 0x1422a0) == 0x4f22
+            && *(uint32_t *)(dst + 0x1422fc) == 0x0c18ce30) {
+            uint8_t test_enter[16] = {
+                0x02, 0xd1, 0x05, 0xe0, 0x02, 0x21, 0x0b, 0x00,
+                0x09, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00
+            };
+
+            *(uint32_t *)(test_enter + 12) = 0x0cb682c4;
+            memcpy(dst + 0x1422a0, test_enter, sizeof(test_enter));
+        }
+        naomi_bios_keep(dst, size);
+        if(size >= 0x141edc + 20 && *(uint16_t *)(dst + 0x141edc) == 0xb1e0) {
+            uint8_t test_exit[20] = {
+                0x03, 0xd1, 0x00, 0xe0, 0x02, 0x21, 0x08, 0x7f,
+                0x26, 0x4f, 0x0b, 0x00, 0x09, 0x00, 0x09, 0x00,
+                0x00, 0x00, 0x00, 0x00
+            };
+
+            *(uint32_t *)(test_exit + 16) = 0x0cb682c4;
+            memcpy(dst + 0x141edc, test_exit, sizeof(test_exit));
+        }
+        dcache_flush_range(caddr, size);
+        icache_flush_range(caddr + 0x16c350, 0x16c406 - 0x16c350);
+        icache_flush_range(caddr + 0x4a8a0, 8);
+        icache_flush_range(caddr + 0x1422a0, 16);
+        icache_flush_range(caddr + 0x141edc, 20);
+        for(n = 0; n < sizeof(reboot_lit) / sizeof(reboot_lit[0]); n++) {
+            icache_flush_range(caddr + reboot_lit[n], sizeof(uint32_t));
+        }
+        LOGF("NAOMI BDG0 cart stubs applied\n");
+        return;
+    }
     /* Crazy Taxi: known-good cart-read overlay, skip generic scan. */
     if(naomi->game_id == NAOMI_ID_BAC0
         && PHYS_ADDR((uint32_t)dst) == 0x0c020000
@@ -1042,6 +1664,40 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
         icache_flush_range(caddr, size);
         LOGF("NAOMI crazy taxi overlay applied\n");
         return;
+    }
+    if(naomi_is_initial_d() && PHYS_ADDR((uint32_t)dst) == 0x0c020000) {
+        for(i = 0; i + sizeof(pio_stub) <= size; i += 2) {
+            uint32_t start;
+
+            if(naomi_id_pio_read(dst, size, i)) {
+                start = naomi_align4(dst, i, sizeof(pio_stub), size);
+                if(start != 0xffffffff && memcmp(dst + start, pio_stub, 8) != 0) {
+                    memcpy(dst + start, pio_stub, sizeof(pio_stub));
+                    n_pio++;
+                }
+            }
+            if(naomi_id_rom_dma(dst, size, i) && naomi_dma_stub_patch(dst, i, size)) {
+                n_dma++;
+            }
+        }
+        naomi_id_bios_keep(dst, size);
+        if(size > 0x100000) {
+            naomi_id_test_enter(dst, size);
+        }
+        else {
+            naomi_id_test_ret(dst, size);
+        }
+        dcache_flush_range(caddr, size);
+        icache_flush_range(caddr, size);
+        LOGF("NAOMI Initial D cart stubs pio %d dma %d\n", n_pio, n_dma);
+        return;
+    }
+    if(naomi->game_id == NAOMI_ID_BHL0
+        && PHYS_ADDR((uint32_t)dst) == 0x0c020000) {
+        naomi_bhl0_rom(dst, size);
+    }
+    if(naomi->game_id == NAOMI_ID_BGD1) {
+        naomi_bgd1_test_enter(dst, size);
     }
     /* Generic scan: PIO, DMA, G1 wait/kick, cart window memcpy. */
     w = (uint16_t *)dst;

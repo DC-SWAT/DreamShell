@@ -17,6 +17,13 @@
 #define NAOMI_ID_BAL1 NAOMI_ID('B', 'A', 'L', '1') /* Dead or Alive 2 Millennium */
 #define NAOMI_ID_BAU0 NAOMI_ID('B', 'A', 'U', '0') /* Jambo Safari */
 #define NAOMI_ID_BEE0 NAOMI_ID('B', 'E', 'E', '0') /* King of Route 66 */
+#define NAOMI_ID_BDG0 NAOMI_ID('B', 'D', 'G', '0') /* Wild Riders */
+#define NAOMI_ID_BGD1 NAOMI_ID('B', 'G', 'D', '1') /* Club Kart */
+#define NAOMI_ID_BHL0 NAOMI_ID('B', 'H', 'L', '0') /* Club Kart 2003 */
+#define NAOMI_ID_BFFA NAOMI_ID('B', 'F', 'F', 'A') /* Initial D */
+#define NAOMI_ID_BFKA NAOMI_ID('B', 'F', 'K', 'A') /* Initial D 2 Japan */
+#define NAOMI_ID_BFSA NAOMI_ID('B', 'F', 'S', 'A') /* Initial D 2 Export */
+#define NAOMI_ID_BHRA NAOMI_ID('B', 'H', 'R', 'A') /* Initial D 3 Export */
 #define NAOMI_ID_BAC0 NAOMI_ID('B', 'A', 'C', '0') /* Crazy Taxi */
 #define NAOMI_ID_ABC0 NAOMI_ID('A', 'B', 'C', '0') /* Power Stone */
 #define NAOMI_ID_BBJ0 NAOMI_ID('B', 'B', 'J', '0') /* Power Stone 2 */
@@ -54,6 +61,15 @@ typedef struct naomi_state {
 } naomi_state_t;
 
 naomi_state_t *get_naomi(void);
+
+static inline int naomi_is_initial_d(void) {
+    uint32_t id = get_naomi()->game_id;
+
+    return id == NAOMI_ID_BFFA
+        || id == NAOMI_ID_BFKA
+        || id == NAOMI_ID_BFSA
+        || id == NAOMI_ID_BHRA;
+}
 
 #define NAOMI_CART_DMA_STATUS_ADDR   (RAM_START_ADDR + 0xac)
 #define NAOMI_CART_REGION_ADDR       (RAM_START_ADDR + 0x1f100)
