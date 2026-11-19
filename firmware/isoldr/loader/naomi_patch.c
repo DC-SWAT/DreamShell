@@ -1406,7 +1406,6 @@ void naomi_patch_cart_read(uint8_t *dst, uint32_t size) {
             memcpy(dst + o->poke_7000, ready, sizeof(ready));
             memcpy(dst + o->win0, rts_nop, sizeof(rts_nop));
             memcpy(dst + o->win1, rts_nop, sizeof(rts_nop));
-            memcpy(dst + o->win2, rts_nop, sizeof(rts_nop));
             naomi_replace_gdst(dst, size);
             dcache_flush_range(caddr, size);
             icache_flush_range(caddr, size);
