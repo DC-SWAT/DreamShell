@@ -765,22 +765,8 @@ static void InputHandler(void *ds_event, void *param, int action) {
             break;
 
         case SDL_JOYAXISMOTION:
-            if (IsArcadeMode()) {
-                if (event->jaxis.axis == 2) {
-                    if (event->jaxis.value > ANALOG_THRESHOLD) {
-                        if (!self.r_trig_held) {
-                            OnSelect();
-                            self.r_trig_held = true;
-                        }
-                    }
-                    else {
-                        self.r_trig_held = false;
-                    }
-                    break;
-                }
-                if (event->jaxis.axis == 3) {
-                    break;
-                }
+            if (IsArcadeMode() && (event->jaxis.axis == 2 || event->jaxis.axis == 3)) {
+                break;
             }
             if (event->jaxis.axis == 0) { // Analog X
                 int ax = event->jaxis.value;
