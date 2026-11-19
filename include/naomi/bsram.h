@@ -18,6 +18,8 @@
 #define NAOMI_BSRAM_MIRROR_OFF              0x00F8
 #define NAOMI_BSRAM_BOOKKEEPING_CRC_OFF     0x0008
 #define NAOMI_BSRAM_BOOKKEEPING_CRC_LEN     0x00F0
+#define NAOMI_BSRAM_VALID_OFF               0x000C
+#define NAOMI_BSRAM_VALID                   1
 #define NAOMI_BSRAM_CREDITS_OFF             0x0010
 #define NAOMI_BSRAM_GAME_OFF                0x01F8
 

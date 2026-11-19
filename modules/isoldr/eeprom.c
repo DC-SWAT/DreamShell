@@ -7,6 +7,7 @@
 
 #include "ds.h"
 #include "isoldr.h"
+#include "naomi/bsram.h"
 #include "naomi/cart.h"
 
 #include <dc/maple/mie.h>
@@ -157,6 +158,10 @@ static const struct {
 
 static void naomi_eeprom_make_path(const char *game_id, char *path, size_t path_size) {
 	snprintf(path, path_size, "%s/firmware/eeprom/%.4s.bin", getenv("HOME"), game_id);
+}
+
+static void naomi_bsram_make_path(const char *game_id, char *path, size_t path_size) {
+	snprintf(path, path_size, "%s/firmware/bsram/%.4s.bin", getenv("HOME"), game_id);
 }
 
 static bool naomi_eeprom_save_file(const char *game_id, const uint8_t *eeprom) {
@@ -470,6 +475,23 @@ static bool naomi_eeprom_read_cart(const char *rom_file, char *game_id,
 	return true;
 }
 
+static void naomi_bsram_mark_valid(void) {
+	uint32_t mark;
+	uint32_t current;
+
+	mark = NAOMI_BSRAM_VALID;
+	if(!naomi_bsram_read(NAOMI_BSRAM_VALID_OFF, &current, sizeof(current))
+			|| current != mark) {
+		naomi_bsram_write(NAOMI_BSRAM_VALID_OFF, &mark, sizeof(mark));
+	}
+
+	if(!naomi_bsram_read(NAOMI_BSRAM_VALID_OFF + NAOMI_BSRAM_MIRROR_OFF,
+			&current, sizeof(current)) || current != mark) {
+		naomi_bsram_write(NAOMI_BSRAM_VALID_OFF + NAOMI_BSRAM_MIRROR_OFF,
+				&mark, sizeof(mark));
+	}
+}
+
 void isoldr_naomi_eeprom_prepare(isoldr_info_t *info) {
 	uint8_t current[MIE_EEPROM_SIZE];
 	uint8_t prepared[MIE_EEPROM_SIZE];
@@ -491,6 +513,8 @@ void isoldr_naomi_eeprom_prepare(isoldr_info_t *info) {
 		return;
 	}
 
+	naomi_bsram_mark_valid();
+
 	if(!mie_get_eeprom(current)) {
 		ds_printf("DS_WARNING: MIE EEPROM read failed\n");
 		return;
@@ -505,10 +529,14 @@ void isoldr_naomi_eeprom_prepare(isoldr_info_t *info) {
 		}
 
 		naomi_eeprom_save_file(current_id, current);
+		naomi_bsram_make_path(current_id, rom_path, sizeof(rom_path));
+		naomi_bsram_save(rom_path);
 	}
 
 	if(naomi_eeprom_load_file(target_id, prepared)) {
 		ds_printf("DS_OK: Restored EEPROM for %.4s\n", target_id);
+		naomi_bsram_make_path(target_id, rom_path, sizeof(rom_path));
+		naomi_bsram_restore(rom_path);
 	}
 	else {
 		if(game_blob_len > 0) {

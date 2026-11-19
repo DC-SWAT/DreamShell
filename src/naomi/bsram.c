@@ -103,6 +103,9 @@ int naomi_bsram_write_credits(uint32_t credits) {
     naomi_bsram_write_u32(ram, NAOMI_BSRAM_CREDITS_OFF, credits);
     mirror_off = NAOMI_BSRAM_CREDITS_OFF + NAOMI_BSRAM_MIRROR_OFF;
     naomi_bsram_write_u32(ram, mirror_off, credits);
+    naomi_bsram_write_u32(ram, NAOMI_BSRAM_VALID_OFF, NAOMI_BSRAM_VALID);
+    naomi_bsram_write_u32(ram, NAOMI_BSRAM_VALID_OFF + NAOMI_BSRAM_MIRROR_OFF,
+            NAOMI_BSRAM_VALID);
     return naomi_bsram_update_bookkeeping_crc();
 }
 
