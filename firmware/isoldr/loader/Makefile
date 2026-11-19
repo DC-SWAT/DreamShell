@@ -10,11 +10,12 @@ DEFS_CDDA = ENABLE_CDDA=1 ENABLE_IRQ=1 ENABLE_LIMIT=1
 DEFS_VMU = ENABLE_WRITE=1 ENABLE_IRQ=1 ENABLE_MAPLE=1 ENABLE_LIMIT=1 ENABLE_MULTI_DISC=1
 DEFS_FEAT = ENABLE_CDDA=1 ENABLE_IRQ=1 ENABLE_MAPLE=1 ENABLE_WRITE=1 ENABLE_MULTI_DISC=1
 DEFS_FULL = $(DEFS_FEAT) ENABLE_ESC=1 ENABLE_SCR=1 ENABLE_BLEEM=1
-DEFS_NAOMI = $(DEFS_FEAT) ENABLE_NAOMI=1 ENABLE_SCR=1 ENABLE_BLEEM=1
+DEFS_NAODC = $(DEFS_FEAT) ENABLE_NAOMI=1 ENABLE_SCR=1 ENABLE_BLEEM=1
+DEFS_NAOMI = ENABLE_IRQ=1 ENABLE_NAOMI=1
 
 TARGETS_CD = cd_full cd_feat cd_vmu cd_cdda cd
-TARGETS_SD = sd_full sd_naomi sd_feat sd_vmu sd_cdda sd
-TARGETS_IDE = ide_full ide_naomi ide_feat ide_vmu ide_cdda ide
+TARGETS_SD = sd_full sd_naomi sd_naodc sd_feat sd_vmu sd_cdda sd
+TARGETS_IDE = ide_full ide_naomi ide_naodc ide_feat ide_vmu ide_cdda ide
 # TARGETS_DCL = dcl_full dcl_feat dcl_vmu dcl_cdda dcl
 # TARGETS_NET = net_full net_feat net_vmu net_cdda net
 
@@ -44,6 +45,10 @@ sd_naomi: $(BUILD)/sd_naomi.bin
 $(BUILD)/sd_naomi.bin:
 	make -f Makefile.sd $(DEFS_NAOMI) NAME=sd_naomi
 
+sd_naodc: $(BUILD)/sd_naodc.bin
+$(BUILD)/sd_naodc.bin:
+	make -f Makefile.sd $(DEFS_NAODC) NAME=sd_naodc
+
 ide: $(BUILD)/ide.bin
 $(BUILD)/ide.bin:
 	make -f Makefile.ide $(DEFS) NAME=ide
@@ -67,6 +72,10 @@ $(BUILD)/ide_full.bin:
 ide_naomi: $(BUILD)/ide_naomi.bin
 $(BUILD)/ide_naomi.bin:
 	make -f Makefile.ide $(DEFS_NAOMI) NAME=ide_naomi
+
+ide_naodc: $(BUILD)/ide_naodc.bin
+$(BUILD)/ide_naodc.bin:
+	make -f Makefile.ide $(DEFS_NAODC) NAME=ide_naodc
 
 cd: $(BUILD)/cd.bin
 $(BUILD)/cd.bin:

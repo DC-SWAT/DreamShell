@@ -86,7 +86,7 @@ setup_cache_addr:
 p2_mask:
     .long       0xa0000000
 stack_ptr:
-    .long       0x8d000000
+    .long       0x8cee0000
 _loader_size:
     .long       _end - start
 

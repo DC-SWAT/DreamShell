@@ -503,8 +503,12 @@ static int patch_loader_addr(uint8 *loader, uint32 size, uint32 addr) {
 }
 
 static void set_loader_type(isoldr_info_t *info) {
-	if (info->image_type == IMAGE_TYPE_ROM_NAOMI || hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
+	if (info->image_type == IMAGE_TYPE_ROM_NAOMI) {
 		strncpy(info->fs_type, ISOLDR_TYPE_NAOMI, 5);
+		info->fs_type[5] = '\0';
+	}
+	else if (hardware_sys_mode(NULL) != HW_TYPE_RETAIL) {
+		strncpy(info->fs_type, ISOLDR_TYPE_NAODC, 5);
 		info->fs_type[5] = '\0';
 	}
 	else if (info->syscalls != 0 || info->scr_hotkey != 0 || info->bleem != 0 ||
@@ -558,10 +562,6 @@ void isoldr_exec(isoldr_info_t *info, uintptr_t addr) {
 	}
 
 	bin_type = info->fs_type;
-
-	if(strcmp(bin_type, ISOLDR_TYPE_NAOMI) == 0) {
-		bin_type = ISOLDR_TYPE_FULL;
-	}
 
 	loader_fw_name(fn, info->fs_dev, bin_type, "bin");
 

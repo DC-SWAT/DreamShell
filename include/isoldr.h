@@ -70,6 +70,7 @@
 #define ISOLDR_TYPE_FEAT     "feat"
 #define ISOLDR_TYPE_FULL     "full"
 #define ISOLDR_TYPE_NAOMI    "naomi"
+#define ISOLDR_TYPE_NAODC    "naodc"
 
 
 /**
