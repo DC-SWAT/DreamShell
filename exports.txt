@@ -305,6 +305,8 @@ naomi_bsram_read_credits
 naomi_bsram_read
 naomi_bsram_write
 naomi_bsram_update_bookkeeping_crc
+naomi_bsram_save
+naomi_bsram_restore
 naomi_coins_count
 naomi_coin_on_meter
 naomi_coin_service

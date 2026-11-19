@@ -8,8 +8,10 @@
 */
 
 #include <assert.h>
+#include <stdlib.h>
 #include <arch/arch.h>
 #include <dc/maple/mie.h>
+#include <kos.h>
 
 #include <naomi/bsram.h>
 
@@ -137,4 +139,79 @@ int naomi_bsram_update_bookkeeping_crc(void) {
             (uint8_t)((uint32_t)crc >> (i * 8));
     }
     return 1;
+}
+
+void naomi_bsram_save(const char *path) {
+    uint8_t *backup;
+    file_t fd;
+    int ok;
+
+    backup = aligned_alloc(32, NAOMI_BSRAM_SIZE);
+    if(backup == NULL) {
+        dbglog(DBG_WARNING, "DS_ERROR: Can't allocate backup RAM for %s\n", path);
+        return;
+    }
+
+    if(!naomi_bsram_read(0, backup, NAOMI_BSRAM_SIZE)) {
+        dbglog(DBG_WARNING, "DS_ERROR: Can't read backup RAM for %s\n", path);
+        free(backup);
+        return;
+    }
+
+    fd = fs_open(path, O_CREAT | O_TRUNC | O_WRONLY);
+    if(fd == FILEHND_INVALID) {
+        dbglog(DBG_WARNING, "DS_ERROR: Can't save backup RAM to %s\n", path);
+        free(backup);
+        return;
+    }
+
+    ok = fs_write(fd, backup, NAOMI_BSRAM_SIZE) == NAOMI_BSRAM_SIZE;
+    fs_close(fd);
+    free(backup);
+    if(!ok) {
+        dbglog(DBG_WARNING, "DS_ERROR: Backup RAM write failed for %s\n", path);
+        return;
+    }
+
+    dbglog(DBG_INFO, "DS_OK: Saved backup RAM to %s\n", path);
+}
+
+void naomi_bsram_restore(const char *path) {
+    uint8_t *backup;
+    file_t fd;
+    ssize_t n;
+
+    fd = fs_open(path, O_RDONLY);
+    if(fd == FILEHND_INVALID) {
+        return;
+    }
+
+    if((size_t)fs_total(fd) != NAOMI_BSRAM_SIZE) {
+        fs_close(fd);
+        return;
+    }
+
+    backup = aligned_alloc(32, NAOMI_BSRAM_SIZE);
+    if(backup == NULL) {
+        fs_close(fd);
+        dbglog(DBG_WARNING, "DS_ERROR: Can't allocate backup RAM for %s\n", path);
+        return;
+    }
+
+    n = fs_read(fd, backup, NAOMI_BSRAM_SIZE);
+    fs_close(fd);
+    if(n != NAOMI_BSRAM_SIZE) {
+        free(backup);
+        return;
+    }
+
+    if(!naomi_bsram_write(NAOMI_BSRAM_GAME_OFF, backup + NAOMI_BSRAM_GAME_OFF,
+            NAOMI_BSRAM_SIZE - NAOMI_BSRAM_GAME_OFF)) {
+        free(backup);
+        dbglog(DBG_WARNING, "DS_ERROR: Can't write backup RAM for %s\n", path);
+        return;
+    }
+
+    free(backup);
+    dbglog(DBG_INFO, "DS_OK: Restored backup RAM from %s\n", path);
 }
